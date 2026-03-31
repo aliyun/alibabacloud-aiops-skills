@@ -1,0 +1,46 @@
+# GA Operational Important Notes
+
+- Prefer Standard GA instances; confirm the actual business scenario before creating a Basic GA instance
+- [MANDATORY] Do NOT use prepaid (subscription) billing mode to create GA instances. Always use pay-as-you-go (postpay) + CDT (Cloud Data Transfer) combination mode, which charges based on actual usage and provides better cost-effectiveness and elastic scaling — suitable for most scenarios
+- Default billing mode: pay-as-you-go (postpay) + CDT (unless otherwise specified); determined at creation and cannot be changed afterwards
+- Cross-border routing requires enabling cross-border acceleration on the GA instance
+- ISP line type for acceleration regions: China (Hong Kong) uses BGP (Multi-ISP) Pro (`BGP_PRO`), other regions use BGP (Multi-ISP) (`BGP`) (unless otherwise specified)
+- Default listener configuration: HTTPS protocol, port 443; the certificate ID must be confirmed with the user (unless otherwise specified)
+- Layer 7 listener (HTTP/HTTPS) endpoint group configuration (unless otherwise specified):
+  - `EndpointRequestProtocol` (back-to-origin protocol): follows the listener protocol (HTTP listener -> HTTP, HTTPS listener -> HTTPS)
+  - `EndpointProtocolVersion` (back-to-origin protocol version): defaults to `HTTP1.1`, optional `HTTP2`
+  - Note: `EndpointProtocolVersion` only takes effect when `EndpointRequestProtocol=HTTPS`; HTTP/2 requires origin server support and does not support automatic negotiation
+- Private cross-border mode (`private`) offers higher quality and lower cost than BGP (Premium) cross-border mode (`bgpPro`)
+- Cross-border mode can be switched via `UpdateAcceleratorCrossBorderMode`
+- Prefer `private` (private cross-border) mode; if the API call fails due to missing compliance qualification, fall back to `bgpPro` (BGP Premium cross-border), and advise the customer to switch after completing the cross-border compliance review
+  - Example: `aliyun ga UpdateAcceleratorCrossBorderMode --region cn-hangzhou --AcceleratorId 'ga-xxxx' --CrossBorderMode private --user-agent AlibabaCloud-Agent-Skills`
+- When Proxy Protocol is enabled on a TCP listener, the origin server must support Proxy Protocol to correctly obtain the client's real IP address; otherwise, requests will fail
+- HTTP/2 back-to-origin does not support automatic negotiation; the origin server must explicitly support HTTP/2, otherwise requests will fail
+- Each listener can have only one default endpoint group per region; virtual endpoint groups are not subject to this limitation and multiple can be created in the same region
+- Multiple virtual endpoint groups can be created under the same listener in the same region to represent different origin services
+- Custom public domain endpoints can accelerate non-Alibaba Cloud public domains
+- Custom public IP endpoints can accelerate non-Alibaba Cloud public IP addresses
+- [MANDATORY] When accelerating multiple different domain services, each domain MUST have its own dedicated endpoint group, and traffic MUST be distributed via forwarding rules. It is FORBIDDEN to place multiple domains as endpoints in a single endpoint group — this will cause routing conflicts and incorrect behavior
+- Typical multi-domain configuration: Endpoint Group A (virtual) for www.A.com, Endpoint Group B (virtual) for www.B.com; Forwarding Rule A matches host `*.A.com` -> routes to Group A, Forwarding Rule B matches host `*.B.com` -> routes to Group B
+- HTTPS listener certificate ID format example: `22400756-cn-hangzhou`
+- Instance status must be confirmed as `active` before each operation
+- Pay-as-you-go instances do not require creating or bindind bandwidth plans
+- Pay-as-you-go instances have no instance specification (spec) concept; elastic scaling is supported. Do NOT pass the `Spec` parameter when calling `CreateAccelerator` for pay-as-you-go instances
+- Supported acceleration regions can be obtained via `aliyun ga ListAccelerateAreas --user-agent AlibabaCloud-Agent-Skills`
+- Only HTTPS listeners require certificate configuration; TCP/UDP/HTTP listeners do not require certificates
+- When accelerating HTTPS services without a certificate (e.g., no domain ownership or certificate unavailable), you MUST use a TCP listener instead of an HTTPS listener; HTTPS listeners cannot be created without a valid certificate
+- Supported endpoint types: `Domain` (custom domain), `Ip` (custom public IP), `IpTarget` (custom private IP), `PublicIp` (Alibaba Cloud public IP), `ECS` (Alibaba Cloud ECS instance), `SLB` (Alibaba Cloud CLB instance), `ALB` (Alibaba Cloud ALB instance), `OSS` (Alibaba Cloud OSS bucket), `ENI` (Alibaba Cloud Elastic Network Interface), `NLB` (Alibaba Cloud NLB instance)
+- GA accelerated domain names (CNAME) use geography-based priority resolution
+- GA supports both CNAME-based access and IP-based access modes
+- An instance can be deleted directly; the backend automatically cleans up all associated sub-resources (acceleration regions, listeners, endpoint groups, forwarding rules, etc.) without manual deletion of each resource
+- GA TCP listeners also support host-based forwarding rules
+- Third-party domains you do not own (e.g., docker.io, github.com, gcr.io, quay.io) cannot have certificates configured — you cannot obtain or upload SSL certificates for domains you do not control. Therefore, HTTPS listeners are NOT an option for third-party domain acceleration
+- When accelerating HTTPS services for third-party domains you do not own (e.g., docker.io, github.com) without domain certificates, you MUST use a TCP listener + host-based forwarding rules to achieve acceleration
+- For HTTPS service acceleration, if you own the domain and have the certificate, prefer using an HTTPS listener for acceleration, as the performance is better than using a TCP listener
+- Listener protocol selection guide by service type:
+  - **HTTP services** (common ports: 80, 88, 8080, etc.): No certificate required. Default to an HTTP listener for acceleration. Do NOT use a TCP listener — HTTP listeners provide better Layer 7 optimization and forwarding rule support for HTTP traffic
+  - **HTTPS services** (common ports: 443, 8443, etc.):
+    - If a valid certificate is available: use an HTTPS listener for acceleration (recommended for best performance)
+    - If no certificate is available (e.g., third-party domain without certificate ownership): use a TCP listener + host-based forwarding rules as a fallback
+  - **TCP listener host-based forwarding rules**: Only effective for HTTPS traffic; host-based forwarding rules on TCP listeners do NOT work for plain HTTP traffic
+- When both HTTP and HTTPS acceleration services are configured simultaneously and HTTP-to-HTTPS redirection is required, use the **Redirect** action in forwarding rules on the HTTP listener to achieve the redirection. Example redirect action configuration: `{"protocol":"HTTPS",  "port":"443", "path":"${path}"  "code":"301"}`
