@@ -1,0 +1,366 @@
+---
+name: alibabacloud-dataworks-infra-manage
+description: |
+  DataWorks Infrastructure Management: CRUD operations for Data Sources (51 types), Compute Resources, and Serverless Resource Groups, plus connectivity testing and resource group binding/unbinding.
+  Uses aliyun CLI to call dataworks-public OpenAPI (2024-05-18).
+  Trigger keywords: DataWorks data source, compute resource, resource group, datasource, data source, compute resource, resource group,
+  mysql/hologres/maxcompute data source, holo/mc/flink resource, Serverless resource group, DataWorks infra, create/list/delete datasource,
+  DW environment config, infrastructure initialization, connect database to DataWorks, database connection failure, configure holo/mc resource.
+  Not triggered: data development tasks, scheduling configuration, MaxCompute table management, data integration tasks, ECS/RDS/OSS operations, workspace member management, data quality monitoring, data lineage, data preview.
+---
+
+# DataWorks Infrastructure Management
+
+Unified management of **Data Sources**, **Compute Resources**, and **Resource Groups** in Alibaba Cloud DataWorks workspaces, supporting CRUD operations.
+
+## Architecture
+
+```
+DataWorks
+├── Workspaces ─── Query and search workspaces
+│   ├── Data Sources ─── 51 types: MySQL, Hologres, MaxCompute, ...
+│   └── Compute Resources ─── Hologres, MaxCompute, Flink, Spark
+└── Resource Groups ─── Serverless resource group lifecycle management (cross-workspace)
+
+Dependencies:
+  Workspace ◀── Data Sources, Compute Resources (must belong to a workspace)
+  Workspace ◀── Resource Groups (associated via binding; one resource group can bind to multiple workspaces)
+  Connectivity Test ──depends on──▶ Resource Group (must be bound to the workspace of the data source)
+  Resource Group Release ──prerequisite──▶ Must unbind all workspaces first
+  Standard Mode ──requires──▶ Dev (Development) + Prod (Production) dual data sources and compute resources
+```
+
+---
+
+## Global Rules
+
+### Prerequisites
+
+1. **Aliyun CLI >= 3.3.1**: `aliyun version` (Installation guide: [references/cli-installation-guide.md](references/cli-installation-guide.md))
+2. **First-time use**: `aliyun configure set --auto-plugin-install true`
+3. **jq** (required for resource group operations): `which jq`
+4. **Credential status**: `aliyun configure list`, verify valid credentials exist
+5. **DataWorks edition**: Basic edition or above required
+
+> **Security Rules**: **DO NOT** read/print/echo AK/SK values, **DO NOT** let users input AK/SK directly, **ONLY** use `aliyun configure list` to check credential status.
+
+### Command Formatting
+
+- **User-Agent (mandatory)**: All `aliyun` CLI commands **must** include the `--user-agent AlibabaCloud-Agent-Skills` parameter to identify the source.
+- **Single-line commands**: When executing Bash commands, **must** construct as a **single-line string**; do not use `\` for line breaks.
+- **jq step-by-step execution**: First execute the `aliyun` command to get JSON, then format with `jq` (to avoid multi-line security prompts).
+- **Endpoint mandatory**: When specifying the `--region` parameter, you **must** also add `--endpoint dataworks.<REGION_ID>.aliyuncs.com`. Not needed when `--region` is not specified.
+
+### Parameter Confirmation
+
+> Before executing any command, all user-customizable parameters **must** be confirmed by the user. Do not assume or use default values.
+> **Exception**: When the user has **explicitly specified** parameter values in the conversation, use them directly without re-confirmation.
+
+**Resource group related parameters (mandatory user selection)**: VPC, VSwitch, Resource Group ID (for binding/connectivity testing) — involve networking and billing, **DO NOT auto-select**; must display a list for the user to explicitly choose. Confirm even if there is only one option.
+
+### RAM Permissions
+
+All operations require `dataworks:<APIAction>` permissions. Creating resource groups additionally requires `AliyunBSSOrderAccess` and `vpc:DescribeVpcs`, `vpc:DescribeVSwitches`.
+> Full permission matrix: [references/ram-policies.md](references/ram-policies.md)
+
+---
+
+## Quick Start: New Workspace Infrastructure Initialization
+
+When the user is **unsure about specific operations** or has vague requirements, guide them through the following process:
+
+1. **Environment check** — Check CLI and credentials per Prerequisites
+2. **Confirm workspace** — Use `ListProjects` to locate the workspace, `GetProject` to confirm the mode (Simple/Standard)
+3. **Create compute resources** — Guide engine type selection; the system will **automatically create corresponding data sources**. Standard Mode requires Dev+Prod pairs. Only pure storage-type data sources (MySQL, Kafka, etc.) need separate data source creation
+4. **Create/bind resource groups** — Query existing resource groups → let user select → bind. Guide creation when no resource groups are available
+5. **Test connectivity** — Test with bound resource groups; when all pass, inform "Infrastructure configuration complete"
+
+> After each step, proactively suggest the next action.
+
+---
+
+## Next Step Guidance
+
+After each write operation is completed and verified, **proactively suggest** follow-up actions:
+
+| Completed Operation | Recommended Next Step |
+|-----------|-----------|
+| Create compute resource | Standard Mode: "Create the corresponding Dev resource?"; "Test connectivity?" |
+| Create data source separately | "Test connectivity?"; Standard Mode: "Create Dev/Prod environment data sources?" |
+| Create resource group | "Bind to a workspace?" |
+| Bind resource group | "Test data source connectivity?" |
+| Connectivity test passed | "Infrastructure is ready." |
+| Connectivity test failed | Analyze the error cause, guide the fix |
+| Delete data source/compute resource | Standard Mode: "Delete the corresponding environment resource as well?" |
+| Unbind resource group | "Release this resource group? Or bind to another workspace?" |
+
+---
+
+## Trigger Rules
+
+**Trigger scenarios**: Data source CRUD, compute resource CRUD, resource group management, infrastructure initialization, colloquial aliases (DW database connection failure, configure holo/mc resources, create rg)
+
+**Not triggered**: Data development tasks, scheduling configuration, MaxCompute table management, data integration tasks, ECS/RDS/OSS, workspace member management, data quality/lineage/preview. Standalone workspace queries are handled by the `alibabacloud-dataworks-workspace-manage` skill.
+
+## Interaction Flow
+
+All operations follow: **Identify module → Environment check → Collect parameters → Execute command → Verify result → Guide next step**
+
+Common aliases: DW=DataWorks, holo=Hologres, mc/MC/odps=MaxCompute, pg=PostgreSQL, rg=Resource Group, ds=Data Source, RDS=InstanceMode MySQL/PG/SQLServer, ADB=AnalyticDB
+
+Naming suggestions: Data source `{type}_{business}_{purpose}`, Compute resource `{type}_{business}`, Resource group `dw_{purpose}_rg_{env}`
+
+---
+
+# Module 0: Workspace Query
+
+> If the `alibabacloud-dataworks-workspace-manage` skill is available, prefer using it for workspace queries. The following is only a fallback.
+
+```bash
+aliyun dataworks-public ListProjects --user-agent AlibabaCloud-Agent-Skills --Status Available --PageSize 100
+```
+
+When searching by name, first get the full list then filter `.PagingInfo.Projects[]` by Name/DisplayName using `jq`.
+
+---
+
+# Module 1: Data Source Management
+
+Supports **51** data source types. See [references/data-sources/README.md](references/data-sources/README.md) for details.
+
+> **When do you need to create a data source separately?** Creating a compute resource (Module 2) will **automatically create the corresponding data source**. Only pure storage-type databases (MySQL, PostgreSQL, Kafka, MongoDB, etc.) need separate creation.
+
+> Some types do not currently support OpenAPI: `polardb-o`, `polardb-x-2-0`, `oceanbase`, `oss-hdfs`, `graph-database`, `bigquery`, `dlf`, `hdfs`, `ssh`, `redis`, `salesforce`, `elasticsearch`, `httpfile`
+
+Connection modes: **UrlMode** (self-hosted databases, requires host/port) or **InstanceMode** (Alibaba Cloud managed instances, requires instanceId). When unsure, proactively ask the user. InstanceMode is preferred.
+
+> Instance query APIs: [references/data-sources/instance-apis.md](references/data-sources/instance-apis.md)
+
+### Workspace Mode
+
+> **Environment note**: **Prod (Production)** is for production data processing; **Dev (Development)** is for development and debugging, physically isolated from production.
+
+`aliyun dataworks-public GetProject --user-agent AlibabaCloud-Agent-Skills --Id <PROJECT_ID>` — check `DevEnvironmentEnabled`:
+- `false` → Simple Mode (1 data source, envType=Prod)
+- `true` → Standard Mode (2 data sources, Dev + Prod, physically isolated)
+
+> Full mode comparison: [references/data-sources/README.md](references/data-sources/README.md)
+
+## Task 1.1: Create Data Source (CreateDataSource)
+
+```bash
+aliyun dataworks-public CreateDataSource --user-agent AlibabaCloud-Agent-Skills [--region <REGION_ID> --endpoint dataworks.<REGION_ID>.aliyuncs.com] --ProjectId <PROJECT_ID> --Name <NAME> --Type <TYPE> --ConnectionPropertiesMode <UrlMode|InstanceMode> --ConnectionProperties '<JSON>' --Description "<DESC>"
+```
+
+**ConnectionProperties common structure**:
+- **UrlMode**: `{"envType":"Prod","address":[{"host":"<IP>","port":<PORT>}],"database":"<DB>","username":"<USER>","password":"<PWD>"}`
+- **InstanceMode**: `{"envType":"Prod","instanceId":"<ID>","regionId":"<REGION>","database":"<DB>","username":"<USER>","password":"<PWD>"}`
+
+> Special type structures (Oracle, MaxCompute, HBase, etc.): see [references/data-sources/](references/data-sources/) per-type docs
+
+> Cross-account data source configuration: [references/cross-account-datasources.md](references/cross-account-datasources.md)
+
+## Task 1.2: Get Data Source (GetDataSource)
+
+```bash
+aliyun dataworks-public GetDataSource --user-agent AlibabaCloud-Agent-Skills --Id <DATASOURCE_ID> [--region <REGION_ID> --endpoint dataworks.<REGION_ID>.aliyuncs.com]
+```
+
+## Task 1.3: List Data Sources (ListDataSources)
+
+```bash
+aliyun dataworks-public ListDataSources --user-agent AlibabaCloud-Agent-Skills --ProjectId <PROJECT_ID> [--Types '["mysql"]'] [--EnvType <Dev|Prod>] [--PageNumber 1] [--PageSize 20]
+```
+
+> Returns nested structure `DataSources[].DataSource[]`; Name/Type are in the outer layer, Id/Description in the inner layer.
+
+## Task 1.4: Update Data Source (UpdateDataSource)
+
+```bash
+aliyun dataworks-public UpdateDataSource --user-agent AlibabaCloud-Agent-Skills --Id <DATASOURCE_ID> --ProjectId <PROJECT_ID> --ConnectionProperties '<JSON>' [--Description "<DESC>"]
+```
+
+## Task 1.5: Delete Data Source (DeleteDataSource)
+
+```bash
+aliyun dataworks-public DeleteDataSource --user-agent AlibabaCloud-Agent-Skills --Id <DATASOURCE_ID>
+```
+
+## Task 1.6: Test Connectivity (TestDataSourceConnectivity)
+
+**Process**: Query resource group list → **Let user select** a resource group → Execute test.
+
+```bash
+# Step 1: Query project resource groups
+aliyun dataworks-public ListResourceGroups --user-agent AlibabaCloud-Agent-Skills --ProjectId <PROJECT_ID>
+
+# Step 2: Execute test after user selects a resource group
+aliyun dataworks-public TestDataSourceConnectivity --user-agent AlibabaCloud-Agent-Skills --DataSourceId <ID> --ProjectId <PROJECT_ID> --ResourceGroupId "<RG_ID>"
+```
+
+> If error `"resourceGroupId is not in the project"`, the resource group needs to be bound first (confirm with user, then execute `AssociateProjectToResourceGroup`).
+
+---
+
+# Module 2: Compute Resource Management
+
+Supports Hologres, MaxCompute, Flink, Spark, and other types. The system will **automatically create corresponding data sources** upon creation.
+
+### authType Rules
+
+- **Dev environment**: `authType` is fixed as `Executor`
+- **Prod environment**: Options are `PrimaryAccount` (recommended), `TaskOwner`, `SubAccount`, `RamRole`. Default recommendation is `PrimaryAccount` unless user has special requirements
+
+> authType details and guidance: [references/compute-resources/README.md](references/compute-resources/README.md)
+
+### Type-Specific Notes
+
+- **Hologres**: Only supports **InstanceMode**, requires `instanceId`, `securityProtocol`
+- **MaxCompute**: Only supports **UrlMode**, requires `project`, `endpointMode`
+
+> Full ConnectionProperties examples: [references/compute-resources/README.md](references/compute-resources/README.md)
+
+## Task 2.1: Create Compute Resource (CreateComputeResource)
+
+```bash
+aliyun dataworks-public CreateComputeResource --user-agent AlibabaCloud-Agent-Skills [--region <REGION_ID> --endpoint dataworks.<REGION_ID>.aliyuncs.com] --ProjectId <PROJECT_ID> --Name <NAME> --Type <TYPE> --ConnectionPropertiesMode <InstanceMode|UrlMode> --ConnectionProperties '<JSON>' [--Description "<DESC>"]
+```
+
+> After creation, use `ListDataSources` to verify the corresponding data source was auto-generated.
+
+## Task 2.2: Get Compute Resource (GetComputeResource)
+
+```bash
+aliyun dataworks-public GetComputeResource --user-agent AlibabaCloud-Agent-Skills --Id <ID> --ProjectId <PROJECT_ID>
+```
+
+## Task 2.3: List Compute Resources (ListComputeResources)
+
+```bash
+aliyun dataworks-public ListComputeResources --user-agent AlibabaCloud-Agent-Skills --ProjectId <PROJECT_ID> [--Name <FILTER>] [--EnvType <Dev|Prod>] [--PageSize 20] [--SortBy CreateTime] [--Order Desc]
+```
+
+> Returns nested structure `ComputeResources[].ComputeResource[]`; Name/Type are in the outer layer, Id in the inner layer.
+
+## Task 2.4: Update Compute Resource (UpdateComputeResource)
+
+```bash
+aliyun dataworks-public UpdateComputeResource --user-agent AlibabaCloud-Agent-Skills --Id <ID> --ProjectId <PROJECT_ID> --ConnectionProperties '<JSON>' [--Description "<DESC>"]
+```
+
+## Task 2.5: Delete Compute Resource (DeleteComputeResource)
+
+```bash
+aliyun dataworks-public DeleteComputeResource --user-agent AlibabaCloud-Agent-Skills --Id <ID> --ProjectId <PROJECT_ID>
+```
+
+---
+
+# Module 3: Resource Group Management
+
+Manages the full lifecycle of Serverless resource groups.
+
+## Task 3.1: Create Resource Group (CreateResourceGroup)
+
+> Requires `AliyunBSSOrderAccess` permission.
+
+**Interaction flow** (let user choose at each step, DO NOT auto-select):
+
+1. **Query and select VPC**:
+```bash
+aliyun vpc DescribeVpcs --user-agent AlibabaCloud-Agent-Skills --RegionId "<REGION_ID>" --PageSize 50
+```
+If the list is empty, guide the user to create a VPC; **DO NOT** auto-create.
+
+2. **Query and select VSwitch**:
+```bash
+aliyun vpc DescribeVSwitches --user-agent AlibabaCloud-Agent-Skills --RegionId "<REGION_ID>" --VpcId "<VPC_ID>" --PageSize 50
+```
+
+3. **Confirm name and specification** → Execute creation:
+```bash
+aliyun dataworks-public CreateResourceGroup --user-agent AlibabaCloud-Agent-Skills [--region <REGION_ID> --endpoint dataworks.<REGION_ID>.aliyuncs.com] --Name "<NAME>" --PaymentType PostPaid --VpcId "<VPC_ID>" --VswitchId "<VSWITCH_ID>" --ClientToken "$(uuidgen 2>/dev/null || echo "token-$(date +%s)")" --Remark "Created by Agent"
+```
+
+After creation, poll `GetResourceGroup` until status becomes `Normal` (every 10 seconds, up to 10 minutes).
+
+## Task 3.2: Get Resource Group (GetResourceGroup)
+
+```bash
+aliyun dataworks-public GetResourceGroup --user-agent AlibabaCloud-Agent-Skills --Id "<ID>"
+```
+
+## Task 3.3: List Resource Groups (ListResourceGroups)
+
+```bash
+aliyun dataworks-public ListResourceGroups --user-agent AlibabaCloud-Agent-Skills [--ProjectId <PROJECT_ID>] [--Statuses '["Normal"]'] --PageSize 100
+```
+
+## Task 3.4: Bind Resource Group (AssociateProjectToResourceGroup)
+
+**Process**: Query available resource groups → **Display list for user to select** → Bind after user confirms.
+
+```bash
+aliyun dataworks-public AssociateProjectToResourceGroup --user-agent AlibabaCloud-Agent-Skills --ResourceGroupId "<RG_ID>" --ProjectId "<PROJECT_ID>"
+```
+
+## Task 3.5: Query Binding Relationships
+
+```bash
+aliyun dataworks-public ListResourceGroupAssociateProjects --user-agent AlibabaCloud-Agent-Skills --ResourceGroupId "<RG_ID>"
+```
+
+## Task 3.6: Unbind Resource Group (DissociateProjectFromResourceGroup)
+
+```bash
+aliyun dataworks-public DissociateProjectFromResourceGroup --user-agent AlibabaCloud-Agent-Skills --ResourceGroupId "<RG_ID>" --ProjectId "<PROJECT_ID>"
+```
+
+## Task 3.7: Release Resource Group (DeleteResourceGroup)
+
+> Before releasing, must first check bindings with `ListResourceGroupAssociateProjects`; if bound, unbind first.
+
+```bash
+aliyun dataworks-public DeleteResourceGroup --user-agent AlibabaCloud-Agent-Skills --Id "<ID>"
+```
+
+---
+
+## Success Verification
+
+After all write operations, use the corresponding Get/List command to verify the result.
+
+## Common Errors
+
+| Error Code | Solution |
+|--------|----------|
+| Forbidden.Access / PermissionDenied | Check RAM permissions, see [references/ram-policies.md](references/ram-policies.md) |
+| InvalidParameter | Check ConnectionProperties JSON and required parameters |
+| EntityNotExists | Verify the ID and Region are correct |
+| QuotaExceeded | Delete unused resources or request a quota increase |
+| Duplicate* | Use a different name |
+
+## Region
+
+Common: `cn-hangzhou`, `cn-shanghai`, `cn-beijing`, `cn-shenzhen`. Endpoint: `dataworks.<region-id>.aliyuncs.com`
+> Full list: [references/related-apis.md](references/related-apis.md)
+
+## Best Practices
+
+1. **Query before action** — Confirm current state before create/update/delete
+2. **Manage by environment** — Manage Dev and Prod resources separately
+3. **Verify operations** — Use Get/List to verify after each write operation
+4. **Proactive guidance** — Suggest the next step after each step completes
+5. **Error recovery** — Use Update to fix modifiable attributes; for non-modifiable attributes (Type/Name), delete and recreate
+
+## Reference Links
+
+| Reference | Description |
+|-----------|-------------|
+| [references/data-sources/README.md](references/data-sources/README.md) | Data source type list and ConnectionProperties examples |
+| [references/data-sources/](references/data-sources/) | Detailed configuration docs for each data source type (51 files) |
+| [references/cross-account-datasources.md](references/cross-account-datasources.md) | Cross-account data source configuration guide |
+| [references/compute-resources/README.md](references/compute-resources/README.md) | Compute resource ConnectionProperties examples |
+| [references/cli-installation-guide.md](references/cli-installation-guide.md) | Aliyun CLI installation guide |
+| [references/ram-policies.md](references/ram-policies.md) | RAM permission configuration and policy examples |
+| [references/related-apis.md](references/related-apis.md) | API parameter details and Region Endpoints |
