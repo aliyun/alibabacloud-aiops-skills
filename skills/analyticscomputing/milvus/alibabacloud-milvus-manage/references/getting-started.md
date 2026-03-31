@@ -1,0 +1,145 @@
+# Quick Start: Create Your First Milvus Instance from Scratch
+
+This guide helps first-time users complete: prerequisite check → create first instance → verify running → get connection info → cleanup resources.
+
+## Prerequisites
+
+### 1. CLI Environment
+
+```bash
+# Verify Alibaba Cloud CLI installed (needs >= 3.0)
+aliyun --version
+
+# Verify credentials configured (should show current profile)
+aliyun configure list
+
+# ⚠️ Set User-Agent environment variable (all aliyun calls must carry)
+export ALIBABA_CLOUD_USER_AGENT="AlibabaCloud-Agent-Skills"
+```
+
+### 2. Network Resources
+
+Creating Milvus instance requires VPC and VSwitch. **Before execution confirm RegionId with user** (e.g., `cn-hangzhou`, `cn-beijing`, `cn-shanghai`, etc.):
+
+```bash
+# Check if available VPC exists
+aliyun vpc DescribeVpcs --RegionId <RegionId>
+
+# Check if VSwitch exists under VPC, record ZoneId
+aliyun vpc DescribeVSwitches --RegionId <RegionId> --VpcId vpc-xxx
+```
+
+> **Don't have these resources?** Please first create VPC and VSwitch via Alibaba Cloud console or CLI.
+
+### 3. Confirm Availability Zone Info
+
+Record the following info, will be used when creating instance:
+- RegionId (e.g., `cn-hangzhou`)
+- ZoneId (e.g., `cn-hangzhou-j`, from VSwitch's availability zone)
+- VpcId, VSwitchId (can prepare two VSwitches in different availability zones for multi-AZ)
+
+## Step 1: Create Test Instance
+
+Below creates a **standalone version (standalone_pro)** minimal instance, 4 CU, pay-as-you-go:
+
+```bash
+aliyun milvus POST "/webapi/instance/create?RegionId=cn-hangzhou" \
+  --RegionId cn-hangzhou \
+  --body '{
+    "regionId": "cn-hangzhou",
+    "zoneId": "cn-hangzhou-j",
+    "instanceName": "my-first-milvus",
+    "dbVersion": "2.6",
+    "vpcId": "vpc-xxx",
+    "vSwitchIds": [{"vswId":"vsw-xxx","zoneId":"cn-hangzhou-j"}],
+    "paymentType": "PayAsYouGo",
+    "ha": false,
+    "components": [{"type":"standalone_pro","replica":1,"cuNum":4,"cuType":"general"}],
+    "dbAdminPassword": "YourPassword@123",
+    "autoBackup": true,
+    "encrypted": false,
+    "isMultiAzStorage": false,
+    "multiZoneMode": "single"
+  }' \
+  --force
+```
+
+Return contains `instanceId` (e.g., `c-xxx`), record it for subsequent operations.
+
+> **Note**: Creating instance incurs cost. Standalone 4 CU pay-as-you-go suitable for dev/test, don't use for production.
+
+## Step 2: Verify Instance Status
+
+Instance creation is async operation, usually takes 5-15 minutes.
+
+```bash
+# View instance status
+aliyun milvus GET "/webapi/instance/get?RegionId=cn-hangzhou&instanceId=c-xxx" \
+  --RegionId cn-hangzhou --force
+```
+
+**Status Transition**: `creating` → `running`
+
+Wait until `status` becomes `running` to indicate instance ready.
+
+## Step 3: Get Connection Info
+
+After instance ready, view connection address and component details:
+
+```bash
+aliyun milvus POST "/webapi/cluster/detail" \
+  --RegionId cn-hangzhou \
+  --InstanceId c-xxx \
+  --force
+```
+
+Focus on key fields in return:
+- `Data.ClusterInfo.IntranetUrl`: Intranet connection address
+- `Data.ClusterInfo.InternetUrl`: Public network connection address (if enabled)
+- `Data.ClusterInfo.ProxyPort`: Milvus service port (default 19530)
+- `Data.ClusterInfo.AttuPort`: Attu visual management port
+
+Connection example (pymilvus):
+```python
+from pymilvus import connections
+connections.connect(host="c-xxx.milvus.aliyuncs.com", port=19530, user="root", password="YourPassword@123")
+```
+
+## Step 4: View Instance List
+
+```bash
+# View all instances under current region
+aliyun milvus GET "/webapi/instance/list?RegionId=cn-hangzhou&pageSize=50" \
+  --RegionId cn-hangzhou --force
+```
+
+## Cleanup: Release Test Instance
+
+Release promptly after use to avoid ongoing billing:
+
+```bash
+# First confirm instance info
+aliyun milvus GET "/webapi/instance/get?RegionId=cn-hangzhou&instanceId=c-xxx" \
+  --RegionId cn-hangzhou --force
+
+# ⚠️ Release instance (irreversible, all data will be deleted)
+aliyun milvus DELETE "/webapi/instance/delete?RegionId=cn-hangzhou&instanceId=c-xxx" \
+  --RegionId cn-hangzhou --force
+```
+
+## Common Creation Failure Reasons
+
+| Symptom | Possible Reason | Troubleshooting Method |
+|---------|-----------------|------------------------|
+| Creation failed | VPC/VSwitch doesn't exist or not in same availability zone | Check if VPC and VSwitch exist and in specified availability zone |
+| Creation failed | VSwitch available IP insufficient | Switch to a VSwitch with sufficient available IPs |
+| Creation failed | Account balance insufficient | Recharge and retry |
+| Creation failed | RAM permission insufficient | Confirm AccessKey has `milvus:CreateInstance` permission |
+| Long time Creating | Backend resource scheduling | Wait 15-30 minutes, if timeout contact support |
+
+## Next Steps
+
+- Need production-grade instance? → Refer to [Instance Full Lifecycle](instance-lifecycle.md) production config template
+- Detailed creation parameters? → Refer to [Create Parameter Reference](create-params.md)
+- Daily operations? → Refer to [Operations Manual](operations.md)
+- API parameter query? → Refer to [API Parameter Reference](api-reference.md)
