@@ -1,81 +1,89 @@
 # Alibaba Cloud Skills
-阿里云官方 Agent Skills 集合，为 AI Agent 提供丰富的阿里云产品能力和通用工具集。
 
-## 概述
-本仓库包含了一系列官方维护的 Agent Skills，旨在帮助开发者更高效地使用阿里云产品和服务。每个 Skill 都经过精心设计和测试，确保稳定性和可靠性。
+**English** | [简体中文](README-CN.md)
 
-## Skills 列表
-阿里云产品 Skills 待更新
+Official Alibaba Cloud Agent Skills collection, providing AI agents with rich Alibaba Cloud product capabilities and general-purpose tooling.
 
-## 安装
+## Overview
 
-### 使用 npx 安装 Skills
+This repository contains a set of officially maintained Agent Skills to help developers use Alibaba Cloud products and services more efficiently. Each Skill is designed and tested for stability and reliability.
+
+## Skills list
+
+Alibaba Cloud product Skills — to be updated.
+
+## Installation
+
+### Install Skills with npx
 
 ```bash
-# 安装单个 Skill
+# Install a single Skill
 npx skills add aliyun/alibabacloud-aiops-skills --skill <skill-name>
 
-# 安装所有阿里云 Skills
+# Install all Alibaba Cloud Skills
 npx skills add aliyun/alibabacloud-aiops-skills
 
-# 安装正式版（默认）
+# Install stable release (default)
 npx skills add aliyun/alibabacloud-aiops-skills --skill <skill-name>
 
-# 安装最新 beta
+# Install latest beta
 npx skills add https://github.com/aliyun/alibabacloud-aiops-skills/tree/preview --skill <skill-name>
 
-# 安装指定历史版本（回退）
+# Install a specific historical version (rollback)
 npx skills add https://github.com/aliyun/alibabacloud-aiops-skills/tree/<skill-name>-<version> --skill <skill-name>
 
-# 安装指定 beta 版本
+# Install a specific beta version
 npx skills add https://github.com/aliyun/alibabacloud-aiops-skills/tree/<skill-name>-<beta-version> --skill <skill-name>
 
 ```
 
-### 手动安装
+### Manual installation
 
 ```bash
-# 克隆仓库
+# Clone the repository
 git clone https://github.com/aliyun/alibabacloud-aiops-skills.git
 
-# 进入 Skills 目录
+# Point npx skills at the Skill directory
 npx skills add <path>/alibabacloud-aiops-skills/skills/<skill-name>
 
 ```
 
-## 认证与配置
-使用阿里云产品相关的 Skills 需要配置认证信息。支持以下认证方式：
+## Authentication and configuration
 
-AccessKey 认证
+Skills related to Alibaba Cloud products require credentials. The following methods are supported:
+
+**AccessKey authentication**
 
 ```bash
-# 设置环境变量
+# Set environment variables
 export ALIBABACLOUD_ACCESS_KEY_ID=<your-access-key-id>
 export ALIBABACLOUD_ACCESS_KEY_SECRET=<your-access-key-secret>
 ```
 
-Aliyun CLI 配置文件认证
+**Aliyun CLI profile authentication**
 
 ```bash
 # ~/.aliyun/config.json
 aliyun configure [--profile <PROFILE_NAME>] [--mode <AUTHENTICATE_MODE>]
 ```
 
-## 问题
-[提交 Issue][issue] 不符合指南的问题可能会立即关闭。
+## Issues
 
-## 相关
+[Open an issue][issue]. Issues that do not follow the guidelines may be closed immediately.
 
-- [阿里云服务 Regions & Endpoints][endpoints]
-- [阿里云官网][url]
+## Related
 
-## 许可证
+- [Alibaba Cloud website][url]
+
+## License
+
 [Apache-2.0](http://www.apache.org/licenses/LICENSE-2.0)
 
 Copyright (c) 2009-present, Alibaba Cloud All rights reserved.
 
+## Legal
+
+All Skills provided in this repository are open-source projects intended to give developers rich Agent capability extensions and help you manage cloud resources more efficiently. They are governed by the [MIT License](https://spdx.org/licenses/MIT.html). Before you use any Skills from this platform, read the [legal terms](https://terms.alicdn.com/legal-agreement/terms/b_platform_service_agreement/20260330114515787/20260330114515787.html?spm=2263e3e9.11c91e34.0.0.64924106EfoiZy) carefully and understand the risks. By downloading, installing, or running any Skills from this platform in any way, you acknowledge that you have read and agree to bear all operational risks and that you are solely responsible for any consequences arising from use of this code.
+
 [issue]: https://github.com/aliyun/alibabacloud-aiops-skills/issues/new
-[url]: https://www.aliyun.com
-[endpoints]: https://developer.aliyun.com/endpoints
-
-
+[url]: https://www.alibabacloud.com
