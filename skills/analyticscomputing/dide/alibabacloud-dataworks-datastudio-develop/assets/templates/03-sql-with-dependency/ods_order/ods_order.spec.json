@@ -5,6 +5,7 @@
     "nodes": [
       {
         "name": "ods_order",
+        "id": "ods_order",
         "recurrence": "Normal",
         "timeout": 4,
         "timeoutUnit": "HOURS",

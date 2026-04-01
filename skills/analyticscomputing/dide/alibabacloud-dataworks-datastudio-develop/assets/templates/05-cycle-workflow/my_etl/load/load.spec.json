@@ -5,6 +5,7 @@
     "nodes": [
       {
         "name": "load",
+        "id": "load",
         "recurrence": "Normal",
         "timeout": 4,
         "timeoutUnit": "HOURS",

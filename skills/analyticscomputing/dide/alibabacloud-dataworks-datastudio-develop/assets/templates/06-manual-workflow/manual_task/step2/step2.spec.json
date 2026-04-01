@@ -5,6 +5,7 @@
     "nodes": [
       {
         "name": "step2",
+        "id": "step2",
         "recurrence": "Normal",
         "timeout": 2,
         "timeoutUnit": "HOURS",

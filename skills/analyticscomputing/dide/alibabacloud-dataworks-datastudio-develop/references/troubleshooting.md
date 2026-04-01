@@ -484,11 +484,9 @@ Node type (command) cannot be changed after creation
 **Cause**: Attempted to modify `script.runtime.command` of an existing node via the UpdateNode API. Node type is immutable after creation.
 
 **Solution**:
-1. Inform the user that the node type cannot be modified; the node must be deleted and recreated
-2. After obtaining user confirmation, delete the existing node (DeleteNode)
-3. Recreate with the correct node type (CreateNode)
-
-**Note**: Automatic deletion is prohibited; the user must be informed and explicit confirmation obtained first.
+1. Inform the user that the node type cannot be modified after creation
+2. Suggest creating a new node with the correct type and a different name
+3. The user can handle the old node manually via the DataWorks console if needed
 
 ### 4. Node already exists
 
@@ -502,7 +500,7 @@ Node with the same name already exists in the project
 **Solution**:
 1. Rename the new node (recommended)
 2. If the intent is to update an existing node, use the `UpdateNode` API instead
-3. **Do not automatically delete existing nodes with the same name**. Existing nodes may contain important user configurations, code, and dependencies; deletion is irreversible. If deletion is truly needed, explicitly inform the user and obtain confirmation
+3. Inform the user of the conflict and let them decide (rename / update existing)
 
 **Prevention**: Call `ListNodes` before creation to check if a node with the same name exists (see "Environment Awareness" in SKILL.md)
 
@@ -704,7 +702,7 @@ The following issues were discovered through actual API calls and are not yet cl
 
 **Symptom**: Dependencies were set during CreateNode, but after creation the node's dependencies are still the project root node (or none).
 
-There are two common causes:
+There are three common causes:
 
 **Cause A: Upstream node did not declare `outputs.nodeOutputs`**
 
@@ -715,11 +713,15 @@ The upstream node must declare outputs, otherwise downstream references silently
 }
 ```
 
-**Cause B: `spec.dependencies[*].nodeId` does not match the node `id`**
+**Cause B: `nodeId` was set to the upstream node's name instead of the current node's name**
 
-The `nodeId` in `spec.dependencies` must exactly match the corresponding node's `id`; otherwise the dependency information is not recognized and the dependency is silently ignored.
+`spec.dependencies[*].nodeId` is a **self-reference** — it must be the **current node's own `name`** (the node being created), NOT the upstream node's name or API-returned ID. `depends[].output` is the upstream node's output.
 
-**Correct approach**: Ensure `spec.dependencies[*].nodeId` exactly matches the node `id`, and that `outputs.nodeOutputs[].data` and `dependencies[].depends[].output` values are exactly identical:
+**Cause C: `depends[].output` does not exactly match upstream's `outputs.nodeOutputs[].data`**
+
+The two values must be **character-for-character identical**. Common mismatches include wrong `projectIdentifier`, wrong node name spelling, or using dot vs underscore (`project.root` vs `project_root`).
+
+**Correct approach**: `nodeId` = current node's own name (self), `depends[].output` = upstream's output:
 
 ```json
 {
@@ -740,6 +742,40 @@ The `nodeId` in `spec.dependencies` must exactly match the corresponding node's 
 ```
 
 See `assets/templates/05-cycle-workflow/` for a complete example.
+
+### 11b. Deployment Fails with "can not exported multiple nodes into the same output"
+
+**Symptom**: `CreatePipelineRun` deployment fails at the PROD stage with error: `"the output name of current workspace:XXX node:YYY and that of workspace:XXX node:YYY are the same one:XXX.YYY, can not exported multiple nodes into the same output"`
+
+**Cause**: Two nodes in the same project have the same `outputs.nodeOutputs[].data` value. Output names must be **globally unique within the project**, even across different workflows. This commonly happens when recreating nodes that already exist in a different workflow.
+
+**Prevention**: Before creating any node, check for existing nodes with the same name and verify their output names:
+```bash
+aliyun dataworks-public ListNodes --ProjectId $PID --Name "node_name" \
+  --user-agent AlibabaCloud-Agent-Skills
+```
+If a node with the same output name already exists, either:
+1. Use a different node name (e.g., add a suffix)
+2. Update the existing node instead of creating a new one
+
+**Recovery**: If the node was already created with a conflicting output, inform the user of the conflict and let them decide how to resolve it (rename or update existing).
+
+### 11c. CreateNode Silently Drops spec.dependencies
+
+**Symptom**: `CreateNode` returns success, but `ListNodeDependencies` for the created node shows `TotalCount: 0` — no dependencies were persisted, despite `spec.dependencies` being correctly formatted in the request.
+
+**Cause**: The `CreateNode` API may silently discard `spec.dependencies` in certain conditions. This is a known API behavior, not a spec formatting issue.
+
+**Fix**: After creating all nodes, verify each downstream node's dependencies with `ListNodeDependencies`. If `TotalCount` is `0`, re-apply dependencies via `UpdateNode` using `spec.dependencies`:
+```bash
+aliyun dataworks-public UpdateNode --ProjectId $PID --Id $NODE_ID \
+  --Spec '{"version":"2.0.0","kind":"Node","spec":{"nodes":[{"id":"'$NODE_ID'"}],"dependencies":[{"nodeId":"node_name","depends":[{"type":"Normal","output":"project.upstream_node"}]}]}}' \
+  --user-agent AlibabaCloud-Agent-Skills
+```
+
+**NEVER use `inputs.nodeOutputs` to fix dependencies** — always use `spec.dependencies` in the UpdateNode call.
+
+**Prevention**: Always run the "Verify and Fix Dependencies" step (see workflow-guide.md Step 5) before deploying.
 
 ### 12. datasource.type Auto-Corrected by Server
 

@@ -80,6 +80,21 @@ Node name, must be unique within the same project. The name is also used for ref
 "name": "etl_daily_report"
 ```
 
+#### id (Node Identifier)
+
+| Property | Value |
+|------|------|
+| Type | string |
+| Required | Yes (must be set equal to `name`) |
+| Constraints | Must exactly match the `name` field value |
+
+Node identifier used for matching `spec.dependencies[*].nodeId`. **Always set `id` equal to `name`** when creating nodes. Without an explicit `id`, the `CreateNode` API may silently drop `spec.dependencies`.
+
+```json
+"name": "etl_daily_report",
+"id": "etl_daily_report"
+```
+
 #### recurrence (Scheduling Type)
 
 | Property | Value |
@@ -272,13 +287,13 @@ Defines the node's output identifier, used for downstream dependency.
 | Sub-field | Type | Required | Description |
 |--------|------|------|------|
 | `nodeOutputs` | array | No | Node output array |
-| `nodeOutputs[].data` | string | Yes | Output identifier, format `projectIdentifier.nodeName` |
+| `nodeOutputs[].data` | string | Yes | Output identifier, format `projectIdentifier.nodeName`. **Must be globally unique within the project** — duplicate output names cause deployment failure |
 
-The output identifier is used for `depends[].output` references in `dependencies` of other nodes. `${projectIdentifier}` is defined in `dataworks.properties`.
+The output identifier is used for `depends[].output` references in `dependencies` of downstream nodes. `${projectIdentifier}` is defined in `dataworks.properties`. The downstream's `depends[].output` must be **character-for-character identical** to this value.
 
 #### inputs (Input Definition)
 
-Defines the node's input data. **Do not use `inputs.nodeOutputs` to configure dependencies**; dependencies are maintained via the `spec.dependencies` array. However, ensure that `spec.dependencies[*].nodeId` exactly matches the corresponding node's `id`, otherwise dependencies will not be recognized.
+Defines the node's input data. **Do not use `inputs.nodeOutputs` to configure dependencies**; dependencies are maintained via the `spec.dependencies` array only. In `spec.dependencies`, `nodeId` is a **self-reference** (current node's own name), and `depends[].output` is the upstream node's output.
 
 ```json
 "inputs": {
@@ -290,7 +305,7 @@ Defines the node's input data. **Do not use `inputs.nodeOutputs` to configure de
 }
 ```
 
-> **Note**: This field is no longer recommended for dependency configuration; use `spec.dependencies` instead. Ensure `dependencies[*].nodeId` exactly matches the node `id`.
+> **Note**: This field is NOT recommended for dependency configuration; use `spec.dependencies` instead. Do NOT dual-write both `inputs.nodeOutputs` and `spec.dependencies`.
 
 #### rerunMode / rerunTimes / rerunInterval (Rerun Configuration)
 
@@ -377,10 +392,10 @@ The following control nodes have separate detailed documentation; see `reference
 
 | Sub-field | Type | Required | Description |
 |--------|------|------|------|
-| `nodeId` | string | Yes | Current node's name |
+| `nodeId` | string | Yes | **Self-reference**: the current node's own `name` (the node that HAS this dependency, NOT the upstream node) |
 | `depends` | array | No | Dependency list |
 | `depends[].type` | string | Yes | `Normal` / `CrossCycleDependsOnSelf` / `CrossCycleDependsOnChildren` / `CrossCycleDependsOnOtherNode` |
-| `depends[].output` | string | Yes | Upstream output identifier (format: `projectIdentifier.nodeName`, root node is `projectIdentifier_root`) |
+| `depends[].output` | string | Yes | **Upstream** node's output identifier (format: `projectIdentifier.upstreamNodeName`, root node is `projectIdentifier_root`). Must be character-for-character identical to the upstream's `outputs.nodeOutputs[].data` |
 | `depends[].sourceType` | string | No | `"System"` (auto-parsed) / `"Manual"` (manually configured) |
 | `variableDepends` | array | No | Variable-level dependencies |
 

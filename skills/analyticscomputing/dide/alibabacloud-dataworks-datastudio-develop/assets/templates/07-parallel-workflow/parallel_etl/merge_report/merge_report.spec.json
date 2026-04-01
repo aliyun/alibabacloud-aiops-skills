@@ -5,6 +5,7 @@
     "nodes": [
       {
         "name": "merge_report",
+        "id": "merge_report",
         "recurrence": "Normal",
         "timeout": 4,
         "timeoutUnit": "HOURS",

@@ -5,6 +5,7 @@
     "nodes": [
       {
         "name": "hello",
+        "id": "hello",
         "recurrence": "Normal",
         "timeout": 4,
         "timeoutUnit": "HOURS",

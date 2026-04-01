@@ -5,6 +5,7 @@
     "nodes": [
       {
         "name": "extract",
+        "id": "extract",
         "recurrence": "Normal",
         "timeout": 2,
         "timeoutUnit": "HOURS",

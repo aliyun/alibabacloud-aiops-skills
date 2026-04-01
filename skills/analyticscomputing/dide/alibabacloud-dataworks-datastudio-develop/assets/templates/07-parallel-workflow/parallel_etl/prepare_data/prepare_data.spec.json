@@ -5,6 +5,7 @@
     "nodes": [
       {
         "name": "prepare_data",
+        "id": "prepare_data",
         "recurrence": "Normal",
         "timeout": 2,
         "timeoutUnit": "HOURS",

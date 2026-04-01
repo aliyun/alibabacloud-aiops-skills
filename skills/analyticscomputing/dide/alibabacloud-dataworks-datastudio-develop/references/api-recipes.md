@@ -115,27 +115,6 @@ response = client.get_node(request)
 # response.body.spec contains the full FlowSpec JSON
 ```
 
-### Delete Node
-
-**aliyun CLI**:
-```bash
-aliyun dataworks-public DeleteNode \
-  --ProjectId {{project_id}} \
-  --Id {{node_id}} \
-  --user-agent AlibabaCloud-Agent-Skills
-```
-
-**Python SDK**:
-```python
-from alibabacloud_dataworks_public20240518.models import DeleteNodeRequest
-
-request = DeleteNodeRequest(
-    project_id={{project_id}},
-    id='{{node_id}}'
-)
-client.delete_node(request)
-```
-
 ### List Nodes
 
 **aliyun CLI**:
@@ -259,27 +238,6 @@ request = GetWorkflowDefinitionRequest(
     id='{{workflow_id}}'
 )
 response = client.get_workflow_definition(request)
-```
-
-### Delete Workflow
-
-**aliyun CLI**:
-```bash
-aliyun dataworks-public DeleteWorkflowDefinition \
-  --ProjectId {{project_id}} \
-  --Id {{workflow_id}} \
-  --user-agent AlibabaCloud-Agent-Skills
-```
-
-**Python SDK**:
-```python
-from alibabacloud_dataworks_public20240518.models import DeleteWorkflowDefinitionRequest
-
-request = DeleteWorkflowDefinitionRequest(
-    project_id={{project_id}},
-    id='{{workflow_id}}'
-)
-client.delete_workflow_definition(request)
 ```
 
 ### List Workflows

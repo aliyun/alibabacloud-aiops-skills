@@ -264,11 +264,11 @@ for item in resp.body.paging_info.pipeline_run_items:
 
 ## Offline Process
 
-The offline process uses `type` `Offline`. **Stages differ from the online process** (4 stages observed in practice, one more than online with DeleteNode):
+The offline process uses `type` `Offline`. **Stages differ from the online process** (4 stages observed in practice):
 
 ```
 Online Stages: BUILD_PACKAGE(Build) -> PROD_CHECK(Check) -> PROD(Deploy)
-Offline Stages: OfflineCheck(Check) -> PROD_CHECK(Check) -> PROD(Offline) -> DeleteNode(Delete)
+Offline Stages: OfflineCheck(Check) -> PROD_CHECK(Check) -> PROD(Offline) 
 ```
 
 | Stage | Type | Description |
@@ -276,9 +276,7 @@ Offline Stages: OfflineCheck(Check) -> PROD_CHECK(Check) -> PROD(Offline) -> Del
 | `OfflineCheck` | Check | Pre-offline check (runs automatically) |
 | `PROD_CHECK` | Check | Production checker (requires advancement) |
 | `PROD` | Offline | Remove from production scheduling (requires advancement) |
-| `DeleteNode` | Delete | Delete the node (requires advancement; nodes are automatically deleted upon completion) |
 
-**Note**: After the `DeleteNode` stage executes, the node is automatically deleted; there is no need to call the `DeleteNode` API separately. If you want to take offline without deleting, cancel the pipeline before the `DeleteNode` stage using `AbolishPipelineRun`.
 
 ```python
 resp = client.create_pipeline_run(CreatePipelineRunRequest(

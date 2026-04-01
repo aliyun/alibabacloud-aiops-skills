@@ -5,6 +5,7 @@
     "nodes": [
       {
         "name": "process_users",
+        "id": "process_users",
         "recurrence": "Normal",
         "timeout": 4,
         "timeoutUnit": "HOURS",

@@ -25,7 +25,6 @@ aliyun dataworks-public CreateNode --help
 aliyun dataworks-public ListNodes --help
 aliyun dataworks-public GetNode --help
 aliyun dataworks-public UpdateNode --help
-aliyun dataworks-public DeleteNode --help
 
 aliyun dataworks-public CreateWorkflowDefinition --help
 aliyun dataworks-public ListWorkflowDefinitions --help
@@ -352,13 +351,11 @@ Each CLI command should be verified with `--help`:
 # Verify product and action exist
 aliyun dataworks-public CreateNode --help
 aliyun dataworks-public UpdateNode --help
-aliyun dataworks-public DeleteNode --help
 aliyun dataworks-public GetNode --help
 aliyun dataworks-public ListNodes --help
 
 aliyun dataworks-public CreateWorkflowDefinition --help
 aliyun dataworks-public UpdateWorkflowDefinition --help
-aliyun dataworks-public DeleteWorkflowDefinition --help
 aliyun dataworks-public GetWorkflowDefinition --help
 aliyun dataworks-public ListWorkflowDefinitions --help
 

@@ -8,7 +8,6 @@ This document lists all CLI commands involved in the DataWorks data development 
 |---------|-------------|-------------|
 | dataworks-public | `aliyun dataworks-public CreateNode` | Create node |
 | dataworks-public | `aliyun dataworks-public UpdateNode` | Update node |
-| dataworks-public | `aliyun dataworks-public DeleteNode` | Delete node |
 | dataworks-public | `aliyun dataworks-public GetNode` | Get node details |
 | dataworks-public | `aliyun dataworks-public ListNodes` | List nodes |
 
@@ -18,7 +17,6 @@ This document lists all CLI commands involved in the DataWorks data development 
 |---------|-------------|-------------|
 | dataworks-public | `aliyun dataworks-public CreateWorkflowDefinition` | Create workflow |
 | dataworks-public | `aliyun dataworks-public UpdateWorkflowDefinition` | Update workflow |
-| dataworks-public | `aliyun dataworks-public DeleteWorkflowDefinition` | Delete workflow |
 | dataworks-public | `aliyun dataworks-public GetWorkflowDefinition` | Get workflow details |
 | dataworks-public | `aliyun dataworks-public ListWorkflowDefinitions` | List workflows |
 

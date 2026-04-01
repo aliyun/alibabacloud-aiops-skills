@@ -5,6 +5,7 @@
     "nodes": [
       {
         "name": "dwd_user_info",
+        "id": "dwd_user_info",
         "recurrence": "Normal",
         "timeout": 4,
         "timeoutUnit": "HOURS",

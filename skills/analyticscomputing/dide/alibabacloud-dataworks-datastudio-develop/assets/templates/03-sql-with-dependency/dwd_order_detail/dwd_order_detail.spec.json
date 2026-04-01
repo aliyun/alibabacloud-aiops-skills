@@ -5,6 +5,7 @@
     "nodes": [
       {
         "name": "dwd_order_detail",
+        "id": "dwd_order_detail",
         "recurrence": "Normal",
         "timeout": 4,
         "timeoutUnit": "HOURS",

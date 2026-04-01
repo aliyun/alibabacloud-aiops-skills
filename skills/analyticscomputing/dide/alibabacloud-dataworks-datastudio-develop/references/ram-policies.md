@@ -18,7 +18,6 @@ This document lists all RAM permissions required to use the DataWorks data devel
 | `dataworks:GetNode` | Get node details | GetNode |
 | `dataworks:CreateNode` | Create node | CreateNode |
 | `dataworks:UpdateNode` | Update node | UpdateNode |
-| `dataworks:DeleteNode` | Delete node | DeleteNode |
 | `dataworks:MoveNode` | Move a node to a specified path | MoveNode |
 | `dataworks:RenameNode` | Rename a node | RenameNode |
 | `dataworks:ListNodeDependencies` | List a node's dependency nodes | ListNodeDependencies |
@@ -31,7 +30,6 @@ This document lists all RAM permissions required to use the DataWorks data devel
 | `dataworks:GetWorkflowDefinition` | Get workflow details | GetWorkflowDefinition |
 | `dataworks:CreateWorkflowDefinition` | Create workflow | CreateWorkflowDefinition |
 | `dataworks:UpdateWorkflowDefinition` | Update workflow | UpdateWorkflowDefinition |
-| `dataworks:DeleteWorkflowDefinition` | Delete workflow | DeleteWorkflowDefinition |
 | `dataworks:ImportWorkflowDefinition` | Import a workflow definition | ImportWorkflowDefinition |
 | `dataworks:MoveWorkflowDefinition` | Move a workflow to a target path | MoveWorkflowDefinition |
 | `dataworks:RenameWorkflowDefinition` | Rename a workflow | RenameWorkflowDefinition |
@@ -64,7 +62,6 @@ This document lists all RAM permissions required to use the DataWorks data devel
 | Permission | Description | API |
 |-----|------|-----|
 | `dataworks:CreateResource` | Create a file resource | CreateResource |
-| `dataworks:DeleteResource` | Delete a file resource | DeleteResource |
 | `dataworks:UpdateResource` | Update file resource information | UpdateResource |
 | `dataworks:MoveResource` | Move a file resource to a specified directory | MoveResource |
 | `dataworks:RenameResource` | Rename a file resource | RenameResource |
@@ -76,7 +73,6 @@ This document lists all RAM permissions required to use the DataWorks data devel
 | Permission | Description | API |
 |-----|------|-----|
 | `dataworks:CreateFunction` | Create a UDF function | CreateFunction |
-| `dataworks:DeleteFunction` | Delete a UDF function | DeleteFunction |
 | `dataworks:UpdateFunction` | Update UDF function information | UpdateFunction |
 | `dataworks:MoveFunction` | Move a function to a target path | MoveFunction |
 | `dataworks:RenameFunction` | Rename a function | RenameFunction |
@@ -88,7 +84,6 @@ This document lists all RAM permissions required to use the DataWorks data devel
 | Permission | Description | API |
 |-----|------|-----|
 | `dataworks:CreateComponent` | Create a component | CreateComponent |
-| `dataworks:DeleteComponent` | Delete a component | DeleteComponent |
 | `dataworks:GetComponent` | Get component details | GetComponent |
 | `dataworks:UpdateComponent` | Update a component | UpdateComponent |
 | `dataworks:ListComponents` | List components | ListComponents |
@@ -142,7 +137,6 @@ This document lists all RAM permissions required to use the DataWorks data devel
         "dataworks:GetNode",
         "dataworks:CreateNode",
         "dataworks:UpdateNode",
-        "dataworks:DeleteNode",
         "dataworks:MoveNode",
         "dataworks:RenameNode",
         "dataworks:ListNodeDependencies",
@@ -150,7 +144,6 @@ This document lists all RAM permissions required to use the DataWorks data devel
         "dataworks:GetWorkflowDefinition",
         "dataworks:CreateWorkflowDefinition",
         "dataworks:UpdateWorkflowDefinition",
-        "dataworks:DeleteWorkflowDefinition",
         "dataworks:ImportWorkflowDefinition",
         "dataworks:MoveWorkflowDefinition",
         "dataworks:RenameWorkflowDefinition",
@@ -163,21 +156,18 @@ This document lists all RAM permissions required to use the DataWorks data devel
         "dataworks:ListDataSources",
         "dataworks:ListResourceGroups",
         "dataworks:CreateResource",
-        "dataworks:DeleteResource",
         "dataworks:UpdateResource",
         "dataworks:MoveResource",
         "dataworks:RenameResource",
         "dataworks:GetResource",
         "dataworks:ListResources",
         "dataworks:CreateFunction",
-        "dataworks:DeleteFunction",
         "dataworks:UpdateFunction",
         "dataworks:MoveFunction",
         "dataworks:RenameFunction",
         "dataworks:GetFunction",
         "dataworks:ListFunctions",
         "dataworks:CreateComponent",
-        "dataworks:DeleteComponent",
         "dataworks:GetComponent",
         "dataworks:UpdateComponent",
         "dataworks:ListComponents"

@@ -5,6 +5,7 @@
     "nodes": [
       {
         "name": "transform",
+        "id": "transform",
         "recurrence": "Normal",
         "timeout": 4,
         "timeoutUnit": "HOURS",

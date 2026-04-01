@@ -5,6 +5,7 @@
     "nodes": [
       {
         "name": "sync_user",
+        "id": "sync_user",
         "recurrence": "Normal",
         "timeout": 4,
         "timeoutUnit": "HOURS",
