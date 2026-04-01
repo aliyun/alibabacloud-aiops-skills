@@ -9,8 +9,6 @@
 | CreateDataSource | dataworks:CreateDataSource | Write |
 | GetDataSource | dataworks:GetDataSource | Read |
 | ListDataSources | dataworks:ListDataSources | List |
-| UpdateDataSource | dataworks:UpdateDataSource | Write |
-| DeleteDataSource | dataworks:DeleteDataSource | Write |
 | TestDataSourceConnectivity | dataworks:TestDataSourceConnectivity | Read |
 
 ### Compute Resource Permissions
@@ -20,8 +18,6 @@
 | CreateComputeResource | dataworks:CreateComputeResource | Write |
 | GetComputeResource | dataworks:GetComputeResource | Read |
 | ListComputeResources | dataworks:ListComputeResources | List |
-| UpdateComputeResource | dataworks:UpdateComputeResource | Write |
-| DeleteComputeResource | dataworks:DeleteComputeResource | Write |
 
 ### Resource Group Permissions
 
@@ -30,8 +26,6 @@
 | CreateResourceGroup | dataworks:CreateResourceGroup | Write |
 | GetResourceGroup | dataworks:GetResourceGroup | Read |
 | ListResourceGroups | dataworks:ListResourceGroups | List |
-| UpdateResourceGroup | dataworks:UpdateResourceGroup | Write |
-| DeleteResourceGroup | dataworks:DeleteResourceGroup | Write |
 | AssociateProjectToResourceGroup | dataworks:AssociateProjectToResourceGroup | Write |
 | DissociateProjectFromResourceGroup | dataworks:DissociateProjectFromResourceGroup | Write |
 | ListResourceGroupAssociateProjects | dataworks:ListResourceGroupAssociateProjects | List |
@@ -62,8 +56,6 @@
 | Create resource | Tenant Owner, Workspace Admin, Project Owner, Operator |
 | View resource | Tenant Owner, Workspace Admin, Deployer, Developer, Project Owner, Operator |
 | List resources | All roles |
-| Update resource | Tenant Owner, Tenant Admin, Workspace Admin, Project Owner, Operator |
-| Delete resource | Tenant Owner, Workspace Admin, Project Owner, Operator |
 
 ## RAM Policy Examples
 
@@ -79,19 +71,13 @@
         "dataworks:CreateDataSource",
         "dataworks:GetDataSource",
         "dataworks:ListDataSources",
-        "dataworks:UpdateDataSource",
-        "dataworks:DeleteDataSource",
         "dataworks:TestDataSourceConnectivity",
         "dataworks:CreateComputeResource",
         "dataworks:GetComputeResource",
         "dataworks:ListComputeResources",
-        "dataworks:UpdateComputeResource",
-        "dataworks:DeleteComputeResource",
         "dataworks:CreateResourceGroup",
         "dataworks:GetResourceGroup",
         "dataworks:ListResourceGroups",
-        "dataworks:UpdateResourceGroup",
-        "dataworks:DeleteResourceGroup",
         "dataworks:AssociateProjectToResourceGroup",
         "dataworks:DissociateProjectFromResourceGroup",
         "dataworks:ListResourceGroupAssociateProjects",
@@ -158,7 +144,6 @@
         "dataworks:CreateResourceGroup",
         "dataworks:GetResourceGroup",
         "dataworks:ListResourceGroups",
-        "dataworks:DeleteResourceGroup",
         "dataworks:AssociateProjectToResourceGroup",
         "dataworks:DissociateProjectFromResourceGroup",
         "dataworks:ListResourceGroupAssociateProjects",

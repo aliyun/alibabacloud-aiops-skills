@@ -49,27 +49,6 @@
 | PageNumber | integer | No | Page number, default 1 |
 | PageSize | integer | No | Page size, default 10, max 100 |
 
-### UpdateDataSource - Update Data Source
-
-**Request Parameters:**
-
-| Name | Type | Required | Description |
-|------|------|----------|------|
-| Id | long | Yes | Data source ID |
-| ProjectId | long | Yes | Workspace ID |
-| ConnectionProperties | string | Yes | New connection configuration JSON |
-| Description | string | No | New description |
-
-### DeleteDataSource - Delete Data Source
-
-> Note: This API uses the GET method.
-
-**Request Parameters:**
-
-| Name | Type | Required | Description |
-|------|------|----------|------|
-| Id | long | Yes | Data source ID |
-
 ### TestDataSourceConnectivity - Test Connectivity
 
 **Request Parameters:**
@@ -79,6 +58,8 @@
 | Id | long | Yes | Data source ID |
 | ProjectId | long | Yes | Workspace ID |
 | ResourceGroupId | string | Yes | Resource group ID |
+
+> **Note**: UpdateDataSource and DeleteDataSource APIs are intentionally excluded from this skill for security reasons. To modify or delete data sources, please use the DataWorks console.
 
 ---
 
@@ -135,26 +116,7 @@
 | SortBy | string | No | Sort field |
 | Order | string | No | Sort order: Desc / Asc |
 
-### UpdateComputeResource - Update Compute Resource
-
-**Request Parameters:**
-
-| Name | Type | Required | Description |
-|------|------|----------|------|
-| Id | long | Yes | Compute resource ID |
-| ProjectId | long | Yes | Workspace ID |
-| ConnectionProperties | string | Yes | New connection configuration JSON |
-| ConnectionPropertiesMode | string | No | Connection mode |
-| Description | string | No | New description |
-
-### DeleteComputeResource - Delete Compute Resource
-
-**Request Parameters:**
-
-| Name | Type | Required | Description |
-|------|------|----------|------|
-| Id | long | Yes | Compute resource ID |
-| ProjectId | long | Yes | Workspace ID |
+> **Note**: UpdateComputeResource and DeleteComputeResource APIs are intentionally excluded from this skill for security reasons. To modify or delete compute resources, please use the DataWorks console.
 
 ---
 
@@ -190,14 +152,6 @@
 |------|------|----------|------|
 | PageSize | integer | No | Page size |
 | Statuses | array | No | Status filter |
-
-### DeleteResourceGroup - Release Resource Group
-
-**Request Parameters:**
-
-| Name | Type | Required | Description |
-|------|------|----------|------|
-| Id | string | Yes | Resource group ID |
 
 ### AssociateProjectToResourceGroup - Bind Workspace
 
@@ -306,8 +260,6 @@
 - [CreateDataSource](https://help.aliyun.com/zh/dataworks/developer-reference/api-dataworks-public-2024-05-18-createdatasource)
 - [GetDataSource](https://help.aliyun.com/zh/dataworks/developer-reference/api-dataworks-public-2024-05-18-getdatasource)
 - [ListDataSources](https://help.aliyun.com/zh/dataworks/developer-reference/api-dataworks-public-2024-05-18-listdatasources)
-- [UpdateDataSource](https://help.aliyun.com/zh/dataworks/developer-reference/api-dataworks-public-2024-05-18-updatedatasource)
-- [DeleteDataSource](https://help.aliyun.com/zh/dataworks/developer-reference/api-dataworks-public-2024-05-18-deletedatasource)
 - [TestDataSourceConnectivity](https://help.aliyun.com/zh/dataworks/developer-reference/api-dataworks-public-2024-05-18-testdatasourceconnectivity)
 
 ### Compute Resources
@@ -315,12 +267,9 @@
 - [CreateComputeResource](https://help.aliyun.com/zh/dataworks/developer-reference/api-dataworks-public-2024-05-18-createcomputeresource)
 - [GetComputeResource](https://help.aliyun.com/zh/dataworks/developer-reference/api-dataworks-public-2024-05-18-getcomputeresource)
 - [ListComputeResources](https://help.aliyun.com/zh/dataworks/developer-reference/api-dataworks-public-2024-05-18-listcomputeresources)
-- [UpdateComputeResource](https://help.aliyun.com/zh/dataworks/developer-reference/api-dataworks-public-2024-05-18-updatecomputeresource)
-- [DeleteComputeResource](https://help.aliyun.com/zh/dataworks/developer-reference/api-dataworks-public-2024-05-18-deletecomputeresource)
 
 ### Resource Groups
 
 - [CreateResourceGroup](https://help.aliyun.com/zh/dataworks/developer-reference/api-dataworks-public-2024-05-18-createresourcegroup)
 - [GetResourceGroup](https://help.aliyun.com/zh/dataworks/developer-reference/api-dataworks-public-2024-05-18-getresourcegroup)
 - [ListResourceGroups](https://help.aliyun.com/zh/dataworks/developer-reference/api-dataworks-public-2024-05-18-listresourcegroups)
-- [DeleteResourceGroup](https://help.aliyun.com/zh/dataworks/developer-reference/api-dataworks-public-2024-05-18-deleteresourcegroup)

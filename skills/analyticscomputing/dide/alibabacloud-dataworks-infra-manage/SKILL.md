@@ -1,17 +1,17 @@
 ---
 name: alibabacloud-dataworks-infra-manage
 description: |
-  DataWorks Infrastructure Management: CRUD operations for Data Sources (51 types), Compute Resources, and Serverless Resource Groups, plus connectivity testing and resource group binding/unbinding.
+  DataWorks Infrastructure Management: Create and query operations for Data Sources (51 types), Compute Resources, and Serverless Resource Groups, plus connectivity testing and resource group binding/unbinding.
   Uses aliyun CLI to call dataworks-public OpenAPI (2024-05-18).
   Trigger keywords: DataWorks data source, compute resource, resource group, datasource, data source, compute resource, resource group,
-  mysql/hologres/maxcompute data source, holo/mc/flink resource, Serverless resource group, DataWorks infra, create/list/delete datasource,
+  mysql/hologres/maxcompute data source, holo/mc/flink resource, Serverless resource group, DataWorks infra, create/list datasource,
   DW environment config, infrastructure initialization, connect database to DataWorks, database connection failure, configure holo/mc resource.
   Not triggered: data development tasks, scheduling configuration, MaxCompute table management, data integration tasks, ECS/RDS/OSS operations, workspace member management, data quality monitoring, data lineage, data preview.
 ---
 
 # DataWorks Infrastructure Management
 
-Unified management of **Data Sources**, **Compute Resources**, and **Resource Groups** in Alibaba Cloud DataWorks workspaces, supporting CRUD operations.
+Unified management of **Data Sources**, **Compute Resources**, and **Resource Groups** in Alibaba Cloud DataWorks workspaces, supporting create and query operations.
 
 ## Architecture
 
@@ -20,13 +20,12 @@ DataWorks
 ├── Workspaces ─── Query and search workspaces
 │   ├── Data Sources ─── 51 types: MySQL, Hologres, MaxCompute, ...
 │   └── Compute Resources ─── Hologres, MaxCompute, Flink, Spark
-└── Resource Groups ─── Serverless resource group lifecycle management (cross-workspace)
+└── Resource Groups ─── Serverless resource group management (cross-workspace)
 
 Dependencies:
   Workspace ◀── Data Sources, Compute Resources (must belong to a workspace)
   Workspace ◀── Resource Groups (associated via binding; one resource group can bind to multiple workspaces)
   Connectivity Test ──depends on──▶ Resource Group (must be bound to the workspace of the data source)
-  Resource Group Release ──prerequisite──▶ Must unbind all workspaces first
   Standard Mode ──requires──▶ Dev (Development) + Prod (Production) dual data sources and compute resources
 ```
 
@@ -91,14 +90,13 @@ After each write operation is completed and verified, **proactively suggest** fo
 | Bind resource group | "Test data source connectivity?" |
 | Connectivity test passed | "Infrastructure is ready." |
 | Connectivity test failed | Analyze the error cause, guide the fix |
-| Delete data source/compute resource | Standard Mode: "Delete the corresponding environment resource as well?" |
-| Unbind resource group | "Release this resource group? Or bind to another workspace?" |
+| Unbind resource group | "Bind to another workspace?" |
 
 ---
 
 ## Trigger Rules
 
-**Trigger scenarios**: Data source CRUD, compute resource CRUD, resource group management, infrastructure initialization, colloquial aliases (DW database connection failure, configure holo/mc resources, create rg)
+**Trigger scenarios**: Data source create/query, compute resource create/query, resource group management, infrastructure initialization, colloquial aliases (DW database connection failure, configure holo/mc resources, create rg)
 
 **Not triggered**: Data development tasks, scheduling configuration, MaxCompute table management, data integration tasks, ECS/RDS/OSS, workspace member management, data quality/lineage/preview. Standalone workspace queries are handled by the `alibabacloud-dataworks-workspace-manage` skill.
 
@@ -135,6 +133,16 @@ Supports **51** data source types. See [references/data-sources/README.md](refer
 Connection modes: **UrlMode** (self-hosted databases, requires host/port) or **InstanceMode** (Alibaba Cloud managed instances, requires instanceId). When unsure, proactively ask the user. InstanceMode is preferred.
 
 > Instance query APIs: [references/data-sources/instance-apis.md](references/data-sources/instance-apis.md)
+
+## ⚠️ Security Restriction
+
+> **IMPORTANT**: For security reasons, this skill does **NOT** support **modifying** or **deleting** data sources. These operations are disabled to prevent:
+> - Accidental data loss or service interruption
+> - Exposure of sensitive credentials (passwords, connection strings)
+> - Disruption of running data integration tasks
+> - Unintended changes to production data source configurations
+>
+> If you need to modify or delete a data source, please use the DataWorks console directly or contact your administrator.
 
 ### Workspace Mode
 
@@ -174,19 +182,7 @@ aliyun dataworks-public ListDataSources --user-agent AlibabaCloud-Agent-Skills -
 
 > Returns nested structure `DataSources[].DataSource[]`; Name/Type are in the outer layer, Id/Description in the inner layer.
 
-## Task 1.4: Update Data Source (UpdateDataSource)
-
-```bash
-aliyun dataworks-public UpdateDataSource --user-agent AlibabaCloud-Agent-Skills --Id <DATASOURCE_ID> --ProjectId <PROJECT_ID> --ConnectionProperties '<JSON>' [--Description "<DESC>"]
-```
-
-## Task 1.5: Delete Data Source (DeleteDataSource)
-
-```bash
-aliyun dataworks-public DeleteDataSource --user-agent AlibabaCloud-Agent-Skills --Id <DATASOURCE_ID>
-```
-
-## Task 1.6: Test Connectivity (TestDataSourceConnectivity)
+## Task 1.4: Test Connectivity (TestDataSourceConnectivity)
 
 **Process**: Query resource group list → **Let user select** a resource group → Execute test.
 
@@ -205,6 +201,15 @@ aliyun dataworks-public TestDataSourceConnectivity --user-agent AlibabaCloud-Age
 # Module 2: Compute Resource Management
 
 Supports Hologres, MaxCompute, Flink, Spark, and other types. The system will **automatically create corresponding data sources** upon creation.
+
+## ⚠️ Security Restriction
+
+> **IMPORTANT**: For security reasons, this skill does **NOT** support **modifying** or **deleting** compute resources. These operations are disabled to prevent:
+> - Accidental data loss or service interruption
+> - Disruption of running data development and scheduling tasks
+> - Unintended changes to production compute resource configurations
+>
+> If you need to modify or delete a compute resource, please use the DataWorks console directly or contact your administrator.
 
 ### authType Rules
 
@@ -241,18 +246,6 @@ aliyun dataworks-public ListComputeResources --user-agent AlibabaCloud-Agent-Ski
 ```
 
 > Returns nested structure `ComputeResources[].ComputeResource[]`; Name/Type are in the outer layer, Id in the inner layer.
-
-## Task 2.4: Update Compute Resource (UpdateComputeResource)
-
-```bash
-aliyun dataworks-public UpdateComputeResource --user-agent AlibabaCloud-Agent-Skills --Id <ID> --ProjectId <PROJECT_ID> --ConnectionProperties '<JSON>' [--Description "<DESC>"]
-```
-
-## Task 2.5: Delete Compute Resource (DeleteComputeResource)
-
-```bash
-aliyun dataworks-public DeleteComputeResource --user-agent AlibabaCloud-Agent-Skills --Id <ID> --ProjectId <PROJECT_ID>
-```
 
 ---
 
@@ -316,14 +309,6 @@ aliyun dataworks-public ListResourceGroupAssociateProjects --user-agent AlibabaC
 aliyun dataworks-public DissociateProjectFromResourceGroup --user-agent AlibabaCloud-Agent-Skills --ResourceGroupId "<RG_ID>" --ProjectId "<PROJECT_ID>"
 ```
 
-## Task 3.7: Release Resource Group (DeleteResourceGroup)
-
-> Before releasing, must first check bindings with `ListResourceGroupAssociateProjects`; if bound, unbind first.
-
-```bash
-aliyun dataworks-public DeleteResourceGroup --user-agent AlibabaCloud-Agent-Skills --Id "<ID>"
-```
-
 ---
 
 ## Success Verification
@@ -347,11 +332,11 @@ Common: `cn-hangzhou`, `cn-shanghai`, `cn-beijing`, `cn-shenzhen`. Endpoint: `da
 
 ## Best Practices
 
-1. **Query before action** — Confirm current state before create/update/delete
+1. **Query before action** — Confirm current state before create operations
 2. **Manage by environment** — Manage Dev and Prod resources separately
 3. **Verify operations** — Use Get/List to verify after each write operation
 4. **Proactive guidance** — Suggest the next step after each step completes
-5. **Error recovery** — Use Update to fix modifiable attributes; for non-modifiable attributes (Type/Name), delete and recreate
+5. **Protect data sources and compute resources** — Never modify or delete data sources or compute resources via this skill; use the DataWorks console for such operations
 
 ## Reference Links
 
