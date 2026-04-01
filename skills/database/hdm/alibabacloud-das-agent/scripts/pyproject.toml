@@ -1,0 +1,16 @@
+[project]
+name = "das-agent-skill"
+version = "0.1.0"
+description = "Client for calling Alibaba Cloud DAS Agent Chat API"
+requires-python = ">=3.10"
+dependencies = [
+    "alibabacloud_credentials==1.0.2",
+    "pytz==2025.2",
+    "requests==2.32.5",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest==7.0.0",
+    "pytest-cov==4.0.0",
+]
