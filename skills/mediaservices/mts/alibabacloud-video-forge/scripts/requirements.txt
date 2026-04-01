@@ -1,0 +1,19 @@
+# Alibaba Cloud Video Forge - Python Dependencies
+# 
+# Install: pip install -r requirements.txt
+#
+# Version pinning follows semantic versioning:
+# - Major version pinned for API compatibility
+# - Minor/patch versions use >= for security updates
+
+# Alibaba Cloud Credentials SDK (for secure credential management)
+alibabacloud-credentials>=0.3.0,<1.0.0
+
+# Alibaba Cloud MPS SDK (Media Processing Service)
+alibabacloud-mts20140618>=6.0.0,<7.0.0
+
+# Alibaba Cloud Tea OpenAPI (required by MPS SDK)
+alibabacloud-tea-openapi>=0.3.0,<1.0.0
+
+# Alibaba Cloud OSS SDK (Object Storage Service)
+oss2>=2.18.0,<3.0.0
