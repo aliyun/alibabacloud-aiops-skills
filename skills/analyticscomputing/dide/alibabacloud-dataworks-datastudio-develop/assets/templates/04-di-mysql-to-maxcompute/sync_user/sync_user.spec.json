@@ -1,0 +1,72 @@
+{
+  "version": "2.0.0",
+  "kind": "Node",
+  "spec": {
+    "nodes": [
+      {
+        "name": "sync_user",
+        "recurrence": "Normal",
+        "timeout": 4,
+        "timeoutUnit": "HOURS",
+        "instanceMode": "T+1",
+        "rerunMode": "Allowed",
+        "rerunTimes": 0,
+        "rerunInterval": 180000,
+        "script": {
+          "path": "sync_user",
+          "language": "di",
+          "runtime": {
+            "command": "DI"
+          },
+          "content": "",
+          "parameters": [
+            {
+              "name": "bizdate",
+              "scope": "NodeParameter",
+              "type": "System",
+              "value": "$yyyymmdd",
+              "artifactType": "Variable"
+            }
+          ]
+        },
+        "trigger": {
+          "type": "Scheduler",
+          "cron": "00 00 01 * * ?",
+          "startTime": "1970-01-01 00:00:00",
+          "endTime": "9999-01-01 00:00:00",
+          "timezone": "Asia/Shanghai"
+        },
+        "runtimeResource": {
+          "resourceGroup": "${spec.runtimeResource.resourceGroup}"
+        },
+        "outputs": {
+          "nodeOutputs": [
+            {
+              "data": "${projectIdentifier}.sync_user",
+              "artifactType": "NodeOutput"
+            }
+          ]
+        },
+        "inputs": {
+          "nodeOutputs": [
+            {
+              "data": "${projectIdentifier}_root",
+              "artifactType": "NodeOutput"
+            }
+          ]
+        }
+      }
+    ],
+    "dependencies": [
+      {
+        "nodeId": "sync_user",
+        "depends": [
+          {
+            "type": "Normal",
+            "output": "${projectIdentifier}_root"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "version": "2.0.0",
+  "kind": "CycleWorkflow",
+  "spec": {
+    "workflows": [
+      {
+        "name": "parallel_etl",
+        "script": {
+          "path": "parallel_etl",
+          "runtime": {
+            "command": "WORKFLOW"
+          }
+        },
+        "trigger": {
+          "type": "Scheduler",
+          "cron": "00 30 01 * * ?",
+          "startTime": "1970-01-01 00:00:00",
+          "endTime": "9999-01-01 00:00:00",
+          "timezone": "Asia/Shanghai"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "version": "2.0.0",
+  "kind": "Node",
+  "spec": {
+    "nodes": [
+      {
+        "name": "transform",
+        "recurrence": "Normal",
+        "timeout": 4,
+        "timeoutUnit": "HOURS",
+        "instanceMode": "T+1",
+        "rerunMode": "Allowed",
+        "rerunTimes": 0,
+        "rerunInterval": 180000,
+        "script": {
+          "path": "transform",
+          "language": "odps-sql",
+          "runtime": {
+            "command": "ODPS_SQL"
+          },
+          "content": "",
+          "parameters": [
+            {
+              "name": "bizdate",
+              "scope": "NodeParameter",
+              "type": "System",
+              "value": "$yyyymmdd",
+              "artifactType": "Variable"
+            }
+          ]
+        },
+        "trigger": {
+          "type": "Scheduler",
+          "cron": "00 00 00 * * ?",
+          "startTime": "1970-01-01 00:00:00",
+          "endTime": "9999-01-01 00:00:00",
+          "timezone": "Asia/Shanghai"
+        },
+        "datasource": {
+          "name": "${spec.datasource.name}",
+          "type": "odps"
+        },
+        "runtimeResource": {
+          "resourceGroup": "${spec.runtimeResource.resourceGroup}"
+        },
+        "outputs": {
+          "nodeOutputs": [
+            {
+              "data": "${projectIdentifier}.transform",
+              "artifactType": "NodeOutput"
+            }
+          ]
+        },
+        "inputs": {
+          "nodeOutputs": [
+            {
+              "data": "${projectIdentifier}.extract",
+              "artifactType": "NodeOutput"
+            }
+          ]
+        }
+      }
+    ],
+    "dependencies": [
+      {
+        "nodeId": "transform",
+        "depends": [
+          {
+            "type": "Normal",
+            "output": "${projectIdentifier}.extract"
+          }
+        ]
+      }
+    ]
+  }
+}

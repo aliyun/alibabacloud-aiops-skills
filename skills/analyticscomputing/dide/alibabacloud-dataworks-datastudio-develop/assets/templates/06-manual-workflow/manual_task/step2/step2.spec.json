@@ -1,0 +1,59 @@
+{
+  "version": "2.0.0",
+  "kind": "Node",
+  "spec": {
+    "nodes": [
+      {
+        "name": "step2",
+        "recurrence": "Normal",
+        "timeout": 2,
+        "timeoutUnit": "HOURS",
+        "instanceMode": "T+1",
+        "rerunMode": "Allowed",
+        "rerunTimes": 0,
+        "rerunInterval": 180000,
+        "script": {
+          "path": "step2",
+          "language": "python",
+          "runtime": {
+            "command": "PYTHON"
+          },
+          "content": ""
+        },
+        "trigger": {
+          "type": "Manual"
+        },
+        "runtimeResource": {
+          "resourceGroup": "${spec.runtimeResource.resourceGroup}"
+        },
+        "outputs": {
+          "nodeOutputs": [
+            {
+              "data": "${projectIdentifier}.step2",
+              "artifactType": "NodeOutput"
+            }
+          ]
+        },
+        "inputs": {
+          "nodeOutputs": [
+            {
+              "data": "${projectIdentifier}.step1",
+              "artifactType": "NodeOutput"
+            }
+          ]
+        }
+      }
+    ],
+    "dependencies": [
+      {
+        "nodeId": "step2",
+        "depends": [
+          {
+            "type": "Normal",
+            "output": "${projectIdentifier}.step1"
+          }
+        ]
+      }
+    ]
+  }
+}

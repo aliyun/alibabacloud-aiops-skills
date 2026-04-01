@@ -1,0 +1,17 @@
+{
+  "version": "2.0.0",
+  "kind": "ManualWorkflow",
+  "spec": {
+    "workflows": [
+      {
+        "name": "manual_task",
+        "script": {
+          "path": "manual_task",
+          "runtime": {
+            "command": "WORKFLOW"
+          }
+        }
+      }
+    ]
+  }
+}

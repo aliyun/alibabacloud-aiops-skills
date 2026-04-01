@@ -1,0 +1,72 @@
+{
+  "version": "2.0.0",
+  "kind": "Node",
+  "spec": {
+    "nodes": [
+      {
+        "name": "prepare_data",
+        "recurrence": "Normal",
+        "timeout": 2,
+        "timeoutUnit": "HOURS",
+        "instanceMode": "T+1",
+        "rerunMode": "Allowed",
+        "rerunTimes": 3,
+        "rerunInterval": 180000,
+        "script": {
+          "path": "prepare_data",
+          "language": "shell",
+          "runtime": {
+            "command": "DIDE_SHELL"
+          },
+          "content": "",
+          "parameters": [
+            {
+              "name": "bizdate",
+              "scope": "NodeParameter",
+              "type": "System",
+              "value": "$yyyymmdd",
+              "artifactType": "Variable"
+            }
+          ]
+        },
+        "trigger": {
+          "type": "Scheduler",
+          "cron": "00 30 01 * * ?",
+          "startTime": "1970-01-01 00:00:00",
+          "endTime": "9999-01-01 00:00:00",
+          "timezone": "Asia/Shanghai"
+        },
+        "runtimeResource": {
+          "resourceGroup": "${spec.runtimeResource.resourceGroup}"
+        },
+        "outputs": {
+          "nodeOutputs": [
+            {
+              "data": "${projectIdentifier}.prepare_data",
+              "artifactType": "NodeOutput"
+            }
+          ]
+        },
+        "inputs": {
+          "nodeOutputs": [
+            {
+              "data": "${projectIdentifier}_root",
+              "artifactType": "NodeOutput"
+            }
+          ]
+        }
+      }
+    ],
+    "dependencies": [
+      {
+        "nodeId": "prepare_data",
+        "depends": [
+          {
+            "type": "Normal",
+            "output": "${projectIdentifier}_root"
+          }
+        ]
+      }
+    ]
+  }
+}

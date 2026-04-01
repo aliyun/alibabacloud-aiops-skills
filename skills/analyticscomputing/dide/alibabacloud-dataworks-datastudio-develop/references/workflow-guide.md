@@ -1,0 +1,533 @@
+# Workflow Development Guide
+
+This document describes how to create and manage workflows in DataWorks, including the complete development process for both cycle workflows and manual workflows.
+
+## Workflow Types
+
+DataWorks supports two workflow types:
+
+### CycleWorkflow
+
+Runs automatically according to a preset scheduling cycle, suitable for daily ETL, scheduled reports, and similar scenarios.
+
+- Must configure a `trigger` (scheduling trigger)
+- Nodes within the workflow execute in dependency order
+- FlowSpec `kind` is `"CycleWorkflow"`
+
+### ManualWorkflow
+
+Runs only when manually triggered, suitable for data repair, one-time tasks, and similar scenarios.
+
+- No `trigger` configuration required
+- Must be triggered manually or via API
+- FlowSpec `kind` is `"ManualWorkflow"`
+
+---
+
+## Complete Workflow Creation Process
+
+### Step 1: Create the Workflow Definition
+
+First, create the FlowSpec definition file for the workflow.
+
+**Cycle Workflow**:
+
+```bash
+mkdir -p ./my_wf
+# Build the workflow spec JSON (refer to the workflow creation example in SKILL.md)
+```
+
+Edit `my_wf.spec.json`, filling in the workflow name and scheduling trigger:
+
+```json
+{
+  "version": "2.0.0",
+  "kind": "CycleWorkflow",
+  "spec": {
+    "workflows": [
+      {
+        "name": "my_wf",
+        "script": {
+          "path": "my_wf",
+          "runtime": {
+            "command": "WORKFLOW"
+          }
+        },
+        "trigger": {
+          "type": "Scheduler",
+          "cron": "00 00 00 * * ?",
+          "startTime": "1970-01-01 00:00:00",
+          "endTime": "9999-01-01 00:00:00",
+          "timezone": "Asia/Shanghai"
+        }
+      }
+    ]
+  }
+}
+```
+
+> **`script.runtime.command: "WORKFLOW"` must be set**, otherwise `CreateWorkflowDefinition` will return an error `"script.runtime.command is empty"`.
+
+**Manual Workflow**:
+
+```bash
+mkdir -p ./my_manual_wf
+# Build the manual workflow spec JSON (kind=ManualWorkflow)
+```
+
+Edit `my_manual_wf.spec.json`:
+
+```json
+{
+  "version": "2.0.0",
+  "kind": "ManualWorkflow",
+  "spec": {
+    "workflows": [
+      {
+        "name": "my_manual_wf",
+        "script": {
+          "path": "my_manual_wf",
+          "runtime": {
+            "command": "WORKFLOW"
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+Build the spec JSON and call the API to create the workflow:
+
+```bash
+aliyun dataworks-public CreateWorkflowDefinition \
+  --ProjectId {{project_id}} \
+  --Spec "$(cat /tmp/wf.json)" \
+  --user-agent AlibabaCloud-Agent-Skills
+```
+
+**Important**: Record the returned `WorkflowId`, as it is needed when creating nodes within the workflow.
+
+### Step 2: Create Nodes Within the Workflow
+
+Each node in the workflow must be created individually. Use the `ContainerId` parameter to associate the node with the workflow.
+
+```bash
+# Create node directory
+mkdir -p ./my_wf/step1
+
+# Copy node template
+# Refer to templates in assets/templates/ and modify accordingly
+# [Required] Add outputs.nodeOutputs for each node (not included in minSpec):
+#   "outputs":{"nodeOutputs":[{"data":"${projectIdentifier}.node_name","artifactType":"NodeOutput"}]}
+
+# Edit spec.json, write code file, configure properties
+# ...(follow the standard node creation process)
+
+# Build spec JSON and submit, note the --ContainerId parameter
+aliyun dataworks-public CreateNode \
+  --ProjectId {{project_id}} \
+  --Scene DATAWORKS_PROJECT \
+  --ContainerId {{workflow_id}} \
+  --Spec "$(cat /tmp/step1.json)" \
+  --user-agent AlibabaCloud-Agent-Skills
+```
+
+Repeat this step for each node in the workflow.
+
+### Complete Example: 3-Node Workflow (extract -> transform -> load)
+
+Below is a complete copy-ready example showing the spec structure of nodes within a workflow. For the full version, see `assets/templates/05-cycle-workflow/`.
+
+**Root node (no upstream dependency) -- extract.spec.json**:
+```json
+{
+  "version": "2.0.0",
+  "kind": "Node",
+  "spec": {
+    "nodes": [
+      {
+        "name": "extract",
+        "script": {
+          "path": "extract",
+          "runtime": { "command": "DIDE_SHELL" }
+        },
+        "runtimeResource": {
+          "resourceGroup": "${spec.runtimeResource.resourceGroup}"
+        },
+        "outputs": {
+          "nodeOutputs": [
+            { "data": "${projectIdentifier}.extract", "artifactType": "NodeOutput" }
+          ]
+        },
+        "inputs": {
+          "nodeOutputs": [
+            { "data": "${projectIdentifier}_root", "artifactType": "NodeOutput" }
+          ]
+        }
+      }
+    ],
+    "dependencies": [
+      {
+        "nodeId": "extract",
+        "depends": [
+          { "type": "Normal", "output": "${projectIdentifier}_root" }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**Middle node (depends on extract) -- transform.spec.json**:
+```json
+{
+  "version": "2.0.0",
+  "kind": "Node",
+  "spec": {
+    "nodes": [
+      {
+        "name": "transform",
+        "script": {
+          "path": "transform",
+          "runtime": { "command": "ODPS_SQL" }
+        },
+        "datasource": {
+          "name": "${spec.datasource.name}",
+          "type": "odps"
+        },
+        "runtimeResource": {
+          "resourceGroup": "${spec.runtimeResource.resourceGroup}"
+        },
+        "outputs": {
+          "nodeOutputs": [
+            { "data": "${projectIdentifier}.transform", "artifactType": "NodeOutput" }
+          ]
+        },
+        "inputs": {
+          "nodeOutputs": [
+            { "data": "${projectIdentifier}.extract", "artifactType": "NodeOutput" }
+          ]
+        }
+      }
+    ],
+    "dependencies": [
+      {
+        "nodeId": "transform",
+        "depends": [
+          { "type": "Normal", "output": "${projectIdentifier}.extract" }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**Terminal node (depends on transform) -- load.spec.json**:
+```json
+{
+  "version": "2.0.0",
+  "kind": "Node",
+  "spec": {
+    "nodes": [
+      {
+        "name": "load",
+        "script": {
+          "path": "load",
+          "runtime": { "command": "HOLOGRES_SQL" }
+        },
+        "datasource": {
+          "name": "${spec.datasource.name}",
+          "type": "hologres"
+        },
+        "runtimeResource": {
+          "resourceGroup": "${spec.runtimeResource.resourceGroup}"
+        },
+        "outputs": {
+          "nodeOutputs": [
+            { "data": "${projectIdentifier}.load", "artifactType": "NodeOutput" }
+          ]
+        },
+        "inputs": {
+          "nodeOutputs": [
+            { "data": "${projectIdentifier}.transform", "artifactType": "NodeOutput" }
+          ]
+        }
+      }
+    ],
+    "dependencies": [
+      {
+        "nodeId": "load",
+        "depends": [
+          { "type": "Normal", "output": "${projectIdentifier}.transform" }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**Key points**:
+- Each node **must** declare `outputs.nodeOutputs` (format `${projectIdentifier}.node_name`), otherwise downstream dependencies will silently fail
+- Dependencies between nodes within a workflow are configured via `spec.dependencies`; there is no need to dual-write `inputs.nodeOutputs`. However, `spec.dependencies[*].nodeId` must exactly match the corresponding node's `id`, otherwise dependencies will not be recognized
+- Root nodes (no upstream) depend on `${projectIdentifier}_root` (underscore, not dot)
+- When `datasource` and `runtimeResource` are uncertain, they can be omitted; the server will automatically use the project defaults
+- For additional optional fields (trigger, rerunTimes, parameters, etc.), see `assets/templates/05-cycle-workflow/`
+
+### Step 3: Configure Dependencies
+
+Dependencies between nodes within a workflow are configured via the `spec.dependencies` array; there is no need to dual-write `inputs.nodeOutputs`:
+
+> **Dependency configuration rules**:
+> 1. **Upstream nodes** declare `outputs.nodeOutputs`: `{"data":"${projectIdentifier}.node_name","artifactType":"NodeOutput"}`
+> 2. **Downstream nodes** declare dependencies in `spec.dependencies`, referencing the upstream `outputs.nodeOutputs[].data`
+>
+> **`spec.dependencies[*].nodeId` must exactly match the corresponding node's `id`**, otherwise dependencies will not be recognized. For example, if a node's `id` is `"step2"`, then the `nodeId` in `dependencies` must also be `"step2"`.
+>
+> **`outputs.nodeOutputs[].data` and `dependencies[].depends[].output` must be exactly identical** (e.g., `${projectIdentifier}.upstream_node`); any mismatch will cause the dependency to silently fail.
+>
+> Note: The minSpec template does not include the outputs field; it must be added manually when creating workflow nodes.
+
+**Single dependency chain** (step1 -> step2 -> step3):
+
+In step2's `spec.json`:
+```json
+"dependencies": [
+  {
+    "nodeId": "step2",
+    "depends": [
+      {
+        "type": "Normal",
+        "output": "${projectIdentifier}.step1"
+      }
+    ]
+  }
+]
+```
+
+In step3's `spec.json`:
+```json
+"dependencies": [
+  {
+    "nodeId": "step3",
+    "depends": [
+      {
+        "type": "Normal",
+        "output": "${projectIdentifier}.step2"
+      }
+    ]
+  }
+]
+```
+
+**Multiple dependency merge** (step1 + step2 -> step3):
+
+```json
+"dependencies": [
+  {
+    "nodeId": "step3",
+    "depends": [
+      {
+        "type": "Normal",
+        "output": "${projectIdentifier}.step1"
+      },
+      {
+        "type": "Normal",
+        "output": "${projectIdentifier}.step2"
+      }
+    ]
+  }
+]
+```
+
+### Step 4: Publish and Deploy
+
+After all nodes are created, publish the workflow:
+
+```bash
+aliyun dataworks-public CreatePipelineRun \
+  --ProjectId {{project_id}} \
+  --Type Online \
+  --ObjectIds '["{{workflow_id}}"]' \
+  --user-agent AlibabaCloud-Agent-Skills
+```
+
+Query the publish status:
+
+```bash
+aliyun dataworks-public GetPipelineRun \
+  --ProjectId {{project_id}} \
+  --Id {{pipeline_run_id}} \
+  --user-agent AlibabaCloud-Agent-Skills
+```
+
+---
+
+## Dependency Configuration Details
+
+### Intra-Workflow Dependencies
+
+Dependencies between nodes within a workflow are configured via the `spec.dependencies` array (no need to dual-write `inputs.nodeOutputs`). `spec.dependencies[*].nodeId` must exactly match the corresponding node's `id`, otherwise dependencies will not be recognized:
+
+**Upstream node** (must declare outputs):
+```json
+"outputs": {
+  "nodeOutputs": [
+    {"data": "${projectIdentifier}.upstream_node", "artifactType": "NodeOutput"}
+  ]
+}
+```
+
+**Downstream node** (references upstream output in `spec.dependencies`):
+```json
+"dependencies": [
+  {
+    "nodeId": "current_node",
+    "depends": [
+      {
+        "type": "Normal",
+        "output": "${projectIdentifier}.upstream_node"
+      }
+    ]
+  }
+]
+```
+
+### Cross-Workflow Dependencies
+
+When a node in the current workflow depends on a node in another workflow, the usage is the same as long as both workflows are in the same project:
+
+```json
+{
+  "nodeId": "current_node",
+  "depends": [
+    {
+      "type": "Normal",
+      "output": "${projectIdentifier}.other_workflow_node"
+    }
+  ]
+}
+```
+
+### Cross-Project Dependencies
+
+When depending on a node from another project, use the upstream project's `projectIdentifier` directly (without the placeholder):
+
+```json
+{
+  "nodeId": "current_node",
+  "depends": [
+    {
+      "type": "Normal",
+      "output": "upstream_project_name.upstream_node_name"
+    }
+  ]
+}
+```
+
+Note that the output format for cross-project dependencies is `upstream_projectIdentifier.upstream_node_name`.
+
+### No Upstream Dependency (Attach to Project Root Node)
+
+If a node has no upstream dependency, it must be attached to the project root node:
+
+```json
+{
+  "nodeId": "first_node",
+  "depends": [
+    {
+      "type": "Normal",
+      "output": "${projectIdentifier}_root"
+    }
+  ]
+}
+```
+
+Note: The root node output format is `projectIdentifier_root` (underscore), not `projectIdentifier.root` (dot).
+
+### Cross-Cycle Dependencies
+
+A node depends on the previous scheduling cycle's result of itself or another node:
+
+**Self-dependency**:
+```json
+{
+  "nodeId": "daily_incremental",
+  "depends": [
+    {
+      "type": "CrossCycleDependsOnSelf",
+      "output": "${projectIdentifier}.daily_incremental"
+    }
+  ]
+}
+```
+
+**Depends on another node's previous cycle**:
+```json
+{
+  "nodeId": "current_node",
+  "depends": [
+    {
+      "type": "CrossCycleDependsOnOther",
+      "output": "${projectIdentifier}.other_node"
+    }
+  ]
+}
+```
+
+---
+
+## Workflow Directory Structure
+
+```
+my_wf/
+├── my_wf.spec.json            # Workflow definition (CycleWorkflow or ManualWorkflow)
+├── dataworks.properties       # Workflow-level configuration
+├── step1/                     # Child node 1
+│   ├── step1.spec.json        # Node FlowSpec
+│   ├── step1.sh               # Code file
+│   └── dataworks.properties   # Node-level configuration
+├── step2/                     # Child node 2
+│   ├── step2.spec.json
+│   ├── step2.sql
+│   └── dataworks.properties
+└── step3/                     # Child node 3
+    ├── step3.spec.json
+    ├── step3.py
+    └── dataworks.properties
+```
+
+Each child node directory follows the standard node file structure (spec.json + code file + dataworks.properties).
+
+---
+
+## Workflow Development in Git Mode
+
+In a DataWorks Git project directory, workflow development does not require API calls. Follow these steps:
+
+1. Create the workflow spec.json and node files
+2. Configure dependencies
+3. `git add` and `git commit` to submit
+
+```bash
+# Commit
+git add ./my_wf
+git commit -m "Add workflow: my_wf with step1, step2, step3"
+```
+
+---
+
+## Important Notes
+
+1. **Creation order**: The workflow definition must be created first to obtain the returned WorkflowId before creating nodes within the workflow
+2. **`script.runtime.command` is required**: The workflow spec must include `script.runtime.command: "WORKFLOW"`, otherwise `CreateWorkflowDefinition` will return an error `"script.runtime.command is empty"`
+3. **ContainerId parameter**: Nodes within a workflow are associated to the workflow via the `ContainerId` parameter of the `CreateNode` API (value is the WorkflowId), rather than embedding node definitions inside the workflow spec
+4. **Intra-workflow node dependencies are configured via `spec.dependencies`**: There is no need to dual-write `inputs.nodeOutputs`, but `spec.dependencies[*].nodeId` must exactly match the corresponding node's `id`, otherwise dependencies will not be recognized (see the complete example and template `assets/templates/05-cycle-workflow/`)
+5. **Node outputs must be declared**: Each node within a workflow **must** declare `${projectIdentifier}.node_name` in `outputs.nodeOutputs` (minSpec does not include this field; it must be added manually)
+6. **Root node dependency**: Nodes with no upstream dependency must be attached to `${projectIdentifier}_root`
+7. **Workflow trigger**: The trigger of a cycle workflow defines the workflow-level scheduling cycle; nodes within the workflow inherit this schedule
+8. **Immutable properties**: The workflow type (CycleWorkflow / ManualWorkflow) cannot be changed after creation
+9. **Updates must be incremental**: When calling `UpdateNode`, only pass the id + fields to be modified; do not pass unchanged fields like `datasource` or `runtimeResource`. The server may have corrected these field values (e.g., `flink` to `flink_serverless`), and passing back the original values will cause errors
+10. **GetNode returns the full workflow spec**: When calling `GetNode` on a node within a workflow, the response returns a complete `kind: CycleWorkflow` workflow spec; the target node is located at `spec.workflows[0].nodes[]` (not `spec.nodes[]`)
+11. **Workflow `strategy` field**: Workflows support a `strategy` configuration (including priority, timeout, rerunMode, failureStrategy, etc.); this field is defined at the workflow level, not the node level
+12. **`datasource.type` auto-correction**: The server may automatically correct the value of `datasource.type` (e.g., `flink` is corrected to `flink_serverless`); refer to the actual returned value

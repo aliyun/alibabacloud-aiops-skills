@@ -1,0 +1,60 @@
+{
+  "type": "job",
+  "version": "2.0",
+  "steps": [
+    {
+      "stepType": "mysql",
+      "name": "Reader",
+      "category": "reader",
+      "parameter": {
+        "datasource": "mysql_source",
+        "column": ["id", "user_name", "age", "gender", "city", "register_time"],
+        "connection": [
+          {
+            "table": ["user_info"],
+            "datasource": "mysql_source"
+          }
+        ],
+        "where": "dt = '${bizdate}'",
+        "splitPk": "id",
+        "encoding": "UTF-8"
+      }
+    },
+    {
+      "stepType": "odps",
+      "name": "Writer",
+      "category": "writer",
+      "parameter": {
+        "datasource": "odps_target",
+        "table": "ods_user_info",
+        "column": [
+          {"name": "id", "type": "bigint"},
+          {"name": "user_name", "type": "string"},
+          {"name": "age", "type": "bigint"},
+          {"name": "gender", "type": "string"},
+          {"name": "city", "type": "string"},
+          {"name": "register_time", "type": "datetime"}
+        ],
+        "partition": "dt=${bizdate}",
+        "truncate": true
+      }
+    }
+  ],
+  "order": {
+    "hops": [
+      {
+        "from": "Reader",
+        "to": "Writer"
+      }
+    ]
+  },
+  "setting": {
+    "speed": {
+      "concurrent": 3,
+      "throttle": false
+    },
+    "errorLimit": {
+      "record": 0
+    }
+  }
+}

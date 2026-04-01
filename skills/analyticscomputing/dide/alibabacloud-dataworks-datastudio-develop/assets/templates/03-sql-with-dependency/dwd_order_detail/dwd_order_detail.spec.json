@@ -1,0 +1,76 @@
+{
+  "version": "2.0.0",
+  "kind": "Node",
+  "spec": {
+    "nodes": [
+      {
+        "name": "dwd_order_detail",
+        "recurrence": "Normal",
+        "timeout": 4,
+        "timeoutUnit": "HOURS",
+        "instanceMode": "T+1",
+        "rerunMode": "Allowed",
+        "rerunTimes": 0,
+        "rerunInterval": 180000,
+        "script": {
+          "path": "dwd_order_detail",
+          "language": "odps-sql",
+          "runtime": {
+            "command": "ODPS_SQL"
+          },
+          "content": "",
+          "parameters": [
+            {
+              "name": "bizdate",
+              "scope": "NodeParameter",
+              "type": "System",
+              "value": "$yyyymmdd",
+              "artifactType": "Variable"
+            }
+          ]
+        },
+        "trigger": {
+          "type": "Scheduler",
+          "cron": "00 00 02 * * ?",
+          "startTime": "1970-01-01 00:00:00",
+          "endTime": "9999-01-01 00:00:00",
+          "timezone": "Asia/Shanghai"
+        },
+        "datasource": {
+          "name": "${spec.datasource.name}",
+          "type": "odps"
+        },
+        "runtimeResource": {
+          "resourceGroup": "${spec.runtimeResource.resourceGroup}"
+        },
+        "outputs": {
+          "nodeOutputs": [
+            {
+              "data": "${projectIdentifier}.dwd_order_detail",
+              "artifactType": "NodeOutput"
+            }
+          ]
+        },
+        "inputs": {
+          "nodeOutputs": [
+            {
+              "data": "${projectIdentifier}.ods_order",
+              "artifactType": "NodeOutput"
+            }
+          ]
+        }
+      }
+    ],
+    "dependencies": [
+      {
+        "nodeId": "dwd_order_detail",
+        "depends": [
+          {
+            "type": "Normal",
+            "output": "${projectIdentifier}.ods_order"
+          }
+        ]
+      }
+    ]
+  }
+}
