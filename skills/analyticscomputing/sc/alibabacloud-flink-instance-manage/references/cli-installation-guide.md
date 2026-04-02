@@ -380,7 +380,7 @@ Grant only the minimum permissions needed:
 ### 3. Rotate Access Keys Regularly
 
 ```bash
-# Create new access key in RAM Console, then update configuration
+# Create new access key in RAM Console, then refresh configuration
 aliyun configure set --access-key-id NEW_KEY --access-key-secret NEW_SECRET
 # Delete old access key from console
 ```

@@ -1,6 +1,6 @@
 # Verification Methods
 
-Step-by-step verification methods for Flink instance operations.
+Step-by-step verification methods for Flink instance create/query operations.
 
 ## Mandatory rule
 
@@ -11,8 +11,6 @@ python scripts/instance_ops.py <command> ...
 ```
 
 Do not run raw `aliyun foasconsole` resource commands as substitutes.
-
----
 
 ## Pre-operation verification
 
@@ -33,17 +31,15 @@ python scripts/instance_ops.py describe_regions
 python scripts/instance_ops.py describe_zones --region_id cn-hangzhou
 ```
 
-If VPC/VSwitch is missing, provide explicit parameters or use the skill network discovery flow.
-
----
+If VPC/VSwitch is missing, provide explicit parameters before create execution.
 
 ## Operation verification pattern
 
-For every write operation, follow:
+For every create operation, follow:
 
-1. execute write with required confirmation flag  
-2. run read-back verification  
-3. conclude completed/incomplete with evidence
+1. execute create with required confirmation flag
+2. run read-back verification
+3. conclude status based on read-back result
 
 ### Example: create instance
 
@@ -65,50 +61,35 @@ Read-back:
 python scripts/instance_ops.py describe --region_id cn-hangzhou
 ```
 
-### Example: tag + untag
+### Example: create namespace
 
 ```bash
-python scripts/instance_ops.py tag_resources \
+python scripts/instance_ops.py create_namespace \
   --region_id cn-hangzhou \
-  --resource_type vvpinstance \
-  --resource_ids f-cn-xxx \
-  --tags env:verify,suite:skill \
-  --confirm
-
-python scripts/instance_ops.py list_tags \
-  --region_id cn-hangzhou \
-  --resource_type vvpinstance \
-  --resource_ids f-cn-xxx
-
-python scripts/instance_ops.py untag_resources \
-  --region_id cn-hangzhou \
-  --resource_type vvpinstance \
-  --resource_ids f-cn-xxx \
-  --tag_keys env,suite \
-  --confirm
-```
-
-### Example: delete instance
-
-```bash
-python scripts/instance_ops.py delete \
   --instance_id f-cn-xxx \
-  --region_id cn-hangzhou \
-  --force_confirmation
-
-python scripts/instance_ops.py describe --region_id cn-hangzhou
+  --name verify-ns \
+  --cpu 100 \
+  --memory_gb 400 \
+  --confirm
 ```
 
----
+Read-back:
+
+```bash
+python scripts/instance_ops.py describe_namespaces \
+  --region_id cn-hangzhou \
+  --instance_id f-cn-xxx
+```
 
 ## Failure verification
 
 - Parse `error.code` and `error.message` from command output
+- For create operations, also inspect `confirmation_check` for auditable `--confirm` evidence
 - Apply retry policy in `output-handling.md`
 - Retry only same operation with corrected parameters (max one retry)
 - If unresolved, report as incomplete with remediation
-
----
+- For lifecycle flows requiring both create steps, keep overall status non-completed when
+  namespace create fails (for example `InsufficientResources`)
 
 ## References
 

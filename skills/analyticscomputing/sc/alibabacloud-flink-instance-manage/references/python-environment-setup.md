@@ -45,7 +45,6 @@ brew install python@3.9
 
 ### Linux (Ubuntu/Debian)
 ```bash
-sudo apt-get update
 sudo apt-get install python3 python3-pip
 ```
 

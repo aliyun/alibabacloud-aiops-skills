@@ -1,75 +1,67 @@
-# Acceptance Criteria: alibabacloud-flink-instance-manage
+# Operation Completion Checklist
 
-**Scenario**: Alibaba Cloud Flink instance operations  
-**Purpose**: Ensure execution stays on the skill wrapper and closes with read-back evidence.
+Use this checklist to decide whether an instance/namespace operation is actually complete.
 
----
+## 1) Entrypoint
 
-## 1) Entrypoint correctness (must pass)
-
-### ✅ Correct
+Run resource operations only through:
 
 ```bash
-python scripts/instance_ops.py describe --region_id cn-hangzhou
-python scripts/instance_ops.py create --region_id cn-hangzhou --name demo --instance_type PayAsYouGo --vswitch_id vsw-xxx --vpc_id vpc-xxx --cpu 200 --memory_gb 800 --confirm
-python scripts/instance_ops.py delete --instance_id f-cn-xxx --region_id cn-hangzhou --force_confirmation
+python scripts/instance_ops.py <command> ...
 ```
 
-### ❌ Incorrect
+Do not replace with raw `aliyun foasconsole` commands.
 
-```bash
-aliyun foasconsole DescribeInstances --region cn-hangzhou
-aliyun foasconsole CreateInstance --region cn-hangzhou ...
-```
+## 2) Confirmation flags
 
-Any raw `aliyun foasconsole` execution for resource operations fails acceptance.
+- `create` requires `--confirm`
+- `create_namespace` requires `--confirm`
 
----
+If `--confirm` is missing, fix the command before execution.
 
-## 2) Safety flag correctness (must pass)
+## 3) Read-back verification
 
-- `create`, `renew`, `tag_resources`, `untag_resources`, namespace create/delete/modify require `--confirm`
-- `modify_spec`, `convert` require `--confirm_price`
-- `delete` requires `--force_confirmation`
+A create operation is complete only when:
 
-Missing required confirmation flag fails acceptance.
+1. create response is successful (or idempotent equivalent), and
+2. follow-up read-back confirms target state.
 
----
+Create response without read-back is not complete.
 
-## 3) Verification correctness (must pass)
+## 4) Retry and fallback
 
-A write operation is accepted only when both are true:
-
-1. write response has `success: true` (or valid idempotent equivalent)
-2. follow-up read-back confirms target state
-
-Write-only success claims fail acceptance.
-
----
-
-## 4) Retry correctness (must pass)
-
-- Max attempts for the same write command: 2 (initial + one corrected retry)
+- Max attempts for one command: 2 (initial + one corrected retry)
 - No blind retries
-- No cross-operation fallback without explicit user approval
-  - example: `modify_*` failure must not auto-switch to `create_*`
+- No automatic operation switching without explicit user approval
 
----
+## 5) Lifecycle chain consistency
 
-## 5) Security correctness (must pass)
+For `create` + `create_namespace` in one flow:
+
+- namespace must target the same `InstanceId` returned by `create`
+- if instance is not `RUNNING`, wait/poll the same instance first
+- do not switch to a different instance without explicit user approval
+- final `completed` status requires both create commands to return `success: true`
+
+## 6) Security baseline
 
 - No AK/SK hardcoding in commands or scripts
 - Use default credential chain (CLI profile or RAM role)
-- No secret values in output/report
+- No secret values in normal response content
 
----
+## 7) Response completeness
 
-## 6) Completion report correctness (must pass)
-
-Final response must include:
+Final response should include:
 
 - `operation`
-- `write_result`
-- `verify_result` (read-back evidence)
-- `final_status` (`completed` or `incomplete`)
-- remediation if incomplete
+- `create_result`
+- `verify_result`
+- `status` (`completed` / `failed` / `not_ready`)
+- `next_action` when not completed
+
+## 8) No partial-success closure for lifecycle flow
+
+For lifecycle tasks that require instance + namespace create:
+
+- if `create_namespace` fails, do not mark overall status as `completed`
+- use `failed` or `not_ready` with explicit next action

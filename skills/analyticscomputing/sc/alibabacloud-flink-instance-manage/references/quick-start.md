@@ -1,29 +1,43 @@
-# alibabacloud-flink-instance-manage
+# Quick Start
 
-Alibaba Cloud Flink portal operations - Python CLI for managing Flink instances.
+Alibaba Cloud Flink VVP instance operations with create/query command scope.
 
-## Quick Start
+## Trigger Recognition
 
-### 1. Install
+Use this skill when request is about:
+- Flink instance create/query
+- Flink namespace create/query
+- Flink region/zone/tag queries
+
+Do not use this skill for:
+- Flink SQL or Flink jobs
+- Other Alibaba Cloud services (ECS, Kafka, OSS, DataWorks)
+- Update or delete operations
+
+## 1) Install Dependencies
 
 ```bash
 pip install -r assets/requirements.txt
 ```
 
-### 2. Configure
+## 2) Configure Credentials
 
 ```bash
 aliyun configure
 aliyun configure list
 ```
 
-### 3. Run
+## 3) Run Read-only Checks
 
 ```bash
-# List instances
+python scripts/instance_ops.py describe_regions
+python scripts/instance_ops.py describe_zones --region_id cn-hangzhou
 python scripts/instance_ops.py describe --region_id cn-hangzhou
+```
 
-# Create instance
+## 4) Create Instance and Verify
+
+```bash
 python scripts/instance_ops.py create \
   --region_id cn-hangzhou \
   --name my-instance \
@@ -34,69 +48,63 @@ python scripts/instance_ops.py create \
   --cpu 200 \
   --memory_gb 800 \
   --confirm
+
+python scripts/instance_ops.py describe --region_id cn-hangzhou
 ```
 
-### 4. Core lifecycle minimal chain
-
-Use one instance ID for the full chain:
+## 5) Create Namespace and Verify
 
 ```bash
-# 1) create (capture InstanceId from JSON)
-python scripts/instance_ops.py create ... --confirm
+python scripts/instance_ops.py create_namespace \
+  --region_id cn-hangzhou \
+  --instance_id f-cn-xxx \
+  --name prod-ns \
+  --cpu 100 \
+  --memory_gb 400 \
+  --confirm
 
-# 2) tag + verify
-python scripts/instance_ops.py tag_resources --region_id cn-hangzhou --resource_type vvpinstance --resource_ids f-cn-xxx --tags env:test --confirm
-python scripts/instance_ops.py list_tags --region_id cn-hangzhou --resource_type vvpinstance --resource_ids f-cn-xxx
-
-# 3) untag + verify
-python scripts/instance_ops.py untag_resources --region_id cn-hangzhou --resource_type vvpinstance --resource_ids f-cn-xxx --tag_keys env --confirm
-python scripts/instance_ops.py list_tags --region_id cn-hangzhou --resource_type vvpinstance --resource_ids f-cn-xxx
-
-# 4) query + delete + verify
-python scripts/instance_ops.py describe --region_id cn-hangzhou
-python scripts/instance_ops.py delete --instance_id f-cn-xxx --region_id cn-hangzhou --force_confirmation
-python scripts/instance_ops.py describe --region_id cn-hangzhou
+python scripts/instance_ops.py describe_namespaces \
+  --region_id cn-hangzhou \
+  --instance_id f-cn-xxx
 ```
 
-## Commands
+## Command Scope
 
 | Category | Commands |
 |----------|----------|
-| Instance | `create`, `describe`, `modify_spec`, `delete`, `renew`, `convert` |
-| Namespace | `create_namespace`, `describe_namespaces`, `modify_namespace_spec` |
-| Tag | `tag_resources`, `list_tags`, `untag_resources` |
-| Query | `describe_regions`, `describe_zones` |
+| Query | `describe_regions`, `describe_zones`, `describe`, `describe_namespaces`, `list_tags` |
+| Create | `create`, `create_namespace` |
 
-## Safety Checks
+## Required Confirmation
 
 | Operation | Flag |
 |-----------|------|
-| Create/Renew/Tag/Untag | `--confirm` |
-| Modify Spec/Convert | `--confirm_price` |
-| Delete | `--force_confirmation` |
+| `create` | `--confirm` |
+| `create_namespace` | `--confirm` |
 
-## Documentation
+## Reference Map
 
 | Document | Purpose |
 |----------|---------|
 | `../SKILL.md` | Main skill instructions and workflow |
-| `required-confirmation-model.md` | Confirmation gate and flag mapping |
-| `core-execution-flow.md` | Operation command flow |
-| `e2e-playbooks.md` | End-to-end completion playbooks |
-| `output-handling.md` | Output handling and retry policy |
-| `python-environment-setup.md` | Setup guide |
-| `related-apis.md` | API reference |
+| `trigger-recognition-guide.md` | Trigger and rejection examples |
+| `core-execution-flow.md` | Standard operation flow |
+| `parameter-validation.md` | Parameter checklist |
+| `verification-method.md` | Read-back verification methods |
+| `output-handling.md` | Retry and error handling |
+| `common-failures.md` | Typical mistakes and fixes |
+| `python-environment-setup.md` | Python setup guide |
+| `related-apis.md` | API command mapping |
 
-## Output
+## Output Shape
 
 ```json
 {
   "success": true,
   "operation": "describe",
-  "data": {...},
+  "data": {},
   "request_id": "..."
 }
 ```
 
 Exit codes: `0` = success, `1` = error.
-

@@ -1,35 +1,23 @@
 # RAM Policies for Flink Instance Operations
 
-Alibaba Cloud RAM (Resource Access Management) permissions required by
-`scripts/instance_ops.py`.
+Alibaba Cloud RAM permissions required by `scripts/instance_ops.py` under a
+create/query-only execution model.
 
 > Note: For OpenAPI 2021-10-28, official action names use the `stream:*`
 > namespace.
 
----
-
 ## Required Permissions
 
-The following actions cover all implemented commands in this skill:
+The following actions cover allowed commands in this skill:
 
 - `stream:CreateVvpInstance` - `create`
 - `stream:DescribeVvpInstances` - `describe`
-- `stream:ModifyVvpInstanceSpec` - `modify_spec`
-- `stream:DeleteVvpInstance` - `delete`
-- `stream:RenewVvpInstance` - `renew`
-- `stream:ConvertVvpInstance` - `convert` and `convert_prepay_instance`
 - `stream:CreateVvpNamespace` - `create_namespace`
 - `stream:DescribeVvpNamespaces` - `describe_namespaces`
-- `stream:ModifyVvpNamespaceSpec` - `modify_namespace_spec`
-- `stream:DeleteVvpNamespace` - `delete_namespace`
-- `stream:TagVvpResources` - `tag_resources`
 - `stream:QueryTagVvpResources` - `list_tags`
-- `stream:UnTagVvpResources` - `untag_resources`
 
 `DescribeSupportedRegions` and `DescribeSupportedZones` pages currently state
 "暂无授权信息透出", so they are intentionally not listed as mandatory actions.
-
----
 
 ## Minimum Permission Policy
 
@@ -42,17 +30,9 @@ The following actions cover all implemented commands in this skill:
       "Action": [
         "stream:CreateVvpInstance",
         "stream:DescribeVvpInstances",
-        "stream:ModifyVvpInstanceSpec",
-        "stream:DeleteVvpInstance",
-        "stream:RenewVvpInstance",
-        "stream:ConvertVvpInstance",
         "stream:CreateVvpNamespace",
         "stream:DescribeVvpNamespaces",
-        "stream:ModifyVvpNamespaceSpec",
-        "stream:DeleteVvpNamespace",
-        "stream:TagVvpResources",
-        "stream:QueryTagVvpResources",
-        "stream:UnTagVvpResources"
+        "stream:QueryTagVvpResources"
       ],
       "Resource": [
         "acs:stream:*:*:vvpinstance/*",
@@ -63,28 +43,15 @@ The following actions cover all implemented commands in this skill:
 }
 ```
 
----
-
 ## Permission Breakdown by Operation
 
 | API Action | RAM Action |
 |------------|------------|
 | `CreateInstance` | `stream:CreateVvpInstance` |
 | `DescribeInstances` | `stream:DescribeVvpInstances` |
-| `ModifyInstanceSpec` | `stream:ModifyVvpInstanceSpec` |
-| `DeleteInstance` | `stream:DeleteVvpInstance` |
-| `RenewInstance` | `stream:RenewVvpInstance` |
-| `ConvertInstance` | `stream:ConvertVvpInstance` |
-| `ConvertPrepayInstance` | `stream:ConvertVvpInstance` |
 | `CreateNamespace` | `stream:CreateVvpNamespace` |
 | `DescribeNamespaces` | `stream:DescribeVvpNamespaces` |
-| `ModifyNamespaceSpecV2` | `stream:ModifyVvpNamespaceSpec` |
-| `DeleteNamespace` | `stream:DeleteVvpNamespace` |
-| `TagResources` | `stream:TagVvpResources` |
 | `ListTagResources` | `stream:QueryTagVvpResources` |
-| `UntagResources` | `stream:UnTagVvpResources` |
-
----
 
 ## Resource ARN Examples
 
@@ -104,16 +71,13 @@ Example policy for one specific instance:
       "Effect": "Allow",
       "Action": [
         "stream:DescribeVvpInstances",
-        "stream:ModifyVvpInstanceSpec",
-        "stream:RenewVvpInstance"
+        "stream:DescribeVvpNamespaces"
       ],
       "Resource": "acs:stream:cn-hangzhou:123456789012:vvpinstance/f-cn-xxx"
     }
   ]
 }
 ```
-
----
 
 ## Predefined System Policies
 
@@ -123,9 +87,7 @@ Alibaba Cloud currently provides these common system policies:
 - `AliyunStreamReadOnlyAccess`
 
 If your organization requires least privilege, prefer custom policy with
-explicit `stream:*` actions shown above.
-
----
+explicit `stream:*` actions listed above.
 
 ## Troubleshooting
 
@@ -144,9 +106,7 @@ explicit `stream:*` actions shown above.
    ```bash
    aliyun ram ListAccessKeys --UserName <your-username>
    ```
-2. Rotate/recreate AccessKey and update local config.
-
----
+2. Rotate/recreate AccessKey and refresh local profile.
 
 ## References
 
