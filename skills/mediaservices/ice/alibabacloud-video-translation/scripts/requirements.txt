@@ -1,0 +1,7 @@
+# Video Translation Script Dependencies
+# Install: pip3 install -r requirements.txt
+
+alibabacloud_tea_openapi==0.3.4
+alibabacloud_credentials==0.3.5
+alibabacloud_tea_util==0.3.4
+alibabacloud_openapi_util==0.1.1
