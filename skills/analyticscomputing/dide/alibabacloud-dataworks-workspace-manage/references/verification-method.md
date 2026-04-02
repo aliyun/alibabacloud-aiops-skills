@@ -2,6 +2,16 @@
 
 This document provides verification steps and expected results after each operation is completed.
 
+## ⛔ PROHIBITED OPERATIONS
+
+> The following operations are **PROHIBITED** via this Skill:
+> - `UpdateProject` - Update workspace
+> - `DeleteProject` - Delete workspace
+> - `DeleteProjectMember` - Remove workspace member
+> - `RevokeMemberProjectRoles` - Revoke member roles
+>
+> Users must perform these operations manually via the DataWorks Console.
+
 ---
 
 ## Workspace Operation Verification
@@ -107,118 +117,6 @@ aliyun dataworks-public ListProjects \
 - [ ] Return status code is 200
 - [ ] Returned list contains expected workspaces
 - [ ] Pagination information is correct
-
----
-
-### 3. Update Workspace Verification
-
-**Operation**: `aliyun dataworks-public UpdateProject`
-
-**Verification Steps**:
-
-```bash
-# Step 1: Update workspace
-aliyun dataworks-public UpdateProject \
-  --Id <project-id> \
-  --DisplayName "Updated Display Name" \
-  --Description "Updated description" \
-  --region <region-id> \
-  --endpoint dataworks.<region-id>.aliyuncs.com
-
-# Step 2: Verify update took effect
-aliyun dataworks-public GetProject \
-  --Id <project-id> \
-  --region <region-id> \
-  --endpoint dataworks.<region-id>.aliyuncs.com
-```
-
-**Important Limitation Verification**:
-
-The following configurations cannot be disabled once enabled:
-
-| Configuration | Limitation |
-|---------------|------------|
-| DevRoleDisabled | Once development role is enabled, cannot be disabled |
-| DevEnvironmentEnabled | Once development environment is enabled, cannot be disabled |
-
-```bash
-# Verify enabling development environment (this operation is irreversible)
-aliyun dataworks-public UpdateProject \
-  --Id <project-id> \
-  --DevEnvironmentEnabled true \
-  --region <region-id> \
-  --endpoint dataworks.<region-id>.aliyuncs.com
-
-# The following operation will fail (attempting to disable enabled development environment)
-aliyun dataworks-public UpdateProject \
-  --Id <project-id> \
-  --DevEnvironmentEnabled false \
-  --region <region-id> \
-  --endpoint dataworks.<region-id>.aliyuncs.com
-# Expected to return error
-```
-
-**Expected Result**:
-```json
-{
-  "RequestId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-  "Project": {
-    "Id": 12345,
-    "DisplayName": "Updated Display Name",
-    "Description": "Updated description"
-  }
-}
-```
-
-**Verification Points**:
-- [ ] Return status code is 200
-- [ ] Display name has been updated
-- [ ] Description has been updated
-- [ ] Returns error when attempting to disable enabled development environment
-
----
-
-### 4. Delete Workspace Verification
-
-**Operation**: `aliyun dataworks-public DeleteProject`
-
-**Verification Steps**:
-
-```bash
-# Step 1: Delete workspace
-aliyun dataworks-public DeleteProject \
-  --Id <project-id> \
-  --region <region-id> \
-  --endpoint dataworks.<region-id>.aliyuncs.com
-
-# Step 2: Verify workspace has been deleted (should return error or empty)
-aliyun dataworks-public GetProject \
-  --Id <project-id> \
-  --region <region-id> \
-  --endpoint dataworks.<region-id>.aliyuncs.com
-```
-
-**Recycle Bin Mechanism Description**:
-
-After deleting a workspace, it is not permanently deleted immediately but goes to the recycle bin:
-
-| Stage | Description |
-|-------|-------------|
-| After deletion | Workspace goes to recycle bin, status becomes pending cleanup |
-| Silent period | Workspace is retained in recycle bin for **14 days** |
-| Permanent deletion | After 14 days, workspace is permanently deleted and **cannot be recovered** |
-
-> ⚠️ **Warning**: Please ensure necessary data backup is completed before deletion. Data cannot be recovered after the 14-day silent period.
-
-**Expected Result**:
-- Delete operation returns success
-- Query again returns `InvalidProject.NotFound` or similar error
-- Workspace goes to recycle bin, permanently deleted after 14 days
-
-**Verification Points**:
-- [ ] Delete operation returns status code 200
-- [ ] Workspace can no longer be queried
-- [ ] Workspace goes to recycle bin, permanently deleted after 14 days
 
 ---
 
@@ -372,68 +270,6 @@ aliyun dataworks-public GetProjectMember \
 
 ---
 
-### 8. Revoke Member Roles Verification
-
-**Operation**: `aliyun dataworks-public RevokeMemberProjectRoles`
-
-**Verification Steps**:
-
-```bash
-# Step 1: Revoke roles
-aliyun dataworks-public RevokeMemberProjectRoles \
-  --ProjectId <project-id> \
-  --UserId <user-id> \
-  --RoleCodes '["role_project_pe"]' \
-  --region <region-id> \
-  --endpoint dataworks.<region-id>.aliyuncs.com
-
-# Step 2: Verify roles have been revoked
-aliyun dataworks-public GetProjectMember \
-  --ProjectId <project-id> \
-  --UserId <user-id> \
-  --region <region-id> \
-  --endpoint dataworks.<region-id>.aliyuncs.com
-```
-
-**Expected Result**:
-- Member's role list no longer contains the revoked role
-
-**Verification Points**:
-- [ ] Return status code is 200
-- [ ] Member role list does not contain `role_project_pe`
-
----
-
-### 9. Remove Workspace Member Verification
-
-**Operation**: `aliyun dataworks-public DeleteProjectMember`
-
-**Verification Steps**:
-
-```bash
-# Step 1: Remove member
-aliyun dataworks-public DeleteProjectMember \
-  --ProjectId <project-id> \
-  --UserId <user-id> \
-  --region <region-id> \
-  --endpoint dataworks.<region-id>.aliyuncs.com
-
-# Step 2: Verify member has been removed
-aliyun dataworks-public GetProjectMember \
-  --ProjectId <project-id> \
-  --UserId <user-id> \
-  --region <region-id> \
-  --endpoint dataworks.<region-id>.aliyuncs.com
-```
-
-**Expected Result**:
-- Remove operation returns success
-- Query the member again returns error
-
-**Verification Points**:
-- [ ] Remove operation returns status code 200
-- [ ] Member can no longer be queried
-
 ---
 
 ## Role Management Operation Verification
@@ -502,11 +338,7 @@ After completing all verifications, ensure the following items have passed:
 
 - [ ] Workspace created successfully and can be queried
 - [ ] Workspace list query returns correct results
-- [ ] Workspace update took effect
 - [ ] Member added successfully and assigned correct roles
 - [ ] Member list query returns all members
 - [ ] Role grant operation took effect
-- [ ] Role revoke operation took effect
-- [ ] Member removed successfully
-- [ ] Workspace deleted successfully (goes to recycle bin)
 - [ ] Error handling meets expectations

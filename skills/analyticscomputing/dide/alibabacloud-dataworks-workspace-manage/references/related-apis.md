@@ -1,5 +1,17 @@
 # DataWorks Workspace Management - API and CLI Command Reference
 
+## ⛔ PROHIBITED OPERATIONS
+
+> The following APIs are **PROHIBITED** via this Skill:
+> - `UpdateProject` - Update workspace
+> - `DeleteProject` - Delete workspace
+> - `DeleteProjectMember` - Remove workspace member
+> - `RevokeMemberProjectRoles` - Revoke member roles
+>
+> Users must perform these operations manually via the DataWorks Console.
+
+---
+
 ## API Version Information
 
 - **Product Code**: dataworks-public
@@ -59,88 +71,6 @@ aliyun dataworks-public CreateProject \
   --PaiTaskEnabled true \
   --DevEnvironmentEnabled true \
   --DevRoleDisabled false \
-  --region <region-id> \
-  --endpoint dataworks.<region-id>.aliyuncs.com
-```
-
----
-
-### UpdateProject - Update Workspace
-
-| Property | Value |
-|----------|-------|
-| API Name | UpdateProject |
-| CLI Command | `aliyun dataworks-public UpdateProject` |
-| HTTP Method | POST |
-| API Style | RPC |
-| Official Documentation | [UpdateProject](https://help.aliyun.com/zh/dataworks/developer-reference/api-dataworks-public-2024-05-18-updateproject) |
-
-**Request Parameters**
-
-| Parameter Name | Type | Required | Description |
-|----------------|------|----------|-------------|
-| Id | Long | Yes | Workspace ID |
-| DisplayName | String | No | New display name |
-| Description | String | No | New description |
-| Status | String | No | Workspace status (Available/Disabled) |
-| DevRoleDisabled | Boolean | No | Disable development role |
-| DevEnvironmentEnabled | Boolean | No | Enable development environment |
-
-**Important Limitations**:
-
-| Configuration | Limitation |
-|---------------|------------|
-| DevRoleDisabled | Once development role is enabled, **cannot be disabled** |
-| DevEnvironmentEnabled | Once development environment is enabled, **cannot be disabled** |
-
-> ⚠️ **Note**: Development role and development environment cannot be disabled via API once enabled. Please plan these configurations carefully when creating or updating a workspace.
-
-**CLI Example**
-
-```bash
-aliyun dataworks-public UpdateProject \
-  --Id 12345 \
-  --DisplayName "Updated Name" \
-  --Description "Updated description" \
-  --region <region-id> \
-  --endpoint dataworks.<region-id>.aliyuncs.com
-```
-
----
-
-### DeleteProject - Delete Workspace
-
-| Property | Value |
-|----------|-------|
-| API Name | DeleteProject |
-| CLI Command | `aliyun dataworks-public DeleteProject` |
-| HTTP Method | POST |
-| API Style | RPC |
-| Official Documentation | [DeleteProject](https://help.aliyun.com/zh/dataworks/developer-reference/api-dataworks-public-2024-05-18-deleteproject) |
-
-**Request Parameters**
-
-| Parameter Name | Type | Required | Description |
-|----------------|------|----------|-------------|
-| Id | Long | Yes | Workspace ID |
-
-**Recycle Bin Mechanism**:
-
-After deleting a workspace, it is not permanently deleted immediately but goes to the recycle bin:
-
-| Stage | Description |
-|-------|-------------|
-| After deletion | Workspace goes to recycle bin, status becomes pending cleanup |
-| Silent period | Workspace is retained in recycle bin for **14 days** |
-| Permanent deletion | After 14 days, workspace is permanently deleted and **cannot be recovered** |
-
-> ⚠️ **Warning**: Please ensure necessary data backup is completed before deletion. Data cannot be recovered after the 14-day silent period.
-
-**CLI Example**
-
-```bash
-aliyun dataworks-public DeleteProject \
-  --Id 12345 \
   --region <region-id> \
   --endpoint dataworks.<region-id>.aliyuncs.com
 ```
@@ -281,94 +211,6 @@ aliyun dataworks-public CreateProjectMember \
   --ProjectId 12345 \
   --UserId ROLE_345678901234567890 \
   --RoleCodes '["role_project_dev"]' \
-  --region <region-id> \
-  --endpoint dataworks.<region-id>.aliyuncs.com
-```
-
----
-
-### DeleteProjectMember - Remove Workspace Member
-
-| Property | Value |
-|----------|-------|
-| API Name | DeleteProjectMember |
-| CLI Command | `aliyun dataworks-public DeleteProjectMember` |
-| HTTP Method | POST |
-| API Style | RPC |
-
-**Request Parameters**
-
-| Parameter Name | Type | Required | Description |
-|----------------|------|----------|-------------|
-| ProjectId | Long | Yes | Workspace ID |
-| UserId | String | Yes | Member user ID |
-
-**CLI Example**
-
-```bash
-aliyun dataworks-public DeleteProjectMember \
-  --ProjectId 12345 \
-  --UserId 234567890123456789 \
-  --region <region-id> \
-  --endpoint dataworks.<region-id>.aliyuncs.com
-```
-
----
-
-### GrantMemberProjectRoles - Grant Member Roles
-
-| Property | Value |
-|----------|-------|
-| API Name | GrantMemberProjectRoles |
-| CLI Command | `aliyun dataworks-public GrantMemberProjectRoles` |
-| HTTP Method | POST |
-| API Style | RPC |
-
-**Request Parameters**
-
-| Parameter Name | Type | Required | Description |
-|----------------|------|----------|-------------|
-| ProjectId | Long | Yes | Workspace ID |
-| UserId | String | Yes | Member user ID |
-| RoleCodes | Array | Yes | Role code list |
-
-**CLI Example**
-
-```bash
-aliyun dataworks-public GrantMemberProjectRoles \
-  --ProjectId 12345 \
-  --UserId 234567890123456789 \
-  --RoleCodes '["role_project_admin", "role_project_dev"]' \
-  --region <region-id> \
-  --endpoint dataworks.<region-id>.aliyuncs.com
-```
-
----
-
-### RevokeMemberProjectRoles - Revoke Member Roles
-
-| Property | Value |
-|----------|-------|
-| API Name | RevokeMemberProjectRoles |
-| CLI Command | `aliyun dataworks-public RevokeMemberProjectRoles` |
-| HTTP Method | POST |
-| API Style | RPC |
-
-**Request Parameters**
-
-| Parameter Name | Type | Required | Description |
-|----------------|------|----------|-------------|
-| ProjectId | Long | Yes | Workspace ID |
-| UserId | String | Yes | Member user ID |
-| RoleCodes | Array | Yes | Role codes to revoke |
-
-**CLI Example**
-
-```bash
-aliyun dataworks-public RevokeMemberProjectRoles \
-  --ProjectId 12345 \
-  --UserId 234567890123456789 \
-  --RoleCodes '["role_project_admin"]' \
   --region <region-id> \
   --endpoint dataworks.<region-id>.aliyuncs.com
 ```
@@ -516,6 +358,4 @@ aliyun dataworks-public ListProjectRoles \
 - [GetProject](https://help.aliyun.com/zh/dataworks/developer-reference/api-dataworks-public-2024-05-18-getproject)
 - [ListProjects](https://help.aliyun.com/zh/dataworks/developer-reference/api-dataworks-public-2024-05-18-listprojects)
 - [CreateProjectMember](https://help.aliyun.com/zh/dataworks/developer-reference/api-dataworks-public-2024-05-18-createprojectmember)
-- [DeleteProjectMember](https://help.aliyun.com/zh/dataworks/developer-reference/api-dataworks-public-2024-05-18-deleteprojectmember)
 - [GrantMemberProjectRoles](https://help.aliyun.com/zh/dataworks/developer-reference/api-dataworks-public-2024-05-18-grantmemberprojectroles)
-- [RevokeMemberProjectRoles](https://help.aliyun.com/zh/dataworks/developer-reference/api-dataworks-public-2024-05-18-revokememberprojectroles)

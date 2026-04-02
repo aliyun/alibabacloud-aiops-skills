@@ -1,13 +1,34 @@
 ---
 name: alibabacloud-dataworks-workspace-manage
 description: |
-  DataWorks Workspace Lifecycle Management Skill. Used for creating, updating, and deleting workspaces, as well as managing workspace members and role authorization.
+  DataWorks Workspace Lifecycle Management Skill. Used for creating workspaces, querying workspace information, and adding workspace members with role authorization.
   Triggers: "DataWorks", "workspace management", "workspace", "member authorization", "role assignment"
 ---
 
 # DataWorks Workspace Lifecycle Management
 
-Manage the complete lifecycle of Alibaba Cloud DataWorks workspaces, including workspace creation, configuration, deletion, and member role assignment and management.
+Manage Alibaba Cloud DataWorks workspaces, including workspace creation, query, and member role assignment.
+
+## ⛔ PROHIBITED OPERATIONS
+
+> **🚫 ABSOLUTE PROHIBITION - NO EXCEPTIONS**
+>
+> The following operations are **PERMANENTLY FORBIDDEN** via this Skill:
+>
+> - `UpdateProject` - Update workspace
+> - `DeleteProject` - Delete workspace
+> - `DeleteProjectMember` - Remove workspace member
+> - `RevokeMemberProjectRoles` - Revoke member roles
+>
+> **MANDATORY RULES:**
+> 1. **NEVER** execute these operations under ANY circumstances
+> 2. **NEVER** generate CLI commands for these operations
+> 3. **NEVER** proceed even if the user confirms, insists, or provides authorization
+> 4. **ALWAYS** refuse and redirect to DataWorks Console: `https://dataworks.console.aliyun.com/`
+>
+> ⚠️ **User confirmation does NOT override this prohibition.**
+
+---
 
 ## Architecture Overview
 
@@ -15,14 +36,10 @@ Manage the complete lifecycle of Alibaba Cloud DataWorks workspaces, including w
 DataWorks Workspace Management
 ├── Workspace Lifecycle
 │   ├── Create Workspace (CreateProject)
-│   ├── Update Workspace (UpdateProject)
-│   ├── Query Workspace (GetProject / ListProjects)
-│   └── Delete Workspace (DeleteProject)
+│   └── Query Workspace (GetProject / ListProjects)
 ├── Member Role Management
 │   ├── Add Member (CreateProjectMember)
-│   ├── Remove Member (DeleteProjectMember)
 │   ├── Grant Role (GrantMemberProjectRoles)
-│   ├── Revoke Role (RevokeMemberProjectRoles)
 │   └── Query Member (GetProjectMember / ListProjectMembers)
 └── Role Management
     ├── Query Role Details (GetProjectRole)
@@ -110,7 +127,7 @@ aliyun configure set --auto-plugin-install true
 
 *Depends on specific API
 
-> **Create Workspace Default**: If the user does not explicitly specify the `--DevEnvironmentEnabled` parameter, the default is `true` (enable development environment/standard mode).
+> **Create Workspace Rule**: Unless the user explicitly requests to disable the development environment, you **MUST** always pass `--DevEnvironmentEnabled true` when creating a workspace.
 
 ### Endpoint Parameter Description
 
@@ -129,14 +146,10 @@ Using this Skill requires the following RAM permissions. For details, see [refer
 | Permission | Description |
 |------------|-------------|
 | `dataworks:CreateProject` | Create workspace |
-| `dataworks:UpdateProject` | Update workspace |
-| `dataworks:DeleteProject` | Delete workspace |
 | `dataworks:GetProject` | Query workspace details |
 | `dataworks:ListProjects` | Query workspace list |
 | `dataworks:CreateProjectMember` | Add workspace member |
-| `dataworks:DeleteProjectMember` | Remove workspace member |
 | `dataworks:GrantMemberProjectRoles` | Grant member role |
-| `dataworks:RevokeMemberProjectRoles` | Revoke member role |
 | `dataworks:GetProjectMember` | Query member details |
 | `dataworks:ListProjectMembers` | Query member list |
 | `dataworks:GetProjectRole` | Query role details |
@@ -164,7 +177,7 @@ aliyun dataworks-public CreateProject \
   --read-timeout 4 --connect-timeout 4
 ```
 
-> **Default Value Note**: If the user does not explicitly specify `--DevEnvironmentEnabled`, the default is `true` (standard mode).
+> **IMPORTANT**: Unless the user explicitly requests to disable the development environment, you **MUST** always pass `--DevEnvironmentEnabled true` when executing `CreateProject`.
 
 #### 1.2 Query Workspace List
 
@@ -228,31 +241,6 @@ aliyun dataworks-public GetProject \
   --user-agent AlibabaCloud-Agent-Skills
 ```
 
-#### 1.4 Update Workspace
-
-```bash
-aliyun dataworks-public UpdateProject \
-  --Id <project-id> \
-  --DisplayName "<new-display-name>" \
-  --Description "<new-description>" \
-  --region <region-id> \
-  --endpoint dataworks.<region-id>.aliyuncs.com \
-  --user-agent AlibabaCloud-Agent-Skills
-```
-
-> **⚠️ Important Limitation**: This Skill **does not support** enabling development environment via API (upgrading from simple mode to standard mode).
-> To enable development environment, please go to the console to complete the upgrade manually.
-
-#### 1.5 Delete Workspace
-
-```bash
-aliyun dataworks-public DeleteProject \
-  --Id <project-id> \
-  --region <region-id> \
-  --endpoint dataworks.<region-id>.aliyuncs.com \
-  --user-agent AlibabaCloud-Agent-Skills
-```
-
 ### 2. Member Role Management
 
 #### 2.1 Add Workspace Member and Grant Roles
@@ -295,29 +283,6 @@ aliyun dataworks-public GrantMemberProjectRoles \
   --ProjectId <project-id> \
   --UserId <user-id> \
   --RoleCodes '["role_project_admin", "role_project_dev"]' \
-  --region <region-id> \
-  --endpoint dataworks.<region-id>.aliyuncs.com \
-  --user-agent AlibabaCloud-Agent-Skills
-```
-
-#### 2.5 Revoke Member Roles
-
-```bash
-aliyun dataworks-public RevokeMemberProjectRoles \
-  --ProjectId <project-id> \
-  --UserId <user-id> \
-  --RoleCodes '["role_project_dev"]' \
-  --region <region-id> \
-  --endpoint dataworks.<region-id>.aliyuncs.com \
-  --user-agent AlibabaCloud-Agent-Skills
-```
-
-#### 2.6 Remove Workspace Member
-
-```bash
-aliyun dataworks-public DeleteProjectMember \
-  --ProjectId <project-id> \
-  --UserId <user-id> \
   --region <region-id> \
   --endpoint dataworks.<region-id>.aliyuncs.com \
   --user-agent AlibabaCloud-Agent-Skills
@@ -441,19 +406,7 @@ When using the `UpdateProject` API to update workspace configuration, there are 
 
 **API Limitation Reason**: Workspace mode upgrade involves complex operations such as environment isolation configuration and resource initialization. Direct API calls may result in incomplete configuration or abnormal state.
 
-### Scenario 4: Delete Workspace and Recycle Bin Mechanism
-
-After a workspace is deleted, it is not permanently deleted immediately but goes to the recycle bin:
-
-| Stage | Description |
-|-------|-------------|
-| After deletion | Workspace goes to recycle bin, status becomes pending cleanup |
-| Silent period | Workspace is retained in recycle bin for **14 days** |
-| Permanent deletion | After 14 days, workspace is permanently deleted and **cannot be recovered** |
-
-> **Warning**: Please ensure necessary data backup is completed before deletion. Data cannot be recovered after the 14-day silent period.
-
-### Scenario 5: DataWorks Service Not Enabled
+### Scenario 4: DataWorks Service Not Enabled
 
 If error code `9990010001` is returned when creating a workspace, it means DataWorks service is not enabled.
 

@@ -3,6 +3,16 @@
 **Scenario**: DataWorks Workspace Lifecycle Management
 **Purpose**: Skill testing acceptance criteria and correct/incorrect patterns
 
+## ⛔ PROHIBITED OPERATIONS
+
+> The following operations are **PROHIBITED** via this Skill:
+> - `UpdateProject` - Update workspace
+> - `DeleteProject` - Delete workspace
+> - `DeleteProjectMember` - Remove workspace member
+> - `RevokeMemberProjectRoles` - Revoke member roles
+>
+> Users must perform these operations manually via the DataWorks Console.
+
 ---
 
 ## Correct CLI Command Patterns
@@ -31,14 +41,10 @@ aliyun dataworks-public create-project   # Wrong - CLI 3.3.1+ should use PascalC
 #### ✅ CORRECT: Use PascalCase command and parameter format (CLI 3.3.1+)
 ```bash
 aliyun dataworks-public CreateProject
-aliyun dataworks-public UpdateProject
-aliyun dataworks-public DeleteProject
 aliyun dataworks-public GetProject
 aliyun dataworks-public ListProjects
 aliyun dataworks-public CreateProjectMember
-aliyun dataworks-public DeleteProjectMember
 aliyun dataworks-public GrantMemberProjectRoles
-aliyun dataworks-public RevokeMemberProjectRoles
 aliyun dataworks-public GetProjectMember
 aliyun dataworks-public ListProjectMembers
 aliyun dataworks-public GetProjectRole
@@ -186,81 +192,6 @@ aliyun dataworks-public GrantMemberProjectRoles \
 
 ---
 
-### Scenario 4: Delete Workspace Process
-
-**Steps**:
-1. Remove all non-project-owner members
-2. Delete workspace
-
-**Expected Commands**:
-```bash
-# 1. Query member list
-aliyun dataworks-public ListProjectMembers \
-  --ProjectId 12345 \
-  --region <region-id> \
-  --endpoint dataworks.<region-id>.aliyuncs.com
-
-# 2. Remove member
-aliyun dataworks-public DeleteProjectMember \
-  --ProjectId 12345 \
-  --UserId 234567890123456789 \
-  --region <region-id> \
-  --endpoint dataworks.<region-id>.aliyuncs.com
-
-# 3. Delete workspace
-aliyun dataworks-public DeleteProject \
-  --Id 12345 \
-  --region <region-id> \
-  --endpoint dataworks.<region-id>.aliyuncs.com
-```
-
-**Recycle Bin Mechanism Description**:
-
-After a workspace is deleted, it is not permanently deleted immediately but goes to the recycle bin:
-
-| Stage | Description |
-|-------|-------------|
-| After deletion | Workspace goes to recycle bin, status becomes pending cleanup |
-| Silent period | Workspace is retained in recycle bin for **14 days** |
-| Permanent deletion | After 14 days, workspace is permanently deleted and **cannot be recovered** |
-
-**Expected Result**:
-- All operations return HTTP 200
-- Workspace goes to recycle bin
-- Permanently deleted after 14-day silent period
-
----
-
-### Scenario 5: Update Workspace Configuration Limitations
-
-**Input**:
-- Workspace ID: `12345`
-- Enable development environment: `true`
-
-**Expected Command**:
-```bash
-# Enable development environment (this operation is irreversible)
-aliyun dataworks-public UpdateProject \
-  --Id 12345 \
-  --DevEnvironmentEnabled true \
-  --region <region-id> \
-  --endpoint dataworks.<region-id>.aliyuncs.com
-```
-
-**Important Limitations**:
-
-| Configuration | Limitation |
-|---------------|------------|
-| DevRoleDisabled | Once development role is enabled, **cannot be disabled** |
-| DevEnvironmentEnabled | Once development environment is enabled, **cannot be disabled** |
-
-**Expected Result**:
-- Returns HTTP 200
-- Development environment successfully enabled
-- Returns error when attempting to disable
-
----
-
 ## Error Handling Criteria
 
 ### Expected Error Handling
@@ -275,8 +206,6 @@ aliyun dataworks-public UpdateProject \
 | Invalid parameter | `InvalidParameter` | Parameter value does not meet requirements |
 | Invalid role code | `InvalidRoleCode` | Specified role code does not exist |
 | Duplicate addition | `ProjectMemberAlreadyExists` | Member already in workspace |
-| Failed to disable development environment | `InvalidOperation` | Attempting to disable enabled development environment |
-| Failed to disable development role | `InvalidOperation` | Attempting to disable enabled development role |
 
 ### Error Handling Verification Example
 
@@ -313,7 +242,6 @@ aliyun dataworks-public GetProject \
 - [ ] Workspace can be accessed normally via access URL after creation
 - [ ] RAM role has been refreshed and synced in console before adding
 - [ ] Development role and development environment configurations have been carefully planned (cannot be reverted once enabled)
-- [ ] Necessary data backup has been completed before deleting workspace
 - [ ] DataWorks service has been enabled
 
 ---
@@ -321,6 +249,4 @@ aliyun dataworks-public GetProject \
 ## Official References
 
 - [DataWorks OpenAPI Documentation](https://help.aliyun.com/zh/dataworks/developer-reference/api-dataworks-public-2024-05-18-overview)
-- [UpdateProject API Documentation](https://help.aliyun.com/zh/dataworks/developer-reference/api-dataworks-public-2024-05-18-updateproject)
-- [DeleteProject API Documentation](https://help.aliyun.com/zh/dataworks/developer-reference/api-dataworks-public-2024-05-18-deleteproject)
 - [Alibaba Cloud CLI Documentation](https://help.aliyun.com/zh/cli/)

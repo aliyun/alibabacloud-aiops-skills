@@ -2,11 +2,21 @@
 
 This document lists the RAM permission policy configurations required to use the DataWorks Workspace Management Skill.
 
+## ⛔ PROHIBITED OPERATIONS
+
+> The following permissions are related to **PROHIBITED** operations:
+> - `dataworks:UpdateProject` - Update workspace
+> - `dataworks:DeleteProject` - Delete workspace
+> - `dataworks:DeleteProjectMember` - Remove member
+> - `dataworks:RevokeMemberProjectRoles` - Revoke roles
+>
+> These operations must be performed manually via the DataWorks Console.
+
 ---
 
-## Complete Permission Policy
+## Recommended Permission Policy
 
-The following policy includes all workspace management related permissions:
+The following policy includes permissions for allowed operations:
 
 ```json
 {
@@ -16,14 +26,10 @@ The following policy includes all workspace management related permissions:
       "Effect": "Allow",
       "Action": [
         "dataworks:CreateProject",
-        "dataworks:UpdateProject",
-        "dataworks:DeleteProject",
         "dataworks:GetProject",
         "dataworks:ListProjects",
         "dataworks:CreateProjectMember",
-        "dataworks:DeleteProjectMember",
         "dataworks:GrantMemberProjectRoles",
-        "dataworks:RevokeMemberProjectRoles",
         "dataworks:GetProjectMember",
         "dataworks:ListProjectMembers",
         "dataworks:GetProjectRole",
@@ -63,30 +69,7 @@ Suitable for scenarios that only need to view workspace information:
 }
 ```
 
-### 2. Workspace Management Permission
-
-Suitable for administrators who need to create, update, and delete workspaces:
-
-```json
-{
-  "Version": "1",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "dataworks:CreateProject",
-        "dataworks:UpdateProject",
-        "dataworks:DeleteProject",
-        "dataworks:GetProject",
-        "dataworks:ListProjects"
-      ],
-      "Resource": "*"
-    }
-  ]
-}
-```
-
-### 3. Member Management Permission
+### 2. Member Management Permission
 
 Suitable for scenarios that need to manage workspace members:
 
@@ -98,9 +81,7 @@ Suitable for scenarios that need to manage workspace members:
       "Effect": "Allow",
       "Action": [
         "dataworks:CreateProjectMember",
-        "dataworks:DeleteProjectMember",
         "dataworks:GrantMemberProjectRoles",
-        "dataworks:RevokeMemberProjectRoles",
         "dataworks:GetProjectMember",
         "dataworks:ListProjectMembers",
         "dataworks:GetProjectRole",
@@ -126,7 +107,6 @@ To restrict access to specific workspaces, you can use resource-level permission
       "Effect": "Allow",
       "Action": [
         "dataworks:GetProject",
-        "dataworks:UpdateProject",
         "dataworks:ListProjectMembers",
         "dataworks:CreateProjectMember"
       ],
@@ -151,14 +131,10 @@ Resource format description:
 | Permission | Description | Corresponding CLI Command |
 |------------|-------------|---------------------------|
 | `dataworks:CreateProject` | Create new DataWorks workspace | `CreateProject` |
-| `dataworks:UpdateProject` | Update workspace configuration | `UpdateProject` |
-| `dataworks:DeleteProject` | Delete workspace (irrecoverable) | `DeleteProject` |
 | `dataworks:GetProject` | Query workspace details | `GetProject` |
 | `dataworks:ListProjects` | List workspaces under current account | `ListProjects` |
 | `dataworks:CreateProjectMember` | Add member to workspace | `CreateProjectMember` |
-| `dataworks:DeleteProjectMember` | Remove member from workspace | `DeleteProjectMember` |
 | `dataworks:GrantMemberProjectRoles` | Grant roles to member | `GrantMemberProjectRoles` |
-| `dataworks:RevokeMemberProjectRoles` | Revoke roles from member | `RevokeMemberProjectRoles` |
 | `dataworks:GetProjectMember` | Query member details | `GetProjectMember` |
 | `dataworks:ListProjectMembers` | List all workspace members | `ListProjectMembers` |
 | `dataworks:GetProjectRole` | Query role details | `GetProjectRole` |
@@ -217,13 +193,10 @@ cat > dataworks-workspace-policy.json << 'EOF'
       "Action": [
         "dataworks:CreateProject",
         "dataworks:UpdateProject",
-        "dataworks:DeleteProject",
         "dataworks:GetProject",
         "dataworks:ListProjects",
         "dataworks:CreateProjectMember",
-        "dataworks:DeleteProjectMember",
         "dataworks:GrantMemberProjectRoles",
-        "dataworks:RevokeMemberProjectRoles",
         "dataworks:GetProjectMember",
         "dataworks:ListProjectMembers",
         "dataworks:GetProjectRole",
@@ -281,9 +254,15 @@ aliyun ram get-policy \
   --policy-type Custom
 ```
 
-### Q: What additional permissions are needed to delete a workspace?
+### Q: What operations require console access?
 
-Deleting a workspace is a high-risk operation. In addition to `dataworks:DeleteProject` permission, it is recommended to ensure the user has the workspace admin role permission.
+A: The following high-risk operations must be performed via the DataWorks Console:
+- Update workspace (`UpdateProject`)
+- Delete workspace (`DeleteProject`)
+- Remove workspace member (`DeleteProjectMember`)
+- Revoke member roles (`RevokeMemberProjectRoles`)
+
+Console URL: https://dataworks.console.aliyun.com/
 
 ---
 
