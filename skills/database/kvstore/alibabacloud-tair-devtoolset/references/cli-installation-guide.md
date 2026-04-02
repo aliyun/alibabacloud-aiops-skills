@@ -316,7 +316,7 @@ aliyun ecs describe-regions
       {
         "RegionId": "cn-hangzhou",
         "RegionEndpoint": "ecs.cn-hangzhou.aliyuncs.com",
-        "LocalName": "华东 1（杭州）"
+        "LocalName": "China East 1 (Hangzhou)"
       },
       ...
     ]

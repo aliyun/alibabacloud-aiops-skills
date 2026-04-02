@@ -1,13 +1,13 @@
 # Acceptance Criteria: alibabacloud-tair-devtoolset
 
-**Scenario**: Tair Benchmark — 创建 Tair 企业版实例并执行 redis-benchmark 性能测试
-**Purpose**: Skill 测试验收标准
+**Scenario**: Create Tair Enterprise Edition Instance
+**Purpose**: Skill Test Acceptance Criteria
 
 ---
 
 # Correct CLI Command Patterns
 
-## 1. Product — 产品名必须为 `r-kvstore`
+## 1. Product — Product name must be `r-kvstore`
 
 #### CORRECT
 ```bash
@@ -16,13 +16,13 @@ aliyun r-kvstore create-tair-instance ...
 
 #### INCORRECT
 ```bash
-# 错误：产品名不正确
+# Error: Incorrect product name
 aliyun redis create-tair-instance ...
 aliyun tair create-tair-instance ...
 aliyun kvstore create-tair-instance ...
 ```
 
-## 2. Command — 必须使用插件模式（小写连字符）
+## 2. Command — Must use plugin mode (lowercase with hyphens)
 
 #### CORRECT
 ```bash
@@ -31,18 +31,17 @@ aliyun r-kvstore describe-instance-attribute ...
 aliyun r-kvstore modify-security-ips ...
 aliyun r-kvstore allocate-instance-public-connection ...
 aliyun r-kvstore describe-db-instance-net-info ...
-aliyun r-kvstore release-instance-public-connection ...
 ```
 
 #### INCORRECT
 ```bash
-# 错误：使用传统 API 大驼峰格式
+# Error: Using legacy API PascalCase format
 aliyun r-kvstore CreateTairInstance ...
 aliyun r-kvstore DescribeInstanceAttribute ...
 aliyun r-kvstore ModifySecurityIps ...
 ```
 
-## 3. Parameters — 参数名必须使用连字符格式
+## 3. Parameters — Parameter names must use hyphen format
 
 #### CORRECT
 ```bash
@@ -63,17 +62,17 @@ aliyun r-kvstore create-tair-instance \
 
 #### INCORRECT
 ```bash
-# 错误：使用大驼峰参数名
+# Error: Using PascalCase parameter names
 aliyun r-kvstore create-tair-instance \
   --RegionId cn-hangzhou \
   --InstanceClass tair.rdb.1g
 
-# 错误：region 参数名不正确（应为 --biz-region-id）
+# Error: Incorrect region parameter name (should be --biz-region-id)
 aliyun r-kvstore create-tair-instance \
   --region-id cn-hangzhou
 ```
 
-## 4. user-agent — 每条 aliyun 命令必须携带
+## 4. user-agent — Must be included in every aliyun command
 
 #### CORRECT
 ```bash
@@ -84,60 +83,60 @@ aliyun r-kvstore describe-instance-attribute \
 
 #### INCORRECT
 ```bash
-# 错误：缺少 --user-agent
+# Error: Missing --user-agent
 aliyun r-kvstore describe-instance-attribute \
   --instance-id r-bp1xxx
 ```
 
-## 5. InstanceType 枚举值
+## 5. InstanceType Enum Values
 
 #### CORRECT
 ```bash
---instance-type tair_rdb    # DRAM 内存型
---instance-type tair_scm    # 持久内存型
---instance-type tair_essd   # ESSD/SSD 磁盘型
+--instance-type tair_rdb    # DRAM memory type
+--instance-type tair_scm    # Persistent memory type
+--instance-type tair_essd   # ESSD/SSD disk type
 ```
 
 #### INCORRECT
 ```bash
---instance-type rdb         # 错误：不完整
---instance-type TAIR_RDB    # 错误：大写
---instance-type redis       # 错误：无效枚举
+--instance-type rdb         # Error: Incomplete
+--instance-type TAIR_RDB    # Error: Uppercase
+--instance-type redis       # Error: Invalid enum
 ```
 
-## 6. ShardType 枚举值
+## 6. ShardType Enum Values
 
 #### CORRECT
 ```bash
---shard-type MASTER_SLAVE   # 主从高可用
---shard-type STAND_ALONE    # 单节点
+--shard-type MASTER_SLAVE   # Master-slave high availability
+--shard-type STAND_ALONE    # Single node
 ```
 
 #### INCORRECT
 ```bash
---shard-type master_slave   # 错误：应为全大写
---shard-type MasterSlave    # 错误：格式不对
+--shard-type master_slave   # Error: Should be uppercase
+--shard-type MasterSlave    # Error: Incorrect format
 ```
 
-## 7. ChargeType 枚举值
+## 7. ChargeType Enum Values
 
 #### CORRECT
 ```bash
---charge-type PostPaid      # 按量付费
---charge-type PrePaid       # 包年包月
+--charge-type PostPaid      # Pay-as-you-go
+--charge-type PrePaid       # Subscription
 ```
 
 #### INCORRECT
 ```bash
---charge-type postpaid      # 错误：大小写不对
---charge-type PayAsYouGo    # 错误：无效枚举
+--charge-type postpaid      # Error: Incorrect case
+--charge-type PayAsYouGo    # Error: Invalid enum
 ```
 
 ---
 
 # Script Execution Patterns
 
-## 8. 脚本调用方式
+## 8. Script Invocation
 
 #### CORRECT
 ```bash
@@ -148,9 +147,9 @@ bash scripts/create-and-connect-test.sh
 
 #### INCORRECT
 ```bash
-# 错误：未设置必填环境变量
+# Error: Required environment variables not set
 bash scripts/create-and-connect-test.sh
 
-# 错误：参数传递方式不对
+# Error: Incorrect parameter passing method
 bash scripts/create-and-connect-test.sh --vpc-id vpc-bp1xxx
 ```

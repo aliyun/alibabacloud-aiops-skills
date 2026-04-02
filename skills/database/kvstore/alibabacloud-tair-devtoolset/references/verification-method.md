@@ -2,13 +2,13 @@
 
 ## Scenario Goal
 
-**Expected Outcome**: Tair 企业版实例创建成功，公网 TCP 端口可达。
+**Expected Outcome**: Tair Enterprise Edition instance created successfully, public TCP port reachable.
 
 ---
 
 ## Step-by-Step Verification
 
-### 1. 验证实例创建成功
+### 1. Verify Instance Creation Success
 
 ```bash
 aliyun r-kvstore describe-instance-attribute \
@@ -17,9 +17,9 @@ aliyun r-kvstore describe-instance-attribute \
   --user-agent AlibabaCloud-Agent-Skills
 ```
 
-**Success Indicator**: 返回值为 `Normal`
+**Success Indicator**: Return value is `Normal`
 
-### 2. 验证白名单配置
+### 2. Verify Whitelist Configuration
 
 ```bash
 aliyun r-kvstore describe-security-ips \
@@ -27,9 +27,9 @@ aliyun r-kvstore describe-security-ips \
   --user-agent AlibabaCloud-Agent-Skills
 ```
 
-**Success Indicator**: 返回的 `SecurityIpGroups` 中包含 benchmark 分组，且 IP 地址与本机公网 IP 一致。
+**Success Indicator**: Returned `SecurityIpGroups` contains benchmark group, and IP address matches local public IP.
 
-### 3. 验证公网地址分配
+### 3. Verify Public Endpoint Allocation
 
 ```bash
 aliyun r-kvstore describe-db-instance-net-info \
@@ -37,5 +37,4 @@ aliyun r-kvstore describe-db-instance-net-info \
   --user-agent AlibabaCloud-Agent-Skills
 ```
 
-**Success Indicator**: 返回 `NetInfoItems.InstanceNetInfo` 中存在 `IPType` 为 `Public` 的记录，且 `ConnectionString` 非空。
-
+**Success Indicator**: Returned `NetInfoItems.InstanceNetInfo` contains a record with `IPType` as `Public`, and `ConnectionString` is not empty.

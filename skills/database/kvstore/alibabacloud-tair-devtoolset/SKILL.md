@@ -1,13 +1,13 @@
 ---
 name: alibabacloud-tair-devtoolset
 description: |
-  Alicloud Service Scenario-Based Skill. 使用阿里云 CLI 创建 Tair 企业版实例并配置公网访问。
-  Triggers: "tair", "创建 tair 实例", "tair instance".
+  Alicloud Service Scenario-Based Skill. Create Tair Enterprise Edition instance and configure public network access using Aliyun CLI.
+  Triggers: "tair", "create tair instance", "tair instance".
 ---
 
-# Tair DevToolset — 创建实例与公网配置
+# Tair DevToolset — Instance Creation and Public Network Configuration
 
-通过阿里云 CLI 自动化创建 Tair 企业版云原生实例、配置公网访问、设置 IP 白名单。
+Automate Tair Enterprise Edition cloud-native instance creation, public network access configuration, and IP whitelist setup using Aliyun CLI.
 
 **Architecture**: `VPC + VSwitch + Tair Enterprise Instance + Public Endpoint`
 
@@ -21,17 +21,17 @@ description: |
 > Then [MUST] run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
 
 ```bash
-# 验证 CLI 版本
+# Verify CLI version
 aliyun version
 
-# 启用自动插件安装
+# Enable automatic plugin installation
 aliyun configure set --auto-plugin-install true
 
-# 验证 jq
+# Verify jq
 jq --version
 ```
 
-如未安装 jq：
+If jq is not installed:
 ```bash
 brew install jq   # macOS
 ```
@@ -42,7 +42,7 @@ brew install jq   # macOS
 
 > **Pre-check: Alibaba Cloud Credentials Required**
 >
-> 所有凭证配置沿用 aliyun CLI 已有配置，无需在脚本中单独设置。
+> All credential configurations follow existing aliyun CLI settings, no separate configuration needed in scripts.
 >
 > **Security Rules:**
 > - **NEVER** read, echo, or print AK/SK values (e.g., `echo $ALIBABA_CLOUD_ACCESS_KEY_ID` is FORBIDDEN)
@@ -64,17 +64,17 @@ brew install jq   # macOS
 
 ## 3. RAM Policy
 
-本 Skill 涉及的 RAM 权限详见 [references/ram-policies.md](references/ram-policies.md)。
+See [references/ram-policies.md](references/ram-policies.md) for RAM permissions required by this Skill.
 
-核心权限：
+Core permissions:
 
 | RAM Action | Description |
 |-----------|-------------|
-| `r-kvstore:CreateTairInstance` | 创建 Tair 实例 |
-| `r-kvstore:DescribeInstanceAttribute` | 查询实例状态 |
-| `r-kvstore:ModifySecurityIps` | 修改白名单 |
-| `r-kvstore:AllocateInstancePublicConnection` | 分配公网地址 |
-| `r-kvstore:DescribeDBInstanceNetInfo` | 查询网络信息 |
+| `r-kvstore:CreateTairInstance` | Create Tair instance |
+| `r-kvstore:DescribeInstanceAttribute` | Query instance status |
+| `r-kvstore:ModifySecurityIps` | Modify IP whitelist |
+| `r-kvstore:AllocateInstancePublicConnection` | Allocate public endpoint |
+| `r-kvstore:DescribeDBInstanceNetInfo` | Query network info |
 
 > **[MUST] Permission Failure Handling:** When any command or API call fails due to permission errors at any point during execution, follow this process:
 > 1. Read `references/ram-policies.md` to get the full list of permissions required by this SKILL
@@ -92,20 +92,20 @@ brew install jq   # macOS
 
 | Parameter | Required | Description | Default |
 |-----------|----------|-------------|---------|
-| VPC_ID | **Yes** | 专有网络 ID，如 `vpc-bp1xxx` | — |
-| VSWITCH_ID | **Yes** | 交换机 ID，如 `vsw-bp1xxx` | — |
-| REGION_ID | No | 地域 ID | `cn-hangzhou` |
-| ZONE_ID | No | 可用区 ID | `cn-hangzhou-h` |
-| INSTANCE_TYPE | No | 实例系列 | `tair_rdb` |
-| INSTANCE_CLASS | No | 实例规格 | `tair.rdb.1g` |
-| INSTANCE_NAME | No | 实例名称 | `tair-benchmark-<timestamp>` |
+| VPC_ID | **Yes** | VPC ID, e.g. `vpc-bp1xxx` | — |
+| VSWITCH_ID | **Yes** | VSwitch ID, e.g. `vsw-bp1xxx` | — |
+| REGION_ID | No | Region ID | `cn-hangzhou` |
+| ZONE_ID | No | Zone ID | `cn-hangzhou-h` |
+| INSTANCE_TYPE | No | Instance series | `tair_rdb` |
+| INSTANCE_CLASS | No | Instance specification | `tair.rdb.1g` |
+| INSTANCE_NAME | No | Instance name | `tair-benchmark-<timestamp>` |
 
-### 常用规格
+### Common Specifications
 
-#### 标准架构
+#### Standard Architecture
 
-| InstanceClass | 内存 | 带宽 | 最大连接数 | QPS 参考值 |
-|---------------|------|------|-----------|-----------|
+| InstanceClass | Memory | Bandwidth | Max Connections | QPS Reference |
+|---------------|--------|-----------|-----------------|---------------|
 | tair.rdb.1g | 1 GB | 768 Mbps | 30,000 | 300,000 |
 | tair.rdb.2g | 2 GB | 768 Mbps | 30,000 | 300,000 |
 | tair.rdb.4g | 4 GB | 768 Mbps | 40,000 | 300,000 |
@@ -117,128 +117,61 @@ brew install jq   # macOS
 
 ## 5. Core Workflow
 
-### 方式一：自动化脚本（推荐）
+> **[MUST] Execution Constraints**
+> - **MUST and ONLY** use `scripts/create-and-connect-test.sh` script to complete instance creation, whitelist configuration, public endpoint allocation, etc.
+> - **DO NOT** bypass the script to directly call `aliyun r-kvstore` CLI commands for the above operations
+> - **DO NOT** write or concatenate aliyun CLI commands to replace script functionality
+> - Model's responsibility is: collect parameters → set environment variables → run script. No improvisation allowed.
 
-使用收集到的参数设置环境变量，运行一体化脚本：
+Set environment variables with collected parameters and run the all-in-one script:
 
 ```bash
-export VPC_ID="<用户确认的 VPC_ID>"
-export VSWITCH_ID="<用户确认的 VSWITCH_ID>"
+export VPC_ID="<user-confirmed VPC_ID>"
+export VSWITCH_ID="<user-confirmed VSWITCH_ID>"
 
-# 可选参数
+# Optional parameters
 export REGION_ID="cn-hangzhou"
 export ZONE_ID="cn-hangzhou-h"
 export INSTANCE_TYPE="tair_rdb"
 export INSTANCE_CLASS="tair.rdb.1g"
-# NAT 环境需手动设置公网 IP
-# export MY_PUBLIC_IP="你的公网IP"
+# For NAT environment, manually set public IP
+# export MY_PUBLIC_IP="your-public-ip"
 
 bash scripts/create-and-connect-test.sh
 ```
 
-脚本将自动完成：创建实例 → 等待就绪 → 配置白名单 → 分配公网地址 → 获取公网连接信息。
-
-### 方式二：手动分步执行
-
-#### Task 1: 创建 Tair 实例
-
-```bash
-aliyun r-kvstore create-tair-instance \
-  --biz-region-id "${REGION_ID}" \
-  --zone-id "${ZONE_ID}" \
-  --vpc-id "${VPC_ID}" \
-  --vswitch-id "${VSWITCH_ID}" \
-  --instance-name "${INSTANCE_NAME}" \
-  --instance-type "${INSTANCE_TYPE}" \
-  --instance-class "${INSTANCE_CLASS}" \
-  --charge-type PostPaid \
-  --shard-type MASTER_SLAVE \
-  --auto-pay true \
-  --user-agent AlibabaCloud-Agent-Skills
-```
-
-从返回中提取 `InstanceId`。
-
-#### Task 2: 等待实例就绪
-
-轮询实例状态直到 `Normal`：
-
-```bash
-aliyun r-kvstore describe-instance-attribute \
-  --instance-id "${INSTANCE_ID}" \
-  --user-agent AlibabaCloud-Agent-Skills
-```
-
-检查 `Instances.DBInstanceAttribute[0].InstanceStatus` 为 `Normal`。建议每 30 秒查询一次，最多等待 10 分钟。
-
-#### Task 3: 配置 IP 白名单
-
-```bash
-# 通过 ifconfig 获取本机 IP，或手动设置
-MY_PUBLIC_IP=$(ifconfig | grep 'inet ' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' | grep -v '127.0.0.1' | head -n1)
-# NAT 环境请手动设置: export MY_PUBLIC_IP="你的公网IP"
-
-aliyun r-kvstore modify-security-ips \
-  --instance-id "${INSTANCE_ID}" \
-  --security-ips "${MY_PUBLIC_IP}" \
-  --security-ip-group-name "benchmark" \
-  --user-agent AlibabaCloud-Agent-Skills
-```
-
-#### Task 4: 分配公网连接地址
-
-```bash
-CONNECTION_PREFIX=$(echo "${INSTANCE_ID}" | tr '[:upper:]' '[:lower:]' | sed 's/-//g' | cut -c1-20)pub
-
-aliyun r-kvstore allocate-instance-public-connection \
-  --instance-id "${INSTANCE_ID}" \
-  --connection-string-prefix "${CONNECTION_PREFIX}" \
-  --port "6379" \
-  --user-agent AlibabaCloud-Agent-Skills
-```
-
-等待实例恢复 `Normal` 状态后继续。
-
-#### Task 5: 获取公网连接地址
-
-```bash
-aliyun r-kvstore describe-db-instance-net-info \
-  --instance-id "${INSTANCE_ID}" \
-  --user-agent AlibabaCloud-Agent-Skills
-```
-
-从返回中找到 `IPType` 为 `Public` 的 `ConnectionString` 和 `Port`。
+The script will automatically complete: Create instance → Wait for ready → Configure whitelist → Allocate public endpoint → Get public connection info.
 
 ---
 
 ## 6. Success Verification
 
-详细验证步骤见 [references/verification-method.md](references/verification-method.md)。
+See [references/verification-method.md](references/verification-method.md) for detailed verification steps.
 
-快速验证实例状态：
+Quick instance status verification:
 ```bash
 aliyun r-kvstore describe-instance-attribute \
   --instance-id "${INSTANCE_ID}" \
   --user-agent AlibabaCloud-Agent-Skills
 ```
 
-确认 `InstanceStatus` 为 `Normal` 且公网地址已分配。
+Confirm `InstanceStatus` is `Normal` and public endpoint is allocated.
 
 ---
 
 ## 7. Troubleshooting
 
-| 问题 | 解决方案 |
-|------|---------|
-| 连接超时 | 检查白名单是否包含当前公网 IP（必须 IPv4） |
-| 公网地址为空 | 确认 `allocate-instance-public-connection` 执行成功并等待实例恢复 Normal |
+| Issue | Solution |
+|-------|----------|
+| Connection timeout | Check if whitelist includes current public IP (must be IPv4) |
+| Public endpoint empty | Confirm `allocate-instance-public-connection` executed successfully and wait for instance to recover to Normal |
 
 ---
 
 ## 8. Best Practices
 
-1. 使用按量付费（PostPaid）进行测试
-2. 白名单仅添加测试机公网 IP，遵循最小权限原则
+1. Use pay-as-you-go (PostPaid) for testing
+2. Only add test machine's public IP to whitelist, follow least privilege principle
 
 ---
 
@@ -246,8 +179,8 @@ aliyun r-kvstore describe-instance-attribute \
 
 | Reference | Description |
 |-----------|-------------|
-| [references/cli-installation-guide.md](references/cli-installation-guide.md) | Aliyun CLI 安装与配置指南 |
-| [references/ram-policies.md](references/ram-policies.md) | RAM 权限策略文档 |
-| [references/related-commands.md](references/related-commands.md) | 相关 CLI 命令列表与参数 |
-| [references/verification-method.md](references/verification-method.md) | 成功验证方法 |
-| [references/acceptance-criteria.md](references/acceptance-criteria.md) | 验收标准 |
+| [references/cli-installation-guide.md](references/cli-installation-guide.md) | Aliyun CLI Installation and Configuration Guide |
+| [references/ram-policies.md](references/ram-policies.md) | RAM Permission Policy Document |
+| [references/related-commands.md](references/related-commands.md) | Related CLI Commands and Parameters |
+| [references/verification-method.md](references/verification-method.md) | Success Verification Method |
+| [references/acceptance-criteria.md](references/acceptance-criteria.md) | Acceptance Criteria |
