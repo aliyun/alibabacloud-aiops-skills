@@ -1,0 +1,4 @@
+alibabacloud-foasconsole20211028==2.2.1
+alibabacloud-tea-openapi==0.4.3
+alibabacloud-tea-util==0.3.14
+alibabacloud-credentials==1.0.8
