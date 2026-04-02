@@ -127,7 +127,6 @@ aliyun emr GetNodeGroup --RegionId cn-hangzhou --ClusterId c-xxx \
 | Error | Cause | Solution |
 |------|------|---------|
 | `OperationDenied.ClusterStatus` | Cluster state doesn't allow current operation | Wait for cluster to become RUNNING then retry |
-| `OperationDenied.DeletionProtection` | Deletion protection enabled | First disable deletion protection then operate |
 
 ### API Throttling
 
@@ -137,4 +136,4 @@ aliyun emr GetNodeGroup --RegionId cn-hangzhou --ClusterId c-xxx \
 
 ## Related Documentation
 
-- When need to switch to creation, scaling, quick start or parameter quick reference scenarios, please return to intent routing table in `SKILL.md`, then select corresponding `references/*.md` file.
+- When need to switch to other scenarios, please return to intent routing table in `SKILL.md` to select the appropriate reference document.

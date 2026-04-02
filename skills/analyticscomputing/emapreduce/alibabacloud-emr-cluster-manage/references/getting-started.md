@@ -180,18 +180,6 @@ Cluster nodes only have private IP, can access via:
 - **Workbench**: Passwordless login to node instance in ECS console
 - **VPN**: Connect to VPC internal network via VPN gateway
 
-## Cleanup: Delete Test Cluster
-
-Delete promptly after use, avoid持续 billing:
-
-```bash
-# First confirm cluster info
-aliyun emr GetCluster --RegionId cn-hangzhou --ClusterId c-xxx
-
-# ⚠️ Delete cluster (irrecoverable, all data will be released)
-aliyun emr DeleteCluster --RegionId cn-hangzhou --ClusterId c-xxx
-```
-
 ## Common Creation Failure Causes
 
 | Symptom | Possible Cause | Diagnosis Method |
@@ -204,4 +192,4 @@ aliyun emr DeleteCluster --RegionId cn-hangzhou --ClusterId c-xxx
 
 ## Next Steps
 
-- When need production-grade cluster, scaling, operations or API parameter quick reference, return to `SKILL.md` intent routing table, then read corresponding `references/*.md` files by scenario.
+- When need other scenarios, return to intent routing table in `SKILL.md` to select the appropriate reference document.

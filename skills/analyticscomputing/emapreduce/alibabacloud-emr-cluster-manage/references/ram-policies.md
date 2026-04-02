@@ -15,8 +15,6 @@ This Skill calls Alibaba Cloud EMR and related services' OpenAPI via `aliyun` CL
 | `emr:GetCluster` | Query cluster details | Read-only |
 | `emr:ListClusters` | Query cluster list | Read-only |
 | `emr:ListApplications` | Query cluster application component list | Read-only |
-| `emr:InstallApplications` | Install application components to existing cluster | Write operation |
-| `emr:DeleteCluster` | Delete cluster | Write operation (irreversible) |
 | `emr:UpdateClusterAttribute` | Modify cluster attributes (name, deletion protection, etc.) | Write operation |
 | `emr:GetClusterCloneMeta` | Get cluster clone metadata | Read-only |
 | `emr:UpdateClusterAutoRenew` | Configure cluster auto renewal | Write operation |
@@ -68,7 +66,6 @@ Below is a RAM custom policy (JSON format) granting all above permissions, can b
         "emr:GetCluster",
         "emr:ListClusters",
         "emr:ListApplications",
-        "emr:DeleteCluster",
         "emr:UpdateClusterAttribute",
         "emr:GetClusterCloneMeta",
         "emr:UpdateClusterAutoRenew",
@@ -103,7 +100,7 @@ Below is a RAM custom policy (JSON format) granting all above permissions, can b
 
 - **Read-only scenarios** (query cluster status, node info): Only grant all `Get*` and `List*` Actions, plus VPC/ECS read-only permissions
 - **Operations scenarios** (scaling, renewal): Add `IncreaseNodes`, `DecreaseNodes`, `UpdateClusterAutoRenew` on top of read-only permissions
-- **Full management** (create, delete cluster): Grant full policy above, note `DeleteCluster` and `DecreaseNodes` are irreversible operations, recommend only granting to trusted RAM users/roles
+- **Full management** (create cluster, node scaling): Grant full policy above, note `DecreaseNodes` is an irreversible operation, recommend only granting to trusted RAM users/roles
 
 ## Troubleshooting Insufficient Permissions
 

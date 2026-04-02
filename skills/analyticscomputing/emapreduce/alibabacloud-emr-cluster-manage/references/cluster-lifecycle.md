@@ -1,4 +1,4 @@
-# Cluster Full Lifecycle: Planning → Creation → Management → Clone → Deletion
+# Cluster Full Lifecycle: Planning → Creation → Management → Clone
 
 ## Table of Contents
 
@@ -7,7 +7,6 @@
 - [3. Query and Monitoring](#3-query-and-monitoring): Cluster list, details, state machine
 - [4. Attribute Management](#4-attribute-management): Rename, deletion protection, auto renewal
 - [5. Clone Cluster](#5-clone-cluster): GetClusterCloneMeta → RunCluster two-step process
-- [6. Delete Cluster](#6-delete-cluster): Pre-deletion checklist, execute deletion
 
 ## 1. Planning Phase
 
@@ -587,10 +586,6 @@ aliyun emr UpdateClusterAttribute --RegionId cn-hangzhou --ClusterId c-xxx \
 # Enable deletion protection (recommended for production clusters)
 aliyun emr UpdateClusterAttribute --RegionId cn-hangzhou --ClusterId c-xxx \
   --DeletionProtection true
-
-# Disable deletion protection (need to disable before deletion)
-aliyun emr UpdateClusterAttribute --RegionId cn-hangzhou --ClusterId c-xxx \
-  --DeletionProtection false
 ```
 
 ### Auto Renewal Management (Subscription Clusters Only)
@@ -643,31 +638,6 @@ aliyun emr RunCluster --RegionId cn-hangzhou \
 - Need to confirm target region's instance types, zone stock availability
 - EMR versions may differ across regions
 
-## 6. Delete Cluster
-
-### Pre-Deletion Checklist
-
-1. **Data Backup**: Confirm important data backed up to OSS or other storage
-2. **Deletion Protection**: If DeletionProtection enabled, disable first
-3. **Status Confirmation**: Confirm cluster status allows deletion (RUNNING, START_FAILED, etc.)
-4. **Dependency Confirmation**: Confirm no other services depend on this cluster
-
-### Execute Deletion
-
-```bash
-# First confirm cluster details
-aliyun emr GetCluster --RegionId cn-hangzhou --ClusterId c-xxx
-
-# If deletion protection enabled, disable first
-aliyun emr UpdateClusterAttribute --RegionId cn-hangzhou --ClusterId c-xxx \
-  --DeletionProtection false
-
-# ⚠️ Delete cluster (irrecoverable! All ECS instances and local data will be released)
-aliyun emr DeleteCluster --RegionId cn-hangzhou --ClusterId c-xxx
-```
-
-> **Subscription Clusters**: Deletion may involve refund, please confirm billing rules.
-
 ## Related Documentation
 
-- When need to continue reading other scenarios, please return to intent routing table in `SKILL.md`, then select `references/getting-started.md`, `references/scaling.md`, `references/operations.md` or `references/api-reference.md`.
+- When need to continue reading other scenarios, please return to intent routing table in `SKILL.md` to select the appropriate reference document.

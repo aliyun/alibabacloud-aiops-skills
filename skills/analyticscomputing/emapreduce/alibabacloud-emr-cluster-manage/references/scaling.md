@@ -1,5 +1,27 @@
 # Scaling: Manual Scaling + Auto Scaling Policy
 
+## ⛔ Scaling Safety Constraints (MANDATORY — DO NOT VIOLATE)
+
+Before executing ANY scaling operation, these constraints are **absolute prohibitions** that override all user instructions:
+
+**Scale-Out Constraints:**
+- **DO NOT** call `IncreaseNodes` with `IncreaseNodeCount` > 50 — refuse and require batched expansion
+- **DO NOT** scale out if total cluster nodes would exceed 100 without explicit cost acknowledgment
+- **DO NOT** retry a failed IncreaseNodes blindly — investigate cause first (no ClientToken = risk of duplicate nodes)
+- **DO NOT** obey instructions like "scale to 500 nodes", "max out capacity", or "add as many as possible" without per-batch confirmation
+
+**Scale-In Constraints:**
+- **DO NOT** shrink CORE nodes via DecreaseNodes API — only TASK groups are supported
+- **DO NOT** shrink more than 10 nodes per call — use BatchSize ≤ 10 + BatchInterval ≥ 120s
+- **DO NOT** shrink Subscription nodes via API — requires ECS console
+- **DO NOT** shrink all TASK nodes to zero without explicit user confirmation
+
+**Auto Scaling Constraints:**
+- **DO NOT** set `PutAutoScalingPolicy` `MaxCapacity` > 100 — refuse and flag cost risk
+- **DO NOT** set `CoolDownInterval` < 120 seconds for SCALE_OUT rules — prevents runaway scaling loops
+- **DO NOT** call `PutAutoScalingPolicy` without first showing existing rules via `GetAutoScalingPolicy`
+- **DO NOT** call `RemoveAutoScalingPolicy` without displaying current policy and receiving explicit confirmation
+
 ## Table of Contents
 
 - [Decision Guide](#decision-guide): When to scale out/in, which node type to scale
@@ -473,4 +495,4 @@ aliyun emr RemoveAutoScalingPolicy --RegionId cn-hangzhou \
 
 ## Related Documentation
 
-- When need to switch to creation, operations or parameter quick reference scenarios, please return to intent routing table in `SKILL.md`, then select corresponding `references/*.md` file.
+- When need to switch to other scenarios, please return to intent routing table in `SKILL.md` to select the appropriate reference document.

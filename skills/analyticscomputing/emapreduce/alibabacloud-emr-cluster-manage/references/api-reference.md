@@ -5,7 +5,7 @@ All APIs version `2021-03-20`, request method RPC style. Common parameter `Regio
 ## Table of Contents
 
 - [Basic Queries](#basic-queries): ListReleaseVersions, ListInstanceTypes
-- [Cluster Management](#cluster-management): RunCluster, CreateCluster, GetCluster, ListClusters, ListApplications, InstallApplications, DeleteCluster, UpdateClusterAttribute, GetClusterCloneMeta, UpdateClusterAutoRenew
+- [Cluster Management](#cluster-management): RunCluster, CreateCluster, GetCluster, ListClusters, ListApplications, UpdateClusterAttribute, GetClusterCloneMeta, UpdateClusterAutoRenew
 - [Node Group Management](#node-group-management): CreateNodeGroup, ListNodeGroups, GetNodeGroup, IncreaseNodes, DecreaseNodes, ListNodes
 - [Auto Scaling](#auto-scaling): PutAutoScalingPolicy, GetAutoScalingPolicy, RemoveAutoScalingPolicy, ListAutoScalingActivities
 - [Complex Object Structure Reference](#complex-object-structure-reference): NodeGroupConfig, NodeAttributes, SubscriptionConfig, ScalingRule, TimeTrigger, MetricsTrigger, ApplicationConfig
@@ -61,6 +61,12 @@ aliyun emr ListInstanceTypes --RegionId cn-hangzhou --ZoneId cn-hangzhou-h \
 
 ### RunCluster — Create Cluster (Recommended)
 
+> **⛔ DO NOT** create clusters without cost guardrails:
+> 1. **DO NOT** set any single NodeGroup's `NodeCount` > 50 — refuse and flag cost risk
+> 2. **DO NOT** create Subscription clusters with `PaymentDuration` > 12 months without explicit cost confirmation
+> 3. **DO NOT** create multiple clusters in a single session without separate confirmation for each
+> 4. **DO NOT** skip the mandatory full configuration summary and user confirmation before executing creation
+
 **Request Parameters** (pass complex parameters individually via `--param 'JSONString'`):
 
 | Parameter | Type | Required | Description |
@@ -84,11 +90,66 @@ aliyun emr ListInstanceTypes --RegionId cn-hangzhou --ZoneId cn-hangzhou-h \
 
 **Key Response Fields**: ClusterId, OperationId
 
+> **⚠️ Before constructing this command, verify your JSON field names against the examples below. Wrong field names cause silent `MissingXxx` errors that look like structural failures but are actually typos.**
+
+**Complete working example** (dev/test DATALAKE cluster with HIVE + SPARK3, local metastore):
+
 ```bash
 aliyun emr RunCluster --RegionId cn-hangzhou \
-  --ClientToken $(uuidgen) \
-  --ClusterName "xxx" --ClusterType "DATALAKE" --ReleaseVersion "EMR-5.16.0" \
-  --Applications '[...]' --NodeAttributes '{...}' --NodeGroups '[...]'
+  --ClientToken a1b2c3d4-e5f6-7890-abcd-ef1234567890 \
+  --ClusterName "team-etl-dev" \
+  --ClusterType "DATALAKE" \
+  --ReleaseVersion "EMR-5.21.0" \
+  --DeployMode "NORMAL" \
+  --PaymentType "PayAsYouGo" \
+  --Applications '[
+    {"ApplicationName": "HADOOP-COMMON"},
+    {"ApplicationName": "HDFS"},
+    {"ApplicationName": "YARN"},
+    {"ApplicationName": "HIVE"},
+    {"ApplicationName": "SPARK3"}
+  ]' \
+  --ApplicationConfigs '[
+    {
+      "ApplicationName": "HIVE",
+      "ConfigFileName": "hivemetastore-site.xml",
+      "ConfigItemKey": "hive.metastore.type",
+      "ConfigItemValue": "LOCAL"
+    },
+    {
+      "ApplicationName": "SPARK3",
+      "ConfigFileName": "hive-site.xml",
+      "ConfigItemKey": "hive.metastore.type",
+      "ConfigItemValue": "LOCAL"
+    }
+  ]' \
+  --NodeAttributes '{
+    "VpcId": "vpc-xxx",
+    "ZoneId": "cn-hangzhou-h",
+    "SecurityGroupId": "sg-xxx",
+    "KeyPairName": "my-keypair"
+  }' \
+  --NodeGroups '[
+    {
+      "NodeGroupType": "MASTER",
+      "NodeGroupName": "master",
+      "NodeCount": 1,
+      "InstanceTypes": ["ecs.g8i.xlarge"],
+      "VSwitchIds": ["vsw-xxx"],
+      "SystemDisk": {"Category": "cloud_essd", "Size": 120},
+      "DataDisks": [{"Category": "cloud_essd", "Size": 80, "Count": 1}]
+    },
+    {
+      "NodeGroupType": "CORE",
+      "NodeGroupName": "core",
+      "NodeCount": 2,
+      "InstanceTypes": ["ecs.g8i.xlarge"],
+      "VSwitchIds": ["vsw-xxx"],
+      "SystemDisk": {"Category": "cloud_essd", "Size": 120},
+      "DataDisks": [{"Category": "cloud_essd", "Size": 80, "Count": 2}]
+    }
+  ]' \
+  --user-agent AlibabaCloud-Agent-Skills
 ```
 
 > **Note**: RunCluster passes complex parameters individually via `--param 'JSONString'` (e.g., `--Applications '[...]'`). This is the only EMR API supporting this format; all other APIs with complex and array parameters must use `--force` + dot expansion format (flat format).
@@ -163,48 +224,6 @@ aliyun emr ListApplications --RegionId cn-hangzhou --ClusterId c-xxx
 
 ---
 
-### InstallApplications — Install Application Components to Existing Cluster
-
-After cluster creation, can随时 install new application components to RUNNING state clusters. Installation is async operation, component state becomes INSTALLED after completion.
-
-**Request Parameters**:
-
-| Parameter | Type | Required | Description |
-|------|------|------|------|
-| ClusterId | String | Yes | Cluster ID |
-| Applications | Array | Yes | Application list to install, each item contains ApplicationName |
-| ApplicationConfigs | Array | No | Application configuration items, structure same as RunCluster.ApplicationConfigs |
-
-**Key Response Fields**: OperationId
-
-```bash
-aliyun emr InstallApplications --RegionId cn-hangzhou --ClusterId c-xxx \
-  --force \
-  --Applications.1.ApplicationName KNOX
-```
-
-> **Note**: Before installing, first use `ListApplications` to confirm component not yet installed, avoid duplicate operation. Some components may require restarting dependent services after installation to take effect.
-
----
-
-### DeleteCluster — Delete Cluster
-
-⚠️ **Destructive Operation**: Irrecoverable, all ECS instances and local data will be released.
-
-**Request Parameters**:
-
-| Parameter | Type | Required | Description |
-|------|------|------|------|
-| ClusterId | String | Yes | Cluster ID |
-
-**Key Response Fields**: OperationId
-
-```bash
-aliyun emr DeleteCluster --RegionId cn-hangzhou --ClusterId c-xxx
-```
-
----
-
 ### UpdateClusterAttribute — Update Cluster Attributes
 
 **Request Parameters**:
@@ -264,6 +283,10 @@ aliyun emr UpdateClusterAutoRenew --RegionId cn-hangzhou --ClusterId c-xxx \
 ## Node Group Management
 
 ### CreateNodeGroup — Create Node Group
+
+> **⛔ DO NOT** create node groups without cost guardrails:
+> 1. **DO NOT** set `NodeCount` > 30 without explicit user confirmation of cost impact
+> 2. **DO NOT** create multiple node groups in rapid succession without user confirmation for each
 
 **Request Parameters**:
 
@@ -331,6 +354,12 @@ aliyun emr GetNodeGroup --RegionId cn-hangzhou --ClusterId c-xxx --NodeGroupId n
 
 ### IncreaseNodes — Expand Nodes
 
+> **⛔ DO NOT** allow uncontrolled scale-out:
+> 1. **DO NOT** set `IncreaseNodeCount` > 50 in a single call — refuse and ask the user to expand in batches
+> 2. **DO NOT** expand if doing so would bring total cluster node count above 100 without explicit cost acknowledgment from the user
+> 3. **DO NOT** expand without first calling `ListNodeGroups` and `ListNodes` to show the user the current node count
+> 4. **DO NOT** retry a failed IncreaseNodes without investigating the failure cause — duplicate calls may create double nodes (no ClientToken support)
+
 **Request Parameters**:
 
 | Parameter | Type | Required | Description |
@@ -359,6 +388,14 @@ aliyun emr IncreaseNodes --RegionId cn-hangzhou --ClusterId c-xxx \
 ### DecreaseNodes — Shrink Nodes
 
 ⚠️ **Destructive Operation**: Node data unrecoverable after release. **Only supports TASK node groups**, CORE node group calls will return error.
+
+> **⛔ DO NOT** call DecreaseNodes without completing ALL of the following safety gates:
+> 1. **DO NOT** shrink CORE node groups — this API only supports TASK; refuse if user targets CORE
+> 2. **DO NOT** shrink more than 10 nodes in a single call — use BatchSize ≤ 10 and BatchInterval ≥ 120 seconds for larger operations
+> 3. **DO NOT** shrink without first calling `ListNodes` to verify the exact NodeIds to be released and showing them to the user
+> 4. **DO NOT** shrink all nodes to zero without explicit confirmation that user accepts losing all compute capacity
+> 5. **DO NOT** shrink Subscription nodes via this API — refuse and explain this requires ECS console operation
+> 6. **DO NOT** use `DecreaseNodeCount` (by count) mode — always prefer `NodeIds` (by specific node) for precise control
 
 **Request Parameters**:
 
@@ -410,6 +447,11 @@ aliyun emr ListNodes --RegionId cn-hangzhou --ClusterId c-xxx
 
 ⚠️ **Full Replacement**: Each call replaces all scaling rules for that node group.
 
+> **⛔ DO NOT** set auto scaling policy without safeguards:
+> 1. **DO NOT** set `MaxCapacity` > 100 — refuse and flag uncontrolled cost explosion risk
+> 2. **DO NOT** call PutAutoScalingPolicy without first calling `GetAutoScalingPolicy` to show the user what existing rules will be **replaced**
+> 3. **DO NOT** set scaling rules that could create a runaway loop (e.g., SCALE_OUT threshold too aggressive with very short CoolDownInterval < 120 seconds)
+
 **Request Parameters**:
 
 | Parameter | Type | Required | Description |
@@ -460,6 +502,11 @@ aliyun emr GetAutoScalingPolicy --RegionId cn-hangzhou \
 ### RemoveAutoScalingPolicy — Delete Auto Scaling Policy
 
 ⚠️ **Destructive Operation**: After deletion, node group no longer auto scales.
+
+> **⛔ DO NOT** call RemoveAutoScalingPolicy without:
+> 1. **DO NOT** remove without first calling `GetAutoScalingPolicy` to display the current policy rules to the user
+> 2. **DO NOT** remove without explicit user confirmation that they understand the node group will lose all automatic scaling capability
+> 3. **DO NOT** remove policies from multiple node groups in bulk — process one at a time with separate confirmation
 
 **Request Parameters**:
 
