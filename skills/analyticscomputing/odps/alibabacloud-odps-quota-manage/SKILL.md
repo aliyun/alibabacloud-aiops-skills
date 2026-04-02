@@ -9,8 +9,6 @@ description: |
 
 Manage MaxCompute (ODPS) Quota resources using Alibaba Cloud CLI and SDK. This skill covers **pay-as-you-go quota creation**, quota query, and quota listing operations.
 
-> **Solution Source**: Based on [odps-open-api-example/quota-manage](https://code.alibaba-inc.com/maxcompute/odps-open-api-example/blob/master/quota-manage/README-CN.md)
-
 ## Limitations and Notes
 
 | Feature | CLI Support | SDK Support | Notes |
@@ -60,11 +58,28 @@ aliyun configure set --auto-plugin-install true
 | `ALIBABA_CLOUD_ACCESS_KEY_ID` | Yes | Alibaba Cloud Access Key ID |
 | `ALIBABA_CLOUD_ACCESS_KEY_SECRET` | Yes | Alibaba Cloud Access Key Secret |
 
+**Timeout Configuration:**
+- `ALIBABA_CLOUD_CONNECT_TIMEOUT`: Connection timeout (default: 10s)
+- `ALIBABA_CLOUD_READ_TIMEOUT`: Read timeout (default: 10s)
+- These defaults are sufficient for quota operations; no explicit configuration required
+
 ## Parameter Confirmation
 
 > **IMPORTANT: Parameter Confirmation** — Before executing any command or API call,
 > ALL user-customizable parameters (e.g., RegionId, quota nicknames, billing types, etc.)
 > MUST be confirmed with the user. Do NOT assume or use default values without explicit user approval.
+
+### Input Validation
+
+| Parameter | Validation Rules |
+|-----------|------------------|
+| `RegionId` | Must be valid Alibaba Cloud region ID (e.g., cn-hangzhou, cn-shanghai) |
+| `nickname` | Max 64 characters; alphanumeric, hyphens (-), underscores (_); URL-encode if contains Chinese characters |
+| `chargeType` | Must be `payasyougo` (subscription not supported) |
+| `commodityCode` | Must be `odps`, `odpsplus`, `odps_intl`, or `odpsplus_intl` |
+| `billingType` | Must be `payasyougo`, `subscription`, or `ALL` |
+
+**Security Note:** All user inputs are passed to aliyun CLI which handles parameter sanitization. Do NOT construct commands using string concatenation with raw user input.
 
 | Parameter Name | Required/Optional | Description                                                  | Default Value |
 |----------------|-------------------|--------------------------------------------------------------|---------------|
@@ -162,12 +177,12 @@ aliyun maxcompute list-quotas --billing-type payasyougo --region <R>
 - [ ] User confirmed they want to create
 
 ```bash
-aliyun maxcompute CreateQuota --chargeType payasyougo --commodityCode odps --region <R>
+aliyun maxcompute CreateQuota --chargeType payasyougo --commodityCode odps --region <R> --ClientToken <UNIQUE_TOKEN>
 ```
 
 **For International Site:**
 ```bash
-aliyun maxcompute CreateQuota --chargeType payasyougo --commodityCode odps_intl --region <R>
+aliyun maxcompute CreateQuota --chargeType payasyougo --commodityCode odps_intl --region <R> --ClientToken <UNIQUE_TOKEN>
 ```
 
 **CRITICAL:** 
@@ -175,6 +190,7 @@ aliyun maxcompute CreateQuota --chargeType payasyougo --commodityCode odps_intl 
 - **FORBIDDEN:** `create-quota`, `create-quota-odps-paygo`, or any kebab-case variant
 - Use **MaxCompute** CreateQuota, NOT **BssOpenApi** CreateInstance
 - Do NOT use `aliyun bssopenapi CreateInstance`
+- **ClientToken:** Generate a unique token (e.g., UUID) for idempotency on retries
 - **commodityCode values:**
   - China site: `odps` or `odpsplus`
   - International site: `odps_intl` or `odpsplus_intl`
