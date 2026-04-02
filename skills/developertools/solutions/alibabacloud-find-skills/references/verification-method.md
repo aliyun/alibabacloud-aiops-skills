@@ -5,6 +5,7 @@ This document provides detailed verification steps for each workflow in the `ali
 ## Overview
 
 After executing each workflow, verify success by checking:
+
 1. Command exit code (0 = success)
 2. Response structure matches expected format
 3. Data content is valid and non-empty
@@ -17,6 +18,7 @@ After executing each workflow, verify success by checking:
 ### Success Criteria
 
 ✅ **Command executes successfully**
+
 ```bash
 aliyun agentexplorer search-skills \
   --keyword "ECS" \
@@ -26,6 +28,7 @@ echo "Exit code: $?"  # Should be 0
 ```
 
 ✅ **Response contains expected fields**
+
 ```bash
 aliyun agentexplorer search-skills \
   --keyword "ECS" \
@@ -35,6 +38,7 @@ aliyun agentexplorer search-skills \
 ```
 
 ✅ **Skills array is not empty** (when results exist)
+
 ```bash
 aliyun agentexplorer search-skills \
   --keyword "ECS" \
@@ -44,6 +48,7 @@ aliyun agentexplorer search-skills \
 ```
 
 ✅ **Each skill has required fields**
+
 - `skillName` — Non-empty string
 - `displayName` — Non-empty string
 - `description` — Non-empty string
@@ -102,6 +107,7 @@ echo "=== Verification Complete ==="
 ### Success Criteria
 
 ✅ **List categories succeeds**
+
 ```bash
 aliyun agentexplorer list-categories \
   --user-agent AlibabaCloud-Agent-Skills
@@ -109,6 +115,7 @@ echo "Exit code: $?"  # Should be 0
 ```
 
 ✅ **Categories structure is valid**
+
 ```bash
 aliyun agentexplorer list-categories \
   --cli-query "categories[0].categoryCode" \
@@ -117,6 +124,7 @@ aliyun agentexplorer list-categories \
 ```
 
 ✅ **Search by category returns filtered results**
+
 ```bash
 aliyun agentexplorer search-skills \
   --category-code "computing" \
@@ -187,6 +195,7 @@ echo "=== Verification Complete ==="
 ### Success Criteria
 
 ✅ **Command succeeds with valid skill name**
+
 ```bash
 aliyun agentexplorer get-skill-content \
   --skill-name "alibabacloud-ecs-batch-command" \
@@ -195,6 +204,7 @@ echo "Exit code: $?"  # Should be 0
 ```
 
 ✅ **Response contains content field**
+
 ```bash
 aliyun agentexplorer get-skill-content \
   --skill-name "alibabacloud-ecs-batch-command" \
@@ -204,6 +214,7 @@ aliyun agentexplorer get-skill-content \
 ```
 
 ✅ **Content is valid markdown**
+
 - Starts with `---` (YAML frontmatter)
 - Contains `name:` field
 - Contains `description:` field
@@ -272,14 +283,14 @@ echo "=== Verification Complete ==="
 ### Success Criteria
 
 ✅ **Installation command succeeds**
+
 ```bash
-npx @anthropic-ai/claude-code skills add \
-  https://github.com/aliyun/alibabacloud-skills \
-  --skill <skill-name>
+npx skills add https://github.com/aliyun/alibabacloud-aiops-skills --skill <skill-name>
 echo "Exit code: $?"  # Should be 0
 ```
 
 ✅ **Skill appears in Claude Code skills list**
+
 ```bash
 # Verify skill is installed (implementation-specific)
 # Check in Claude Code UI or skills directory
@@ -307,6 +318,7 @@ echo "Exit code: $?"  # Should be 0
 ### Success Criteria
 
 ✅ **Combined search executes successfully**
+
 ```bash
 aliyun agentexplorer search-skills \
   --keyword "backup" \
@@ -316,6 +328,7 @@ echo "Exit code: $?"  # Should be 0
 ```
 
 ✅ **Results match both filters**
+
 - Each result's `categoryCode` or `subCategoryCode` matches the filter
 - Each result's `displayName` or `description` contains keyword (case-insensitive)
 
@@ -365,6 +378,7 @@ echo "=== Verification Complete ==="
 ### Success Criteria
 
 ✅ **First page returns results and nextToken**
+
 ```bash
 RESULT=$(aliyun agentexplorer search-skills \
   --keyword "monitoring" \
@@ -376,6 +390,7 @@ echo "$RESULT" | grep -q '"nextToken"'
 ```
 
 ✅ **Second page uses nextToken correctly**
+
 ```bash
 NEXT_TOKEN=$(echo "$RESULT" | grep -o '"nextToken":"[^"]*"' | cut -d'"' -f4)
 
@@ -459,29 +474,34 @@ echo "=== Verification Complete ==="
 Use this checklist after implementing any workflow:
 
 ### Command Execution
+
 - [ ] Command exits with code 0 on success
 - [ ] Command exits with non-zero code on error
 - [ ] Error messages are clear and actionable
 
 ### Response Format
+
 - [ ] Response is valid JSON
 - [ ] Response contains expected top-level keys
 - [ ] All required fields are present
 - [ ] Field types match expected types (string, int, array, etc.)
 
 ### Data Validity
+
 - [ ] String fields are non-empty when expected
 - [ ] Numeric fields are non-negative
 - [ ] Array fields contain valid elements
 - [ ] Nested objects have correct structure
 
 ### Edge Cases
+
 - [ ] Empty results handled gracefully (no error)
 - [ ] Invalid parameters return appropriate errors
 - [ ] Missing required parameters return clear error messages
 - [ ] Pagination works correctly at boundaries
 
 ### User Experience
+
 - [ ] Results are displayed in user-friendly format
 - [ ] Tables align properly
 - [ ] Important information is highlighted
@@ -575,6 +595,7 @@ echo "========================================"
 ```
 
 Save as `test-skill.sh` and run with:
+
 ```bash
 chmod +x test-skill.sh
 ./test-skill.sh
@@ -587,6 +608,7 @@ chmod +x test-skill.sh
 ### Issue: Command returns non-zero exit code
 
 **Check**:
+
 1. Credentials configured: `aliyun configure list --user-agent AlibabaCloud-Agent-Skills`
 2. Plugin installed: `aliyun plugin list | grep agentexplorer`
 3. CLI version: `aliyun version` (should be >= 3.3.1)
@@ -595,6 +617,7 @@ chmod +x test-skill.sh
 ### Issue: Response missing expected fields
 
 **Check**:
+
 1. CLI version is up-to-date
 2. Plugin version is latest: `aliyun plugin list`
 3. API version changes (check official docs)
@@ -602,6 +625,7 @@ chmod +x test-skill.sh
 ### Issue: No results returned
 
 **Check**:
+
 1. Keyword spelling
 2. Category code validity
 3. Try broader search terms
@@ -613,13 +637,13 @@ chmod +x test-skill.sh
 
 Track these metrics to assess skill effectiveness:
 
-| Metric | Target | Measurement |
-|--------|--------|-------------|
-| Command success rate | > 99% | Exit code 0 / total commands |
-| Average response time | < 3 seconds | Time to receive response |
-| Empty results rate | < 20% | Searches with 0 results / total searches |
-| Installation success rate | > 95% | Successful installs / install attempts |
-| User satisfaction | > 4/5 | User feedback rating |
+| Metric                    | Target      | Measurement                              |
+| ------------------------- | ----------- | ---------------------------------------- |
+| Command success rate      | > 99%       | Exit code 0 / total commands             |
+| Average response time     | < 3 seconds | Time to receive response                 |
+| Empty results rate        | < 20%       | Searches with 0 results / total searches |
+| Installation success rate | > 95%       | Successful installs / install attempts   |
+| User satisfaction         | > 4/5       | User feedback rating                     |
 
 ---
 
@@ -633,6 +657,7 @@ Set up periodic checks:
 ```
 
 Monitor for:
+
 - API availability
 - Response time degradation
 - New error patterns

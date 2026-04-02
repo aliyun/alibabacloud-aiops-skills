@@ -10,6 +10,7 @@
 ### 1. Aliyun CLI Version
 
 #### ✅ CORRECT
+
 ```bash
 # CLI version check returns >= 3.3.1
 aliyun version
@@ -17,6 +18,7 @@ aliyun version
 ```
 
 #### ❌ INCORRECT
+
 ```bash
 # Version too old (< 3.3.1)
 aliyun version
@@ -30,6 +32,7 @@ aliyun version
 ### 2. Plugin Installation
 
 #### ✅ CORRECT
+
 ```bash
 # Install agentexplorer plugin
 aliyun plugin install --names aliyun-cli-agentexplorer
@@ -39,6 +42,7 @@ aliyun plugin list | grep agentexplorer
 ```
 
 #### ❌ INCORRECT
+
 ```bash
 # Incorrect plugin name
 aliyun plugin install --names agentexplorer
@@ -56,6 +60,7 @@ aliyun install plugin agentexplorer
 ### 1. Product Name Verification
 
 #### ✅ CORRECT
+
 ```bash
 # Correct product name
 aliyun agentexplorer list-categories --user-agent AlibabaCloud-Agent-Skills
@@ -64,6 +69,7 @@ aliyun agentexplorer get-skill-content --user-agent AlibabaCloud-Agent-Skills
 ```
 
 #### ❌ INCORRECT
+
 ```bash
 # Wrong product name
 aliyun agent-explorer list-categories
@@ -78,6 +84,7 @@ aliyun explorerAgent get-skill-content
 ### 2. Command/Action Names
 
 #### ✅ CORRECT
+
 ```bash
 # Correct command names (lowercase with hyphens)
 aliyun agentexplorer list-categories
@@ -86,6 +93,7 @@ aliyun agentexplorer get-skill-content
 ```
 
 #### ❌ INCORRECT
+
 ```bash
 # Wrong command format (camelCase or incorrect names)
 aliyun agentexplorer listCategories
@@ -101,6 +109,7 @@ aliyun agentexplorer list_categories
 ### 3. Parameter Names
 
 #### ✅ CORRECT
+
 ```bash
 # Correct parameter names
 aliyun agentexplorer search-skills \
@@ -117,6 +126,7 @@ aliyun agentexplorer get-skill-content \
 ```
 
 #### ❌ INCORRECT
+
 ```bash
 # Wrong parameter names
 aliyun agentexplorer search-skills --keywords "ECS"  # plural
@@ -134,6 +144,7 @@ aliyun agentexplorer get-skill-content --name "name"  # wrong parameter
 ### 4. User-Agent Flag (CRITICAL)
 
 #### ✅ CORRECT
+
 ```bash
 # Every agentexplorer command MUST include user-agent
 aliyun agentexplorer list-categories \
@@ -149,6 +160,7 @@ aliyun agentexplorer get-skill-content \
 ```
 
 #### ❌ INCORRECT
+
 ```bash
 # Missing user-agent flag
 aliyun agentexplorer list-categories
@@ -166,6 +178,7 @@ aliyun agentexplorer list-categories --user-agent "MyAgent"
 ### 5. Required Parameters
 
 #### ✅ CORRECT
+
 ```bash
 # get-skill-content requires --skill-name
 aliyun agentexplorer get-skill-content \
@@ -182,6 +195,7 @@ aliyun agentexplorer list-categories \
 ```
 
 #### ❌ INCORRECT
+
 ```bash
 # Missing required parameter
 aliyun agentexplorer get-skill-content \
@@ -198,6 +212,7 @@ aliyun agentexplorer get-skill-content \
 ### 1. Category Code Format
 
 #### ✅ CORRECT
+
 ```bash
 # Top-level category
 aliyun agentexplorer search-skills \
@@ -221,6 +236,7 @@ aliyun agentexplorer search-skills \
 ```
 
 #### ❌ INCORRECT
+
 ```bash
 # Wrong separator for multiple categories
 aliyun agentexplorer search-skills --category-code "computing database"
@@ -241,6 +257,7 @@ aliyun agentexplorer search-skills --category-code "invalid-category"
 ### 2. Max Results Range
 
 #### ✅ CORRECT
+
 ```bash
 # Valid range: 1-100
 aliyun agentexplorer search-skills \
@@ -262,6 +279,7 @@ aliyun agentexplorer search-skills \
 ```
 
 #### ❌ INCORRECT
+
 ```bash
 # Out of range
 aliyun agentexplorer search-skills --max-results 0
@@ -279,6 +297,7 @@ aliyun agentexplorer search-skills --max-results "twenty"
 ### 3. Keyword Format
 
 #### ✅ CORRECT
+
 ```bash
 # Single word
 aliyun agentexplorer search-skills \
@@ -302,6 +321,7 @@ aliyun agentexplorer search-skills \
 ```
 
 #### ❌ INCORRECT
+
 ```bash
 # Unquoted multi-word (may cause parsing errors)
 aliyun agentexplorer search-skills --keyword batch command
@@ -317,6 +337,7 @@ aliyun agentexplorer search-skills --keyword ECS&RDS
 ### 4. Next Token Usage
 
 #### ✅ CORRECT
+
 ```bash
 # First page (no token)
 RESULT=$(aliyun agentexplorer search-skills \
@@ -336,6 +357,7 @@ aliyun agentexplorer search-skills \
 ```
 
 #### ❌ INCORRECT
+
 ```bash
 # Manually crafted token
 aliyun agentexplorer search-skills \
@@ -363,6 +385,7 @@ aliyun agentexplorer search-skills \
 ### 1. Credential Verification
 
 #### ✅ CORRECT
+
 ```bash
 # Check credentials before operations
 aliyun configure list --user-agent AlibabaCloud-Agent-Skills
@@ -373,6 +396,7 @@ aliyun configure list --user-agent AlibabaCloud-Agent-Skills
 ```
 
 #### ❌ INCORRECT
+
 ```bash
 # Reading credentials
 echo $ALIBABA_CLOUD_ACCESS_KEY_ID
@@ -392,6 +416,7 @@ aliyun configure get --key access_key_id
 ### 2. Configuration Check
 
 #### ✅ CORRECT
+
 ```bash
 # Use configure list to check status
 aliyun configure list --user-agent AlibabaCloud-Agent-Skills
@@ -404,6 +429,7 @@ aliyun configure list --user-agent AlibabaCloud-Agent-Skills
 ```
 
 #### ❌ INCORRECT
+
 ```bash
 # Don't test credentials by making API calls
 aliyun agentexplorer list-categories --user-agent AlibabaCloud-Agent-Skills
@@ -419,6 +445,7 @@ aliyun agentexplorer list-categories --user-agent AlibabaCloud-Agent-Skills
 ### 1. JMESPath Filtering
 
 #### ✅ CORRECT
+
 ```bash
 # Filter for specific fields
 aliyun agentexplorer search-skills \
@@ -440,6 +467,7 @@ aliyun agentexplorer search-skills \
 ```
 
 #### ❌ INCORRECT
+
 ```bash
 # Invalid JMESPath syntax
 aliyun agentexplorer search-skills --cli-query "skills.skillName"  # Missing []
@@ -453,19 +481,23 @@ aliyun agentexplorer search-skills --cli-query "skills[skillName]"  # Wrong synt
 ### 2. Result Display
 
 #### ✅ CORRECT
+
 ```markdown
 # Display results in table format
-| Skill Name | Display Name | Category | Install Count |
-|------------|--------------|----------|---------------|
-| alibabacloud-ecs-batch | ECS Batch Ops | Computing | 245 |
+
+| Skill Name             | Display Name  | Category  | Install Count |
+| ---------------------- | ------------- | --------- | ------------- |
+| alibabacloud-ecs-batch | ECS Batch Ops | Computing | 245           |
 
 # Show key fields
+
 - **Skill Name**: alibabacloud-ecs-batch
 - **Description**: Batch manage ECS instances
 - **Category**: Computing > ECS
 ```
 
 #### ❌ INCORRECT
+
 ```bash
 # Dumping raw JSON
 echo "$RESULT"
@@ -483,6 +515,7 @@ echo "$RESULT" | jq
 ### 1. Missing Plugin
 
 #### ✅ CORRECT
+
 ```bash
 # Check plugin before use
 if ! aliyun plugin list | grep -q "agentexplorer"; then
@@ -492,6 +525,7 @@ fi
 ```
 
 #### ❌ INCORRECT
+
 ```bash
 # Assume plugin is installed
 aliyun agentexplorer list-categories --user-agent AlibabaCloud-Agent-Skills
@@ -505,6 +539,7 @@ aliyun agentexplorer list-categories --user-agent AlibabaCloud-Agent-Skills
 ### 2. No Results Handling
 
 #### ✅ CORRECT
+
 ```bash
 RESULT=$(aliyun agentexplorer search-skills \
   --keyword "nonexistent" \
@@ -518,6 +553,7 @@ fi
 ```
 
 #### ❌ INCORRECT
+
 ```bash
 # Don't treat empty results as error
 RESULT=$(aliyun agentexplorer search-skills --keyword "nonexistent" --user-agent AlibabaCloud-Agent-Skills)
@@ -535,6 +571,7 @@ fi
 ### 1. Search-Detail-Install Flow
 
 #### ✅ CORRECT
+
 ```bash
 # Step 1: Search
 SEARCH_RESULT=$(aliyun agentexplorer search-skills \
@@ -551,16 +588,15 @@ aliyun agentexplorer get-skill-content \
   --user-agent AlibabaCloud-Agent-Skills
 
 # Step 4: User confirms installation
-npx @anthropic-ai/claude-code skills add \
-  https://github.com/aliyun/alibabacloud-skills \
-  --skill alibabacloud-ecs-batch
+npx skills add https://github.com/aliyun/alibabacloud-aiops-skills --skill alibabacloud-ecs-batch
 ```
 
 #### ❌ INCORRECT
+
 ```bash
 # Skip user confirmation
 SKILL=$(aliyun agentexplorer search-skills --keyword "ECS" --cli-query "skills[0].skillName" --user-agent AlibabaCloud-Agent-Skills)
-npx @anthropic-ai/claude-code skills add https://github.com/aliyun/alibabacloud-skills --skill "$SKILL"
+npx skills add https://github.com/aliyun/alibabacloud-aiops-skills --skill "$SKILL"
 # Wrong: User must confirm before installation
 ```
 

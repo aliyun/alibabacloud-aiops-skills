@@ -169,7 +169,7 @@ aliyun agentexplorer get-skill-content \
 # Step 1: Confirm skill name with user
 
 # Step 2: Execute installation command
-npx skills add aliyun/alibabacloud-skills \
+npx skills add aliyun/alibabacloud-aiops-skills \
   --skill <user-confirmed-skill-name>
 
 # Step 3: Verify installation success
