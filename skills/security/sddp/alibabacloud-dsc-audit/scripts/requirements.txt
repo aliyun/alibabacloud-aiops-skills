@@ -1,0 +1,7 @@
+# Alibaba Cloud Python Common SDK dependencies
+# Required for generic API invocation to Data Security Center (Sddp)
+
+alibabacloud_tea_openapi==0.4.3
+alibabacloud_credentials==1.0.8
+alibabacloud_tea_util==0.3.14
+alibabacloud_openapi_util==0.2.4
