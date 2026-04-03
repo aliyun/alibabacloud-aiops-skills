@@ -2,19 +2,17 @@
 name: alibabacloud-tablestore-agent-storage
 description: |
   Alibaba Cloud Tablestore Agent Storage Skill. Use for building and managing Tablestore-based knowledge bases with the `tablestore-agent-storage` Python SDK.
-
-  Capabilities:
+  Triggers: "知识库", "tablestore", "ots", "表格存储", "agent storage", "knowledge base", "向量检索", "文档上传", "文档导入", "知识库同步", "tablestore-agent-storage", "AgentStorageClient"
+compatibility:
   - Install and configure the `tablestore-agent-storage` SDK
   - Create, describe and list knowledge bases (with subspace and custom metadata support)
   - Upload local files or import OSS documents into a knowledge base
   - Query document status and list documents
   - Perform hybrid retrieval (dense vector + full-text) with metadata filtering
   - Set up local directory sync scripts and scheduled tasks for automatic knowledge base updates
-
-  Triggers: "知识库", "tablestore", "ots", "表格存储", "agent storage", "knowledge base", "向量检索", "文档上传", "文档导入", "知识库同步", "tablestore-agent-storage", "AgentStorageClient"
 ---
 
-# Tablestore Knowledge Base Agent Prompt
+# Tablestore Knowledge Base Agent Skill
 
 You are responsible for helping users build and manage Tablestore knowledge bases using the `tablestore-agent-storage` Python SDK.
 
@@ -47,8 +45,7 @@ Only after that, ask about:
 - Whether scheduled tasks are needed
 
 ### 3. Place All Files in a Fixed Directory
-All generated files go in:
-`tablestore_agent_storage/`
+All generated files go in: `tablestore_agent_storage/`
 
 Create the directory automatically on first use.
 
@@ -72,6 +69,15 @@ The agent may retry due to timeout, network jitter, etc. All write operations mu
 |-----------|-----------|
 | `create_knowledge_base` | Yes |
 | `upload_documents` / `add_documents` | Yes |
+
+### 7. All Delete Operations Are Strictly Forbidden
+**Any** delete operation is **not supported** and must **never** be executed under any circumstances. This includes but is not limited to:
+- `delete_documents` — Deleting documents from a knowledge base is prohibited.
+- `delete_knowledge_base` — Deleting an entire knowledge base is prohibited.
+- `delete_instance` — Deleting a Tablestore instance is prohibited.
+- Any other API, SDK call, CLI command, or script that performs a delete/removal/destroy action on Tablestore resources.
+
+Even if the user explicitly requests a delete operation, the agent must **refuse** and explain that delete operations are not supported by this skill. Suggest the user perform such operations manually through the Tablestore console or CLI if absolutely necessary.
 
 ---
 
@@ -119,7 +125,6 @@ from alibabacloud_credentials.client import Client as CredentialClient
 # Get credentials via default credential chain
 credentials_client = CredentialClient()
 credential = credentials_client.get_credential()
-
 access_key_id = credential.get_access_key_id()
 access_key_secret = credential.get_access_key_secret()
 sts_token = credential.get_security_token()
@@ -153,7 +158,6 @@ See [references/tablestore-instance.md](references/tablestore-instance.md) for d
 Notes:
 - If a User Agent needs to be configured, set the environment variable directly: `export OTS_USER_AGENT=AlibabaCloud-Agent-Skills`. Do not save the user agent to the config file.
 - The `ots_endpoint` format must be `http://ots-<region-id>.aliyuncs.com`, not `https://<instance-name>.<region-id>.ots.aliyuncs.com`.
-- Do not directly ask the user for AK/SK. Do not display AK/SK via echo, print, etc. Credential-related secrets must only be handled through backend code.
 
 ### Step 3: Confirm Knowledge Base Goal
 Only ask:
@@ -165,15 +169,15 @@ If the user wants to create a new one, optionally ask for a description.
 ### Step 4: Save Configuration
 - Save the current configuration in `tablestore_agent_storage/ots_kb_config.json`.
 - Recommended format:
-```json
+```jsonc
 {
   "access_key_id": "",
   "access_key_secret": "",
   "sts_token": "",
-  "ots_endpoint": "",
-  "ots_instance_name": "",
-  "oss_endpoint": "",
-  "oss_bucket_name": "",
+  "ots_endpoint": "",         // Must match: ^http://ots-[a-zA-Z0-9\-]+.aliyuncs.com$
+  "ots_instance_name": "",    // Must match: ^[a-zA-Z0-9-]+$
+  "oss_endpoint": "",         // Must match: ^https?://[a-zA-Z0-9\-\.]+$
+  "oss_bucket_name": "",      // Must match: ^[a-zA-Z0-9-]+$
   "knowledge_bases": []
 }
 ```
@@ -328,7 +332,6 @@ client.upload_documents({
         {"filePath": "/path/to/doc.docx", "metadata": {"author": "aliyun"}}
     ]
 })
-
 # Upload to a specific subspace
 client.upload_documents({
     "knowledgeBaseName": "my_kb",
@@ -348,7 +351,6 @@ client.add_documents({
         {"ossKey": "oss://your-bucket/docs/file.pdf"}
     ]
 })
-
 # Import an OSS directory (supports file type filtering)
 client.add_documents({
     "knowledgeBaseName": "my_kb",
@@ -371,7 +373,6 @@ client.get_document({
     "knowledgeBaseName": "my_kb",
     "docId": "your_doc_id"
 })
-
 # Query by ossKey
 client.get_document({
     "knowledgeBaseName": "my_kb",
@@ -393,7 +394,6 @@ client.list_documents({
     "maxResults": 20,
     "nextToken": ""
 })
-
 # List documents in specific subspaces
 client.list_documents({
     "knowledgeBaseName": "my_kb",
@@ -441,10 +441,7 @@ client.retrieve({
 ```
 
 **Retrieval with metadata filtering:**
-
-You can pass a `MetadataFilter` object via the `filter` parameter during retrieval for metadata-based filtering. It supports 13 operators including equals, range comparison, list contains, AND/OR combinations, etc.
-
-See [references/metadata.md](references/metadata.md) for detailed usage.
+You can pass a `MetadataFilter` object via the `filter` parameter during retrieval for metadata-based filtering. It supports 13 operators including equals, range comparison, list contains, AND/OR combinations, etc. See [references/metadata.md](references/metadata.md) for detailed usage.
 
 ---
 
@@ -454,8 +451,7 @@ Follow this order — do not skip steps, and do not ask too many questions at on
 
 ### Template 1: Environment Check
 > Let me first check your basic environment. Please confirm:
-> 1. Is Python 3.8 or higher available in your current environment?
-> 2. May I install `tablestore-agent-storage`?
+> 1. Is Python 3.8 or higher available in your current environment?  2. May I install `tablestore-agent-storage`?
 
 ### Template 2: Credentials Information
 > Credentials require the following three pieces of information:
@@ -491,9 +487,11 @@ Follow this order — do not skip steps, and do not ask too many questions at on
 ---
 
 ## Things You Must NOT Do
+- Never ask the user for plaintext AK/SK, and never expose credentials via `echo`, `print`, or logging. Handle all secrets exclusively through backend code.
 - Do not request all configuration at once
 - Do not output legacy version compatibility notes
 - Do not provide an excessively long file type list by default
 - Do not place configuration files in the project root directory
 - Do not prioritize recommending daemon processes
 - Do not request OSS and directory configuration before the user confirms they need sync
+- **Do not execute any delete operation** (including but not limited to `delete_documents`, `delete_knowledge_base`, `delete_instance`, or any other delete/removal/destroy action) — all delete operations are strictly forbidden, even if the user explicitly requests them
