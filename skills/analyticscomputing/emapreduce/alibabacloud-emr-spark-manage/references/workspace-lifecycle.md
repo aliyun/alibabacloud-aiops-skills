@@ -4,7 +4,6 @@
 
 - [1. Create Workspace](#1-create-workspace)
 - [2. Query Workspace](#2-query-workspace)
-- [3. Delete Workspace](#3-delete-workspace)
 - [4. Member Management](#4-member-management)
 - [5. Engine Versions](#5-engine-versions)
 
@@ -16,7 +15,7 @@ Before creating a workspace, ensure the account has granted the following two ro
 - **AliyunServiceRoleForEMRServerlessSpark**: Service-linked role, EMR Serverless Spark service uses this role to access other cloud resources
 - **AliyunEMRSparkJobRunDefaultRole**: Job execution role, Spark jobs use this role to access OSS, DLF and other resources during execution
 
-> For first-time use, you can authorize with one click through the [EMR Serverless Spark Console](https://emr-serverless-spark.console.aliyun.com).
+> For first-time use, you can authorize with one click through the [EMR Serverless Spark Console](https://emr-next.console.aliyun.com/#/region/cn-hangzhou/resource/all/serverless/spark/list).
 
 ### Create Basic Workspace
 
@@ -73,38 +72,7 @@ Key information in the response:
 
 ## 3. Delete Workspace
 
-### Pre-delete Checklist
-
-1. **Confirm no running jobs**: Check via ListJobRuns if there are running status jobs
-2. **Confirm no running session clusters**: Check via ListSessionClusters if there are running sessions
-3. **Confirm no running Kyuubi services**: Check via ListKyuubiServices if there are active Kyuubi services
-4. **User explicit confirmation**: Inform user deletion is irreversible, all associated resources will be permanently deleted
-
-```bash
-# Check if there are running jobs
-aliyun emr-serverless-spark GET /api/v1/workspaces/{workspaceId}/jobRuns --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
-
-# Check if there are running session clusters
-aliyun emr-serverless-spark GET /api/v1/workspaces/{workspaceId}/sessionClusters --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
-
-# Check if there are running Kyuubi services
-aliyun emr-serverless-spark GET /api/v1/kyuubi/{workspaceId} --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
-```
-
-### Execute Deletion
-
-```bash
-# ⚠️ Delete workspace (irreversible! Workspace and all associated resources will be permanently deleted)
-aliyun emr-serverless-spark DELETE "/api/v1/workspaces/{workspaceId}?regionId=cn-hangzhou" --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
-```
-
-Returns `operationId` and `workspaceId`, deletion is async operation, workspace status becomes `TERMINATING`.
-
-### Verify Deletion
-
-```bash
-aliyun emr-serverless-spark GET /api/v1/workspaces --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
-```
+> **STRICTLY PROHIBITED.** The `DeleteWorkspace` API must NEVER be called through this skill. Do NOT construct or execute any DELETE request to `/api/v1/workspaces/{workspaceId}`. If the user asks to delete a workspace, refuse the request and inform them: "Workspace deletion is not supported via this skill. Please delete workspaces through the [EMR Serverless Spark Console](https://emr-next.console.aliyun.com/#/region/cn-hangzhou/resource/all/serverless/spark/list)."
 
 ## 4. Member Management
 

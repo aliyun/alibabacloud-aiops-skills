@@ -61,29 +61,6 @@ aliyun emr-serverless-spark POST "/api/v1/workspaces?regionId=cn-hangzhou" \
 
 ---
 
-### DeleteWorkspace - Delete Workspace
-
-**Method**: DELETE `/api/v1/workspaces/{workspaceId}`
-
-⚠️ **Destructive Operation**: Irreversible, workspace and all associated resources will be permanently deleted.
-
-**Request Parameters**:
-
-| Parameter Name | Type | Required | Location | Description |
-|----------------|------|----------|----------|-------------|
-| workspaceId | string | Yes | path | Workspace ID |
-| regionId | string | No | query | Region ID (URL append `?regionId=cn-hangzhou`) |
-
-**Return Value**: Returns `operationId` (operation ID) and `workspaceId`, deletion is async operation, workspace status becomes `TERMINATING`.
-
-**Example**:
-
-```bash
-aliyun emr-serverless-spark DELETE "/api/v1/workspaces/w-xxx?regionId=cn-hangzhou" --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
-```
-
----
-
 ### ListWorkspaces - Query Workspace List
 
 **Method**: GET `/api/v1/workspaces`

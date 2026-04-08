@@ -23,7 +23,7 @@ Before using EMR Serverless Spark, you need to grant the account the following t
 | **AliyunServiceRoleForEMRServerlessSpark** | Service-linked role | EMR Serverless Spark service uses this role to access your resources in other cloud products |
 | **AliyunEMRSparkJobRunDefaultRole** | Job execution role | Spark jobs use this role to access OSS, DLF and other cloud resources during execution |
 
-> For first-time use, you can authorize with one click through the [EMR Serverless Spark Console](https://emr-serverless-spark.console.aliyun.com), or manually create in the RAM console.
+> For first-time use, you can authorize with one click through the [EMR Serverless Spark Console](https://emr-next.console.aliyun.com/#/region/cn-hangzhou/resource/all/serverless/spark/list), or manually create in the RAM console.
 
 ### 3. OSS Storage
 

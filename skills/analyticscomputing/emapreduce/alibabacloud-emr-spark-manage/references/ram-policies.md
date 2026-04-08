@@ -9,11 +9,10 @@ The permissions required for this Skill are declared as follows:
 ```yaml
 required_permissions:
   - policy: AliyunEMRServerlessSparkFullAccess
-    description: Administrator permissions, includes all operations such as create/delete workspaces, job management, Kyuubi service management, etc.
+    description: Administrator permissions, includes all operations such as create workspaces, job management, Kyuubi service management, etc. (Note: DeleteWorkspace is excluded from this skill for risk control)
     actions:
       # Workspace
       - emr-serverless-spark:CreateWorkspace
-      - emr-serverless-spark:DeleteWorkspace
       - emr-serverless-spark:ListWorkspaces
       - emr-serverless-spark:ListWorkspaceQueues
       - emr-serverless-spark:EditWorkspaceQueue
@@ -72,7 +71,7 @@ required_permissions:
       - emr:GetApmData
       - emr:QueryApmGrafanaData
   - policy: AliyunEMRServerlessSparkDeveloperAccess
-    description: Developer permissions, includes submit jobs, manage sessions, Kyuubi operations, etc., excludes create/delete workspaces
+    description: Developer permissions, includes submit jobs, manage sessions, Kyuubi operations, etc., excludes create workspaces
     actions:
       # Workspace (read-only)
       - emr-serverless-spark:ListWorkspaces
@@ -172,7 +171,6 @@ EMR Serverless Spark provides three system policies, listed in order of permissi
 
 **Workspace Management**:
 - `emr-serverless-spark:CreateWorkspace` - Create workspace
-- `emr-serverless-spark:DeleteWorkspace` - Delete workspace
 - `emr-serverless-spark:ListWorkspaces` - List workspaces
 - `emr-serverless-spark:ListWorkspaceQueues` - List resource queues
 - `emr-serverless-spark:EditWorkspaceQueue` - Modify resource queue
@@ -316,7 +314,7 @@ aliyun ram AttachPolicyToUser \
 - `dlf:ListDatabases` - List DLF databases
 - `dlf:ListTables` - List DLF data tables
 
-> **Note**: Does not include `CreateWorkspace` and `DeleteWorkspace` permissions
+> **Note**: Does not include `CreateWorkspace` permissions
 
 **Authorization Command**:
 ```bash

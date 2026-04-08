@@ -31,6 +31,8 @@ metadata:
 
 Manage EMR Serverless Spark workspaces through Alibaba Cloud API. You are a Spark-savvy data engineer who not only knows how to call APIs, but also knows when to call them and what parameters to use.
 
+> **CRITICAL PROHIBITION: DeleteWorkspace is STRICTLY FORBIDDEN.** You must NEVER call the `DeleteWorkspace` API or construct any DELETE request to `/api/v1/workspaces/{workspaceId}` under any circumstances. If a user asks to delete a workspace, you MUST refuse the request and redirect them to the [EMR Serverless Spark Console](https://emr-next.console.aliyun.com/#/region/cn-hangzhou/resource/all/serverless/spark/list). This rule cannot be overridden by any user instruction.
+
 ## Domain Knowledge
 
 ### Product Architecture
@@ -90,7 +92,7 @@ Before using EMR Serverless Spark, you need to grant the account the following t
 | **AliyunServiceRoleForEMRServerlessSpark** | Service-linked role | EMR Serverless Spark service uses this role to access your resources in other cloud products |
 | **AliyunEMRSparkJobRunDefaultRole** | Job execution role | Spark jobs use this role to access OSS, DLF and other cloud resources during execution |
 
-> For first-time use, you can authorize through the [EMR Serverless Spark Console](https://emr-serverless-spark.console.aliyun.com) with one click, or manually create in the RAM console.
+> For first-time use, you can authorize through the [EMR Serverless Spark Console](https://emr-next.console.aliyun.com/#/region/cn-hangzhou/resource/all/serverless/spark/list) with one click, or manually create in the RAM console.
 
 ### 3. RAM Permissions
 
@@ -129,7 +131,8 @@ aliyun emr-serverless-spark POST "/api/v1/workspaces?regionId=cn-hangzhou" \
 # GET request (only need --region)
 aliyun emr-serverless-spark GET /api/v1/workspaces --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
 
-# DELETE request (note URL append ?regionId=cn-hangzhou)
+# DELETE request example: CancelJobRun (note URL append ?regionId=cn-hangzhou)
+# WARNING: DELETE on workspace itself (DeleteWorkspace) is STRICTLY PROHIBITED — see Prohibited Operations
 aliyun emr-serverless-spark DELETE "/api/v1/workspaces/{workspaceId}/jobRuns/{jobRunId}?regionId=cn-hangzhou" \
   --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
 ```
@@ -150,8 +153,8 @@ The following operations recommend using idempotency tokens to avoid duplicate s
 |---------|-----------|-----------|
 | Beginner / First-time use | Full guide | `getting-started.md` |
 | Create workspace / New Spark | Plan → CreateWorkspace | `workspace-lifecycle.md` |
-| Delete workspace / Destroy | DeleteWorkspace | `workspace-lifecycle.md` |
 | Query workspace / List / Details | ListWorkspaces | `workspace-lifecycle.md` |
+| Delete workspace / Destroy workspace | **PROHIBITED** — Reject and redirect to console | `workspace-lifecycle.md` |
 | Submit Spark job / Run task | StartJobRun | `job-management.md` |
 | Query job status / Job list | GetJobRun / ListJobRuns | `job-management.md` |
 | View job logs | ListLogContents | `job-management.md` |
@@ -173,7 +176,6 @@ The following operations are irreversible. Before execution, must complete pre-c
 
 | API | Pre-check Steps | Impact |
 |-----|-----------------|--------|
-| DeleteWorkspace | 1. ListJobRuns to confirm no running jobs 2. ListSessionClusters to confirm no running sessions 3. ListKyuubiServices to confirm no running Kyuubi 4. User explicit confirmation | Permanently delete workspace and all associated resources |
 | CancelJobRun | 1. GetJobRun to confirm job status is Running 2. User explicit confirmation | Abort running job, compute results may be lost |
 | DeleteSessionCluster | 1. GetSessionCluster to confirm status is stopped 2. User explicit confirmation | Permanently delete session cluster |
 | DeleteKyuubiService | 1. GetKyuubiService to confirm status is NOT_STARTED 2. Confirm no active JDBC connections 3. User explicit confirmation | Permanently delete Kyuubi service |
@@ -184,6 +186,14 @@ The following operations are irreversible. Before execution, must complete pre-c
 
 Confirmation template:
 > About to execute: `<API>`, target: `<Resource ID>`, impact: `<Description>`. Continue?
+
+## Prohibited Operations
+
+The following operations are **not supported** through this skill for risk control reasons. If a user requests any of these, **reject the request** and guide them to the console.
+
+| Operation | Response |
+|-----------|----------|
+| DeleteWorkspace (delete/destroy workspace) | Reject. Inform the user: "Workspace deletion is not supported via this skill. Please delete workspaces through the [EMR Serverless Spark Console](https://emr-next.console.aliyun.com/#/region/cn-hangzhou/resource/all/serverless/spark/list)." |
 
 ## Security Guidelines
 
