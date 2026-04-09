@@ -67,6 +67,11 @@ export ALIBABACLOUD_ACCESS_KEY_SECRET=<your-access-key-secret>
 aliyun configure [--profile <PROFILE_NAME>] [--mode <AUTHENTICATE_MODE>]
 ```
 
+**Security notes**
+
+- **AccessKey authentication** and **AccessKey credentials via the Aliyun CLI profile** are intended for local, personal testing only, to reduce the risk of exposing plaintext AccessKey pairs.
+- For services running in the cloud, **EcsRamRole** credentials in the Aliyun CLI profile are strongly recommended. See the [EcsRamRole configuration guide][EcsRamRole].
+
 ## Issues
 
 [Open an issue][issue]. Issues that do not follow the guidelines may be closed immediately.
@@ -87,3 +92,4 @@ All Skills provided in this repository are open-source projects intended to give
 
 [issue]: https://github.com/aliyun/alibabacloud-aiops-skills/issues/new
 [url]: https://www.alibabacloud.com
+[EcsRamRole]: https://www.alibabacloud.com/help/zh/cli/configure-credentials#6344dd9ddapvg

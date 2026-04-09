@@ -64,6 +64,11 @@ Aliyun CLI 配置文件认证
 aliyun configure [--profile <PROFILE_NAME>] [--mode <AUTHENTICATE_MODE>]
 ```
 
+**安全提示**
+
+- **`AccessKey 认证`** 和 **`Aliyun CLI 配置文件认证的 AK 凭证认证`**，建议仅在本地测试环境时个人使用，避免明文 AK/SK 凭证信息的外泄。
+- 云上环境服务，强烈推荐使用 **`Aliyun CLI 配置文件认证的 EcsRamRole 凭证类型`**，见[EcsRamRole配置方案][EcsRamRole]。
+
 ## 问题
 [提交 Issue][issue] 不符合指南的问题可能会立即关闭。
 
@@ -81,3 +86,4 @@ Copyright (c) 2009-present, Alibaba Cloud All rights reserved.
 
 [issue]: https://github.com/aliyun/alibabacloud-aiops-skills/issues/new
 [url]: https://www.aliyun.com
+[EcsRamRole]: https://help.aliyun.com/zh/cli/configure-credentials#6344dd9ddapvg
