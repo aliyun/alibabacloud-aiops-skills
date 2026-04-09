@@ -1,6 +1,9 @@
 ---
 name: alibabacloud-waf-checkresponse-intercept-query
-description: Query Alibaba Cloud WAF block reasons via SLS logs and WAF CLI. Analyzes detailed information about blocked requests. Optionally supports disabling WAF rules (ModifyDefenseRuleStatus) and managing log service settings (ModifyUserWafLogStatus, ModifyResourceLogStatus). Use when users report being blocked by WAF, encounter 405/block error pages, or need to investigate and remediate WAF security rules. Trigger words: "WAF block query", "blocked by WAF", "405 troubleshooting", "request blocked", "checkresponse", "intercept query", "disable WAF rule", "enable WAF log"
+description: |
+  Query Alibaba Cloud WAF block reasons via SLS logs and WAF CLI. Analyzes detailed information about blocked requests. Optionally supports disabling WAF rules (ModifyDefenseRuleStatus) and managing log service settings (ModifyUserWafLogStatus, ModifyResourceLogStatus).
+  Use when users report being blocked by WAF, encounter 405/block error pages, or need to investigate and remediate WAF security rules.
+  Trigger words: "WAF block query", "blocked by WAF", "405 troubleshooting", "request blocked", "checkresponse", "intercept query", "disable WAF rule", "enable WAF log"
 ---
 
 # WAF CheckResponse Intercept Query
@@ -11,12 +14,12 @@ Before execution, you **must** collect the following information from the user:
 
 | Parameter | Description | Required |
 |-----------|-------------|----------|
-| Request ID | X-Request-Id or X-Tt-Trace-Id from the WAF block response | Yes |
+| Request ID | The traceid obtained from the HTML body of WAF's block (intercept) response, or the Request ID shown on the 405 block page displayed in the browser | Yes |
 
 **Optional**: WAF Instance ID, SLS Project name, SLS Logstore name (will be auto-discovered if not provided)
 
 **Notes**:
-- Request ID can be obtained from the block response headers or the browser developer tools
+- Request ID (traceid) is obtained from the HTML body of WAF's block response, or from the 405 block page displayed in the browser
 - Uses Alibaba Cloud default credential chain for authentication (ECS RAM Role, ~/.alibabacloud/config, etc.)
 
 ## Region Information
@@ -32,7 +35,9 @@ Before execution, you **must** collect the following information from the user:
 
 ### Step 1: Information Collection
 
-Confirm the Request ID with the user. If the user has not provided one, guide them to obtain `X-Request-Id` from the Response Headers in the browser F12 Network panel.
+Confirm the Request ID (traceid) with the user. If the user has not provided one, guide them to obtain it from:
+1. The 405 block page displayed in the browser, which shows the Request ID directly
+2. The HTML body of WAF's block (intercept) response, which contains the traceid
 
 ### Step 2: Auto-Discover WAF Instances and Verify Log Service
 
