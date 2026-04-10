@@ -11,7 +11,7 @@ This skill requires permissions across multiple Alibaba Cloud products:
 - **VPC**: Virtual network and VSwitch management
 - **VPC (EIP)**: Elastic IP address management
 - **STS**: Identity verification
-- **MaaS (Bailian)**: Workspace and API Key management for Bailian LLM service
+- **Model Studio (Bailian)**: Workspace and API Key management for Bailian LLM service
 
 ### System Policies (Not Recommended for Production)
 
@@ -72,9 +72,9 @@ For production environments following the least-privilege principle, create a cu
     {
       "Effect": "Allow",
       "Action": [
-        "maas:ListWorkspaces",
-        "maas:ListApiKeys",
-        "maas:CreateApiKey"
+        "modelstudio:ListWorkspaces",
+        "modelstudio:ListApiKeys",
+        "modelstudio:CreateApiKey"
       ],
       "Resource": "*"
     }
@@ -105,9 +105,9 @@ For production environments following the least-privilege principle, create a cu
 
 | API Action | Permission | Purpose |
 |------------|-----------|---------|
-| `ListWorkspaces` | `maas:ListWorkspaces` | List Bailian workspaces to get workspace ID |
-| `ListApiKeys` | `maas:ListApiKeys` | Query existing API Keys in workspace |
-| `CreateApiKey` | `maas:CreateApiKey` | Create new API Key if none exists |
+| `ListWorkspaces` | `modelstudio:ListWorkspaces` | List Bailian workspaces to get workspace ID |
+| `ListApiKeys` | `modelstudio:ListApiKeys` | Query existing API Keys in workspace |
+| `CreateApiKey` | `modelstudio:CreateApiKey` | Create new API Key if none exists |
 
 ### Step 3: Cloud Assistant Commands
 

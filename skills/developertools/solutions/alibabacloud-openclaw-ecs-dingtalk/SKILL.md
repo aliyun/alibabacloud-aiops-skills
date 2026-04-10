@@ -42,7 +42,7 @@ When passing parameters to Cloud Assistant `RunCommand`, use base64 encoding for
 
 ### OpenClaw and Bailian Parameters
 
-The Bailian API Key (`bailian_api_key`) is **automatically obtained via CLI** during deployment (see Step 2). No manual console operation is needed. The Skill uses `aliyun maas` commands (ListWorkspaces + ListApiKeys/CreateApiKey) to retrieve or create an API Key programmatically.
+The Bailian API Key (`bailian_api_key`) is **automatically obtained via CLI** during deployment (see Step 2). No manual console operation is needed. The Skill uses `aliyun modelstudio` commands (ListWorkspaces + CreateApiKey) to retrieve or create an API Key programmatically.
 
 > Prerequisites: The user's Alibaba Cloud account must have the Bailian (Model Studio) service activated. If not activated, guide the user to visit [Bailian Console](https://bailian.console.aliyun.com/) to activate it first.
 
@@ -224,57 +224,42 @@ aliyun ecs DescribeInstances \
 
 # Step 2: Obtain Bailian API Key via CLI
 
-Use the `aliyun maas` CLI plugin to automatically retrieve or create a Bailian API Key, eliminating the need for manual console operations.
+Use the `aliyun modelstudio` CLI plugin to automatically retrieve or create a Bailian API Key, eliminating the need for manual console operations.
 
-## 2.1 Install the MaaS CLI Plugin
+## 2.1 Install the Model Studio CLI Plugin
 
-The `aliyun maas` commands require the `aliyun-cli-maas` plugin:
+The `aliyun modelstudio` commands require the `aliyun-cli-modelstudio` plugin:
 
 ```bash
-aliyun plugin install --names aliyun-cli-maas \
+aliyun plugin install --names aliyun-cli-modelstudio \
   --user-agent AlibabaCloud-Agent-Skills
 ```
 
 ## 2.2 List Workspaces (must run first)
 
-**`workspace-id` is a required parameter for ListApiKeys and CreateApiKey**, so you must obtain it via ListWorkspaces first. Every Alibaba Cloud account with Bailian activated has a default workspace:
+**`workspace-id` is a required parameter for CreateApiKey**, so you must obtain it via ListWorkspaces first. Every Alibaba Cloud account with Bailian activated has a default workspace:
 
 ```bash
-aliyun maas list-workspaces \
-  --region ${region} \
+aliyun modelstudio list-workspaces \
   --user-agent AlibabaCloud-Agent-Skills
 ```
 
 Record the `WorkspaceId` from the result as `${workspace_id}`. If the result is empty (no workspaces), the user has not activated the Bailian service yet — guide them to activate it at the [Bailian Console](https://bailian.console.aliyun.com/).
 
-## 2.3 List Existing API Keys (requires workspace_id)
+## 2.3 Create API Key
 
-Use the `${workspace_id}` obtained in the previous step to query existing API Keys in that workspace:
-
-```bash
-aliyun maas list-api-keys \
-  --workspace-id ${workspace_id} \
-  --region ${region} \
-  --user-agent AlibabaCloud-Agent-Skills
-```
-
-If an existing API Key is found, record its `ApiKeyValue` (in `sk-xxx` format) as `${bailian_api_key}` and skip step 2.4.
-
-## 2.4 Create API Key (only if 2.3 returns no results)
-
-Only when no API Key was found in the previous step, create a new one using the same `${workspace_id}`:
+Create a new API Key using the `${workspace_id}`:
 
 ```bash
-aliyun maas create-api-key \
+aliyun modelstudio create-api-key \
   --workspace-id ${workspace_id} \
   --description "OpenClaw deployment API Key" \
-  --region ${region} \
   --user-agent AlibabaCloud-Agent-Skills
 ```
 
 Record the `ApiKeyValue` (in `sk-xxx` format) from the response as `${bailian_api_key}`.
 
-> Important: The full API Key value is only visible at creation time. Subsequent queries will only return a masked value. Make sure to record the complete key in this step.
+> Important: The full API Key value is only returned at creation time. `list-api-keys` always returns masked values (`sk-***`), so it cannot be used to retrieve a usable key. Make sure to record the complete key here. If the key is lost, delete the old one and create a new one.
 
 ---
 

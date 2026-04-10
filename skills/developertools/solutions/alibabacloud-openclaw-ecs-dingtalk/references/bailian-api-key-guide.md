@@ -8,49 +8,32 @@
 
 ## 2. Obtain an API Key via CLI
 
-The Bailian API Key can be fully obtained via `aliyun maas` CLI commands — no console operation needed.
+The Bailian API Key can be fully obtained via `aliyun modelstudio` CLI commands — no console operation needed.
 
-### 2.1 Install MaaS CLI Plugin
+### 2.1 Install Model Studio CLI Plugin
 
 ```bash
-aliyun plugin install --names aliyun-cli-maas
+aliyun plugin install --names aliyun-cli-modelstudio
 ```
 
 ### 2.2 List Workspaces (must run first)
 
-`workspace-id` is a required parameter for querying and creating API Keys, so you must obtain it first:
+`workspace-id` is a required parameter for creating API Keys, so you must obtain it first:
 
 ```bash
-aliyun maas list-workspaces --region cn-hangzhou
+aliyun modelstudio list-workspaces
 ```
 
 Record the `WorkspaceId` from the result (e.g., `ws-xxxxxxxx`).
 
-### 2.3 Query Existing API Keys
+### 2.3 Create a New API Key
 
-Use the `workspace-id` obtained in the previous step to query existing keys:
-
-```bash
-aliyun maas list-api-keys --workspace-id ${workspace_id} --region cn-hangzhou
-```
-
-If an existing API Key is found, use its `ApiKeyValue` (in `sk-xxx` format).
-
-### 2.4 Create a New API Key (only if none exists)
+Use the `workspace-id` obtained in the previous step:
 
 ```bash
-aliyun maas create-api-key --workspace-id ${workspace_id} --description "My API Key" --region cn-hangzhou
+aliyun modelstudio create-api-key --workspace-id ${workspace_id} --description "My API Key"
 ```
 
-Record the `ApiKeyValue` (in `sk-xxx` format) from the response. The full API Key value is only visible at creation time.
+Record the `ApiKeyValue` (in `sk-xxx` format) from the response. **The full API Key value is only returned at creation time** — `list-api-keys` always returns masked values (`sk-***`), so it cannot be used to retrieve a usable key. If you lose the key, delete the old one and create a new one.
 
-## 3. Plan Recommendations
 
-- The Coding Plan (Lite basic plan for trial) is recommended, which refreshes a specified quota every 5 hours to help control costs
-- New users have a free quota (specific quota subject to the latest official policies)
-- Charges apply per token usage after exceeding the free quota
-
-## Reference Links
-
-- [Bailian Console](https://bailian.console.aliyun.com/)
-- [Bailian API Documentation](https://help.aliyun.com/zh/model-studio/)
