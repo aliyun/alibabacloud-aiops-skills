@@ -1,8 +1,8 @@
 # DataWorks Data Source Reference
 
-Supports a total of **51** data source types (verified through API testing).
+Supports a total of **50** data source types (verified through API testing).
 
-> **Note**: The following types does not currently support OpenAPI, please configure through the console (Support will be added in future versions): `polardb-o`, `polardb-x-2-0`, `oceanbase`, `oss-hdfs`, `graph-database`, `bigquery`, `dlf` (not supported in some regions), `hdfs`, `ssh`, `redis`, `salesforce`, `elasticsearch`, `httpfile`
+> **Note**: The following types do not currently support OpenAPI, please configure through the console (Support will be added in future versions): `hdfs`
 
 ---
 
@@ -136,7 +136,7 @@ For detailed cross-account configuration of each data source type, please refer 
 
 ## Type List
 
-### Relational Databases (13)
+### Relational Databases (18)
 
 | Type | Name | UrlMode | InstanceMode | Notes |
 |------|------|---------|-------------|-------|
@@ -145,6 +145,9 @@ For detailed cross-account configuration of each data source type, please refer 
 | oracle | Oracle | Yes | No | Uses jdbcUrl format |
 | sqlserver | SQL Server | Yes | Yes | |
 | polardb | PolarDB MySQL | Yes | Yes | Requires dbType |
+| polardbo | PolarDB for Oracle | Yes | Yes | InstanceMode requires instanceId/regionId |
+| polardb-x-2-0 | PolarDB-X 2.0 | Yes | Yes | InstanceMode requires instanceId/regionId |
+| apsaradb_for_oceanbase | OceanBase | Yes | Yes | InstanceMode requires instanceId/tenant/regionId, UrlMode requires dbMode |
 | mariadb | MariaDB | Yes | No | |
 | dm | DM (Dameng) | Yes | No | Does not require the database field |
 | db2 | DB2 | Yes | No | Requires jdbcDriver parameter |
@@ -156,7 +159,7 @@ For detailed cross-account configuration of each data source type, please refer 
 | drds | DRDS | Yes | Yes | |
 | snowflake | Snowflake | Yes | No | Requires accountUrl |
 
-### Big Data Engines (11)
+### Big Data Engines (13)
 
 | Type | Name | UrlMode | InstanceMode | Notes |
 |------|------|---------|-------------|-------|
@@ -172,18 +175,18 @@ For detailed cross-account configuration of each data source type, please refer 
 | redshift | Amazon Redshift | Yes | No | |
 | hbase | HBase | Yes | No | Uses hbaseConfig |
 | lindorm | Lindorm | Yes | No | Uses seedserver/namespace |
+| dlf | Data Lake Formation | No | Yes | Requires catalogId/catalogName/catalogType |
 
-### Storage Services (3)
+### Storage Services (4)
 
 | Type | Name | UrlMode | InstanceMode | Notes |
 |------|------|---------|-------------|-------|
 | oss | OSS | Yes | No | RamRole authentication recommended |
 | s3 | Amazon S3 | Yes | No | |
 | ftp | FTP | Yes | No | protocol uses lowercase |
+| ssh | SSH | Yes | No | Only supports connection string mode |
 
-> ⚠️ **Does not support OpenAPI**: `ssh`
-
-### NoSQL Databases (4)
+### NoSQL Databases (7)
 
 | Type | Name | UrlMode | InstanceMode | Notes |
 |------|------|---------|-------------|-------|
@@ -191,8 +194,9 @@ For detailed cross-account configuration of each data source type, please refer 
 | memcache | Memcache | Yes | No | Uses proxy/port |
 | milvus | Milvus | Yes | Yes | UrlMode uses endpoint |
 | mongodb | MongoDB | Yes | Yes | Requires authDb and engineVersion |
-
-> ⚠️ **Does not support OpenAPI**: `redis`, `elasticsearch`
+| redis | Redis | Yes | Yes | Supports InstanceMode and UrlMode, SSL authentication optional |
+| elasticsearch | Elasticsearch | Yes | Yes | Supports InstanceMode and UrlMode, anonymous authentication optional |
+| graph_database | Graph Database | Yes | No | Connection string mode (host/port) |
 
 ### Message Services (3)
 
@@ -202,14 +206,15 @@ For detailed cross-account configuration of each data source type, please refer 
 | loghub | LogHub (SLS) | Yes | No | Requires regionId |
 | kafka | Kafka | Yes | Yes | version uses "2.0" or "3.4" |
 
-### SaaS Services (2)
+### SaaS Services (5)
 
 | Type | Name | UrlMode | InstanceMode | Notes |
 |------|------|---------|-------------|-------|
 | restapi | REST API | Yes | No | |
 | opensearch | OpenSearch | No | Yes | Only supports InstanceMode |
-
-> ⚠️ **Does not support OpenAPI**: `salesforce`, `httpfile`
+| salesforce | Salesforce | Yes | No | Uses OAuth, requires refreshToken |
+| httpfile | HttpFile | Yes | No | HTTP file data source |
+| bigquery | BigQuery | Yes | No | Requires bigQueryProjectId, bigQueryAuth |
 
 ---
 
@@ -644,6 +649,94 @@ For detailed cross-account configuration of each data source type, please refer 
   "address": [{"host": "192.168.1.100", "port": "3306"}],
   "database": "mydb",
   "username": "root",
+  "password": "<PASSWORD>"
+}
+```
+
+### DLF (InstanceMode)
+
+> **Note**: DLF only supports InstanceMode, requires catalog-related parameters.
+
+```json
+{
+  "envType": "Prod",
+  "authType": "PrimaryAccount",
+  "database": "db1",
+  "catalogId": "clg-paimon-xxx",
+  "catalogName": "xxx",
+  "catalogType": "Paimon",
+  "endpoint": "http://cn-hangzhou-vpc.dlf.aliyuncs.com"
+}
+```
+
+### Graph Database (UrlMode)
+
+> **Note**: Graph Database uses connection string mode with host/port.
+
+```json
+{
+  "host": "127.0.0.1",
+  "port": "5432",
+  "username": "xxxxx",
+  "password": "xxxxx",
+  "envType": "Dev"
+}
+```
+
+### BigQuery (UrlMode)
+
+> **Note**: BigQuery requires `bigQueryProjectId` (project ID) and `bigQueryAuth` (credential file ID).
+
+```json
+{
+  "bigQueryProjectId": "bigquery_id",
+  "bigQueryAuth": "123",
+  "envType": "Prod"
+}
+```
+
+### PolarDB-O (InstanceMode / UrlMode)
+
+> **Note**: PolarDB-O supports both InstanceMode and UrlMode. InstanceMode requires `instanceId` and `regionId`.
+
+```json
+{
+  "envType": "Prod",
+  "regionId": "cn-beijing",
+  "instanceId": "pc-xxxxx",
+  "database": "my_database",
+  "username": "my_username",
+  "password": "<PASSWORD>"
+}
+```
+
+### PolarDB-X 2.0 (InstanceMode / UrlMode)
+
+> **Note**: PolarDB-X 2.0 supports both InstanceMode and UrlMode. InstanceMode requires `instanceId` and `regionId`.
+
+```json
+{
+  "envType": "Prod",
+  "regionId": "cn-beijing",
+  "instanceId": "pxc-xxxxx",
+  "database": "my_database",
+  "username": "my_username",
+  "password": "<PASSWORD>"
+}
+```
+
+### OceanBase (apsaradb_for_oceanbase) (InstanceMode / UrlMode)
+
+> **Note**: OceanBase supports both modes. InstanceMode requires `instanceId`, `tenant`, `regionId`. UrlMode requires `dbMode` (mysql/oracle).
+
+```json
+{
+  "envType": "Prod",
+  "instanceId": "ob5nj51ns6qjr4",
+  "tenant": "t5nnecr8dppi8",
+  "regionId": "cn-shanghai",
+  "database": "my_database",
+  "username": "aliyun",
   "password": "<PASSWORD>"
 }
 ```

@@ -253,6 +253,56 @@
 
 ---
 
+## Region and Endpoints
+
+DataWorks OpenAPI uses region-specific endpoints. When specifying `--region`, you **must** also add the matching `--endpoint`.
+
+### Usage
+
+| Scenario | Parameters |
+|----------|-----------|
+| Public network | `--region <REGION_ID> --endpoint dataworks.<REGION_ID>.aliyuncs.com` |
+| VPC internal network | `--region <REGION_ID> --endpoint dataworks-vpc.<REGION_ID>.aliyuncs.com` |
+
+### Supported Regions
+
+| Region Name | Region ID | Public Endpoint | VPC Endpoint |
+|---|---|---|---|
+| China (Hangzhou) | `cn-hangzhou` | `dataworks.cn-hangzhou.aliyuncs.com` | `dataworks-vpc.cn-hangzhou.aliyuncs.com` |
+| China (Shanghai) | `cn-shanghai` | `dataworks.cn-shanghai.aliyuncs.com` | `dataworks-vpc.cn-shanghai.aliyuncs.com` |
+| China (Beijing) | `cn-beijing` | `dataworks.cn-beijing.aliyuncs.com` | `dataworks-vpc.cn-beijing.aliyuncs.com` |
+| China (Zhangjiakou) | `cn-zhangjiakou` | `dataworks.cn-zhangjiakou.aliyuncs.com` | `dataworks-vpc.cn-zhangjiakou.aliyuncs.com` |
+| China (Ulanqab) | `cn-wulanchabu` | `dataworks.cn-wulanchabu.aliyuncs.com` | `dataworks-vpc.cn-wulanchabu.aliyuncs.com` |
+| China (Shenzhen) | `cn-shenzhen` | `dataworks.cn-shenzhen.aliyuncs.com` | `dataworks-vpc.cn-shenzhen.aliyuncs.com` |
+| China (Chengdu) | `cn-chengdu` | `dataworks.cn-chengdu.aliyuncs.com` | `dataworks-vpc.cn-chengdu.aliyuncs.com` |
+| China (Hong Kong) | `cn-hongkong` | `dataworks.cn-hongkong.aliyuncs.com` | `dataworks-vpc.cn-hongkong.aliyuncs.com` |
+| Singapore | `ap-southeast-1` | `dataworks.ap-southeast-1.aliyuncs.com` | `dataworks-vpc.ap-southeast-1.aliyuncs.com` |
+| Malaysia (Kuala Lumpur) | `ap-southeast-3` | `dataworks.ap-southeast-3.aliyuncs.com` | `dataworks-vpc.ap-southeast-3.aliyuncs.com` |
+| Indonesia (Jakarta) | `ap-southeast-5` | `dataworks.ap-southeast-5.aliyuncs.com` | `dataworks-vpc.ap-southeast-5.aliyuncs.com` |
+| Japan (Tokyo) | `ap-northeast-1` | `dataworks.ap-northeast-1.aliyuncs.com` | `dataworks-vpc.ap-northeast-1.aliyuncs.com` |
+| South Korea (Seoul) | `ap-northeast-2` | `dataworks.ap-northeast-2.aliyuncs.com` | `dataworks-vpc.ap-northeast-2.aliyuncs.com` |
+| US (Virginia) | `us-east-1` | `dataworks.us-east-1.aliyuncs.com` | `dataworks-vpc.us-east-1.aliyuncs.com` |
+| US (Silicon Valley) | `us-west-1` | `dataworks.us-west-1.aliyuncs.com` | `dataworks-vpc.us-west-1.aliyuncs.com` |
+| UK (London) | `eu-west-1` | `dataworks.eu-west-1.aliyuncs.com` | `dataworks-vpc.eu-west-1.aliyuncs.com` |
+| Germany (Frankfurt) | `eu-central-1` | `dataworks.eu-central-1.aliyuncs.com` | `dataworks-vpc.eu-central-1.aliyuncs.com` |
+| UAE (Dubai) | `me-east-1` | `dataworks.me-east-1.aliyuncs.com` | `dataworks-vpc.me-east-1.aliyuncs.com` |
+| Mexico (Querétaro) | `na-south-1` | `dataworks.na-south-1.aliyuncs.com` | `dataworks-vpc.na-south-1.aliyuncs.com` |
+| Saudi Arabia (Riyadh) | `me-central-1` | `dataworks.me-central-1.aliyuncs.com` | `dataworks-vpc.me-central-1.aliyuncs.com` |
+| China South 1 Finance | `cn-shenzhen-finance-1` | `dataworks.cn-shenzhen-finance-1.aliyuncs.com` | `dataworks-vpc.cn-shenzhen-finance-1.aliyuncs.com` |
+| China East 2 Finance | `cn-shanghai-finance-1` | `dataworks.cn-shanghai-finance-1.aliyuncs.com` | `dataworks-vpc.cn-shanghai-finance-1.aliyuncs.com` |
+| China East 1 Finance | `cn-hangzhou-finance` | `dataworks.aliyuncs.com` | *not available* |
+
+### Notes
+
+- **Endpoint naming rule**: If a region is not explicitly listed above, the endpoint follows the standard naming pattern:
+  - Public: `dataworks.<REGION_ID>.aliyuncs.com`
+  - VPC: `dataworks-vpc.<REGION_ID>.aliyuncs.com`
+- **Endpoint selection**: Always use the **public endpoint** by default. Only use the VPC endpoint when the user explicitly specifies it (e.g., the API call is being made from within an Alibaba Cloud VPC).
+- **Finance Cloud (`cn-hangzhou-finance`)**: Uses the global endpoint `dataworks.aliyuncs.com` and does **not** support VPC endpoints.
+- **Official documentation**: [DataWorks Service Access Points](https://help.aliyun.com/zh/dataworks/developer-reference/api-dataworks-public-2024-05-18-endpoint)
+
+---
+
 ## Official Documentation Links
 
 ### Data Sources

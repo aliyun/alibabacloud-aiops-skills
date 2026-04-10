@@ -11,12 +11,13 @@
 
 | Name | Type | Example Value | Required | Description |
 |------|------|---------------|----------|-------------|
+| `regionId` | String | `cn-shanghai` | Yes | The region where the MongoDB instance belongs. |
 | `instanceId` | String | `dds-2zebc89f45b238b4` | Yes | MongoDB instance ID. |
 | `database` | String | `my_db` | Yes | Database name. |
 | `username` | String | `root` | Yes | Username. |
 | `password` | String | `xxx` | Yes | Password. |
 | `authDb` | String | `admin` | Yes | Authentication database. |
-| `engineVersion` | String | `4.x` | Yes | MongoDB engine version. Values: `4.x`, `5.x`, `6.x`, `7.x`. |
+| `engineVersion` | String | `4.x` | No | MongoDB engine version. Values: `4.x`, `5.x`, `6.x`, `7.x`. |
 | `authType` | String | `authTypeNone` | No | Authentication method. Values:<br>• `authTypeNone`: No SSL<br>• `authTypeSsl`: SSL authentication |
 | `truststoreFile` | String | `<FILE_ID>` | Conditional | Truststore certificate file ID. Required when `authType=authTypeSsl`. |
 | `truststorePassword` | String | `xxx` | No | Truststore password. |
@@ -34,7 +35,7 @@
 | `username` | String | `root` | Yes | Username. |
 | `password` | String | `xxx` | Yes | Password. |
 | `authDb` | String | `admin` | Yes | Authentication database. |
-| `engineVersion` | String | `4.x` | Yes | MongoDB engine version. Values: `4.x`, `5.x`, `6.x`, `7.x`. |
+| `engineVersion` | String | `4.x` | No | MongoDB engine version. Values: `4.x`, `5.x`, `6.x`, `7.x`. |
 | `authType` | String | `authTypeNone` | No | Authentication method. Values:<br>• `authTypeNone`: No SSL<br>• `authTypeSsl`: SSL authentication |
 | `truststoreFile` | String | `<FILE_ID>` | Conditional | Truststore certificate file ID. Required when `authType=authTypeSsl`. |
 | `truststorePassword` | String | `xxx` | No | Truststore password. |
@@ -51,6 +52,7 @@
 {
   "envType": "Prod",
   "instanceId": "dds-xxxxx",
+  "regionId": "cn-shanghai",
   "database": "my_db",
   "username": "root",
   "password": "<PASSWORD>",

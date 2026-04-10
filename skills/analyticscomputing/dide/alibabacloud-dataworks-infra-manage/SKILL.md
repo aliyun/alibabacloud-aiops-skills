@@ -1,7 +1,7 @@
 ---
 name: alibabacloud-dataworks-infra-manage
 description: |
-  DataWorks Infrastructure Management: Create and query operations for Data Sources (51 types), Compute Resources, and Serverless Resource Groups, plus connectivity testing and resource group binding/unbinding.
+  DataWorks Infrastructure Management: Create and query operations for Data Sources (50 types), Compute Resources, and Serverless Resource Groups, plus connectivity testing and resource group binding/unbinding.
   Uses aliyun CLI to call dataworks-public OpenAPI (2024-05-18).
   Trigger keywords: DataWorks data source, compute resource, resource group, datasource, data source, compute resource, resource group,
   mysql/hologres/maxcompute data source, holo/mc/flink resource, Serverless resource group, DataWorks infra, create/list datasource,
@@ -18,7 +18,7 @@ Unified management of **Data Sources**, **Compute Resources**, and **Resource Gr
 ```
 DataWorks
 ├── Workspaces ─── Query and search workspaces
-│   ├── Data Sources ─── 51 types: MySQL, Hologres, MaxCompute, ...
+│   ├── Data Sources ─── 50 types: MySQL, Hologres, MaxCompute, ...
 │   └── Compute Resources ─── Hologres, MaxCompute, Flink, Spark
 └── Resource Groups ─── Serverless resource group management (cross-workspace)
 
@@ -56,6 +56,26 @@ Dependencies:
 > **Exception**: When the user has **explicitly specified** parameter values in the conversation, use them directly without re-confirmation.
 
 **Resource group related parameters (mandatory user selection)**: VPC, VSwitch, Resource Group ID (for binding/connectivity testing) — involve networking and billing, **DO NOT auto-select**; must display a list for the user to explicitly choose. Confirm even if there is only one option.
+
+### ⚠️ Write API Execution Gate — MUST Check Before Every Write Operation
+
+> **MANDATORY**: Before calling **any** Write API (Create / Update / Delete / Bind / Unbind / Associate / Dissociate / Test), you **MUST** perform the following checks in order:
+>
+> 1. **Scan the entire SKILL.md** for a Security Restriction or Disabled Operations notice that mentions the target API or module.
+> 2. **If a restriction exists**: **BLOCK the operation immediately**. Do NOT call the API. Respond to the user with:
+>    - What operation is blocked and why
+>    - The recommended alternative (e.g., use the DataWorks console, contact administrator)
+> 3. **If no restriction exists**: Proceed normally with parameter confirmation and execution.
+>
+> **This check is NOT optional.** It applies to every single write operation without exception. Never skip this step.
+>
+> **Quick Reference — Blocked APIs in this skill**:
+> | Module | Blocked APIs | Reason |
+> |--------|-------------|--------|
+> | Data Sources (Module 1) | `UpdateDataSource`, `DeleteDataSource` | Prevent accidental data loss, credential exposure, disruption of running tasks |
+> | Compute Resources (Module 2) | `UpdateComputeResource`, `DeleteComputeResource` | Prevent disruption of running development and scheduling tasks |
+>
+> **Allowed Write APIs**: `CreateDataSource`, `CreateComputeResource`, `CreateResourceGroup`, `AssociateProjectToResourceGroup`, `DissociateProjectFromResourceGroup`, `TestDataSourceConnectivity`
 
 ### RAM Permissions
 
@@ -124,25 +144,33 @@ When searching by name, first get the full list then filter `.PagingInfo.Project
 
 # Module 1: Data Source Management
 
-Supports **51** data source types. See [references/data-sources/README.md](references/data-sources/README.md) for details.
+Supports **50** data source types. See [references/data-sources/README.md](references/data-sources/README.md) for details.
 
 > **When do you need to create a data source separately?** Creating a compute resource (Module 2) will **automatically create the corresponding data source**. Only pure storage-type databases (MySQL, PostgreSQL, Kafka, MongoDB, etc.) need separate creation.
 
-> Some types do not currently support OpenAPI: `polardb-o`, `polardb-x-2-0`, `oceanbase`, `oss-hdfs`, `graph-database`, `bigquery`, `dlf`, `hdfs`, `ssh`, `redis`, `salesforce`, `elasticsearch`, `httpfile`
+> **Note**: The following types do not currently support OpenAPI: `hdfs`
 
 Connection modes: **UrlMode** (self-hosted databases, requires host/port) or **InstanceMode** (Alibaba Cloud managed instances, requires instanceId). When unsure, proactively ask the user. InstanceMode is preferred.
 
 > Instance query APIs: [references/data-sources/instance-apis.md](references/data-sources/instance-apis.md)
 
-## ⚠️ Security Restriction
+## ⚠️ Security Restriction — See Write API Execution Gate (Global Rules) for mandatory pre-check
 
-> **IMPORTANT**: For security reasons, this skill does **NOT** support **modifying** or **deleting** data sources. These operations are disabled to prevent:
-> - Accidental data loss or service interruption
-> - Exposure of sensitive credentials (passwords, connection strings)
-> - Disruption of running data integration tasks
-> - Unintended changes to production data source configurations
->
+> **IMPORTANT**: The `DeleteDataSource` and `UpdateDataSource` APIs are supported by the DataWorks service, but this skill has **disabled** modifying or deleting data sources for security reasons. **Before attempting any write operation, the agent MUST check the Write API Execution Gate section.**
 > If you need to modify or delete a data source, please use the DataWorks console directly or contact your administrator.
+
+### Connection Mode Quick Reference
+
+`ConnectionPropertiesMode` selection determines required fields. InstanceMode is preferred when both are available.
+
+| Mode | Types | Count |
+|------|-------|-------|
+| **Both** | mysql, postgresql, sqlserver, polardb, polardbo, polardb-x-2-0, apsaradb_for_oceanbase, drds, starrocks, analyticdb_for_mysql, analyticdb_for_postgresql, milvus, mongodb, redis, elasticsearch, kafka | 16 |
+| **InstanceMode only** | hologres, dlf, opensearch | 3 |
+| **UrlMode only** | oracle, mariadb, dm, db2, tidb, vertica, gbase8a, kingbasees, saphana, snowflake, maxcompute, hive, clickhouse, doris, selectdb, redshift, hbase, lindorm, oss, s3, ftp, ssh, tablestore, memcache, graph_database, datahub, loghub, restapi, salesforce, httpfile, bigquery | 31 |
+
+> `hdfs` — not supported via OpenAPI.
+> Full details: [references/data-sources/README.md](references/data-sources/README.md)
 
 ### Workspace Mode
 
@@ -202,9 +230,9 @@ aliyun dataworks-public TestDataSourceConnectivity --user-agent AlibabaCloud-Age
 
 Supports Hologres, MaxCompute, Flink, Spark, and other types. The system will **automatically create corresponding data sources** upon creation.
 
-## ⚠️ Security Restriction
+## ⚠️ Security Restriction — See Write API Execution Gate (Global Rules) for mandatory pre-check
 
-> **IMPORTANT**: For security reasons, this skill does **NOT** support **modifying** or **deleting** compute resources. These operations are disabled to prevent:
+> **IMPORTANT**: For security reasons, this skill does **NOT** support **modifying** or **deleting** compute resources. **Before attempting any write operation, the agent MUST check the Write API Execution Gate section.** These operations are disabled to prevent:
 > - Accidental data loss or service interruption
 > - Disruption of running data development and scheduling tasks
 > - Unintended changes to production compute resource configurations
@@ -343,7 +371,7 @@ Common: `cn-hangzhou`, `cn-shanghai`, `cn-beijing`, `cn-shenzhen`. Endpoint: `da
 | Reference | Description |
 |-----------|-------------|
 | [references/data-sources/README.md](references/data-sources/README.md) | Data source type list and ConnectionProperties examples |
-| [references/data-sources/](references/data-sources/) | Detailed configuration docs for each data source type (51 files) |
+| [references/data-sources/](references/data-sources/) | Detailed configuration docs for each data source type (50 files) |
 | [references/cross-account-datasources.md](references/cross-account-datasources.md) | Cross-account data source configuration guide |
 | [references/compute-resources/README.md](references/compute-resources/README.md) | Compute resource ConnectionProperties examples |
 | [references/cli-installation-guide.md](references/cli-installation-guide.md) | Aliyun CLI installation guide |

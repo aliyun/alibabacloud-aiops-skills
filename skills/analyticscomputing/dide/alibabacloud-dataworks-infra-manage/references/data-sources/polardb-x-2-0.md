@@ -1,7 +1,5 @@
 # PolarDB-X 2.0 ConnectionProperties Documentation
 
-> ⚠️ **Note**: This data source type does not currently support OpenAPI creation/modification. Please configure it through the DataWorks console. Support will be added in future versions.
-
 ## Attribute Definition
 
 - **Datasource type**: `polardbx20`

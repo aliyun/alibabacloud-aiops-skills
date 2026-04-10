@@ -80,7 +80,6 @@ aliyun maxcompute ListProjects --user-agent AlibabaCloud-Agent-Skills --RegionId
     "endpoint": "http://service.cn-shanghai.maxcompute.aliyun-inc.com/api",
     "envType": "Prod",
     "project": "skyfire_20221228",
-    "dsVersion": "2",
     "authType": "PrimaryAccount",
     "endpointMode": "Custom",
     "regionId": "cn-shanghai"
@@ -96,7 +95,6 @@ aliyun maxcompute ListProjects --user-agent AlibabaCloud-Agent-Skills --RegionId
     "crossAccountRoleName": "mc-accross-role-name",
     "endpointMode": "SelfAdaption",
     "envType": "Prod",
-    "dsVersion": "2",
     "authType": "RamRole",
     "regionId": "cn-shanghai"
 }

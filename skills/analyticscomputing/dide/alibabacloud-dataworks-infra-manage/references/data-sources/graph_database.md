@@ -1,7 +1,5 @@
 # Graph Database Connection Properties Documentation
 
-> ⚠️ **Note**: This data source type does not currently support OpenAPI creation/modification. Please configure it through the DataWorks console. Support will be added in future versions.
-
 ## Overview
 
 - **Data Source Type**: `graph_database`

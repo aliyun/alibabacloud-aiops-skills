@@ -1,7 +1,5 @@
 # SSH Datasource Documentation
 
-> ⚠️ **Note**: This data source type does not currently support OpenAPI creation/modification. Please configure it through the DataWorks console. Support will be added in future versions.
-
 ## Property Definition
 
 - **Datasource Type**: `ssh`

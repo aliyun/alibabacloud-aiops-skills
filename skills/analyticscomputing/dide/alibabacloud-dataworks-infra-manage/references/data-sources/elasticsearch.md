@@ -1,7 +1,5 @@
 # Elasticsearch Datasource Documentation
 
-> ⚠️ **Note**: This data source type does not currently support OpenAPI creation/modification. Please configure it through the DataWorks console. Support will be added in future versions.
-
 ## Property Definition
 
 - **Datasource Type**: `elasticsearch`
@@ -27,9 +25,9 @@
 | Name | Type | Example Value | Required | Description |
 |------|------|---------------|----------|-------------|
 | `endpoint` | String | `http://esxxx.elasticsearch.aliyuncs.com:9200` | Yes | Elasticsearch connection endpoint. |
-| `authEnable` | String | `true` | Yes | Enable authentication. Values: `true`, `false`. Default: `true`. |
-| `username` | String | `elastic` | Conditional | Username. Required when `authEnable=true`. |
-| `password` | String | `xxx` | Conditional | Password. Required when `authEnable=true`. |
+| `authEnable` | String | `enable` | Yes | Enable authentication. Values: `enable`, `disable`. Default: `enable`. |
+| `username` | String | `elastic` | Conditional | Username. Required when `authEnable=enable`. |
+| `password` | String | `xxx` | Conditional | Password. Required when `authEnable=enable`. |
 | `envType` | String | `Prod` | Yes | Environment type. Values: `Dev`, `Prod`. |
 
 ---
@@ -55,7 +53,7 @@
 {
   "envType": "Prod",
   "endpoint": "http://esxxx.elasticsearch.aliyuncs.com:9200",
-  "authEnable": "true",
+  "authEnable": "enable",
   "username": "elastic",
   "password": "<PASSWORD>"
 }
@@ -67,6 +65,6 @@
 {
   "envType": "Prod",
   "endpoint": "http://192.168.1.100:9200",
-  "authEnable": "false"
+  "authEnable": "disable"
 }
 ```

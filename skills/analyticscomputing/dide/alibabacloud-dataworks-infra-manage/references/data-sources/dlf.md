@@ -1,7 +1,5 @@
 # Data Lake Formation Datasource Documentation
 
-> ⚠️ **Note**: This data source type does not currently support OpenAPI creation/modification (not supported in some regions). Please configure it through the DataWorks console. Support will be added in future versions.
-
 ## Property Definition
 
 - **Datasource type**: `dlf`
@@ -17,6 +15,7 @@
 | `regionId` | String | `cn-hangzhou` | Yes | Region ID. |
 | `catalogId` | String | `clg-paimon-xxx` | Yes | DLF catalog ID. |
 | `catalogName` | String | `xxx` | Yes | DLF catalog name. |
+| `catalogType` | String | `Paimon` | Yes | DLF catalog type. Only supports `Paimon`. |
 | `database` | String | `db1` | Yes | Database name. |
 | `authType` | String | `Executor` | Yes | DLF access identity. Enumerated values:<br>• `Executor`: Executor (Development environment)<br>• `PrimaryAccount`: Primary account (Production environment)<br>• `SubAccount`: Specified sub-account (Production environment)<br>• `RamRole`: Specified RAM role (Production environment) |
 | `authIdentity` | String | `123123` | No | Sub-account ID or Role ID. Required when `authType` is `SubAccount` or `RamRole`. |
@@ -34,6 +33,7 @@
   "database": "testdb01",
   "catalogId": "clg-paimon-xx",
   "catalogName": "xx",
+  "catalogType": "Paimon",
   "endpoint": "http://cn-hangzhou-vpc.dlf.aliyuncs.com",
   "authIdentity": "xxx"
 }

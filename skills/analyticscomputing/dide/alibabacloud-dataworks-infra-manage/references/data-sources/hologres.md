@@ -51,7 +51,6 @@
   "securityProtocol": "authTypeNone",
   "regionId": "cn-beijing",
   "envType": "Dev",
-  "dsVersion": "2",
   "authType": "Executor"
 }
 ```

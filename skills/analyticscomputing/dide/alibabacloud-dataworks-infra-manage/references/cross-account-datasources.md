@@ -51,6 +51,7 @@ Create a data source in the DataWorks account and configure cross-account parame
 | SQLServer | sqlserver | InstanceMode | - | instanceId, regionId, database, username, password | Standard cross-account |
 | AnalyticDB MySQL | analyticdb_for_mysql | InstanceMode | - | instanceId, regionId, database, username, password | Standard cross-account |
 | AnalyticDB PostgreSQL | analyticdb_for_postgresql | InstanceMode | - | instanceId, regionId, database, username, password | Standard cross-account |
+| StarRocks | starrocks | InstanceMode | - | instanceId, instanceType, regionId, database, username, password | Must provide `instanceType` (`emr-olap` or `serverless`) |
 
 > **Note**: Only MaxCompute and Hologres require explicitly setting `authType: RamRole` for cross-account. Other types do not need to set authType.
 
@@ -177,6 +178,22 @@ Create a data source in the DataWorks account and configure cross-account parame
 }
 ```
 
+### StarRocks Cross-Account
+
+```json
+{
+  "instanceId": "c-xxxxx",
+  "instanceType": "serverless",
+  "regionId": "cn-zhangjiakou",
+  "database": "mydb",
+  "username": "sr_user",
+  "password": "<PASSWORD>",
+  "crossAccountOwnerId": "<TARGET_ACCOUNT_ID>",
+  "crossAccountRoleName": "<CROSS_ACCOUNT_ROLE_NAME>",
+  "envType": "Prod"
+}
+```
+
 ---
 
 ## CLI Command Examples
@@ -208,3 +225,4 @@ For detailed cross-account configuration of each data source type, please refer 
 - [data-sources/sqlserver.md](data-sources/sqlserver.md)
 - [data-sources/analyticdb_for_mysql.md](data-sources/analyticdb_for_mysql.md)
 - [data-sources/analyticdb_for_postgresql.md](data-sources/analyticdb_for_postgresql.md)
+- [data-sources/starrocks.md](data-sources/starrocks.md)
