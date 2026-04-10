@@ -1,0 +1,8 @@
+# Locked top-level dependencies for scripts/ (e.g. upload_document_local.py).
+# Generated with: uv venv --python 3.12 .venv && uv pip install <packages> && pinned from `uv pip show`.
+# To upgrade: recreate venv, reinstall latest, refresh pins, run py_compile / --help on the script.
+alibabacloud-gpdb20160503==5.1.0
+alibabacloud-credentials==1.0.8
+alibabacloud-tea-openapi==0.4.4
+alibabacloud-tea-util==0.3.14
+alibabacloud-tea==0.4.3
