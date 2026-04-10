@@ -23,6 +23,7 @@ aliyun elasticsearch create-instance ...
 aliyun elasticsearch describe-instance ...
 aliyun elasticsearch list-instance ...
 aliyun elasticsearch restart-instance ...
+aliyun elasticsearch update-instance ...
 ```
 
 #### ❌ INCORRECT
@@ -42,6 +43,7 @@ aliyun elasticsearch create-instance      # Use kebab-case
 aliyun elasticsearch describe-instance    # Use kebab-case
 aliyun elasticsearch list-instance        # Use kebab-case
 aliyun elasticsearch restart-instance     # Use kebab-case
+aliyun elasticsearch update-instance      # Use kebab-case
 ```
 
 #### ❌ INCORRECT
@@ -146,6 +148,38 @@ aliyun elasticsearch list-all-node \
 
 aliyun elasticsearch listAllNode \
   --instance-id es-cn-xxx****   # Wrong: command should be list-all-node (kebab-case)
+```
+
+#### ✅ CORRECT - update-instance
+```bash
+aliyun elasticsearch update-instance \
+  --region cn-hangzhou \
+  --instance-id es-cn-xxx**** \
+  --client-token $(uuidgen) \
+  --body '{"nodeSpec":{"spec":"elasticsearch.sn2ne.xlarge.new"}}' \
+  --user-agent AlibabaCloud-Agent-Skills
+
+# Downgrade with orderActionType
+aliyun elasticsearch update-instance \
+  --region cn-hangzhou \
+  --instance-id es-cn-xxx**** \
+  --client-token $(uuidgen) \
+  --order-action-type downgrade \
+  --body '{"nodeSpec":{"spec":"elasticsearch.sn2ne.large.new"}}' \
+  --user-agent AlibabaCloud-Agent-Skills
+```
+
+#### ❌ INCORRECT - update-instance
+```bash
+aliyun elasticsearch update-instance \
+  --instanceId es-cn-xxx****   # Wrong: should be --instance-id (kebab-case)
+
+aliyun elasticsearch update-instance \
+  --body '{"nodeSpec":{"spec":"elasticsearch.sn2ne.xlarge.new"},"warmNodeConfiguration":{"amount":3}}'   # Wrong: cannot change multiple node types in one call
+
+aliyun elasticsearch update-instance \
+  --order-action-type downgrade \
+  --body '{"nodeAmount":2}'   # Wrong: cannot reduce node count via UpdateInstance, use ShrinkNode
 ```
 
 ---
@@ -293,6 +327,12 @@ client = OpenApiClient(config)
 ✅ Must contain:
 - `RequestId` (string)
 - `Result.instanceId` (string)
+
+### update-instance Response
+✅ Must contain:
+- `RequestId` (string)
+- `Result.instanceId` (string)
+- `Result.status` (string, expected `activating` after successful update)
 
 ---
 

@@ -12,6 +12,7 @@ This document lists all CLI commands and APIs used in the Elasticsearch Instance
   - [3. ListInstance - List Instances](#3-listinstance---list-instances)
   - [4. RestartInstance - Restart Instance](#4-restartinstance---restart-instance)
   - [5. ListAllNode - Query Cluster Node Information](#5-listallnode---query-cluster-node-information)
+  - [6. UpdateInstance - Upgrade/Downgrade Instance Configuration](#6-updateinstance---upgradedowngrade-instance-configuration)
 - [Instance Status Reference](#instance-status-reference)
 - [Elasticsearch Version Reference](#elasticsearch-version-reference)
 - [Official Documentation](#official-documentation)
@@ -69,12 +70,13 @@ aliyun elasticsearch create-instance \
 | Elasticsearch | `aliyun elasticsearch list-instance` | ListInstance | List ES Instances in a Region |
 | Elasticsearch | `aliyun elasticsearch list-all-node` | ListAllNode | Query All Cluster Node Information |
 | Elasticsearch | `aliyun elasticsearch restart-instance` | RestartInstance | Restart Elasticsearch Cluster |
+| Elasticsearch | `aliyun elasticsearch update-instance` | UpdateInstance | Upgrade/Downgrade Instance Configuration |
 
 ---
 
 ## API Details
 
-> **Idempotency:** For write operations (createInstance, RestartInstance), you **MUST** use the `--client-token` parameter to ensure idempotency for safe retries when requests time out.
+> **Idempotency:** For write operations (createInstance, RestartInstance, UpdateInstance), you **MUST** use the `--client-token` parameter to ensure idempotency for safe retries when requests time out.
 
 ### 1. createInstance - Create Elasticsearch Instance
 
@@ -554,6 +556,254 @@ aliyun elasticsearch list-all-node \
 
 ---
 
+### 6. UpdateInstance - Upgrade/Downgrade Instance Configuration
+
+> **⚠️ CRITICAL: Pre-update Status Check and Constraints**
+>
+> **1. Instance Status Check (Required)**
+>
+> Before executing an update operation, you **MUST** first query the instance status using `describe-instance` and confirm it is `active`.
+> - **Only when the instance status is `active` can you execute the update operation**
+> - **If the instance status is `activating`, `inactive`, or `invalid`, update operation is prohibited**
+>
+> **2. Single Node Type Per Call**
+>
+> Each update call can only change **one type of node**. The supported node types are:
+> - Data node (`nodeAmount` / `nodeSpec`)
+> - Dedicated master node (`masterConfiguration`)
+> - Cold data node (`warmNodeConfiguration`)
+> - Coordinating node (`clientNodeConfiguration`)
+> - Kibana node (`kibanaConfiguration`)
+> - Elastic data node (`elasticDataNodeConfiguration`)
+>
+> You **CAN** change multiple attributes of the **same** node type in one call (e.g., both `amount` and `spec` for coordinating nodes).
+>
+> **3. Upgrade vs Downgrade Rules**
+>
+> | Rule | Upgrade (default) | Downgrade (`orderActionType=downgrade`) |
+> |------|-------------------|----------------------------------------|
+> | Storage size | Can increase | Cannot decrease |
+> | Storage type | Can upgrade | Can downgrade |
+> | Node count | Can increase | Cannot decrease (use ShrinkNode API) |
+> | Spec (CPU/Memory) | Can increase | Can decrease |
+> | Force change | Supported | Not supported |
+> | updateType | Supported | Not supported (smart change only) |
+>
+> **Prohibited Behaviors:**
+> - ❌ Do NOT attempt to change multiple node types in a single call
+> - ❌ Do NOT reduce node count via UpdateInstance (use ShrinkNode instead)
+> - ❌ Do NOT reduce storage size in either upgrade or downgrade
+> - ❌ Do NOT disable already-enabled nodes
+> - ❌ Do NOT guess node specifications - refer to [node-specifications-by-region.md](node-specifications-by-region.md)
+
+**API Style:** ROA (RESTful)
+
+**CLI Command (using --body for RESTful HTTP body):**
+
+```bash
+# Generate idempotency token
+CLIENT_TOKEN=$(uuidgen)
+
+# Upgrade (default orderActionType=upgrade)
+aliyun elasticsearch update-instance \
+  --region <RegionId> \
+  --instance-id <InstanceId> \
+  --client-token $CLIENT_TOKEN \
+  --body '<JSON_BODY>' \
+  --connect-timeout 3 \
+  --read-timeout 30 \
+  --user-agent AlibabaCloud-Agent-Skills
+
+# Downgrade (must set orderActionType=downgrade)
+aliyun elasticsearch update-instance \
+  --region <RegionId> \
+  --instance-id <InstanceId> \
+  --client-token $CLIENT_TOKEN \
+  --order-action-type downgrade \
+  --body '<JSON_BODY>' \
+  --connect-timeout 3 \
+  --read-timeout 30 \
+  --user-agent AlibabaCloud-Agent-Skills
+```
+
+**Required Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `--instance-id` | string | Instance ID |
+| `--client-token` | string | Idempotency token for safe retries, UUID format |
+
+**Optional Parameters (query):**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `--order-action-type` | string | Change type: `upgrade` (default) or `downgrade` |
+| `--force` | bool | Whether to force change (only for upgrade), default false |
+
+**Request Body Parameters (via --body):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `nodeAmount` | int | Data node count (2~50) |
+| `nodeSpec` | object | Data node configuration: `spec`, `disk`, `diskType`, `performanceLevel` |
+| `masterConfiguration` | object | Dedicated master node config: `amount`, `spec`, `disk`, `diskType` |
+| `clientNodeConfiguration` | object | Coordinating node config: `amount`, `spec`, `disk` |
+| `warmNodeConfiguration` | object | Cold data node config: `amount`, `spec`, `disk`, `diskType` |
+| `kibanaConfiguration` | object | Kibana node config: `amount`, `spec`, `disk` |
+| `elasticDataNodeConfiguration` | object | Elastic data node config: `amount`, `spec`, `disk`, `diskType` |
+| `updateType` | string | Change method: `blue_green` (blue-green), `normal` (in-place). Default is smart change (only for upgrade) |
+| `force` | bool | Whether to force change (only for upgrade) |
+| `dryRun` | bool | Pre-validation only, does not execute change |
+
+**Request Body Examples:**
+
+The following examples show the `--body` JSON for each common upgrade/downgrade scenario.
+
+> **Note:** Each call can only change **one type of node**. For data nodes, `nodeAmount` and `nodeSpec` are considered the same type and can be combined in one call.
+
+| # | Scenario | Request Body (`--body`) |
+|---|----------|------------------------|
+| 1 | Data node disk upgrade/downgrade | `{"nodeSpec":{"disk":40}}` |
+| 2 | Data node spec upgrade/downgrade | `{"nodeSpec":{"spec":"elasticsearch.sn2ne.xlarge.new"}}` |
+| 3 | Data node disk + spec together | `{"nodeSpec":{"spec":"elasticsearch.sn2ne.xlarge.new","disk":40}}` |
+| 4 | Data node count increase/decrease | `{"nodeAmount":4}` |
+| 5 | Data node count + disk + spec together | `{"nodeAmount":4,"nodeSpec":{"spec":"elasticsearch.sn2ne.xlarge.new","disk":40}}` |
+| 6 | Master node spec upgrade/downgrade | `{"masterConfiguration":{"spec":"elasticsearch.sn2ne.xlarge"}}` |
+| 7 | Kibana node spec change | `{"kibanaConfiguration":{"spec":"elasticsearch.sn1ne.large"}}` |
+| 8 | Coordinating node count + spec | `{"clientNodeConfiguration":{"amount":3,"spec":"elasticsearch.sn1ne.large"}}` |
+| 9 | Cold node count + disk + spec | `{"warmNodeConfiguration":{"amount":3,"spec":"elasticsearch.sn1ne.large","disk":500}}` |
+
+**CLI Examples:**
+
+```bash
+# Generate idempotency token
+CLIENT_TOKEN=$(uuidgen)
+
+# Example 1: Upgrade data node disk to 40GB
+aliyun elasticsearch update-instance \
+  --region cn-hangzhou \
+  --instance-id es-cn-xxx**** \
+  --client-token $CLIENT_TOKEN \
+  --body '{"nodeSpec":{"disk":40}}' \
+  --connect-timeout 3 \
+  --read-timeout 30 \
+  --user-agent AlibabaCloud-Agent-Skills
+
+# Example 2: Upgrade data node spec
+aliyun elasticsearch update-instance \
+  --region cn-hangzhou \
+  --instance-id es-cn-xxx**** \
+  --client-token $CLIENT_TOKEN \
+  --body '{"nodeSpec":{"spec":"elasticsearch.sn2ne.xlarge.new"}}' \
+  --connect-timeout 3 \
+  --read-timeout 30 \
+  --user-agent AlibabaCloud-Agent-Skills
+
+# Example 3: Upgrade data node disk and spec together
+aliyun elasticsearch update-instance \
+  --region cn-hangzhou \
+  --instance-id es-cn-xxx**** \
+  --client-token $CLIENT_TOKEN \
+  --body '{"nodeSpec":{"spec":"elasticsearch.sn2ne.xlarge.new","disk":40}}' \
+  --connect-timeout 3 \
+  --read-timeout 30 \
+  --user-agent AlibabaCloud-Agent-Skills
+
+# Example 4: Increase data node count to 4
+aliyun elasticsearch update-instance \
+  --region cn-hangzhou \
+  --instance-id es-cn-xxx**** \
+  --client-token $CLIENT_TOKEN \
+  --body '{"nodeAmount":4}' \
+  --connect-timeout 3 \
+  --read-timeout 30 \
+  --user-agent AlibabaCloud-Agent-Skills
+
+# Example 5: Change data node count, disk, and spec together
+aliyun elasticsearch update-instance \
+  --region cn-hangzhou \
+  --instance-id es-cn-xxx**** \
+  --client-token $CLIENT_TOKEN \
+  --body '{"nodeAmount":4,"nodeSpec":{"spec":"elasticsearch.sn2ne.xlarge.new","disk":40}}' \
+  --connect-timeout 3 \
+  --read-timeout 30 \
+  --user-agent AlibabaCloud-Agent-Skills
+
+# Example 6: Upgrade master node spec
+aliyun elasticsearch update-instance \
+  --region cn-hangzhou \
+  --instance-id es-cn-xxx**** \
+  --client-token $CLIENT_TOKEN \
+  --body '{"masterConfiguration":{"spec":"elasticsearch.sn2ne.xlarge"}}' \
+  --connect-timeout 3 \
+  --read-timeout 30 \
+  --user-agent AlibabaCloud-Agent-Skills
+
+# Example 7: Change Kibana node spec
+aliyun elasticsearch update-instance \
+  --region cn-hangzhou \
+  --instance-id es-cn-xxx**** \
+  --client-token $CLIENT_TOKEN \
+  --body '{"kibanaConfiguration":{"spec":"elasticsearch.sn1ne.large"}}' \
+  --connect-timeout 3 \
+  --read-timeout 30 \
+  --user-agent AlibabaCloud-Agent-Skills
+
+# Example 8: Change coordinating node count and spec
+aliyun elasticsearch update-instance \
+  --region cn-hangzhou \
+  --instance-id es-cn-xxx**** \
+  --client-token $CLIENT_TOKEN \
+  --body '{"clientNodeConfiguration":{"amount":3,"spec":"elasticsearch.sn1ne.large"}}' \
+  --connect-timeout 3 \
+  --read-timeout 30 \
+  --user-agent AlibabaCloud-Agent-Skills
+
+# Example 9: Change cold node count, disk, and spec
+aliyun elasticsearch update-instance \
+  --region cn-hangzhou \
+  --instance-id es-cn-xxx**** \
+  --client-token $CLIENT_TOKEN \
+  --body '{"warmNodeConfiguration":{"amount":3,"spec":"elasticsearch.sn1ne.large","disk":500}}' \
+  --connect-timeout 3 \
+  --read-timeout 30 \
+  --user-agent AlibabaCloud-Agent-Skills
+
+# Example 10: Downgrade data node spec (must set orderActionType=downgrade)
+aliyun elasticsearch update-instance \
+  --region cn-hangzhou \
+  --instance-id es-cn-xxx**** \
+  --client-token $CLIENT_TOKEN \
+  --order-action-type downgrade \
+  --body '{"nodeSpec":{"spec":"elasticsearch.sn2ne.large.new"}}' \
+  --connect-timeout 3 \
+  --read-timeout 30 \
+  --user-agent AlibabaCloud-Agent-Skills
+
+# Example 11: Dry-run pre-validation (does not execute)
+aliyun elasticsearch update-instance \
+  --region cn-hangzhou \
+  --instance-id es-cn-xxx**** \
+  --client-token $CLIENT_TOKEN \
+  --body '{"nodeSpec":{"spec":"elasticsearch.sn2ne.xlarge.new"},"dryRun":true}' \
+  --connect-timeout 3 \
+  --read-timeout 30 \
+  --user-agent AlibabaCloud-Agent-Skills
+```
+
+**Response:**
+```json
+{
+  "RequestId": "F99407AB-2FA9-489E-A259-40CF6DC****",
+  "Result": {
+    "instanceId": "es-cn-xxx****",
+    "status": "activating"
+  }
+}
+```
+
+---
+
 ## Instance Status Reference
 
 | Status | Description |
@@ -580,4 +830,5 @@ aliyun elasticsearch list-all-node \
 - [DescribeInstance API](https://next.api.aliyun.com/api/elasticsearch/2017-06-13/DescribeInstance)
 - [ListInstance API](https://next.api.aliyun.com/api/elasticsearch/2017-06-13/ListInstance)
 - [RestartInstance API](https://next.api.aliyun.com/api/elasticsearch/2017-06-13/RestartInstance)
+- [UpdateInstance API](https://next.api.aliyun.com/api/elasticsearch/2017-06-13/UpdateInstance)
 - [Elasticsearch Pricing](https://www.aliyun.com/price/product#/elasticsearch/detail)

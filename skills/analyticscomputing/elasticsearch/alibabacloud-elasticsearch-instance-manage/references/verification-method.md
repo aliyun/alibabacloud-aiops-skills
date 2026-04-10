@@ -9,7 +9,8 @@ This document describes how to verify the success of each operation in the Elast
 - [3. Verify Instance List (ListInstance)](#3-verify-instance-list-listinstance)
 - [4. Verify Instance Restart](#4-verify-instance-restart)
 - [5. Verify List All Nodes](#5-verify-list-all-nodes)
-- [6. End-to-End Verification Script](#6-end-to-end-verification-script)
+- [6. Verify Instance Update (Upgrade/Downgrade)](#6-verify-instance-update-upgradedowngrade)
+- [7. End-to-End Verification Script](#7-end-to-end-verification-script)
 - [Error Handling](#error-handling)
 - [References](#references)
 
@@ -261,7 +262,76 @@ aliyun elasticsearch list-all-node \
 
 ---
 
-## 6. End-to-End Verification Script
+## 6. Verify Instance Update (Upgrade/Downgrade)
+
+### Step 1: Pre-check Instance Status
+
+Before updating, verify the instance is in `active` status:
+
+```bash
+aliyun elasticsearch describe-instance \
+  --region <RegionId> \
+  --instance-id <InstanceId> \
+  --cli-query "Result.status" \
+  --user-agent AlibabaCloud-Agent-Skills
+```
+
+**Expected**: `"active"`
+
+### Step 2: Execute Update and Check Response
+
+**Expected Response:**
+```json
+{
+  "RequestId": "F99407AB-2FA9-489E-A259-40CF6DC****",
+  "Result": {
+    "instanceId": "es-cn-xxx****",
+    "status": "activating"
+  }
+}
+```
+
+**Verification**: Ensure the response contains `RequestId` and `Result.instanceId`.
+
+### Step 3: Monitor Update Progress
+
+```bash
+# Poll status until back to "active"
+aliyun elasticsearch describe-instance \
+  --region <RegionId> \
+  --instance-id <InstanceId> \
+  --cli-query "Result.{Status:status,Nodes:nodeAmount,Spec:nodeSpec}" \
+  --user-agent AlibabaCloud-Agent-Skills
+```
+
+**Status Progression:**
+1. `activating` - Configuration change in progress
+2. `active` - Configuration change complete
+
+### Step 4: Verify New Configuration
+
+After the instance returns to `active`, verify the configuration has been updated:
+
+```bash
+# Check instance configuration details
+aliyun elasticsearch describe-instance \
+  --region <RegionId> \
+  --instance-id <InstanceId> \
+  --cli-query "Result.{NodeAmount:nodeAmount,NodeSpec:nodeSpec,Master:masterConfiguration,Warm:warmNodeConfiguration,Client:clientNodeConfiguration,Kibana:kibanaConfiguration}" \
+  --user-agent AlibabaCloud-Agent-Skills
+```
+
+### Success Criteria
+
+1. Pre-check confirms instance status is `active`
+2. Update response contains `RequestId` and `Result.instanceId`
+3. Instance status transitions to `activating` during update
+4. Instance status returns to `active` after update completes
+5. Instance configuration matches the requested changes
+
+---
+
+## 7. End-to-End Verification Script
 
 Complete verification workflow:
 

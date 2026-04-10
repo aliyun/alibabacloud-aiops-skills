@@ -1,27 +1,23 @@
 ---
 name: alibabacloud-elasticsearch-instance-manage
 description: |
-  Alibaba Cloud Elasticsearch Instance Management Skill. Use for creating, querying, listing, and restarting Elasticsearch instances on Alibaba Cloud.
-  Triggers: "elasticsearch", "ES instance", "elasticsearch instance", "create ES", "query ES instance", "restart ES", "ES node", "cluster node"
+  Alibaba Cloud Elasticsearch Instance Management Skill. Use for creating, querying, listing, restarting, and upgrading/downgrading Elasticsearch instances on Alibaba Cloud.
+  Triggers: "elasticsearch", "ES instance", "elasticsearch instance", "create ES", "query ES instance", "restart ES", "ES node", "cluster node", "upgrade ES", "downgrade ES", "scale ES", "resize ES"
 ---
 
 # Elasticsearch Instance Management
-
-Manage Alibaba Cloud Elasticsearch instances: create, describe, list, restart, and query node information.
-
+Manage Alibaba Cloud Elasticsearch instances: create, describe, list, restart, upgrade/downgrade configuration, and query node information.
 ## Architecture
-
 ```
 Alibaba Cloud Elasticsearch Instance Management
 ├── createInstance     (Create Instance)
 ├── DescribeInstance   (Query Instance Details)
 ├── ListInstance       (List Instances)
 ├── ListAllNode        (Query Cluster Node Info)
-└── RestartInstance    (Restart Instance)
+├── RestartInstance    (Restart Instance)
+└── UpdateInstance     (Upgrade/Downgrade Instance Configuration)
 ```
-
 ## Prerequisites
-
 > **Pre-check: Aliyun CLI >= 3.3.1 required**
 > Run `aliyun version` to verify >= 3.3.1. If not installed or version too low,
 > see [references/cli-installation-guide.md](references/cli-installation-guide.md) for installation instructions.
@@ -34,13 +30,12 @@ aliyun version
 # Enable auto plugin installation
 aliyun configure set --auto-plugin-install true
 ```
-
 ---
 
 ## Authentication
 
 > **Pre-check: Alibaba Cloud Credentials Required**
->
+
 > **Security Rules (MUST FOLLOW):**
 > - **NEVER** read, echo, or print AK/SK values
 > - **NEVER** ask the user to input AK/SK directly in the conversation
@@ -90,6 +85,7 @@ Ensure the RAM user has the required permissions. See [references/ram-policies.m
 - `elasticsearch:ListInstance`
 - `elasticsearch:ListAllNode`
 - `elasticsearch:RestartInstance`
+- `elasticsearch:UpdateInstance`
 
 ---
 
@@ -130,17 +126,8 @@ aliyun elasticsearch create-instance \
     "esAdminPassword": "<Password>",
     "esVersion": "7.10_with_X-Pack",
     "nodeAmount": 2,
-    "nodeSpec": {
-      "disk": 20,
-      "diskType": "cloud_ssd",
-      "spec": "elasticsearch.sn2ne.large.new"
-    },
-    "networkConfig": {
-      "vpcId": "<VpcId>",
-      "vswitchId": "<VswitchId>",
-      "vsArea": "<ZoneId>",
-      "type": "vpc"
-    },
+    "nodeSpec": {"disk": 20, "diskType": "cloud_ssd","spec": "elasticsearch.sn2ne.large.new"},
+    "networkConfig": {"vpcId": "<VpcId>","vswitchId": "<VswitchId>", "vsArea": "<ZoneId>", "type": "vpc"},
     "paymentType": "postpaid",
     "description": "<InstanceName>"
   }' \
@@ -206,18 +193,14 @@ aliyun elasticsearch create-instance \
       "spec": "elasticsearch.sn2ne.large.new"
     },
     "networkConfig": {
-      "vpcId": "vpc-bp1xxx",
-      "vswitchId": "vsw-bp1xxx",
-      "vsArea": "cn-hangzhou-i",
-      "type": "vpc"
+      "vpcId": "vpc-bp1xxx", "vswitchId": "vsw-bp1xxx", "vsArea": "cn-hangzhou-i", "type": "vpc"
     },
     "paymentType": "postpaid",
     "description": "my-es-instance",
     "zoneCount": "2",
     "kibanaConfiguration": {
       "spec": "elasticsearch.sn1ne.large",
-      "amount": 1,
-      "disk": 0
+      "amount": 1
     },
     "masterConfiguration": {
       "amount": 3,
@@ -276,30 +259,7 @@ aliyun elasticsearch list-instance \
   --user-agent AlibabaCloud-Agent-Skills
 ```
 
-**Example with filters:**
-```bash
-# List all instances
-aliyun elasticsearch list-instance \
-  --region cn-hangzhou \
-  --connect-timeout 3 \
-  --read-timeout 10 \
-  --user-agent AlibabaCloud-Agent-Skills
-
-# Filter by status
-aliyun elasticsearch list-instance \
-  --region cn-hangzhou \
-  --connect-timeout 3 \
-  --read-timeout 10 \
-  --user-agent AlibabaCloud-Agent-Skills
-
-# Filter by name (fuzzy match)
-aliyun elasticsearch list-instance \
-  --region cn-hangzhou \
-  --description "my-es" \
-  --connect-timeout 3 \
-  --read-timeout 10 \
-  --user-agent AlibabaCloud-Agent-Skills
-```
+For detailed parameters, filter examples, and response format, refer to [related-apis.md - ListInstance](references/related-apis.md#3-listinstance---list-instances)
 
 ### Task 4: Restart Instance
 
@@ -363,7 +323,95 @@ aliyun elasticsearch restart-instance \
   --user-agent AlibabaCloud-Agent-Skills
 ```
 
-### Task 5: List All Nodes (Query Cluster Node Information)
+### Task 5: Update Instance Configuration (Upgrade/Downgrade)
+
+> **⚠️ CRITICAL: Pre-update Check Requirements**
+>
+> **Before executing an update operation, you must first query the instance status and confirm it is `active`:**
+> - **Only when the instance status is `active` can you execute the update operation**
+> - **If the instance status is abnormal (such as `activating`, `inactive`, `invalid`), update operation is prohibited**
+> - If the instance status is abnormal, inform the user that the current status is not suitable for configuration change and recommend waiting for the instance to recover
+>
+> **Important Constraints:**
+> - Each update call can only change **one type of node** (data node, dedicated master node, cold data node, coordinating node, Kibana node, or elastic node)
+> - **Upgrade**: Cannot reduce storage size, storage type, node count, or spec CPU/memory
+> - **Downgrade**: Cannot increase storage size, storage type, node count, or spec CPU/memory. The `orderActionType` query parameter **MUST** be set to `downgrade`. Cannot reduce node count via this API (use ShrinkNode instead). Force change and updateType are not supported for downgrade
+> - Storage size reduction is not supported in either direction
+> - Enabled nodes cannot be disabled
+>
+> For detailed API usage, parameters, and examples, refer to [related-apis.md - UpdateInstance](references/related-apis.md#6-updateinstance---upgradedowngrade-instance-configuration)
+
+[node-specifications-by-region.md](references/node-specifications-by-region.md) Different roles in different regions support different specifications, refer to this document.
+
+**CLI Command (using --body for RESTful HTTP body):**
+
+```bash
+# Generate idempotency token
+CLIENT_TOKEN=$(uuidgen)
+
+aliyun elasticsearch update-instance \
+  --region <RegionId> \
+  --instance-id <InstanceId> \
+  --client-token $CLIENT_TOKEN \
+  --body '<JSON_BODY>' \
+  --connect-timeout 3 \
+  --read-timeout 30 \
+  --user-agent AlibabaCloud-Agent-Skills
+```
+
+**Example: Upgrade data node spec**
+```bash
+CLIENT_TOKEN=$(uuidgen)
+
+aliyun elasticsearch update-instance \
+  --region cn-hangzhou \
+  --instance-id es-cn-xxx**** \
+  --client-token $CLIENT_TOKEN \
+  --body '{"nodeSpec":{"spec":"elasticsearch.sn2ne.xlarge.new"}}' \
+  --connect-timeout 3 \
+  --read-timeout 30 \
+  --user-agent AlibabaCloud-Agent-Skills
+```
+
+**Example: Downgrade data node spec (must set orderActionType=downgrade)**
+```bash
+CLIENT_TOKEN=$(uuidgen)
+
+aliyun elasticsearch update-instance \
+  --region cn-hangzhou \
+  --instance-id es-cn-xxx**** \
+  --client-token $CLIENT_TOKEN \
+  --order-action-type downgrade \
+  --body '{"nodeSpec":{"spec":"elasticsearch.sn2ne.large.new"}}' \
+  --connect-timeout 3 \
+  --read-timeout 30 \
+  --user-agent AlibabaCloud-Agent-Skills
+```
+
+**Request Body Examples:**
+
+The following examples show the `--body` JSON for each common upgrade/downgrade scenario.
+
+> **Note:** Each call can only change **one type of node**. For data nodes, `nodeAmount` and `nodeSpec` are considered the same type and can be combined in one call.
+
+| # | Scenario | Request Body (`--body`) |
+|---|----------|------------------------|
+| 1 | Data node disk upgrade/downgrade | `{"nodeSpec":{"disk":40}}` |
+| 2 | Data node spec upgrade/downgrade | `{"nodeSpec":{"spec":"elasticsearch.sn2ne.xlarge.new"}}` |
+| 3 | Data node disk + spec together | `{"nodeSpec":{"spec":"elasticsearch.sn2ne.xlarge.new","disk":40}}` |
+| 4 | Data node count increase/decrease | `{"nodeAmount":4}` |
+| 5 | Data node count + disk + spec together | `{"nodeAmount":4,"nodeSpec":{"spec":"elasticsearch.sn2ne.xlarge.new","disk":40}}` |
+| 6 | Master node spec upgrade/downgrade | `{"masterConfiguration":{"spec":"elasticsearch.sn2ne.xlarge"}}` |
+| 7 | Kibana node spec change | `{"kibanaConfiguration":{"spec":"elasticsearch.sn1ne.large"}}` |
+| 8 | Coordinating node count + spec | `{"clientNodeConfiguration":{"amount":3,"spec":"elasticsearch.sn1ne.large"}}` |
+| 9 | Cold node count + disk + spec | `{"warmNodeConfiguration":{"amount":3,"spec":"elasticsearch.sn1ne.large","disk":500}}` |
+
+**Error Handling**
+1. When an error occurs indicating order parameters do not meet validation conditions, it may be due to incorrect node specifications. Refer to [node-specifications-by-region.md](references/node-specifications-by-region.md)
+2. If the instance status is not `active`, prompt the user to wait for the instance to recover before retrying
+3. If attempting to change multiple node types at once, inform the user that only one node type can be changed per operation
+
+### Task 6: List All Nodes (Query Cluster Node Information)
 
 ```bash
 aliyun elasticsearch list-all-node \
@@ -437,41 +485,6 @@ Expected status: `active`
 
 ---
 
-
-## Best Practices
-
-1. **Always confirm parameters** before executing create commands
-2. **Use `--cli-query`** to filter JSON output for specific fields
-3. **Monitor instance status** after create/restart operations
-4. **Set meaningful instance names** using `--description` for easy identification
-5. **Use appropriate node specifications** based on your workload requirements
-6. **Configure Kibana** for visualization and management
-7. **Enable master nodes** for production environments with 3+ data nodes
-8. **Use idempotency tokens** (`--client-token`) for all write operations to enable safe retries on timeout
-
-### Idempotency Best Practices
-
-For write operations (create, restart, delete), be sure to follow these idempotency best practices:
-
-1. **Generate unique Token before each operation**: Use `uuidgen` to generate UUID
-2. **Reuse Token when retrying after timeout**: If the request times out, retry with the same clientToken. When the user requests a retry, use the same clientToken
-3. **Use different Tokens for different operations**: Each independent operation requires a new clientToken, but if the user requests a retry, use the same clientToken
-4. **Token validity**: clientToken is typically valid for 24 hours
-
-```bash
-# Example: Safe retry pattern
-CLIENT_TOKEN=$(uuidgen)
-echo "Using clientToken: $CLIENT_TOKEN"
-
-# First attempt
-aliyun elasticsearch create-instance --client-token $CLIENT_TOKEN ...
-
-# If timeout, retry with the same Token
-aliyun elasticsearch create-instance --client-token $CLIENT_TOKEN ...
-```
-
----
-
 ## Reference Links
 
 | Reference | Description |
@@ -482,11 +495,5 @@ aliyun elasticsearch create-instance --client-token $CLIENT_TOKEN ...
 | [acceptance-criteria.md](references/acceptance-criteria.md) | Correct/incorrect patterns |
 | [cli-installation-guide.md](references/cli-installation-guide.md) | CLI installation guide |
 | [node-specifications-by-region.md](references/node-specifications-by-region.md) | Node specifications by region and role |
-
----
-
-## Official Documentation
-
-- [Elasticsearch Product Page](https://www.aliyun.com/product/bigdata/elasticsearch)
-- [Elasticsearch API Reference](https://next.api.aliyun.com/product/elasticsearch)
-- [Elasticsearch Pricing](https://www.aliyun.com/price/product#/elasticsearch/detail)
+| [Elasticsearch Product Page](https://www.aliyun.com/product/bigdata/elasticsearch) | Official product page |
+| [Elasticsearch API Reference](https://next.api.aliyun.com/product/elasticsearch) | Official API reference |

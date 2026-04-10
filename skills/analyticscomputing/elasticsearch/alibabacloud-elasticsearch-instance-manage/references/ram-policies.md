@@ -27,6 +27,7 @@ This document lists the RAM (Resource Access Management) permissions required fo
 | ListInstance | `elasticsearch:ListInstance` | List Instances |
 | ListAllNode | `elasticsearch:ListAllNode` | Query Cluster Node Information |
 | RestartInstance | `elasticsearch:RestartInstance` | Restart Instance |
+| UpdateInstance | `elasticsearch:UpdateInstance` | Upgrade/Downgrade Instance Configuration |
 
 ---
 
@@ -45,7 +46,8 @@ The following policy grants the minimum permissions needed for Elasticsearch ins
         "elasticsearch:DescribeInstance",
         "elasticsearch:ListInstance",
         "elasticsearch:ListAllNode",
-        "elasticsearch:RestartInstance"
+        "elasticsearch:RestartInstance",
+        "elasticsearch:UpdateInstance"
       ],
       "Resource": "*"
     }
@@ -75,7 +77,8 @@ For better security, restrict permissions to specific resources:
       "Action": [
         "elasticsearch:DescribeInstance",
         "elasticsearch:ListInstance",
-        "elasticsearch:RestartInstance"
+        "elasticsearch:RestartInstance",
+        "elasticsearch:UpdateInstance"
       ],
       "Resource": "acs:elasticsearch:*:*:instances/*"
     }
@@ -99,7 +102,8 @@ Restrict operations to specific regions:
         "elasticsearch:CreateInstance",
         "elasticsearch:DescribeInstance",
         "elasticsearch:ListInstance",
-        "elasticsearch:RestartInstance"
+        "elasticsearch:RestartInstance",
+        "elasticsearch:UpdateInstance"
       ],
       "Resource": "acs:elasticsearch:cn-hangzhou:*:instances/*"
     }
@@ -145,7 +149,8 @@ When creating Elasticsearch instances, you may also need VPC-related permissions
         "elasticsearch:CreateInstance",
         "elasticsearch:DescribeInstance",
         "elasticsearch:ListInstance",
-        "elasticsearch:RestartInstance"
+        "elasticsearch:RestartInstance",
+        "elasticsearch:UpdateInstance"
       ],
       "Resource": "*"
     },
