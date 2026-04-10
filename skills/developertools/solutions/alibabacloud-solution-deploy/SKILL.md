@@ -189,11 +189,11 @@ Run scripts in parallel when researching multiple products — don't serialize w
 
 | Scenario | CLI Command | Notes |
 |----------|------------|-------|
-| Get Bailian (百炼) API Key | `aliyun maas list-workspaces` → `aliyun maas create-api-key --WorkspaceId <id>` | Avoids console entirely. Almost every AI solution needs this. |
+| Get Bailian (百炼) API Key | `aliyun modelstudio list-workspaces` → `aliyun modelstudio create-api-key --WorkspaceId <id>` | Avoids console entirely. Almost every AI solution needs this. |
 | Run commands on ECS | `aliyun ecs RunCommand --Type RunShellScript --CommandContent '<script>' --InstanceId.1 <id>` | Use Cloud Assistant instead of asking the user to SSH in. |
 | OSS operations | `aliyun ossutil cp/ls/mb ...` | Use `ossutil` subcommand, not `oss`. |
 
-The Bailian API Key pattern is especially important — nearly every AI-related solution needs a DashScope/Bailian SK, and users often don't know it can be obtained programmatically. Whenever a plan involves 百炼/Bailian/DashScope, proactively use the `maas` commands to get the key.
+The Bailian API Key pattern is especially important — nearly every AI-related solution needs a DashScope/Bailian SK, and users often don't know it can be obtained programmatically. Whenever a plan involves 百炼/Bailian/DashScope, proactively use the `modelstudio` commands to get the key.
 
 ### B.4: Present Plan and Confirm
 
