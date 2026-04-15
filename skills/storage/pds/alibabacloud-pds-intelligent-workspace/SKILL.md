@@ -1,8 +1,8 @@
 ---
 name: alibabacloud-pds-intelligent-workspace
 description: |
-  Implements file upload, file download, document analysis, and video analysis features. Access cloud drive storage via mount app. The mount app installation process involves driver installation and creating scheduled tasks/launchd.
-  Triggers: "upload file to PDS drive", "download file from PDS drive", "PDS drive document analysis", "PDS drive video analysis", "mount PDS drive", "install mount app", "uninstall mount app", "PDS drive mount access", "stop mount app"
+  Implements file upload, file download, document analysis, video analysis, and image editing features. Image editing supports scaling, cropping, rotation, segmentation, removal, watermark, and other operations with save-as to PDS. Access cloud drive storage via mount app. The mount app installation process involves driver installation and creating scheduled tasks/launchd.
+  Triggers: "upload file to PDS drive", "download file from PDS drive", "PDS drive document analysis", "PDS drive video analysis", "PDS image editing", "PDS image processing", "mount PDS drive", "install mount app", "uninstall mount app", "PDS drive mount access", "stop mount app"
 ---
 
 # PDS (Cloud Drive)
@@ -17,6 +17,7 @@ description: |
 - For document/audio/video analysis, quick view, summarization on cloud drive → read `references/multianalysis-file.md`
 - For image search, similar image search, image-text hybrid retrieval → read `references/visual-similar-search.md`
 - For mount app, install mount app, uninstall mount app, stop mount app → read `references/mountapp.md`
+- For image editing, image processing → read `references/image-editing.md`
 
 ## Agent Execution Guidelines
 - **Must execute steps in order**: Do not skip any step, do not proceed to the next step before the previous one is completed.
