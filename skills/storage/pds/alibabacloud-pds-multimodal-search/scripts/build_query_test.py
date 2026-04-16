@@ -195,12 +195,12 @@ def test_basic_operations():
     )
     
     # prefix 操作符
-    query = {"Operation": "prefix", "Field": "description", "Value": "项目"}
+    query = {"Operation": "prefix", "Field": "address", "Value": "Hang"}
     result, cats = _parse_query_recursive(query)
     results.record(
         "prefix 操作符",
-        result == '(description prefix "项目")',
-        f"期望 '(description prefix \"项目\")', 得到 '{result}'"
+        result == '(address prefix "Hang")',
+        f"期望 '(address prefix \"Hang\")', 得到 '{result}'"
     )
 
 
@@ -513,7 +513,7 @@ def test_semantic_queries():
     # 语义查询中的特殊字符转义
     semantic_json = json.dumps({
         "valid": True,
-        "result": {"query": '说"你好"的照片', "modality": ["all"]}
+        "result": {"query": '说"你好"的照片', "modality": ["image"]}
     })
     result = build_query(None, semantic_json)
     results.record(
@@ -527,7 +527,7 @@ def test_category_modality_merge():
     """测试 Category 和 Modality 合并"""
     print("\n[测试 Category/Modality 合并]")
     
-    # 标量 category + 语义 modality 合并
+    # 标量 category + 语义 modality 冲突
     scalar_json = json.dumps({
         "valid": True,
         "result": {"Query": {"Operation": "eq", "Field": "category", "Value": "doc"}}
@@ -538,23 +538,35 @@ def test_category_modality_merge():
     })
     result = build_query(scalar_json, semantic_json)
     results.record(
-        "category + modality 合并为 in",
-        "category in" in result["query"] and "doc" in result["query"] and "video" in result["query"],
-        f"得到 query: {result.get('query')}"
+        "category + modality 冲突时报错",
+        result["has_query"] == False and "conflicts with the scalar filters" in result["message"],
+        f"得到结果: has_query={result.get('has_query')}, message={result.get('message')}"
     )
-    
-    # 语义 modality=["all"] 不添加 category
+
+    # 标量多模态 + 语义单模态 收敛到语义模态
+    scalar_json = json.dumps({
+        "valid": True,
+        "result": {
+            "Query": {
+                "Operation": "or",
+                "SubQueries": [
+                    {"Operation": "eq", "Field": "category", "Value": "image"},
+                    {"Operation": "eq", "Field": "category", "Value": "video"}
+                ]
+            }
+        }
+    })
     semantic_json = json.dumps({
         "valid": True,
-        "result": {"query": "风景", "modality": ["all"]}
+        "result": {"query": "海边日落", "modality": ["image"]}
     })
-    result = build_query(None, semantic_json)
+    result = build_query(scalar_json, semantic_json)
     results.record(
-        "modality=all 不添加category",
-        "category" not in result["query"],
+        "多模态标量与语义收敛到单模态",
+        result["has_query"] == True and 'category = "image"' in result["query"] and "video" not in result["query"],
         f"得到 query: {result.get('query')}"
     )
-    
+
     # 仅语义有 modality
     semantic_json = json.dumps({
         "valid": True,
@@ -639,13 +651,25 @@ def test_edge_cases():
     scalar_json = json.dumps({"valid": False})
     semantic_json = json.dumps({
         "valid": True,
-        "result": {"query": "日落", "modality": ["all"]}
+        "result": {"query": "日落", "modality": ["image"]}
     })
     result = build_query(scalar_json, semantic_json)
     results.record(
         "只有语义valid",
         result["has_query"] == True and "semantic_text" in result["query"],
         f"得到 query: {result.get('query')}"
+    )
+
+    # 语义检索不允许多模态
+    semantic_json = json.dumps({
+        "valid": True,
+        "result": {"query": "日落", "modality": ["image", "video"]}
+    })
+    result = build_query(None, semantic_json)
+    results.record(
+        "语义检索禁止多模态",
+        result["has_query"] == False and "only a single modality" in result["message"],
+        f"得到结果: has_query={result.get('has_query')}, message={result.get('message')}"
     )
     
     # 未知字段默认加引号
@@ -782,7 +806,7 @@ def test_modality_to_category():
         f"得到 '{_modality_to_category('audio')}'"
     )
     results.record(
-        "all -> None",
+        "未知模态 -> None",
         _modality_to_category("all") is None,
         f"得到 '{_modality_to_category('all')}'"
     )

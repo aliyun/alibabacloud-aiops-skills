@@ -1,7 +1,7 @@
 # PDS File Search
 
-**Scenario**: When you have obtained the drive_id to search in and need to search for files under that drive
-**Purpose**: Search for corresponding files and get file attributes such as file_id
+**Scenario**: When you already have the `drive_id` to search in and need to search for files under that drive
+**Purpose**: Find the target files and retrieve attributes such as `file_id`. Supports scalar search based on metadata such as filename, type, size, and time, as well as multimodal semantic search based on content understanding.
 
 ## Core Workflow
 
@@ -28,8 +28,16 @@ python scripts/build_query.py \
 The script will:
 1. Recursively parse the Query object from scalar query into a query string
 2. Convert semantic query to `semantic_text = "..."` format
-3. Merge the modality from semantic query and category conditions from scalar query
+3. Merge the modality from semantic query and the category conditions from scalar query according to the retrieval mode
 4. Connect all parts with correct logical operators
+
+**Modality merge rules (important)**
+
+1. Pure scalar retrieval supports multi-modal filtering, for example images or videos.
+2. Pure semantic retrieval supports only a single modality and must converge to exactly one of `document`, `image`, `video`, or `audio`.
+3. Mixed retrieval must converge to the single modality selected by semantic retrieval.
+   - If the scalar `category` includes that semantic modality, use the semantic modality as the final modality.
+   - If the scalar `category` conflicts with the semantic modality, do not continue the search. Instead, tell the user to adjust the conditions and try again.
 
 **Important**: If the script execution fails, it is strictly forbidden to construct `query` and `order_by` on your own understanding for the next step, as this will very easily produce syntax errors. You should go back to step one and restart the query process from the beginning.
 
@@ -65,10 +73,15 @@ Output error messages to stderr on failure.
 
 1. **Prefer semantic search**: When users describe file content or scenarios, semantic search is more accurate than keyword matching
 
-2. **Combine conditions appropriately**: Semantic search can be combined with scalar conditions, e.g., "beach photos from this year" can use both time range and semantic description
+2. **Combine conditions appropriately**: Semantic search can be combined with scalar conditions, for example "beach photos from this year" can use both a time range and a semantic description
 
-3. **Note pagination limits**: limit maximum is 100, large result sets require pagination
+3. **Distinguish pure scalar multi-modal filtering from mixed-query single-modality convergence**:
+   - Pure scalar example: `images or videos larger than 10 MB`
+   - Mixed, convergent example: `beach photos taken this year`
+   - Mixed, conflicting example: `find sunset photos inside video files`
 
-4. **Time format specification**: Time conditions use UTC format `YYYY-MM-DDTHH:mm:ss`
+4. **Note pagination limits**: `limit` has a maximum value of 100, and large result sets require pagination
 
-5. **Language consistency in semantic search**: Semantic query text should maintain the same language as user input, do not translate
+5. **Time format specification**: Time conditions use UTC format `YYYY-MM-DDTHH:mm:ss`
+
+6. **Language consistency in semantic search**: The semantic query text must stay in the same language as the user's input. Do not translate it.

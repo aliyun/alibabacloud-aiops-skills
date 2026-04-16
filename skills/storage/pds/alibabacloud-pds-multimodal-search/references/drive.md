@@ -18,6 +18,30 @@ A PDS drive is a cloud storage space that can store files. A drive must have an 
 
 **When referring to "my PDS drive" without specifying which type of space, it should be understood as all spaces: including enterprise space, team space, and personal space**
 
+## Mandatory Space Mapping Rules
+
+This section is critical when the user explicitly specifies a space type.
+
+- `root_group_drive` represents the enterprise space. There is at most one.
+- `items` returned by `list-my-group-drive` represent team spaces only. There may be multiple.
+- `list-my-drives.items` represent personal spaces.
+- Enterprise space and team space are both group-owned drives, but they are different scopes and must never be mixed.
+- If the user says "enterprise space", you must read `drive_id` from `root_group_drive` only.
+- If the user says "team space", you must read `drive_id` from `items` only.
+- If the user says "personal space", you must read `drive_id` from `list-my-drives.items` only.
+- If the user does not specify any space, then and only then can you consider all spaces together.
+- If the requested space does not exist in the corresponding field, stop and report that the requested space is unavailable. Do not silently switch to another space type.
+- If the user asks for "team space" and multiple team spaces exist, do not arbitrarily choose one unless the request already identifies which team space to use.
+
+### Quick Decision Table
+
+| Requested scope | API field to inspect | Allowed behavior |
+|------|------|------|
+| Enterprise space | `root_group_drive` | Use it if present; otherwise stop |
+| Team space | `items` | Use the specified team space; ask/clarify if multiple candidates |
+| Personal space | `list-my-drives.items` | Use the user's personal drive |
+| Unspecified / all spaces | all of the above | Search one or more spaces as needed |
+
 ### Drive Query API Reference
 
 #### Query Method for Enterprise Space and Team Space
@@ -112,6 +136,11 @@ The JSON objects returned in items and root_group_drive are Drive objects. Impor
 ```
 
 In the above example output, team space drive_ids are: 100 and 101, enterprise space drive_id is: 103
+
+Important interpretation rule for the example above:
+- If the user asked for enterprise space, only `103` is eligible.
+- If the user asked for team space, only `100` or `101` are eligible.
+- It is incorrect to use `100` or `101` as enterprise space, and incorrect to use `103` as a team space.
 
 #### Query API for Personal Space
 You can query using the list my drives API. The items field in the response contains the user's personal space list.

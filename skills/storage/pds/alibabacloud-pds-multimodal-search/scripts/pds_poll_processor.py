@@ -6,12 +6,12 @@ PDS 文档/视频精读分析轮询处理器
 支持文档分析 (doc/analysis) 和视频分析 (video/analysis)。
 """
 
-import json
 import subprocess
-import sys
+import json
 import time
-from datetime import datetime
+import sys
 from pathlib import Path
+from datetime import datetime
 
 
 class PDSPollProcessor:

@@ -1,53 +1,52 @@
-# 描述了如何判断是否需要用语义搜索文件，以及如何提取关键语义词
 def semantic_search_prompt() -> str:
     output = """
-# 任务
+# Task
 
-你的任务是分析用户的自然语言输入，以判断其中是否包含对“语义（基于内容）搜索”的请求。如果包含，你需要将相关信息提取为指定的 JSON 格式。如果输入仅与文件属性（元数据）有关，或者过于模糊无法进行内容搜索，你需要指出这不是一个有效的语义查询。
+Your task is to analyze the user's natural-language input and determine whether it contains a request for semantic (content-based) search. If it does, extract the relevant information into the specified JSON format. If the input only concerns file attributes (metadata), or is too vague to support content search, you must mark it as an invalid semantic query.
 
-## 语义查询判定指南
+## Semantic Query Decision Guide
 
-你必须决定用户的输入是否符合语义查询的标准。
+You must decide whether the user's input meets the criteria for a semantic query.
 
-### 何时将查询判定为语义（valid: true）
+### When to mark a query as semantic (`valid: true`)
 
-如果一个查询描述了文件中的“内容、概念或场景”，则它是语义的。请关注以下模式：
+If a query describes the content, concept, or scene inside a file, it is semantic. Pay attention to patterns like these:
 
-- 基于内容的相似性搜索："查找与此文档相似的文档。"
-- 跨模态检索："查找与此音频片段对应的视频。"
-- 概念层面的模糊匹配："关于可持续能源的文件。"
-- 自然语言的场景描述："海上日落的照片。", "一个人弹吉他的视频。"
+- Content-based similarity search: "Find documents similar to this document."
+- Cross-modal retrieval: "Find the video corresponding to this audio clip."
+- Concept-level fuzzy matching: "Files about sustainable energy."
+- Natural-language scene descriptions: "Photos of a sunset over the sea.", "A video of someone playing guitar."
 
-示例：
-- "照片里有狗"（描述视觉内容）
-- "关于人工智能的文档"（描述主题/概念）
-- "城市夜景"（描述场景）
+Examples:
+- "Photos with dogs in them" (describes visual content)
+- "Documents about artificial intelligence" (describes a topic or concept)
+- "City night views" (describes a scene)
 
-### 何时判定为非语义（`valid: false`）
+### When to mark a query as non-semantic (`valid: false`)
 
-如果查询“仅”涉及文件的“元数据或属性”，你应忽略这些并标记为无效。包括但不限于：
+If the query is only about file metadata or attributes, you must ignore it and mark it as invalid. This includes, but is not limited to:
 
-- 涉及特定文件属性：大小、类型、日期（创建/修改）、文件名、路径
-- 要求对属性进行精确匹配或范围筛选
-- 过于模糊、没有可描述内容的查询
+- Specific file attributes such as size, type, creation date, modification date, filename, or path
+- Exact-match or range filters on attributes
+- Queries that are too vague and do not describe any searchable content
 
-示例：
-- "大于1MB的图片"（纯元数据：大小）
-- "文件名是'report.docx'的文件"（纯元数据：文件名）
-- "上周创建的文档"（纯元数据：日期）
-- "查找文件"（过于模糊）
+Examples:
+- "Images larger than 1 MB" (pure metadata: size)
+- "Files named 'report.docx'" (pure metadata: filename)
+- "Documents created last week" (pure metadata: date)
+- "Find files" (too vague)
 
-## 混合查询处理
+## Mixed Queries
 
-如果一个查询同时包含语义描述与元数据筛选（例如：“查找今年创建的关于人工智能的PDF文档。”），你的任务是“只提取语义部分”，忽略元数据条件。只要存在语义部分，就判定 `valid: true`。
+If a query contains both semantic intent and metadata filters, for example, "Find PDF documents about artificial intelligence created this year.", your job is to extract only the semantic portion and ignore the metadata constraints. As long as a semantic portion exists, mark it as `valid: true`.
 
-- 输入："查找今年创建的关于人工智能的PDF文档"
-- 你的关注点："关于人工智能" -> 这是语义部分。
-- 你忽略："今年创建的"、"PDF文档" -> 这些是元数据。
+- Input: "Find PDF documents about artificial intelligence created this year"
+- Focus on: "about artificial intelligence" -> this is the semantic portion
+- Ignore: "created this year", "PDF documents" -> these are metadata constraints
 
-## 输出 JSON 格式
+## Output JSON Format
 
-你的响应必须是一个单一的 JSON 对象，结构如下：
+Your response must be a single JSON object with this structure:
 
 ```json
 {
@@ -55,14 +54,14 @@ def semantic_search_prompt() -> str:
     "properties": {
         "valid": {
             "type": "boolean",
-            "description": "如果输入是有效的语义查询，则为 true，否则为 false。"
+            "description": "True if the input is a valid semantic query; otherwise false."
         },
         "result": {
             "type": "object",
             "properties": {
                 "query": {
                     "type": "string",
-                    "description": "用于语义搜索的查询文本。"
+                    "description": "The query text to use for semantic search."
                 },
                 "modality": {
                     "type": "array",
@@ -70,109 +69,111 @@ def semantic_search_prompt() -> str:
                         "type": "string",
                         "enum": ["document", "image", "video", "audio"]
                     },
-                    "description": "指定要搜索的模态。你必须输出一个且仅只能有一个模态。"
+                    "description": "The target modality. You must output exactly one modality. Do not output `all`, and do not output multiple modalities."
                 }
             },
             "required": ["query"],
-            "description": "仅当 'valid' 为 true 时才应存在此字段。"
+            "description": "This field should exist only when 'valid' is true."
         }
     },
     "required": ["valid"]
 }
 ```
 
-- 如果 valid 为 false，应省略 result 字段。
-- 你必须输出一个且仅只能有一个模态。
+- If `valid` is false, omit the `result` field.
+- You must output exactly one modality.
+- Do not output `all`, and do not output multiple modalities.
+- If the user's description could span multiple modalities, you must still choose the single most appropriate and executable modality.
 
-## 语义查询构造规则
+## Semantic Query Construction Rules
 
-构造 result 对象中的 query 字符串时，严格遵循以下规则：
+When constructing the `query` string inside `result`, follow these rules strictly:
 
-1. 保留完整语境：包含所有相关的上下文信息。不要缩短或简化专有名词或具体描述。
-   - 示例："杭州西湖的樱花" -> query: "杭州西湖的樱花"（不要仅写“樱花”）
+1. Preserve the full context: include all relevant contextual information. Do not shorten or simplify proper nouns or specific descriptions.
+   - Example: "Cherry blossoms at West Lake in Hangzhou" -> query: "Cherry blossoms at West Lake in Hangzhou" (not just "cherry blossoms")
 
-2. 保持地理位置信息的完整性：地名需保留完整。
-   - 示例："北京故宫的建筑" -> query: "北京故宫的建筑"
+2. Keep location information complete: place names must remain intact.
+   - Example: "Architecture of the Forbidden City in Beijing" -> query: "Architecture of the Forbidden City in Beijing"
 
-3. 维护主体关系：当时间、地点与主体构成一个连贯概念时，要保留这些关系。
-   - 示例："春天的杭州西湖景色" -> query: "春天的杭州西湖景色"
+3. Preserve subject relationships: when time, place, and subject form one coherent concept, keep those relationships.
+   - Example: "Spring scenery at West Lake in Hangzhou" -> query: "Spring scenery at West Lake in Hangzhou"
 
-4. 语言一致性（重要）：输出必须与用户输入使用相同语言。用户用中文查询，query 字段必须是中文；用户用英文查询，query 字段必须是英文。不要翻译 query 字段的内容。
+4. Language consistency is critical: the output must stay in the same language as the user's input. If the user queries in Chinese, the `query` field must be Chinese. If the user queries in English, the `query` field must be English. Do not translate the content of `query`.
 
-## 示例
+## Examples
 
-### 示例 1：纯语义查询
+### Example 1: Pure semantic query
 
-用户输入：`找一些海滩日落的照片`
-（自我校正：用户在描述一个视觉场景“海滩日落”，并明确了模态“照片”（image）。这是一个明确的语义查询。）
-输出：
+User input: `Find some photos of beach sunsets`
+(Self-check: the user describes a visual scene, "beach sunsets", and explicitly specifies the modality "photos" (`image`). This is a valid semantic query.)
+Output:
 ```json
 {
     "valid": true,
     "result": {
-        "query": "海滩日落",
+        "query": "beach sunsets",
         "modality": ["image"]
     }
 }
 ```
 
-### 示例 2：纯元数据查询
+### Example 2: Pure metadata query
 
-用户输入：`查找大于10MB的视频文件`
-（自我校正：该查询仅涉及文件属性（大小），未描述内容。因此，它不是语义查询。）
-```json
-输出：
-{
-    "valid": false
-}
-```
-
-### 示例 3：混合查询（语义 + 元数据）
-
-用户输入：`去年夏天拍的关于家庭聚会的照片`
-（自我校正：该查询包含一个元数据筛选（“去年夏天拍的”）和一个语义概念（“家庭聚会”）。按照规则，我必须忽略元数据，只提取语义部分。）
-输出：
-```json
-{
-    "valid": true,
-    "result": {
-        "query": "家庭聚会",
-        "modality": ["image"]
-    }
-}
-```
-
-### 示例 4：非内容查询
-
-用户输入：`查找文件`
-（自我校正：该查询过于模糊，缺乏任何可描述的内容，无法进行语义搜索。）
-输出：
+User input: `Find video files larger than 10 MB`
+(Self-check: this query only refers to file attributes, specifically size, and does not describe file content. Therefore it is not a semantic query.)
+Output:
 ```json
 {
     "valid": false
 }
 ```
 
-### 示例 5：具有复杂语境的语义查询
+### Example 3: Mixed query (semantic + metadata)
 
-用户输入：`北京故宫的雪景`
-（自我校正：该查询描述了一个场景。未明确提到“照片”或“视频”等具体模态，但是由于我被要求至少输出一个模态，因此暂定为图片`image``。）
-输出：
+User input: `Photos of family gatherings taken last summer`
+(Self-check: this query contains a metadata filter, "taken last summer", and a semantic concept, "family gatherings". By rule, I must ignore the metadata and extract only the semantic part.)
+Output:
 ```json
 {
     "valid": true,
     "result": {
-        "query": "北京故宫雪景",
+        "query": "family gatherings",
         "modality": ["image"]
     }
 }
 ```
 
-### 示例 6：语言一致性（英文输入）
+### Example 4: Non-content query
 
-用户输入：`Find pictures of a cat sleeping on a sofa`
-（自我校正：输入是英文，因此输出的 query 也必须是英文。禁止翻译。）
-正确输出：
+User input: `Find files`
+(Self-check: this query is too vague and does not contain any describable content for semantic search.)
+Output:
+```json
+{
+    "valid": false
+}
+```
+
+### Example 5: Semantic query with a richer context
+
+User input: `Snowy scenery of the Forbidden City in Beijing`
+(Self-check: this query describes a scene. It does not explicitly mention a modality like "photo" or "video", but semantic retrieval must output a single modality, so I choose the most reasonable and executable one: `image`.)
+Output:
+```json
+{
+    "valid": true,
+    "result": {
+        "query": "Snowy scenery of the Forbidden City in Beijing",
+        "modality": ["image"]
+    }
+}
+```
+
+### Example 6: Language consistency
+
+User input: `Find pictures of a cat sleeping on a sofa`
+(Self-check: the input is in English, so the `query` must also be in English. Translation is not allowed.)
+Correct output:
 ```json
 {
     "valid": true,
@@ -182,7 +183,7 @@ def semantic_search_prompt() -> str:
     }
 }
 ```
-错误示例——不要这样做：
+Incorrect output - do not do this:
 ```json
 {
     "valid": true,

@@ -8,12 +8,11 @@ PDS 视频精读 PPT 提取脚本
 - 支持添加备注信息 (页码、时间戳等)
 """
 
-import argparse
 import json
-from io import BytesIO
-from pathlib import Path
-
 import requests
+import argparse
+from pathlib import Path
+from io import BytesIO
 
 try:
     from pptx import Presentation

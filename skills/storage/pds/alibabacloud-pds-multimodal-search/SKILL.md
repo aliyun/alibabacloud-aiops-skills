@@ -21,14 +21,36 @@ description: |
 - **Must execute steps in order**: Do not skip any step, do not proceed to the next step before the previous one is completed.
 - **Must follow documentation**: The aliyun pds cli commands and parameters must follow this document's guidance, do not fabricate commands.
 - **Recommended parameter**: All `aliyun pds` commands should include `--user-agent AlibabaCloud-Agent-Skills` parameter to help server identify request source, track usage, and troubleshoot issues.
+- **Must determine the target space before file operations**: Before search, upload, download, or analysis, first decide whether the user explicitly means enterprise space, team space, personal space, or all spaces.
+- **Space scope must not be broadened silently**: If the user explicitly says "enterprise space", only use the enterprise space drive_id. If the user explicitly says "team space", only use the matching team space drive_id. If the user explicitly says "personal space", only use the personal space drive_id. Only search across multiple spaces when the user did not restrict the scope.
+- **Enterprise space and team space are not interchangeable**: Even though both are returned by `list-my-group-drive`, `root_group_drive` is the enterprise space and `items` are team spaces. Never substitute one for the other.
+- **If the requested space is missing, stop and explain**: For example, if the user asks for enterprise space but `root_group_drive` is empty, do not fall back to a team space search.
 
 ## Core Concepts:
 - **Domain**: PDS instance with a unique domain_id, data is completely isolated between domains
 - **User**: End user under a domain, has user_id
 - **Group**: Team organization under a domain, divided into enterprise group and team group
-- **Drive**: Storage space, can belong to a user (personal space) or team (team/enterprise space)
+- **Drive**: Storage space, can belong to a user (personal space) or group (enterprise space or team space)
 - **File**: File or folder under a space, has file_id
 - **Mountapp**: PDS mount app plugin, used to mount PDS space to local, allowing users to access and manage files in PDS space conveniently
+
+## Space Selection Rules
+
+Apply the following rules before choosing a `drive_id`:
+
+| User wording | Allowed drive source | Forbidden fallback |
+|------------|------|------|
+| "企业空间" / "company space" / "enterprise space" | `root_group_drive` only | Any drive from `items` |
+| "团队空间" / "某个团队空间" / "team space" | `items` only | `root_group_drive` |
+| "个人空间" / "我的空间" / "personal space" | `list-my-drives.items` only | group drives |
+| "网盘里" / "我的网盘" / no space specified | all relevant spaces | none |
+
+Before continuing, perform a brief self-check:
+1. Did the user explicitly name the target space type?
+2. Does the selected `drive_id` come from the correct response field for that space type?
+3. If multiple team spaces exist and the user only said "team space", do I need to disambiguate which team space?
+
+If any answer is uncertain, do not guess.
 
 ---
 
