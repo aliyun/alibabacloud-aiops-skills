@@ -594,29 +594,30 @@ npx skills add https://github.com/aliyun/alibabacloud-aiops-skills --skill aliba
 #### ❌ INCORRECT
 
 ```bash
-# Skip user confirmation
+# Skip presenting results to user
 SKILL=$(aliyun agentexplorer search-skills --keyword "ECS" --cli-query "skills[0].skillName" --user-agent AlibabaCloud-Agent-Skills)
 npx skills add https://github.com/aliyun/alibabacloud-aiops-skills --skill "$SKILL"
-# Wrong: User must confirm before installation
+# Wrong: Should present search results and skill details to user before installing
 ```
 
-**Why**: Always confirm parameters and actions with user before executing.
+**Why**: Always present search results and skill details to the user before executing installation.
 
 ---
 
 ## Common Anti-Patterns
 
-### ❌ ANTI-PATTERN 1: Hardcoded Values
+### ❌ ANTI-PATTERN 1: Arbitrary Hardcoded Values
 
 ```bash
-# DON'T hardcode keywords or categories
+# DON'T use keywords unrelated to the user's request
+# e.g., User asks about databases but Agent searches for "ECS"
 aliyun agentexplorer search-skills \
   --keyword "ECS" \
   --category-code "computing" \
   --user-agent AlibabaCloud-Agent-Skills
 ```
 
-**✅ CORRECT**: Always confirm with user first.
+**✅ CORRECT**: Derive keyword and category from the user's intent.
 
 ---
 

@@ -5,7 +5,7 @@ description: >
   Triggers include: "find a skill for X", "search alicloud skills", "阿里云有什么 skill",
   "搜索阿里云技能", "有没有管理 ECS/RDS/OSS 的 skill", "阿里云 skills 有哪些类目",
   "帮我找一个 skill", "browse alicloud skills", "list alicloud skill categories",
-  "is there an alicloud skill that can...", "what alicloud skills are available", "XX Skill 的内容是什么", "我想了解阿里云 XX Skill 具体做什么",
+  "is there an alicloud skill that can...", "what alicloud skills are available", "XX Skill 的内容是什么", "我想了解阿里云 XX Skill 具体做什么","帮我安装阿里云 Skill"
   "阿里云 agent skill 市场", "搜一下阿里云的 skill".
 ---
 
@@ -39,6 +39,30 @@ This skill enables users to:
 > Run `aliyun version` to verify >= 3.3.1. If not installed or version too low,
 > see [references/cli-installation-guide.md](references/cli-installation-guide.md) for installation instructions.
 > Then [MUST] run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+
+### Enable AI-Mode
+
+Aliyun CLI provides AI-Mode. When enabled, the CLI automatically attaches AI identity information, allowing the server to identify and optimize Agent call chains.
+
+```bash
+# Enable AI-Mode
+aliyun configure ai-mode enable
+
+# Set AI-Mode user-agent identifier
+aliyun configure ai-mode set-user-agent
+
+# Disable AI-Mode
+aliyun configure ai-mode disable
+```
+
+### Update Plugin
+
+After installing plugins, update them periodically to get the latest features and fixes:
+
+```bash
+# Update installed CLI plugins
+aliyun plugin update
+```
 
 ### Install agentexplorer Plugin
 
@@ -85,11 +109,81 @@ This skill uses read-only APIs from the AgentExplorer service. Required permissi
 
 For detailed permission information, see [references/ram-policies.md](references/ram-policies.md).
 
-## Parameter Confirmation
+## Core Workflow
 
-> **IMPORTANT: Parameter Confirmation** — Before executing any command or API call,
-> ALL user-customizable parameters (e.g., keyword, category-code, skill-name, max-results, etc.)
-> MUST be confirmed with the user. Do NOT assume or use default values without explicit user approval.
+### Step 1: Search Skills
+
+Based on user intent, choose keyword search, category search, or both:
+
+- **Keyword search**: Extract keywords from the user's request and execute search directly
+- **Category search**: Call `list-categories` to get all available categories, select the best match, and search
+- **Combined search**: Use both keyword and category to narrow results
+
+```bash
+# Keyword search
+aliyun agentexplorer search-skills \
+  --keyword "<keyword>" \
+  --max-results 20 \
+  --user-agent AlibabaCloud-Agent-Skills
+
+# Get all categories
+aliyun agentexplorer list-categories \
+  --user-agent AlibabaCloud-Agent-Skills
+
+# Category search
+aliyun agentexplorer search-skills \
+  --category-code "<category-code>" \
+  --max-results 20 \
+  --user-agent AlibabaCloud-Agent-Skills
+
+# Combined search (keyword + category)
+aliyun agentexplorer search-skills \
+  --keyword "<keyword>" \
+  --category-code "<category-code>" \
+  --max-results 20 \
+  --user-agent AlibabaCloud-Agent-Skills
+```
+
+### Step 2: Iterate Until Found
+
+If the target skill is not in the results, adjust search criteria and retry automatically:
+
+1. Switch between Chinese and English keywords ("cloud server" → "ECS", "object storage" → "OSS")
+2. Broaden keywords (drop qualifiers: "RDS backup automation" → "RDS")
+3. Remove category filter, search by keyword only
+4. Try synonyms or related terms ("instance" → "ECS", "bucket" → "OSS")
+5. Browse the most relevant top-level category without keyword
+
+Repeat until the target skill is found or confirmed not to exist. If all attempts fail, inform the user what was tried.
+
+### Step 3: View Skill Details (Optional)
+
+Optionally retrieve skill content to verify it matches user intent before installation. This step can be skipped if the search results already provide sufficient information.
+
+```bash
+aliyun agentexplorer get-skill-content \
+  --skill-name "<skill-name>" \
+  --user-agent AlibabaCloud-Agent-Skills
+```
+
+### Step 4: Install Skill
+
+Execute the installation command for the target skill.
+
+```bash
+# Option A: Using npx skills add
+npx skills add aliyun/alibabacloud-aiops-skills \
+  --skill <skill-name>
+
+# Option B: Using npx clawhub install (recommended for OpenClaw ecosystem)
+npx clawhub install <skill-name>
+```
+
+Verify the skill appears in the available skills list after installation.
+
+## Command Reference
+
+### Parameters
 
 | Parameter Name  | Required/Optional                | Description                                                      | Default Value |
 | --------------- | -------------------------------- | ---------------------------------------------------------------- | ------------- |
@@ -100,113 +194,11 @@ For detailed permission information, see [references/ram-policies.md](references
 | `skip`          | Optional                         | Number of items to skip                                          | 0             |
 | `skill-name`    | Required (for get-skill-content) | Unique skill identifier                                          | None          |
 
-## Core Workflow
+### Pagination
 
-### Workflow 1: Search Skills by Keyword
-
-**Scenario**: User wants to find skills related to a specific product or feature.
+When search results span multiple pages, use `next-token` from the previous response to fetch the next page:
 
 ```bash
-# Step 1: Confirm search keyword with user
-# Example: "ECS", "database backup", "OSS", "monitoring"
-
-# Step 2: Execute search command
-aliyun agentexplorer search-skills \
-  --keyword "<user-confirmed-keyword>" \
-  --max-results 20 \
-  --user-agent AlibabaCloud-Agent-Skills
-
-# Step 3: Parse and display results to user
-# Show: skillName, displayName, description, categoryName, installCount, likeCount
-```
-
-### Workflow 2: Browse Skills by Category
-
-**Scenario**: User wants to explore skills in a specific category.
-
-```bash
-# Step 1: List all available categories
-aliyun agentexplorer list-categories \
-  --user-agent AlibabaCloud-Agent-Skills
-
-# Step 2: Confirm category selection with user
-# Example: "computing", "database", "computing.ecs"
-
-# Step 3: Search skills in selected category
-aliyun agentexplorer search-skills \
-  --category-code "<user-confirmed-category>" \
-  --max-results 20 \
-  --user-agent AlibabaCloud-Agent-Skills
-
-# Step 4: Display results to user
-```
-
-### Workflow 3: Get Skill Details
-
-**Scenario**: User wants to see detailed information about a specific skill.
-
-```bash
-# Step 1: Confirm skill name with user
-# (Usually obtained from previous search results)
-
-# Step 2: Retrieve skill content
-aliyun agentexplorer get-skill-content \
-  --skill-name "<user-confirmed-skill-name>" \
-  --user-agent AlibabaCloud-Agent-Skills
-
-# Step 3: Display skill details including:
-# - Full description
-# - Usage instructions
-# - Prerequisites
-# - Examples
-```
-
-### Workflow 4: Install a Skill
-
-**Scenario**: User wants to install a discovered skill.
-
-```bash
-# Step 1: Confirm skill name with user
-
-# Step 2: Execute installation command
-npx skills add aliyun/alibabacloud-aiops-skills \
-  --skill <user-confirmed-skill-name>
-
-# Step 3: Verify installation success
-# Check that skill appears in available skills list
-```
-
-### Workflow 5: Combined Search (Keyword + Category)
-
-**Scenario**: User wants to narrow down search results using both keyword and category.
-
-```bash
-# Step 1: Confirm both keyword and category with user
-
-# Step 2: Execute combined search
-aliyun agentexplorer search-skills \
-  --keyword "<user-confirmed-keyword>" \
-  --category-code "<user-confirmed-category>" \
-  --max-results 20 \
-  --user-agent AlibabaCloud-Agent-Skills
-
-# Step 3: Display filtered results
-```
-
-### Workflow 6: Paginated Search
-
-**Scenario**: User wants to browse through multiple pages of search results.
-
-```bash
-# Step 1: Execute initial search
-aliyun agentexplorer search-skills \
-  --keyword "<keyword>" \
-  --max-results 20 \
-  --user-agent AlibabaCloud-Agent-Skills
-
-# Step 2: Extract nextToken from response
-
-# Step 3: Fetch next page if user requests more results
 aliyun agentexplorer search-skills \
   --keyword "<keyword>" \
   --max-results 20 \
@@ -293,7 +285,7 @@ This skill does not create any resources. No cleanup is required.
 ## Best Practices
 
 1. **Always verify credentials first** — Use `aliyun configure list` before any search operation
-2. **Confirm parameters with user** — Never assume keyword or category without asking
+2. **Iterate on search** — Automatically adjust keywords and retry until the target skill is found or confirmed absent
 3. **Start with broad searches** — Narrow down with filters if too many results
 4. **Show category structure** — Help users understand available categories before filtering
 5. **Display results clearly** — Use tables to make skill comparison easy
@@ -316,8 +308,7 @@ aliyun agentexplorer search-skills \
   --max-results 20 \
   --user-agent AlibabaCloud-Agent-Skills
 
-# Step 2: Display results table
-# Step 3: If user selects a skill, get details
+# Step 2: Display results table and get details for the best match
 aliyun agentexplorer get-skill-content \
   --skill-name "alibabacloud-ecs-batch-command" \
   --user-agent AlibabaCloud-Agent-Skills
@@ -346,7 +337,7 @@ aliyun agentexplorer search-skills \
 ```bash
 # User: "搜索 OSS 相关的 skill"
 
-# Step 1: Search using Chinese or English
+# Step 1: Search using Chinese or English keyword
 aliyun agentexplorer search-skills \
   --keyword "OSS" \
   --max-results 20 \
