@@ -9,6 +9,7 @@
 ## 何时选用（Agent）
 
 - **load average 高、CPU 排队、负载任务分析**。
+- 必须走 `./scripts/osops.sh load loadtask ...` 触发 SysOM `InvokeDiagnosis`；不要改用 ECS 通用诊断或 RunCommand 手工采集替代。
 
 ## `params` 字段
 
@@ -29,9 +30,9 @@
 
 ## 建议用法
 
-**当前目录**：见 [agent-conventions.md](../agent-conventions.md)（在 `sysom-diagnosis/` 下使用 `./shared/scripts/osops`）。
+**当前目录**：见 [agent-conventions.md](../agent-conventions.md)（在 `sysom-diagnosis/` 下使用 `./scripts/osops.sh`）。
 
 ```bash
-./shared/scripts/osops load loadtask --channel ecs \
+./scripts/osops.sh load loadtask --channel ecs \
   --region cn-hangzhou --instance i-xxx --timeout 300
 ```

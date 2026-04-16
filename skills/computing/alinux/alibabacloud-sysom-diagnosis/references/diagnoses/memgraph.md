@@ -35,11 +35,11 @@
 
 ## 建议用法
 
-**当前目录**：须在 **sysom-diagnosis（技能根）**（存在 `shared/scripts/osops`）下执行；若不在该目录，使用 `cd <sysom-diagnosis> && …`（说明见 [README.md](./README.md) 中「运行命令时的当前目录」）。在任意工作目录下直接执行 `./shared/scripts/osops` 会报「未找到」。
+**当前目录**：须在 **sysom-diagnosis（技能根）**（存在 `scripts/osops.sh`）下执行；若不在该目录，使用 `cd <sysom-diagnosis> && …`（说明见 [README.md](./README.md) 中「运行命令时的当前目录」）。在任意工作目录下直接执行 `./scripts/osops.sh` 会报「未找到」。
 
 ```bash
 # Agent：直接走内存全景专项（常见「内存高、要大图拆解」主路径）
-cd <sysom-diagnosis> && ./shared/scripts/osops memory memgraph --deep-diagnosis --channel ecs \
+cd <sysom-diagnosis> && ./scripts/osops.sh memory memgraph --deep-diagnosis --channel ecs \
   --region cn-hangzhou --instance i-xxx --timeout 300
 ```
 

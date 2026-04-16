@@ -4,8 +4,8 @@
 
 ## 执行目录
 
-- `./shared/scripts/osops` 为相对路径，仅在 **技能根**（与 `SKILL.md` 同级）下有效。
-- 推荐写法：`cd <技能根绝对路径> && ./shared/scripts/osops …`。
+- `./scripts/osops.sh` 为相对路径，仅在 **技能根**（与 `SKILL.md` 同级）下有效。
+- 推荐写法：`cd <技能根绝对路径> && ./scripts/osops.sh …`。
 - `agent.next` 中的 `command` 同样须在技能根用 Bash 执行，不要改为让用户自行复制。
 
 ## 本地优先
@@ -16,7 +16,7 @@
 ## 凭证与安全
 
 - **禁止**在对话中收集 AccessKey / Secret。
-- 引导用户在本机终端于技能根执行 `./shared/scripts/osops configure`，写入 `~/.aliyun/config.json`。
+- 引导用户在本机终端于技能根执行 `./scripts/osops.sh configure`，写入 `~/.aliyun/config.json`。
 - 无 PTY 时：在 COSH 中通过 `/settings` 开启「交互式 Shell（PTY）」，或用 `/bash` 进入交互式 Bash。
 
 ## Precheck 信封消费
@@ -36,11 +36,11 @@
 
 ### B. 非内存域（IO / 网络 / 负载）
 
-1. **确认当前/其它实例**（同 A）→ 2. `./shared/scripts/osops <io|net|load> <子命令> …`（调用前内建环境检查）→ 读 `data.routing`/`data.remote`、`agent.findings`。
+1. **确认当前/其它实例**（同 A）→ 2. `./scripts/osops.sh <io|net|load> <子命令> …`（调用前内建环境检查）→ 读 `data.routing`/`data.remote`、`agent.findings`。
 2. **网络延迟 + socket 队列积压**：已跑 `net netjitter`/`net packetdrop` 且结果正常，但 `ss` 显示 Send-Q/Recv-Q 偏大时，须交叉 `memory memgraph --deep-diagnosis`。详见 [non-memory-routing.md](./non-memory-routing.md)。
 3. **失败处理**：同 A。
 
 ## 与其它 memory 技能的边界
 
-- 本技能在 `sysom-diagnosis/` 下使用 `./shared/scripts/osops`（`memory`/`io`/`net`/`load` 配套）。
+- 本技能在 `sysom-diagnosis/` 下使用 `./scripts/osops.sh`（`memory`/`io`/`net`/`load` 配套）。
 - 其它技能或父仓库里的入口可能与本目录不同；SysOM 远程专项请使用本目录内的 `osops`。

@@ -10,6 +10,7 @@
 
 - 云上 **OOM、oom-killer**、需 **SysOM 远程 OOM 诊断**。
 - **勿**与父仓库 **linux-memory-oom / `sysom_cli memory oom`**（本机 dmesg）混淆。
+- 远程 OOM 诊断必须通过 `./scripts/osops.sh memory oom --deep-diagnosis ...` 触发 SysOM `InvokeDiagnosis`，不要退化为 ECS RunCommand 手工采集。
 
 ## Agent 操作约定
 
@@ -45,13 +46,13 @@
 本机（CLI 自动补全 region/instance）：
 
 ```bash
-./shared/scripts/osops memory oom --deep-diagnosis --channel ecs --timeout 300
+./scripts/osops.sh memory oom --deep-diagnosis --channel ecs --timeout 300
 ```
 
 远程实例：
 
 ```bash
-./shared/scripts/osops memory oom --deep-diagnosis --channel ecs \
+./scripts/osops.sh memory oom --deep-diagnosis --channel ecs \
   --region cn-hangzhou --instance i-xxx --timeout 300
 ```
 

@@ -37,10 +37,10 @@
 
 ## 建议用法
 
-**当前目录**：见 [agent-conventions.md](../agent-conventions.md)（在 `sysom-diagnosis/` 下使用 `./shared/scripts/osops`）。
+**当前目录**：见 [agent-conventions.md](../agent-conventions.md)（在 `sysom-diagnosis/` 下使用 `./scripts/osops.sh`）。
 
 ```bash
-./shared/scripts/osops net packetdrop --channel ecs \
+./scripts/osops.sh net packetdrop --channel ecs \
   --region cn-hangzhou --instance i-xxx
 ```
 

@@ -2,7 +2,7 @@
 
 > **本文件**说明 **InvokeDiagnosis** 契约、**本机/远程**约定与 **CLI 选项**。Agent 主路径为 `memory … --deep-diagnosis`。各诊断专有 `params` 见 [diagnoses/](./diagnoses/)。
 
-**权限与开通**：远程路径在发 OpenAPI 前会**内建**与 **`osops precheck` 相同的环境检查**；亦可单独运行 precheck 自检。三要素与场景矩阵见 [openapi-permission-guide.md](../shared/references/openapi-permission-guide.md)。
+**权限与开通**：远程路径在发 OpenAPI 前会**内建**与 **`osops precheck` 相同的环境检查**；亦可单独运行 precheck 自检。三要素与场景矩阵见 [openapi-permission-guide.md](./openapi-permission-guide.md)。
 
 **本地优先**：未明确要远程时，先跑本机 quick（见 [memory-routing.md](./memory-routing.md)）。下表「诊断目标」仅适用于远程深度诊断。
 
@@ -29,9 +29,14 @@
 
 **前置条件**：目标 ECS 须运行中、已装云助手；须在 **SysOM / ECS 控制台** 对目标实例完成 **诊断授权**（勿使用已废弃的 OpenAPI 授权接口）；账号侧需 **AliyunServiceRoleForSysom** 等服务关联角色（细则见阿里云 SysOM 产品说明）。
 
+## 路由硬约束（评测关键）
+
+- 远程诊断结论必须来自 SysOM `InvokeDiagnosis` / `GetDiagnosisResult` 返回结果。
+- 禁止以 ECS 通用诊断 API 或 `Ecs.RunCommand`/Cloud Assistant 手工采集（`top`/`ps`/`iostat`/`uptime`）替代 SysOM 专项调用。
+
 ## CLI 与内部 Invoke（原 `diagnosis invoke`）
 
-**对外**：`./shared/scripts/osops memory <子命令> --deep-diagnosis …`，选项如下：
+**对外**：`./scripts/osops.sh memory <子命令> --deep-diagnosis …`，选项如下：
 
 | 选项 | 说明 |
 |------|------|
@@ -49,7 +54,7 @@
 
 未传 `--region`/`--instance` 时，CLI 会请求 ECS 元数据（`100.100.100.200`）补全。若 `error.code` 为 `Sysom.InvalidParameter`、`instance not found in ecs`，常见原因是 **AK 所属账号与实例不匹配**（含跨账号）。precheck 通过仅表示凭证可调接口，不保证实例对齐。
 
-元数据详见 [metadata-api.md](../shared/references/metadata-api.md)。
+元数据详见 [metadata-api.md](./metadata-api.md)。
 
 ## 按诊断类型的参数
 
@@ -58,4 +63,4 @@
 ## 相关入口
 
 - [SKILL.md](../SKILL.md) — 能力总览表
-- [openapi-permission-guide.md](../shared/references/openapi-permission-guide.md) — 权限与 precheck
+- [openapi-permission-guide.md](./openapi-permission-guide.md) — 权限与 precheck

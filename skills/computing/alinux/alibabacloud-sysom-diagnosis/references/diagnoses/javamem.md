@@ -34,10 +34,10 @@
 
 ## 建议用法
 
-**当前目录**：见 [README.md](./README.md)（在 `sysom-diagnosis/` 下使用 `./shared/scripts/osops`）。
+**当前目录**：见 [README.md](./README.md)（在 `sysom-diagnosis/` 下使用 `./scripts/osops.sh`）。
 
 ```bash
-./shared/scripts/osops memory javamem --deep-diagnosis --channel ecs \
+./scripts/osops.sh memory javamem --deep-diagnosis --channel ecs \
   --region cn-hangzhou --instance i-xxx \
   --params '{"pid":12345,"duration":5}'
 ```

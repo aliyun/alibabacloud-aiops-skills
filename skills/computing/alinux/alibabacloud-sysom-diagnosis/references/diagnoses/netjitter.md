@@ -39,10 +39,10 @@
 
 ## 建议用法
 
-**当前目录**：见 [agent-conventions.md](../agent-conventions.md)（在 `sysom-diagnosis/` 下使用 `./shared/scripts/osops`）。
+**当前目录**：见 [agent-conventions.md](../agent-conventions.md)（在 `sysom-diagnosis/` 下使用 `./scripts/osops.sh`）。
 
 ```bash
-./shared/scripts/osops net netjitter --channel ecs \
+./scripts/osops.sh net netjitter --channel ecs \
   --region cn-hangzhou --instance i-xxx \
   --params '{"duration":30,"threshold":10}'
 ```

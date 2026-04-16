@@ -7,8 +7,8 @@
 | 内容 | 在哪读 |
 |------|--------|
 | **诊断本机/远程、InvokeDiagnosis 请求体、`region`/`instance`、元数据补全** | [invoke-diagnosis.md](../invoke-diagnosis.md) |
-| **ECS 元数据服务端点、常用路径、IMDS 说明** | [metadata-api.md](../../shared/references/metadata-api.md) |
-| **precheck、凭证、三要素、场景 A-K** | [openapi-permission-guide.md](../../shared/references/openapi-permission-guide.md) |
+| **ECS 元数据服务端点、常用路径、IMDS 说明** | [metadata-api.md](../metadata-api.md) |
+| **precheck、凭证、三要素、场景 A-K** | [openapi-permission-guide.md](../openapi-permission-guide.md) |
 | **本目录各 `service_name` 的字段表** | 下文索引 → 对应 `*.md` |
 
 ## 维护约定
