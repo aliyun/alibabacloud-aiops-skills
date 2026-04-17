@@ -75,7 +75,7 @@ class SignatureRequest:
             ('accept', 'text/event-stream'),
             ('cache-control', 'no-cache'),
             ('connection', 'keep-alive'),
-            ('User-Agent', 'AlibabaCloud-Agent-Skills'),
+            ('User-Agent', 'AlibabaCloud-Agent-Skills/alibabacloud-das-agent'),
         ])
         return headers
 
