@@ -20,7 +20,7 @@ aliyun ice create-yike-asset-upload \
   --file-ext txt \
   --file-type StoryboardInput \
   --region cn-shanghai \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-yike-storyboard
 ```
 
 **Parameters:**
@@ -68,7 +68,7 @@ aliyun ice submit-yike-storyboard-job \
   --exec-mode StoryboardOnly \
   --title "My Story" \
   --region cn-shanghai \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-yike-storyboard
 ```
 
 **Parameters:**
@@ -95,7 +95,7 @@ aliyun ice submit-yike-storyboard-job \
 aliyun ice get-yike-storyboard-job \
   --job-id <JobId> \
   --region cn-shanghai \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-yike-storyboard
 ```
 
 **Parameters:**
@@ -109,13 +109,13 @@ aliyun ice get-yike-storyboard-job \
 
 | Product | CLI Command | Description |
 |---------|-------------|-------------|
-| STS | `aliyun sts GetCallerIdentity` | Verify current identity |
+| STS | `aliyun sts get-caller-identity` | Verify current identity |
 | ICE | `aliyun ice list-yike-productions` | List Yike productions |
 | ICE | `aliyun ice batch-get-yike-ai-app-job` | Batch get jobs |
 
 ## Important Notes
 
-1. All `aliyun` CLI commands MUST include `--user-agent AlibabaCloud-Agent-Skills`
+1. All `aliyun` CLI commands MUST include `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-yike-storyboard`
 2. ICE service is currently only available in `cn-shanghai` region
 3. OSS upload uses STS temporary credentials with limited validity period
 4. The `--title` parameter is optional but recommended for identification

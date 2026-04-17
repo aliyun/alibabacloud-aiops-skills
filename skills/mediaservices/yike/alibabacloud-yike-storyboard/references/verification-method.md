@@ -23,7 +23,7 @@ aliyun ice create-yike-asset-upload \
   --file-ext txt \
   --file-type StoryboardInput \
   --region cn-shanghai \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-yike-storyboard
 ```
 
 **Success Criteria:**
@@ -64,7 +64,7 @@ aliyun ice submit-yike-storyboard-job \
   --narration-voice-id sys_GentleYoungMan \
   --shot-split-mode dialogue \
   --region cn-shanghai \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-yike-storyboard
 ```
 
 **Success Criteria:**
@@ -87,7 +87,7 @@ aliyun ice submit-yike-storyboard-job \
 aliyun ice get-yike-storyboard-job \
   --job-id <JobId> \
   --region cn-shanghai \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-yike-storyboard
 ```
 
 **Success Criteria:**

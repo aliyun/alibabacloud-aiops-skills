@@ -52,6 +52,6 @@ Attach the `AliyunICEFullAccess` system policy to your RAM user/role.
 If you encounter permission-related errors:
 
 1. Verify the current account/role has the permissions listed above
-2. Use `aliyun sts GetCallerIdentity` to confirm current identity
+2. Use `aliyun sts get-caller-identity` to confirm current identity
 3. Check for RAM policy conflicts (Deny policies take precedence)
 4. Ensure the ICE service is activated in your account

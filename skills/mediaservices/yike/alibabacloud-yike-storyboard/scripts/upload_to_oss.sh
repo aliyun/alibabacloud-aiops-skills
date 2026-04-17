@@ -97,7 +97,7 @@ UPLOAD_RESP=$(run_with_timeout $CLI_TIMEOUT aliyun ice create-yike-asset-upload 
   --file-ext "$FILE_EXT" \
   --file-type StoryboardInput \
   --region cn-shanghai \
-  --user-agent AlibabaCloud-Agent-Skills 2>&1) || {
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-yike-storyboard 2>&1) || {
     if [ $? -eq 124 ]; then
         echo "Error: CLI command timed out after ${CLI_TIMEOUT}s"
         exit 1

@@ -16,22 +16,30 @@ Help users complete the AI video creation workflow from novel/script to storyboa
 
 ### 1. Aliyun CLI Check
 
-> **Pre-check: Aliyun CLI >= 3.3.1 required**
+> **Pre-check: Aliyun CLI >= 3.3.3 required**
 > 
 > ```bash
 > aliyun version
 > ```
 > 
-> Verify version >= 3.3.1. If not installed or version is too low, refer to [references/cli-installation-guide.md](references/cli-installation-guide.md).
+> Verify version >= 3.3.3. If not installed or version is too low,
+> run `curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash` to update,
+> or see [references/cli-installation-guide.md](references/cli-installation-guide.md) for installation instructions.
 > 
 > Then **[MUST]** run the following commands to configure CLI:
 > ```bash
 > # Enable auto plugin installation
 > aliyun configure set --auto-plugin-install true
 > 
+> # Update plugins to latest
+> aliyun plugin update
+> 
 > # Set region to cn-shanghai (required for ICE service)
 > aliyun configure set --region cn-shanghai
 > ```
+
+**[MUST] CLI User-Agent** — Every `aliyun` CLI command invocation must include:
+`--user-agent AlibabaCloud-Agent-Skills/alibabacloud-yike-storyboard`
 
 ### 2. ICE Plugin Installation
 
@@ -217,7 +225,7 @@ aliyun ice submit-yike-storyboard-job \
   --exec-mode StoryboardOnly \
   --title "<Title>" \
   --region cn-shanghai \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-yike-storyboard
 ```
 
 > For complete parameter reference, see [references/related-commands.md](references/related-commands.md#3-submit-storyboard-job).
@@ -228,7 +236,7 @@ aliyun ice submit-yike-storyboard-job \
 aliyun ice get-yike-storyboard-job \
   --job-id <JobId> \
   --region cn-shanghai \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-yike-storyboard
 ```
 
 > For complete parameter and response reference, see [references/related-commands.md](references/related-commands.md#4-query-job-status).
