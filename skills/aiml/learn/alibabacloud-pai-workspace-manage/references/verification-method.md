@@ -17,7 +17,7 @@ WORKSPACE_ID=$(aliyun aiworkspace create-workspace \
   --workspace-name <WorkspaceName> \
   --description "<Description>" \
   --env-types prod \
-  --user-agent AlibabaCloud-Agent-Skills | jq -r '.WorkspaceId')
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-workspace-manage | jq -r '.WorkspaceId')
 
 echo "WorkspaceId: $WORKSPACE_ID"
 ```
@@ -31,7 +31,7 @@ echo "WorkspaceId: $WORKSPACE_ID"
 ```bash
 aliyun aiworkspace get-workspace \
   --workspace-id $WORKSPACE_ID \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-workspace-manage
 ```
 
 > **Note**: `get-workspace` only accepts `--workspace-id` and `--verbose` parameters. The region is specified via the global `--region` parameter (if overriding the default region).
@@ -55,7 +55,7 @@ aliyun aiworkspace get-workspace \
 aliyun aiworkspace list-workspaces \
   --region <RegionId> \
   --workspace-name <WorkspaceName> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-workspace-manage
 ```
 
 **Success criteria**: Response has `TotalCount >= 1` and contains the target workspace.
@@ -84,7 +84,7 @@ WORKSPACE_ID="<WorkspaceId>"
 
 STATUS=$(aliyun aiworkspace get-workspace \
   --workspace-id $WORKSPACE_ID \
-  --user-agent AlibabaCloud-Agent-Skills | jq -r '.Status')
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-workspace-manage | jq -r '.Status')
 
 if [ "$STATUS" = "ENABLED" ]; then
   echo "Workspace created successfully, Status: $STATUS"

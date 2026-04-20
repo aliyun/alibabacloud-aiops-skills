@@ -19,14 +19,20 @@ Create, query, and list workspaces on Alibaba Cloud Platform for AI (PAI). Works
 
 ## Installation
 
-> **Pre-check: Aliyun CLI >= 3.3.1 required**
-> Run `aliyun version` to verify >= 3.3.1. If not installed or version too low,
-> see `references/cli-installation-guide.md` for installation instructions.
+> **Pre-check: Aliyun CLI >= 3.3.3 required**
+> Run `aliyun version` to verify >= 3.3.3. If not installed or version too low,
+> run `curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash` to install/update,
+> or see `references/cli-installation-guide.md` for installation instructions.
 > Then [MUST] run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+> Then [MUST] run `aliyun plugin update` to ensure that any existing plugins on your local machine are always up-to-date.
+
+**[MUST] CLI User-Agent** — Every `aliyun` CLI command invocation must include:
+`--user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-workspace-manage`
 
 ```bash
 aliyun version
 aliyun configure set --auto-plugin-install true
+aliyun plugin update
 ```
 
 ---
@@ -52,7 +58,7 @@ aliyun configure set --auto-plugin-install true
 >   **Basic query** (without `--verbose`):
 >   ```bash
 >   aliyun aiworkspace get-workspace --workspace-id <ID> --region <RegionId> \
->     --user-agent AlibabaCloud-Agent-Skills \
+>     --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-workspace-manage \
 >     | jq -r '"Workspace: \(.WorkspaceName) (ID: \(.WorkspaceId))
 >   Status: \(.Status)
 >   Environment: \(.EnvTypes | join(", "))
@@ -63,7 +69,7 @@ aliyun configure set --auto-plugin-install true
 >   **Verbose query** (with `--verbose true`):
 >   ```bash
 >   aliyun aiworkspace get-workspace --workspace-id <ID> --verbose true --region <RegionId> \
->     --user-agent AlibabaCloud-Agent-Skills \
+>     --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-workspace-manage \
 >     | jq -r '"Workspace: \(.WorkspaceName) (ID: \(.WorkspaceId))
 >   Status: \(.Status)
 >   Owner: \(.Owner.UserName // "" | if length > 0 then .[0:1] + "***" else "N/A" end) (ID: \(.Owner.UserId // "" | if length > 0 then "****" + .[-4:] else "N/A" end))
@@ -169,7 +175,7 @@ aliyun aiworkspace list-products \
   --region <UserSpecifiedRegionId> \
   --product-codes PAI_share \
   --verbose true \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-workspace-manage
 ```
 
 #### Step 3: Handle Check Results

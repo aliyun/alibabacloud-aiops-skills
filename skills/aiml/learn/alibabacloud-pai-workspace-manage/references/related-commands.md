@@ -1,6 +1,6 @@
 # Related Commands — PAI Workspace Management
 
-All commands use plugin mode format and include `--user-agent AlibabaCloud-Agent-Skills`.
+All commands use plugin mode format and include `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-workspace-manage`.
 
 > **Important**: CLI uses `--region` (global parameter) to specify the region, not `--region-id`. `--region` **must be specified by the user** — do not use default values.
 > `--env-types` uses list format (e.g., `--env-types prod` or `--env-types dev prod`), not JSON arrays.
@@ -29,7 +29,7 @@ aliyun aiworkspace create-workspace \
   --workspace-name <WorkspaceName> \
   --description "<Description>" \
   --env-types prod \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-workspace-manage
 ```
 
 ### Standard Mode (development + production environments)
@@ -41,7 +41,7 @@ aliyun aiworkspace create-workspace \
   --description "<Description>" \
   --env-types dev prod \
   --display-name "<DisplayName>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-workspace-manage
 ```
 
 ### With Resource Group
@@ -53,7 +53,7 @@ aliyun aiworkspace create-workspace \
   --description "<Description>" \
   --env-types prod \
   --resource-group-id <ResourceGroupId> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-workspace-manage
 ```
 
 ### create-workspace Parameter Reference
@@ -84,7 +84,7 @@ aliyun aiworkspace create-workspace \
 aliyun aiworkspace get-workspace \
   --workspace-id <WorkspaceId> \
   --region <RegionId> \
-  --user-agent AlibabaCloud-Agent-Skills \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-workspace-manage \
   | jq -r '"Workspace: \(.WorkspaceName) (ID: \(.WorkspaceId))
 Status: \(.Status)
 Environment: \(.EnvTypes | join(", "))
@@ -101,7 +101,7 @@ aliyun aiworkspace get-workspace \
   --workspace-id <WorkspaceId> \
   --verbose true \
   --region <RegionId> \
-  --user-agent AlibabaCloud-Agent-Skills \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-workspace-manage \
   | jq -r '"Workspace: \(.WorkspaceName) (ID: \(.WorkspaceId))
 Status: \(.Status)
 Environment: \(.EnvTypes | join(", "))
@@ -191,7 +191,7 @@ Administrators: a***, b***
 ```bash
 aliyun aiworkspace list-workspaces \
   --region <RegionId> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-workspace-manage
 ```
 
 ### Filter by Name
@@ -200,7 +200,7 @@ aliyun aiworkspace list-workspaces \
 aliyun aiworkspace list-workspaces \
   --region <RegionId> \
   --workspace-name <WorkspaceName> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-workspace-manage
 ```
 
 ### Filter by Status + Sort by Creation Time Descending
@@ -213,7 +213,7 @@ aliyun aiworkspace list-workspaces \
   --status ENABLED \
   --sort-by GmtCreateTime \
   --order DESC \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-workspace-manage
 ```
 
 ### Paginated Query
@@ -223,7 +223,7 @@ aliyun aiworkspace list-workspaces \
   --region <RegionId> \
   --page-number 1 \
   --page-size 20 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-workspace-manage
 ```
 
 ### Batch Query by ID List (for multiple IDs, 2 or more)
@@ -236,7 +236,7 @@ aliyun aiworkspace list-workspaces \
 aliyun aiworkspace list-workspaces \
   --workspace-ids "10234,10567,10891" \
   --region <RegionId> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-workspace-manage
 ```
 
 ### Get Resource Limits
@@ -245,7 +245,7 @@ aliyun aiworkspace list-workspaces \
 aliyun aiworkspace list-workspaces \
   --region <RegionId> \
   --option GetResourceLimits \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-workspace-manage
 ```
 
 ### Check Workspace Name Existence (must call before creating)
@@ -257,7 +257,7 @@ aliyun aiworkspace list-workspaces \
   --region <RegionId> \
   --option CheckWorkspaceExists \
   --workspace-name <WorkspaceName> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-workspace-manage
 ```
 
 **Response examples**:
@@ -278,7 +278,7 @@ Name already exists (`TotalCount >= 1`):
 aliyun aiworkspace list-workspaces \
   --region <RegionId> \
   --fields Id \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-workspace-manage
 ```
 
 ### list-workspaces Parameter Reference
@@ -314,7 +314,7 @@ aliyun aiworkspace list-workspaces \
 > ```bash
 > aliyun aiworkspace list-workspaces \
 >   --region <RegionId> \
->   --user-agent AlibabaCloud-Agent-Skills \
+>   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-workspace-manage \
 >   | jq -r '.Workspaces[] | "- \(.WorkspaceName) (ID: \(.WorkspaceId)) Status: \(.Status), Creator: \(.Creator // "" | if length > 0 then "****" + .[-4:] else "N/A" end), Admin: \(.AdminNames // [] | map(.[0:1] + "***") | join(", "))"'
 > ```
 
@@ -357,7 +357,7 @@ aliyun aiworkspace list-products \
   --region <RegionId> \
   --product-codes PAI_share \
   --verbose true \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-workspace-manage
 ```
 
 ### list-products Parameter Reference
