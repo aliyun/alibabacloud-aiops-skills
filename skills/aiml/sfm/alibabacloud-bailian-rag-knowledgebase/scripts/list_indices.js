@@ -25,7 +25,7 @@ async function main(workspaceId, pageNumber, pageSize) {
         connectTimeout: 3000
     });
     let headers = {
-        "User-Agent": "AlibabaCloud-Agent-Skills"
+        "User-Agent": "AlibabaCloud-Agent-Skills/alibabacloud-bailian-rag-knowledgebase"
     };
 
     try {

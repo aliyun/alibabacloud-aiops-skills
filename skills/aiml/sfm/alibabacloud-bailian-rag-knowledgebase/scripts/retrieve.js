@@ -26,7 +26,7 @@ async function main(workspaceId, indexId, query) {
         connectTimeout: 3000
     });
     let headers = {
-        "User-Agent": "AlibabaCloud-Agent-Skills"
+        "User-Agent": "AlibabaCloud-Agent-Skills/alibabacloud-bailian-rag-knowledgebase"
     };
     runtime.extendsParameters = new Util.ExtendsParameters();
     runtime.extendsParameters.queries = {
