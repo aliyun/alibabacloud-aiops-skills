@@ -211,7 +211,7 @@ def create_client(region):
         credential=cred,
         endpoint=f"mts.{region}.aliyuncs.com",
         region_id=region,
-        user_agent='AlibabaCloud-Agent-Skills',  # Required user-agent
+        user_agent='AlibabaCloud-Agent-Skills/alibabacloud-video-forge',  # Required user-agent
     )
     return MtsClient(config)
 

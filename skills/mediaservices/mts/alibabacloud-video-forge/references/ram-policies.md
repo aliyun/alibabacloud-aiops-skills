@@ -271,8 +271,8 @@
 ```bash
 # 通过 RAM 控制台附加系统策略
 # 或使用 CLI
-aliyun ram AttachPolicyToUser --PolicyType System --PolicyName AliyunMTSFullAccess --UserName <your-user>
-aliyun ram AttachPolicyToUser --PolicyType System --PolicyName AliyunOSSFullAccess --UserName <your-user>
+aliyun ram attach-policy-to-user --policy-type System --policy-name AliyunMTSFullAccess --user-name <your-user>
+aliyun ram attach-policy-to-user --policy-type System --policy-name AliyunOSSFullAccess --user-name <your-user>
 ```
 
 ## 参考链接

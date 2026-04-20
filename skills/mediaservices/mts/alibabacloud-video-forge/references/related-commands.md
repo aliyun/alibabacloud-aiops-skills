@@ -10,45 +10,45 @@
 
 | 命令 | 说明 | 示例 |
 |------|------|------|
-| `aliyun mts submit-jobs` | 提交转码任务 | `aliyun mts submit-jobs --Input '{"Bucket":"xxx","Location":"xxx","Object":"xxx"}' --OutputBucket xxx --OutputLocation cn-shanghai --TemplateId xxx --PipelineId xxx --user-agent AlibabaCloud-Agent-Skills` |
-| `aliyun mts query-job-list` | 查询转码任务 | `aliyun mts query-job-list --JobIds xxx --user-agent AlibabaCloud-Agent-Skills` |
+| `aliyun mts submit-jobs` | 提交转码任务 | `aliyun mts submit-jobs --Input '{"Bucket":"xxx","Location":"xxx","Object":"xxx"}' --OutputBucket xxx --OutputLocation cn-shanghai --TemplateId xxx --PipelineId xxx --user-agent AlibabaCloud-Agent-Skills/alibabacloud-video-forge` |
+| `aliyun mts query-job-list` | 查询转码任务 | `aliyun mts query-job-list --JobIds xxx --user-agent AlibabaCloud-Agent-Skills/alibabacloud-video-forge` |
 
 ### 截图相关
 
 | 命令 | 说明 | 示例 |
 |------|------|------|
-| `aliyun mts submit-snapshot-job` | 提交截图任务 | `aliyun mts submit-snapshot-job --Input '{"Bucket":"xxx","Object":"xxx"}' --SnapshotConfig '{"Time":"5000","OutputFile":{"Bucket":"xxx","Object":"xxx"}}' --PipelineId xxx --user-agent AlibabaCloud-Agent-Skills` |
-| `aliyun mts query-snapshot-job-list` | 查询截图任务 | `aliyun mts query-snapshot-job-list --SnapshotJobIds xxx --user-agent AlibabaCloud-Agent-Skills` |
+| `aliyun mts submit-snapshot-job` | 提交截图任务 | `aliyun mts submit-snapshot-job --Input '{"Bucket":"xxx","Object":"xxx"}' --SnapshotConfig '{"Time":"5000","OutputFile":{"Bucket":"xxx","Object":"xxx"}}' --PipelineId xxx --user-agent AlibabaCloud-Agent-Skills/alibabacloud-video-forge` |
+| `aliyun mts query-snapshot-job-list` | 查询截图任务 | `aliyun mts query-snapshot-job-list --SnapshotJobIds xxx --user-agent AlibabaCloud-Agent-Skills/alibabacloud-video-forge` |
 
 ### 媒体信息相关
 
 | 命令 | 说明 | 示例 |
 |------|------|------|
-| `aliyun mts submit-media-info-job` | 提交媒体信息任务 | `aliyun mts submit-media-info-job --Input '{"Bucket":"xxx","Object":"xxx"}' --PipelineId xxx --user-agent AlibabaCloud-Agent-Skills` |
-| `aliyun mts query-media-info-job-list` | 查询媒体信息任务 | `aliyun mts query-media-info-job-list --MediaInfoJobIds xxx --user-agent AlibabaCloud-Agent-Skills` |
+| `aliyun mts submit-media-info-job` | 提交媒体信息任务 | `aliyun mts submit-media-info-job --Input '{"Bucket":"xxx","Object":"xxx"}' --PipelineId xxx --user-agent AlibabaCloud-Agent-Skills/alibabacloud-video-forge` |
+| `aliyun mts query-media-info-job-list` | 查询媒体信息任务 | `aliyun mts query-media-info-job-list --MediaInfoJobIds xxx --user-agent AlibabaCloud-Agent-Skills/alibabacloud-video-forge` |
 
 ### 内容审核相关
 
 | 命令 | 说明 | 示例 |
 |------|------|------|
-| `aliyun mts submit-media-censor-job` | 提交内容审核任务 | `aliyun mts submit-media-censor-job --Input '{"Bucket":"xxx","Object":"xxx"}' --PipelineId xxx --user-agent AlibabaCloud-Agent-Skills` |
-| `aliyun mts query-media-censor-job-detail` | 查询审核任务详情 | `aliyun mts query-media-censor-job-detail --JobId xxx --user-agent AlibabaCloud-Agent-Skills` |
-| `aliyun mts query-media-censor-job-list` | 查询审核任务列表 | `aliyun mts query-media-censor-job-list --JobIds xxx --user-agent AlibabaCloud-Agent-Skills` |
+| `aliyun mts submit-media-censor-job` | 提交内容审核任务 | `aliyun mts submit-media-censor-job --Input '{"Bucket":"xxx","Object":"xxx"}' --PipelineId xxx --user-agent AlibabaCloud-Agent-Skills/alibabacloud-video-forge` |
+| `aliyun mts query-media-censor-job-detail` | 查询审核任务详情 | `aliyun mts query-media-censor-job-detail --JobId xxx --user-agent AlibabaCloud-Agent-Skills/alibabacloud-video-forge` |
+| `aliyun mts query-media-censor-job-list` | 查询审核任务列表 | `aliyun mts query-media-censor-job-list --JobIds xxx --user-agent AlibabaCloud-Agent-Skills/alibabacloud-video-forge` |
 
 ### 管道相关
 
 | 命令 | 说明 | 示例 |
 |------|------|------|
-| `aliyun mts search-pipeline` | 搜索管道列表 | `aliyun mts search-pipeline --PageNumber 1 --PageSize 10 --user-agent AlibabaCloud-Agent-Skills` |
-| `aliyun mts query-pipeline-list` | 查询管道详情 | `aliyun mts query-pipeline-list --PipelineIds xxx --user-agent AlibabaCloud-Agent-Skills` |
-| `aliyun mts update-pipeline` | 更新管道状态 | `aliyun mts update-pipeline --PipelineId xxx --Name xxx --State Active --user-agent AlibabaCloud-Agent-Skills` |
+| `aliyun mts search-pipeline` | 搜索管道列表 | `aliyun mts search-pipeline --PageNumber 1 --PageSize 10 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-video-forge` |
+| `aliyun mts query-pipeline-list` | 查询管道详情 | `aliyun mts query-pipeline-list --PipelineIds xxx --user-agent AlibabaCloud-Agent-Skills/alibabacloud-video-forge` |
+| `aliyun mts update-pipeline` | 更新管道状态 | `aliyun mts update-pipeline --PipelineId xxx --Name xxx --State Active --user-agent AlibabaCloud-Agent-Skills/alibabacloud-video-forge` |
 
 ### 模板相关
 
 | 命令 | 说明 | 示例 |
 |------|------|------|
-| `aliyun mts query-template-list` | 查询模板列表 | `aliyun mts query-template-list --TemplateIds xxx --user-agent AlibabaCloud-Agent-Skills` |
-| `aliyun mts search-template` | 搜索模板 | `aliyun mts search-template --PageNumber 1 --PageSize 10 --user-agent AlibabaCloud-Agent-Skills` |
+| `aliyun mts query-template-list` | 查询模板列表 | `aliyun mts query-template-list --TemplateIds xxx --user-agent AlibabaCloud-Agent-Skills/alibabacloud-video-forge` |
+| `aliyun mts search-template` | 搜索模板 | `aliyun mts search-template --PageNumber 1 --PageSize 10 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-video-forge` |
 
 ## OSS (对象存储服务) 命令
 
@@ -84,10 +84,10 @@ ossutil config
 aliyun configure list
 
 # 测试 MPS 服务连通性
-aliyun mts search-pipeline --PageNumber 1 --PageSize 1 --user-agent AlibabaCloud-Agent-Skills
+aliyun mts search-pipeline --PageNumber 1 --PageSize 1 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-video-forge
 
 # 测试 ECS 服务（基本连通性测试）
-aliyun ecs describe-regions --user-agent AlibabaCloud-Agent-Skills
+aliyun ecs describe-regions --user-agent AlibabaCloud-Agent-Skills/alibabacloud-video-forge
 ```
 
 ## 常用组合命令
@@ -96,10 +96,10 @@ aliyun ecs describe-regions --user-agent AlibabaCloud-Agent-Skills
 
 ```bash
 # 列出所有管道
-aliyun mts search-pipeline --PageNumber 1 --PageSize 20 --user-agent AlibabaCloud-Agent-Skills
+aliyun mts search-pipeline --PageNumber 1 --PageSize 20 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-video-forge
 
 # 查看管道详情
-aliyun mts query-pipeline-list --PipelineIds "pipeline-id-1,pipeline-id-2" --user-agent AlibabaCloud-Agent-Skills
+aliyun mts query-pipeline-list --PipelineIds "pipeline-id-1,pipeline-id-2" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-video-forge
 ```
 
 ### 转码工作流
@@ -113,13 +113,13 @@ JOB_RESPONSE=$(aliyun mts submit-jobs \
   --TemplateId S00000001-100020 \
   --PipelineId your-pipeline-id \
   --Outputs '[{"OutputObject":"output/transcode/video.mp4"}]' \
-  --user-agent AlibabaCloud-Agent-Skills)
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-video-forge)
 
 # 2. 提取 JobId
 JOB_ID=$(echo $JOB_RESPONSE | jq -r '.JobResultList.JobResult[0].Job.JobId')
 
 # 3. 查询任务状态
-aliyun mts query-job-list --JobIds $JOB_ID --user-agent AlibabaCloud-Agent-Skills
+aliyun mts query-job-list --JobIds $JOB_ID --user-agent AlibabaCloud-Agent-Skills/alibabacloud-video-forge
 ```
 
 ### 审核工作流
@@ -129,18 +129,18 @@ aliyun mts query-job-list --JobIds $JOB_ID --user-agent AlibabaCloud-Agent-Skill
 CENSOR_RESPONSE=$(aliyun mts submit-media-censor-job \
   --Input '{"Bucket":"your-bucket","Location":"oss-cn-shanghai","Object":"input/video.mp4"}' \
   --PipelineId your-audit-pipeline-id \
-  --user-agent AlibabaCloud-Agent-Skills)
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-video-forge)
 
 # 2. 提取 JobId
 CENSOR_JOB_ID=$(echo $CENSOR_RESPONSE | jq -r '.JobId')
 
 # 3. 查询审核结果
-aliyun mts query-media-censor-job-detail --JobId $CENSOR_JOB_ID --user-agent AlibabaCloud-Agent-Skills
+aliyun mts query-media-censor-job-detail --JobId $CENSOR_JOB_ID --user-agent AlibabaCloud-Agent-Skills/alibabacloud-video-forge
 ```
 
 ## 注意事项
 
-1. **user-agent 标识**：所有 `aliyun` CLI 命令必须包含 `--user-agent AlibabaCloud-Agent-Skills`
+1. **user-agent 标识**：所有 `aliyun` CLI 命令必须包含 `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-video-forge`
 2. **区域设置**：MPS 服务需要指定正确的区域（如 cn-shanghai）
 3. **JSON 参数**：Input、Output 等参数需要使用 JSON 格式
 4. **管道选择**：不同任务类型需要使用对应类型的管道（转码/审核）

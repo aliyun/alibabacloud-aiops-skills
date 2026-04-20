@@ -183,7 +183,7 @@ def create_client(region):
         region_id=region,
         connect_timeout=5000,  # 5 seconds connection timeout
         read_timeout=30000,    # 30 seconds read timeout
-        user_agent='AlibabaCloud-Agent-Skills',  # Required user-agent
+        user_agent='AlibabaCloud-Agent-Skills/alibabacloud-video-forge',  # Required user-agent
     )
     return MtsClient(config)
 

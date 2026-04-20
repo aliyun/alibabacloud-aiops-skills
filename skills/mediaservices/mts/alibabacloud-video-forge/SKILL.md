@@ -7,6 +7,31 @@ description: Alibaba Cloud Media Processing Service (MPS) one-stop video process
 
 One-stop video processing through Alibaba Cloud Media Processing Service (MPS), including cover generation, multi-resolution transcoding, content moderation, and more.
 
+## Prerequisites
+
+> **Pre-check: Aliyun CLI >= 3.3.3 required**
+> Run `aliyun version` to verify >= 3.3.3. If not installed or version too low,
+> run `curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash` to update,
+> or see `references/cli-installation-guide.md` for installation instructions.
+
+> **Pre-check: Aliyun CLI plugin update required**
+> [MUST] run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+> [MUST] run `aliyun plugin update` to ensure that any existing plugins are always up-to-date.
+
+> **Pre-check: AI-Mode Configuration required**
+> [MUST] Before using aliyun CLI commands, configure AI-Mode:
+- aliyun configure ai-mode enable
+- aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-video-forge"
+- aliyun configure ai-mode disable
+
+> **Pre-check: Python >= 3.10 required**
+> Run `python3 --version` to verify.
+
+> **Pre-check: Alibaba Cloud Credentials Required**
+>
+> Run `aliyun configure list` to check credential status. If no valid profile, configure via `aliyun configure`.
+> See [references/security-guidelines.md](references/security-guidelines.md) for credential security rules.
+
 ## 🚀 Quick Start
 
 **Easiest Way** - One-click video processing:
@@ -76,20 +101,6 @@ OSS Bucket + MPS Pipeline + Transcoding Templates + Moderation Service
 ## Capability Overview
 
 See [references/capability-overview.md](references/capability-overview.md) for detailed feature tree and automatic pipeline management.
-
-## Prerequisites
-
-> **Pre-check: Aliyun CLI >= 3.3.1 required**
-> Run `aliyun version` to verify >= 3.3.1. If not installed, see `references/cli-installation-guide.md`.
-> Then [MUST] run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
-
-> **Pre-check: Python >= 3.10 required**
-> Run `python3 --version` to verify.
-
-> **Pre-check: Alibaba Cloud Credentials Required**
->
-> Run `aliyun configure list` to check credential status. If no valid profile, configure via `aliyun configure`.
-> See [references/security-guidelines.md](references/security-guidelines.md) for credential security rules.
 
 ## Environment Variables
 
@@ -348,7 +359,36 @@ python scripts/oss_delete.py --prefix output/ --recursive --dry-run
 | [references/cli-installation-guide.md](references/cli-installation-guide.md) | Aliyun CLI installation guide |
 | [references/acceptance-criteria.md](references/acceptance-criteria.md) | Testing acceptance criteria |
 
+## AI-Mode Configuration
+
+> **[MUST] AI-Mode Setup for Aliyun CLI** — Before using `aliyun` CLI commands, you must configure AI-Mode to enable proper tracking and plugin management.
+
+### Enable AI-Mode
+
+Enable AI-Mode for enhanced functionality:
+
+```bash
+aliyun configure ai-mode enable
+```
+
+### Configure User-Agent
+
+Set the User-Agent for proper skill identification:
+
+```bash
+aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-video-forge"
+```
+
+### Disable AI-Mode
+
+Disable AI-Mode when no longer needed:
+
+```bash
+aliyun configure ai-mode disable
+```
+
+> **Note**: AI-Mode must be enabled before executing any `aliyun` CLI commands to ensure proper functionality tracking and plugin compatibility.
+
 ## CLI Command Standards
 
-> **Important**: If using `aliyun` CLI commands, all commands **MUST** include the `--user-agent AlibabaCloud-Agent-Skills` parameter.
-> Example: `aliyun mts search-pipeline --PageNumber 1 --PageSize 10 --user-agent AlibabaCloud-Agent-Skills`
+> **Important**: User-Agent is automatically applied via AI-Mode configuration. After running `aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-video-forge"`, all subsequent `aliyun` CLI commands will include the correct User-Agent automatically. No need to add `--user-agent` parameter to each command.

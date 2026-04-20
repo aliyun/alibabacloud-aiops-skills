@@ -27,7 +27,7 @@ python3 -c "import alibabacloud_credentials; print('Credentials SDK OK')"
 ```bash
 # 验证 CLI 版本
 aliyun version
-# 预期输出: 版本号 >= 3.3.1
+# 预期输出: 版本号 >= 3.3.3
 
 # 验证 CLI 配置
 aliyun configure list

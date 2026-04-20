@@ -26,7 +26,7 @@ aliyun configure list  # Check credential status
 # Solution: Manually set pipeline ID
 export ALIBABA_CLOUD_MPS_PIPELINE_ID="your-pipeline-id"
 # Or check available pipelines
-aliyun mts SearchPipeline
+aliyun mts search-pipeline
 ```
 
 ### 4. Network/Timeout Issues

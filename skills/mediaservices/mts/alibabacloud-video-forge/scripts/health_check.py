@@ -169,7 +169,8 @@ def check_mps_service():
         config = open_api_models.Config(
             credential=cred_client,
             region_id=region,
-            endpoint=f'mts.{region}.aliyuncs.com'
+            endpoint=f'mts.{region}.aliyuncs.com',
+            user_agent='AlibabaCloud-Agent-Skills/alibabacloud-video-forge',
         )
         
         client = Client(config)
