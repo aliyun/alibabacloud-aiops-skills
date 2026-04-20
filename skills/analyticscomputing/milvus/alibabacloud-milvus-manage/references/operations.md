@@ -19,17 +19,17 @@
 
 ```bash
 # 1. View all instance status (focus on non-running status)
-aliyun milvus GET "/webapi/instance/list?RegionId=cn-hangzhou&pageSize=50" \
+aliyun milvus get "/webapi/instance/list?RegionId=cn-hangzhou&pageSize=50" \
   --RegionId cn-hangzhou --force
 
 # 2. View specific instance details (component specs, connection addresses, storage usage)
-aliyun milvus POST "/webapi/cluster/detail" \
+aliyun milvus post "/webapi/cluster/detail" \
   --RegionId cn-hangzhou \
   --InstanceId c-xxx \
   --force
 
 # 3. Confirm connection address available (extract IntranetUrl)
-aliyun milvus POST "/webapi/cluster/detail" \
+aliyun milvus post "/webapi/cluster/detail" \
   --RegionId cn-hangzhou \
   --InstanceId c-xxx \
   --force | jq '.Data.ClusterInfo.IntranetUrl'
@@ -49,7 +49,7 @@ aliyun milvus POST "/webapi/cluster/detail" \
 ### View Instance Config
 
 ```bash
-aliyun milvus POST "/webapi/config/describe_milvus_user_config" \
+aliyun milvus post "/webapi/config/describe_milvus_user_config" \
   --RegionId cn-hangzhou \
   --InstanceId c-xxx \
   --force
@@ -63,13 +63,13 @@ Returns `Data` field as YAML format user custom config.
 
 ```bash
 # 1. First view current config
-aliyun milvus POST "/webapi/config/describe_milvus_user_config" \
+aliyun milvus post "/webapi/config/describe_milvus_user_config" \
   --RegionId cn-hangzhou \
   --InstanceId c-xxx \
   --force
 
 # 2. Modify config (need to fill change reason)
-aliyun milvus POST "/webapi/config/modify_milvus_config" \
+aliyun milvus post "/webapi/config/modify_milvus_config" \
   --RegionId cn-hangzhou \
   --InstanceId c-xxx \
   --Reason "Adjust proxy max task count" \
@@ -85,13 +85,13 @@ aliyun milvus POST "/webapi/config/modify_milvus_config" \
 
 ```bash
 # View public network access status and whitelist
-aliyun milvus POST "/webapi/milvus/describe_access_control_list" \
+aliyun milvus post "/webapi/milvus/describe_access_control_list" \
   --RegionId cn-hangzhou \
   --InstanceId c-xxx \
   --force
 
 # Enable public network access and set whitelist
-aliyun milvus POST "/webapi/network/updatePublicNetworkStatus" \
+aliyun milvus post "/webapi/network/updatePublicNetworkStatus" \
   --RegionId cn-hangzhou \
   --InstanceId c-xxx \
   --ComponentType Proxy \
@@ -100,7 +100,7 @@ aliyun milvus POST "/webapi/network/updatePublicNetworkStatus" \
   --force
 
 # ⚠️ Disable public network access (confirm no external services depend on public network address before operation)
-aliyun milvus POST "/webapi/network/updatePublicNetworkStatus" \
+aliyun milvus post "/webapi/network/updatePublicNetworkStatus" \
   --RegionId cn-hangzhou \
   --InstanceId c-xxx \
   --ComponentType Proxy \
@@ -112,13 +112,13 @@ aliyun milvus POST "/webapi/network/updatePublicNetworkStatus" \
 
 ```bash
 # View current whitelist
-aliyun milvus POST "/webapi/milvus/describe_access_control_list" \
+aliyun milvus post "/webapi/milvus/describe_access_control_list" \
   --RegionId cn-hangzhou \
   --InstanceId c-xxx \
   --force
 
 # Update whitelist (AclId required, first obtain via DescribeAccessControlList)
-aliyun milvus POST "/webapi/milvus/update_access_control_list" \
+aliyun milvus post "/webapi/milvus/update_access_control_list" \
   --RegionId cn-hangzhou \
   --InstanceId c-xxx \
   --AclId acl-xxx \
@@ -130,7 +130,7 @@ aliyun milvus POST "/webapi/milvus/update_access_control_list" \
 
 ```bash
 # Transfer instance to target resource group
-aliyun milvus POST "/webapi/resourceGroup/change" \
+aliyun milvus post "/webapi/resourceGroup/change" \
   --RegionId cn-hangzhou \
   --NewResourceGroupId rg-xxx \
   --ResourceId c-xxx \
@@ -143,13 +143,13 @@ aliyun milvus POST "/webapi/resourceGroup/change" \
 
 ```bash
 # View instance status and error info
-aliyun milvus GET "/webapi/instance/get?RegionId=cn-hangzhou&instanceId=c-xxx" \
+aliyun milvus get "/webapi/instance/get?RegionId=cn-hangzhou&instanceId=c-xxx" \
   --RegionId cn-hangzhou --force
 ```
 
 | Common Reason | Troubleshooting Method |
 |---------------|------------------------|
-| VPC/VSwitch doesn't exist or not in same availability zone | `aliyun vpc DescribeVSwitches --RegionId cn-hangzhou --VpcId vpc-xxx` to confirm |
+| VPC/VSwitch doesn't exist or not in same availability zone | `aliyun vpc describe-vswitches --RegionId cn-hangzhou --VpcId vpc-xxx` to confirm |
 | VSwitch available IP exhausted | Check `AvailableIpAddressCount` field |
 | RAM permission insufficient | Confirm AccessKey has `milvus:CreateInstance` permission |
 | Account balance insufficient | Recharge and retry |
@@ -162,11 +162,11 @@ aliyun milvus GET "/webapi/instance/get?RegionId=cn-hangzhou&instanceId=c-xxx" \
 
 ```bash
 # 1. Confirm instance status
-aliyun milvus GET "/webapi/instance/get?RegionId=cn-hangzhou&instanceId=c-xxx" \
+aliyun milvus get "/webapi/instance/get?RegionId=cn-hangzhou&instanceId=c-xxx" \
   --RegionId cn-hangzhou --force
 
 # 2. Get connection address
-aliyun milvus POST "/webapi/cluster/detail" \
+aliyun milvus post "/webapi/cluster/detail" \
   --RegionId cn-hangzhou \
   --InstanceId c-xxx \
   --force

@@ -34,6 +34,7 @@ Calling method: `RegionId` must be placed in both **URL query string** (`?Region
 | `ha` | Boolean | `false`=standalone, `true`=cluster |
 | `components` | Array | Component config list, see structure description |
 | `dbAdminPassword` | String | Admin password |
+| `aiFunction` | Boolean | Enable AI embedding functions (auto `true` when `dbVersion` is `2.6`) |
 
 **CLI flag**:
 - `--RegionId`: Region ID (required)
@@ -61,7 +62,7 @@ When creating cluster instances, each component has **minimum CU requirements**:
 When `ha=false` creates standalone version, component type is `standalone_pro`:
 
 ```bash
-aliyun milvus POST "/webapi/instance/create?RegionId=cn-hangzhou" \
+aliyun milvus post "/webapi/instance/create?RegionId=cn-hangzhou" \
   --RegionId cn-hangzhou \
   --body '{
     "regionId": "cn-hangzhou",
@@ -73,7 +74,8 @@ aliyun milvus POST "/webapi/instance/create?RegionId=cn-hangzhou" \
     "paymentType": "PayAsYouGo",
     "ha": false,
     "components": [{"type":"standalone_pro","replica":1,"cuNum":4,"cuType":"general"}],
-    "dbAdminPassword": "YourPassword@123"
+    "dbAdminPassword": "YourPassword@123",
+    "aiFunction": true
   }' \
   --force
 ```
@@ -92,7 +94,7 @@ aliyun milvus POST "/webapi/instance/create?RegionId=cn-hangzhou" \
 When `ha=true` creates cluster version, need to configure 5 components:
 
 ```bash
-aliyun milvus POST "/webapi/instance/create?RegionId=cn-hangzhou" \
+aliyun milvus post "/webapi/instance/create?RegionId=cn-hangzhou" \
   --RegionId cn-hangzhou \
   --body '{
     "regionId": "cn-hangzhou",
@@ -111,7 +113,8 @@ aliyun milvus POST "/webapi/instance/create?RegionId=cn-hangzhou" \
       {"type":"query",           "replica":2,"cuNum":4,"cuType":"general","diskSizeType":"Normal"}
     ],
     "dbAdminPassword": "YourPassword@123",
-    "autoBackup": true
+    "autoBackup": true,
+    "aiFunction": true
   }' \
   --force
 ```
@@ -175,10 +178,10 @@ Before creating instance, query available network resources:
 
 ```bash
 # List VPCs
-aliyun vpc DescribeVpcs --RegionId cn-hangzhou
+aliyun vpc describe-vpcs --RegionId cn-hangzhou
 
 # List VSwitches (includes availability zone and available IP count)
-aliyun vpc DescribeVSwitches --RegionId cn-hangzhou --VpcId vpc-xxx
+aliyun vpc describe-vswitches --RegionId cn-hangzhou --VpcId vpc-xxx
 ```
 
 ## Payment and High Availability

@@ -23,10 +23,10 @@ Creating Milvus instance requires VPC and VSwitch. **Before execution confirm Re
 
 ```bash
 # Check if available VPC exists
-aliyun vpc DescribeVpcs --RegionId <RegionId>
+aliyun vpc describe-vpcs --RegionId <RegionId>
 
 # Check if VSwitch exists under VPC, record ZoneId
-aliyun vpc DescribeVSwitches --RegionId <RegionId> --VpcId vpc-xxx
+aliyun vpc describe-vswitches --RegionId <RegionId> --VpcId vpc-xxx
 ```
 
 > **Don't have these resources?** Please first create VPC and VSwitch via Alibaba Cloud console or CLI.
@@ -43,7 +43,7 @@ Record the following info, will be used when creating instance:
 Below creates a **standalone version (standalone_pro)** minimal instance, 4 CU, pay-as-you-go:
 
 ```bash
-aliyun milvus POST "/webapi/instance/create?RegionId=cn-hangzhou" \
+aliyun milvus post "/webapi/instance/create?RegionId=cn-hangzhou" \
   --RegionId cn-hangzhou \
   --body '{
     "regionId": "cn-hangzhou",
@@ -57,6 +57,7 @@ aliyun milvus POST "/webapi/instance/create?RegionId=cn-hangzhou" \
     "components": [{"type":"standalone_pro","replica":1,"cuNum":4,"cuType":"general"}],
     "dbAdminPassword": "YourPassword@123",
     "autoBackup": true,
+    "aiFunction": true,
     "encrypted": false,
     "isMultiAzStorage": false,
     "multiZoneMode": "single"
@@ -74,7 +75,7 @@ Instance creation is async operation, usually takes 5-15 minutes.
 
 ```bash
 # View instance status
-aliyun milvus GET "/webapi/instance/get?RegionId=cn-hangzhou&instanceId=c-xxx" \
+aliyun milvus get "/webapi/instance/get?RegionId=cn-hangzhou&instanceId=c-xxx" \
   --RegionId cn-hangzhou --force
 ```
 
@@ -87,7 +88,7 @@ Wait until `status` becomes `running` to indicate instance ready.
 After instance ready, view connection address and component details:
 
 ```bash
-aliyun milvus POST "/webapi/cluster/detail" \
+aliyun milvus post "/webapi/cluster/detail" \
   --RegionId cn-hangzhou \
   --InstanceId c-xxx \
   --force
@@ -109,23 +110,13 @@ connections.connect(host="c-xxx.milvus.aliyuncs.com", port=19530, user="root", p
 
 ```bash
 # View all instances under current region
-aliyun milvus GET "/webapi/instance/list?RegionId=cn-hangzhou&pageSize=50" \
+aliyun milvus get "/webapi/instance/list?RegionId=cn-hangzhou&pageSize=50" \
   --RegionId cn-hangzhou --force
 ```
 
 ## Cleanup: Release Test Instance
 
-Release promptly after use to avoid ongoing billing:
-
-```bash
-# First confirm instance info
-aliyun milvus GET "/webapi/instance/get?RegionId=cn-hangzhou&instanceId=c-xxx" \
-  --RegionId cn-hangzhou --force
-
-# ⚠️ Release instance (irreversible, all data will be deleted)
-aliyun milvus DELETE "/webapi/instance/delete?RegionId=cn-hangzhou&instanceId=c-xxx" \
-  --RegionId cn-hangzhou --force
-```
+> 🚫 **Instance deletion is NOT available through this Skill.** To release/delete a test instance, please go to the [Alibaba Cloud Milvus Console](https://milvus.console.aliyun.com/#/overview). Release promptly after use to avoid ongoing billing.
 
 ## Common Creation Failure Reasons
 

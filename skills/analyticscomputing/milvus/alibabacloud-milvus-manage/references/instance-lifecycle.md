@@ -6,7 +6,7 @@
 - [2. Creation Phase](#2-creation-phase): Dev/test / Production cluster / Custom component three templates
 - [3. Query and Monitoring](#3-query-and-monitoring): Instance list, details, state machine
 - [4. Scaling and Management](#4-scaling-and-management): Scale up/down, rename
-- [5. Release Instance](#5-release-instance): Release checklist, execute release
+- [5. Release Instance](#5-release-instance): Console only (not available via Skill)
 
 ## 1. Planning Phase
 
@@ -28,13 +28,13 @@ Before creation confirm target RegionId, check network resources. **Before execu
 export ALIBABA_CLOUD_USER_AGENT="AlibabaCloud-Agent-Skills"
 
 # List available VPCs
-aliyun vpc DescribeVpcs --RegionId cn-hangzhou
+aliyun vpc describe-vpcs --RegionId cn-hangzhou
 
 # List VSwitches under VPC (record ZoneId and available IP count)
-aliyun vpc DescribeVSwitches --RegionId cn-hangzhou --VpcId vpc-xxx
+aliyun vpc describe-vswitches --RegionId cn-hangzhou --VpcId vpc-xxx
 
 # List security groups (for reference only, CreateInstance doesn't require passing security group)
-aliyun ecs DescribeSecurityGroups --RegionId cn-hangzhou --VpcId vpc-xxx
+aliyun ecs describe-security-groups --RegionId cn-hangzhou --VpcId vpc-xxx
 ```
 
 **Recommended Practice**: List VPC → User selects → List VSwitches → User selects → Create instance.
@@ -55,7 +55,7 @@ For multi-AZ scenarios select one VSwitch in each of different availability zone
 Standalone + pay-as-you-go + 4 CU, suitable for feature verification and dev debugging.
 
 ```bash
-aliyun milvus POST "/webapi/instance/create?RegionId=cn-hangzhou" \
+aliyun milvus post "/webapi/instance/create?RegionId=cn-hangzhou" \
   --RegionId cn-hangzhou \
   --body '{
     "regionId": "cn-hangzhou",
@@ -69,6 +69,7 @@ aliyun milvus POST "/webapi/instance/create?RegionId=cn-hangzhou" \
     "components": [{"type":"standalone_pro","replica":1,"cuNum":4,"cuType":"general"}],
     "dbAdminPassword": "YourPassword@123",
     "autoBackup": true,
+    "aiFunction": true,
     "encrypted": false,
     "isMultiAzStorage": false,
     "multiZoneMode": "single"
@@ -83,7 +84,7 @@ Cluster + 5-component distributed deployment, suitable for production environmen
 ⚠️ **Note**: streaming, data, mix_coordinator, query minimum 4 CU.
 
 ```bash
-aliyun milvus POST "/webapi/instance/create?RegionId=cn-hangzhou" \
+aliyun milvus post "/webapi/instance/create?RegionId=cn-hangzhou" \
   --RegionId cn-hangzhou \
   --body '{
     "regionId": "cn-hangzhou",
@@ -103,6 +104,7 @@ aliyun milvus POST "/webapi/instance/create?RegionId=cn-hangzhou" \
     ],
     "dbAdminPassword": "YourPassword@123",
     "autoBackup": true,
+    "aiFunction": true,
     "encrypted": false,
     "isMultiAzStorage": false,
     "multiZoneMode": "single"
@@ -117,7 +119,7 @@ Total CU = 4×2 + 4×2 + 2×2 + 4×2 + 4×2 = **36 CU**
 Suitable for search-intensive scenarios, QueryNode uses cap type large memory, dual-AZ high-availability storage.
 
 ```bash
-aliyun milvus POST "/webapi/instance/create?RegionId=cn-hangzhou" \
+aliyun milvus post "/webapi/instance/create?RegionId=cn-hangzhou" \
   --RegionId cn-hangzhou \
   --body '{
     "regionId": "cn-hangzhou",
@@ -140,6 +142,7 @@ aliyun milvus POST "/webapi/instance/create?RegionId=cn-hangzhou" \
     ],
     "dbAdminPassword": "YourPassword@123",
     "autoBackup": true,
+    "aiFunction": true,
     "isMultiAzStorage": true,
     "multiZoneMode": "Active-Active"
   }' \
@@ -153,7 +156,7 @@ aliyun milvus POST "/webapi/instance/create?RegionId=cn-hangzhou" \
 ### Instance List
 
 ```bash
-aliyun milvus GET "/webapi/instance/list?RegionId=cn-hangzhou&pageSize=50" \
+aliyun milvus get "/webapi/instance/list?RegionId=cn-hangzhou&pageSize=50" \
   --RegionId cn-hangzhou --force
 ```
 
@@ -162,7 +165,7 @@ aliyun milvus GET "/webapi/instance/list?RegionId=cn-hangzhou&pageSize=50" \
 ### Instance Basic Info
 
 ```bash
-aliyun milvus GET "/webapi/instance/get?RegionId=cn-hangzhou&instanceId=c-xxx" \
+aliyun milvus get "/webapi/instance/get?RegionId=cn-hangzhou&instanceId=c-xxx" \
   --RegionId cn-hangzhou --force
 ```
 
@@ -171,7 +174,7 @@ Focus on return fields: `instanceId`, `instanceName`, `status`, `dbVersion`, `ha
 ### Instance Details (Component Specs, Connection Addresses, Storage Usage)
 
 ```bash
-aliyun milvus POST "/webapi/cluster/detail" \
+aliyun milvus post "/webapi/cluster/detail" \
   --RegionId cn-hangzhou \
   --InstanceId c-xxx \
   --force
@@ -206,13 +209,13 @@ Adjust component CU count or replica count via UpdateInstance. Before scaling us
 
 ```bash
 # 1. View current component specs
-aliyun milvus POST "/webapi/cluster/detail" \
+aliyun milvus post "/webapi/cluster/detail" \
   --RegionId cn-hangzhou \
   --InstanceId c-xxx \
   --force
 
 # 2. Scale up query component to 3 replicas × 8 CU
-aliyun milvus PUT "/webapi/instance/update?RegionId=cn-hangzhou" \
+aliyun milvus put "/webapi/instance/update?RegionId=cn-hangzhou" \
   --RegionId cn-hangzhou \
   --body '{
     "instanceId": "c-xxx",
@@ -232,7 +235,7 @@ aliyun milvus PUT "/webapi/instance/update?RegionId=cn-hangzhou" \
 ### Modify Instance Name
 
 ```bash
-aliyun milvus POST "/webapi/cluster/update_name" \
+aliyun milvus post "/webapi/cluster/update_name" \
   --RegionId cn-hangzhou \
   --InstanceId c-xxx \
   --ClusterName new-name \
@@ -241,26 +244,13 @@ aliyun milvus POST "/webapi/cluster/update_name" \
 
 ## 5. Release Instance
 
-### Release Checklist
+> 🚫 **Instance deletion is NOT available through this Skill.** To release/delete a Milvus instance, please use the [Alibaba Cloud Milvus Console](https://milvus.console.aliyun.com/#/overview).
+
+### Before Releasing (Checklist)
 
 1. **Data Backup**: Confirm important data backed up (Collection data, indexes)
-2. **Confirm Payment Type**: Subscription instances cannot be released via API
-3. **Confirm Dependencies**: No other services depend on this instance's connection address
-4. **Instance Status**: Confirm instance status is running
-
-### Execute Release
-
-```bash
-# 1. First view instance status and payment type
-aliyun milvus GET "/webapi/instance/get?RegionId=cn-hangzhou&instanceId=c-xxx" \
-  --RegionId cn-hangzhou --force
-
-# 2. ⚠️ Release instance (irreversible! All data will be permanently deleted)
-aliyun milvus DELETE "/webapi/instance/delete?RegionId=cn-hangzhou&instanceId=c-xxx" \
-  --RegionId cn-hangzhou --force
-```
-
-> **Annual/Monthly Instances**: Cannot be released directly via API, need to request refund in Alibaba Cloud console to release.
+2. **Confirm Dependencies**: No other services depend on this instance's connection address
+3. **Instance Status**: Confirm instance status is running
 
 ## Related Documentation
 
