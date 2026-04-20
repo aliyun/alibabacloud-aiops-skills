@@ -27,6 +27,18 @@ Main features:
 >
 > This skill uses Alibaba Cloud CLI to call RdsAi OpenAPI. You need to install and configure Alibaba Cloud CLI first.
 
+**Pre-check: Aliyun CLI >= 3.3.3 required**
+> Run `aliyun version` to verify >= 3.3.3. If not installed or version too low,
+> run `curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash` to update,
+> or see `references/cli-installation-guide.md` for installation instructions.
+
+**Pre-check: Aliyun CLI plugin update required**
+> [MUST] run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+> [MUST] run `aliyun plugin update` to ensure that any existing plugins are always up-to-date.
+
+**[MUST] CLI User-Agent** — Every `aliyun` CLI command invocation must include:
+`--user-agent AlibabaCloud-Agent-Skills/alibabacloud-rds-copilot`
+
 ### macOS Installation
 
 ```bash
@@ -97,7 +109,7 @@ aliyun rdsai chat-messages \
   --inputs RegionId=<region ID> Language=<language> Timezone=<timezone> [CustomAgentId=<custom agent ID>] \
   --event-mode separate \
   --endpoint rdsai.aliyuncs.com \
-  --user-agent 'AlibabaCloud-Agent-Skills' \
+  --user-agent 'AlibabaCloud-Agent-Skills/alibabacloud-rds-copilot' \
   [--conversation-id '<conversation ID>']
 ```
 
@@ -119,7 +131,7 @@ aliyun rdsai chat-messages \
 | `--conversation-id` | Optional | Conversation ID for multi-turn dialogue | None |
 | `--region` | Optional | Region for API call | Credential default region |
 | `--profile` | Optional | Specify credential profile name | Default profile |
-| `--user-agent` | Required | Custom User-Agent | `AlibabaCloud-Agent-Skills` |
+| `--user-agent` | Required | Custom User-Agent | `AlibabaCloud-Agent-Skills/alibabacloud-rds-copilot` |
 
 ---
 
@@ -134,6 +146,18 @@ This skill requires the following RAM permissions. See [references/ram-policies.
 ---
 
 ## Core Workflow
+
+### 0. Enable AI-Mode (Before Executing Any CLI Command)
+
+Before executing any `aliyun` CLI command, you **must** enable AI-Mode and set the User-Agent:
+
+```bash
+# [MUST] Enable AI-Mode before any CLI command execution
+aliyun configure ai-mode enable
+
+# [MUST] Set User-Agent for AI-Mode
+aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-rds-copilot"
+```
 
 ### 1. Confirm Task Type and Parameters
 
@@ -156,7 +180,7 @@ aliyun rdsai chat-messages \
   --inputs RegionId=cn-hangzhou Language=zh-CN Timezone=Asia/Shanghai \
   --event-mode separate \
   --endpoint rdsai.aliyuncs.com \
-  --user-agent 'AlibabaCloud-Agent-Skills'
+  --user-agent 'AlibabaCloud-Agent-Skills/alibabacloud-rds-copilot'
 
 # Troubleshooting example
 aliyun rdsai chat-messages \
@@ -164,7 +188,7 @@ aliyun rdsai chat-messages \
   --inputs RegionId=cn-hangzhou Language=zh-CN Timezone=Asia/Shanghai \
   --event-mode separate \
   --endpoint rdsai.aliyuncs.com \
-  --user-agent 'AlibabaCloud-Agent-Skills'
+  --user-agent 'AlibabaCloud-Agent-Skills/alibabacloud-rds-copilot'
 
 # Query with Beijing region
 aliyun rdsai chat-messages \
@@ -172,7 +196,7 @@ aliyun rdsai chat-messages \
   --inputs RegionId=cn-beijing Language=zh-CN Timezone=Asia/Shanghai \
   --event-mode separate \
   --endpoint rdsai.aliyuncs.com \
-  --user-agent 'AlibabaCloud-Agent-Skills'
+  --user-agent 'AlibabaCloud-Agent-Skills/alibabacloud-rds-copilot'
 
 # Multi-turn dialogue (using ConversationId from previous response)
 aliyun rdsai chat-messages \
@@ -181,7 +205,7 @@ aliyun rdsai chat-messages \
   --inputs RegionId=cn-hangzhou Language=zh-CN Timezone=Asia/Shanghai \
   --event-mode separate \
   --endpoint rdsai.aliyuncs.com \
-  --user-agent 'AlibabaCloud-Agent-Skills'
+  --user-agent 'AlibabaCloud-Agent-Skills/alibabacloud-rds-copilot'
 
 # Using custom Agent
 aliyun rdsai chat-messages \
@@ -189,7 +213,7 @@ aliyun rdsai chat-messages \
   --inputs RegionId=cn-hangzhou Language=zh-CN Timezone=Asia/Shanghai CustomAgentId=your-custom-agent-id \
   --event-mode separate \
   --endpoint rdsai.aliyuncs.com \
-  --user-agent 'AlibabaCloud-Agent-Skills'
+  --user-agent 'AlibabaCloud-Agent-Skills/alibabacloud-rds-copilot'
 ```
 
 ### 3. Parse Results and Follow-up Processing
@@ -199,6 +223,17 @@ aliyun rdsai chat-messages \
   - Avoid executing high-risk statements directly in production (e.g., large table `DELETE` / `UPDATE` / schema changes)
   - Recommend validating in test environment or adding backup/condition restrictions
 - If continuing the conversation, record the `ConversationId` from the response for the next query
+
+---
+
+### 4. Disable AI-Mode (After Workflow Ends)
+
+After the workflow is complete, you **must** disable AI-Mode:
+
+```bash
+# [MUST] Disable AI-Mode after workflow ends
+aliyun configure ai-mode disable
+```
 
 ---
 

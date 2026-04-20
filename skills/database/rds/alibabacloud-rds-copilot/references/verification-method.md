@@ -10,7 +10,7 @@ This document describes how to verify that the RDS Copilot skill is correctly co
 aliyun version
 ```
 
-**Expected Result**: Outputs CLI version number, e.g., `3.0.277`
+**Expected Result**: Outputs CLI version number, e.g., `3.3.3` (must be >= 3.3.3)
 
 **If not installed**:
 
@@ -56,7 +56,7 @@ aliyun rdsai chat-messages \
   --inputs RegionId=cn-hangzhou Language=zh-CN Timezone=Asia/Shanghai \
   --event-mode separate \
   --endpoint rdsai.aliyuncs.com \
-  --user-agent 'AlibabaCloud-Agent-Skills'
+  --user-agent 'AlibabaCloud-Agent-Skills/alibabacloud-rds-copilot'
 ```
 
 **Expected Result**:
@@ -80,7 +80,7 @@ aliyun rdsai chat-messages \
   --inputs RegionId=cn-hangzhou Language=zh-CN Timezone=Asia/Shanghai \
   --event-mode separate \
   --endpoint rdsai.aliyuncs.com \
-  --user-agent 'AlibabaCloud-Agent-Skills'
+  --user-agent 'AlibabaCloud-Agent-Skills/alibabacloud-rds-copilot'
 ```
 
 **Expected Result**: Returns response with troubleshooting recommendations
@@ -93,7 +93,7 @@ aliyun rdsai chat-messages \
   --inputs RegionId=cn-beijing Language=zh-CN Timezone=Asia/Shanghai \
   --event-mode separate \
   --endpoint rdsai.aliyuncs.com \
-  --user-agent 'AlibabaCloud-Agent-Skills'
+  --user-agent 'AlibabaCloud-Agent-Skills/alibabacloud-rds-copilot'
 ```
 
 **Expected Result**: Returns query results related to Beijing region
@@ -107,7 +107,7 @@ RESULT=$(aliyun rdsai chat-messages \
   --inputs RegionId=cn-hangzhou Language=zh-CN Timezone=Asia/Shanghai \
   --event-mode separate \
   --endpoint rdsai.aliyuncs.com \
-  --user-agent 'AlibabaCloud-Agent-Skills' 2>&1)
+  --user-agent 'AlibabaCloud-Agent-Skills/alibabacloud-rds-copilot' 2>&1)
 echo "$RESULT"
 
 # Extract ConversationId
@@ -121,7 +121,7 @@ aliyun rdsai chat-messages \
   --inputs RegionId=cn-hangzhou Language=zh-CN Timezone=Asia/Shanghai \
   --event-mode separate \
   --endpoint rdsai.aliyuncs.com \
-  --user-agent 'AlibabaCloud-Agent-Skills'
+  --user-agent 'AlibabaCloud-Agent-Skills/alibabacloud-rds-copilot'
 ```
 
 **Expected Result**: Second turn understands context and provides recommendations related to first turn
@@ -137,7 +137,7 @@ aliyun rdsai chat-messages \
   --inputs RegionId=cn-hangzhou Language=zh-CN Timezone=Asia/Shanghai \
   --event-mode separate \
   --endpoint rdsai.aliyuncs.com \
-  --user-agent 'AlibabaCloud-Agent-Skills' \
+  --user-agent 'AlibabaCloud-Agent-Skills/alibabacloud-rds-copilot' \
   --profile nonexistent
 ```
 
@@ -185,6 +185,6 @@ aliyun rdsai chat-messages \
   --inputs RegionId=cn-hangzhou Language=zh-CN Timezone=Asia/Shanghai \
   --event-mode separate \
   --endpoint rdsai.aliyuncs.com \
-  --user-agent 'AlibabaCloud-Agent-Skills' \
+  --user-agent 'AlibabaCloud-Agent-Skills/alibabacloud-rds-copilot' \
   --dryrun
 ```
