@@ -15,7 +15,7 @@ aliyun configure list
 ## 2. Verify Plugin Installation
 
 ```bash
-aliyun pai-dsw --help --user-agent AlibabaCloud-Agent-Skills
+aliyun pai-dsw --help --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dsw-manage
 ```
 
 **Expected**: Help output listing available `pai-dsw` subcommands.
@@ -27,7 +27,7 @@ aliyun pai-dsw --help --user-agent AlibabaCloud-Agent-Skills
 ```bash
 aliyun aiworkspace list-workspaces \
   --region <region> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dsw-manage
 ```
 
 **Success criteria**:
@@ -47,14 +47,14 @@ aliyun pai-dsw list-ecs-specs \
   --region <region> \
   --page-number 1 \
   --page-size 5 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dsw-manage
 
 aliyun pai-dsw list-ecs-specs \
   --accelerator-type GPU \
   --region <region> \
   --page-number 1 \
   --page-size 5 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dsw-manage
 ```
 
 **Success criteria**:
@@ -80,7 +80,7 @@ See SKILL.md Section 2.1 for check-then-act pattern and decision logic.
 ```bash
 aliyun pai-dsw list-instances \
   --instance-name <your-instance-name> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dsw-manage
 ```
 
 **Success criteria**:
@@ -98,7 +98,7 @@ aliyun pai-dsw list-instances \
 aliyun pai-dsw get-instance \
   --instance-id <instance-id> \
   --read-timeout 30 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dsw-manage
 ```
 
 **Key fields**:
@@ -117,7 +117,7 @@ aliyun pai-dsw get-instance \
 ```bash
 aliyun pai-dsw get-instance \
   --instance-id <instance-id> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dsw-manage
 ```
 
 **Success criteria**:
@@ -132,7 +132,7 @@ aliyun pai-dsw get-instance \
 aliyun pai-dsw list-instances \
   --page-number 1 \
   --page-size 10 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dsw-manage
 ```
 
 **Success criteria**:
@@ -147,7 +147,7 @@ aliyun pai-dsw list-instances \
 ```bash
 aliyun pai-dsw get-instance \
   --instance-id <instance-id> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dsw-manage
 ```
 
 **Success criteria**:
@@ -161,7 +161,7 @@ aliyun pai-dsw get-instance \
 ```bash
 aliyun pai-dsw get-instance \
   --instance-id <instance-id> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dsw-manage
 ```
 
 **Success criteria**:

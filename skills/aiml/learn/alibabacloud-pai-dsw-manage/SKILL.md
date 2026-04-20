@@ -17,25 +17,35 @@ Manage the full lifecycle of Alibaba Cloud PAI DSW (Data Science Workshop) insta
 
 ## Installation
 
-> **Pre-check: Aliyun CLI >= 3.3.1 required**
+> **Pre-check: Aliyun CLI >= 3.3.3 required**
 >
-> Run `aliyun version` to verify the version is 3.3.1 or higher. If not installed or the version is too low, see [`references/cli-installation-guide.md`](references/cli-installation-guide.md) for installation instructions.
->
-> **[MUST]** Then run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+> Run `aliyun version` to verify >= 3.3.3. If not installed or version too low,
+> run `curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash` to update,
+> or see [`references/cli-installation-guide.md`](references/cli-installation-guide.md) for installation instructions.
+
+> **Pre-check: Aliyun CLI plugin update required**
+> [MUST] run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+> [MUST] run `aliyun plugin update` to ensure that any existing plugins are always up-to-date.
 
 ```bash
 # macOS (recommended)
 brew install aliyun-cli
 
-# Verify version
+# Verify version (>= 3.3.3)
 aliyun version
 
 # Enable automatic plugin installation
 aliyun configure set --auto-plugin-install true
 
+# Update existing plugins
+aliyun plugin update
+
 # Install pai-dsw plugin
 aliyun plugin install --names pai-dsw
 ```
+
+**[MUST] CLI User-Agent** — Every `aliyun` CLI command invocation must include:
+`--user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dsw-manage`
 
 ---
 
@@ -96,7 +106,7 @@ See [`references/ram-policies.md`](references/ram-policies.md) for the complete 
 
 > **How to get WorkspaceId**: If the user doesn't know their workspace ID, run:
 > ```bash
-> aliyun aiworkspace list-workspaces --region <region> --user-agent AlibabaCloud-Agent-Skills
+> aliyun aiworkspace list-workspaces --region <region> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dsw-manage
 > ```
 > This returns all workspaces the user has access to. Select the appropriate one based on `WorkspaceName` or ask the user to confirm.
 >
@@ -107,8 +117,6 @@ See [`references/ram-policies.md`](references/ram-policies.md) for the complete 
 ## Core Workflow
 
 > Full command syntax and parameter details: [`references/related-commands.md`](references/related-commands.md).
->
-> Every `aliyun` CLI command **must** include `--user-agent AlibabaCloud-Agent-Skills`.
 
 ### 1. Query Available ECS Specs
 
@@ -153,7 +161,7 @@ aliyun pai-dsw list-instances \
   --instance-name <name> \
   --region <region> \
   --resource-id ALL \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dsw-manage
 ```
 
 **Decision logic**:
@@ -212,7 +220,7 @@ Run `aliyun pai-dsw create-instance` with required args: `--workspace-id`, `--in
 > 1. Return the `InstanceId` and current status (`Creating`) to the user immediately
 > 2. Provide the user with a command to check status later:
 >    ```bash
->    aliyun pai-dsw get-instance --instance-id <instance-id> --user-agent AlibabaCloud-Agent-Skills
+>    aliyun pai-dsw get-instance --instance-id <instance-id> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dsw-manage
 >    ```
 > 3. Inform the user that instance startup typically takes 2–5 minutes
 >
@@ -234,7 +242,7 @@ Run `aliyun pai-dsw get-instance --instance-id <id>` to check instance status an
 >
 > **CLI timeout**: For long-running operations, increase read timeout:
 > ```bash
-> aliyun pai-dsw get-instance --instance-id <id> --read-timeout 30 --user-agent AlibabaCloud-Agent-Skills
+> aliyun pai-dsw get-instance --instance-id <id> --read-timeout 30 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dsw-manage
 > ```
 >
 > Once `Status == "Running"`, access the instance via `InstanceUrl`.

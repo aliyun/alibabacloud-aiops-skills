@@ -2,7 +2,7 @@
 
 All PAI DSW instance management commands in plugin mode (kebab-case).
 
-> Every command must include `--user-agent AlibabaCloud-Agent-Skills`
+> Every command must include `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dsw-manage`
 
 ## Workspace Commands
 
@@ -14,13 +14,13 @@ All PAI DSW instance management commands in plugin mode (kebab-case).
 # List all workspaces in a region
 aliyun aiworkspace list-workspaces \
   --region <region> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dsw-manage
 
 # With verbose output (shows full details)
 aliyun aiworkspace list-workspaces \
   --region <region> \
   --verbose true \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dsw-manage
 ```
 
 > See SKILL.md "Parameter Confirmation" for WorkspaceId requirements.
@@ -55,7 +55,7 @@ aliyun pai-dsw list-instances \
   --instance-name <instance-name> \
   --region <region> \
   --resource-id ALL \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dsw-manage
 ```
 
 ---
@@ -71,7 +71,7 @@ aliyun pai-dsw create-instance \
   --image-url <image-url> \
   --region <region> \
   --accessibility PRIVATE \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dsw-manage
 
 # With image ID
 aliyun pai-dsw create-instance \
@@ -81,7 +81,7 @@ aliyun pai-dsw create-instance \
   --image-id <image-id> \
   --region <region> \
   --accessibility PRIVATE \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dsw-manage
 
 # With VPC configuration
 aliyun pai-dsw create-instance \
@@ -92,7 +92,7 @@ aliyun pai-dsw create-instance \
   --region <region> \
   --user-vpc '{"VpcId":"<vpc-id>","VSwitchId":"<vswitch-id>","SecurityGroupId":"<sg-id>","ExtendedCIDRs":["<cidr>"]}' \
   --accessibility PRIVATE \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dsw-manage
 
 # With dataset mounts
 aliyun pai-dsw create-instance \
@@ -102,7 +102,7 @@ aliyun pai-dsw create-instance \
   --image-url <image-url> \
   --region <region> \
   --datasets DatasetId=<dataset-id> MountPath=/mnt/data MountAccess=RO \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dsw-manage
 ```
 
 > See SKILL.md for parameter requirements (Region, Dataset confirmation, etc.).
@@ -124,20 +124,20 @@ aliyun pai-dsw create-instance \
 aliyun pai-dsw update-instance \
   --instance-id <instance-id> \
   --instance-name <new-name> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dsw-manage
 
 # Change image
 aliyun pai-dsw update-instance \
   --instance-id <instance-id> \
   --image-id <new-image-id> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dsw-manage
 
 # Change compute spec and auto-start after update
 aliyun pai-dsw update-instance \
   --instance-id <instance-id> \
   --ecs-spec <new-ecs-spec> \
   --start-instance true \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dsw-manage
 ```
 
 ---
@@ -147,7 +147,7 @@ aliyun pai-dsw update-instance \
 ```bash
 aliyun pai-dsw get-instance \
   --instance-id <instance-id> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dsw-manage
 ```
 
 ---
@@ -157,12 +157,12 @@ aliyun pai-dsw get-instance \
 ```bash
 # All instances
 aliyun pai-dsw list-instances \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dsw-manage
 
 # Filter by status
 aliyun pai-dsw list-instances \
   --status Running \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dsw-manage
 
 # By workspace, paginated with sorting
 # Note: --sort-by and --order must be used together
@@ -173,13 +173,13 @@ aliyun pai-dsw list-instances \
   --page-size 20 \
   --sort-by GmtCreateTime \
   --order DESC \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dsw-manage
 
 # All workspaces, all billing types
 aliyun pai-dsw list-instances \
   --workspace-id ALL \
   --resource-id ALL \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dsw-manage
 ```
 
 **Sorting parameters**:
@@ -196,7 +196,7 @@ aliyun pai-dsw list-instances \
 ```bash
 aliyun pai-dsw start-instance \
   --instance-id <instance-id> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dsw-manage
 ```
 
 ---
@@ -206,7 +206,7 @@ aliyun pai-dsw start-instance \
 ```bash
 aliyun pai-dsw stop-instance \
   --instance-id <instance-id> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dsw-manage
 ```
 
 > To save the environment as a custom image, see SKILL.md Step 5.
@@ -227,13 +227,13 @@ aliyun pai-dsw stop-instance \
 aliyun pai-dsw list-ecs-specs \
   --accelerator-type CPU \
   --region <region> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dsw-manage
 
 # GPU specs in a specific region
 aliyun pai-dsw list-ecs-specs \
   --accelerator-type GPU \
   --region <region> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dsw-manage
 
 # Paginated with sort
 aliyun pai-dsw list-ecs-specs \
@@ -242,14 +242,14 @@ aliyun pai-dsw list-ecs-specs \
   --page-number 1 \
   --page-size 20 \
   --order ASC \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dsw-manage
 
 # Filter by resource type
 aliyun pai-dsw list-ecs-specs \
   --accelerator-type GPU \
   --region <region> \
   --resource-type ECS \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dsw-manage
 ```
 
 > See SKILL.md Step 1 for key response fields (`InstanceType`, `IsAvailable`, etc.).
