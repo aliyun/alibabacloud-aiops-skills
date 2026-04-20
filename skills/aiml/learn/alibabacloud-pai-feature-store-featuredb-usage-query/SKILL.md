@@ -25,11 +25,17 @@ description: |
 
 ## Installation
 
-> **Pre-check: Aliyun CLI >= 3.3.1 required**
+> **Pre-check: Aliyun CLI >= 3.3.3 required**
 >
-> Run `aliyun version` to verify >= 3.3.1. If not installed or version too low, see `references/cli-installation-guide.md` for installation instructions.
+> Run `aliyun version` to verify >= 3.3.3. If not installed or version too low,
+> run `curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash` to update,
+> or see `references/cli-installation-guide.md` for installation instructions.
 >
 > Then **[MUST]** run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+> **[MUST]** run `aliyun plugin update` to ensure that any existing plugins on your local machine are always up-to-date.
+
+**[MUST] CLI User-Agent** — Every `aliyun` CLI command invocation must include:
+`--user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-feature-store-featuredb-usage-query`
 
 The PAI-FeatureStore CLI plugin will be automatically installed when first used if auto-plugin-install is enabled.
 
@@ -128,7 +134,7 @@ Use descriptive names instead of function numbers when prompting, because "Funct
 aliyun paifeaturestore list-instances \
   --region <RegionId> \
   --status Running \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-feature-store-featuredb-usage-query
 ```
 
 **Expected Output**: A list of running instances with their InstanceIds.
@@ -149,19 +155,19 @@ aliyun paifeaturestore list-datasources \
   --instance-id <InstanceId> \
   --type FeatureDB \
   --workspace-id <WorkspaceId> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-feature-store-featuredb-usage-query
 ```
 
 **Case B: User provided DatasourceId**
 
-> **[MUST]** When user provides DatasourceId, you MUST call GetDatasource to verify the datasource type is `FeatureDB`. Do NOT skip this validation step.
+> **[MUST]** When user provides DatasourceId, you MUST call GetDatasource or ListDatasources to verify the datasource type is `FeatureDB`. Do NOT skip this validation step.
 
 ```bash
 aliyun paifeaturestore get-datasource \
   --region <RegionId> \
   --instance-id <InstanceId> \
   --datasource-id <DatasourceId> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-feature-store-featuredb-usage-query
 ```
 
 **Validation**: Check the `Type` field in the response. If `Type` is NOT `FeatureDB`, stop and inform the user that this datasource is not a FeatureDB datasource.
@@ -173,7 +179,7 @@ aliyun paifeaturestore list-datasources \
   --region <RegionId> \
   --instance-id <InstanceId> \
   --type FeatureDB \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-feature-store-featuredb-usage-query
 ```
 
 **Note**: This API is paginated. Calculate total pages from `TotalCount` and `PageSize`, then fetch all pages.
@@ -187,7 +193,7 @@ FIRST_RESPONSE=$(aliyun paifeaturestore list-datasources \
   --type FeatureDB \
   --page-number 1 \
   --page-size 10 \
-  --user-agent AlibabaCloud-Agent-Skills)
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-feature-store-featuredb-usage-query)
 
 # Extract TotalCount and calculate total pages
 # Then iterate through all pages
@@ -198,7 +204,7 @@ for page in {1..total_pages}; do
     --type FeatureDB \
     --page-number $page \
     --page-size 10 \
-    --user-agent AlibabaCloud-Agent-Skills
+    --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-feature-store-featuredb-usage-query
 done
 ```
 
@@ -239,7 +245,7 @@ aliyun paifeaturestore list-datasource-feature-views \
   --verbose false \
   --show-storage-usage false \
   --page-size 1 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-feature-store-featuredb-usage-query
 ```
 
 **Output**: Extract `TotalUsageStatistics` from the response.
@@ -260,7 +266,7 @@ aliyun paifeaturestore list-datasource-feature-views \
   --all true \
   --sort-by <ReadCount|WriteCount> \
   --order <ASC|DESC> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-feature-store-featuredb-usage-query
 ```
 
 **Output**: Extract `FeatureViews` array from the response.
@@ -280,7 +286,7 @@ aliyun paifeaturestore list-datasource-feature-views \
   --show-storage-usage false \
   --page-size 1 \
   --project-name <ProjectName> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-feature-store-featuredb-usage-query
 ```
 
 **Output**: Extract `TotalUsageStatistics` from the response.
@@ -304,7 +310,7 @@ aliyun paifeaturestore list-datasource-feature-views \
   --all true \
   --project-name <ProjectName> \
   --name <FeatureViewName> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-feature-store-featuredb-usage-query
 ```
 
 **Output**: Extract the matching feature view from the `FeatureViews` array.

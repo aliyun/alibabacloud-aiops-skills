@@ -23,7 +23,7 @@ The skill performs read-only query operations, so verification focuses on:
 aliyun paifeaturestore list-instances \
   --region <RegionId> \
   --status Running \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-feature-store-featuredb-usage-query
 ```
 
 **Success Criteria**:
@@ -38,7 +38,7 @@ aliyun paifeaturestore list-instances \
 RESPONSE=$(aliyun paifeaturestore list-instances \
   --region <RegionId> \
   --status Running \
-  --user-agent AlibabaCloud-Agent-Skills)
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-feature-store-featuredb-usage-query)
 
 # Verify response is valid JSON
 echo "$RESPONSE" | jq . > /dev/null 2>&1 && echo "✅ Valid JSON response" || echo "❌ Invalid JSON"
@@ -86,7 +86,7 @@ aliyun paifeaturestore list-datasources \
   --instance-id <InstanceId> \
   --type FeatureDB \
   --workspace-id <WorkspaceId> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-feature-store-featuredb-usage-query
 ```
 
 **Success Criteria**:
@@ -102,7 +102,7 @@ RESPONSE=$(aliyun paifeaturestore list-datasources \
   --instance-id <InstanceId> \
   --type FeatureDB \
   --workspace-id <WorkspaceId> \
-  --user-agent AlibabaCloud-Agent-Skills)
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-feature-store-featuredb-usage-query)
 
 # Verify all datasources are FeatureDB type
 FEATUREDB_COUNT=$(echo "$RESPONSE" | jq '[.Datasources[] | select(.Type=="FeatureDB")] | length')
@@ -122,7 +122,7 @@ aliyun paifeaturestore get-datasource \
   --region <RegionId> \
   --instance-id <InstanceId> \
   --datasource-id <DatasourceId> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-feature-store-featuredb-usage-query
 ```
 
 **Success Criteria**:
@@ -136,7 +136,7 @@ RESPONSE=$(aliyun paifeaturestore get-datasource \
   --region <RegionId> \
   --instance-id <InstanceId> \
   --datasource-id <DatasourceId> \
-  --user-agent AlibabaCloud-Agent-Skills)
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-feature-store-featuredb-usage-query)
 
 # Verify type is FeatureDB
 TYPE=$(echo "$RESPONSE" | jq -r '.Type')
@@ -158,7 +158,7 @@ FIRST_RESPONSE=$(aliyun paifeaturestore list-datasources \
   --type FeatureDB \
   --page-number 1 \
   --page-size 10 \
-  --user-agent AlibabaCloud-Agent-Skills)
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-feature-store-featuredb-usage-query)
 
 # Calculate total pages
 TOTAL_COUNT=$(echo "$FIRST_RESPONSE" | jq -r '.TotalCount')
@@ -177,7 +177,7 @@ for ((page=1; page<=TOTAL_PAGES; page++)); do
     --type FeatureDB \
     --page-number $page \
     --page-size 10 \
-    --user-agent AlibabaCloud-Agent-Skills
+    --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-feature-store-featuredb-usage-query
 done
 ```
 
@@ -203,7 +203,7 @@ aliyun paifeaturestore list-datasource-feature-views \
   --verbose false \
   --show-storage-usage false \
   --page-size 1 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-feature-store-featuredb-usage-query
 ```
 
 **Success Criteria**:
@@ -224,7 +224,7 @@ RESPONSE=$(aliyun paifeaturestore list-datasource-feature-views \
   --verbose false \
   --show-storage-usage false \
   --page-size 1 \
-  --user-agent AlibabaCloud-Agent-Skills)
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-feature-store-featuredb-usage-query)
 
 # Count daily records
 RECORD_COUNT=$(echo "$RESPONSE" | jq '.TotalUsageStatistics | length')
@@ -277,7 +277,7 @@ aliyun paifeaturestore list-datasource-feature-views \
   --all true \
   --sort-by ReadCount \
   --order DESC \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-feature-store-featuredb-usage-query
 ```
 
 **Success Criteria**:
@@ -300,7 +300,7 @@ RESPONSE=$(aliyun paifeaturestore list-datasource-feature-views \
   --all true \
   --sort-by ReadCount \
   --order DESC \
-  --user-agent AlibabaCloud-Agent-Skills)
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-feature-store-featuredb-usage-query)
 
 # Count feature views
 FV_COUNT=$(echo "$RESPONSE" | jq '.FeatureViews | length')
@@ -336,7 +336,7 @@ aliyun paifeaturestore list-datasource-feature-views \
   --show-storage-usage false \
   --page-size 1 \
   --project-name recommendation_system \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-feature-store-featuredb-usage-query
 ```
 
 **Success Criteria**:
@@ -356,7 +356,7 @@ RESPONSE=$(aliyun paifeaturestore list-datasource-feature-views \
   --show-storage-usage false \
   --page-size 1 \
   --project-name recommendation_system \
-  --user-agent AlibabaCloud-Agent-Skills)
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-feature-store-featuredb-usage-query)
 
 # Extract and display project usage
 echo "$RESPONSE" | jq '.TotalUsageStatistics[] | "\(.Date): \(.ReadCount) reads, \(.WriteCount) writes"'
@@ -377,7 +377,7 @@ aliyun paifeaturestore list-datasource-feature-views \
   --all true \
   --project-name recommendation_system \
   --name user_features \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-feature-store-featuredb-usage-query
 ```
 
 **Success Criteria**:
@@ -399,7 +399,7 @@ RESPONSE=$(aliyun paifeaturestore list-datasource-feature-views \
   --all true \
   --project-name recommendation_system \
   --name user_features \
-  --user-agent AlibabaCloud-Agent-Skills)
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-feature-store-featuredb-usage-query)
 
 # Find the matching feature view
 FV=$(echo "$RESPONSE" | jq '.FeatureViews[] | select(.ProjectName=="recommendation_system" and .Name=="user_features")')
@@ -484,7 +484,7 @@ aliyun paifeaturestore list-datasource-feature-views \
   --instance-id <InstanceId> \
   --datasource-id <DatasourceId> \
   --all true \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-feature-store-featuredb-usage-query
 ```
 
 ### Issue 2: Date Range Error
@@ -522,13 +522,13 @@ fi
 # Check RAM user's policies
 aliyun ram list-policies-for-user \
   --user-name <YourUserName> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-feature-store-featuredb-usage-query
 
 # Verify policy includes required actions
 aliyun ram get-policy \
   --policy-name <PolicyName> \
   --policy-type Custom \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-feature-store-featuredb-usage-query
 ```
 
 ---
@@ -550,7 +550,7 @@ echo -e "\n[Step 1] Listing instances..."
 INSTANCE_ID=$(aliyun paifeaturestore list-instances \
   --region $REGION \
   --status Running \
-  --user-agent AlibabaCloud-Agent-Skills | jq -r '.Instances[0].InstanceId')
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-feature-store-featuredb-usage-query | jq -r '.Instances[0].InstanceId')
 
 if [ -z "$INSTANCE_ID" ] || [ "$INSTANCE_ID" == "null" ]; then
   echo "❌ No Running instance found"
@@ -565,7 +565,7 @@ DATASOURCE_ID=$(aliyun paifeaturestore list-datasources \
   --instance-id $INSTANCE_ID \
   --type FeatureDB \
   --workspace-id $WORKSPACE_ID \
-  --user-agent AlibabaCloud-Agent-Skills | jq -r '.Datasources[0].DatasourceId')
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-feature-store-featuredb-usage-query | jq -r '.Datasources[0].DatasourceId')
 
 if [ -z "$DATASOURCE_ID" ] || [ "$DATASOURCE_ID" == "null" ]; then
   echo "❌ No FeatureDB datasource found"
@@ -587,7 +587,7 @@ USAGE=$(aliyun paifeaturestore list-datasource-feature-views \
   --verbose false \
   --show-storage-usage false \
   --page-size 1 \
-  --user-agent AlibabaCloud-Agent-Skills)
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-feature-store-featuredb-usage-query)
 
 TOTAL_READS=$(echo "$USAGE" | jq '[.TotalUsageStatistics[].ReadCount] | add')
 TOTAL_WRITES=$(echo "$USAGE" | jq '[.TotalUsageStatistics[].WriteCount] | add')

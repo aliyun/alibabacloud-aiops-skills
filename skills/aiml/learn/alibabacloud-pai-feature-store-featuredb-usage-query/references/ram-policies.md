@@ -77,14 +77,14 @@ aliyun ram create-policy \
       }
     ]
   }' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-feature-store-featuredb-usage-query
 
 # Attach the policy to a user
 aliyun ram attach-policy-to-user \
   --policy-name PAI-FeatureStore-ReadOnly-UsageQuery \
   --policy-type Custom \
   --user-name <YourUserName> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-feature-store-featuredb-usage-query
 ```
 
 ---
@@ -113,7 +113,7 @@ The actions in this skill operate at the account level and require `Resource: "*
 **Cause**: The RAM user lacks the required permissions.
 
 **Solution**:
-1. Verify the user has the policy attached: `aliyun ram list-policies-for-user --user-name <UserName> --user-agent AlibabaCloud-Agent-Skills`
+1. Verify the user has the policy attached: `aliyun ram list-policies-for-user --user-name <UserName> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-feature-store-featuredb-usage-query`
 2. Check that the policy includes all required actions listed above
 3. If using a custom policy, ensure the JSON syntax is correct
 
