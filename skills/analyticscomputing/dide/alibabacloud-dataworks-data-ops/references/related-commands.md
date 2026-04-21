@@ -17,7 +17,7 @@ aliyun dataworks-public list-tasks \
   [--page-number <NUMBER>] \
   [--project-env Prod|Dev] \
   [--sort-by "Id Desc"] \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-ops
 ```
 
 **Parameter Description:**
@@ -41,7 +41,7 @@ aliyun dataworks-public get-task \
   --region <REGION> \
   --id <TASK_ID> \
   [--project-env Prod|Dev] \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-ops
 ```
 
 **Parameter Description:**
@@ -61,7 +61,7 @@ aliyun dataworks-public list-upstream-tasks \
   [--page-size <SIZE>] \
   [--page-number <NUMBER>] \
   [--project-env Prod|Dev] \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-ops
 
 aliyun dataworks-public list-downstream-tasks \
   --region <REGION> \
@@ -69,7 +69,7 @@ aliyun dataworks-public list-downstream-tasks \
   [--page-size <SIZE>] \
   [--page-number <NUMBER>] \
   [--project-env Prod|Dev] \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-ops
 ```
 
 ### Query Task Operation Logs
@@ -82,7 +82,7 @@ aliyun dataworks-public list-task-operation-logs \
   [--page-size <SIZE>] \
   [--page-number <NUMBER>] \
   [--project-env Prod|Dev] \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-ops
 ```
 
 ---
@@ -102,7 +102,7 @@ aliyun dataworks-public list-task-instances \
   [--page-size <SIZE>] \
   [--page-number <NUMBER>] \
   [--project-env Prod|Dev] \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-ops
 ```
 
 **Parameter Description:**
@@ -125,7 +125,7 @@ aliyun dataworks-public list-task-instances \
 aliyun dataworks-public get-task-instance \
   --region <REGION> \
   --id <TASK_INSTANCE_ID> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-ops
 ```
 
 ### Get Instance Log
@@ -135,7 +135,7 @@ aliyun dataworks-public get-task-instance-log \
   --region <REGION> \
   --id <TASK_INSTANCE_ID> \
   [--run-number <RUN_NUMBER>] \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-ops
 ```
 
 **Parameter Description:**
@@ -154,14 +154,14 @@ aliyun dataworks-public list-upstream-task-instances \
   --id <TASK_INSTANCE_ID> \
   [--page-size <SIZE>] \
   [--page-number <NUMBER>] \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-ops
 
 aliyun dataworks-public list-downstream-task-instances \
   --region <REGION> \
   --id <TASK_INSTANCE_ID> \
   [--page-size <SIZE>] \
   [--page-number <NUMBER>] \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-ops
 ```
 
 ### Query Task Instance Operation Logs
@@ -173,7 +173,7 @@ aliyun dataworks-public list-task-instance-operation-logs \
   [--date <UNIX_TIMESTAMP_MS>] \
   [--page-size <SIZE>] \
   [--page-number <NUMBER>] \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-ops
 ```
 
 ---
@@ -187,7 +187,7 @@ aliyun dataworks-public get-workflow \
   --region <REGION> \
   --id <WORKFLOW_ID> \
   [--env-type Prod|Dev] \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-ops
 ```
 
 ### Query Workflow List
@@ -205,7 +205,7 @@ aliyun dataworks-public list-workflows \
   [--page-size <SIZE>] \
   [--page-number <NUMBER>] \
   [--sort-by "Id Desc"] \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-ops
 ```
 
 ---
@@ -230,7 +230,7 @@ aliyun dataworks-public list-workflow-instances \
   [--page-size <SIZE>] \
   [--page-number <NUMBER>] \
   [--sort-by "Id Desc"] \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-ops
 ```
 
 ### Get Workflow Instance Details
@@ -239,7 +239,7 @@ aliyun dataworks-public list-workflow-instances \
 aliyun dataworks-public get-workflow-instance \
   --region <REGION> \
   --id <WORKFLOW_INSTANCE_ID> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-ops
 ```
 
 ---
@@ -258,7 +258,7 @@ aliyun dataworks-public list-task-instances \
   --bizdate $BIZDATE \
   --status Failure \
   --page-size 100 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-ops
 ```
 
 ### Query by Task Name
@@ -269,7 +269,7 @@ aliyun dataworks-public list-task-instances \
   --project-id <PROJECT_ID> \
   --bizdate <BIZDATE> \
   --task-name "ods_user_log" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-ops
 ```
 
 ---
@@ -288,7 +288,7 @@ aliyun dataworks-public list-alert-rules \
   [--receiver <RECEIVER_UID>] \
   [--task-ids <ID1> <ID2> ...] \
   [--types <TYPE1> <TYPE2> ...] \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-ops
 ```
 
 **Parameter Description:**
@@ -310,7 +310,7 @@ aliyun dataworks-public list-alert-rules \
 aliyun dataworks-public get-alert-rule \
   --region <REGION> \
   --id <ALERT_RULE_ID> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-ops
 ```
 
 **Parameter Description:**

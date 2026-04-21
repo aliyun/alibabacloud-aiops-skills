@@ -91,5 +91,5 @@ To restrict to a specific workspace, replace `Resource` with:
 
 ```bash
 # Check current account identity
-aliyun sts get-caller-identity --user-agent AlibabaCloud-Agent-Skills
+aliyun sts get-caller-identity --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-ops
 ```

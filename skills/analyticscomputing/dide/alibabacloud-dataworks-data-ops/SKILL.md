@@ -21,10 +21,24 @@ Supports periodic, manual, and triggered tasks/workflows (excludes real-time/str
 
 ## Installation
 
-> **Pre-check: Aliyun CLI >= 3.3.1 required**
-> Run `aliyun version` to verify >= 3.3.1. If not installed or version too low,
-> see [references/cli-installation-guide.md](references/cli-installation-guide.md) for installation instructions.
-> Then [MUST] run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+> **Pre-check: Aliyun CLI >= 3.3.3 required**
+> Run `aliyun version` to verify >= 3.3.3. If not installed or version too low,
+> run `curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash` to update,
+> or see [references/cli-installation-guide.md](references/cli-installation-guide.md) for installation instructions.
+
+> **Pre-check: Aliyun CLI plugin update required**
+> [MUST] run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+
+**[MUST] CLI AI-Mode & User-Agent** — Before executing any business CLI command:
+```bash
+aliyun configure ai-mode enable
+aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-ops"
+aliyun plugin update
+```
+After the workflow is complete:
+```bash
+aliyun configure ai-mode disable
+```
 
 ## Environment Variables
 
@@ -161,13 +175,13 @@ aliyun dataworks-public list-tasks \
   --project-id <PROJECT_ID> \
   [--name <TASK_NAME>] \
   [--page-size <SIZE>] \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-ops
 
 # Get task details
 aliyun dataworks-public get-task \
   --region <REGION> \
   --id <TASK_ID> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-ops
 ```
 
 > For more command parameters and the full command list, see [references/related-commands.md](references/related-commands.md)
@@ -184,13 +198,19 @@ aliyun dataworks-public list-task-instances \
   --bizdate <BIZDATE_TIMESTAMP> \
   [--status NotRun|Running|Failure|Success|WaitTime|WaitResource] \
   [--task-name <TASK_NAME>] \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-ops
+
+# Get task instance details (use instance ID from list above)
+aliyun dataworks-public get-task-instance \
+  --region <REGION> \
+  --id <TASK_INSTANCE_ID> \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-ops
 
 # Get task instance log
 aliyun dataworks-public get-task-instance-log \
   --region <REGION> \
   --id <TASK_INSTANCE_ID> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-ops
 ```
 
 > For more commands (instance details, upstream/downstream instances, operation logs, etc.) see [references/related-commands.md](references/related-commands.md)
@@ -205,13 +225,13 @@ aliyun dataworks-public list-workflows \
   --region <REGION> \
   --project-id <PROJECT_ID> \
   [--name <WORKFLOW_NAME>] \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-ops
 
 # Get workflow details
 aliyun dataworks-public get-workflow \
   --region <REGION> \
   --id <WORKFLOW_ID> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-ops
 ```
 
 ---
@@ -225,13 +245,13 @@ aliyun dataworks-public list-workflow-instances \
   --project-id <PROJECT_ID> \
   --biz-date <BIZDATE_TIMESTAMP> \
   [--type Normal|Manual|SmokeTest|SupplementData|ManualWorkflow|TriggerWorkflow] \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-ops
 
 # Get workflow instance details
 aliyun dataworks-public get-workflow-instance \
   --region <REGION> \
   --id <WORKFLOW_INSTANCE_ID> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-ops
 ```
 
 ---
@@ -249,13 +269,13 @@ aliyun dataworks-public list-alert-rules \
   [--receiver <RECEIVER_UID>] \
   [--task-ids <ID1> <ID2> ...] \
   [--types <TYPE1> <TYPE2> ...] \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-ops
 
 # Get alert rule details
 aliyun dataworks-public get-alert-rule \
   --region <REGION> \
   --id <ALERT_RULE_ID> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-ops
 ```
 
 ---
@@ -270,13 +290,13 @@ aliyun dataworks-public list-task-instances \
   --bizdate 1775404800000 \
   --status Failure \
   --page-size 100 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-ops
 
 # Step 2: View instance log
 aliyun dataworks-public get-task-instance-log \
   --region cn-hangzhou \
   --id <INSTANCE_ID> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-ops
 ```
 
 ## Success Verification

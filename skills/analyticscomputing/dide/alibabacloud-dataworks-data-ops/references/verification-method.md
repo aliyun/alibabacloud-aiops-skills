@@ -41,7 +41,7 @@ aliyun dataworks-public list-task-instances \
   --project-id <PROJECT_ID> \
   --bizdate <BIZDATE> \
   --status Failure \
-  --user-agent AlibabaCloud-Agent-Skills | jq '.PagingInfo.TotalCount'
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-ops | jq '.PagingInfo.TotalCount'
 ```
 
 ## 2. GetTaskInstanceLog Verification
@@ -67,7 +67,7 @@ aliyun dataworks-public list-task-instances \
 aliyun dataworks-public get-task-instance-log \
   --region cn-hangzhou \
   --id <TASK_INSTANCE_ID> \
-  --user-agent AlibabaCloud-Agent-Skills | jq '.TaskInstanceLog | length'
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-ops | jq '.TaskInstanceLog | length'
 ```
 
 ## Common Error Handling
