@@ -170,8 +170,8 @@ ALTER TABLE range_tbl SINGLE;
 
 ## Recommendations and Considerations
 
-1. **Prefer Global primary/unique keys**: Ensure primary and unique keys include all partition columns when designing tables.
-2. **Local primary key scenarios**: If the business genuinely requires a Local primary key, use `AUTO_INCREMENT` or Sequence for system-generated primary key values to avoid manually specifying primary key values from the business side.
+1. **Prefer choosing partition keys from PK/UK columns**: When designing partition schemes, prefer selecting partition keys from existing primary key or unique key columns — this naturally ensures Global classification without modifying the user's schema. Do NOT add partition columns into the user's existing primary key definition.
+2. **Local primary key scenarios**: If the business genuinely requires a Local primary key (partition key is not part of PK), use `AUTO_INCREMENT` or Sequence for system-generated primary key values to avoid manually specifying primary key values from the business side. Explain the risks (cross-partition duplicate PKs, DDL failures on repartition) to the user.
 3. **Local unique key scenarios**: The business side should take measures to ensure global uniqueness of unique key values.
 4. **Data synchronization note**: If a table has duplicate primary key values due to Local primary keys, when syncing to downstream systems (e.g., AnalyticDB MySQL), set the downstream primary key to the full set of "PolarDB-X table's primary key columns + partition columns" to avoid conflicts.
 5. **Converting Local PK to globally unique**: Use Sequence to generate unique values as primary key values; see `sequence.md`.
