@@ -24,16 +24,46 @@ User Request → Search Database → Get Database ID → Execute SQL → Return 
 
 ## Prerequisites
 
-> **Pre-check: Aliyun CLI >= 3.3.1 required**
-> Run `aliyun version` to verify >= 3.3.1. If not installed or version too low,
-> see `references/cli-installation-guide.md` for installation instructions.
-> Then [MUST] run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+### AI-Mode Lifecycle (MUST follow in order)
 
-- Aliyun CLI >= 3.3.1
+This skill MUST run inside an AI-Mode session. Treat the following five steps as a strict lifecycle — do not skip, reorder, or interleave the setup steps with command execution:
+
+```
+1. aliyun configure ai-mode enable                                              # Enable AI-Mode
+2. aliyun configure ai-mode set-user-agent AlibabaCloud-Agent-Skills/alibabacloud-dms-skill   # Register skill User-Agent
+3. aliyun configure set --auto-plugin-install true && aliyun plugin update      # Plugin update
+4. <execute DMS commands via ./scripts/*.sh>                                    # Execute commands
+5. aliyun configure ai-mode disable                                             # Disable AI-Mode (Cleanup)
+```
+
+Steps 1–3 belong to setup (this section). Step 4 is covered by [Core Workflow](#core-workflow). Step 5 is covered by [Cleanup](#cleanup).
+
+### Pre-checks
+
+> **Pre-check 0: Aliyun CLI >= 3.3.3 required**
+> Run `aliyun version` to verify >= 3.3.3. If not installed or version too low,
+> run `curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash` to install/update,
+> or see `references/cli-installation-guide.md` for installation instructions.
+
+> **Pre-check 1: Enable AI-Mode**
+> [MUST] run `aliyun configure ai-mode enable` to enable AI-Mode before any other configuration or command.
+> This activates the AI-Mode session that downstream OpenAPI services use to recognize agent-issued traffic.
+
+> **Pre-check 2: Register skill User-Agent under AI-Mode**
+> [MUST] run `aliyun configure ai-mode set-user-agent AlibabaCloud-Agent-Skills/alibabacloud-dms-skill`
+> to register this skill's identifier as the AI-Mode User-Agent for the current session.
+> Run this immediately after `ai-mode enable` and before any plugin update or DMS command.
+
+> **Pre-check 3: Aliyun CLI plugin update required**
+> [MUST] run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+> [MUST] run `aliyun plugin update` to ensure that any existing plugins are always up-to-date.
+> Plugin update MUST happen AFTER AI-Mode is enabled and the User-Agent is registered, so the plugin manager itself reports the correct identifier.
+
+- Aliyun CLI >= 3.3.3
 - jq (for JSON parsing): `brew install jq`
 - Credentials configured via `aliyun configure`
 
-> **Pre-check: Alibaba Cloud Credentials Required**
+> **Pre-check 4: Alibaba Cloud Credentials Required**
 >
 > **Security Rules:**
 > - **NEVER** read, echo, or print AK/SK values (e.g., `echo $ALIBABA_CLOUD_ACCESS_KEY_ID` is FORBIDDEN)
@@ -50,6 +80,11 @@ User Request → Search Database → Get Database ID → Execute SQL → Return 
 > 1. Obtain credentials from [Alibaba Cloud Console](https://ram.console.aliyun.com/manage/ak)
 > 2. Configure credentials **outside of this session** (via `aliyun configure` in terminal or environment variables in shell profile)
 > 3. Return and re-run after `aliyun configure list` shows a valid profile
+
+**[MUST] Per-command CLI User-Agent** — In addition to the AI-Mode User-Agent registered in Pre-check 2,
+every `aliyun` CLI command invocation in step 4 MUST also include:
+`--user-agent AlibabaCloud-Agent-Skills/alibabacloud-dms-skill`
+The per-command flag and the AI-Mode session-level setting are complementary — both MUST be present so the identifier is sent on every request even if the AI-Mode session expires.
 
 ## RAM Permissions
 
@@ -156,7 +191,18 @@ After executing SQL, check the returned results:
 
 ## Cleanup
 
-This skill performs read and write operations but does not create persistent resources. No cleanup is required.
+This skill performs read and write operations but does not create persistent resources, so no database resources need to be released.
+
+However, the AI-Mode lifecycle requires an explicit teardown step:
+
+> **[MUST] Disable AI-Mode after all tasks complete**
+> Run `aliyun configure ai-mode disable` once all DMS commands in this skill session have finished
+> (success or failure). This terminates the AI-Mode session and prevents the registered
+> `AlibabaCloud-Agent-Skills/alibabacloud-dms-skill` User-Agent from leaking into subsequent unrelated CLI usage.
+
+```bash
+aliyun configure ai-mode disable
+```
 
 ## Write Operation Safety
 

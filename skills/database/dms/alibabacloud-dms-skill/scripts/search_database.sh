@@ -90,7 +90,7 @@ if ! command -v aliyun &> /dev/null; then
 fi
 
 # User-Agent for tracking
-USER_AGENT="AlibabaCloud-Agent-Skills"
+USER_AGENT="AlibabaCloud-Agent-Skills/alibabacloud-dms-skill"
 
 # Timeout settings (in seconds)
 READ_TIMEOUT=10
@@ -98,7 +98,7 @@ CONNECT_TIMEOUT=10
 
 # Step 1: Get Tenant ID (Tid)
 echo "Fetching Tenant ID..." >&2
-TID_RESPONSE=$(aliyun dms-enterprise GetUserActiveTenant \
+TID_RESPONSE=$(aliyun dms-enterprise get-user-active-tenant \
     --region "$REGION" \
     --user-agent "$USER_AGENT" \
     --read-timeout "$READ_TIMEOUT" \
@@ -128,9 +128,9 @@ echo "Tenant ID: $TID" >&2
 
 # Step 2: Search Database
 echo "Searching databases with keyword: $KEYWORD" >&2
-SEARCH_RESPONSE=$(aliyun dms-enterprise SearchDatabase \
-    --Tid "$TID" \
-    --SearchKey "$KEYWORD" \
+SEARCH_RESPONSE=$(aliyun dms-enterprise search-database \
+    --tid "$TID" \
+    --search-key "$KEYWORD" \
     --region "$REGION" \
     --user-agent "$USER_AGENT" \
     --read-timeout "$READ_TIMEOUT" \

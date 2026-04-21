@@ -146,7 +146,7 @@ if ! command -v aliyun &> /dev/null; then
 fi
 
 # User-Agent for tracking
-USER_AGENT="AlibabaCloud-Agent-Skills"
+USER_AGENT="AlibabaCloud-Agent-Skills/alibabacloud-dms-skill"
 
 # Timeout settings (in seconds)
 READ_TIMEOUT=10
@@ -210,7 +210,7 @@ fi
 
 # Step 1: Get Tenant ID (Tid)
 echo "Fetching Tenant ID..." >&2
-TID_RESPONSE=$(aliyun dms-enterprise GetUserActiveTenant \
+TID_RESPONSE=$(aliyun dms-enterprise get-user-active-tenant \
     --region "$REGION" \
     --user-agent "$USER_AGENT" \
     --read-timeout "$READ_TIMEOUT" \
@@ -243,19 +243,16 @@ echo "Executing SQL on database $DB_ID..." >&2
 
 # Build command arguments
 CMD_ARGS=(
-    "dms-enterprise" "ExecuteScript"
-    "--Tid" "$TID"
-    "--DbId" "$DB_ID"
-    "--Script" "$SQL"
+    "dms-enterprise" "execute-script"
+    "--tid" "$TID"
+    "--db-id" "$DB_ID"
+    "--script" "$SQL"
+    "--logic" "$LOGIC"
     "--region" "$REGION"
     "--user-agent" "$USER_AGENT"
     "--read-timeout" "$READ_TIMEOUT"
     "--connect-timeout" "$CONNECT_TIMEOUT"
 )
-
-if [[ "$LOGIC" == "true" ]]; then
-    CMD_ARGS+=("--Logic" "true")
-fi
 
 EXEC_RESPONSE=$(aliyun "${CMD_ARGS[@]}" 2>&1)
 
