@@ -2,7 +2,7 @@
 
 Complete guide for installing and configuring Aliyun CLI.
 
-> **Aliyun CLI 3.3.1+**: Supports installing and using all published Alibaba Cloud product plugins. Make sure to upgrade to 3.3.1 or later for full plugin ecosystem coverage.
+> **Aliyun CLI 3.3.3+**: Supports installing and using all published Alibaba Cloud product plugins. Make sure to upgrade to 3.3.3 or later for full plugin ecosystem coverage.
 
 ## Installation
 
@@ -14,7 +14,7 @@ brew install aliyun-cli
 # Upgrade to latest
 brew upgrade aliyun-cli
 
-# Verify version (>= 3.3.1)
+# Verify version (>= 3.3.3)
 aliyun version
 ```
 
@@ -135,7 +135,7 @@ aliyun configure set \
 aliyun configure list
 
 # 基本测试 - 列出地域
-aliyun ecs describe-regions --user-agent AlibabaCloud-Agent-Skills
+aliyun ecs describe-regions --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-quick-showcase
 ```
 
 **If successful**, you'll see:
@@ -166,7 +166,7 @@ aliyun ecs describe-regions --user-agent AlibabaCloud-Agent-Skills
 aliyun configure get
 
 # Test with debug logging
-aliyun ecs describe-regions --log-level=debug --user-agent AlibabaCloud-Agent-Skills
+aliyun ecs describe-regions --log-level=debug --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-quick-showcase
 
 # Check credential provider
 aliyun configure get mode
@@ -226,7 +226,7 @@ aliyun configure list
 aliyun configure --mode OAuth
 
 # Test with debug
-aliyun ecs describe-regions --log-level=debug --user-agent AlibabaCloud-Agent-Skills
+aliyun ecs describe-regions --log-level=debug --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-quick-showcase
 ```
 
 ### Issue: Permission Denied
@@ -245,7 +245,7 @@ aliyun ecs describe-regions --log-level=debug --user-agent AlibabaCloud-Agent-Sk
 # Some resources may not exist in the specified region
 
 # Check available regions
-aliyun ecs describe-regions --user-agent AlibabaCloud-Agent-Skills
+aliyun ecs describe-regions --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-quick-showcase
 
 # Update default region
 aliyun configure set region cn-shanghai
@@ -285,7 +285,7 @@ export ALIBABA_CLOUD_READ_TIMEOUT=30
 
 After installation and configuration:
 
-1. **Install plugins** for services you need (v3.3.1+ supports all published product plugins):
+1. **Install plugins** for services you need (v3.3.3+ supports all published product plugins):
    ```bash
    aliyun plugin install --names ecs vpc rds
 

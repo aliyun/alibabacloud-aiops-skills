@@ -9,6 +9,37 @@ description: |
 
 With this skill, you can quickly deploy a complete web application protection solution, including network environment setup, ECS instance creation, sample application deployment, and WAF integration.
 
+## Prerequisites
+
+**Pre-check: Aliyun CLI >= 3.3.3 required**
+> Run `aliyun version` to verify >= 3.3.3. If not installed or version too low,
+> run `curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash` to update,
+> or see `references/cli-installation-guide.md` for installation instructions.
+
+**Pre-check: Aliyun CLI plugin update required**
+> [MUST] run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+> [MUST] run `aliyun plugin update` to ensure that any existing plugins are always up-to-date.
+
+**[MUST] AI-Mode Configuration** — Must configure AI-Mode before executing CLI commands:
+
+1. **Enable AI-Mode** (before any CLI commands):
+   ```bash
+   aliyun configure ai-mode enable
+   ```
+
+2. **Set User-Agent for AI-Mode**:
+   ```bash
+   aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-waf-quick-showcase"
+   ```
+
+3. **Disable AI-Mode** (after workflow completion):
+   ```bash
+   aliyun configure ai-mode disable
+   ```
+
+**[MUST] CLI User-Agent** — Every `aliyun` CLI command invocation must include:
+`--user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-quick-showcase`
+
 ## Supported Scenarios
 
 > **This skill supports two usage scenarios**:
@@ -34,7 +65,7 @@ With this skill, you can quickly deploy a complete web application protection so
 >
 > After authentication confirmation and before parameter confirmation, must execute:
 > ```bash
-> aliyun waf-openapi describe-instance --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills
+> aliyun waf-openapi describe-instance --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-quick-showcase
 > ```
 >
 > - **If valid InstanceId is returned**: Skip WAF creation steps and use this WAF directly to integrate ECS
@@ -58,7 +89,8 @@ With this skill, you can quickly deploy a complete web application protection so
 
 > **IMPORTANT: Must proactively ask and help users complete the following checks before running**
 > 
-> 1. **CLI Version**: Run `aliyun version` to confirm version >= 3.3.1
+> 1. **CLI Version**: Run `aliyun version` to confirm version >= 3.3.3. If not installed or version too low, run `curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash` to install/update.
+>    Then [MUST] run `aliyun plugin update` to ensure that any existing plugins on your local machine are always up-to-date.
 > 2. **Authentication Configuration**: Run `aliyun configure list` to confirm authentication status is Valid
 > 3. **Auto Plugin**: Run `aliyun configure set --auto-plugin-install true`
 > 4. **Account Balance**: Confirm Alibaba Cloud account balance >= 100 CNY
@@ -101,7 +133,7 @@ brew install aliyun-cli
 # Authentication Configuration (OAuth Mode)
 aliyun configure --mode OAuth
 
-# Verify Version (must be >= 3.3.1)
+# Verify Version (must be >= 3.3.3)
 aliyun version
 ```
 
@@ -192,7 +224,7 @@ aliyun version
 > **CRITICAL: Must check quota before creating VPC** (Each account has a maximum of 10 VPCs per region by default)
 
 ```bash
-aliyun vpc describe-vpcs --biz-region-id cn-hangzhou --page-size 50 --connect-timeout 5 --read-timeout 30 --user-agent AlibabaCloud-Agent-Skills
+aliyun vpc describe-vpcs --biz-region-id cn-hangzhou --page-size 50 --connect-timeout 5 --read-timeout 30 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-quick-showcase
 # Check TotalCount in the response
 ```
 >
@@ -229,7 +261,7 @@ aliyun vpc create-vpc \
   --description "WAF Protection Solution VPC" \
   --connect-timeout 10 --read-timeout 60 \
   --client-token $(uuidgen) \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-quick-showcase
 
 # Save the returned VpcId, e.g., vpc-bp1234567890abcdef
 
@@ -238,7 +270,7 @@ aliyun vpc describe-vpcs \
   --biz-region-id cn-hangzhou \
   --vpc-id <VpcId> \
   --connect-timeout 5 --read-timeout 30 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-quick-showcase
 
 # 1.3 Create VSwitch (Idempotent Operation)
 aliyun vpc create-vswitch \
@@ -248,7 +280,7 @@ aliyun vpc create-vswitch \
   --vswitch-name vsw_001 \
   --connect-timeout 10 --read-timeout 60 \
   --client-token $(uuidgen) \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-quick-showcase
 
 # Save the returned VSwitchId
 ```
@@ -265,7 +297,7 @@ aliyun ecs create-security-group \
   --description "WAF Protection Solution Security Group" \
   --connect-timeout 10 --read-timeout 60 \
   --client-token $(uuidgen) \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-quick-showcase
 
 # Save the returned SecurityGroupId
 
@@ -275,7 +307,7 @@ aliyun ecs authorize-security-group \
   --security-group-id <SecurityGroupId> \
   --permissions '[{"Policy":"Accept","Priority":"1","IpProtocol":"TCP","PortRange":"80/80","SourceCidrIp":"0.0.0.0/0"}]' \
   --connect-timeout 10 --read-timeout 30 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-quick-showcase
 ```
 
 ### Step 3: Create ECS Instance
@@ -320,7 +352,7 @@ aliyun ecs run-instances \
   --amount 1 \
   --connect-timeout 10 --read-timeout 120 \
   --client-token $(uuidgen) \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-quick-showcase
 
 # Save the returned InstanceId
 
@@ -329,7 +361,7 @@ aliyun ecs describe-instances \
   --biz-region-id cn-hangzhou \
   --instance-ids '["<InstanceId>"]' \
   --connect-timeout 5 --read-timeout 30 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-quick-showcase
 ```
 
 ### Step 4: Enable WAF and Integrate ECS
@@ -344,7 +376,7 @@ aliyun waf-openapi create-postpaid-instance \
   --region cn-hangzhou \
   --connect-timeout 10 --read-timeout 60 \
   --client-token $(uuidgen) \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-quick-showcase
 
 # The response result contains InstanceId, please save it
 ```
@@ -369,7 +401,7 @@ aliyun waf-openapi create-postpaid-instance \
 aliyun waf-openapi describe-instance \
   --region cn-hangzhou \
   --connect-timeout 5 --read-timeout 30 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-quick-showcase
 
 # Save the returned InstanceId
 ```
@@ -383,7 +415,7 @@ aliyun waf-openapi sync-product-instance \
   --instance-id <WAF-InstanceId> \
   --region cn-hangzhou \
   --connect-timeout 10 --read-timeout 60 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-quick-showcase
 
 # If 503 error is returned, please wait 10 seconds and retry
 ```
@@ -399,7 +431,7 @@ aliyun waf-openapi create-cloud-resource \
   --listen '{"ResourceProduct":"ecs","ResourceInstanceId":"<ECS-InstanceId>","Port":80,"Protocol":"http"}' \
   --redirect '{"ReadTimeout":120,"WriteTimeout":120}' \
   --connect-timeout 10 --read-timeout 60 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-quick-showcase
 ```
 
 #### 4.5 Verify ECS Has Been Integrated into WAF
@@ -413,7 +445,7 @@ aliyun waf-openapi describe-cloud-resources \
   --page-size 10 \
   --region cn-hangzhou \
   --connect-timeout 5 --read-timeout 30 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-quick-showcase
 ```
 
 ### Completion Prompt
@@ -427,6 +459,11 @@ aliyun waf-openapi describe-cloud-resources \
 > 2. **Verify Protection Effectiveness**: Access ECS public IP to test normal access and attack interception
 >
 > For detailed verification methods, see [references/verification-method.md](references/verification-method.md)"
+>
+> **CRITICAL: After completing the workflow, MUST disable AI-Mode**:
+> ```bash
+> aliyun configure ai-mode disable
+> ```
 
 ## RAM Permission Requirements
 

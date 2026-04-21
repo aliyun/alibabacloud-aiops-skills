@@ -13,7 +13,7 @@
 aliyun vpc describe-vpcs \
   --biz-region-id cn-hangzhou \
   --vpc-id <VpcId> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-quick-showcase
 
 # 预期输出应包含:
 # "Status": "Available"
@@ -26,7 +26,7 @@ aliyun vpc describe-vpcs \
 aliyun vpc describe-vswitches \
   --biz-region-id cn-hangzhou \
   --vswitch-id <VSwitchId> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-quick-showcase
 
 # 预期输出应包含:
 # "Status": "Available"
@@ -41,13 +41,13 @@ aliyun vpc describe-vswitches \
 aliyun ecs describe-security-groups \
   --biz-region-id cn-hangzhou \
   --security-group-id <SecurityGroupId> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-quick-showcase
 
 # 验证安全组规则（80端口已开放）
 aliyun ecs describe-security-group-attribute \
   --biz-region-id cn-hangzhou \
   --security-group-id <SecurityGroupId> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-quick-showcase
 ```
 
 **成功标志**: 
@@ -61,7 +61,7 @@ aliyun ecs describe-security-group-attribute \
 aliyun ecs describe-instances \
   --biz-region-id cn-hangzhou \
   --instance-ids '["<InstanceId>"]' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-quick-showcase
 
 # 预期输出应包含:
 # "Status": "Running"
@@ -79,7 +79,7 @@ aliyun ecs describe-instances \
 ECS_IP=$(aliyun ecs describe-instances \
   --biz-region-id cn-hangzhou \
   --instance-ids '["<InstanceId>"]' \
-  --user-agent AlibabaCloud-Agent-Skills | jq -r '.Instances.Instance[0].PublicIpAddress.IpAddress[0]')
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-quick-showcase | jq -r '.Instances.Instance[0].PublicIpAddress.IpAddress[0]')
 
 # 验证Web应用可访问
 curl --connect-timeout 5 --max-time 10 -I "http://${ECS_IP}/"
@@ -95,7 +95,7 @@ curl --connect-timeout 5 --max-time 10 -I "http://${ECS_IP}/"
 # 查询WAF实例信息
 aliyun waf-openapi describe-instance \
   --region-id cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-quick-showcase
 
 # 查询已接入WAF的ECS实例
 aliyun waf-openapi describe-cloud-resources \
@@ -103,7 +103,7 @@ aliyun waf-openapi describe-cloud-resources \
   --resource-product ecs \
   --page-number 1 \
   --page-size 10 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-quick-showcase
 
 # 预期输出应包含接入的ECS实例信息
 ```
@@ -132,26 +132,26 @@ INSTANCE_ID="<your-ecs-instance-id>"
 WAF_INSTANCE_ID="<your-waf-instance-id>"
 
 echo "=== 验证VPC状态 ==="
-aliyun vpc describe-vpcs --biz-region-id $REGION --vpc-id $VPC_ID --user-agent AlibabaCloud-Agent-Skills | jq '.Vpcs.Vpc[0].Status'
+aliyun vpc describe-vpcs --biz-region-id $REGION --vpc-id $VPC_ID --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-quick-showcase | jq '.Vpcs.Vpc[0].Status'
 
 echo "=== 验证VSwitch状态 ==="
-aliyun vpc describe-vswitches --biz-region-id $REGION --vswitch-id $VSWITCH_ID --user-agent AlibabaCloud-Agent-Skills | jq '.VSwitches.VSwitch[0].Status'
+aliyun vpc describe-vswitches --biz-region-id $REGION --vswitch-id $VSWITCH_ID --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-quick-showcase | jq '.VSwitches.VSwitch[0].Status'
 
 echo "=== 验证ECS状态 ==="
-aliyun ecs describe-instances --biz-region-id $REGION --instance-ids "[\"$INSTANCE_ID\"]" --user-agent AlibabaCloud-Agent-Skills | jq '.Instances.Instance[0].Status'
+aliyun ecs describe-instances --biz-region-id $REGION --instance-ids "[\"$INSTANCE_ID\"]" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-quick-showcase | jq '.Instances.Instance[0].Status'
 
 echo "=== 获取ECS公网IP ==="
-ECS_IP=$(aliyun ecs describe-instances --biz-region-id $REGION --instance-ids "[\"$INSTANCE_ID\"]" --user-agent AlibabaCloud-Agent-Skills | jq -r '.Instances.Instance[0].PublicIpAddress.IpAddress[0]')
+ECS_IP=$(aliyun ecs describe-instances --biz-region-id $REGION --instance-ids "[\"$INSTANCE_ID\"]" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-quick-showcase | jq -r '.Instances.Instance[0].PublicIpAddress.IpAddress[0]')
 echo "ECS公网IP: $ECS_IP"
 
 echo "=== 验证Web应用 ==="
 curl --connect-timeout 5 --max-time 10 -I "http://${ECS_IP}/" 2>/dev/null | head -1
 
 echo "=== 验证WAF实例 ==="
-aliyun waf-openapi describe-instance --region-id $REGION --user-agent AlibabaCloud-Agent-Skills | jq '.InstanceId'
+aliyun waf-openapi describe-instance --region-id $REGION --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-quick-showcase | jq '.InstanceId'
 
 echo "=== 验证ECS已接入WAF ==="
-aliyun waf-openapi describe-cloud-resources --instance-id $WAF_INSTANCE_ID --resource-product ecs --page-number 1 --page-size 10 --user-agent AlibabaCloud-Agent-Skills | jq '.CloudResources'
+aliyun waf-openapi describe-cloud-resources --instance-id $WAF_INSTANCE_ID --resource-product ecs --page-number 1 --page-size 10 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-quick-showcase | jq '.CloudResources'
 
 echo "=== 验证完成 ==="
 ```
