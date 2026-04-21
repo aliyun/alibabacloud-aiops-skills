@@ -1,67 +1,67 @@
-# ECS Metadata 服务
+# ECS Metadata Service
 
-## 什么是 Metadata 服务？
+## What Is the Metadata Service?
 
-ECS Metadata 是阿里云 ECS 实例内置的一个 HTTP 服务，用于提供当前实例的元数据信息。**无需配置 AccessKey，实例内部可直接访问**。
+ECS Metadata is a built-in HTTP service provided inside Alibaba Cloud ECS instances. It exposes instance metadata and can be accessed **from inside the instance without configuring AccessKey**.
 
 ---
 
-## 访问端点
+## Endpoints
 
-| 版本 | 端点 URL | 说明 |
+| Version | Endpoint URL | Notes |
 |------|----------|------|
-| V1 | `http://100.100.100.200/` | 简化访问，无需 token |
-| V2 | `http://100.100.100.200/latest/meta-data/` | 需要 IMDSv2 token，更安全 |
-| 兼容 | `http://169.254.169.254/` | AWS 兼容端点 |
+| V1 | `http://100.100.100.200/` | Simplified access, no token required |
+| V2 | `http://100.100.100.200/latest/meta-data/` | Requires IMDSv2 token, more secure |
+| Compatibility | `http://169.254.169.254/` | AWS-compatible endpoint |
 
 ---
 
-## 常用 Metadata 字段
+## Common Metadata Fields
 
-### 实例基本信息
+### Basic Instance Info
 
 ```bash
-curl http://100.100.100.200/latest/meta-data/instance-id          # 实例 ID
-curl http://100.100.100.200/latest/meta-data/instance-type        # 实例规格
-curl http://100.100.100.200/latest/meta-data/region-id            # 地域 ID
-curl http://100.100.100.200/latest/meta-data/zone-id              # 可用区 ID
-curl http://100.100.100.200/latest/meta-data/hostname             # 主机名
-curl http://100.100.100.200/latest/meta-data/serial-number        # 序列号
-curl http://100.100.100.200/latest/meta-data/image-id             # 镜像 ID
-curl http://100.100.100.200/latest/meta-data/os-type              # 操作系统类型
-curl http://100.100.100.200/latest/meta-data/os-name              # 操作系统名称
-curl http://100.100.100.200/latest/meta-data/launch-time          # 启动时间
+curl http://100.100.100.200/latest/meta-data/instance-id          # Instance ID
+curl http://100.100.100.200/latest/meta-data/instance-type        # Instance type
+curl http://100.100.100.200/latest/meta-data/region-id            # Region ID
+curl http://100.100.100.200/latest/meta-data/zone-id              # Zone ID
+curl http://100.100.100.200/latest/meta-data/hostname             # Hostname
+curl http://100.100.100.200/latest/meta-data/serial-number        # Serial number
+curl http://100.100.100.200/latest/meta-data/image-id             # Image ID
+curl http://100.100.100.200/latest/meta-data/os-type              # OS type
+curl http://100.100.100.200/latest/meta-data/os-name              # OS name
+curl http://100.100.100.200/latest/meta-data/launch-time          # Launch time
 ```
 
-### 网络信息
+### Networking
 
 ```bash
-curl http://100.100.100.200/latest/meta-data/mac                  # MAC 地址
+curl http://100.100.100.200/latest/meta-data/mac                  # MAC address
 curl http://100.100.100.200/latest/meta-data/vpc-id               # VPC ID
-curl http://100.100.100.200/latest/meta-data/vswitch-id           # 交换机 ID
-curl http://100.100.100.200/latest/meta-data/private-ipv4         # 私网 IP
-curl http://100.100.100.200/latest/meta-data/public-ipv4          # 公网 IP
-curl http://100.100.100.200/latest/meta-data/eipv4                # EIP 地址
-curl http://100.100.100.200/latest/meta-data/network/interfaces/macs/<MAC>/vpc-id  # 指定网卡的 VPC
+curl http://100.100.100.200/latest/meta-data/vswitch-id           # VSwitch ID
+curl http://100.100.100.200/latest/meta-data/private-ipv4         # Private IPv4
+curl http://100.100.100.200/latest/meta-data/public-ipv4          # Public IPv4
+curl http://100.100.100.200/latest/meta-data/eipv4                # EIP address
+curl http://100.100.100.200/latest/meta-data/network/interfaces/macs/<MAC>/vpc-id  # VPC of specific NIC
 ```
 
-### 安全相关
+### Security-Related
 
 ```bash
-curl http://100.100.100.200/latest/meta-data/security-groups      # 安全组列表
-curl http://100.100.100.200/latest/meta-data/ram-role-name        # RAM 角色名
+curl http://100.100.100.200/latest/meta-data/security-groups      # Security group list
+curl http://100.100.100.200/latest/meta-data/ram-role-name        # RAM role name
 ```
 
-### 其他
+### Others
 
 ```bash
-curl http://100.100.100.200/latest/meta-data/ntp-conf/ntp-servers # NTP 服务器
-curl http://100.100.100.200/latest/meta-data/source-address       # 请求源地址
+curl http://100.100.100.200/latest/meta-data/ntp-conf/ntp-servers # NTP servers
+curl http://100.100.100.200/latest/meta-data/source-address       # Request source address
 ```
 
 ---
 
-## 查看所有可用字段
+## List All Available Fields
 
 ```bash
 curl http://100.100.100.200/latest/meta-data/
@@ -69,44 +69,44 @@ curl http://100.100.100.200/latest/meta-data/
 
 ---
 
-## IMDSv2（更安全的访问方式）
+## IMDSv2 (More Secure Access)
 
-阿里云支持 IMDSv2，需要先生成 token：
+Alibaba Cloud supports IMDSv2, which requires a token:
 
 ```bash
-# 第一步：获取 token
+# Step 1: get token
 TOKEN=$(curl -X PUT "http://100.100.100.200/latest/api/token" \
   -H "X-aliyun-ecs-metadata-token-ttl-seconds: 21600")
 
-# 第二步：使用 token 访问 metadata
+# Step 2: access metadata with token
 curl -H "X-aliyun-ecs-metadata-token: $TOKEN" \
   http://100.100.100.200/latest/meta-data/instance-id
 ```
 
 ---
 
-## Metadata 服务特点
+## Metadata Service Characteristics
 
-| 特性 | 说明 |
+| Characteristic | Description |
 |------|------|
-| 仅实例内访问 | 只能从 ECS 实例内部访问，外部无法访问 |
-| 无需认证 | V1 模式无需任何凭证 |
-| 实时性 | 数据随实例状态实时更新 |
-| 只读 | 只能读取，不能修改 |
-| 本地服务 | 不产生公网流量 |
+| Instance-local only | Accessible only from inside the ECS instance |
+| No credential required (V1) | V1 mode does not require credential material |
+| Real-time | Values update with current instance state |
+| Read-only | Can read only, cannot modify |
+| Local traffic | No public internet traffic generated |
 
 ---
 
-## 典型使用场景
+## Typical Use Cases
 
-### 1. 脚本自动获取实例信息
+### 1) Auto-fetch Instance Info in Scripts
 
 ```bash
 INSTANCE_ID=$(curl -s http://100.100.100.200/latest/meta-data/instance-id)
 echo "Running on instance: $INSTANCE_ID"
 ```
 
-### 2. 根据实例规格动态配置
+### 2) Dynamic Config by Instance Type
 
 ```bash
 INSTANCE_TYPE=$(curl -s http://100.100.100.200/latest/meta-data/instance-type)
@@ -116,66 +116,66 @@ case $INSTANCE_TYPE in
 esac
 ```
 
-### 3. 获取 RAM 角色临时凭证
+### 3) Fetch RAM Role Temporary Credentials
 
 ```bash
 ROLE_NAME=$(curl -s http://100.100.100.200/latest/meta-data/ram-role-name)
 curl -s http://100.100.100.200/latest/meta-data/ram/security-credentials/$ROLE_NAME
 ```
 
-### 4. SysOM 工具使用场景
+### 4) SysOM Tool Scenario
 
-**自动获取实例信息用于诊断**：
+**Auto-collect instance metadata for diagnosis**:
 
 ```bash
 #!/bin/bash
-# 自动收集实例元数据用于诊断报告
+# Auto-collect metadata for diagnosis report
 
 INSTANCE_ID=$(curl -s http://100.100.100.200/latest/meta-data/instance-id)
 REGION_ID=$(curl -s http://100.100.100.200/latest/meta-data/region-id)
 INSTANCE_TYPE=$(curl -s http://100.100.100.200/latest/meta-data/instance-type)
 
-echo "实例信息："
+echo "Instance Info:"
 echo "  Instance ID: $INSTANCE_ID"
 echo "  Region: $REGION_ID"
 echo "  Type: $INSTANCE_TYPE"
 
-# 在 sysom-diagnosis（技能根）执行（或 cd <sysom-diagnosis> && …）；REGION_ID 与上面 curl 一致
-# 快速排查后深度诊断（oomcheck）：
+# Run in sysom-diagnosis (skill root), or: cd <sysom-diagnosis> && ...
+# Deep diagnosis after quick triage (oomcheck):
 cd <sysom-diagnosis> && ./scripts/osops.sh memory oom --deep-diagnosis --channel ecs --region "$REGION_ID" --instance "$INSTANCE_ID"
 ```
 
-**验证 RAM Role 配置**：
+**Validate RAM Role configuration**:
 
 ```bash
-# 检查实例是否绑定了 RAM 角色
+# Check whether the instance has RAM role attached
 ROLE_NAME=$(curl -s http://100.100.100.200/latest/meta-data/ram-role-name)
 
 if [ -z "$ROLE_NAME" ]; then
-  echo "⚠️  实例未绑定 RAM 角色"
-  echo "请参考文档配置 ECS RAM Role：./authentication.md"
+  echo "Warning: no RAM role is attached to this instance"
+  echo "See ECS RAM Role setup in ./authentication.md"
 else
-  echo "✓ 实例已绑定 RAM 角色: $ROLE_NAME"
-  
-  # 获取临时凭证
+  echo "RAM role attached: $ROLE_NAME"
+
+  # Fetch temporary credentials
   CREDS=$(curl -s http://100.100.100.200/latest/meta-data/ram/security-credentials/$ROLE_NAME)
-  echo "临时凭证已获取（有效期内自动刷新）"
+  echo "Temporary credentials fetched (auto-rotated within validity window)"
 fi
 ```
 
 ---
 
-## 安全建议
+## Security Recommendations
 
-- 优先使用 IMDSv2（需要 token），防止 SSRF 攻击
-- 通过 MetadataOptions 控制 token 跳转限制
-- 定期审计实例的 Metadata 访问配置
-- 在应用代码中避免将 Metadata 信息暴露给外部用户
+- Prefer IMDSv2 (token-based) to mitigate SSRF risks.
+- Restrict token hops through MetadataOptions controls.
+- Audit metadata access configuration on instances regularly.
+- Avoid exposing metadata values to external users in application code.
 
 ---
 
-## 参考资源
+## References
 
-- [阿里云 ECS Metadata 文档](https://help.aliyun.com/zh/ecs/user-guide/overview-of-ecs-instance-metadata)
-- [IMDSv2 安全实践](https://help.aliyun.com/zh/ecs/user-guide/use-instance-metadata)
-- [认证配置指南](./authentication.md)
+- [Alibaba Cloud ECS Metadata Docs](https://help.aliyun.com/zh/ecs/user-guide/overview-of-ecs-instance-metadata)
+- [IMDSv2 Security Practices](https://help.aliyun.com/zh/ecs/user-guide/use-instance-metadata)
+- [Authentication Guide](./authentication.md)

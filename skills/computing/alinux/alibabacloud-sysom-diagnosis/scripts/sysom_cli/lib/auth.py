@@ -468,11 +468,7 @@ def generate_help_message(
     aksk = (
         "方式 1: 使用 AccessKey (AKSK)\n"
         "A. 推荐（跨 Shell / Agent）：./scripts/osops.sh configure，写入 ~/.aliyun/config.json\n"
-        "B. 环境变量（须在同一 shell 进程内与 precheck 一起执行）:\n"
-        "   export ALIBABA_CLOUD_ACCESS_KEY_ID='your-ak-id'\n"
-        "   export ALIBABA_CLOUD_ACCESS_KEY_SECRET='your-ak-secret'\n"
-        "   export ALIBABA_CLOUD_SECURITY_TOKEN='your-sts-token'  # 可选，使用 STS 临时凭证时必填\n"
-        "   （亦支持 ALICLOUD_ACCESS_KEY_ID / ALICLOUD_ACCESS_KEY_SECRET）\n"
+        "B. 如需环境变量方式，请按 references/authentication.md 操作，避免在命令行/日志中明文展示凭证\n"
         "C. 或手工编辑 ~/.aliyun/config.json（mode=AK 或 mode=StsToken）"
     )
     ram_role = (

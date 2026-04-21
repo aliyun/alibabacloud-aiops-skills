@@ -1,11 +1,11 @@
-# 子账号开通 SysOM 与服务关联角色（SLR）
+# SysOM Activation for Subaccounts and Service-Linked Roles (SLR)
 
-子账号在 **Alinux 控制台** 开通 SysOM 时，若提示缺少 **`ram:CreateServiceLinkedRole`**（或同类 RAM 权限），需要由**主账号**或具备 RAM 管理权限的账号处理，或按组织规范为子账号授予相应权限。
+When a subaccount activates SysOM in the **Alinux console**, it may fail with missing permissions like **`ram:CreateServiceLinkedRole`**. In that case, handling must be done by the **primary account** or an account with RAM administration privileges, or according to organizational IAM policy.
 
-**常见处置思路**（以控制台与租户策略为准）：
+Common handling patterns (subject to console behavior and tenant governance):
 
-1. 使用具备权限的账号完成 SysOM 开通（SLR 通常随开通自动创建 **`AliyunServiceRoleForSysom`**）。
-2. 在 **RAM 控制台** 为子账号附加允许创建**服务关联角色**的自定义策略（策略内容需符合贵组织安全要求）。
-3. 由管理员预先完成开通与 SLR 创建后，子账号仅使用 SysOM 能力。
+1. Use an authorized account to activate SysOM (SLR is usually auto-created as **`AliyunServiceRoleForSysom`** during activation).
+2. In **RAM console**, attach a custom policy to the subaccount that allows creating service-linked roles (policy content must comply with your organization security requirements).
+3. Let administrators pre-activate SysOM and create SLR, then allow subaccounts to use SysOM features only.
 
-更完整的认证与 AK/RAM Role 路径见同目录 [authentication.md](./authentication.md)、[openapi-permission-guide.md](./openapi-permission-guide.md)。
+For full authentication flows and AK/RAM Role paths, see [authentication.md](./authentication.md) and [openapi-permission-guide.md](./openapi-permission-guide.md).

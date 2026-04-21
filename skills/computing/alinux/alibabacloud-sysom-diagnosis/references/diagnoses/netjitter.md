@@ -1,45 +1,47 @@
-# netjitter（网络抖动诊断）
+# netjitter (Network Jitter Diagnosis)
 
-> 参数说明依据 SysOM 诊断侧脚本与 OpenAPI 行为整理。
+> Parameter notes are consolidated from SysOM diagnosis scripts and OpenAPI behavior.
 
-## 功能概述
+## Overview
 
-- **实时**（`is_history` 为 0/false）：执行 **`sysak rtrace --jitter-unity`**，阈值 **`threshold`**（毫秒）、持续 **`duration`**（秒）。
-- **历史**（`is_history` 非 0）：按 **`anomaly_start`/`anomaly_end`** 查本地表（时间窗 **≤1 小时、7 天内**）。
+- **Realtime** (`is_history` = 0/false): runs **`sysak rtrace --jitter-unity`** with **`threshold`** (ms) and **`duration`** (s).
+- **Historical** (`is_history` != 0): queries local tables by **`anomaly_start`/`anomaly_end`** (window **<= 1 hour and within 7 days**).
 
-## 何时选用（Agent）
+## When to Use (Agent)
 
-- **网络抖动、时延波动** 类问题。
+- Network jitter and latency fluctuation scenarios.
 
-## 与 `memory memgraph` 的互补
+## Complement with `memory memgraph`
 
-本专项**不**采集 socket 发送/接收队列积压、TCP 内存占用等 memgraph 侧数据。若 `netjitter` 正常但用户仍觉延迟，且 `ss` 显示 Send-Q/Recv-Q 偏大，应再跑 `memory memgraph --deep-diagnosis`。详见 [non-memory-routing.md](../non-memory-routing.md) 与 [memgraph.md](./memgraph.md)。
+This diagnosis does **not** collect socket send/receive queue backlog or TCP-memory composition from memgraph.  
+If `netjitter` appears normal but users still report latency and `ss` shows high Send-Q/Recv-Q, run `memory memgraph --deep-diagnosis`.  
+See [non-memory-routing.md](../non-memory-routing.md) and [memgraph.md](./memgraph.md).
 
-## `params` 字段
+## `params` Fields
 
-| 字段 | 类型 | 必填 | 含义 | 默认 | 备注 |
+| Field | Type | Required | Meaning | Default | Notes |
 |------|------|------|------|------|------|
-| `region` | string | 是* | 地域 | — | `--region` |
-| `instance` | string | 是* | 实例 ID（去 `:port`） | — | `--instance` |
-| `is_history` | int/bool | 否 | 是否历史模式 | `0` | 非 0 走历史查询 |
-| `anomaly_start` | int | 条件 | 起始 Unix 秒 | `0` | 历史必填 |
-| `anomaly_end` | int | 条件 | 结束 Unix 秒 | `0` | 历史必填 |
-| `duration` | int | 否 | 实时采集持续 **秒** | `20` | **须 ≤60** |
-| `threshold` | int | 否 | 抖动阈值 **毫秒** | `10` | 传入 `rtrace --jitter-unity -t` |
+| `region` | string | yes* | Region | — | `--region` |
+| `instance` | string | yes* | Instance ID (strip `:port`) | — | `--instance` |
+| `is_history` | int/bool | no | historical mode toggle | `0` | non-zero enters historical query |
+| `anomaly_start` | int | conditional | start Unix timestamp | `0` | required in historical mode |
+| `anomaly_end` | int | conditional | end Unix timestamp | `0` | required in historical mode |
+| `duration` | int | no | realtime collection duration in **seconds** | `20` | **must be <= 60** |
+| `threshold` | int | no | jitter threshold in **ms** | `10` | passed to `rtrace --jitter-unity -t` |
 
-\* CLI `--region`/`--instance` 可合并写入 params；本机 ECS 省略时由元数据补全。
+\* CLI `--region` / `--instance` can be merged into params; for current ECS instance, metadata can auto-fill them.
 
-## 平台约束
+## Platform Constraints
 
-| 项 | 值 |
+| Item | Value |
 |----|-----|
 | support_channel | **ecs \| eflo** |
-| support_mode | **仅 node** |
-| sysak 最低 | **`3.6.0-1`** |
+| support_mode | **node only** |
+| minimum sysak version | **`3.6.0-1`** |
 
-## 建议用法
+## Recommended Usage
 
-**当前目录**：见 [agent-conventions.md](../agent-conventions.md)（在 `sysom-diagnosis/` 下使用 `./scripts/osops.sh`）。
+Run in `sysom-diagnosis/` (skill root):
 
 ```bash
 ./scripts/osops.sh net netjitter --channel ecs \

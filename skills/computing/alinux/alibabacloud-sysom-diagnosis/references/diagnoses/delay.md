@@ -1,41 +1,42 @@
-# delay（调度延迟 / nosched 诊断）
+# delay (Scheduling Latency / nosched Diagnosis)
 
-> 参数说明依据 SysOM 诊断侧脚本与 OpenAPI 行为整理。OpenAPI **`service_name` 为 `delay`**；实现使用 **`sysak -g nosched`**（调度延迟，非 ICMP RTT）。
+> Parameter notes are consolidated from SysOM diagnosis scripts and OpenAPI behavior.  
+> OpenAPI `service_name` is `delay`; implementation uses **`sysak -g nosched`** (scheduler delay, not ICMP RTT).
 
-## 功能概述
+## Overview
 
-- **实时**（`is_history` 为 0）：执行 **`sysak -g nosched`**，阈值 **`threshold`**（毫秒）、持续 **`duration`**（秒）。
-- **历史**（`is_history` 非 0）：按时间戳查询（**≤1 小时、7 天内**）。
+- **Realtime** (`is_history` = 0): runs **`sysak -g nosched`** with **`threshold`** (ms) and **`duration`** (s).
+- **Historical** (`is_history` != 0): timestamp-based query (**<= 1 hour and within 7 days**).
 
-## 何时选用（Agent）
+## When to Use (Agent)
 
-- **调度延迟、runqueue、nosched 可观测的卡顿**。
-- **不要**当作「ICMP 网络时延」唯一手段（产品配置注释可能写「网络延迟」，以本实现为准）。
+- Scheduling latency, runqueue pressure, and nosched-observable stalls.
+- Do **not** treat this as the sole method for ICMP network latency.
 
-## `params` 字段
+## `params` Fields
 
-| 字段 | 类型 | 必填 | 含义 | 默认 | 备注 |
+| Field | Type | Required | Meaning | Default | Notes |
 |------|------|------|------|------|------|
-| `region` | string | 是* | 地域 | — | `--region` |
-| `instance` | string | 是* | 实例 ID（去 `:port`） | — | `--instance` |
-| `is_history` | int | 否 | 是否历史 | `0` | 非 0 走历史查询 |
-| `anomaly_start` / `anomaly_end` | int | 条件 | Unix 秒 | `0` | 历史模式必填 |
-| `duration` | int | 否 | 实时采集秒数 | `20` | **须 ≤60** |
-| `threshold` | int | 否 | 阈值 **毫秒** | `20` | 传给 `nosched -t` |
+| `region` | string | yes* | Region | — | `--region` |
+| `instance` | string | yes* | Instance ID (strip `:port`) | — | `--instance` |
+| `is_history` | int | no | historical mode toggle | `0` | non-zero enters historical query |
+| `anomaly_start` / `anomaly_end` | int | conditional | Unix timestamps | `0` | required in historical mode |
+| `duration` | int | no | realtime collection duration in seconds | `20` | **must be <= 60** |
+| `threshold` | int | no | threshold in ms | `20` | passed to `nosched -t` |
 
-\* CLI `--region`/`--instance` 可合并写入 params；本机 ECS 省略时由元数据补全。
+\* CLI `--region` / `--instance` can be merged into params; for current ECS instance, metadata can auto-fill them.
 
-## 平台约束
+## Platform Constraints
 
-| 项 | 值 |
+| Item | Value |
 |----|-----|
 | support_channel | **ecs \| eflo** |
-| support_mode | **仅 node** |
-| sysak 最低 | **`3.6.0-1`** |
+| support_mode | **node only** |
+| minimum sysak version | **`3.6.0-1`** |
 
-## 建议用法
+## Recommended Usage
 
-**当前目录**：见 [agent-conventions.md](../agent-conventions.md)（在 `sysom-diagnosis/` 下使用 `./scripts/osops.sh`）。
+Run in `sysom-diagnosis/` (skill root):
 
 ```bash
 ./scripts/osops.sh load delay --channel ecs \

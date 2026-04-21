@@ -1,36 +1,36 @@
-# loadtask（系统负载诊断）
+# loadtask (System Load Diagnosis)
 
-> 参数说明依据 SysOM 诊断侧脚本与 OpenAPI 行为整理。
+> Parameter notes are consolidated from SysOM diagnosis scripts and OpenAPI behavior.
 
-## 功能概述
+## Overview
 
-在目标实例执行 **`sysak -g loadtask`**，读取 `summary.json` 与临时日志，用于 **load average 高、CPU 排队、负载任务分析**。
+Runs **`sysak -g loadtask`** on target instances, reads `summary.json` plus temporary logs, and analyzes **high load average**, **CPU queueing**, and **load-driving tasks**.
 
-## 何时选用（Agent）
+## When to Use (Agent)
 
-- **load average 高、CPU 排队、负载任务分析**。
-- 必须走 `./scripts/osops.sh load loadtask ...` 触发 SysOM `InvokeDiagnosis`；不要改用 ECS 通用诊断或 RunCommand 手工采集替代。
+- High load average, CPU queueing, or load-task analysis scenarios.
+- Must go through `./scripts/osops.sh load loadtask ...` to trigger SysOM `InvokeDiagnosis`; do not replace with generic ECS diagnostics or manual RunCommand collection.
 
-## `params` 字段
+## `params` Fields
 
-| 字段 | 类型 | 必填 | 含义 | 默认 | 备注 |
+| Field | Type | Required | Meaning | Default | Notes |
 |------|------|------|------|------|------|
-| `region` | string | 是* | 地域 | — | `--region` |
-| `instance` | string | 是* | 实例 ID | — | `--instance` |
+| `region` | string | yes* | Region | — | `--region` |
+| `instance` | string | yes* | Instance ID | — | `--instance` |
 
-\* CLI `--region`/`--instance` 可合并写入 params；本机 ECS 省略时由元数据补全。
+\* CLI `--region` / `--instance` can be merged into params; for current ECS instance, metadata can auto-fill them.
 
-## 平台约束
+## Platform Constraints
 
-| 项 | 值 |
+| Item | Value |
 |----|-----|
 | support_channel | **ecs \| eflo** |
-| support_mode | **仅 node** |
-| sysak 最低 | **`3.6.0-1`** |
+| support_mode | **node only** |
+| minimum sysak version | **`3.6.0-1`** |
 
-## 建议用法
+## Recommended Usage
 
-**当前目录**：见 [agent-conventions.md](../agent-conventions.md)（在 `sysom-diagnosis/` 下使用 `./scripts/osops.sh`）。
+Run in `sysom-diagnosis/` (skill root):
 
 ```bash
 ./scripts/osops.sh load loadtask --channel ecs \

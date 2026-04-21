@@ -1,27 +1,35 @@
-# 内存域：快速排查与 SysOM 专项（Agent 补充）
+# Memory Domain: Quick Triage and SysOM Deep Diagnosis (Agent Addendum)
 
-本页**不重复** [SKILL.md](../SKILL.md) 中的「诊断能力总览」表；仅归纳 **内存相关命令** 与 **下一步读哪**。
+This page does **not** repeat the capability overview table in [SKILL.md](../SKILL.md). It only summarizes **memory-related commands** and **what to read next**.
 
-## 何时用哪条入口
+## Which Entry to Use
 
-**原则**：优先匹配用户表述是否已对应某一 **专项**（下表前几行）；**无法匹配或意图明显模糊**时，再用最后一行 **`memory classify`** 综合归类。
+**Principle**: first match whether the user intent maps to a specific diagnosis item (top rows in the table). If intent is unclear, use the fallback **`memory classify`**.
 
-| 意图 | 建议 |
+| Intent | Recommended command |
 |------|------|
-| 内存占用高、要看整机/应用内存大图与组成拆解；怀疑 **TCP 内存高 / socket 队列积压**；或**主诉延迟/卡顿**且 **`ss` 显示 Send-Q/Recv-Q 偏大** | `./scripts/osops.sh memory memgraph` |
-| 明确怀疑 OOM / 要看内核 oom-killer 线索 | `./scripts/osops.sh memory oom` |
-| 明确 Java 内存 / JVM | `./scripts/osops.sh memory javamem` |
-| Go 相关弱特征或需语言侧细节（非 Java） | `./scripts/osops.sh memory memgraph`（全景）；已确认 Java 时用 `javamem` |
-| 不明确、需综合归类（meminfo + OOM 线索 + RSS 合一） | `./scripts/osops.sh memory classify` |
+| High memory usage; need full-machine/app memory panorama and breakdown; suspected **high TCP memory / socket queue backlog**; or user reports **latency/stalls** and `ss` shows high Send-Q/Recv-Q | `./scripts/osops.sh memory memgraph` |
+| Explicit suspicion of OOM / need oom-killer kernel clues | `./scripts/osops.sh memory oom` |
+| Explicit Java memory / JVM issue | `./scripts/osops.sh memory javamem` |
+| Weak Go signals or language-level details needed (non-Java) | `./scripts/osops.sh memory memgraph` (panorama); use `javamem` once Java is confirmed |
+| Unknown symptom, requires integrated classification (meminfo + OOM clues + RSS) | `./scripts/osops.sh memory classify` |
 
-各命令 stdout 信封中请关注 **`agent.next`**（环境已通过时常仅一条深度命令；否则可含 precheck 步骤）、**`agent.findings`**（关键指标摘要）、**`data.routing`** / **`data.local`**。路由到 **oomcheck** 时另见 [oomcheck.md](./diagnoses/oomcheck.md)「Agent 操作约定」。**`data`** 侧不放 `next_steps`；**`--verbose-envelope`** 只加长 **`agent.summary`**。
+From each command stdout envelope, focus on **`agent.next`** (often a single deep-diagnosis command if environment is ready; otherwise may include precheck steps), **`agent.findings`** (key metrics), and **`data.routing`** / **`data.local`**.  
+For routes to **oomcheck**, also see "Agent Operating Conventions" in [oomcheck.md](./diagnoses/oomcheck.md). The **`data`** section does not carry `next_steps`; **`--verbose-envelope`** only expands **`agent.summary`**.
 
-## 可选：一步完成专项
+## Optional: One-Step Deep Diagnosis
 
-在 **`memory memgraph` / `oom` / `javamem` / `classify`** 上加 **`--deep-diagnosis`**（并可传 `--region` / `--instance` / **`--params` / `--params-file`** 等与 [invoke-diagnosis.md](./invoke-diagnosis.md) 专项约定一致的选项），可发起**深度诊断**；**`memory oom`** 还可传 **`--oom-time`** 写入 oomcheck 的 `time`。本地入口加 `--deep-diagnosis` 时以远程专项为主，合并结果见 **`data.remote`**。**本机诊断**的示例命令**勿**写 `--region`/`--instance`；**仅诊断其它 ECS** 且用户已提供时再写入这两项。
+Add **`--deep-diagnosis`** on **`memory memgraph` / `oom` / `javamem` / `classify`** (plus options such as `--region`, `--instance`, **`--params` / `--params-file`** as documented in [invoke-diagnosis.md](./invoke-diagnosis.md)) to trigger deep diagnosis.
 
-远程路径会**内建**与 precheck 相同的环境检查；**可选**单独执行 **`./scripts/osops.sh precheck`** 做自检或排障。
+For **`memory oom`**, you can also pass **`--oom-time`**, which is written to oomcheck `time`.
 
-## 专项参数与契约
+When `--deep-diagnosis` is used, remote diagnosis is primary and merged results appear under **`data.remote`**.
 
-各 `service_name` 的 **params**、边界：仅读 [diagnoses/](./diagnoses/) 下对应专文；请求体与元数据补全：[invoke-diagnosis.md](./invoke-diagnosis.md)。
+Do **not** include `--region` / `--instance` for **current-instance** diagnosis examples. Include them only when diagnosing **another ECS instance** and the user has provided both values.
+
+The remote path includes the same environment checks as precheck. You can also run **`./scripts/osops.sh precheck`** independently for self-check or troubleshooting.
+
+## Diagnosis Params and Contract
+
+For each `service_name` `params` and boundaries, read only the corresponding file under [diagnoses/](./diagnoses/).  
+For request-body and metadata completion details, see [invoke-diagnosis.md](./invoke-diagnosis.md).

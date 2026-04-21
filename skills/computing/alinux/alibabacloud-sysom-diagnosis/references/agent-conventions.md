@@ -1,46 +1,46 @@
-# Agent 约定（sysom-diagnosis）
+# Agent Conventions (sysom-diagnosis)
 
-本文件从 SKILL.md 迁出，详述 Agent 行为规范。主 SKILL 仅保留三条核心规则与索引链接。
+This document was split out from `SKILL.md` and provides detailed agent behavior conventions. The main skill file keeps only core rules and index links.
 
-## 执行目录
+## Execution Directory
 
-- `./scripts/osops.sh` 为相对路径，仅在 **技能根**（与 `SKILL.md` 同级）下有效。
-- 推荐写法：`cd <技能根绝对路径> && ./scripts/osops.sh …`。
-- `agent.next` 中的 `command` 同样须在技能根用 Bash 执行，不要改为让用户自行复制。
+- `./scripts/osops.sh` is a relative path and is only valid in the **skill root** (same level as `SKILL.md`).
+- Recommended form: `cd <absolute skill root path> && ./scripts/osops.sh ...`.
+- Commands in `agent.next.command` must also be executed with Bash in the skill root; do not switch to asking users to copy and run manually.
 
-## 本地优先
+## Local First
 
-- 用户只说「内存高」「OOM」等泛化症状、未明确要远程时，先跑本机 quick（按 [memory-routing.md](./memory-routing.md) 选子命令），不索要 region/instance。
-- 用户明确要远程、或 `agent.next` 已给出 `--deep-diagnosis` 时，再按 [invoke-diagnosis.md](./invoke-diagnosis.md) 区分本机/远程。
+- If users only describe generic symptoms like "high memory" or "OOM" and do not explicitly request remote diagnosis, run a local quick check first (choose subcommands via [memory-routing.md](./memory-routing.md)); do not request region/instance.
+- If users explicitly request remote diagnosis, or `agent.next` already includes `--deep-diagnosis`, follow [invoke-diagnosis.md](./invoke-diagnosis.md) for local vs remote flow.
 
-## 凭证与安全
+## Credentials and Security
 
-- **禁止**在对话中收集 AccessKey / Secret。
-- 引导用户在本机终端于技能根执行 `./scripts/osops.sh configure`，写入 `~/.aliyun/config.json`。
-- 无 PTY 时：在 COSH 中通过 `/settings` 开启「交互式 Shell（PTY）」，或用 `/bash` 进入交互式 Bash。
+- **Do not** collect AccessKey/Secret in chat.
+- Guide users to run `./scripts/osops.sh configure` in their local terminal under the skill root, which writes to `~/.aliyun/config.json`.
+- Without PTY: in COSH, enable "Interactive Shell (PTY)" via `/settings`, or enter an interactive Bash with `/bash`.
 
-## Precheck 信封消费
+## Precheck Envelope Consumption
 
-- 按 `data.remediation`（独立 precheck）或 `data.precheck_gate.remediation`（deep-diagnosis 合并）**顺序**引导用户修复。`primary_path` 已锁定时只展示该路径，`configure_identity` 时按 `guidance.auth_path_choice` 让用户选择。
-- `data.precheck_gate` 存在时以其为准，不要把 quick findings 与 precheck findings 重复全文复述。
+- Guide users to remediate in **order** based on `data.remediation` (standalone precheck) or `data.precheck_gate.remediation` (deep-diagnosis merged). If `primary_path` is locked, show only that path. For `configure_identity`, let users choose per `guidance.auth_path_choice`.
+- If `data.precheck_gate` exists, treat it as authoritative and avoid repeating quick findings and precheck findings in full.
 
-## 检查与使用顺序
+## Check and Usage Order
 
-### A. 内存域
+### A. Memory Domain
 
-1. **快速排查**：按 [memory-routing.md](./memory-routing.md) 选本机子命令。下一步读 `agent.next`，关键发现见 `agent.findings`。
-2. **（可选）`precheck`**：单独验证凭证与 SysOM 开通。
-3. **确认目标**：当前实例不传 `--region`/`--instance`；其它实例须用户给出 region + instance-id。
-4. **深度诊断**：按 `agent.next` 中的 `command`，或加 `--deep-diagnosis`。
-5. **失败处理**：读 `error`、`data`（含 `remediation`、`precheck_gate` 等）、`agent.summary`。
+1. **Quick check**: choose local subcommands via [memory-routing.md](./memory-routing.md). Then read `agent.next`; key findings are in `agent.findings`.
+2. **(Optional) `precheck`**: validate credentials and SysOM activation separately.
+3. **Confirm target**: for current instance, do not pass `--region`/`--instance`; for other instances, users must provide region + instance-id.
+4. **Deep diagnosis**: execute `agent.next.command`, or append `--deep-diagnosis`.
+5. **Failure handling**: inspect `error`, `data` (including `remediation`, `precheck_gate`, etc.), and `agent.summary`.
 
-### B. 非内存域（IO / 网络 / 负载）
+### B. Non-Memory Domains (IO / Network / Load)
 
-1. **确认当前/其它实例**（同 A）→ 2. `./scripts/osops.sh <io|net|load> <子命令> …`（调用前内建环境检查）→ 读 `data.routing`/`data.remote`、`agent.findings`。
-2. **网络延迟 + socket 队列积压**：已跑 `net netjitter`/`net packetdrop` 且结果正常，但 `ss` 显示 Send-Q/Recv-Q 偏大时，须交叉 `memory memgraph --deep-diagnosis`。详见 [non-memory-routing.md](./non-memory-routing.md)。
-3. **失败处理**：同 A。
+1. **Confirm current/other instance** (same as A) → run `./scripts/osops.sh <io|net|load> <subcommand> ...` (built-in environment check before invocation) → read `data.routing`/`data.remote` and `agent.findings`.
+2. **Latency + socket queue backlog**: if `net netjitter`/`net packetdrop` has been run and results look normal, but `ss` shows high Send-Q/Recv-Q, cross-check with `memory memgraph --deep-diagnosis`. See [non-memory-routing.md](./non-memory-routing.md).
+3. **Failure handling**: same as A.
 
-## 与其它 memory 技能的边界
+## Boundary with Other Memory Skills
 
-- 本技能在 `sysom-diagnosis/` 下使用 `./scripts/osops.sh`（`memory`/`io`/`net`/`load` 配套）。
-- 其它技能或父仓库里的入口可能与本目录不同；SysOM 远程专项请使用本目录内的 `osops`。
+- This skill uses `./scripts/osops.sh` under `sysom-diagnosis/` (with `memory`/`io`/`net`/`load` support).
+- Other skills or parent-repo entries may differ; for SysOM remote deep diagnosis, use the `osops` in this directory.

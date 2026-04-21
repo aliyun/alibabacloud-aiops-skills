@@ -1,37 +1,37 @@
-# iofsstat（IO 流量 / 磁盘统计大盘）
+# iofsstat (IO Throughput / Disk Statistics Dashboard)
 
-> 参数说明依据 SysOM 诊断侧脚本与 OpenAPI 行为整理。
+> Parameter notes are consolidated from SysOM diagnosis scripts and OpenAPI behavior.
 
-## 功能概述
+## Overview
 
-在目标实例执行 **`sysak iofsstat`**，采集 IO 统计并输出 JSON，用于 **磁盘/块设备 IO 统计大盘**。
+Runs **`sysak iofsstat`** on the target instance and returns JSON for **disk/block-device IO statistics dashboard** analysis.
 
-## 何时选用（Agent）
+## When to Use (Agent)
 
-- 需要 **磁盘/块设备 IO 统计大盘**，先看 IO 概况再决定是否做 **iodiagnose**。
+- Need a high-level **disk/block IO dashboard** before deciding whether to run **iodiagnose**.
 
-## `params` 字段
+## `params` Fields
 
-| 字段 | 类型 | 必填 | 含义 | 默认 | 备注 |
+| Field | Type | Required | Meaning | Default | Notes |
 |------|------|------|------|------|------|
-| `region` | string | 是* | 地域 | — | `--region` |
-| `instance` | string | 是* | 实例 ID | — | `--instance` |
-| `timeout` | string/int | 否 | 采样时长（秒） | `"15"` | ≤0 时置 15；**>30 时置 30** |
-| `disk` | string | 否 | 块设备名（如 `vda`） | `""` | 非空时命令追加 `-d <disk>` |
+| `region` | string | yes* | Region | — | `--region` |
+| `instance` | string | yes* | Instance ID | — | `--instance` |
+| `timeout` | string/int | no | sampling duration (seconds) | `"15"` | <=0 becomes 15; **>30 is capped to 30** |
+| `disk` | string | no | block device name (e.g. `vda`) | `""` | non-empty appends `-d <disk>` |
 
-\* CLI `--region`/`--instance` 可合并写入 params；本机 ECS 省略时由元数据补全。
+\* CLI `--region` / `--instance` can be merged into params; for current ECS instance, metadata can auto-fill them.
 
-## 平台约束
+## Platform Constraints
 
-| 项 | 值 |
+| Item | Value |
 |----|-----|
 | support_channel | **ecs \| eflo** |
-| support_mode | **仅 node** |
-| sysak 最低 | **`3.6.0-1`** |
+| support_mode | **node only** |
+| minimum sysak version | **`3.6.0-1`** |
 
-## 建议用法
+## Recommended Usage
 
-**当前目录**：见 [agent-conventions.md](../agent-conventions.md)（在 `sysom-diagnosis/` 下使用 `./scripts/osops.sh`）。
+Run in `sysom-diagnosis/` (skill root):
 
 ```bash
 ./scripts/osops.sh io iofsstat --channel ecs \

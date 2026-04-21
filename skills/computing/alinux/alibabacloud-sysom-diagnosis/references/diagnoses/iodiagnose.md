@@ -1,40 +1,40 @@
-# iodiagnose（IO 深度 / ioMonitor 诊断）
+# iodiagnose (Deep IO / ioMonitor Diagnosis)
 
-> 参数说明依据 SysOM 诊断侧脚本与 OpenAPI 行为整理。
+> Parameter notes are consolidated from SysOM diagnosis scripts and OpenAPI behavior.
 
-## 功能概述
+## Overview
 
-在目标实例执行 **`sysak ioMonitor`**（带固定 yaml、日志路径与诊断开关），用于 **IO 延迟、iowait、burst** 等深度采集。
+Runs **`sysak ioMonitor`** on target instances (with fixed yaml, log paths, and diagnosis switches) for deep collection of **IO latency**, **iowait**, and **burst** behavior.
 
-## 何时选用（Agent）
+## When to Use (Agent)
 
-- **IO 慢、iowait 高** 等需要 ioMonitor 一键采集时（在 iofsstat 大盘之后）。
+- Slow IO / high iowait scenarios that require one-click ioMonitor deep collection (typically after iofsstat overview).
 
-## `params` 字段
+## `params` Fields
 
-| 字段 | 类型 | 必填 | 含义 | 默认 | 备注 |
+| Field | Type | Required | Meaning | Default | Notes |
 |------|------|------|------|------|------|
-| `region` | string | 是* | 地域 | — | `--region` |
-| `instance` | string | 是* | 实例 ID | — | `--instance` |
-| `timeout` | string/int | 否 | ioMonitor 采集时长（秒） | `"30"` | 解析失败或非正数时用 30；**上限 300**，超出则回退为 30 |
+| `region` | string | yes* | Region | — | `--region` |
+| `instance` | string | yes* | Instance ID | — | `--instance` |
+| `timeout` | string/int | no | ioMonitor collection duration (seconds) | `"30"` | invalid/non-positive -> 30; **max 300**; overflow falls back to 30 |
 
-\* CLI `--region`/`--instance` 可合并写入 params；本机 ECS 省略时由元数据补全。
+\* CLI `--region` / `--instance` can be merged into params; for current ECS instance, metadata can auto-fill them.
 
-## 平台约束
+## Platform Constraints
 
-| 项 | 值 |
+| Item | Value |
 |----|-----|
 | support_channel | **ecs \| eflo** |
-| support_mode | **仅 node** |
-| sysak 最低 | **`3.6.0-1`** |
+| support_mode | **node only** |
+| minimum sysak version | **`3.6.0-1`** |
 
-## 建议用法
+## Recommended Usage
 
-**当前目录**：见 [agent-conventions.md](../agent-conventions.md)（在 `sysom-diagnosis/` 下使用 `./scripts/osops.sh`）。
+Run in `sysom-diagnosis/` (skill root):
 
 ```bash
 ./scripts/osops.sh io iodiagnose --channel ecs \
   --region cn-hangzhou --instance i-xxx --params '{"timeout":60}'
 ```
 
-长采集时同步增大 `--timeout`（轮询总超时）。
+For long collections, increase outer `--timeout` (polling total timeout) as well.

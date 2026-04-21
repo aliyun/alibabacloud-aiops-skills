@@ -1,17 +1,18 @@
-# 非内存域：IO / 网络 / 负载子命令路由
+# Non-Memory Domains: IO / Network / Load Routing
 
-与 [memory-routing.md](./memory-routing.md) 并列；IO/网络/负载子命令本身即远程专项入口，内建环境检查。
+This document complements [memory-routing.md](./memory-routing.md).  
+`io`/`net`/`load` subcommands are direct entries to remote SysOM diagnosis and include built-in environment checks.
 
-## 强约束（避免错误路由）
+## Hard Constraints (Avoid Misrouting)
 
-- `io/*`、`net/*`、`load/*` 场景必须通过 `./scripts/osops.sh` 进入 SysOM 远程专项（`InvokeDiagnosis`）。
-- 禁止用 ECS 通用诊断 API 或 `Ecs.RunCommand`/Cloud Assistant 手工执行 `top`、`ps`、`iostat`、`uptime` 等命令替代专项诊断。
+- In `io/*`, `net/*`, and `load/*` scenarios, diagnosis must go through `./scripts/osops.sh` to invoke SysOM remote diagnosis (`InvokeDiagnosis`).
+- Do not replace diagnosis items with generic ECS diagnostics APIs or manual `Ecs.RunCommand`/Cloud Assistant commands (`top`, `ps`, `iostat`, `uptime`, etc.).
 
-## 推荐入口
+## Recommended Entries
 
-子命令名与 **`service_name`** 一致；`--channel`/`--params`/`--region`/`--instance`/轮询选项等与 [invoke-diagnosis.md](./invoke-diagnosis.md) 中专项约定一致。
+Subcommand names match **`service_name`**. `--channel`, `--params`, `--region`, `--instance`, and polling options follow [invoke-diagnosis.md](./invoke-diagnosis.md).
 
-| 子系统 | 子命令 | 专文 |
+| Subsystem | Subcommand | Reference |
 |--------|--------|------|
 | **`io`** | `iofsstat` | [iofsstat.md](./diagnoses/iofsstat.md) |
 | **`io`** | `iodiagnose` | [iodiagnose.md](./diagnoses/iodiagnose.md) |
@@ -20,21 +21,22 @@
 | **`load`** | `delay` | [delay.md](./diagnoses/delay.md) |
 | **`load`** | `loadtask` | [loadtask.md](./diagnoses/loadtask.md) |
 
-示例：
+Examples:
 
 ```bash
 ./scripts/osops.sh io iofsstat --channel ecs --timeout 300
 ./scripts/osops.sh net packetdrop --channel ecs --region cn-hangzhou --instance i-xxx
 ```
 
-## 与内存域 `memgraph` 的交叉（延迟 / socket 队列）
+## Cross-check with `memory memgraph` (Latency / Socket Queues)
 
-`net packetdrop` / `net netjitter` 主要覆盖丢包、rtrace、抖动阈值等；**不**提供整机内存 + socket 队列 + TCP 内存占用的 SysOM memgraph 视图。
+`net packetdrop` / `net netjitter` cover packet loss, rtrace, and jitter thresholds, but they do **not** provide the SysOM memgraph perspective for full-memory view + socket queue + TCP memory usage.
 
-当用户描述 **网络延迟、卡顿**，且本机 `ss` 等已观察到 **Send-Q / Recv-Q 积压**（含 `127.0.0.1` 上应用间 TCP），即使 packetdrop / netjitter 远程结果正常，仍建议补充：
+If users report **latency/stalls** and local `ss` already shows **Send-Q / Recv-Q backlog**, you should still run:
 
 ```bash
 ./scripts/osops.sh memory memgraph --deep-diagnosis --channel ecs --timeout 300
 ```
 
-本机 ECS 不传 `--region`/`--instance`；规则同 [invoke-diagnosis.md](./invoke-diagnosis.md)。详见 [memgraph.md](./diagnoses/memgraph.md)。
+For current-instance ECS, omit `--region` / `--instance`; same rule as [invoke-diagnosis.md](./invoke-diagnosis.md).  
+See [memgraph.md](./diagnoses/memgraph.md) for details.

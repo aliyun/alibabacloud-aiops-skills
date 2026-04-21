@@ -1,60 +1,61 @@
-# oomcheck（OOM 诊断）
+# oomcheck (OOM Diagnosis)
 
-> 参数说明依据 `service_scripts/oomcheck_pre.py` 整理。
+> Parameter notes are based on `service_scripts/oomcheck_pre.py`.
 
-## 功能概述
+## Overview
 
-在目标实例上执行 SysOM oomcheck，结合 memgraph 输出路径分析 **OOM / oom-killer**。
+Runs SysOM oomcheck on target instances and analyzes **OOM / oom-killer** paths with memgraph artifacts.
 
-## 何时选用（Agent）
+## When to Use (Agent)
 
-- 云上 **OOM、oom-killer**、需 **SysOM 远程 OOM 诊断**。
-- **勿**与父仓库 **linux-memory-oom / `sysom_cli memory oom`**（本机 dmesg）混淆。
-- 远程 OOM 诊断必须通过 `./scripts/osops.sh memory oom --deep-diagnosis ...` 触发 SysOM `InvokeDiagnosis`，不要退化为 ECS RunCommand 手工采集。
+- Cloud-side **OOM / oom-killer** diagnosis with SysOM remote flow.
+- Do **not** confuse with parent-repo local-only OOM tooling (`linux-memory-oom` / `sysom_cli memory oom`).
+- Remote OOM diagnosis must be triggered by `./scripts/osops.sh memory oom --deep-diagnosis ...` to call SysOM `InvokeDiagnosis`.
 
-## Agent 操作约定
+## Agent Conventions
 
-通用约定（执行目录、Bash 执行、本机/远程区分、凭证安全）见 [agent-conventions.md](../agent-conventions.md)。以下仅列 oomcheck 特有规则。
+General conventions (working directory, Bash execution, local/remote split, credential safety): [agent-conventions.md](../agent-conventions.md).  
+This section lists oomcheck-specific rules only.
 
-### 多次 OOM
+### Multiple OOM Events
 
-- 本机 quick 显示多次 OOM 时，可用 `--oom-at` 锚定某次。
-- 远程 oomcheck 须用 `--oom-time` 或 `--params` 中的 `time`；**禁止**在用户已指定时刻时仍走无时间限定的默认命令。
+- If local quick output shows multiple OOM events, use `--oom-at` to anchor one event.
+- For remote oomcheck, pass `--oom-time` or `time` in `--params`. If user already provided time, do **not** run unbounded default commands.
 
-### 时间格式
+### Time Formats
 
-- CLI 支持 ISO、`YYYY-MM-DD HH:MM:SS`、Unix 秒、journal 风格等；发起 Invoke 前会自动转为 Unix 秒。
+- CLI accepts ISO, `YYYY-MM-DD HH:MM:SS`, Unix seconds, journal-like formats, and converts to Unix seconds before InvokeDiagnosis.
 
-## `params` 字段
+## `params` Fields
 
-| 字段 | 类型 | 必填 | 含义 | 默认 | 备注 |
+| Field | Type | Required | Meaning | Default | Notes |
 |------|------|------|------|------|------|
-| `region` | string | 是* | 地域 | — | `--region` |
-| `instance` | string | 是* | 实例 ID | — | `--instance` |
-| `pod` | string | 否 | Pod 名 | `""` | 非空追加 `-p` |
-| `time` | string | 否 | OOM 发生时间或 `开始~结束` | `""` | CLI `--oom-time`；自动转 Unix 秒 |
+| `region` | string | yes* | Region | — | `--region` |
+| `instance` | string | yes* | Instance ID | — | `--instance` |
+| `pod` | string | no | Pod name | `""` | non-empty appends `-p` |
+| `time` | string | no | OOM timestamp or `start~end` | `""` | from CLI `--oom-time`; converted to Unix seconds |
 
-## 平台约束
+## Platform Constraints
 
-| 项 | 值 |
+| Item | Value |
 |----|-----|
 | support_channel | **all** |
 | support_mode | **all** |
 
-## 建议用法
+## Recommended Usage
 
-本机（CLI 自动补全 region/instance）：
+Current instance (CLI auto-fills region/instance):
 
 ```bash
 ./scripts/osops.sh memory oom --deep-diagnosis --channel ecs --timeout 300
 ```
 
-远程实例：
+Remote instance:
 
 ```bash
 ./scripts/osops.sh memory oom --deep-diagnosis --channel ecs \
   --region cn-hangzhou --instance i-xxx --timeout 300
 ```
 
-本机 quick 专用选项：`--oom-at`（锚定时间）、`--max-oom-summaries`（默认 64）、`--max-oom-full-logs`（默认 1）。
-远程：`--oom-time` 写入 `params.time`（自动转 Unix 秒）。历史窗口务必 **≤1 小时、7 天内**。
+Local quick-only options: `--oom-at`, `--max-oom-summaries` (default 64), `--max-oom-full-logs` (default 1).  
+Remote mode: `--oom-time` is written to `params.time` and converted to Unix seconds. Historical window should be **<= 1 hour and within 7 days**.

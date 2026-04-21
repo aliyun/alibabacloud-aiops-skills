@@ -1,18 +1,18 @@
-# RAM Policy - SysOM 诊断技能
+# RAM Policies for SysOM Diagnosis Skill
 
-本文件列出 `alibabacloud-sysom-diagnosis` Skill 所需的 RAM 权限（用于远程深度诊断相关 OpenAPI）。
+This file lists RAM permissions required by `alibabacloud-sysom-diagnosis` for remote deep-diagnosis OpenAPI calls.
 
-## 权限列表
+## Permission List
 
-### SysOM 诊断调用权限
+### SysOM Diagnosis Invocation Permissions
 
-| API 名称 | 权限 Action | 说明 |
+| API Name | RAM Action | Description |
 |----------|-------------|------|
-| `InitialSysom` | `sysom:InitialSysom` | precheck 与开通/权限校验 |
-| `InvokeDiagnosis` | `sysom:InvokeDiagnosis` | 发起诊断任务 |
-| `GetDiagnosisResult` | `sysom:GetDiagnosisResult` | 查询诊断任务结果 |
+| `InitialSysom` | `sysom:InitialSysom` | precheck and activation/permission validation |
+| `InvokeDiagnosis` | `sysom:InvokeDiagnosis` | start diagnosis task |
+| `GetDiagnosisResult` | `sysom:GetDiagnosisResult` | query diagnosis task result |
 
-## 最小权限策略模板
+## Minimum Policy Template
 
 ```json
 {
@@ -31,8 +31,8 @@
 }
 ```
 
-## 系统策略推荐
+## Recommended System Policy
 
-| 策略名称 | 说明 |
+| Policy Name | Description |
 |----------|------|
-| AliyunSysomFullAccess | SysOM完全访问权限 |
+| `AliyunSysomFullAccess` | Full access to SysOM |
