@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Create ALB forwarding rule via aliyun CLI.
-# Supports Redirect, ForwardGroup, and FixedResponse actions.
+# Supports redirect, forward-group, and fixed-response actions.
 
 set -euo pipefail
 
@@ -19,22 +19,22 @@ Required:
   --listener-id   Listener ID (e.g. lsn-xxx)
   --name          Rule name (2-128 chars, letters/digits/._-)
   --priority      Rule priority (1-10000, smaller = higher priority)
-  --action-type   Action type: Redirect, ForwardGroup, FixedResponse
+  --action-type   Action type: redirect, forward-group, fixed-response
 
 Condition options (combine for AND logic, omit all for match-all /*):
   --host          Match hostname (e.g. "api.example.com")
   --path          Match path pattern (e.g. "/login" or "/api/*")
   --method        Match HTTP method (e.g. GET, POST, DELETE)
 
-Redirect options (--action-type Redirect):
+Redirect options (--action-type redirect):
   --redirect-proto  Target protocol: HTTPS or HTTP (default: HTTPS)
   --redirect-port   Target port (default: 443)
   --redirect-code   HTTP code: 301 or 302 (default: 301)
 
-ForwardGroup options (--action-type ForwardGroup):
+Forward group options (--action-type forward-group):
   --forward-sg    Server group ID
 
-FixedResponse options (--action-type FixedResponse):
+Fixed response options (--action-type fixed-response):
   --fixed-code    HTTP status code (default: 405)
   --fixed-content Response body
   --fixed-type    Content type (default: text/plain)
@@ -50,21 +50,21 @@ Examples:
   # First inspect existing priorities:
   #   bash scripts/list_rules.sh --region cn-hangzhou --listener-id lsn-xxx
   bash create_rule.sh --region cn-hangzhou --listener-id lsn-xxx \
-      --name "force-https" --priority <AVAILABLE_PRIORITY> --action-type Redirect
+      --name "force-https" --priority <AVAILABLE_PRIORITY> --action-type redirect
 
   # Redirect specific domain
   bash create_rule.sh --region cn-hangzhou --listener-id lsn-xxx \
-      --name "force-https-api" --priority <AVAILABLE_PRIORITY> --action-type Redirect \
+      --name "force-https-api" --priority <AVAILABLE_PRIORITY> --action-type redirect \
       --host "api.example.com"
 
   # Host-based routing to server group
   bash create_rule.sh --region cn-hangzhou --listener-id lsn-xxx \
-      --name "api-route" --priority 20 --action-type ForwardGroup \
+      --name "api-route" --priority 20 --action-type forward-group \
       --host "api.example.com" --forward-sg sgp-xxx
 
   # Block DELETE method
   bash create_rule.sh --region cn-hangzhou --listener-id lsn-xxx \
-      --name "block-delete" --priority 5 --action-type FixedResponse \
+      --name "block-delete" --priority 5 --action-type fixed-response \
       --method DELETE --fixed-code 405 --fixed-content "Method Not Allowed"
 EOF
     exit 0
@@ -119,6 +119,17 @@ require_arg "--listener-id" "$LISTENER_ID"
 require_arg "--name" "$RULE_NAME"
 require_arg "--priority" "$PRIORITY"
 require_arg "--action-type" "$ACTION_TYPE"
+
+case "$ACTION_TYPE" in
+    redirect)       ACTION_TYPE="Redirect" ;;
+    forward-group)  ACTION_TYPE="ForwardGroup" ;;
+    fixed-response) ACTION_TYPE="FixedResponse" ;;
+    Redirect|ForwardGroup|FixedResponse) ;;
+    *)
+        echo "Error: --action-type must be redirect, forward-group, or fixed-response." >&2
+        exit 1
+        ;;
+esac
 
 if ! [[ "$PRIORITY" =~ ^[0-9]+$ ]] || [[ "$PRIORITY" -lt 1 || "$PRIORITY" -gt 10000 ]]; then
     echo "Error: --priority must be between 1 and 10000." >&2
@@ -287,7 +298,7 @@ print(json.dumps([{
         ACTION_DESC="FixedResponse $FIXED_CODE"
         ;;
     *)
-        echo "Error: --action-type must be Redirect, ForwardGroup, or FixedResponse." >&2
+        echo "Error: --action-type must be redirect, forward-group, or fixed-response." >&2
         exit 1
         ;;
 esac

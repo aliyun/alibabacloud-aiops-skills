@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-readonly ALIYUN_USER_AGENT="AlibabaCloud-Agent-Skills"
+readonly ALIYUN_USER_AGENT="AlibabaCloud-Agent-Skills/alibabacloud-network-alb-http-to-https"
 readonly -a ALIYUN_CMD=(aliyun --user-agent "$ALIYUN_USER_AGENT")
 
 require_arg() {

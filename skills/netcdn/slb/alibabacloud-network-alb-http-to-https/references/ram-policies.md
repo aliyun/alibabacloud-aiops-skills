@@ -8,11 +8,13 @@ This skill requires the following RAM permissions.
 - `alb:GetLoadBalancerAttribute` - Read ALB details and confirm the load balancer is in a usable state.
 - `alb:ListListeners` - Inspect existing HTTP and HTTPS listeners.
 - `alb:GetListenerAttribute` - Read listener protocol, default action, and certificate configuration.
+- `alb:UpdateListenerAttribute` - Replace the default certificate on an existing HTTPS or QUIC listener when requested.
 - `alb:ListRules` - Inspect existing redirect and forwarding rules and detect priority conflicts.
 - `alb:CreateServerGroup` - Create an empty placeholder server group for an HTTP listener when needed.
 - `alb:CreateListener` - Create a missing HTTP or HTTPS listener.
 - `alb:CreateRule` - Create the HTTP-to-HTTPS redirect rule.
 - `cas:UploadUserCertificate` - Upload a user certificate when a test or temporary certificate is needed.
+- `cas:DeleteUserCertificate` - Delete temporary user certificates uploaded during test certificate workflows.
 
 ## Notes
 

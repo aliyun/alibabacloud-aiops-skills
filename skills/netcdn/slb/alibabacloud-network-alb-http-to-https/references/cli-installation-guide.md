@@ -1,8 +1,8 @@
 # Aliyun CLI Installation Guide
 
-Install or upgrade Aliyun CLI to a version that supports automatic product plugin installation.
+Install or upgrade Aliyun CLI to a version that supports automatic product plugin installation and AI-Mode.
 
-> **Aliyun CLI 3.3.1+**: Use version `3.3.1` or later so published product plugins can be installed automatically when needed.
+> **Aliyun CLI 3.3.3+**: Use version `3.3.3` or later so published product plugins can be installed automatically when needed and skill runs can be marked with AI-Mode.
 
 ## Installation
 
@@ -67,9 +67,11 @@ aliyun version
 
 ## After Installation
 
-1. Confirm `aliyun version` reports `>= 3.3.1`.
+1. Confirm `aliyun version` reports `>= 3.3.3`.
 2. Return to the calling skill and follow its `Authentication` section for credential checks.
 3. Run `aliyun configure set --auto-plugin-install true` if the calling skill requires automatic product plugin installation.
+4. Run `aliyun plugin update` before using product plugins.
+5. If the calling skill uses Alibaba Cloud service APIs, follow its AI-Mode enable, user-agent, and disable instructions.
 
 ## Notes
 
