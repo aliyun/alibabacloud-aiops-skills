@@ -17,16 +17,16 @@ from alibabacloud_tea_util import models as util_models
 
 def create_client() -> QuanMiaoLightApp20240801Client:
     """
-    使用凭据初始化账号Client
+    Initialize client using credential chain
     @return: Client
     @throws Exception
     """
     credential = CredentialClient()
     config = open_api_models.Config(
         credential=credential,
-        user_agent='AlibabaCloud-Agent-Skills'
+        user_agent='AlibabaCloud-Agent-Skills/alibabacloud-bailian-videoanalysis'
     )
-    # Endpoint 请参考 https://api.aliyun.com/product/QuanMiaoLightApp
+    # Endpoint refer to https://api.aliyun.com/product/QuanMiaoLightApp
     config.endpoint = f'quanmiaolightapp.cn-beijing.aliyuncs.com'
     return QuanMiaoLightApp20240801Client(config)
 
@@ -62,40 +62,40 @@ def main(workspace_id, file_url):
         sys.exit(1)
 
 
-# 参数校验函数
+# Parameter validation functions
 def validate_workspace_id(arg):
     if not arg or arg.strip() == '':
-        raise ValueError('workspace_id 不能为空')
+        raise ValueError('workspace_id cannot be empty')
     if not isinstance(arg, str):
-        raise ValueError('workspace_id 必须是字符串类型')
+        raise ValueError('workspace_id must be a string type')
     
-    # 先去除前后空格
+    # Trim whitespace
     trimmed = arg.strip()
     
     if len(trimmed) > 64:
-        raise ValueError('workspace_id 长度不能超过 64 字符')
-    # 只允许字母、数字、连字符、下划线
+        raise ValueError('workspace_id length cannot exceed 64 characters')
+    # Only allow letters, numbers, hyphens, and underscores
     import re
     if not re.match(r'^[a-zA-Z0-9_-]+$', trimmed):
-        raise ValueError('workspace_id 包含非法字符，只允许字母、数字、连字符和下划线')
+        raise ValueError('workspace_id contains invalid characters, only letters, numbers, hyphens and underscores are allowed')
     return trimmed
 
 
 def validate_file_url(arg):
     if not arg or arg.strip() == '':
-        raise ValueError('fileUrl 不能为空')
+        raise ValueError('fileUrl cannot be empty')
     if not isinstance(arg, str):
-        raise ValueError('fileUrl 必须是字符串类型')
+        raise ValueError('fileUrl must be a string type')
     
-    # 先去除前后空格
+    # Trim whitespace
     trimmed = arg.strip()
     
-    # 基本的 URL 格式校验
+    # Basic URL format validation
     if not trimmed.startswith(('http://', 'https://')):
-        raise ValueError('fileUrl 必须是有效的 HTTP/HTTPS URL')
+        raise ValueError('fileUrl must be a valid HTTP/HTTPS URL')
     return trimmed
 
-# 从命令行参数获取参数
+# Get parameters from command line arguments
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Submit video analysis task to Bailian')
     parser.add_argument('--workspace_id', required=True, help='Workspace ID')

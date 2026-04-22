@@ -29,32 +29,39 @@ python scripts/check_env.py --ak xxx --sk xxx   # NEVER pass AK/SK as arguments
 
 #### ✅ CORRECT
 ```bash
-python scripts/list_workspace.py
+aliyun modelstudio list-workspaces --user-agent AlibabaCloud-Agent-Skills/alibabacloud-bailian-videoanalysis
 ```
 - Returns JSON array of available workspaces
 - Auto-detects workspace_id; does NOT require user to know it in advance
+- Uses `--user-agent` parameter for tracking
 
 #### ❌ INCORRECT
 ```bash
-python scripts/list_workspace.py --workspace_id llm-xxx   # workspace_id is not an input parameter
+aliyun modelstudio list-workspaces   # Missing --user-agent parameter
 ```
-- The script lists all workspaces; workspace_id is an output, not an input
 
 ## 3. File Upload to OSS
 
 #### ✅ CORRECT
 ```bash
-python scripts/quanmiao_upload_file_to_oss_and_get_file_url.py --localFilePath /path/to/video.mp4
+# List buckets first
+aliyun ossutil ls --user-agent AlibabaCloud-Agent-Skills/alibabacloud-bailian-videoanalysis
+
+# Upload file
+aliyun ossutil cp /path/to/video.mp4 oss://my-bucket/temp/quanmiao/20260409/video.mp4 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-bailian-videoanalysis --region cn-beijing
+
+# Generate temporary URL
+aliyun ossutil sign oss://my-bucket/temp/quanmiao/20260409/video.mp4 --expires-duration 7200 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-bailian-videoanalysis --region cn-beijing
 ```
 - Uses auto-detected bucket and generated object key by default
-- Optionally specifies `--ossBucket`, `--ossObjectKey`, `--expireSeconds`
+- All commands include `--user-agent` parameter
+- Optionally specifies custom `--expires-duration` (default 7200s)
 
 #### ❌ INCORRECT
 ```bash
-python scripts/quanmiao_upload_file_to_oss_and_get_file_url.py   # Missing --localFilePath (required)
-python scripts/quanmiao_upload_file_to_oss_and_get_file_url.py --localFilePath /path/to/video.mp4 --ossBucket ""   # Empty bucket name
+aliyun ossutil cp /path/to/video.mp4 oss://my-bucket/key   # Missing --user-agent and --region
+aliyun ossutil sign oss://my-bucket/key   # Missing required parameters
 ```
-- `--localFilePath` is required and must point to an existing file
 
 ## 4. Submit Video Analysis Task
 
@@ -62,7 +69,7 @@ python scripts/quanmiao_upload_file_to_oss_and_get_file_url.py --localFilePath /
 ```bash
 python scripts/quanmiao_submit_videoAnalysis_task.py --workspace_id llm-xxx --file_url "https://..."
 ```
-- workspace_id must come from Step 2 (list_workspace.py output)
+- workspace_id must come from Step 2
 - file_url must come from Step 3 (upload script output tempUrl)
 
 #### ❌ INCORRECT
@@ -115,14 +122,14 @@ echo $ALIBABA_CLOUD_ACCESS_KEY_ID   # NEVER print credential values
 # Assuming a specific workspace_id without checking
 python scripts/quanmiao_submit_videoAnalysis_task.py --workspace_id llm-known-good --file_url ...
 ```
-- Always fetch workspaces via `list_workspace.py` first; default to the first result or present a selection list if the user explicitly asks to choose
+- Always fetch workspaces via step 4 first; default to the first result or present a selection list if the user explicitly asks to choose
 
 ## Skipping Environment Check
 
 #### ❌ INCORRECT
 ```bash
-# Jumping directly to upload without checking environment
-python scripts/quanmiao_upload_file_to_oss_and_get_file_url.py --localFilePath /path/to/video.mp4
+# Jumping directly to OSS upload without checking environment
+aliyun ossutil cp /path/to/video.mp4 oss://my-bucket/key --user-agent AlibabaCloud-Agent-Skills/alibabacloud-bailian-videoanalysis --region cn-beijing
 ```
 - Always run `check_env.py` first to ensure dependencies and credentials are ready
 

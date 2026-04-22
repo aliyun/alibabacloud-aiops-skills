@@ -19,6 +19,11 @@ Complete guide for installing and configuring Aliyun CLI.
 - [Next Steps](#next-steps)
 - [References](#references)
 > **Aliyun CLI 3.3.1+**: Supports installing and using all published Alibaba Cloud product plugins. Make sure to upgrade to 3.3.1 or later for full plugin ecosystem coverage.
+>
+> **[IMPORTANT]** After installation, run the following command to enable automatic plugin installation:
+> ```bash
+> aliyun configure set --auto-plugin-install true
+> ```
 ## Installation
 ### macOS
 **Using Homebrew (Recommended)**

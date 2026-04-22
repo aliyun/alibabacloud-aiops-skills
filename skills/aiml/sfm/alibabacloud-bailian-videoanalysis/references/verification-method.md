@@ -15,7 +15,6 @@ python scripts/check_env.py
 ```json
 {
   "pythonPackagesInstalled": {
-    "alibabacloud-bailian20231229": true,
     "alibabacloud-quanmiaolightapp20240801": true,
     "alibabacloud-openapi-util": true,
     "alibabacloud-credentials": true,
@@ -39,61 +38,76 @@ python scripts/check_env.py
 - If `allPythonPackagesInstalled` is `false` → Run `pip install -r scripts/requirements.txt`
 - If `credentialsConfigured` is `false` → Guide user to run `aliyun configure` outside session
 
+**Additional CLI Verification:**
+```bash
+# Verify Aliyun CLI version >= 3.3.1
+aliyun version
+
+# Verify credentials are configured
+aliyun configure list
+```
+
 ---
 
 ## Step 2: Workspace Listing Verification
 
 **Command:**
 ```bash
-python scripts/list_workspace.py
+aliyun modelstudio list-workspaces --user-agent AlibabaCloud-Agent-Skills/alibabacloud-bailian-videoanalysis
 ```
 
 **Expected Output (Success):**
 ```json
 {
-  "workspaces": [
-    { "workspace_id": "llm-xxx", "name": "Default Workspace" }
+  "RequestId": "...",
+  "Workspaces": [
+    {
+      "WorkspaceId": "llm-xxx",
+      "Name": "Default Workspace"
+    }
   ]
 }
 ```
 
 **Verification Criteria:**
-- `workspaces` array is non-empty
-- Each workspace has `workspace_id` and `name` fields
-- `workspace_id` starts with `llm-` prefix
+- `Workspaces` array is non-empty
+- Each workspace has `WorkspaceId` and `Name` fields
+- `WorkspaceId` starts with `llm-` prefix
 
 **Failure Actions:**
-- If `workspaces` is empty → User may not have activated Bailian service; guide to [Bailian console](https://bailian.console.aliyun.com/cn-beijing#/app/app-market/quanmiao/video-comprehend)
+- If `Workspaces` is empty → User may not have activated Bailian service; guide to [Bailian console](https://bailian.console.aliyun.com/cn-beijing#/app/app-market/quanmiao/video-comprehend)
 - If error contains `No workspace permissions` → Check RAM permissions and Bailian workspace authorization
 
 ---
 
 ## Step 3: OSS Upload Verification
 
-**Command:**
+**Commands:**
 ```bash
-python scripts/quanmiao_upload_file_to_oss_and_get_file_url.py --localFilePath <localFilePath>
+# List available buckets
+aliyun ossutil ls --user-agent AlibabaCloud-Agent-Skills/alibabacloud-bailian-videoanalysis
+
+# Upload file to OSS
+aliyun ossutil cp <local-file> oss://<bucket>/<key> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-bailian-videoanalysis --region <region>
+
+# Generate temporary URL
+aliyun ossutil sign oss://<bucket>/<key> --expires-duration 7200 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-bailian-videoanalysis --region <region>
 ```
 
-**Expected Output (Success):**
-```json
-{
-  "status": "success",
-  "ossBucket": "my-bucket",
-  "ossObjectKey": "temp/quanmiao/20260409/video.mp4",
-  "tempUrl": "https://xxx.oss-cn-beijing.aliyuncs.com/...?Signature=xxx",
-  "expireSeconds": 7200
-}
+**Expected Output (Sign Command Success):**
+```
+https://my-bucket.oss-cn-beijing.aliyuncs.com/temp/quanmiao/20260409/video.mp4?Signature=xxx&Expires=xxx&OSSAccessKeyId=xxx
 ```
 
 **Verification Criteria:**
-- `status` field equals `"success"`
-- `tempUrl` is a valid HTTPS URL containing OSS domain and signature
-- `ossBucket` and `ossObjectKey` are non-empty strings
+- Generated URL is a valid HTTPS URL containing OSS domain and signature parameters
+- URL includes `Signature`, `Expires`, and `OSSAccessKeyId` query parameters
+- Bucket name and object key match the uploaded file
 
 **Failure Actions:**
 - If upload fails with permission error → Follow Permission Failure Handling in RAM Policy section
-- If file not found → Verify `localFilePath` points to an existing file
+- If file not found → Verify local file path points to an existing file
+- If no buckets available → Create an OSS bucket first or use user-provided video URL directly
 
 ---
 
@@ -140,16 +154,16 @@ python scripts/quanmiao_get_videoAnalysis_task_result.py --workspace_id <workspa
   "payload": {
     "output": {
       "videoTitleGenerateResult": { "text": "..." },
-      "videoCaptionResult": { "videoCaptions": [...] },
+      "videoCaptionResult": { "videoCaptions": [] },
       "videoAnalysisResult": { "text": "..." },
       "videoGenerateResults": [{ "text": "..." }],
-      "videoMindMappingGenerateResult": { "text": "...", "videoMindMappings": [...] },
-      "videoCalculatorResult": { "items": [...] }
+      "videoMindMappingGenerateResult": { "text": "...", "videoMindMappings": [] },
+      "videoCalculatorResult": { "items": [] }
     },
     "usage": {
-      "inputTokens": N,
-      "outputTokens": N,
-      "totalTokens": N
+      "inputTokens": 1,
+      "outputTokens": 1,
+      "totalTokens": 2
     }
   },
   "requestId": "..."
@@ -162,13 +176,14 @@ python scripts/quanmiao_get_videoAnalysis_task_result.py --workspace_id <workspa
 - `payload.usage` contains token counts
 
 **Status Handling:**
-| Status | Action |
-|--------|--------|
-| `PENDING` | Wait 10-15s, retry |
-| `RUNNING` | Display partial results, wait 10-15s, retry |
-| `SUCCESSED` | Proceed to Step 6 |
-| `FAILED` | Check error message, inform user |
-| `CANCELED` | Inform user task was canceled |
+
+| Status      | Action                                      |
+|-------------|---------------------------------------------|
+| `PENDING`   | Wait 10-15s, retry                          |
+| `RUNNING`   | Display partial results, wait 10-15s, retry |
+| `SUCCESSED` | Proceed to Step 6                           |
+| `FAILED`    | Check error message, inform user            |
+| `CANCELED`  | Inform user task was canceled               |
 
 **Maximum retries:** 180 (approximately 30 minutes)
 
@@ -180,3 +195,5 @@ python scripts/quanmiao_get_videoAnalysis_task_result.py --workspace_id <workspa
 - Summary uses data from Step 5 result directly (no additional API calls)
 - Output includes all sections: title, outline, overview, captions, shot analysis, timeline, summary, token usage
 - Token usage numbers match `payload.usage` from Step 5 result
+
+--- 

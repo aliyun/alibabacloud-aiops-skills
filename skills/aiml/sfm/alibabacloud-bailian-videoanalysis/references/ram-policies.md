@@ -1,41 +1,66 @@
-# RAM 权限声明
+# RAM Permissions
 
-本 Skill 需要以下阿里云 RAM 权限才能正常运行。
+This Skill requires the following Alibaba Cloud RAM permissions to function properly.
 
-## 所需权限清单
+## Required Permissions
 
-| 产品   | Action                | 说明                                    |
-|------|-----------------------|---------------------------------------|
-| modelstudio | `modelstudio:ListWorkspaces` | 查询工作空间列表                              |
-| oss  | `ossutil:ls`          | List buckets or objects               |
-| oss  | `ossutil:cp`          | Upload, Download or Copy Objects      |
-| oss  | `ossutil:presign`     | Generate a pre-signed URL for object  |
+| Product          | Action                                     | Description                          |
+|------------------|--------------------------------------------|--------------------------------------|
+| ModelStudio      | `modelstudio:ListWorkspaces`               | List Bailian workspaces              |
+| OSS              | `ossutil:ls`                               | List buckets or objects              |
+| OSS              | `ossutil:cp`                               | Upload, Download or Copy Objects     |
+| OSS              | `ossutil:presign`                          | Generate a pre-signed URL for object |
+| QuanMiaoLightApp | `quanmiaolightapp:SubmitVideoAnalysisTask` | Submit video analysis task           |
+| QuanMiaoLightApp | `quanmiaolightapp:GetVideoAnalysisTask`    | Get video analysis task results      |
 
-## 权限详情
+## Permission Details
 
 ### modelstudio:ListWorkspaces
 
-用于查询可用的 ModelStudio 工作空间列表。
+Used to query the list of available Bailian workspaces.
+
+### ossutil:ls, ossutil:cp, ossutil:presign
+
+Used to manage OSS buckets and objects, including listing buckets/objects, uploading/downloading files, and generating temporary access URLs.
+
+### quanmiaolightapp:SubmitVideoAnalysisTask
+
+Used to submit video analysis tasks to Bailian service.
+
+### quanmiaolightapp:GetVideoAnalysisTask
+Used to query video analysis task results.
+
+## Authorization Methods
+
+### Use System Policies (Recommended)
+
+1. Visit [Alibaba Cloud RAM Console](https://ram.console.aliyun.com/users)
+2. Select the target RAM user
+3. Click "Add Permissions" button
+4. Search and select the following system policies:
+   - `AliyunBailianFullAccess` (includes Bailian-related permissions)
+   - `AliyunModelStudioReadOnlyAccess` (includes ModelStudio-related permissions)
+   - `AliyunQuanMiaoLightAppFullAccess` (includes QuanMiao-related permissions)
+   - `AliyunOSSFullAccess` (includes OSS-related permissions, can be restricted to specific buckets)
+5. Confirm and add permissions
 
 
-## 授权方式
+## Notes
 
-### 方式一：使用系统策略（推荐）
+- There may be a delay of approximately 30 seconds after authorization before permissions take effect
+- If you encounter `403` or `Index.NoWorkspacePermissions` errors, please check:
+  1. Whether the RAM user has been granted the above permissions
+  2. Whether workspace permissions have been granted to the user in the Bailian console
 
-1. 访问 [阿里云 RAM 访问控制](https://ram.console.aliyun.com/users)
-2. 选择对应的 RAM 用户
-3. 点击「新增授权」按钮
-4. 在权限策略中搜索并选择以下系统策略：
-   - `AliyunBailianFullAccess`（包含 bailian 相关权限）
-   - `AliyunModelStudioReadOnlyAccess`（包含 modelstudio 相关权限）
-   - `AliyunQuanMiaoLightAppFullAccess`（包含 quanmiao 相关权限）
-   - `AliyunOSSFullAccess`（包含 oss 相关权限，可按需授予指定bucket的读写权限）
-5. 确认新增授权
+---
 
+## Permission Failure Handling
 
-## 注意事项
+When any command or API call fails due to permission errors at any point during execution, follow this process:
 
-- 授权后权限生效可能存在 30 秒左右的延迟
-- 如遇到 `403` 或 `Index.NoWorkspacePermissions` 错误，请检查：
-  1. RAM 用户是否已授予上述权限
-  2. 百炼控制台中是否已为该用户授予工作空间权限
+1. **Read this file** (`references/ram-policies.md`) to get the full list of permissions required by this SKILL
+2. **Use `ram-permission-diagnose` skill** to guide the user through requesting the necessary permissions
+3. **Pause and wait** until the user confirms that the required permissions have been granted
+4. **Retry the failed operation** after permissions are confirmed
+
+**Important:** Never proceed with operations that require permissions the user does not have. Always pause and wait for explicit confirmation.

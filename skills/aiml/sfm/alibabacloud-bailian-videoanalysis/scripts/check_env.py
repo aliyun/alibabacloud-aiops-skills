@@ -14,9 +14,8 @@ try:
 except ImportError:
     CredentialClient = None
 
-# 必要的 Python 依赖列表
+# Required Python packages list
 REQUIRED_PACKAGES = [
-    'alibabacloud-bailian20231229',
     'alibabacloud-quanmiaolightapp20240801',
     'alibabacloud-openapi-util',
     'alibabacloud-credentials',
@@ -25,15 +24,21 @@ REQUIRED_PACKAGES = [
 ]
 
 def check_package_installed(package_name):
-    """检查 Python 包是否已安装"""
+    """Check if Python package is installed using importlib.metadata (Python 3.8+)"""
     try:
-        subprocess.run(
-            ['pip', 'show', package_name],
-            capture_output=True,
-            check=True
-        )
+        # Use importlib.metadata which is more reliable than pip commands
+        from importlib.metadata import version
+        version(package_name)
         return True
-    except subprocess.CalledProcessError:
+    except ImportError:
+        # Fallback for older Python versions
+        try:
+            import pkg_resources
+            pkg_resources.get_distribution(package_name)
+            return True
+        except (ImportError, pkg_resources.DistributionNotFound):
+            return False
+    except Exception:
         return False
 
 
@@ -46,31 +51,31 @@ def check_env():
         'errors': []
     }
 
-    # 检查凭证是否可通过默认凭证链获取
+    # Check if credentials can be obtained through default credential chain
     try:
         if CredentialClient is None:
-            raise ImportError('alibabacloud-credentials 未安装')
+            raise ImportError('alibabacloud-credentials not installed')
         credential = CredentialClient()
-        # 尝试获取凭证，验证凭证链是否可用
+        # Try to get credentials to verify credential chain is available
         credential.get_credential().access_key_id
         result['credentialsConfigured'] = True
     except Exception as error:
-        result['errors'].append('阿里云凭证未配置，请运行 `aliyun configure` 配置凭证')
+        result['errors'].append('Alibaba Cloud credentials not configured, please run `aliyun configure` to configure credentials')
         result['credentialsConfigured'] = False
 
-    # 检查所有必要的 Python 包是否安装
+    # Check if all required Python packages are installed
     all_installed = True
     for pkg in REQUIRED_PACKAGES:
         if check_package_installed(pkg):
             result['pythonPackagesInstalled'][pkg] = True
         else:
             result['pythonPackagesInstalled'][pkg] = False
-            result['errors'].append(f'未安装 Python 包：{pkg}')
+            result['errors'].append(f'Python package not installed: {pkg}')
             all_installed = False
     
     result['allPythonPackagesInstalled'] = all_installed
 
-    # 判断是否就绪
+    # Determine if ready
     result['ready'] = result['credentialsConfigured'] and result['allPythonPackagesInstalled']
 
     print(json.dumps(result, indent=2, ensure_ascii=False))

@@ -1,6 +1,5 @@
-alibabacloud-bailian20231229==2.8.4
 alibabacloud-openapi-util==0.2.4
 alibabacloud-credentials==1.0.8
 alibabacloud-tea-util==0.3.14
 alibabacloud-tea-openapi==0.4.4
-alibabacloud-quanmiaolightapp20240801==2.13.8
+alibabacloud-quanmiaolightapp20240801>=2.13.8
