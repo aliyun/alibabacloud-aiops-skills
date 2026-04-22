@@ -16,7 +16,7 @@ A new MaxCompute project is created and available for use.
 # The create-project command should return the project name
 aliyun maxcompute create-project \
   --body '{"name":"test_project","defaultQuota":"os_PayAsYouGoQuota","productType":"payasyougo"}' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-odps-project-manage
 
 # Expected response:
 # {
@@ -29,7 +29,7 @@ aliyun maxcompute create-project \
 ```bash
 aliyun maxcompute get-project \
   --project-name test_project \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-odps-project-manage
 ```
 
 **Success Indicators:**
@@ -61,7 +61,7 @@ Project details are returned with accurate information.
 ```bash
 aliyun maxcompute get-project \
   --project-name <project-name> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-odps-project-manage
 ```
 
 **Success Indicators:**
@@ -78,7 +78,7 @@ aliyun maxcompute get-project \
 PROJECT_NAME="your_project_name"
 
 # Get project and extract status
-RESPONSE=$(aliyun maxcompute get-project --project-name $PROJECT_NAME --user-agent AlibabaCloud-Agent-Skills 2>&1)
+RESPONSE=$(aliyun maxcompute get-project --project-name $PROJECT_NAME --user-agent AlibabaCloud-Agent-Skills/alibabacloud-odps-project-manage 2>&1)
 
 # Check if response contains expected fields
 if echo "$RESPONSE" | grep -q '"status"'; then
@@ -104,7 +104,7 @@ A list of projects is returned, optionally filtered by quota.
 ```bash
 aliyun maxcompute list-projects \
   --max-item 10 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-odps-project-manage
 ```
 
 **Step 2: List with quota filter (optional)**
@@ -112,7 +112,7 @@ aliyun maxcompute list-projects \
 aliyun maxcompute list-projects \
   --quota-nick-name os_PayAsYouGoQuota \
   --max-item 10 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-odps-project-manage
 ```
 
 **Success Indicators:**
@@ -128,7 +128,7 @@ aliyun maxcompute list-projects \
 #!/bin/bash
 
 # List projects
-RESPONSE=$(aliyun maxcompute list-projects --max-item 10 --user-agent AlibabaCloud-Agent-Skills 2>&1)
+RESPONSE=$(aliyun maxcompute list-projects --max-item 10 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-odps-project-manage 2>&1)
 
 # Check if response contains projects array
 if echo "$RESPONSE" | grep -q '"projects"'; then
@@ -158,7 +158,7 @@ Project is deleted and no longer accessible.
 ```bash
 aliyun maxcompute delete-project \
   --project-name <project-name> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-odps-project-manage
 ```
 
 **Step 2: Verify deletion**
@@ -166,7 +166,7 @@ aliyun maxcompute delete-project \
 # Attempting to get the deleted project should fail
 aliyun maxcompute get-project \
   --project-name <project-name> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-odps-project-manage
 
 # Expected: ProjectNotFound error
 ```
@@ -199,7 +199,7 @@ echo ""
 echo "1. Creating project..."
 CREATE_RESULT=$(aliyun maxcompute create-project \
   --body "{\"name\":\"$PROJECT_NAME\",\"defaultQuota\":\"$QUOTA_NAME\",\"productType\":\"payasyougo\"}" \
-  --user-agent AlibabaCloud-Agent-Skills)
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-odps-project-manage)
 echo "✅ Project created"
 
 # Step 2: Wait for project to be available
@@ -210,7 +210,7 @@ sleep 5
 echo "3. Getting project details..."
 GET_RESULT=$(aliyun maxcompute get-project \
   --project-name $PROJECT_NAME \
-  --user-agent AlibabaCloud-Agent-Skills)
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-odps-project-manage)
 STATUS=$(echo $GET_RESULT | jq -r '.data.status')
 echo "✅ Project status: $STATUS"
 
@@ -218,14 +218,14 @@ echo "✅ Project status: $STATUS"
 echo "4. Listing projects..."
 LIST_RESULT=$(aliyun maxcompute list-projects \
   --max-item 10 \
-  --user-agent AlibabaCloud-Agent-Skills)
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-odps-project-manage)
 echo "✅ Projects listed"
 
 # Step 5: Cleanup (Optional - uncomment to delete)
 # echo "5. Cleaning up..."
 # aliyun maxcompute delete-project \
 #   --project-name $PROJECT_NAME \
-#   --user-agent AlibabaCloud-Agent-Skills
+#   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-odps-project-manage
 # echo "✅ Project deleted"
 
 echo ""

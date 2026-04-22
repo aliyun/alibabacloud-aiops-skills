@@ -9,7 +9,6 @@ This Skill execution requires the following RAM permissions in `{Product}:{Actio
 - `odps:CreateProject` — Create MaxCompute project
 - `odps:GetProject` — Query project details
 - `odps:ListProjects` — List all projects
-- `odps:DeleteProject` — Delete project
 - `odps:ListQuotas` — List compute quotas (REQUIRED for project creation)
 
 ## Summary Table
@@ -19,7 +18,6 @@ This Skill execution requires the following RAM permissions in `{Product}:{Actio
 | MaxCompute | `odps:CreateProject` | `*` | Create MaxCompute project |
 | MaxCompute | `odps:GetProject` | `*` or specific project | Get project details |
 | MaxCompute | `odps:ListProjects` | `*` | List all projects |
-| MaxCompute | `odps:DeleteProject` | `*` or specific project | Delete a project |
 | MaxCompute | `odps:ListQuotas` | `*` | List compute quotas (required for creation) |
 
 ---
@@ -40,7 +38,6 @@ Use this policy for users who need complete project management capabilities:
         "odps:CreateProject",
         "odps:GetProject",
         "odps:ListProjects",
-        "odps:DeleteProject",
         "odps:ListQuotas"
       ],
       "Resource": "*"
@@ -106,8 +103,7 @@ To restrict permissions to a specific project:
     {
       "Effect": "Allow",
       "Action": [
-        "odps:GetProject",
-        "odps:DeleteProject"
+        "odps:GetProject"
       ],
       "Resource": "acs:odps:*:*:projects/<project-name>"
     }
@@ -143,10 +139,10 @@ Before running the skill, verify permissions using:
 
 ```bash
 # Check current user identity
-aliyun sts GetCallerIdentity --user-agent AlibabaCloud-Agent-Skills
+aliyun sts get-caller-identity --user-agent AlibabaCloud-Agent-Skills/alibabacloud-odps-project-manage
 
 # List attached policies (requires RAM read permission)
-aliyun ram ListPoliciesForUser --UserName <username> --user-agent AlibabaCloud-Agent-Skills
+aliyun ram list-policies-for-user --user-name <username> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-odps-project-manage
 ```
 
 ---
@@ -163,11 +159,11 @@ Alibaba Cloud provides pre-configured policies that include MaxCompute permissio
 To attach a system policy:
 
 ```bash
-aliyun ram AttachPolicyToUser \
-  --PolicyType System \
-  --PolicyName AliyunODPSFullAccess \
-  --UserName <username> \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun ram attach-policy-to-user \
+  --policy-type System \
+  --policy-name AliyunODPSFullAccess \
+  --user-name <username> \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-odps-project-manage
 ```
 
 ---

@@ -24,7 +24,7 @@ Complete API reference for MaxCompute Project Management operations.
 ```bash
 aliyun maxcompute create-project \
   --body '{"name":"<project-name>","defaultQuota":"os_PayAsYouGoQuota","productType":"payasyougo"}' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-odps-project-manage
 ```
 
 ### Request Body Parameters
@@ -57,7 +57,7 @@ aliyun maxcompute create-project \
 ```bash
 aliyun maxcompute get-project \
   --project-name <project-name> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-odps-project-manage
 ```
 
 ### Request Parameters
@@ -114,13 +114,13 @@ aliyun maxcompute get-project \
 # List all projects
 aliyun maxcompute list-projects \
   --max-item 10 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-odps-project-manage
 
 # Filter by quota
 aliyun maxcompute list-projects \
   --quota-nick-name <quota-name> \
   --max-item 10 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-odps-project-manage
 ```
 
 ### Request Parameters
@@ -172,7 +172,7 @@ aliyun maxcompute list-projects \
 ```bash
 aliyun maxcompute delete-project \
   --project-name <project-name> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-odps-project-manage
 ```
 
 ### Request Parameters
@@ -224,7 +224,7 @@ from alibabacloud_openapi_util.client import Client as OpenApiUtilClient
 import json
 
 # User-Agent identifier for Alibaba Cloud Agent Skills
-USER_AGENT = 'AlibabaCloud-Agent-Skills'
+USER_AGENT = 'AlibabaCloud-Agent-Skills/alibabacloud-odps-project-manage'
 
 def create_maxcompute_project(project_name, quota_nickname, product_type="payasyougo"):
     """Create a MaxCompute project using Python Common SDK."""
