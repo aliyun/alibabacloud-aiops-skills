@@ -1,0 +1,27 @@
+[project]
+name = "scripts"
+version = "0.1.0"
+description = "阿里云云安全中心多账号管理工具"
+requires-python = ">=3.6"
+dependencies = [
+    "openpyxl>=3.1.5",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+only-include = [
+    "accounts.py",
+    "merge.py",
+    "baseline.py",
+    "export_baseline.py",
+    "vuln.py",
+]
+
+[project.scripts]
+accounts = "accounts:main"
+merge = "merge:main"
+baseline = "baseline:main"
+vuln = "vuln:main"
