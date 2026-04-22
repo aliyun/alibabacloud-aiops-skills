@@ -1,0 +1,132 @@
+{
+  "source": "EMAS AppMonitor system filter registry",
+  "generatedFrom": "Snapshot of EMAS AppMonitor system filter definitions (frozen; rebuild manually when the product adds new filterCode)",
+  "bizModules": [
+    "anr",
+    "crash",
+    "custom",
+    "lag",
+    "memory_alloc",
+    "memory_leak"
+  ],
+  "platforms": [
+    "android",
+    "harmony",
+    "iphoneos"
+  ],
+  "total": 391,
+  "files": [
+    {
+      "bizModule": "anr",
+      "platform": "android",
+      "file": "anr-android.json",
+      "count": 29,
+      "staticCount": 10,
+      "dynamicCount": 19
+    },
+    {
+      "bizModule": "crash",
+      "platform": "android",
+      "file": "crash-android.json",
+      "count": 32,
+      "staticCount": 13,
+      "dynamicCount": 19
+    },
+    {
+      "bizModule": "crash",
+      "platform": "harmony",
+      "file": "crash-harmony.json",
+      "count": 27,
+      "staticCount": 9,
+      "dynamicCount": 18
+    },
+    {
+      "bizModule": "crash",
+      "platform": "iphoneos",
+      "file": "crash-iphoneos.json",
+      "count": 31,
+      "staticCount": 12,
+      "dynamicCount": 19
+    },
+    {
+      "bizModule": "custom",
+      "platform": "android",
+      "file": "custom-android.json",
+      "count": 31,
+      "staticCount": 12,
+      "dynamicCount": 19
+    },
+    {
+      "bizModule": "custom",
+      "platform": "harmony",
+      "file": "custom-harmony.json",
+      "count": 26,
+      "staticCount": 8,
+      "dynamicCount": 18
+    },
+    {
+      "bizModule": "custom",
+      "platform": "iphoneos",
+      "file": "custom-iphoneos.json",
+      "count": 30,
+      "staticCount": 11,
+      "dynamicCount": 19
+    },
+    {
+      "bizModule": "lag",
+      "platform": "android",
+      "file": "lag-android.json",
+      "count": 29,
+      "staticCount": 10,
+      "dynamicCount": 19
+    },
+    {
+      "bizModule": "lag",
+      "platform": "harmony",
+      "file": "lag-harmony.json",
+      "count": 26,
+      "staticCount": 8,
+      "dynamicCount": 18
+    },
+    {
+      "bizModule": "lag",
+      "platform": "iphoneos",
+      "file": "lag-iphoneos.json",
+      "count": 28,
+      "staticCount": 9,
+      "dynamicCount": 19
+    },
+    {
+      "bizModule": "memory_alloc",
+      "platform": "android",
+      "file": "memory_alloc-android.json",
+      "count": 26,
+      "staticCount": 9,
+      "dynamicCount": 17
+    },
+    {
+      "bizModule": "memory_alloc",
+      "platform": "iphoneos",
+      "file": "memory_alloc-iphoneos.json",
+      "count": 25,
+      "staticCount": 8,
+      "dynamicCount": 17
+    },
+    {
+      "bizModule": "memory_leak",
+      "platform": "android",
+      "file": "memory_leak-android.json",
+      "count": 26,
+      "staticCount": 9,
+      "dynamicCount": 17
+    },
+    {
+      "bizModule": "memory_leak",
+      "platform": "iphoneos",
+      "file": "memory_leak-iphoneos.json",
+      "count": 25,
+      "staticCount": 8,
+      "dynamicCount": 17
+    }
+  ]
+}

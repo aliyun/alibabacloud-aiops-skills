@@ -1,0 +1,351 @@
+{
+  "bizModule": "custom",
+  "platform": "android",
+  "source": "EMAS AppMonitor system filter registry",
+  "count": 31,
+  "filters": [
+    {
+      "filterCode": "customErrorLanguage",
+      "filterName": "异常类型",
+      "filterType": "checkbox",
+      "filterOrder": 1,
+      "dynamic": false,
+      "filterValues": [
+        {
+          "name": "C#异常",
+          "value": "csharp"
+        },
+        {
+          "name": "Lua异常",
+          "value": "lua"
+        },
+        {
+          "name": "Dart异常",
+          "value": "dart"
+        },
+        {
+          "name": "Java异常",
+          "value": ""
+        },
+        {
+          "name": "未知",
+          "value": "unknown"
+        }
+      ]
+    },
+    {
+      "filterCode": "isCustomErrorFlag",
+      "filterName": "是否自定义",
+      "filterType": "radio",
+      "filterOrder": 2,
+      "dynamic": false,
+      "filterValues": [
+        {
+          "name": "是",
+          "value": "1"
+        },
+        {
+          "name": "否",
+          "value": "0"
+        }
+      ]
+    },
+    {
+      "filterCode": "appVersion",
+      "filterName": "应用版本",
+      "filterType": "checkbox",
+      "filterOrder": 3,
+      "dynamic": true,
+      "filterValues": []
+    },
+    {
+      "filterCode": "build",
+      "filterName": "构建号",
+      "filterType": "checkbox",
+      "filterOrder": 3,
+      "dynamic": true,
+      "filterValues": []
+    },
+    {
+      "filterCode": "firstVersion",
+      "filterName": "首现版本",
+      "filterType": "checkbox",
+      "filterOrder": 4,
+      "dynamic": true,
+      "filterValues": []
+    },
+    {
+      "filterCode": "utdid",
+      "filterName": "设备ID",
+      "filterType": "text",
+      "filterOrder": 6,
+      "dynamic": false,
+      "filterValues": []
+    },
+    {
+      "filterCode": "osVersion",
+      "filterName": "系统版本",
+      "filterType": "checkbox",
+      "filterOrder": 7,
+      "dynamic": true,
+      "filterValues": []
+    },
+    {
+      "filterCode": "brand",
+      "filterName": "品牌",
+      "filterType": "checkbox",
+      "filterOrder": 8,
+      "dynamic": true,
+      "filterValues": []
+    },
+    {
+      "filterCode": "deviceModel",
+      "filterName": "机型",
+      "filterType": "checkbox",
+      "filterOrder": 9,
+      "dynamic": true,
+      "filterValues": []
+    },
+    {
+      "filterCode": "clientIp",
+      "filterName": "客户端IP",
+      "filterType": "text",
+      "filterOrder": 10,
+      "dynamic": false,
+      "filterValues": []
+    },
+    {
+      "filterCode": "channel",
+      "filterName": "渠道",
+      "filterType": "checkbox",
+      "filterOrder": 11,
+      "dynamic": true,
+      "filterValues": []
+    },
+    {
+      "filterCode": "language",
+      "filterName": "语言",
+      "filterType": "checkbox",
+      "filterOrder": 12,
+      "dynamic": true,
+      "filterValues": []
+    },
+    {
+      "filterCode": "view",
+      "filterName": "页面",
+      "filterType": "checkbox",
+      "filterOrder": 13,
+      "dynamic": true,
+      "filterValues": []
+    },
+    {
+      "filterCode": "userNick",
+      "filterName": "用户昵称",
+      "filterType": "text",
+      "filterOrder": 16,
+      "dynamic": false,
+      "filterValues": []
+    },
+    {
+      "filterCode": "userId",
+      "filterName": "用户ID",
+      "filterType": "text",
+      "filterOrder": 18,
+      "dynamic": false,
+      "filterValues": []
+    },
+    {
+      "filterCode": "isForeground",
+      "filterName": "是否前台",
+      "filterType": "radio",
+      "filterOrder": 19,
+      "dynamic": false,
+      "filterValues": [
+        {
+          "name": "是",
+          "value": 1
+        },
+        {
+          "name": "否",
+          "value": 0
+        },
+        {
+          "name": "-",
+          "value": 2
+        }
+      ]
+    },
+    {
+      "filterCode": "isJailbroken",
+      "filterName": "是否root",
+      "filterType": "radio",
+      "filterOrder": 20,
+      "dynamic": false,
+      "filterValues": [
+        {
+          "name": "是",
+          "value": 1
+        },
+        {
+          "name": "否",
+          "value": 0
+        },
+        {
+          "name": "-",
+          "value": 2
+        }
+      ]
+    },
+    {
+      "filterCode": "inMainProcess",
+      "filterName": "是否主进程",
+      "filterType": "radio",
+      "filterOrder": 25,
+      "dynamic": false,
+      "filterValues": [
+        {
+          "name": "是",
+          "value": true
+        },
+        {
+          "name": "否",
+          "value": false
+        }
+      ]
+    },
+    {
+      "filterCode": "access",
+      "filterName": "网络",
+      "filterType": "checkbox",
+      "filterOrder": 27,
+      "dynamic": true,
+      "filterValues": []
+    },
+    {
+      "filterCode": "country",
+      "filterName": "国家/地区",
+      "filterType": "checkbox",
+      "filterOrder": 28,
+      "dynamic": true,
+      "filterValues": []
+    },
+    {
+      "filterCode": "province",
+      "filterName": "省份",
+      "filterType": "checkbox",
+      "filterOrder": 29,
+      "dynamic": true,
+      "filterValues": []
+    },
+    {
+      "filterCode": "city",
+      "filterName": "城市",
+      "filterType": "checkbox",
+      "filterOrder": 30,
+      "dynamic": true,
+      "filterValues": []
+    },
+    {
+      "filterCode": "resolution",
+      "filterName": "分辨率",
+      "filterType": "checkbox",
+      "filterOrder": 31,
+      "dynamic": true,
+      "filterValues": []
+    },
+    {
+      "filterCode": "processName",
+      "filterName": "进程",
+      "filterType": "checkbox",
+      "filterOrder": 32,
+      "dynamic": true,
+      "filterValues": []
+    },
+    {
+      "filterCode": "carrier",
+      "filterName": "运营商",
+      "filterType": "checkbox",
+      "filterOrder": 33,
+      "dynamic": true,
+      "filterValues": []
+    },
+    {
+      "filterCode": "cpuModel",
+      "filterName": "CPU架构",
+      "filterType": "checkbox",
+      "filterOrder": 34,
+      "dynamic": true,
+      "filterValues": []
+    },
+    {
+      "filterCode": "digestHash",
+      "filterName": "问题ID",
+      "filterType": "text",
+      "filterOrder": 35,
+      "dynamic": false,
+      "filterValues": []
+    },
+    {
+      "filterCode": "isSimulator",
+      "filterName": "运行环境",
+      "filterType": "radio",
+      "filterOrder": 40,
+      "dynamic": false,
+      "filterValues": [
+        {
+          "name": "真机",
+          "value": 0
+        },
+        {
+          "name": "模拟器",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "filterCode": "tag",
+      "filterName": "标签",
+      "filterType": "checkbox",
+      "filterOrder": 41,
+      "dynamic": true,
+      "filterValues": []
+    },
+    {
+      "filterCode": "additionalCustomInfo",
+      "filterName": "自定义维度",
+      "filterType": "custom",
+      "filterOrder": 42,
+      "dynamic": true,
+      "filterValues": []
+    },
+    {
+      "filterCode": "issueStatus",
+      "filterName": "问题状态",
+      "filterType": "checkbox",
+      "filterOrder": 43,
+      "dynamic": false,
+      "filterValues": [
+        {
+          "name": "未处理",
+          "value": 1
+        },
+        {
+          "name": "处理中",
+          "value": 2
+        },
+        {
+          "name": "已关闭",
+          "value": 3
+        },
+        {
+          "name": "已处理",
+          "value": 4
+        },
+        {
+          "name": "已忽略",
+          "value": 5
+        }
+      ]
+    }
+  ]
+}
