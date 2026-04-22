@@ -41,7 +41,7 @@ The `create-instance` command returns an `instanceId` if successful:
 aliyun elasticsearch describe-instance \
   --region <RegionId> \
   --instance-id <InstanceId> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage
 ```
 
 **Expected Status Progression:**
@@ -58,7 +58,7 @@ aliyun elasticsearch describe-instance \
   --region cn-hangzhou \
   --instance-id es-cn-xxx**** \
   --cli-query "Result.status" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage
 ```
 
 **Success Criteria:**
@@ -76,7 +76,7 @@ aliyun elasticsearch describe-instance \
 aliyun elasticsearch describe-instance \
   --region <RegionId> \
   --instance-id <InstanceId> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage
 ```
 
 ### Success Criteria
@@ -96,7 +96,7 @@ aliyun elasticsearch describe-instance \
   --region cn-hangzhou \
   --instance-id es-cn-xxx**** \
   --cli-query "Result.{ID:instanceId,Status:status,Version:esVersion,Domain:domain}" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage
 ```
 
 **Expected Output:**
@@ -118,7 +118,7 @@ aliyun elasticsearch describe-instance \
 ```bash
 aliyun elasticsearch list-instance \
   --region <RegionId> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage
 ```
 
 ### Success Criteria
@@ -134,7 +134,7 @@ aliyun elasticsearch list-instance \
 aliyun elasticsearch list-instance \
   --region cn-hangzhou \
   --cli-query "length(Result)" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage
 ```
 
 ### Verify Specific Instance in List
@@ -145,7 +145,7 @@ aliyun elasticsearch list-instance \
   --region cn-hangzhou \
   --instance-id es-cn-xxx**** \
   --cli-query "Result[0].instanceId" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage
 ```
 
 **Success Criteria:**
@@ -162,7 +162,7 @@ aliyun elasticsearch list-instance \
 aliyun elasticsearch restart-instance \
   --region <RegionId> \
   --instance-id <InstanceId> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage
 ```
 
 ### Step 2: Check Response
@@ -186,7 +186,7 @@ aliyun elasticsearch describe-instance \
   --region cn-hangzhou \
   --instance-id es-cn-xxx**** \
   --cli-query "Result.status" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage
 ```
 
 **Status Progression:**
@@ -210,7 +210,7 @@ aliyun elasticsearch describe-instance \
 aliyun elasticsearch list-all-node \
   --region <RegionId> \
   --instance-id <InstanceId> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage
 ```
 
 ### Success Criteria
@@ -227,7 +227,7 @@ aliyun elasticsearch list-all-node \
   --region cn-hangzhou \
   --instance-id es-cn-xxx**** \
   --cli-query "Result[].{Host:host,Type:nodeType,Health:health,CPU:cpuPercent}" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage
 ```
 
 **Expected Output:**
@@ -250,14 +250,14 @@ aliyun elasticsearch describe-instance \
   --region cn-hangzhou \
   --instance-id es-cn-xxx**** \
   --cli-query "Result.nodeAmount" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage
 
 # Compare with actual node count (WORKER nodes)
 aliyun elasticsearch list-all-node \
   --region cn-hangzhou \
   --instance-id es-cn-xxx**** \
   --cli-query "length(Result[?nodeType=='WORKER'])" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage
 ```
 
 ---
@@ -273,7 +273,7 @@ aliyun elasticsearch describe-instance \
   --region <RegionId> \
   --instance-id <InstanceId> \
   --cli-query "Result.status" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage
 ```
 
 **Expected**: `"active"`
@@ -301,7 +301,7 @@ aliyun elasticsearch describe-instance \
   --region <RegionId> \
   --instance-id <InstanceId> \
   --cli-query "Result.{Status:status,Nodes:nodeAmount,Spec:nodeSpec}" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage
 ```
 
 **Status Progression:**
@@ -318,7 +318,7 @@ aliyun elasticsearch describe-instance \
   --region <RegionId> \
   --instance-id <InstanceId> \
   --cli-query "Result.{NodeAmount:nodeAmount,NodeSpec:nodeSpec,Master:masterConfiguration,Warm:warmNodeConfiguration,Client:clientNodeConfiguration,Kibana:kibanaConfiguration}" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage
 ```
 
 ### Success Criteria
@@ -340,7 +340,7 @@ Complete verification workflow:
 
 REGION="cn-hangzhou"
 INSTANCE_ID="es-cn-xxx****"
-USER_AGENT="--user-agent AlibabaCloud-Agent-Skills"
+USER_AGENT="--user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage"
 
 echo "=== Step 1: Verify Instance Exists ==="
 aliyun elasticsearch describe-instance \
@@ -391,14 +391,14 @@ fi
 aliyun configure list
 
 # Test API connectivity
-aliyun elasticsearch list-instance --region cn-hangzhou --size 1 --user-agent AlibabaCloud-Agent-Skills
+aliyun elasticsearch list-instance --region cn-hangzhou --size 1 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage
 
 # Debug with verbose logging
 aliyun elasticsearch describe-instance \
   --region cn-hangzhou \
   --instance-id es-cn-xxx**** \
   --log-level debug \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage
 ```
 
 ---

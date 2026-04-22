@@ -181,18 +181,18 @@ Alibaba Cloud provides built-in system policies for Elasticsearch:
 
 ```bash
 # Attach full access policy to RAM user
-aliyun ram AttachPolicyToUser \
-  --PolicyType System \
-  --PolicyName AliyunElasticsearchFullAccess \
-  --UserName <UserName> \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun ram attach-policy-to-user \
+  --policy-type System \
+  --policy-name AliyunElasticsearchFullAccess \
+  --user-name <UserName> \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage
 
 # Attach read-only policy to RAM user
-aliyun ram AttachPolicyToUser \
-  --PolicyType System \
-  --PolicyName AliyunElasticsearchReadOnlyAccess \
-  --UserName <UserName> \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun ram attach-policy-to-user \
+  --policy-type System \
+  --policy-name AliyunElasticsearchReadOnlyAccess \
+  --user-name <UserName> \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage
 ```
 
 ---

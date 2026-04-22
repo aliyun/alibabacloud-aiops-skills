@@ -18,18 +18,30 @@ Alibaba Cloud Elasticsearch Instance Management
 └── UpdateInstance     (Upgrade/Downgrade Instance Configuration)
 ```
 ## Prerequisites
-> **Pre-check: Aliyun CLI >= 3.3.1 required**
-> Run `aliyun version` to verify >= 3.3.1. If not installed or version too low,
-> see [references/cli-installation-guide.md](references/cli-installation-guide.md) for installation instructions.
-> Then [MUST] run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+> **Pre-check: Aliyun CLI >= 3.3.3 required**
+> Run `aliyun version` to verify >= 3.3.3. If not installed or version too low,
+> run `curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash` to update,
+> or see [references/cli-installation-guide.md](references/cli-installation-guide.md) for installation instructions.
+
+> **Pre-check: Aliyun CLI plugin update required**
+> [MUST] run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+> [MUST] run `aliyun plugin update` to ensure that any existing plugins are always up-to-date.
 
 ```bash
-# Verify CLI version
 aliyun version
-
-# Enable auto plugin installation
 aliyun configure set --auto-plugin-install true
+aliyun plugin update
 ```
+
+**[MUST] CLI User-Agent** — Every `aliyun` CLI command invocation must include:
+`--user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage`
+
+**[MUST] AI-Mode** — Before executing CLI commands, run:
+1. `aliyun configure ai-mode enable`
+2. `aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage"`
+
+After all CLI operations complete, run: `aliyun configure ai-mode disable`
+
 ---
 
 ## Authentication
@@ -133,7 +145,7 @@ aliyun elasticsearch create-instance \
   }' \
   --connect-timeout 3 \
   --read-timeout 10 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage
 ```
 **Example: Create Single Availability Zone Instance**
 ```bash
@@ -168,7 +180,7 @@ aliyun elasticsearch create-instance \
   }' \
   --connect-timeout 3 \
   --read-timeout 10 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage
 ```
 
 **Example: Create Multi-Availability Zone Instance**
@@ -211,7 +223,7 @@ aliyun elasticsearch create-instance \
   }' \
   --connect-timeout 3 \
   --read-timeout 10 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage
 ```
 
 **Error Handling**
@@ -229,17 +241,7 @@ aliyun elasticsearch describe-instance \
   --instance-id <InstanceId> \
   --connect-timeout 3 \
   --read-timeout 10 \
-  --user-agent AlibabaCloud-Agent-Skills
-```
-
-**Example:**
-```bash
-aliyun elasticsearch describe-instance \
-  --region cn-hangzhou \
-  --instance-id es-cn-xxx**** \
-  --connect-timeout 3 \
-  --read-timeout 10 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage
 ```
 
 ### Task 3: List Instances
@@ -256,7 +258,7 @@ aliyun elasticsearch list-instance \
   --size 10 \
   --connect-timeout 3 \
   --read-timeout 10 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage
 ```
 
 For detailed parameters, filter examples, and response format, refer to [related-apis.md - ListInstance](references/related-apis.md#3-listinstance---list-instances)
@@ -284,7 +286,7 @@ aliyun elasticsearch restart-instance \
   --body '<JSON_BODY>' \
   --connect-timeout 3 \
   --read-timeout 10 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage
 ```
 
 **Example (using --body):**
@@ -300,7 +302,7 @@ aliyun elasticsearch restart-instance \
   --body '{"restartType":"instance"}' \
   --connect-timeout 3 \
   --read-timeout 10 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage
 
 # Force restart
 aliyun elasticsearch restart-instance \
@@ -310,7 +312,7 @@ aliyun elasticsearch restart-instance \
   --body '{"restartType":"instance","force":true}' \
   --connect-timeout 3 \
   --read-timeout 10 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage
 
 # Restart specific nodes
 aliyun elasticsearch restart-instance \
@@ -320,7 +322,7 @@ aliyun elasticsearch restart-instance \
   --body '{"restartType":"nodeIp","nodes":["10.0.XX.XX","10.0.XX.XX"]}' \
   --connect-timeout 3 \
   --read-timeout 10 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage
 ```
 
 ### Task 5: Update Instance Configuration (Upgrade/Downgrade)
@@ -356,7 +358,7 @@ aliyun elasticsearch update-instance \
   --body '<JSON_BODY>' \
   --connect-timeout 3 \
   --read-timeout 30 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage
 ```
 
 **Example: Upgrade data node spec**
@@ -370,7 +372,7 @@ aliyun elasticsearch update-instance \
   --body '{"nodeSpec":{"spec":"elasticsearch.sn2ne.xlarge.new"}}' \
   --connect-timeout 3 \
   --read-timeout 30 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage
 ```
 
 **Example: Downgrade data node spec (must set orderActionType=downgrade)**
@@ -385,7 +387,7 @@ aliyun elasticsearch update-instance \
   --body '{"nodeSpec":{"spec":"elasticsearch.sn2ne.large.new"}}' \
   --connect-timeout 3 \
   --read-timeout 30 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage
 ```
 
 **Request Body Examples:**
@@ -419,7 +421,7 @@ aliyun elasticsearch list-all-node \
   --instance-id <InstanceId> \
   --connect-timeout 3 \
   --read-timeout 10 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage
 ```
 
 **Parameters:**
@@ -437,7 +439,7 @@ aliyun elasticsearch list-all-node \
   --instance-id es-cn-xxx**** \
   --connect-timeout 3 \
   --read-timeout 10 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage
 
 # Query specific fields
 aliyun elasticsearch list-all-node \
@@ -446,7 +448,7 @@ aliyun elasticsearch list-all-node \
   --cli-query "Result[].{Host:host,Type:nodeType,Health:health,CPU:cpuPercent,Heap:heapPercent,Disk:diskUsedPercent}" \
   --connect-timeout 3 \
   --read-timeout 10 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage
 ```
 
 **Response Fields:**
@@ -478,7 +480,7 @@ aliyun elasticsearch describe-instance \
   --cli-query "Result.status" \
   --connect-timeout 3 \
   --read-timeout 10 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage
 ```
 
 Expected status: `active`
@@ -486,7 +488,6 @@ Expected status: `active`
 ---
 
 ## Reference Links
-
 | Reference | Description |
 |-----------|-------------|
 | [related-apis.md](references/related-apis.md) | API and CLI command details |
