@@ -34,11 +34,16 @@ This skill enables users to:
 
 ## Installation
 
-> **Pre-check: Aliyun CLI >= 3.3.1 required**
+> **Pre-check: Aliyun CLI >= 3.3.3 required**
 >
-> Run `aliyun version` to verify >= 3.3.1. If not installed or version too low,
-> see [references/cli-installation-guide.md](references/cli-installation-guide.md) for installation instructions.
+> Run `aliyun version` to verify >= 3.3.3. If not installed or version too low,
+> run `curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash` to install/update,
+> or see [references/cli-installation-guide.md](references/cli-installation-guide.md) for installation instructions.
 > Then [MUST] run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+> Then [MUST] run `aliyun plugin update` to ensure that any existing plugins on your local machine are always up-to-date.
+
+**[MUST] CLI User-Agent** — Every `aliyun` CLI command invocation must include:
+`--user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills`
 
 ### Enable AI-Mode
 
@@ -49,7 +54,7 @@ Aliyun CLI provides AI-Mode. When enabled, the CLI automatically attaches AI ide
 aliyun configure ai-mode enable
 
 # Set AI-Mode user-agent identifier
-aliyun configure ai-mode set-user-agent
+aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-find-skills"
 
 # Disable AI-Mode
 aliyun configure ai-mode disable
@@ -71,7 +76,7 @@ aliyun plugin update
 aliyun plugin install --names agentexplorer
 
 # Verify installation
-aliyun agentexplorer --help --user-agent AlibabaCloud-Agent-Skills
+aliyun agentexplorer --help --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
 ## Authentication
@@ -86,7 +91,7 @@ aliyun agentexplorer --help --user-agent AlibabaCloud-Agent-Skills
 > - **ONLY** use `aliyun configure list` to check credential status
 >
 > ```bash
-> aliyun configure list --user-agent AlibabaCloud-Agent-Skills
+> aliyun configure list --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 > ```
 >
 > Check the output for a valid profile (AK, STS, or OAuth identity).
@@ -124,24 +129,24 @@ Based on user intent, choose keyword search, category search, or both:
 aliyun agentexplorer search-skills \
   --keyword "<keyword>" \
   --max-results 20 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Get all categories
 aliyun agentexplorer list-categories \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Category search
 aliyun agentexplorer search-skills \
   --category-code "<category-code>" \
   --max-results 20 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Combined search (keyword + category)
 aliyun agentexplorer search-skills \
   --keyword "<keyword>" \
   --category-code "<category-code>" \
   --max-results 20 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
 ### Step 2: Iterate Until Found
@@ -163,7 +168,7 @@ Optionally retrieve skill content to verify it matches user intent before instal
 ```bash
 aliyun agentexplorer get-skill-content \
   --skill-name "<skill-name>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
 ### Step 4: Install Skill
@@ -203,7 +208,7 @@ aliyun agentexplorer search-skills \
   --keyword "<keyword>" \
   --max-results 20 \
   --next-token "<next-token-from-previous-response>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
 ## Success Verification
@@ -250,8 +255,8 @@ For detailed verification steps, see [references/verification-method.md](referen
 # Drop category filter, search by keyword only
 
 # Strategy 3: Browse by category
-aliyun agentexplorer list-categories --user-agent AlibabaCloud-Agent-Skills
-aliyun agentexplorer search-skills --category-code "computing" --user-agent AlibabaCloud-Agent-Skills
+aliyun agentexplorer list-categories --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
+aliyun agentexplorer search-skills --category-code "computing" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Strategy 4: Use broader terms
 # Instead of "RDS backup automation" try just "RDS" or "database"
@@ -306,12 +311,12 @@ This skill does not create any resources. No cleanup is required.
 aliyun agentexplorer search-skills \
   --keyword "ECS" \
   --max-results 20 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Step 2: Display results table and get details for the best match
 aliyun agentexplorer get-skill-content \
   --skill-name "alibabacloud-ecs-batch-command" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
 ### Example 2: Browse Database Skills
@@ -321,13 +326,13 @@ aliyun agentexplorer get-skill-content \
 
 # Step 1: List categories to show database category
 aliyun agentexplorer list-categories \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Step 2: Search database category
 aliyun agentexplorer search-skills \
   --category-code "database" \
   --max-results 20 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Step 3: Display results grouped by subcategory
 ```
@@ -341,7 +346,7 @@ aliyun agentexplorer search-skills \
 aliyun agentexplorer search-skills \
   --keyword "OSS" \
   --max-results 20 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Step 2: Display results in user's preferred language
 ```
@@ -356,7 +361,7 @@ aliyun agentexplorer search-skills \
   --keyword "backup" \
   --category-code "database.rds" \
   --max-results 20 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Step 2: Display targeted results
 ```

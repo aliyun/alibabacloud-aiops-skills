@@ -18,7 +18,7 @@ NC='\033[0m' # No Color
 # Check 1: Aliyun CLI version
 echo "Check 1: Aliyun CLI Version"
 CLI_VERSION=$(aliyun version 2>/dev/null || echo "0.0.0")
-REQUIRED_VERSION="3.3.1"
+REQUIRED_VERSION="3.3.3"
 
 if [ "$(printf '%s\n' "$REQUIRED_VERSION" "$CLI_VERSION" | sort -V | head -n1)" = "$REQUIRED_VERSION" ]; then
     echo -e "${GREEN}✅ PASS${NC} - Aliyun CLI version: $CLI_VERSION (>= $REQUIRED_VERSION)"
@@ -131,7 +131,7 @@ CLI_COMMANDS=(
 
 ALL_COMMANDS_VALID=true
 for cmd in "${CLI_COMMANDS[@]}"; do
-    if aliyun agentexplorer "$cmd" --help --user-agent AlibabaCloud-Agent-Skills >/dev/null 2>&1; then
+    if aliyun agentexplorer "$cmd" --help --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills >/dev/null 2>&1; then
         echo -e "${GREEN}✅${NC} agentexplorer $cmd"
     else
         echo -e "${RED}❌${NC} agentexplorer $cmd (command not found or invalid)"
@@ -148,7 +148,7 @@ echo ""
 
 # Check 7: User-agent flag presence
 echo "Check 7: User-Agent Flag in Commands"
-USER_AGENT_COUNT=$(grep -o "user-agent AlibabaCloud-Agent-Skills" SKILL.md | wc -l)
+USER_AGENT_COUNT=$(grep -o "user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills" SKILL.md | wc -l)
 if [ "$USER_AGENT_COUNT" -gt 20 ]; then
     echo -e "${GREEN}✅ PASS${NC} - Found $USER_AGENT_COUNT instances of user-agent flag"
 else

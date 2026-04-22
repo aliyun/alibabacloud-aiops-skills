@@ -82,14 +82,14 @@ aliyun ram create-policy \
       "Resource": "*"
     }]
   }' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Attach to RAM user
 aliyun ram attach-policy-to-user \
   --policy-name AgentExplorerReadOnly \
   --policy-type Custom \
   --user-name <your-ram-user-name> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
 ## Permission Verification
@@ -98,13 +98,13 @@ To verify that your account has the required permissions:
 
 ```bash
 # Test ListCategories permission
-aliyun agentexplorer list-categories --user-agent AlibabaCloud-Agent-Skills
+aliyun agentexplorer list-categories --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Test SearchSkills permission
-aliyun agentexplorer search-skills --keyword "test" --user-agent AlibabaCloud-Agent-Skills
+aliyun agentexplorer search-skills --keyword "test" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Test GetSkillContent permission
-aliyun agentexplorer get-skill-content --skill-name "example-skill" --user-agent AlibabaCloud-Agent-Skills
+aliyun agentexplorer get-skill-content --skill-name "example-skill" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
 If any command returns a permission error (e.g., `403 Forbidden`, `NoPermission`), you need to apply the RAM policy above.

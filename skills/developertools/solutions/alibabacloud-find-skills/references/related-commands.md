@@ -27,19 +27,19 @@ aliyun agentexplorer list-categories [flags]
 **Parameters**: None required.
 
 **Common Flags**:
-- `--user-agent AlibabaCloud-Agent-Skills` — **Required**: Identify requests from this skill
+- `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills` — **Required**: Identify requests from this skill
 - `--cli-query <jmespath>` — Filter output using JMESPath expression
 - `-q, --quiet` — Suppress output
 
 **Example Usage**:
 ```bash
 # List all categories
-aliyun agentexplorer list-categories --user-agent AlibabaCloud-Agent-Skills
+aliyun agentexplorer list-categories --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # List categories with JMESPath filtering
 aliyun agentexplorer list-categories \
   --cli-query "categories[].categoryName" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
 **Output Structure**:
@@ -82,7 +82,7 @@ aliyun agentexplorer search-skills [flags]
 | `--skip` | int | No | Number of items to skip |
 
 **Common Flags**:
-- `--user-agent AlibabaCloud-Agent-Skills` — **Required**: Identify requests from this skill
+- `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills` — **Required**: Identify requests from this skill
 - `--cli-query <jmespath>` — Filter output using JMESPath expression
 - `--pager` — Auto-merge all pages
 - `-q, --quiet` — Suppress output
@@ -93,49 +93,49 @@ aliyun agentexplorer search-skills [flags]
 # Search by keyword only
 aliyun agentexplorer search-skills \
   --keyword "ECS" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Search by category only
 aliyun agentexplorer search-skills \
   --category-code "computing" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Search by subcategory (dot notation)
 aliyun agentexplorer search-skills \
   --category-code "computing.ecs" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Combined keyword and category
 aliyun agentexplorer search-skills \
   --keyword "backup" \
   --category-code "database.rds" \
   --max-results 10 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Multiple categories
 aliyun agentexplorer search-skills \
   --category-code "computing,database" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Paginated search (page 2)
 aliyun agentexplorer search-skills \
   --keyword "monitoring" \
   --max-results 20 \
   --next-token "<token-from-previous-response>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Skip first N results
 aliyun agentexplorer search-skills \
   --keyword "OSS" \
   --skip 10 \
   --max-results 20 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Filter results with JMESPath
 aliyun agentexplorer search-skills \
   --keyword "ECS" \
   --cli-query "skills[].skillName" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
 **Output Structure**:
@@ -177,7 +177,7 @@ aliyun agentexplorer get-skill-content --skill-name <name> [flags]
 | `--skill-name` | string | **Yes** | Unique skill identifier (from search results) |
 
 **Common Flags**:
-- `--user-agent AlibabaCloud-Agent-Skills` — **Required**: Identify requests from this skill
+- `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills` — **Required**: Identify requests from this skill
 - `--cli-query <jmespath>` — Filter output using JMESPath expression
 - `-q, --quiet` — Suppress output
 
@@ -187,13 +187,13 @@ aliyun agentexplorer get-skill-content --skill-name <name> [flags]
 # Get skill content
 aliyun agentexplorer get-skill-content \
   --skill-name "alibabacloud-ecs-batch-command" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Get only the description field
 aliyun agentexplorer get-skill-content \
   --skill-name "alibabacloud-ecs-batch-command" \
   --cli-query "description" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
 **Output Structure**:
@@ -255,13 +255,13 @@ aliyun configure list [flags]
 **Parameters**: None required.
 
 **Common Flags**:
-- `--user-agent AlibabaCloud-Agent-Skills` — **Required**: Identify requests from this skill
+- `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills` — **Required**: Identify requests from this skill
 
 **Example Usage**:
 
 ```bash
 # List all profiles
-aliyun configure list --user-agent AlibabaCloud-Agent-Skills
+aliyun configure list --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
 **Output Example**:
@@ -328,7 +328,7 @@ aliyun configure set --auto-plugin-install true
 aliyun agentexplorer search-skills \
   --keyword "monitoring" \
   --pager \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
 ### Pattern 2: Filter Output with JMESPath
@@ -338,13 +338,13 @@ aliyun agentexplorer search-skills \
 aliyun agentexplorer search-skills \
   --keyword "ECS" \
   --cli-query "skills[].skillName" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Get skills with install count > 100
 aliyun agentexplorer search-skills \
   --keyword "ECS" \
   --cli-query "skills[?installCount > \`100\`]" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
 ### Pattern 3: Hierarchical Category Search
@@ -353,12 +353,12 @@ aliyun agentexplorer search-skills \
 # Search all computing skills
 aliyun agentexplorer search-skills \
   --category-code "computing" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Search only ECS skills (computing.ecs)
 aliyun agentexplorer search-skills \
   --category-code "computing.ecs" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
 ### Pattern 4: Multi-category Search
@@ -367,12 +367,12 @@ aliyun agentexplorer search-skills \
 # Search across multiple top-level categories
 aliyun agentexplorer search-skills \
   --category-code "computing,database,storage" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Search across multiple subcategories
 aliyun agentexplorer search-skills \
   --category-code "computing.ecs,database.rds,storage.oss" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
 ---
@@ -393,10 +393,10 @@ aliyun plugin list | grep agentexplorer
 
 ```bash
 # Check if credentials are configured
-aliyun configure list --user-agent AlibabaCloud-Agent-Skills
+aliyun configure list --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Test API access
-aliyun agentexplorer list-categories --user-agent AlibabaCloud-Agent-Skills
+aliyun agentexplorer list-categories --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
 ### Debug Mode
@@ -406,7 +406,7 @@ aliyun agentexplorer list-categories --user-agent AlibabaCloud-Agent-Skills
 aliyun agentexplorer search-skills \
   --keyword "ECS" \
   --log-level DEBUG \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
 ### Dry Run Mode
@@ -416,7 +416,7 @@ aliyun agentexplorer search-skills \
 aliyun agentexplorer search-skills \
   --keyword "ECS" \
   --cli-dry-run \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
 ---
@@ -438,7 +438,7 @@ aliyun agentexplorer search-skills \
 
 ## Notes
 
-- **User-Agent Required**: All `aliyun agentexplorer` commands MUST include `--user-agent AlibabaCloud-Agent-Skills`
+- **User-Agent Required**: All `aliyun agentexplorer` commands MUST include `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills`
 - **Plugin Mode**: Commands use plugin mode format (lowercase with hyphens)
 - **Pagination**: Use `--next-token` from response for subsequent pages
 - **Category Codes**: Use dot notation for subcategories (e.g., `computing.ecs`)
