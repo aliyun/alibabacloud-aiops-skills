@@ -78,6 +78,11 @@ This document lists all RAM permissions required to use the DataWorks Data Quali
 | `InvalidAccessKeyId.NotFound` | Invalid AccessKey | Check AccessKey configuration via `aliyun configure list` |
 | `SignatureDoesNotMatch` | Signature mismatch | Check AccessKeySecret |
 
+## Local CLI Configuration Notes
+
+- `aliyun configure set --auto-plugin-install true`, `aliyun configure ai-mode enable`, `aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-quality"`, `aliyun configure ai-mode disable`, and `aliyun configure list` are local CLI configuration commands.
+- These commands do not map to DataWorks RAM permissions, but they are required prerequisites for safe skill execution.
+
 ## References
 
 - [DataWorks RAM Permission Guide](https://help.aliyun.com/zh/dataworks/user-guide/dataworks-ram-permissions)

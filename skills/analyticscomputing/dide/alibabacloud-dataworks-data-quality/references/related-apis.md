@@ -2,6 +2,17 @@
 
 All APIs use: `aliyun dataworks-public <ApiName> --user-agent AlibabaCloud-Agent-Skills`
 
+## Local CLI Prerequisite Commands
+
+| Surface | Command | Purpose |
+| --- | --- | --- |
+| `aliyun` CLI | `aliyun version` | Verify CLI availability and version |
+| `aliyun` CLI | `aliyun configure set --auto-plugin-install true` | Enable plugin auto-install |
+| `aliyun` CLI | `aliyun configure ai-mode enable` | Enable AI-Mode before running aliyun CLI commands |
+| `aliyun` CLI | `aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-quality"` | Configure the skill-specific AI-Mode user agent |
+| `aliyun` CLI | `aliyun configure ai-mode disable` | Disable AI-Mode after task completion |
+| `aliyun` CLI | `aliyun configure list` | Verify credential profile state safely |
+
 ---
 
 ## Module 1: Rule Template APIs

@@ -40,16 +40,21 @@ DataWorks Data Quality
 
 ### Prerequisites
 
-1. **Aliyun CLI >= 3.3.1**: `aliyun version` (Installation: see [references/cli-installation-guide.md](references/cli-installation-guide.md))
+1. **Aliyun CLI >= 3.3.3**: `aliyun version` (If not installed or version too low, run `curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash` to install/update. See [references/cli-installation-guide.md](references/cli-installation-guide.md))
 2. **First-time use**: `aliyun configure set --auto-plugin-install true`
-3. **jq** (recommended for output formatting): `which jq`
-4. **Credential status**: `aliyun configure list`, verify valid credentials exist
+3. **Plugin update**: [MUST] run `aliyun plugin update` to ensure that any existing plugins on your local machine are always up-to-date.
+4. **AI-Mode Configuration**: [MUST] Before using aliyun CLI commands, configure AI-Mode:
+   - `aliyun configure ai-mode enable`
+   - `aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-quality"`
+   - `aliyun configure ai-mode disable`
+5. **jq** (recommended for output formatting): `which jq`
+6. **Credential status**: `aliyun configure list`, verify valid credentials exist
 
 > **Security Rules**: **DO NOT** read/print/echo AK/SK values. **ONLY** use `aliyun configure list` to check credential status.
 
 ### Command Formatting
 
-- **User-Agent (mandatory)**: All `aliyun` CLI commands **must** include `--user-agent AlibabaCloud-Agent-Skills`.
+- **User-Agent (mandatory)**: All `aliyun` CLI commands **must** include `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-quality`.
 - **Timeout (mandatory)**: All `aliyun` CLI commands **must** include `--connect-timeout 5 --read-timeout 10`. These match the CLI built-in defaults and make the timeout policy explicit.
 - **Single-line commands**: Construct as a **single-line string**; do not use `\` for line breaks.
 - **jq step-by-step**: First execute the `aliyun` command to get JSON, then pipe to `jq` for formatting.
@@ -177,7 +182,7 @@ Common aliases: DW = DataWorks, DQ = Data Quality, scan = monitor, scan run = ex
 > If the `alibabacloud-dataworks-workspace-manage` skill is available, prefer using it for workspace lookup. The following is only a fallback.
 
 ```bash
-aliyun dataworks-public ListProjects --user-agent AlibabaCloud-Agent-Skills --Status Available --PageSize 100
+aliyun dataworks-public list-projects --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-quality --status Available --page-size 100
 ```
 
 Rules:
@@ -190,7 +195,7 @@ Rules:
 Intent guidance:
 
 - `"there's a data quality issue"` → ask whether the user wants monitor configuration, run records, or alert settings
-- `"show me this table"` → start with `ListDataQualityScans --Table <TABLE_NAME>`
+- `"show me this table"` → start with `list-data-quality-scans --table <TABLE_NAME>`
 - If the intent is still unclear, ask the user to choose one of four modules: rule templates, monitors, alert rules, or scan runs
 
 ---
@@ -201,21 +206,26 @@ Rule templates define reusable metric logic such as null rate, duplicate rate, r
 
 ## Task 1.1: List Rule Templates (ListDataQualityTemplates)
 
+> **Always call `ListDataQualityTemplates`** whenever the user asks about quality rule templates in their workspace. Never answer without invoking the API.
+>
+> **Scope**: This API only returns workspace **custom** templates. It does **not** support querying system built-in templates. `--project-id` is **required** — if the user has not provided `ProjectId`, collect it first via Module 0.
+
 ```bash
-aliyun dataworks-public ListDataQualityTemplates --user-agent AlibabaCloud-Agent-Skills [--region <REGION_ID> --endpoint dataworks.<REGION_ID>.aliyuncs.com] [--ProjectId <PROJECT_ID>] [--Name <FUZZY_NAME>] [--Catalog <CATALOG_PATH>] [--PageNumber 1] [--PageSize 10]
+aliyun dataworks-public list-data-quality-templates --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-quality [--region <REGION_ID> --endpoint dataworks.<REGION_ID>.aliyuncs.com] --project-id <PROJECT_ID> [--name <FUZZY_NAME>] [--catalog <CATALOG_PATH>] [--page-number 1] [--page-size 10]
 ```
 
 How to interpret the result:
 
 - `PageInfo.DataQualityTemplates[]` is the working set for user selection
-- Show `Id`, a concise template name if present in `Spec`, owner, and modification time in a table
-- If `ProjectId` is omitted, explain that the result is the system built-in template set
+- Present a Markdown table of `Id`, template name (from `Spec`), `Catalog`/category, and description — do not dump raw JSON
 - Use `Catalog` and template naming patterns to tell the user what class of checks is available
+- After listing, proactively suggest the user pick a template ID to view full configuration via `GetDataQualityTemplate`
+- If the user asks about system built-in templates, explain this API only covers workspace custom templates and direct them to the DataWorks console
 
 ## Task 1.2: Get Rule Template Details (GetDataQualityTemplate)
 
 ```bash
-aliyun dataworks-public GetDataQualityTemplate --user-agent AlibabaCloud-Agent-Skills [--region <REGION_ID> --endpoint dataworks.<REGION_ID>.aliyuncs.com] --Id <TEMPLATE_ID>
+aliyun dataworks-public get-data-quality-template --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-quality [--region <REGION_ID> --endpoint dataworks.<REGION_ID>.aliyuncs.com] --id <TEMPLATE_ID>
 ```
 
 How to interpret the result:
@@ -234,7 +244,7 @@ A data quality monitor (scan) is a concrete monitoring task bound to a table or 
 ## Task 2.1: List Data Quality Monitors (ListDataQualityScans)
 
 ```bash
-aliyun dataworks-public ListDataQualityScans --user-agent AlibabaCloud-Agent-Skills [--region <REGION_ID> --endpoint dataworks.<REGION_ID>.aliyuncs.com] --ProjectId <PROJECT_ID> --PageNumber 1 --PageSize 10 [--Name <FUZZY_NAME>] [--Table <FUZZY_TABLE_NAME>] [--SortBy "ModifyTime Desc"]
+aliyun dataworks-public list-data-quality-scans --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-quality [--region <REGION_ID> --endpoint dataworks.<REGION_ID>.aliyuncs.com] --project-id <PROJECT_ID> --page-number 1 --page-size 10 [--name <FUZZY_NAME>] [--table <FUZZY_TABLE_NAME>] [--sort-by "ModifyTime Desc"]
 ```
 
 How to interpret the result:
@@ -247,7 +257,7 @@ How to interpret the result:
 ## Task 2.2: Get Monitor Details (GetDataQualityScan)
 
 ```bash
-aliyun dataworks-public GetDataQualityScan --user-agent AlibabaCloud-Agent-Skills [--region <REGION_ID> --endpoint dataworks.<REGION_ID>.aliyuncs.com] --Id <SCAN_ID>
+aliyun dataworks-public get-data-quality-scan --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-quality [--region <REGION_ID> --endpoint dataworks.<REGION_ID>.aliyuncs.com] --id <SCAN_ID>
 ```
 
 How to interpret the result:
@@ -280,7 +290,7 @@ Alert rules define when notifications are sent and to whom. Use this module when
 ## Task 3.1: List Alert Rules (ListDataQualityAlertRules)
 
 ```bash
-aliyun dataworks-public ListDataQualityAlertRules --user-agent AlibabaCloud-Agent-Skills [--region <REGION_ID> --endpoint dataworks.<REGION_ID>.aliyuncs.com] --ProjectId <PROJECT_ID> --PageNumber 1 --PageSize 10 [--DataQualityScanId <SCAN_ID>] [--SortBy "CreateTime Desc"]
+aliyun dataworks-public list-data-quality-alert-rules --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-quality [--region <REGION_ID> --endpoint dataworks.<REGION_ID>.aliyuncs.com] --project-id <PROJECT_ID> --page-number 1 --page-size 10 [--data-quality-scan-id <SCAN_ID>] [--sort-by "CreateTime Desc"]
 ```
 
 How to interpret the result:
@@ -293,7 +303,7 @@ How to interpret the result:
 ## Task 3.2: Get Alert Rule Details (GetDataQualityAlertRule)
 
 ```bash
-aliyun dataworks-public GetDataQualityAlertRule --user-agent AlibabaCloud-Agent-Skills [--region <REGION_ID> --endpoint dataworks.<REGION_ID>.aliyuncs.com] --Id <ALERT_RULE_ID>
+aliyun dataworks-public get-data-quality-alert-rule --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-quality [--region <REGION_ID> --endpoint dataworks.<REGION_ID>.aliyuncs.com] --id <ALERT_RULE_ID>
 ```
 
 How to interpret the result:
@@ -322,7 +332,7 @@ A scan run is created every time a monitor executes. Use this module to inspect 
 ## Task 4.1: List Scan Runs (ListDataQualityScanRuns)
 
 ```bash
-aliyun dataworks-public ListDataQualityScanRuns --user-agent AlibabaCloud-Agent-Skills [--region <REGION_ID> --endpoint dataworks.<REGION_ID>.aliyuncs.com] --ProjectId <PROJECT_ID> [--DataQualityScanId <SCAN_ID>] [--Status <Pass|Running|Error|Fail|Warn>] [--CreateTimeFrom <TIMESTAMP_MS>] [--CreateTimeTo <TIMESTAMP_MS>] [--Filter '{"TaskInstanceId":"<INSTANCE_ID>"}'] [--SortBy "CreateTime Desc"] [--PageNumber 1] [--PageSize 20]
+aliyun dataworks-public list-data-quality-scan-runs --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-quality [--region <REGION_ID> --endpoint dataworks.<REGION_ID>.aliyuncs.com] --project-id <PROJECT_ID> [--data-quality-scan-id <SCAN_ID>] [--status <Pass|Running|Error|Fail|Warn>] [--create-time-from <TIMESTAMP_MS>] [--create-time-to <TIMESTAMP_MS>] [--filter '{"TaskInstanceId":"<INSTANCE_ID>"}'] [--sort-by "CreateTime Desc"] [--page-number 1] [--page-size 20]
 ```
 
 Filter quick reference:
@@ -342,7 +352,7 @@ How to interpret the result:
 ## Task 4.2: Get Scan Run Details (GetDataQualityScanRun)
 
 ```bash
-aliyun dataworks-public GetDataQualityScanRun --user-agent AlibabaCloud-Agent-Skills [--region <REGION_ID> --endpoint dataworks.<REGION_ID>.aliyuncs.com] --Id <SCAN_RUN_ID>
+aliyun dataworks-public get-data-quality-scan-run --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-quality [--region <REGION_ID> --endpoint dataworks.<REGION_ID>.aliyuncs.com] --id <SCAN_RUN_ID>
 ```
 
 How to interpret the result:
@@ -356,7 +366,7 @@ How to interpret the result:
 ## Task 4.3: Get Scan Run Log (GetDataQualityScanRunLog)
 
 ```bash
-aliyun dataworks-public GetDataQualityScanRunLog --user-agent AlibabaCloud-Agent-Skills [--region <REGION_ID> --endpoint dataworks.<REGION_ID>.aliyuncs.com] --Id <SCAN_RUN_ID> [--Offset <BYTE_OFFSET>]
+aliyun dataworks-public get-data-quality-scan-run-log --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-quality [--region <REGION_ID> --endpoint dataworks.<REGION_ID>.aliyuncs.com] --id <SCAN_RUN_ID> [--offset <BYTE_OFFSET>]
 ```
 
 How to interpret the result:
@@ -372,7 +382,7 @@ How to interpret the result:
 
 1. **List before detail** — Do not guess IDs. Use list queries first, then drill into a selected resource.
 2. **Diagnose failures in order** — For `Fail`, check `GetDataQualityScanRun` results first, then read `GetDataQualityScanRunLog`.
-3. **Separate built-in vs workspace templates** — Omit `ProjectId` for built-in templates; include it for workspace custom templates.
+3. **Templates scope** — `ListDataQualityTemplates` returns workspace **custom** templates only; `ProjectId` is required. Built-in templates must be viewed in the DataWorks console.
 4. **Use a bounded time window** — For run-history queries, default to recent 24 hours or recent 10 rows to avoid oversized result sets.
 5. **Proactively guide the next step** — After every query, suggest the most likely follow-up instead of waiting for the user to ask.
 6. **Expand `Spec` on demand** — `Spec` is often verbose. Summarize first, expand only on request.

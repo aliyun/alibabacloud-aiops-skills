@@ -1,6 +1,6 @@
 # Aliyun CLI Installation & Configuration Guide
 
-> **Aliyun CLI 3.3.1+** required for full plugin ecosystem support.
+> **Aliyun CLI 3.3.3+** required for full plugin ecosystem support.
 
 ## Installation
 
@@ -9,7 +9,7 @@
 ```bash
 brew install aliyun-cli
 brew upgrade aliyun-cli
-aliyun version  # verify >= 3.3.1
+aliyun version  # verify >= 3.3.3
 ```
 
 ### macOS (Binary)
@@ -57,10 +57,18 @@ export ALIBABA_CLOUD_REGION_ID=cn-hangzhou
 aliyun configure set --auto-plugin-install true
 ```
 
+## Enable AI-Mode
+
+```bash
+aliyun configure ai-mode enable
+aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-quality"
+aliyun configure ai-mode disable
+```
+
 ## Verification
 
 ```bash
-aliyun ecs describe-regions --user-agent AlibabaCloud-Agent-Skills   # test authentication
+aliyun ecs describe-regions --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-data-quality   # test authentication
 aliyun configure list         # show current configuration
 ```
 
