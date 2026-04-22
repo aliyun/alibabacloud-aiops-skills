@@ -38,15 +38,33 @@ This Skill focuses on **Alibaba Cloud PolarDB MySQL/PostgreSQL database** intell
 
 ## Installation
 
-> **Pre-check: Aliyun CLI >= 3.3.1 required**
-> Run `aliyun version` to verify >= 3.3.1. If not installed or version too low,
-> see [references/cli-installation-guide.md](references/cli-installation-guide.md) for installation instructions.
+> **Pre-check: Aliyun CLI >= 3.3.3 required**
+> Run `aliyun version` to verify >= 3.3.3. If not installed or version too low,
+> run `curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash` to update,
+> or see [references/cli-installation-guide.md](references/cli-installation-guide.md) for installation instructions.
 > Then **[MUST]** run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+> Then **[MUST]** run `aliyun plugin update` to ensure that any existing plugins on your local machine are always up-to-date.
+
+**[MUST] CLI User-Agent** — Every `aliyun` CLI command invocation must include:
+`--user-agent AlibabaCloud-Agent-Skills/alibabacloud-polardb-ai-assistant`
+
+**[MUST] Enable AI-Mode** — AI-mode is required for Agent Skill execution.
+Run the following commands before any CLI invocation:
+```bash
+aliyun configure ai-mode enable
+aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-polardb-ai-assistant"
+```
+
+**[MUST] Disable AI-Mode at EVERY exit point** — Before delivering the final response for ANY reason, always disable AI-mode first. This applies to ALL exit paths: workflow success, workflow failure, error/exception, user cancellation, session end, or any other scenario where no further CLI commands will be executed.
+AI-mode is only used for Agent Skill invocation scenarios and MUST NOT remain enabled after the skill stops running.
+```bash
+aliyun configure ai-mode disable
+```
 
 ```bash
 # Install aliyun CLI
-curl -fsSL https://aliyuncli.alicdn.com/install.sh | bash
-aliyun version  # Verify >= 3.3.1
+curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash
+aliyun version  # Verify >= 3.3.3
 
 # Enable automatic plugin installation
 aliyun configure set --auto-plugin-install true

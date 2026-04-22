@@ -59,7 +59,7 @@ debug_log() {
 # Check dependencies
 check_dependencies() {
     if ! command -v aliyun &>/dev/null; then
-        echo "Error: aliyun CLI not found, please install (>= 3.3.1)" >&2
+        echo "Error: aliyun CLI not found, please install (>= 3.3.3)" >&2
         echo "Install: curl -fsSL https://aliyuncli.alicdn.com/install.sh | bash" >&2
         echo "See: references/cli-installation-guide.md" >&2
         exit 1
@@ -280,7 +280,7 @@ cli_args=(das get-yao-chi-agent
     --endpoint "$ENDPOINT"
     --read-timeout "$READ_TIMEOUT"
     --connect-timeout "$CONNECT_TIMEOUT"
-    --user-agent AlibabaCloud-Agent-Skills
+    --user-agent AlibabaCloud-Agent-Skills/alibabacloud-polardb-ai-assistant
 )
 
 if [[ -n "$SESSION_ID" ]]; then

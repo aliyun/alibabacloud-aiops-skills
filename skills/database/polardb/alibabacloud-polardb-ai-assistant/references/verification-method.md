@@ -7,14 +7,14 @@
 ```bash
 # Check CLI version
 aliyun version
-# Expected output: 3.3.1 or higher
+# Expected output: 3.3.3 or higher
 
 # Check authentication configuration
 aliyun configure get
 # Expected output: Display current profile configuration
 
 # Test basic connectivity
-aliyun das DescribeInstanceDasPro --InstanceId "pc-test" --endpoint das.cn-shanghai.aliyuncs.com --user-agent AlibabaCloud-Agent-Skills 2>&1
+aliyun das describe-instance-das-pro --instance-id "pc-test" --endpoint das.cn-shanghai.aliyuncs.com --user-agent AlibabaCloud-Agent-Skills/alibabacloud-polardb-ai-assistant 2>&1
 # Expected: Return JSON response (even if instance doesn't exist, should return API error not connection error)
 ```
 
