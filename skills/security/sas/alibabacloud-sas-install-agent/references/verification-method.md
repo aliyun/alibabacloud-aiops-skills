@@ -10,7 +10,7 @@ Verification methods for each scenario to confirm successful completion.
 aliyun sas describe-cloud-center-instances \
   --criteria '[{"name":"instanceId","value":"<instance-id>"}]' \
   --machine-types ecs \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 **Success criteria**: `ClientStatus` = `online`
@@ -20,14 +20,14 @@ aliyun sas describe-cloud-center-instances \
 ```bash
 aliyun sas describe-cloud-center-instances \
   --criteria '[{"name":"internetIp","value":"<server-IP>"}]' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 **Success criteria**: Server found in asset list with `ClientStatus` = `online`
 
 If not found, sync assets first:
 ```bash
-aliyun sas refresh-assets --asset-type ecs --user-agent AlibabaCloud-Agent-Skills
+aliyun sas refresh-assets --asset-type ecs --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 ### Scenario 3: Image-Based Installation
@@ -38,7 +38,7 @@ After new instance boots from image, wait ~5 minutes:
 aliyun sas describe-cloud-center-instances \
   --criteria '[{"name":"instanceId","value":"<new-instance-id>"}]' \
   --machine-types ecs \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 **Success criteria**: New instance appears with `ClientStatus` = `online` and unique UUID
@@ -54,7 +54,7 @@ aliyun sas describe-cloud-center-instances \
 ```bash
 aliyun sas describe-cloud-center-instances \
   --criteria '[{"name":"instanceId","value":"<instance-id>"}]' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 **Success criteria**: `AuthVersion` matches the target version number
@@ -68,7 +68,7 @@ aliyun sas describe-cloud-center-instances \
 ```bash
 aliyun sas describe-cloud-center-instances \
   --criteria '[{"name":"uuid","value":"<UUID>"}]' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 **Success criteria**: `ClientStatus` changed to `offline` or asset no longer in list
@@ -77,19 +77,19 @@ aliyun sas describe-cloud-center-instances \
 
 **Vulnerability scan completion**:
 ```bash
-aliyun sas describe-once-task --task-type "VUL_CHECK_TASK" --current-page 1 --page-size 1 --user-agent AlibabaCloud-Agent-Skills
+aliyun sas describe-once-task --task-type "VUL_CHECK_TASK" --current-page 1 --page-size 1 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 **Success criteria**: Latest task `TaskStatusText` != `PROCESSING`
 
 **Baseline check completion**:
 ```bash
-aliyun sas describe-strategy --strategy-ids "<id>" --user-agent AlibabaCloud-Agent-Skills
+aliyun sas describe-strategy --strategy-ids "<id>" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 **Success criteria**: `ExecStatus` = 1 (completed)
 
 **Virus scan completion**:
 ```bash
-aliyun sas get-virus-scan-latest-task-statistic --user-agent AlibabaCloud-Agent-Skills
+aliyun sas get-virus-scan-latest-task-statistic --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 **Success criteria**: `Status` = 20 (completed)
 

@@ -1,6 +1,6 @@
 # CLI Command Reference
 
-Complete list of all CLI commands used by this skill. All commands use plugin mode (kebab-case) and MUST include `--user-agent AlibabaCloud-Agent-Skills`.
+Complete list of all CLI commands used by this skill. All commands use plugin mode (kebab-case) and MUST include `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent`.
 
 ## SAS (Security Center) Commands
 
@@ -50,5 +50,5 @@ Complete list of all CLI commands used by this skill. All commands use plugin mo
 
 - **Read** commands execute directly with brief intent statement
 - **Write** commands require: display operation details -> user confirmation -> execute -> report result
-- All commands MUST include `--user-agent AlibabaCloud-Agent-Skills`
+- All commands MUST include `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent`
 - Limit to 8 CLI tool calls per scenario (proxy scenarios may extend moderately)

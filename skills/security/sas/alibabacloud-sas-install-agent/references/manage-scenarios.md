@@ -18,7 +18,7 @@
 ### Step 1: Query Version Details
 
 ```bash
-aliyun sas describe-version-config --user-agent AlibabaCloud-Agent-Skills
+aliyun sas describe-version-config --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 Extract and display the following key information:
@@ -48,7 +48,7 @@ When displaying `PostPayModuleSwitch` module switch statuses, fetch current pric
 ### Step 2: Query Authorization Usage
 
 ```bash
-aliyun sas get-auth-summary --user-agent AlibabaCloud-Agent-Skills
+aliyun sas get-auth-summary --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 Extract and display:
@@ -69,7 +69,7 @@ Extract and display:
 Execute only when the user asks about Serverless / pay-as-you-go feature status:
 
 ```bash
-aliyun sas get-serverless-auth-summary --user-agent AlibabaCloud-Agent-Skills
+aliyun sas get-serverless-auth-summary --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 Display pay-as-you-go module switch status (`PostPaidModuleSwitch` JSON field), showing each module with its name and switch status in a table. Module codes are listed in the reference table below. Also display SERVERLESS module tiered pricing for reference (prices fetched from billing documentation page).
@@ -84,7 +84,7 @@ First obtain `PostPayInstanceId` from Step 1, then:
 aliyun sas modify-post-pay-module-switch \
   --post-pay-instance-id "<pay-as-you-go-instance-id>" \
   --post-pay-module-switch '{"<module-code>": <0-or-1>}' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 > Modules not included in the request remain unchanged.
@@ -123,7 +123,7 @@ Obtain the server identifier from the user (instance ID, IP, name, etc.) and que
 aliyun sas describe-cloud-center-instances \
   --criteria '[{"name":"instanceId","value":"<instance-id>"}]' \
   --page-size 20 --current-page 1 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 Extract and display:
@@ -193,14 +193,14 @@ After confirmation, execute binding:
 aliyun sas bind-auth-to-machine \
   --auth-version <version-number> \
   --bind "<UUID>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 Unbind authorization (also requires secondary confirmation):
 ```bash
 aliyun sas bind-auth-to-machine \
   --un-bind "<UUID>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 ### Step 4: Change Pay-As-You-Go Version Binding
@@ -247,7 +247,7 @@ After confirmation, execute:
 ```bash
 aliyun sas update-post-paid-bind-rel \
   --bind-action '[{"Version": "<version-number>", "UuidList": ["<UUID>"]}]' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 #### 4c: Unbind / Downgrade to Free Version (Pay-as-you-go)
@@ -272,7 +272,7 @@ After confirmation, execute:
 ```bash
 aliyun sas update-post-paid-bind-rel \
   --bind-action '[{"UuidList": ["<UUID>"], "Version": 1}]' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 ### Step 5: Verify Change
@@ -282,7 +282,7 @@ After the operation completes, re-query asset status to confirm the authorizatio
 ```bash
 aliyun sas describe-cloud-center-instances \
   --criteria '[{"name":"instanceId","value":"<instance-id>"}]' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 ---
@@ -308,7 +308,7 @@ aliyun sas describe-property-sca-detail \
   --biz <sca|sca_database|sca_web> \
   --current-page 1 \
   --page-size 20 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 > Only pass parameters the user has specified. If --biz is not specified, omit it (defaults to sca).
@@ -337,7 +337,7 @@ If the user needs further information about a server's client status, authorizat
 ```bash
 aliyun sas describe-cloud-center-instances \
   --criteria '[{"name":"instanceId","value":"<instance-id>"}]' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 ---
@@ -352,7 +352,7 @@ Obtain the server identifier from the user (instance ID, IP, name, etc.) and que
 aliyun sas describe-cloud-center-instances \
   --criteria '[{"name":"instanceName","value":"<server-name>"}]' \
   --page-size 20 --current-page 1 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 Extract and display:
@@ -390,7 +390,7 @@ After confirmation, execute the uninstall command:
 ```bash
 aliyun sas add-uninstall-clients-by-uuids \
   --uuids "<UUID>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 To uninstall multiple servers simultaneously, separate UUIDs with commas:
@@ -398,7 +398,7 @@ To uninstall multiple servers simultaneously, separate UUIDs with commas:
 ```bash
 aliyun sas add-uninstall-clients-by-uuids \
   --uuids "<UUID1>,<UUID2>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 ### Step 4: Verify Uninstall Result
@@ -408,7 +408,7 @@ Wait approximately 30 seconds, then re-query asset status to confirm the agent h
 ```bash
 aliyun sas describe-cloud-center-instances \
   --criteria '[{"name":"uuid","value":"<UUID>"}]' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 Check if `ClientStatus` has changed to `offline` or if the asset has been removed from the list.
@@ -443,7 +443,7 @@ aliyun sas describe-grouped-vul \
   --dealed n \
   --current-page 1 \
   --page-size 20 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 Vulnerability type (--type) options:
@@ -477,7 +477,7 @@ aliyun sas list-check-item-warning-summary \
   --check-warning-status 1 \
   --current-page 1 \
   --page-size 20 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 Risk status (--check-warning-status) options: 1=Failed, 3=Passed, 6=Whitelisted, 8=Fixed.
@@ -502,7 +502,7 @@ aliyun sas describe-susp-events \
   --dealed N \
   --current-page 1 \
   --page-size 20 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 Optional filter parameters:
@@ -553,7 +553,7 @@ Query asset -> Check auth version -> [Need binding? -> Show cost -> User confirm
 aliyun sas describe-cloud-center-instances \
   --criteria '[{"name":"instanceName","value":"<server-name>"}]' \
   --page-size 20 --current-page 1 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 Extract key fields: `Uuid`, `InstanceId`, `AuthVersion`, `ClientStatus`, `ClientSubStatus`, `Os`, `Cores`, `RegionId`
@@ -571,7 +571,7 @@ Based on `AuthVersion`:
 
 1. Query account version info to confirm available billing modes:
 ```bash
-aliyun sas describe-version-config --user-agent AlibabaCloud-Agent-Skills
+aliyun sas describe-version-config --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 2. Based on billing mode, display binding options and costs:
@@ -580,7 +580,7 @@ aliyun sas describe-version-config --user-agent AlibabaCloud-Agent-Skills
 
 First query remaining quota:
 ```bash
-aliyun sas get-auth-summary --user-agent AlibabaCloud-Agent-Skills
+aliyun sas get-auth-summary --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 Display confirmation:
@@ -602,7 +602,7 @@ Confirm binding? (yes/no)
 
 After confirmation, auto-execute:
 ```bash
-aliyun sas bind-auth-to-machine --auth-version <version-number> --bind "<UUID>" --user-agent AlibabaCloud-Agent-Skills
+aliyun sas bind-auth-to-machine --auth-version <version-number> --bind "<UUID>" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 **b) Pay-as-you-go mode** (`IsPostpay=true` with no subscription):
@@ -632,7 +632,7 @@ After confirmation, auto-execute:
 ```bash
 aliyun sas update-post-paid-bind-rel \
   --bind-action '[{"Version": "<version-number>", "UuidList": ["<UUID>"]}]' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 **c) Both billing modes exist**: Display both options for user selection, then follow the corresponding flow.
@@ -651,13 +651,13 @@ Based on `ClientStatus`:
 
 1. Get install code:
 ```bash
-aliyun sas describe-install-codes --user-agent AlibabaCloud-Agent-Skills
+aliyun sas describe-install-codes --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 Match criteria: Os matches target server, VendorName=ALIYUN, OnlyImage=false
 
 2. Check cloud assistant status:
 ```bash
-aliyun ecs describe-cloud-assistant-status --region <RegionId> --biz-region-id <RegionId> --instance-id "<InstanceId>" --user-agent AlibabaCloud-Agent-Skills
+aliyun ecs describe-cloud-assistant-status --region <RegionId> --biz-region-id <RegionId> --instance-id "<InstanceId>" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 3a. **Cloud assistant online** -> Dispatch install command via cloud assistant:
@@ -669,7 +669,7 @@ aliyun ecs run-command \
   --command-content "<Base64-encoded-install-command>" \
   --instance-id "<InstanceId>" \
   --content-encoding Base64 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 Install command (Linux internal):
@@ -686,7 +686,7 @@ Windows internal (RunPowerShellScript):
 
 4. Wait for installation to complete, query execution results:
 ```bash
-aliyun ecs describe-invocation-results --region <RegionId> --biz-region-id <RegionId> --invoke-id "<InvokeId>" --user-agent AlibabaCloud-Agent-Skills
+aliyun ecs describe-invocation-results --region <RegionId> --biz-region-id <RegionId> --invoke-id "<InvokeId>" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 Poll until `InvocationStatus` is no longer `Running` (recommended 30-second interval); confirm final status is `Success`.
@@ -722,7 +722,7 @@ Tasks with baseline detection:
 aliyun sas modify-push-all-task \
   --uuids "<UUID>" \
   --tasks "OVAL_ENTITY,CMS,SYSVUL,SCA,HEALTH_CHECK,WEBSHELL,PROC_SNAPSHOT,PORT_SNAPSHOT,ACCOUNT_SNAPSHOT,SOFTWARE_SNAPSHOT,SCA_SNAPSHOT" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 Tasks without baseline detection:
@@ -730,7 +730,7 @@ Tasks without baseline detection:
 aliyun sas modify-push-all-task \
   --uuids "<UUID>" \
   --tasks "OVAL_ENTITY,CMS,SYSVUL,SCA,WEBSHELL,PROC_SNAPSHOT,PORT_SNAPSHOT,ACCOUNT_SNAPSHOT,SOFTWARE_SNAPSHOT,SCA_SNAPSHOT" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 **b) Virus scan (create-virus-scan-once-task)**:
@@ -745,7 +745,7 @@ aliyun sas create-asset-selection-config \
   --business-type "VIRUS_SCAN_ONCE_TASK" \
   --target-type "instance" \
   --platform "all" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 Record the returned `SelectionKey`.
 
@@ -754,7 +754,7 @@ Record the returned `SelectionKey`.
 aliyun sas add-asset-selection-criteria \
   --selection-key "<SelectionKey>" \
   --target-operation-list Target="<UUID>" Operation=add \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 > Multiple servers can be added by repeating `--target-operation-list Target=<UUID> Operation=add`.
 
@@ -763,7 +763,7 @@ aliyun sas add-asset-selection-criteria \
 aliyun sas update-selection-key-by-type \
   --business-type "VIRUS_SCAN_ONCE_TASK" \
   --selection-key "<SelectionKey>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 4. Create virus scan task:
@@ -771,7 +771,7 @@ aliyun sas update-selection-key-by-type \
 aliyun sas create-virus-scan-once-task \
   --scan-type "system" \
   --selection-key "<SelectionKey>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 > --scan-type values: `system` (system scan, scans all critical paths), `user` (custom scan, requires additional --scan-path). Default is `system`.
 
@@ -804,7 +804,7 @@ Before full scan, query all asset client and authorization statuses to show the 
 ```bash
 aliyun sas describe-cloud-center-instances \
   --page-size 20 --current-page 1 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 > If `TotalCount` exceeds `PageSize`, paginate until all assets are retrieved.
@@ -855,7 +855,7 @@ Scan all ready servers for vulnerabilities:
 ```bash
 aliyun sas modify-start-vul-scan \
   --types "cve,sys,cms,app,sca" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 > Omitting --types scans all vulnerability types.
@@ -875,7 +875,7 @@ First query baseline strategy list for user selection.
 **Step one: Query baseline strategy list**
 
 ```bash
-aliyun sas describe-strategy --user-agent AlibabaCloud-Agent-Skills
+aliyun sas describe-strategy --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 Display strategy list in table format:
@@ -900,7 +900,7 @@ After the user selects a strategy, execute (write operation, requires confirmati
 ```bash
 aliyun sas exec-strategy \
   --strategy-id <user-selected-strategy-id> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 #### 3d: Full Asset Fingerprint Collection (generate-once-task)
@@ -912,7 +912,7 @@ aliyun sas generate-once-task \
   --task-type "ASSETS_COLLECTION" \
   --task-name "ASSETS_COLLECTION" \
   --param '{"items":"ACCOUNT_SNAPSHOT,PORT_SNAPSHOT,PROC_SNAPSHOT,SOFTWARE_SNAPSHOT,CROND_SNAPSHOT,SCA_SNAPSHOT,LKM_SNAPSHOT,AUTORUN_SNAPSHOT,SCA_PROXY_SNAPSHOT"}' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 Collection items:
@@ -938,7 +938,7 @@ aliyun sas create-asset-selection-config \
   --business-type "VIRUS_SCAN_ONCE_TASK" \
   --target-type "all_instance" \
   --platform "all" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 Record the returned `SelectionKey`.
 
@@ -949,14 +949,14 @@ Record the returned `SelectionKey`.
 aliyun sas create-virus-scan-once-task \
   --scan-type "system" \
   --selection-key "<SelectionKey>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 #### Virus Scan Result Query
 
 Query the latest virus scan task progress:
 ```bash
-aliyun sas get-virus-scan-latest-task-statistic --user-agent AlibabaCloud-Agent-Skills
+aliyun sas get-virus-scan-latest-task-statistic --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 Key return fields:
@@ -974,7 +974,7 @@ Key return fields:
 
 Query machines where viruses were found:
 ```bash
-aliyun sas list-virus-scan-machine --current-page 1 --page-size 20 --user-agent AlibabaCloud-Agent-Skills
+aliyun sas list-virus-scan-machine --current-page 1 --page-size 20 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 Query virus event details for a specific machine:
@@ -983,7 +983,7 @@ aliyun sas list-virus-scan-machine-event \
   --uuid "<UUID>" \
   --current-page 1 \
   --page-size 20 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 ### Step 4: Poll Task Progress and Query Results
@@ -997,7 +997,7 @@ aliyun sas describe-once-task \
   --task-type "VUL_CHECK_TASK" \
   --current-page 1 \
   --page-size 1 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 Check the latest task (first item): 
@@ -1009,7 +1009,7 @@ Check the latest task (first item):
 Only poll if baseline check (exec-strategy) was triggered:
 
 ```bash
-aliyun sas describe-strategy --strategy-ids "<strategy-id-used>" --user-agent AlibabaCloud-Agent-Skills
+aliyun sas describe-strategy --strategy-ids "<strategy-id-used>" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 Check the corresponding strategy's status:
@@ -1019,7 +1019,7 @@ Check the corresponding strategy's status:
 #### 4c: Virus Scan Progress (get-virus-scan-latest-task-statistic)
 
 ```bash
-aliyun sas get-virus-scan-latest-task-statistic --user-agent AlibabaCloud-Agent-Skills
+aliyun sas get-virus-scan-latest-task-statistic --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 Check status:

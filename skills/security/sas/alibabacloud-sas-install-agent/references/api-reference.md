@@ -2,7 +2,7 @@
 
 This document lists all Alibaba Cloud OpenAPIs used by this skill and their invocation via aliyun CLI.
 
-> **Every `aliyun` CLI command MUST include `--user-agent AlibabaCloud-Agent-Skills`.**
+> **Every `aliyun` CLI command MUST include `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent`.**
 
 ## Table of Contents
 
@@ -53,7 +53,7 @@ aliyun sas describe-cloud-center-instances \
   --machine-types ecs \
   --page-size 20 \
   --current-page 1 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 **Common query conditions (criteria field)**:
@@ -84,7 +84,7 @@ aliyun ecs describe-instances \
   --instance-ids '["i-xxx"]' \
   --page-size 10 \
   --page-number 1 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 > **[MUST] ECS API Region parameter rules** (applies to ALL ECS API calls in this skill):
@@ -113,7 +113,7 @@ aliyun ecs describe-cloud-assistant-status \
   --region cn-hangzhou \
   --biz-region-id cn-hangzhou \
   --instance-id "i-xxx" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 **Parameters**:
@@ -141,7 +141,7 @@ aliyun ecs invoke-command \
   --biz-region-id cn-hangzhou \
   --command-id "c-xxx" \
   --instance-id "i-xxx" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 > Note: You need to first create a command via `create-command`, or use an existing command ID. Alternatively, use `run-command` for a one-step approach.
@@ -155,7 +155,7 @@ aliyun ecs run-command \
   --command-content "$(echo 'wget "https://update.aegis.aliyun.com/download/install.sh" && chmod +x install.sh && ./install.sh -k=<KEY>' | base64)" \
   --instance-id "i-xxx" \
   --content-encoding Base64 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 ---
@@ -170,7 +170,7 @@ aliyun ecs describe-invocation-results \
   --region cn-hangzhou \
   --biz-region-id cn-hangzhou \
   --invoke-id "<InvokeId>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 **Parameters**:
@@ -208,7 +208,7 @@ aliyun ecs describe-invocation-results \
 ```bash
 aliyun sas refresh-assets \
   --asset-type ecs \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 **Parameters**:
@@ -224,7 +224,7 @@ aliyun sas refresh-assets \
 **CLI invocation**:
 ```bash
 aliyun sas describe-install-codes \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 **Key response fields**:
@@ -249,7 +249,7 @@ aliyun sas add-install-code \
   --vendor-name "ALIYUN" \
   --expired-date 1735689600000 \
   --only-image false \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 **Parameters**:
@@ -273,7 +273,7 @@ Create a new group:
 ```bash
 aliyun sas create-or-update-asset-group \
   --group-name "<group-name>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 Create a group and associate servers simultaneously:
@@ -281,7 +281,7 @@ Create a group and associate servers simultaneously:
 aliyun sas create-or-update-asset-group \
   --group-name "<group-name>" \
   --uuids "<uuid1>,<uuid2>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 Modify assets in an existing group:
@@ -289,7 +289,7 @@ Modify assets in an existing group:
 aliyun sas create-or-update-asset-group \
   --group-id <group-ID> \
   --uuids "<uuid1>,<uuid2>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 **Parameters**:
@@ -316,7 +316,7 @@ aliyun sas create-or-update-asset-group \
 **CLI invocation**:
 ```bash
 aliyun sas describe-version-config \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 **Parameters**:
@@ -354,7 +354,7 @@ aliyun sas describe-version-config \
 **CLI invocation**:
 ```bash
 aliyun sas get-auth-summary \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 **Parameters**: No required parameters.
@@ -388,7 +388,7 @@ aliyun sas get-auth-summary \
 **CLI invocation**:
 ```bash
 aliyun sas get-serverless-auth-summary \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 **Optional parameters**:
@@ -420,7 +420,7 @@ aliyun sas get-serverless-auth-summary \
 aliyun sas modify-post-pay-module-switch \
   --post-pay-instance-id "<pay-as-you-go-instance-ID>" \
   --post-pay-module-switch '{"VUL": 1, "CSPM": 0}' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 **Parameters**:
@@ -463,14 +463,14 @@ Bind authorization:
 aliyun sas bind-auth-to-machine \
   --auth-version 7 \
   --bind "<UUID>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 Unbind authorization:
 ```bash
 aliyun sas bind-auth-to-machine \
   --un-bind "<UUID>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 Batch bind:
@@ -478,7 +478,7 @@ Batch bind:
 aliyun sas bind-auth-to-machine \
   --auth-version 7 \
   --bind "<UUID1>" "<UUID2>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 **Parameters**:
@@ -508,14 +508,14 @@ Bind / upgrade to paid version:
 ```bash
 aliyun sas update-post-paid-bind-rel \
   --bind-action '[{"Version": "7", "UuidList": ["<UUID>"]}]' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 Unbind / downgrade to free version (Version=1):
 ```bash
 aliyun sas update-post-paid-bind-rel \
   --bind-action '[{"UuidList": ["<UUID>"], "Version": 1}]' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 **Parameters**:
@@ -541,7 +541,7 @@ aliyun sas describe-property-sca-detail \
   --search-info "nginx" \
   --current-page 1 \
   --page-size 20 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 Query by software type:
@@ -551,7 +551,7 @@ aliyun sas describe-property-sca-detail \
   --search-info "web_container" \
   --current-page 1 \
   --page-size 20 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 Query database type:
@@ -562,7 +562,7 @@ aliyun sas describe-property-sca-detail \
   --search-info "mysql" \
   --current-page 1 \
   --page-size 20 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 **Parameters**:
@@ -612,14 +612,14 @@ Uninstall from a single server:
 ```bash
 aliyun sas add-uninstall-clients-by-uuids \
   --uuids "<UUID>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 Batch uninstall from multiple servers:
 ```bash
 aliyun sas add-uninstall-clients-by-uuids \
   --uuids "<UUID1>,<UUID2>,<UUID3>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 **Parameters**:
@@ -650,7 +650,7 @@ aliyun sas add-uninstall-clients-by-uuids \
 aliyun sas modify-push-all-task \
   --uuids "<UUID1>,<UUID2>" \
   --tasks "OVAL_ENTITY,CMS,SYSVUL,SCA,HEALTH_CHECK,WEBSHELL,PROC_SNAPSHOT,PORT_SNAPSHOT,ACCOUNT_SNAPSHOT,SOFTWARE_SNAPSHOT,SCA_SNAPSHOT" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 **Parameters**:
@@ -712,7 +712,7 @@ aliyun sas modify-push-all-task \
 Scan all vulnerability types:
 ```bash
 aliyun sas modify-start-vul-scan \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 Specify vulnerability types and servers:
@@ -720,7 +720,7 @@ Specify vulnerability types and servers:
 aliyun sas modify-start-vul-scan \
   --types "cve,sys,cms" \
   --uuids "<UUID1>,<UUID2>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 **Parameters**:
@@ -747,7 +747,7 @@ aliyun sas describe-grouped-vul \
   --dealed n \
   --current-page 1 \
   --page-size 20 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 Query high-priority vulnerabilities:
@@ -757,7 +757,7 @@ aliyun sas describe-grouped-vul \
   --dealed n \
   --current-page 1 \
   --page-size 20 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 **Parameters**:
@@ -799,7 +799,7 @@ aliyun sas describe-grouped-vul \
 ```bash
 aliyun sas exec-strategy \
   --strategy-id <strategy-ID> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 **Parameters**:
@@ -826,7 +826,7 @@ aliyun sas list-check-item-warning-summary \
   --check-warning-status 1 \
   --current-page 1 \
   --page-size 20 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 Query high-risk items:
@@ -836,7 +836,7 @@ aliyun sas list-check-item-warning-summary \
   --check-level high \
   --current-page 1 \
   --page-size 20 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 **Parameters**:
@@ -879,7 +879,7 @@ aliyun sas describe-susp-events \
   --dealed N \
   --current-page 1 \
   --page-size 20 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 Query critical alerts:
@@ -889,7 +889,7 @@ aliyun sas describe-susp-events \
   --levels serious \
   --current-page 1 \
   --page-size 20 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 Query alerts for a specific server:
@@ -899,7 +899,7 @@ aliyun sas describe-susp-events \
   --dealed N \
   --current-page 1 \
   --page-size 20 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 **Parameters**:
@@ -949,7 +949,7 @@ aliyun sas generate-once-task \
   --task-type "ASSETS_COLLECTION" \
   --task-name "ASSETS_COLLECTION" \
   --param '{"items":"ACCOUNT_SNAPSHOT,PORT_SNAPSHOT,PROC_SNAPSHOT,SOFTWARE_SNAPSHOT,CROND_SNAPSHOT,SCA_SNAPSHOT,LKM_SNAPSHOT,AUTORUN_SNAPSHOT,SCA_PROXY_SNAPSHOT"}' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 **Parameters**:
@@ -986,21 +986,21 @@ aliyun sas generate-once-task \
 Query all policies:
 ```bash
 aliyun sas describe-strategy \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 Query standard policies:
 ```bash
 aliyun sas describe-strategy \
   --custom-type common \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 Query custom policies:
 ```bash
 aliyun sas describe-strategy \
   --custom-type custom \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 **Parameters**:
@@ -1040,7 +1040,7 @@ aliyun sas create-asset-selection-config \
   --business-type "VIRUS_SCAN_ONCE_TASK" \
   --target-type "instance" \
   --platform "all" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 All instances:
@@ -1049,7 +1049,7 @@ aliyun sas create-asset-selection-config \
   --business-type "VIRUS_SCAN_ONCE_TASK" \
   --target-type "all_instance" \
   --platform "all" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 **Parameters**:
@@ -1077,7 +1077,7 @@ Add a single asset:
 aliyun sas add-asset-selection-criteria \
   --selection-key "<SelectionKey>" \
   --target-operation-list Target="<UUID>" Operation=add \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 Add multiple assets:
@@ -1086,7 +1086,7 @@ aliyun sas add-asset-selection-criteria \
   --selection-key "<SelectionKey>" \
   --target-operation-list Target="<UUID1>" Operation=add \
   --target-operation-list Target="<UUID2>" Operation=add \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 **Parameters**:
@@ -1109,7 +1109,7 @@ aliyun sas add-asset-selection-criteria \
 aliyun sas update-selection-key-by-type \
   --business-type "VIRUS_SCAN_ONCE_TASK" \
   --selection-key "<SelectionKey>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 **Parameters**:
@@ -1132,7 +1132,7 @@ aliyun sas update-selection-key-by-type \
 aliyun sas create-virus-scan-once-task \
   --scan-type "system" \
   --selection-key "<SelectionKey>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 **Parameters**:
@@ -1156,7 +1156,7 @@ aliyun sas create-virus-scan-once-task \
 **CLI invocation**:
 ```bash
 aliyun sas get-virus-scan-latest-task-statistic \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 **Parameters**: No required parameters.
@@ -1185,7 +1185,7 @@ aliyun sas get-virus-scan-latest-task-statistic \
 aliyun sas list-virus-scan-machine \
   --current-page 1 \
   --page-size 20 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 Filter by asset:
@@ -1194,7 +1194,7 @@ aliyun sas list-virus-scan-machine \
   --current-page 1 \
   --page-size 20 \
   --uuid "<UUID>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 **Parameters**:
@@ -1221,7 +1221,7 @@ aliyun sas list-virus-scan-machine-event \
   --current-page 1 \
   --page-size 20 \
   --uuid "<UUID>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 **Parameters**:
@@ -1250,7 +1250,7 @@ aliyun sas describe-once-task \
   --task-type "VUL_CHECK_TASK" \
   --current-page 1 \
   --page-size 5 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 **Parameters**:

@@ -21,10 +21,12 @@ Manage Alibaba Cloud Security Center agent installation, version authorization, 
 
 Execution model: read operations execute directly (ReAct), write operations display details and require user confirmation before execution (Command). Keep analysis concise -- output a brief reasoning for each action.
 
-> **Pre-check: Aliyun CLI >= 3.3.1 required**
-> Run `aliyun version` to verify >= 3.3.1. If not installed or version too low,
-> see `references/cli-installation-guide.md` for installation instructions.
+> **Pre-check: Aliyun CLI >= 3.3.3 required**
+> Run `aliyun version` to verify >= 3.3.3. If not installed or version too low,
+> run `curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash` to install/update,
+> or see `references/cli-installation-guide.md` for installation instructions.
 > Then [MUST] run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+> Then [MUST] run `aliyun plugin update` to ensure that any existing plugins on your local machine are always up-to-date.
 
 > **Pre-check: Alibaba Cloud Credentials Required**
 >
@@ -65,11 +67,24 @@ Detailed permissions required by this skill: `references/ram-policies.md`
 > passwords, domain names, resource specifications, etc.) MUST be confirmed with the
 > user. Do NOT assume or use default values without explicit user approval.
 
+At the **start** of the Core Workflow (before any CLI invocation):
+**[MUST] Enable AI-Mode** — AI-mode is required for Agent Skill execution.
+Run the following commands before any CLI invocation:
+```bash
+aliyun configure ai-mode enable
+aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent"
+```
+**[MUST] Disable AI-Mode at EVERY exit point** — Before delivering the final response for ANY reason, always disable AI-mode first. This applies to ALL exit paths: workflow success, workflow failure, error/exception, user cancellation, session end, or any other scenario where no further CLI commands will be executed.
+AI-mode is only used for Agent Skill invocation scenarios and MUST NOT remain enabled after the skill stops running.
+```bash
+aliyun configure ai-mode disable
+```
+
 ---
 
 ## Tool Inventory
 
-All APIs are invoked via the `aliyun` CLI. Every `aliyun` command MUST include `--user-agent AlibabaCloud-Agent-Skills`.
+All APIs are invoked via the `aliyun` CLI. Every `aliyun` command MUST include `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent`.
 
 | CLI Command | Purpose |
 |-------------|---------|
@@ -119,7 +134,7 @@ When any installation scenario requires an install code, follow this unified flo
 **Step 1: Query existing install codes**
 
 ```bash
-aliyun sas describe-install-codes --user-agent AlibabaCloud-Agent-Skills
+aliyun sas describe-install-codes --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 Display as table: install code, OS, vendor, group, image flag, expiration.

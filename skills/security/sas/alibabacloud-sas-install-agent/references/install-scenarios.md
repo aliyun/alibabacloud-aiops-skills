@@ -16,7 +16,7 @@
 Ask the user for ECS details (instance ID, IP address, region, etc.), then query instance status:
 
 ```bash
-aliyun ecs describe-instances --region <RegionId> --biz-region-id <RegionId> --instance-ids '["<instance-id>"]' --user-agent AlibabaCloud-Agent-Skills
+aliyun ecs describe-instances --region <RegionId> --biz-region-id <RegionId> --instance-ids '["<instance-id>"]' --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 > **[MUST] ECS API Region parameter rules**:
@@ -28,14 +28,14 @@ aliyun ecs describe-instances --region <RegionId> --biz-region-id <RegionId> --i
 ### Step 2: Query Client Status
 
 ```bash
-aliyun sas describe-cloud-center-instances --criteria '[{"name":"instanceId","value":"<instance-id>"}]' --machine-types ecs --user-agent AlibabaCloud-Agent-Skills
+aliyun sas describe-cloud-center-instances --criteria '[{"name":"instanceId","value":"<instance-id>"}]' --machine-types ecs --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 Evaluate based on `ClientStatus` and `ClientSubStatus`:
 
 - **Instance not found** -> Execute `refresh-assets` to sync assets, then re-query:
   ```bash
-  aliyun sas refresh-assets --asset-type ecs --vendor 0 --user-agent AlibabaCloud-Agent-Skills
+  aliyun sas refresh-assets --asset-type ecs --vendor 0 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
   ```
 
 - **`ClientStatus` = `online`** -> Inform the user this ECS is already onboarded and online; no action needed.
@@ -57,7 +57,7 @@ Follow the "Common Flow: Get or Create Install Code" in SKILL.md. Recommended ma
 
 Query cloud assistant status:
 ```bash
-aliyun ecs describe-cloud-assistant-status --region <RegionId> --biz-region-id <RegionId> --instance-id "<instance-id>" --user-agent AlibabaCloud-Agent-Skills
+aliyun ecs describe-cloud-assistant-status --region <RegionId> --biz-region-id <RegionId> --instance-id "<instance-id>" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 **Cloud assistant online** (`CloudAssistantStatus=true`) -> Display install command content, dispatch remotely via cloud assistant after confirmation:
@@ -71,7 +71,7 @@ aliyun ecs run-command \
   --command-content "<Base64-encoded-install-command>" \
   --instance-id "<instance-id>" \
   --content-encoding Base64 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 Windows:
@@ -83,7 +83,7 @@ aliyun ecs run-command \
   --command-content "<Base64-encoded-install-command>" \
   --instance-id "<instance-id>" \
   --content-encoding Base64 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 **Cloud assistant not online** -> Display install command and guide the user to log into the server and execute manually:
@@ -133,12 +133,12 @@ Display the full command and guide the user to execute with admin privileges.
 
 Ask the user to provide the installed server's IP, then query status:
 ```bash
-aliyun sas describe-cloud-center-instances --criteria '[{"name":"internetIp","value":"<IP-address>"}]' --user-agent AlibabaCloud-Agent-Skills
+aliyun sas describe-cloud-center-instances --criteria '[{"name":"internetIp","value":"<IP-address>"}]' --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 If not found, sync assets first then retry:
 ```bash
-aliyun sas refresh-assets --asset-type ecs --vendor 1 --user-agent AlibabaCloud-Agent-Skills
+aliyun sas refresh-assets --asset-type ecs --vendor 1 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 ---
@@ -180,7 +180,7 @@ Clearly inform the user about these risks:
 
 After the new instance created from the image boots up, wait approximately 5 minutes. Once the user provides the new instance info, query client status:
 ```bash
-aliyun sas describe-cloud-center-instances --criteria '[{"name":"instanceId","value":"<new-instance-id>"}]' --machine-types ecs --user-agent AlibabaCloud-Agent-Skills
+aliyun sas describe-cloud-center-instances --criteria '[{"name":"instanceId","value":"<new-instance-id>"}]' --machine-types ecs --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-install-agent
 ```
 
 ---
