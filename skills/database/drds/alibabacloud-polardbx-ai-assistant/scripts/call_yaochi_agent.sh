@@ -61,7 +61,7 @@ debug_log() {
 # Check dependencies
 check_dependencies() {
     if ! command -v aliyun &>/dev/null; then
-        echo "Error: aliyun CLI not found, please install (>= 3.3.1)" >&2
+        echo "Error: aliyun CLI not found, please install (>= 3.3.3)" >&2
         echo "Install: curl -fsSL https://aliyuncli.alicdn.com/install.sh | bash" >&2
         echo "See: references/cli-installation-guide.md" >&2
         exit 1
@@ -80,13 +80,12 @@ check_dependencies() {
     version=$(aliyun version 2>/dev/null || echo "0.0.0")
     debug_log "aliyun CLI version: $version"
 
-    # Ensure DAS plugin is installed (get-yao-chi-agent requires plugin for Signature V3)
+    # Check DAS plugin is installed (do NOT auto-install at runtime to avoid downloading unaudited code)
     if ! aliyun das get-yao-chi-agent --help &>/dev/null 2>&1; then
-        debug_log "DAS plugin not installed, auto-installing..."
-        aliyun plugin install --names aliyun-cli-das >&2 || {
-            echo "Error: Failed to install DAS plugin, please run manually: aliyun plugin install --names aliyun-cli-das" >&2
-            exit 1
-        }
+        echo "Error: DAS plugin is not installed. Please install it manually before running this script:" >&2
+        echo "  aliyun plugin install --names aliyun-cli-das" >&2
+        echo "See: references/cli-installation-guide.md" >&2
+        exit 1
     fi
 }
 
@@ -228,10 +227,43 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# --- Validation ---
+# --- Input Validation ---
+# All agent inputs are treated as untrusted; validate type, format, and boundaries.
+
 if [[ -z "$QUERY" ]]; then
     usage
     exit 1
+fi
+
+# QUERY: enforce maximum length (8192 characters)
+MAX_QUERY_LENGTH=8192
+if [[ ${#QUERY} -gt $MAX_QUERY_LENGTH ]]; then
+    echo "Error: Query too long (${#QUERY} chars). Maximum allowed: $MAX_QUERY_LENGTH characters." >&2
+    exit 1
+fi
+
+# SESSION_ID: if provided, must match expected format (alphanumeric, hyphens, underscores, dots, 1-128 chars)
+if [[ -n "$SESSION_ID" ]]; then
+    if [[ ${#SESSION_ID} -gt 128 ]]; then
+        echo "Error: Session ID too long (${#SESSION_ID} chars). Maximum allowed: 128 characters." >&2
+        exit 1
+    fi
+    if [[ ! "$SESSION_ID" =~ ^[a-zA-Z0-9._-]+$ ]]; then
+        echo "Error: Session ID contains invalid characters. Only alphanumeric, hyphen, underscore, and dot are allowed." >&2
+        exit 1
+    fi
+fi
+
+# PROFILE: if provided, must match safe character whitelist (alphanumeric, hyphens, underscores, 1-64 chars)
+if [[ -n "$PROFILE" ]]; then
+    if [[ ${#PROFILE} -gt 64 ]]; then
+        echo "Error: Profile name too long (${#PROFILE} chars). Maximum allowed: 64 characters." >&2
+        exit 1
+    fi
+    if [[ ! "$PROFILE" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+        echo "Error: Profile name contains invalid characters. Only alphanumeric, hyphen, and underscore are allowed." >&2
+        exit 1
+    fi
 fi
 
 check_dependencies
@@ -244,7 +276,7 @@ cli_args=(das get-yao-chi-agent
     --endpoint "$ENDPOINT"
     --read-timeout "$READ_TIMEOUT"
     --connect-timeout "$CONNECT_TIMEOUT"
-    --user-agent AlibabaCloud-Agent-Skills
+    --user-agent AlibabaCloud-Agent-Skills/alibabacloud-polardbx-ai-assistant
 )
 
 if [[ -n "$SESSION_ID" ]]; then

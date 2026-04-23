@@ -5,7 +5,7 @@
 | Product | CLI Command | API Action | Description |
 |---------|------------|------------|-------------|
 | DAS | `aliyun das get-yao-chi-agent --query "<query>" --source "polardbx-console" --endpoint das.cn-shanghai.aliyuncs.com --user-agent AlibabaCloud-Agent-Skills` | GetYaoChiAgent | YaoChi Agent (SSE streaming response) |
-| DAS | `aliyun das GetDasAgentSSE --Query "<query>" --endpoint das.cn-shanghai.aliyuncs.com --user-agent AlibabaCloud-Agent-Skills` | GetDasAgentSSE | DAS Agent SSE API |
+| DAS | `aliyun das get-das-agent-sse --Query "<query>" --endpoint das.cn-shanghai.aliyuncs.com --user-agent AlibabaCloud-Agent-Skills` | GetDasAgentSSE | DAS Agent SSE API |
 
 ## GetYaoChiAgent API Parameters
 

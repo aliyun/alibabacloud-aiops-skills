@@ -71,7 +71,7 @@ For cross-account access, configure RAM role trust policy on the target account:
 | Policy Name | Description | Use Case |
 |-------------|-------------|----------|
 | `AliyunDASReadOnlyAccess` | DAS read-only | Daily diagnostic queries |
-| `AliyunDASFullAccess` | DAS full access | Execute diagnostic tasks |
+
 
 ## Permission Mapping
 
