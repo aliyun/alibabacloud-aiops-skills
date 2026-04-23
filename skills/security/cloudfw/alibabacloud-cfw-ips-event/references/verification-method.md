@@ -5,7 +5,7 @@
 Before executing skill commands, verify that the Aliyun CLI has a valid profile available in the default credential chain:
 
 ```bash
-# 1. Check CLI version (must be >= 3.3.1)
+# 1. Check CLI version (must be >= 3.3.3)
 aliyun version
 
 # 2. Check credential profile status (do not display raw credentials)
@@ -25,11 +25,11 @@ aliyun configure list
 START_TS=$(date -d "1 day ago" +%s)
 NOW_TS=$(date +%s)
 
-aliyun cloudfw DescribeRiskEventStatistic \
+aliyun cloudfw describe-risk-event-statistic \
   --StartTime ${START_TS} \
   --EndTime ${NOW_TS} \
   --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-ips-event
 ```
 
 **Expected Response Structure:**
@@ -52,14 +52,14 @@ aliyun cloudfw DescribeRiskEventStatistic \
 ### Step 2: Verify DescribeRiskEventGroup
 
 ```bash
-aliyun cloudfw DescribeRiskEventGroup \
+aliyun cloudfw describe-risk-event-group \
   --CurrentPage 1 \
   --PageSize 10 \
   --StartTime ${START_TS} \
   --EndTime ${NOW_TS} \
   --DataType 1 \
   --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-ips-event
 ```
 
 **Expected Response Structure:**
@@ -89,11 +89,11 @@ aliyun cloudfw DescribeRiskEventGroup \
 ### Step 3: Verify DescribeRiskEventTopAttackAsset
 
 ```bash
-aliyun cloudfw DescribeRiskEventTopAttackAsset \
+aliyun cloudfw describe-risk-event-top-attack-asset \
   --StartTime ${START_TS} \
   --EndTime ${NOW_TS} \
   --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-ips-event
 ```
 
 **Expected Response Structure:**
@@ -119,9 +119,9 @@ aliyun cloudfw DescribeRiskEventTopAttackAsset \
 ### Step 4: Verify DescribeDefaultIPSConfig
 
 ```bash
-aliyun cloudfw DescribeDefaultIPSConfig \
+aliyun cloudfw describe-default-ipsconfig \
   --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-ips-event
 ```
 
 **Expected Response Structure:**
@@ -143,9 +143,9 @@ aliyun cloudfw DescribeDefaultIPSConfig \
 ### Step 5: Verify DescribeSignatureLibVersion
 
 ```bash
-aliyun cloudfw DescribeSignatureLibVersion \
+aliyun cloudfw describe-signature-lib-version \
   --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-ips-event
 ```
 
 **Expected Response Structure:**

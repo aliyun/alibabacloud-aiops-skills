@@ -9,7 +9,7 @@ Purpose: Skill testing acceptance criteria
 
 **CORRECT:**
 ```bash
-aliyun cloudfw DescribeRiskEventGroup \
+aliyun cloudfw describe-risk-event-group \
   --CurrentPage 1 \
   --PageSize 50 \
   --StartTime 1711324800 \
@@ -22,22 +22,22 @@ aliyun cloudfw DescribeRiskEventGroup \
 **INCORRECT - Wrong product name:**
 ```bash
 # WRONG: Using "cloudfirewall" instead of "cloudfw"
-aliyun cloudfirewall DescribeRiskEventGroup ...
+aliyun cloudfirewall describe-risk-event-group ...
 
 # WRONG: Using "cfw" instead of "cloudfw"
-aliyun cfw DescribeRiskEventGroup ...
+aliyun cfw describe-risk-event-group ...
 ```
 
-**INCORRECT - Using kebab-case for API name:**
+**INCORRECT - Using PascalCase for API name:**
 ```bash
-# WRONG: API names must be PascalCase, not kebab-case
-aliyun cloudfw describe-risk-event-group ...
+# WRONG: API names must use plugin mode (lowercase-hyphenated), not PascalCase
+aliyun cloudfw DescribeRiskEventGroup ...
 ```
 
 **INCORRECT - Missing --user-agent:**
 ```bash
 # WRONG: All commands MUST include --user-agent
-aliyun cloudfw DescribeRiskEventGroup \
+aliyun cloudfw describe-risk-event-group \
   --CurrentPage 1 \
   --PageSize 50 \
   --region cn-hangzhou
@@ -54,7 +54,7 @@ client = AcsClient(ak, sk, 'cn-hangzhou')
 
 **CORRECT - PascalCase parameters:**
 ```bash
-aliyun cloudfw DescribeRiskEventGroup \
+aliyun cloudfw describe-risk-event-group \
   --CurrentPage 1 \
   --PageSize 50 \
   --StartTime 1711324800 \
@@ -70,19 +70,19 @@ aliyun cloudfw DescribeRiskEventGroup \
 **INCORRECT - Wrong parameter casing:**
 ```bash
 # WRONG: Using camelCase
-aliyun cloudfw DescribeRiskEventGroup \
+aliyun cloudfw describe-risk-event-group \
   --currentPage 1 \
   --pageSize 50 \
   --startTime 1711324800
 
 # WRONG: Using snake_case
-aliyun cloudfw DescribeRiskEventGroup \
+aliyun cloudfw describe-risk-event-group \
   --current_page 1 \
   --page_size 50 \
   --start_time 1711324800
 
 # WRONG: Using kebab-case
-aliyun cloudfw DescribeRiskEventGroup \
+aliyun cloudfw describe-risk-event-group \
   --current-page 1 \
   --page-size 50 \
   --start-time 1711324800
@@ -93,7 +93,7 @@ aliyun cloudfw DescribeRiskEventGroup \
 **CORRECT - Let CLI handle credentials automatically:**
 ```bash
 # Just call the API directly; CLI reads credentials from config
-aliyun cloudfw DescribeDefaultIPSConfig \
+aliyun cloudfw describe-default-ipsconfig \
   --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills
 ```
@@ -101,7 +101,7 @@ aliyun cloudfw DescribeDefaultIPSConfig \
 **INCORRECT - Passing credentials in command:**
 ```bash
 # WRONG: Never pass AK/SK directly in commands
-aliyun cloudfw DescribeDefaultIPSConfig \
+aliyun cloudfw describe-default-ipsconfig \
   --access-key-id LTAI5tXXXX \
   --access-key-secret 8dXXXX \
   --region cn-hangzhou
@@ -113,29 +113,36 @@ cat ~/.aliyun/config.json
 
 ### 4. API Names
 
-**CORRECT - All 7 API names (PascalCase):**
-- `DescribeRiskEventStatistic`
-- `DescribeRiskEventGroup`
-- `DescribeRiskEventTopAttackAsset`
-- `DescribeRiskEventTopAttackType`
-- `DescribeRiskEventTopAttackApp`
-- `DescribeDefaultIPSConfig`
-- `DescribeSignatureLibVersion`
+**CORRECT - All 7 API names (plugin mode, lowercase-hyphenated):**
+- `describe-risk-event-statistic`
+- `describe-risk-event-group`
+- `describe-risk-event-top-attack-asset`
+- `describe-risk-event-top-attack-type`
+- `describe-risk-event-top-attack-app`
+- `describe-default-ipsconfig`
+- `describe-signature-lib-version`
 
-**INCORRECT - Wrong casing or naming:**
+**INCORRECT - PascalCase (non-plugin mode):**
+```
+# WRONG: Must use plugin mode (lowercase-hyphenated)
+DescribeRiskEventStatistic
+DescribeRiskEventGroup
+DescribeDefaultIPSConfig
+```
+
+**INCORRECT - Other wrong casing or naming:**
 ```
 # WRONG casing examples:
 describeriskeventstatistic
 describeRiskEventStatistic
 Describe_Risk_Event_Statistic
-describe-risk-event-statistic
 DESCRIBERRISKEVENTSTATISTIC
 
 # WRONG names:
 DescribeRiskEventStats          (wrong abbreviation)
 DescribeRiskEventList           (wrong API name)
-DescribeIPSConfig               (wrong - should be DescribeDefaultIPSConfig)
-DescribeSignatureVersion        (wrong - should be DescribeSignatureLibVersion)
+DescribeIPSConfig               (wrong - should be describe-default-ipsconfig)
+DescribeSignatureVersion        (wrong - should be describe-signature-lib-version)
 DescribeRiskEventTopAttack      (incomplete name)
 ```
 

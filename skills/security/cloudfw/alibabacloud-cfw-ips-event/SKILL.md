@@ -33,10 +33,30 @@ Query and analyze IPS (Intrusion Prevention System) security events and alerts d
 
 ## Prerequisites
 
-> **Pre-check: Aliyun CLI >= 3.3.1 required**
-> Run `aliyun version` to verify >= 3.3.1. If not installed or version too low,
-> see `references/cli-installation-guide.md` for installation instructions.
-> Then [MUST] run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+> **Pre-check: Aliyun CLI >= 3.3.3 required**
+> Run `aliyun version` to verify >= 3.3.3. If not installed or version too low,
+> run `curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash` to install/update,
+> or see `references/cli-installation-guide.md` for installation instructions.
+
+> **Pre-check: Aliyun CLI plugin update required**
+> [MUST] run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+> [MUST] run `aliyun plugin update` to ensure that any existing plugins are always up-to-date.
+
+**[MUST] CLI User-Agent** — Every `aliyun` CLI command invocation must include:
+`--user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-ips-event`
+
+At the **start** of the Core Workflow (before any CLI invocation):
+**[MUST] Enable AI-Mode** — AI-mode is required for Agent Skill execution.
+Run the following commands before any CLI invocation:
+```bash
+aliyun configure ai-mode enable
+aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-cfw-ips-event"
+```
+**[MUST] Disable AI-Mode at EVERY exit point** — Before delivering the final response for ANY reason, always disable AI-mode first. This applies to ALL exit paths: workflow success, workflow failure, error/exception, user cancellation, session end, or any other scenario where no further CLI commands will be executed.
+AI-mode is only used for Agent Skill invocation scenarios and MUST NOT remain enabled after the skill stops running.
+```bash
+aliyun configure ai-mode disable
+```
 
 ---
 
@@ -161,17 +181,17 @@ When presenting the final summary report:
 All API calls use the Aliyun CLI `cloudfw` plugin.
 Request/response schemas are maintained only in [references/api-analysis.md](references/api-analysis.md). Do not duplicate field-by-field descriptions in this file.
 
-**User-Agent**: All commands must include `--user-agent AlibabaCloud-Agent-Skills`
+**User-Agent**: All commands must include `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-ips-event`
 **Region**: Specified via `--region {RegionId}` global flag
 
-> **CRITICAL: Execute immediately without asking.** When this skill is triggered, start executing from Step 1 right away.
-> Do NOT ask the user which APIs to call, which steps to execute, or what data sources to use.
-> All data comes from the Aliyun CLI commands defined below — just run them.
-> The intent routing table below is for **optimization only** — if the user's intent is unclear, execute ALL steps (Step 1-7) by default.
+> **CRITICAL: This skill is read-only (query only).** All commands below are safe, read-only queries that do not modify any cloud resources.
+> Before executing, confirm the execution plan with the user: briefly list which steps will be executed and the target region. Proceed only after user confirmation.
+> Do NOT ask the user which specific APIs to call or what data sources to use — those are determined by the workflow below.
+> The intent routing table below is for **optimization only** — if the user's intent is unclear, plan to execute ALL steps (Step 1-7) by default.
 
-### Intent Routing (Auto-determined, No Confirmation Needed)
+### Intent Routing (Auto-determined, Confirm Before Execution)
 
-Automatically determine execution scope based on user wording. **Do NOT ask the user to confirm**:
+Automatically determine execution scope based on user wording. Present the execution plan to the user for confirmation before running commands:
 
 | User Intent | Execution Steps |
 |-------------|----------------|
@@ -182,7 +202,7 @@ Automatically determine execution scope based on user wording. **Do NOT ask the 
 | Attack trend/types ("are attacks increasing recently") | Execute Step 1 + Step 4 + Step 5 |
 | IPS configuration check ("what mode is IPS in", "rule library version") | Execute Step 6 + Step 7 |
 
-**Default behavior**: If user intent cannot be clearly determined, execute all Steps 1-7 without asking.
+**Default behavior**: If user intent cannot be clearly determined, plan to execute all Steps 1-7 and confirm with user before proceeding.
 
 ### Time Parameters
 
@@ -203,11 +223,11 @@ Default time ranges:
 Retrieve overall alert statistics to understand the current security posture.
 
 ```bash
-aliyun cloudfw DescribeRiskEventStatistic \
+aliyun cloudfw describe-risk-event-statistic \
   --StartTime {StartTime} \
   --EndTime {EndTime} \
   --region {RegionId} \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-ips-event
 ```
 
 ### Step 2: IPS Alert Event Details
@@ -215,14 +235,14 @@ aliyun cloudfw DescribeRiskEventStatistic \
 Retrieve grouped alert event list. This is the core data for analysis.
 
 ```bash
-aliyun cloudfw DescribeRiskEventGroup \
+aliyun cloudfw describe-risk-event-group \
   --CurrentPage 1 \
   --PageSize 50 \
   --StartTime {StartTime} \
   --EndTime {EndTime} \
   --DataType 1 \
   --region {RegionId} \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-ips-event
 ```
 
 Optional filter parameters (auto-added based on user intent, no confirmation needed):
@@ -240,11 +260,11 @@ Pagination: Check `TotalCount`. If it exceeds 50, increment `CurrentPage`.
 Identify which assets are attack hotspots.
 
 ```bash
-aliyun cloudfw DescribeRiskEventTopAttackAsset \
+aliyun cloudfw describe-risk-event-top-attack-asset \
   --StartTime {StartTime} \
   --EndTime {EndTime} \
   --region {RegionId} \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-ips-event
 ```
 
 ### Step 4: Top Attack Types Ranking
@@ -252,12 +272,12 @@ aliyun cloudfw DescribeRiskEventTopAttackAsset \
 Understand the main threat types being faced.
 
 ```bash
-aliyun cloudfw DescribeRiskEventTopAttackType \
+aliyun cloudfw describe-risk-event-top-attack-type \
   --StartTime {StartTime} \
   --EndTime {EndTime} \
   --Direction in \
   --region {RegionId} \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-ips-event
 ```
 
 If outbound attack types are also needed, make another call with `--Direction out`.
@@ -269,11 +289,11 @@ Note: This API requires the `Direction` parameter, otherwise it will return an e
 Understand which application-layer targets are being attacked.
 
 ```bash
-aliyun cloudfw DescribeRiskEventTopAttackApp \
+aliyun cloudfw describe-risk-event-top-attack-app \
   --StartTime {StartTime} \
   --EndTime {EndTime} \
   --region {RegionId} \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-ips-event
 ```
 
 ### Step 6: IPS Protection Configuration Status
@@ -281,17 +301,17 @@ aliyun cloudfw DescribeRiskEventTopAttackApp \
 Check the current IPS run mode and protection capabilities.
 
 ```bash
-aliyun cloudfw DescribeDefaultIPSConfig \
+aliyun cloudfw describe-default-ipsconfig \
   --region {RegionId} \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-ips-event
 ```
 
 ### Step 7: IPS Rule Library Version
 
 ```bash
-aliyun cloudfw DescribeSignatureLibVersion \
+aliyun cloudfw describe-signature-lib-version \
   --region {RegionId} \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-ips-event
 ```
 
 ---
