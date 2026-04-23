@@ -26,7 +26,7 @@
 ```bash
 aliyun maxcompute list-quotas
 aliyun maxcompute query-quota --nickname xxx
-aliyun maxcompute CreateQuota --chargeType payasyougo
+aliyun maxcompute create-quota --charge-type payasyougo
 ```
 
 ❌ **INCORRECT** — Wrong product names:
@@ -38,9 +38,9 @@ aliyun mc list-quotas             # Wrong: no abbreviation
 
 ### 2. Command Name Verification
 
-✅ **CORRECT** — Use kebab-case for query/list, PascalCase for CreateQuota:
+✅ **CORRECT** — Use kebab-case (plugin mode) for all commands:
 ```bash
-aliyun maxcompute CreateQuota     # No kebab-case subcommand exists for this API
+aliyun maxcompute create-quota     # Plugin mode
 aliyun maxcompute get-quota       # Deprecated
 aliyun maxcompute query-quota     # Recommended
 aliyun maxcompute list-quotas
@@ -48,7 +48,6 @@ aliyun maxcompute list-quotas
 
 ❌ **INCORRECT** — Wrong command formats:
 ```bash
-aliyun maxcompute create-quota    # Wrong: this subcommand does not exist in CLI plugin
 aliyun maxcompute createQuota     # Wrong: camelCase
 aliyun maxcompute create_quota    # Wrong: underscore
 aliyun maxcompute delete-quota    # Wrong: No such API exists
@@ -56,13 +55,12 @@ aliyun maxcompute delete-quota    # Wrong: No such API exists
 
 ### 3. Parameter Name Verification
 
-✅ **CORRECT** — Use camelCase for CreateQuota, kebab-case for other commands:
+✅ **CORRECT** — Use kebab-case for all parameters:
 ```bash
-# CreateQuota uses camelCase parameters (PascalCase API)
-aliyun maxcompute CreateQuota \
-  --chargeType payasyougo \
-  --commodityCode odps \
-  --partNickName "myQuotaNick"    # Only letters and numbers allowed
+aliyun maxcompute create-quota \
+  --charge-type payasyougo \
+  --commodity-code odps \
+  --part-nick-name "myQuotaNick"    # Only letters and numbers allowed
 
 aliyun maxcompute list-quotas \
   --billing-type payasyougo \
@@ -77,9 +75,9 @@ aliyun maxcompute get-quota \        # Deprecated
 
 ❌ **INCORRECT** — Wrong parameter formats:
 ```bash
-aliyun maxcompute CreateQuota --charge-type payasyougo   # Wrong: kebab-case not supported for CreateQuota
-aliyun maxcompute CreateQuota --charge_type payasyougo   # Wrong: underscore
-aliyun maxcompute CreateQuota --ChargeType payasyougo    # Wrong: PascalCase
+aliyun maxcompute create-quota --chargeType payasyougo    # Wrong: camelCase
+aliyun maxcompute create-quota --charge_type payasyougo   # Wrong: underscore
+aliyun maxcompute create-quota --ChargeType payasyougo    # Wrong: PascalCase
 ```
 
 ### 4. User-Agent Verification
@@ -256,9 +254,9 @@ aliyun maxcompute query-quota \
 ### Scenario 3: Create Pay-as-you-go Quota
 ```bash
 # Should succeed and return NickName
-aliyun maxcompute CreateQuota \
-  --chargeType payasyougo \
-  --commodityCode odps \
+aliyun maxcompute create-quota \
+  --charge-type payasyougo \
+  --commodity-code odps \
   --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills
 ```

@@ -14,7 +14,7 @@
 
 | Product | CLI Command | API Action | API Version | Description | Status |
 |---------|-------------|------------|-------------|-------------|--------|
-| MaxCompute | `aliyun maxcompute CreateQuota` | CreateQuota | 2022-01-04 | Create a new quota | ✅ Active |
+| MaxCompute | `aliyun maxcompute create-quota` | CreateQuota | 2022-01-04 | Create a new quota | ✅ Active |
 | MaxCompute | `aliyun maxcompute get-quota` | GetQuota | 2022-01-04 | Get quota details | ⚠️ Deprecated |
 | MaxCompute | `aliyun maxcompute query-quota` | QueryQuota | 2022-01-04 | Get quota details | ✅ Recommended |
 | MaxCompute | `aliyun maxcompute list-quotas` | ListQuotas | 2022-01-04 | List all quotas | ✅ Active |
@@ -25,18 +25,15 @@
 
 **Endpoint:** `maxcompute.{regionId}.aliyuncs.com`
 
-> **Note**: The `create-quota` kebab-case subcommand does not exist in the CLI plugin.
-> Use the PascalCase API name `CreateQuota` with camelCase parameters.
-
 **CLI Command:**
 ```bash
-aliyun maxcompute CreateQuota \
-  --chargeType <payasyougo|subscription> \
-  --commodityCode <odps|odpsplus|odps_intl|odpsplus_intl> \
-  --partNickName <nickname> \
-  --commodityData '<json-data>' \
+aliyun maxcompute create-quota \
+  --charge-type <payasyougo|subscription> \
+  --commodity-code <odps|odpsplus|odps_intl|odpsplus_intl> \
+  --part-nick-name <nickname> \
+  --commodity-data '<json-data>' \
   --region <regionId> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-odps-quota-manage
 ```
 
 **Parameters:**

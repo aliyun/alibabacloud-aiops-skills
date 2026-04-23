@@ -20,11 +20,11 @@ This document provides step-by-step verification methods to confirm successful e
 ### Step 1: Execute Create Command
 
 ```bash
-aliyun maxcompute CreateQuota \
-  --chargeType payasyougo \
-  --commodityCode odps \
+aliyun maxcompute create-quota \
+  --charge-type payasyougo \
+  --commodity-code odps \
   --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-odps-quota-manage
 ```
 
 ### Step 2: Check Response
@@ -49,7 +49,7 @@ aliyun maxcompute CreateQuota \
 aliyun maxcompute list-quotas \
   --billing-type payasyougo \
   --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-odps-quota-manage
 ```
 
 **Verification:**
@@ -63,20 +63,20 @@ aliyun maxcompute list-quotas \
 ### Step 1: Execute Create Command
 
 ```bash
-aliyun maxcompute CreateQuota \
-  --chargeType subscription \
-  --commodityCode odpsplus \
-  --partNickName "my-test-quota" \
-  --commodityData '{"CU":50,"ord_time":"1:Month","autoRenew":false}' \
+aliyun maxcompute create-quota \
+  --charge-type subscription \
+  --commodity-code odpsplus \
+  --part-nick-name "my-test-quota" \
+  --commodity-data '{"CU":50,"ord_time":"1:Month","autoRenew":false}' \
   --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-odps-quota-manage
 ```
 
 ### Step 2: Check Response
 
 **Success Indicators:**
 - Response contains `RequestId`
-- Response contains `Data.NickName` matching the specified `partNickName`
+- Response contains `Data.NickName` matching the specified `part-nick-name`
 
 ### Step 3: Verify via List or Query
 
@@ -85,7 +85,7 @@ aliyun maxcompute CreateQuota \
 aliyun maxcompute query-quota \
   --nickname "my-test-quota" \
   --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-odps-quota-manage
 ```
 
 **Or using ListQuotas:**
@@ -93,7 +93,7 @@ aliyun maxcompute query-quota \
 aliyun maxcompute list-quotas \
   --billing-type subscription \
   --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-odps-quota-manage
 ```
 
 **Verification:**
@@ -113,7 +113,7 @@ aliyun maxcompute list-quotas \
 aliyun maxcompute query-quota \
   --nickname "quota-nickname" \
   --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-odps-quota-manage
 ```
 
 ### Step 2: Check Response
@@ -148,7 +148,7 @@ aliyun maxcompute list-quotas \
   --billing-type payasyougo \
   --max-item 10 \
   --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-odps-quota-manage
 ```
 
 ### Step 2: Check Response
@@ -187,7 +187,7 @@ aliyun maxcompute list-quotas \
   --max-item 10 \
   --marker "<NextToken-value>" \
   --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-odps-quota-manage
 ```
 
 ---
@@ -212,7 +212,7 @@ aliyun maxcompute list-quotas \
 aliyun maxcompute query-quota \
   --nickname "deleted-quota-nickname" \
   --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-odps-quota-manage
 ```
 
 **Expected Result**: Should return `QuotaNotFound` error if quota was successfully deleted.
@@ -244,14 +244,14 @@ aliyun configure list
 echo "Listing all quotas..."
 aliyun maxcompute list-quotas \
   --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-odps-quota-manage
 
 # Query specific quota (using recommended QueryQuota)
 echo "Querying specific quota..."
 aliyun maxcompute query-quota \
   --nickname "your-quota-nickname" \
   --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-odps-quota-manage
 
 echo "Verification complete!"
 echo ""

@@ -15,8 +15,8 @@ Manage MaxCompute (ODPS) Quota resources using Alibaba Cloud CLI and SDK. This s
 |---------|-------------|-------------|-------|
 | Create Pay-as-you-go Quota | ✅ Yes | ✅ Yes | Fully supported |
 | Create Subscription Quota | ❌ Not Supported | ❌ Not Supported | **Temporarily unavailable** |
-| Query Quota (GetQuota) | ✅ Yes | ✅ Yes | ⚠️ **Deprecated** - Use QueryQuota instead |
-| Query Quota (QueryQuota) | ✅ Yes | ✅ Yes | Recommended replacement for GetQuota |
+| Query Quota (get-quota) | ✅ Yes | ✅ Yes | ⚠️ **Deprecated** - Use query-quota instead |
+| Query Quota (query-quota) | ✅ Yes | ✅ Yes | Recommended replacement for get-quota |
 | List Quotas | ✅ Yes | ✅ Yes | Fully supported (both payasyougo and subscription) |
 | Delete Quota | ❌ No API | ❌ No API | **Not available via API** - Must use Console |
 | Modify Quota | ❌ Not in scope | ❌ Not in scope | Not covered in this solution |
@@ -24,9 +24,9 @@ Manage MaxCompute (ODPS) Quota resources using Alibaba Cloud CLI and SDK. This s
 > **Important**: 
 > - **Create Subscription Quota** is **temporarily NOT supported** in this skill. For subscription quota creation, please use the [Alibaba Cloud Console](https://maxcompute.console.aliyun.com/).
 > - **Delete Quota** operation is NOT available through CLI or SDK. You must use the [Alibaba Cloud Console](https://maxcompute.console.aliyun.com/) to delete quotas.
-> - **QueryQuota is preferred** - GetQuota is deprecated but acceptable if it returns success
-> - **⚠️ CRITICAL: When checking if quota exists, ALWAYS use ListQuotas API, NEVER use GetQuota**
-> - **🚨 MANDATORY: Before CreateQuota, MUST call ListQuotas first - NEVER skip this step**
+> - **query-quota is preferred** - get-quota is deprecated but acceptable if it returns success
+> - **⚠️ CRITICAL: When checking if quota exists, ALWAYS use list-quotas, NEVER use get-quota**
+> - **🚨 MANDATORY: Before create-quota, MUST call list-quotas first - NEVER skip this step**
 
 ## Architecture
 
@@ -38,25 +38,47 @@ Alibaba Cloud Account → MaxCompute Service → Quota Resources (CU)
 
 ## Installation
 
-> **Pre-check: Aliyun CLI >= 3.3.1 required**
-> Run `aliyun version` to verify >= 3.3.1. If not installed or version too low,
-> see [references/cli-installation-guide.md](references/cli-installation-guide.md) for installation instructions.
-> Then **[MUST]** run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+> **Pre-check: Aliyun CLI >= 3.3.3 required**
+> Run `aliyun version` to verify >= 3.3.3. If not installed or version too low,
+> run `curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash` to update,
+> or see [references/cli-installation-guide.md](references/cli-installation-guide.md) for installation instructions.
+
+> **Pre-check: Aliyun CLI plugin setup required**
+> [MUST] Install the maxcompute plugin manually: `aliyun plugin install maxcompute`
+> [MUST] Update the plugin to latest version: `aliyun plugin update maxcompute`
 
 ```bash
 # Verify CLI version
 aliyun version
 
-# Enable auto plugin installation
-aliyun configure set --auto-plugin-install true
+# Install maxcompute plugin (confirm when prompted)
+aliyun plugin install maxcompute
+
+# Update maxcompute plugin to latest version
+aliyun plugin update maxcompute
+```
+
+**[MUST] CLI User-Agent** — Every `aliyun` CLI command invocation must include:
+`--user-agent AlibabaCloud-Agent-Skills/alibabacloud-odps-quota-manage`
+
+At the **start** of the Core Workflow (before any CLI invocation):
+**[MUST] Enable AI-Mode** — AI-mode is required for Agent Skill execution.
+Run the following commands before any CLI invocation:
+```bash
+aliyun configure ai-mode enable
+aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-odps-quota-manage"
+```
+**[MUST] Disable AI-Mode at EVERY exit point** — Before delivering the final response for ANY reason, always disable AI-mode first. This applies to ALL exit paths: workflow success, workflow failure, error/exception, user cancellation, session end, or any other scenario where no further CLI commands will be executed.
+AI-mode is only used for Agent Skill invocation scenarios and MUST NOT remain enabled after the skill stops running.
+```bash
+aliyun configure ai-mode disable
 ```
 
 ## Environment Variables
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `ALIBABA_CLOUD_ACCESS_KEY_ID` | Yes | Alibaba Cloud Access Key ID |
-| `ALIBABA_CLOUD_ACCESS_KEY_SECRET` | Yes | Alibaba Cloud Access Key Secret |
+This skill relies on the aliyun CLI default credential chain. No explicit credential configuration is needed.
+- Run `aliyun configure` to set up credentials before first use
+- Do NOT explicitly handle or pass credential values in commands
 
 **Timeout Configuration:**
 - `ALIBABA_CLOUD_CONNECT_TIMEOUT`: Connection timeout (default: 10s)
@@ -112,6 +134,15 @@ If no credentials, ask user to run `aliyun configure` first, then continue.
 
 ## Core Workflow
 
+**🚨 STEP 0 - CONFIRM PARAMETERS WITH USER BEFORE ANY EXECUTION:**
+
+Before running any CLI command, you MUST confirm all required parameters with the user:
+- **For LIST:** Confirm `region` and `billing-type` (payasyougo / subscription / ALL)
+- **For QUERY:** Confirm `region` and `nickname`
+- **For CREATE:** Confirm `region`, `charge-type`, and `commodity-code`
+
+Do NOT assume or use default values. Ask the user explicitly and wait for confirmation before proceeding.
+
 **🚨 CRITICAL RULE FOR ALL OPERATIONS:**
 
 | Operation | First Command | Then |
@@ -120,27 +151,25 @@ If no credentials, ask user to run `aliyun configure` first, then continue.
 | **QUERY** quota | `query-quota` | Show results |
 | **LIST** quotas | `list-quotas` | Show list |
 
-**⚠️ CREATE without ListQuotas first = ERROR**
+**⚠️ CREATE without list-quotas first = ERROR**
 
 ---
 
 **FORBIDDEN COMMANDS - NEVER USE:**
-- ❌ `aliyun maxcompute create-quota` - WRONG CASE (kebab-case), use PascalCase `CreateQuota`
-- ❌ `aliyun maxcompute GetQuota` - DEPRECATED, use `query-quota` instead
-- ❌ `aliyun bssopenapi CreateInstance` - WRONG API (BssOpenApi), use MaxCompute CreateQuota instead
-- ❌ `aliyun bssopenapi QueryAvailableInstances` - WRONG API for listing quotas, use MaxCompute ListQuotas instead
 - ❌ `aliyun quotas` commands - WRONG SERVICE (Quota Center), use MaxCompute instead
+- ❌ Any BssOpenApi commands for quota operations - use MaxCompute instead
+- ❌ `get-quota` - DEPRECATED, use `query-quota` instead
 
-**MUST USE INSTEAD:**
-- ✅ `aliyun maxcompute list-quotas` - For listing/checking quotas (MaxCompute service, NOT BssOpenApi)
-- ✅ `aliyun maxcompute query-quota` - For querying quota details (MaxCompute service)
-- ✅ `aliyun maxcompute CreateQuota` - For creating quota (MaxCompute service)
+**MUST USE (plugin mode, kebab-case):**
+- ✅ `aliyun maxcompute list-quotas` - For listing/checking quotas
+- ✅ `aliyun maxcompute query-quota` - For querying quota details
+- ✅ `aliyun maxcompute create-quota` - For creating quota
 
 **⚠️ IMPORTANT:** Use `aliyun maxcompute` commands (MaxCompute service), NOT `aliyun quotas` commands (Quota Center service).
 
-**Command Case Rules:**
-- API actions use PascalCase: `CreateQuota`
-- CLI commands use kebab-case: `list-quotas`, `query-quota`
+**Command Rules:**
+- ALL CLI commands use plugin mode (kebab-case): `create-quota`, `list-quotas`, `query-quota`
+- Parameters also use kebab-case: `--charge-type`, `--commodity-code`, `--billing-type`
 
 ---
 
@@ -153,15 +182,15 @@ This skill ONLY supports **pay-as-you-go** quota creation.
 
 **🚨 FOR CREATE: FIRST RUN LISTQUOTAS - NEVER SKIP THIS:**
 
-**STEP 1 - MANDATORY: Call ListQuotas FIRST**
+**STEP 1 - MANDATORY: Call list-quotas FIRST**
 ```bash
 aliyun maxcompute list-quotas --billing-type payasyougo --region <R>
 ```
-**DO NOT proceed to Step 2 until you get ListQuotas result**
+**DO NOT proceed to Step 2 until you get list-quotas result**
 
 **Use MaxCompute service (`aliyun maxcompute`), NOT Quota Center (`aliyun quotas`).**
 
-**AFTER ListQuotas result (STEP 2):**
+**AFTER list-quotas result (STEP 2):**
 
 | Result | Action |
 |--------|--------|
@@ -172,39 +201,42 @@ aliyun maxcompute list-quotas --billing-type payasyougo --region <R>
 
 **PRE-CREATE CHECKLIST - ALL MUST BE TRUE:**
 - [ ] User wants **pay-as-you-go** (NOT prepaid/subscription)
-- [ ] ListQuotas was called and returned empty list
+- [ ] list-quotas was called and returned empty list
 - [ ] No existing pay-as-you-go quota in the region
 - [ ] User confirmed they want to create
 
 ```bash
-aliyun maxcompute CreateQuota --chargeType payasyougo --commodityCode odps --region <R> --ClientToken <UNIQUE_TOKEN>
+aliyun maxcompute create-quota --charge-type payasyougo --commodity-code odps --region <R> --client-token <UNIQUE_TOKEN>
 ```
 
 **For International Site:**
 ```bash
-aliyun maxcompute CreateQuota --chargeType payasyougo --commodityCode odps_intl --region <R> --ClientToken <UNIQUE_TOKEN>
+aliyun maxcompute create-quota --charge-type payasyougo --commodity-code odps_intl --region <R> --client-token <UNIQUE_TOKEN>
 ```
 
 **CRITICAL:** 
-- Use `CreateQuota` (PascalCase), NOT `create-quota` (kebab-case)
-- **FORBIDDEN:** `create-quota`, `create-quota-odps-paygo`, or any kebab-case variant
-- Use **MaxCompute** CreateQuota, NOT **BssOpenApi** CreateInstance
-- Do NOT use `aliyun bssopenapi CreateInstance`
-- **ClientToken:** Generate a unique token (e.g., UUID) for idempotency on retries
+- Use plugin mode (kebab-case): `create-quota`
+- Use **MaxCompute** service, NOT BssOpenApi
+- **client-token:** Generate a unique token (e.g., UUID) for idempotency on retries
 - **commodityCode values:**
   - China site: `odps` or `odpsplus`
   - International site: `odps_intl` or `odpsplus_intl`
   - NEVER use `maxcompute` as commodityCode
   - Note: When `chargeType=payasyougo` is set, commodityCode validation is not strict
 
+**⚠️ OUTPUT HANDLING:**
+- Do NOT pipe command output to files (e.g., `| tee ...` or `> file.json`) — if the target directory does not exist, the command will return a non-zero exit code even when the API call succeeds.
+- Let the CLI print output directly to stdout, then parse the result inline.
+- **When saving output files** (e.g., `existing_quotas.json`, `actions_log.txt`), ALWAYS `mkdir -p <directory>` first before writing any file to ensure the target directory exists.
+
 **FINALLY:**
 - Parse result
 - Show user
 - **Done**
 
-**⚠️ NEVER call CreateQuota before ListQuotas. This causes errors.**
+**⚠️ NEVER call create-quota before list-quotas. This causes errors.**
 
-**Note:** If quota already exists, DO NOT create. Only create when ListQuotas returns empty list.
+**Note:** If quota already exists, DO NOT create. Only create when list-quotas returns empty list.
 
 ### QUERY Quota (when user provides nickname):
 
@@ -212,7 +244,7 @@ aliyun maxcompute CreateQuota --chargeType payasyougo --commodityCode odps_intl 
 
 **CHECKLIST:**
 - [ ] User provided quota nickname
-- [ ] Use `query-quota` (NOT `GetQuota`)
+- [ ] Use `query-quota` (NOT `get-quota`)
 
 **USE THIS COMMAND:**
 ```bash
@@ -221,7 +253,7 @@ aliyun maxcompute query-quota --nickname <N> --region <R>
 
 **IMPORTANT:** If nickname contains Chinese characters, URL-encode it first before passing to the command.
 
-**FORBIDDEN:** `aliyun maxcompute GetQuota` - use `query-quota` instead.
+**FORBIDDEN:** `get-quota` is deprecated - use `query-quota` instead.
 
 - Parse JSON
 - Extract: `nickName`, `name`, `id`, `status`
@@ -229,7 +261,7 @@ aliyun maxcompute query-quota --nickname <N> --region <R>
 
 ### LIST Quotas:
 
-**⚠️ FOR LISTING QUOTAS: ONLY use MaxCompute ListQuotas, NOT BssOpenApi QueryAvailableInstances**
+**⚠️ FOR LISTING QUOTAS: ONLY use MaxCompute list-quotas, NOT BssOpenApi**
 
 **When checking for existing pay-as-you-go quotas (before creation):**
 ```bash
@@ -251,6 +283,17 @@ aliyun maxcompute list-quotas --billing-type ALL --region <R>
 - Extract `quotaInfoList` array
 - Show list → **Done**
 
+**Response field `odpsSpecCode` enum values:**
+
+| odpsSpecCode | Description |
+|--------------|-------------|
+| `OdpsStandard` | ODPS Pay-as-you-go Resource |
+| `OdpsSpot` | ODPS Spot/Off-peak Resource (Pay-as-you-go) |
+| `OdpsDev` | Developer Resource Type |
+| `OdpsPlusStandard` | Subscription Resource |
+| `OdpsPlusHa` | High Availability Resource |
+| `OdpsPlusElasticCU` | ODPS Non-reserved Elastic CU Subscription Resource |
+
 ---
 
 ## Quick Reference
@@ -260,16 +303,24 @@ See [references/related-apis.md](references/related-apis.md) for complete CLI co
 **Key Points:**
 - Use `list-quotas --billing-type payasyougo` before creating
 - Use `query-quota` (not `get-quota`) for querying
-- Use `CreateQuota` (PascalCase) for creating
-- Always include `--user-agent AlibabaCloud-Agent-Skills`
+- Use `create-quota` (kebab-case plugin mode) for creating
+- Always include `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-odps-quota-manage`
 
 ---
 
 ## Task Completion
 
+**Output Files — MUST create before finishing:**
+1. `mkdir -p outputs ran_scripts` — ensure directories exist first
+2. Save quota query/list results to `outputs/existing_quotas.json`
+3. Save a log of all actions performed to `ran_scripts/actions_log.txt`
+
+> **IMPORTANT:** Always run `mkdir -p` for any target directory BEFORE writing files. Never assume directories already exist.
+
 **Finish with:**
 - Summary of what was done
 - Key results (nickname, region, status)
+- Confirm output files were written (`outputs/existing_quotas.json`, `ran_scripts/actions_log.txt`)
 - "✅ Complete"
 
 ---
@@ -315,8 +366,8 @@ See [references/related-apis.md](references/related-apis.md) for complete API re
 ## Related Documentation
 
 - [MaxCompute Product](https://api.aliyun.com/product/MaxCompute)
-- [CreateQuota API](https://api.aliyun.com/api/MaxCompute/2022-01-04/CreateQuota)
-- [GetQuota API](https://api.aliyun.com/api/MaxCompute/2022-01-04/GetQuota)
-- [ListQuotas API](https://api.aliyun.com/api/MaxCompute/2022-01-04/ListQuotas)
+- [create-quota API](https://api.aliyun.com/api/MaxCompute/2022-01-04/CreateQuota)
+- [get-quota API](https://api.aliyun.com/api/MaxCompute/2022-01-04/GetQuota)
+- [list-quotas API](https://api.aliyun.com/api/MaxCompute/2022-01-04/ListQuotas)
 - [Java SDK Documentation](https://help.aliyun.com/zh/sdk/developer-reference/v2-java-sdk)
 - [Credential Management](https://help.aliyun.com/zh/sdk/developer-reference/v2-manage-access-credentials)

@@ -34,11 +34,13 @@ This policy grants all permissions needed for quota management:
         "odps:QueryQuota",
         "odps:ListQuotas"
       ],
-      "Resource": "*"
+      "Resource": "acs:odps:*:<your-account-id>:quota/*"
     }
   ]
 }
 ```
+
+> **Note:** Replace `<your-account-id>` with your Alibaba Cloud account ID. This scopes permissions to quota resources only.
 
 ### Read-Only Quota Policy
 
@@ -55,7 +57,7 @@ For users who only need to view quota information:
         "odps:QueryQuota",
         "odps:ListQuotas"
       ],
-      "Resource": "*"
+      "Resource": "acs:odps:*:<your-account-id>:quota/*"
     }
   ]
 }
@@ -76,7 +78,7 @@ For users who need to create quotas:
         "odps:QueryQuota",
         "odps:ListQuotas"
       ],
-      "Resource": "*"
+      "Resource": "acs:odps:*:<your-account-id>:quota/*"
     }
   ]
 }
@@ -113,14 +115,14 @@ aliyun ram create-policy \
       }
     ]
   }' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-odps-quota-manage
 
 # Attach policy to user
 aliyun ram attach-policy-to-user \
   --policy-name MaxComputeQuotaManagement \
   --policy-type Custom \
   --user-name <your-username> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-odps-quota-manage
 ```
 
 ## System Policies
