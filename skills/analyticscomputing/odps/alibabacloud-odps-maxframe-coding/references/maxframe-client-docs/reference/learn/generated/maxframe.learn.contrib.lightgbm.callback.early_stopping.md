@@ -1,0 +1,3 @@
+# maxframe.learn.contrib.lightgbm.callback.early_stopping
+
+### maxframe.learn.contrib.lightgbm.callback.early_stopping(stopping_rounds: [int](https://docs.python.org/3/library/functions.html#int), first_metric_only: [bool](https://docs.python.org/3/library/functions.html#bool) = False, verbose: [bool](https://docs.python.org/3/library/functions.html#bool) = True, min_delta: [float](https://docs.python.org/3/library/functions.html#float) | [List](https://docs.python.org/3/library/typing.html#typing.List)[[float](https://docs.python.org/3/library/functions.html#float)] = 0.0) → EarlyStoppingCallback

@@ -1,0 +1,3 @@
+# maxframe.learn.contrib.lightgbm.predict
+
+### maxframe.learn.contrib.lightgbm.predict(booster, data, raw_score: [bool](https://docs.python.org/3/library/functions.html#bool) = False, start_iteration: [int](https://docs.python.org/3/library/functions.html#int) = 0, num_iteration: [int](https://docs.python.org/3/library/functions.html#int) = None, pred_leaf: [bool](https://docs.python.org/3/library/functions.html#bool) = False, pred_contrib: [bool](https://docs.python.org/3/library/functions.html#bool) = False, validate_features: [bool](https://docs.python.org/3/library/functions.html#bool) = False, \*\*kwargs)

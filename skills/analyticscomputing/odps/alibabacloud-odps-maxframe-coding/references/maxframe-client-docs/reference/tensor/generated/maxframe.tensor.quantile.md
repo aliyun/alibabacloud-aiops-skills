@@ -1,0 +1,90 @@
+# maxframe.tensor.quantile
+
+### maxframe.tensor.quantile(a, q, axis=None, out=None, overwrite_input=False, interpolation='linear', keepdims=False, \*\*kw)
+
+Compute the q-th quantile of the data along the specified axis.
+
+* **Parameters:**
+  * **a** (*array_like*) – Input tensor or object that can be converted to a tensor.
+  * **q** (*array_like* *of* [*float*](https://docs.python.org/3/library/functions.html#float)) – Quantile or sequence of quantiles to compute, which must be between
+    0 and 1 inclusive.
+  * **axis** ( *{int* *,* [*tuple*](https://docs.python.org/3/library/stdtypes.html#tuple) *of* [*int*](https://docs.python.org/3/library/functions.html#int) *,* *None}* *,* *optional*) – Axis or axes along which the quantiles are computed. The
+    default is to compute the quantile(s) along a flattened
+    version of the tensor.
+  * **out** (*Tensor* *,* *optional*) – Alternative output tensor in which to place the result. It must
+    have the same shape and buffer length as the expected output,
+    but the type (of the output) will be cast if necessary.
+  * **overwrite_input** ([*bool*](https://docs.python.org/3/library/functions.html#bool) *,* *optional*) – Just for compatibility with Numpy, would not take effect.
+  * **interpolation** ( *{'linear'* *,*  *'lower'* *,*  *'higher'* *,*  *'midpoint'* *,*  *'nearest'}*) – 
+
+    This optional parameter specifies the interpolation method to
+    use when the desired quantile lies between two data points
+    `i < j`:
+    > * linear: `i + (j - i) * fraction`, where `fraction`
+    >   is the fractional part of the index surrounded by `i`
+    >   and `j`.
+    > * lower: `i`.
+    > * higher: `j`.
+    > * nearest: `i` or `j`, whichever is nearest.
+    > * midpoint: `(i + j) / 2`.
+  * **keepdims** ([*bool*](https://docs.python.org/3/library/functions.html#bool) *,* *optional*) – If this is set to True, the axes which are reduced are left in
+    the result as dimensions with size one. With this option, the
+    result will broadcast correctly against the original tensor a.
+* **Returns:**
+  **quantile** – If q is a single quantile and axis=None, then the result
+  is a scalar. If multiple quantiles are given, first axis of
+  the result corresponds to the quantiles. The other axes are
+  the axes that remain after the reduction of a. If the input
+  contains integers or floats smaller than `float64`, the output
+  data-type is `float64`. Otherwise, the output data-type is the
+  same as that of the input. If out is specified, that tensor is
+  returned instead.
+* **Return type:**
+  scalar or Tensor
+
+#### SEE ALSO
+[`mean`](maxframe.tensor.mean.md#maxframe.tensor.mean)
+
+[`percentile`](maxframe.tensor.percentile.md#maxframe.tensor.percentile)
+: equivalent to quantile, but with q in the range [0, 100].
+
+[`median`](maxframe.tensor.median.md#maxframe.tensor.median)
+: equivalent to `quantile(..., 0.5)`
+
+`nanquantile`
+
+### Notes
+
+Given a vector `V` of length `N`, the q-th quantile of
+`V` is the value `q` of the way from the minimum to the
+maximum in a sorted copy of `V`. The values and distances of
+the two nearest neighbors as well as the interpolation parameter
+will determine the quantile if the normalized ranking does not
+match the location of `q` exactly. This function is the same as
+the median if `q=0.5`, the same as the minimum if `q=0.0` and the
+same as the maximum if `q=1.0`.
+
+### Examples
+
+```pycon
+>>> import maxframe.tensor as mt
+>>> a = mt.array([[10, 7, 4], [3, 2, 1]])
+>>> a.execute()
+array([[10,  7,  4],
+       [ 3,  2,  1]])
+>>> mt.quantile(a, 0.5).execute()
+3.5
+>>> mt.quantile(a, 0.5, axis=0).execute()
+array([6.5, 4.5, 2.5])
+>>> mt.quantile(a, 0.5, axis=1).execute()
+array([7.,  2.])
+>>> mt.quantile(a, 0.5, axis=1, keepdims=True).execute()
+array([[7.],
+       [2.]])
+>>> m = mt.quantile(a, 0.5, axis=0)
+>>> out = mt.zeros_like(m)
+>>> mt.quantile(a, 0.5, axis=0, out=out).execute()
+array([6.5, 4.5, 2.5])
+>>> m.execute()
+array([6.5, 4.5, 2.5])
+```
