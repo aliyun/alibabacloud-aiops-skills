@@ -240,11 +240,11 @@ EMR Serverless Spark provides three system policies, listed in order of permissi
 
 **Authorization Command**:
 ```bash
-aliyun ram AttachPolicyToUser \
-  --PolicyName AliyunEMRServerlessSparkFullAccess \
-  --PolicyType System \
-  --UserName <username> \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun ram attach-policy-to-user \
+  --policy-name AliyunEMRServerlessSparkFullAccess \
+  --policy-type System \
+  --user-name <username> \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ### AliyunEMRServerlessSparkDeveloperAccess
@@ -318,11 +318,11 @@ aliyun ram AttachPolicyToUser \
 
 **Authorization Command**:
 ```bash
-aliyun ram AttachPolicyToUser \
-  --PolicyName AliyunEMRServerlessSparkDeveloperAccess \
-  --PolicyType System \
-  --UserName <username> \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun ram attach-policy-to-user \
+  --policy-name AliyunEMRServerlessSparkDeveloperAccess \
+  --policy-type System \
+  --user-name <username> \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ### AliyunEmrServerlessSparkReadOnlyAccess
@@ -371,11 +371,11 @@ aliyun ram AttachPolicyToUser \
 
 **Authorization Command**:
 ```bash
-aliyun ram AttachPolicyToUser \
-  --PolicyName AliyunEmrServerlessSparkReadOnlyAccess \
-  --PolicyType System \
-  --UserName <username> \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun ram attach-policy-to-user \
+  --policy-name AliyunEmrServerlessSparkReadOnlyAccess \
+  --policy-type System \
+  --user-name <username> \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ## Custom Policies
@@ -443,9 +443,9 @@ EMR Serverless Spark jobs may need to access other cloud services, below are com
 
 **Manual Creation**:
 ```bash
-aliyun ram CreateServiceLinkedRole \
-  --ServiceName spark.emr-serverless.aliyuncs.com \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun resourcemanager create-service-linked-role \
+  --service-name spark.emr-serverless.aliyuncs.com \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 **Trust Policy**:

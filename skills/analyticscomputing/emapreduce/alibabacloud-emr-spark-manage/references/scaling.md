@@ -30,7 +30,7 @@
 ### View Queue List
 
 ```bash
-aliyun emr-serverless-spark GET /api/v1/workspaces/{workspaceId}/queues --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark list-workspace-queues --workspace-id {workspaceId} --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 Key information in the response:
@@ -53,11 +53,10 @@ Before scaling up, confirm:
 After confirming the operation, need user explicit confirmation before execution.
 
 ```bash
-aliyun emr-serverless-spark POST "/api/v1/workspaces/queues/action/edit?regionId=cn-hangzhou" \
+aliyun emr-serverless-spark edit-workspace-queue \
   --region cn-hangzhou \
-  --header "Content-Type=application/json" \
   --body '{"workspaceId":"w-xxx","workspaceQueueName":"dev_queue","resourceSpec":{"cu":64,"maxCu":128}}' \
-  --force --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ### Scale Down Resource Queue
@@ -65,18 +64,17 @@ aliyun emr-serverless-spark POST "/api/v1/workspaces/queues/action/edit?regionId
 > **Note**: Scaling down may increase wait time for queued jobs. If running jobs use resources exceeding the scaled-down quota, scaling down won't affect running jobs, but new jobs may need to wait.
 
 ```bash
-aliyun emr-serverless-spark POST "/api/v1/workspaces/queues/action/edit?regionId=cn-hangzhou" \
+aliyun emr-serverless-spark edit-workspace-queue \
   --region cn-hangzhou \
-  --header "Content-Type=application/json" \
   --body '{"workspaceId":"w-xxx","workspaceQueueName":"dev_queue","resourceSpec":{"cu":16}}' \
-  --force --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ### Verify After Scaling
 
 ```bash
 # View queue status to confirm change生效
-aliyun emr-serverless-spark GET /api/v1/workspaces/{workspaceId}/queues --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark list-workspace-queues --workspace-id {workspaceId} --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ## Common Issues

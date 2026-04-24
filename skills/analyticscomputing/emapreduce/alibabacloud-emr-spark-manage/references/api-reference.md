@@ -1,13 +1,12 @@
 # API Parameter Reference
 
-All APIs are version `2023-08-08`, request method is ROA style (RESTful).
+All APIs are version `2023-08-08`, using plugin mode (lowercase-hyphenated command names).
 
 > **Important**: When calling this product's API with Alibaba Cloud CLI:
-> 1. Must add `--force` parameter to skip local API metadata validation, otherwise will report `can not find api by path` error.
+> 1. Must add `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage` parameter.
 > 2. Recommend always adding `--region <regionId>` parameter to specify region (e.g., `cn-hangzhou`). If CLI has no default Region configured and `--region` not specified, server reports `MissingParameter.regionId` error.
-> 3. **POST / PUT / DELETE write operations** need to append `?regionId=cn-hangzhou` at end of URL, `--region` alone is not enough. GET requests only need `--region`.
 >
-> All examples already include `--force` and `--region`, write operation examples have appended `?regionId=cn-hangzhou` to URL.
+> All examples already include `--region` and `--user-agent`.
 
 ## Table of Contents
 
@@ -46,9 +45,8 @@ All APIs are version `2023-08-08`, request method is ROA style (RESTful).
 **Example**:
 
 ```bash
-aliyun emr-serverless-spark POST "/api/v1/workspaces?regionId=cn-hangzhou" \
+aliyun emr-serverless-spark create-workspace \
   --region cn-hangzhou \
-  --header "Content-Type=application/json" \
   --body '{
     "workspaceName": "my-workspace",
     "ossBucket": "oss://my-spark-bucket",
@@ -56,7 +54,7 @@ aliyun emr-serverless-spark POST "/api/v1/workspaces?regionId=cn-hangzhou" \
     "paymentType": "PayAsYouGo",
     "resourceSpec": {"cu": 8}
   }' \
-  --force --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ---
@@ -79,7 +77,7 @@ aliyun emr-serverless-spark POST "/api/v1/workspaces?regionId=cn-hangzhou" \
 **Example**:
 
 ```bash
-aliyun emr-serverless-spark GET /api/v1/workspaces --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark list-workspaces --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ---
@@ -99,7 +97,7 @@ aliyun emr-serverless-spark GET /api/v1/workspaces --region cn-hangzhou --force 
 **Example**:
 
 ```bash
-aliyun emr-serverless-spark GET /api/v1/workspaces/w-xxx/queues --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark list-workspace-queues --workspace-id w-xxx --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ---
@@ -123,11 +121,10 @@ aliyun emr-serverless-spark GET /api/v1/workspaces/w-xxx/queues --region cn-hang
 **Example**:
 
 ```bash
-aliyun emr-serverless-spark POST "/api/v1/workspaces/queues/action/edit?regionId=cn-hangzhou" \
+aliyun emr-serverless-spark edit-workspace-queue \
   --region cn-hangzhou \
-  --header "Content-Type=application/json" \
   --body '{"workspaceId":"w-xxx","workspaceQueueName":"dev_queue","resourceSpec":{"cu":32,"maxCu":64}}' \
-  --force --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ---
@@ -165,9 +162,8 @@ aliyun emr-serverless-spark POST "/api/v1/workspaces/queues/action/edit?regionId
 **Example**:
 
 ```bash
-aliyun emr-serverless-spark POST "/api/v1/workspaces/w-xxx/jobRuns?regionId=cn-hangzhou" \
+aliyun emr-serverless-spark start-job-run --workspace-id w-xxx \
   --region cn-hangzhou \
-  --header "Content-Type=application/json" \
   --body '{
     "name": "my-job",
     "jobDriver": {
@@ -181,7 +177,7 @@ aliyun emr-serverless-spark POST "/api/v1/workspaces/w-xxx/jobRuns?regionId=cn-h
     "resourceQueueId": "root_queue",
     "releaseVersion": "esr-2.1 (Spark 3.3.1, Scala 2.12, Java Runtime)"
   }' \
-  --force --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ---
@@ -201,7 +197,7 @@ aliyun emr-serverless-spark POST "/api/v1/workspaces/w-xxx/jobRuns?regionId=cn-h
 **Example**:
 
 ```bash
-aliyun emr-serverless-spark GET /api/v1/workspaces/w-xxx/jobRuns/jr-xxx --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark get-job-run --workspace-id w-xxx --job-run-id jr-xxx --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ---
@@ -230,7 +226,7 @@ aliyun emr-serverless-spark GET /api/v1/workspaces/w-xxx/jobRuns/jr-xxx --region
 **Example**:
 
 ```bash
-aliyun emr-serverless-spark GET /api/v1/workspaces/w-xxx/jobRuns --region cn-hangzhou --maxResults 20 --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark list-job-runs --workspace-id w-xxx --region cn-hangzhou --maxResults 20 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ---
@@ -252,7 +248,7 @@ aliyun emr-serverless-spark GET /api/v1/workspaces/w-xxx/jobRuns --region cn-han
 **Example**:
 
 ```bash
-aliyun emr-serverless-spark DELETE "/api/v1/workspaces/w-xxx/jobRuns/jr-xxx?regionId=cn-hangzhou" --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark cancel-job-run --workspace-id w-xxx --job-run-id jr-xxx --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ---
@@ -285,11 +281,11 @@ aliyun emr-serverless-spark DELETE "/api/v1/workspaces/w-xxx/jobRuns/jr-xxx?regi
 **Example**:
 
 ```bash
-aliyun emr-serverless-spark GET /api/v1/workspaces/w-xxx/action/listLogContents \
+aliyun emr-serverless-spark list-log-contents --workspace-id w-xxx \
   --region cn-hangzhou \
   --fileName 'oss://my-bucket/w-xxx/spark/logs/jr-xxx/driver/stdout.log' \
   --offset 0 --length 9999 \
-  --force --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ---
@@ -314,10 +310,10 @@ aliyun emr-serverless-spark GET /api/v1/workspaces/w-xxx/action/listLogContents 
 **Example**:
 
 ```bash
-aliyun emr-serverless-spark GET /api/v1/workspaces/w-xxx/metric/cuHours/root_queue \
+aliyun emr-serverless-spark get-cu-hours --workspace-id w-xxx --queue root_queue \
   --region cn-hangzhou \
   --startTime '2024-01-01 00:00:00' --endTime '2024-01-08 00:00:00' \
-  --force --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ---
@@ -337,7 +333,7 @@ aliyun emr-serverless-spark GET /api/v1/workspaces/w-xxx/metric/cuHours/root_que
 **Example**:
 
 ```bash
-aliyun emr-serverless-spark GET /api/v1/workspaces/w-xxx/runs/jr-xxx/action/getRunConfiguration --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark get-run-configuration --workspace-id w-xxx --run-id jr-xxx --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ---
@@ -361,7 +357,7 @@ aliyun emr-serverless-spark GET /api/v1/workspaces/w-xxx/runs/jr-xxx/action/getR
 **Example**:
 
 ```bash
-aliyun emr-serverless-spark GET /api/v1/workspaces/w-xxx/jobRuns/jr-xxx/executors --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark list-job-executors --workspace-id w-xxx --job-run-id jr-xxx --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ---
@@ -393,11 +389,10 @@ aliyun emr-serverless-spark GET /api/v1/workspaces/w-xxx/jobRuns/jr-xxx/executor
 **Example**:
 
 ```bash
-aliyun emr-serverless-spark POST "/api/v1/workspaces/w-xxx/sessionClusters?regionId=cn-hangzhou" \
+aliyun emr-serverless-spark create-session-cluster --workspace-id w-xxx \
   --region cn-hangzhou \
-  --header "Content-Type=application/json" \
   --body '{"name":"my-session","queueName":"default","kind":"SQL"}' \
-  --force --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ---
@@ -479,7 +474,7 @@ aliyun emr-serverless-spark POST "/api/v1/workspaces/w-xxx/sessionClusters?regio
 **Example**:
 
 ```bash
-aliyun emr-serverless-spark DELETE "/api/v1/workspaces/w-xxx/sessionClusters/sc-xxx?regionId=cn-hangzhou" --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark delete-session-cluster --workspace-id w-xxx --session-cluster-id sc-xxx --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ---
@@ -506,11 +501,10 @@ aliyun emr-serverless-spark DELETE "/api/v1/workspaces/w-xxx/sessionClusters/sc-
 **Example**:
 
 ```bash
-aliyun emr-serverless-spark PUT "/api/interactive/v1/workspace/w-xxx/statement?regionId=cn-hangzhou" \
+aliyun emr-serverless-spark create-sql-statement --workspace-id w-xxx \
   --region cn-hangzhou \
-  --header "Content-Type=application/json" \
   --body '{"sqlComputeId":"sc-xxx","codeContent":"SHOW TABLES","defaultDatabase":"default"}' \
-  --force --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ---
@@ -532,7 +526,7 @@ aliyun emr-serverless-spark PUT "/api/interactive/v1/workspace/w-xxx/statement?r
 **Example**:
 
 ```bash
-aliyun emr-serverless-spark GET /api/interactive/v1/workspace/w-xxx/statement/st-xxx --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark get-sql-statement --workspace-id w-xxx --statement-id st-xxx --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ---
@@ -554,7 +548,7 @@ aliyun emr-serverless-spark GET /api/interactive/v1/workspace/w-xxx/statement/st
 **Example**:
 
 ```bash
-aliyun emr-serverless-spark POST "/api/interactive/v1/workspace/w-xxx/statement/st-xxx/terminate?regionId=cn-hangzhou" --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark terminate-sql-statement --workspace-id w-xxx --statement-id st-xxx --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ---
@@ -575,10 +569,10 @@ aliyun emr-serverless-spark POST "/api/interactive/v1/workspace/w-xxx/statement/
 **Example**:
 
 ```bash
-aliyun emr-serverless-spark GET /api/v1/workspaces/w-xxx/action/listSqlStatementContents \
+aliyun emr-serverless-spark list-sql-statement-contents --workspace-id w-xxx \
   --region cn-hangzhou \
   --fileName 'oss://bucket/w-xxx/spark/logs/jr-xxx/driver/st-xxx' \
-  --force --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ---
@@ -607,11 +601,10 @@ aliyun emr-serverless-spark GET /api/v1/workspaces/w-xxx/action/listSqlStatement
 **Example**:
 
 ```bash
-aliyun emr-serverless-spark POST "/api/v1/kyuubi/w-xxx?regionId=cn-hangzhou" \
+aliyun emr-serverless-spark create-kyuubi-service --workspace-id w-xxx \
   --region cn-hangzhou \
-  --header "Content-Type=application/json" \
   --body '{"name":"my-kyuubi","queue":"default","releaseVersion":"esr-2.1 (Spark 3.3.1, Scala 2.12, Java Runtime)"}' \
-  --force --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ---
@@ -894,7 +887,7 @@ aliyun emr-serverless-spark POST "/api/v1/kyuubi/w-xxx?regionId=cn-hangzhou" \
 **Example**:
 
 ```bash
-aliyun emr-serverless-spark GET /api/v1/releaseVersions --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark list-release-versions --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ---
@@ -916,7 +909,7 @@ aliyun emr-serverless-spark GET /api/v1/releaseVersions --region cn-hangzhou --f
 **Example**:
 
 ```bash
-aliyun emr-serverless-spark GET /api/v1/workspaces/w-xxx/catalogs --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark list-catalogs --workspace-id w-xxx --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ---

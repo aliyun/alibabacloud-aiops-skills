@@ -20,9 +20,8 @@ Before creating a workspace, ensure the account has granted the following two ro
 ### Create Basic Workspace
 
 ```bash
-aliyun emr-serverless-spark POST "/api/v1/workspaces?regionId=cn-hangzhou" \
+aliyun emr-serverless-spark create-workspace \
   --region cn-hangzhou \
-  --header "Content-Type=application/json" \
   --body '{
     "workspaceName": "my-spark-workspace",
     "ossBucket": "oss://my-spark-bucket",
@@ -30,7 +29,7 @@ aliyun emr-serverless-spark POST "/api/v1/workspaces?regionId=cn-hangzhou" \
     "paymentType": "PayAsYouGo",
     "resourceSpec": {"cu": 8}
   }' \
-  --force --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ### Verify After Creation
@@ -39,7 +38,7 @@ Workspace creation is an asynchronous operation, initial status is `STARTING`, n
 
 ```bash
 # View workspace list to confirm creation success, wait for workspaceStatus to become RUNNING
-aliyun emr-serverless-spark GET /api/v1/workspaces --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark list-workspaces --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ### Workspace Status Description
@@ -56,10 +55,10 @@ aliyun emr-serverless-spark GET /api/v1/workspaces --region cn-hangzhou --force 
 
 ```bash
 # View all workspaces
-aliyun emr-serverless-spark GET /api/v1/workspaces --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark list-workspaces --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 
 # Paginated query
-aliyun emr-serverless-spark GET /api/v1/workspaces --region cn-hangzhou --maxResults 10 --nextToken xxx --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark list-workspaces --region cn-hangzhou --maxResults 10 --nextToken xxx --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ### Workspace Details
@@ -79,20 +78,19 @@ Key information in the response:
 ### Add Members
 
 ```bash
-aliyun emr-serverless-spark POST "/api/v1/auth/members?regionId=cn-hangzhou" \
+aliyun emr-serverless-spark add-members \
   --region cn-hangzhou \
-  --header "Content-Type=application/json" \
   --body '{
     "workspaceId": "w-xxx",
     "memberArns": ["acs:ram::123456789:user/username"]
   }' \
-  --force --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ### View Member List
 
 ```bash
-aliyun emr-serverless-spark GET /api/v1/auth/{workspaceId}/members --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark list-members --workspace-id {workspaceId} --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ### Grant Roles
@@ -103,17 +101,16 @@ aliyun emr-serverless-spark GET /api/v1/auth/{workspaceId}/members --region cn-h
 
 ```bash
 # First view member list to get userArn and available roles
-aliyun emr-serverless-spark GET /api/v1/auth/{workspaceId}/members --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark list-members --workspace-id {workspaceId} --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 
 # Grant role
-aliyun emr-serverless-spark POST "/api/v1/auth/roles/grant?regionId=cn-hangzhou" \
+aliyun emr-serverless-spark grant-role-to-users \
   --region cn-hangzhou \
-  --header "Content-Type=application/json" \
   --body '{
     "roleArn": "acs:emr::w-xxx:role/Owner",
     "userArns": ["acs:emr::w-xxx:member/123456789"]
   }' \
-  --force --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ## 5. Engine Versions
@@ -121,7 +118,7 @@ aliyun emr-serverless-spark POST "/api/v1/auth/roles/grant?regionId=cn-hangzhou"
 ### View Available Versions
 
 ```bash
-aliyun emr-serverless-spark GET /api/v1/releaseVersions --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark list-release-versions --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 Returns all available Spark engine versions, need to specify version number when creating jobs and sessions.

@@ -26,9 +26,8 @@ After confirmation, display equivalent spark-submit command, get user explicit c
 ### Submit JAR Job
 
 ```bash
-aliyun emr-serverless-spark POST "/api/v1/workspaces/{workspaceId}/jobRuns?regionId=cn-hangzhou" \
+aliyun emr-serverless-spark start-job-run --workspace-id {workspaceId} \
   --region cn-hangzhou \
-  --header "Content-Type=application/json" \
   --body '{
     "name": "my-jar-job",
     "jobDriver": {
@@ -42,7 +41,7 @@ aliyun emr-serverless-spark POST "/api/v1/workspaces/{workspaceId}/jobRuns?regio
     "resourceQueueId": "root_queue",
     "releaseVersion": "esr-2.1 (Spark 3.3.1, Scala 2.12, Java Runtime)"
   }' \
-  --force --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 Equivalent spark-submit command:
@@ -61,9 +60,8 @@ spark-submit \
 ### Submit PySpark Job
 
 ```bash
-aliyun emr-serverless-spark POST "/api/v1/workspaces/{workspaceId}/jobRuns?regionId=cn-hangzhou" \
+aliyun emr-serverless-spark start-job-run --workspace-id {workspaceId} \
   --region cn-hangzhou \
-  --header "Content-Type=application/json" \
   --body '{
     "name": "my-pyspark-job",
     "jobDriver": {
@@ -77,15 +75,14 @@ aliyun emr-serverless-spark POST "/api/v1/workspaces/{workspaceId}/jobRuns?regio
     "resourceQueueId": "root_queue",
     "releaseVersion": "esr-2.1 (Spark 3.3.1, Scala 2.12, Java Runtime)"
   }' \
-  --force --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ### Submit Job with Custom Configuration
 
 ```bash
-aliyun emr-serverless-spark POST "/api/v1/workspaces/{workspaceId}/jobRuns?regionId=cn-hangzhou" \
+aliyun emr-serverless-spark start-job-run --workspace-id {workspaceId} \
   --region cn-hangzhou \
-  --header "Content-Type=application/json" \
   --body '{
     "name": "daily-etl-job",
     "jobDriver": {
@@ -107,7 +104,7 @@ aliyun emr-serverless-spark POST "/api/v1/workspaces/{workspaceId}/jobRuns?regio
     "resourceQueueId": "root_queue",
     "releaseVersion": "esr-2.1 (Spark 3.3.1, Scala 2.12, Java Runtime)"
   }' \
-  --force --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ### Common Spark Parameter Reference
@@ -126,19 +123,19 @@ aliyun emr-serverless-spark POST "/api/v1/workspaces/{workspaceId}/jobRuns?regio
 ### Query Single Job
 
 ```bash
-aliyun emr-serverless-spark GET /api/v1/workspaces/{workspaceId}/jobRuns/{jobRunId} --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark get-job-run --workspace-id {workspaceId} --job-run-id {jobRunId} --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ### Job List
 
 ```bash
 # View all jobs
-aliyun emr-serverless-spark GET /api/v1/workspaces/{workspaceId}/jobRuns --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark list-job-runs --workspace-id {workspaceId} --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 
 # Paginated query
-aliyun emr-serverless-spark GET /api/v1/workspaces/{workspaceId}/jobRuns \
+aliyun emr-serverless-spark list-job-runs --workspace-id {workspaceId} \
   --region cn-hangzhou \
-  --maxResults 20 --nextToken xxx --force --user-agent AlibabaCloud-Agent-Skills
+  --maxResults 20 --nextToken xxx --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ### Job State Machine
@@ -157,11 +154,11 @@ aliyun emr-serverless-spark GET /api/v1/workspaces/{workspaceId}/jobRuns \
 ```bash
 # View job logs (need to get log file path from GetJobRun response first)
 # Note: offset and length parameters are required, not passing will cause server error
-aliyun emr-serverless-spark GET /api/v1/workspaces/{workspaceId}/action/listLogContents \
+aliyun emr-serverless-spark list-log-contents --workspace-id {workspaceId} \
   --region cn-hangzhou \
   --fileName 'oss://my-bucket/w-xxx/spark/logs/jr-xxx/driver/stdout.log' \
   --offset 0 --length 9999 \
-  --force --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 > **Note**: `fileName` is the OSS full path of the log file, can be obtained from the `log` field in `GetJobRun` response.
@@ -182,24 +179,24 @@ aliyun emr-serverless-spark GET /api/v1/workspaces/{workspaceId}/action/listLogC
 ### View Executor Information
 
 ```bash
-aliyun emr-serverless-spark GET /api/v1/workspaces/{workspaceId}/jobRuns/{jobRunId}/executors --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark list-job-executors --workspace-id {workspaceId} --job-run-id {jobRunId} --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ### View Queue CU Consumption
 
 ```bash
 # Query CU consumption by resource queue dimension (note: query by queue, not by individual job)
-aliyun emr-serverless-spark GET /api/v1/workspaces/{workspaceId}/metric/cuHours/{queueName} \
+aliyun emr-serverless-spark get-cu-hours --workspace-id {workspaceId} --queue {queueName} \
   --region cn-hangzhou \
   --startTime '2024-01-01 00:00:00' --endTime '2024-01-08 00:00:00' \
-  --force --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 # Note: Query time span cannot exceed 1 month
 ```
 
 ### View Job Configuration
 
 ```bash
-aliyun emr-serverless-spark GET /api/v1/workspaces/{workspaceId}/runs/{jobRunId}/action/getRunConfiguration --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark get-run-configuration --workspace-id {workspaceId} --run-id {jobRunId} --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ## 3. Cancel Jobs
@@ -212,10 +209,10 @@ aliyun emr-serverless-spark GET /api/v1/workspaces/{workspaceId}/runs/{jobRunId}
 
 ```bash
 # First confirm job status
-aliyun emr-serverless-spark GET /api/v1/workspaces/{workspaceId}/jobRuns/{jobRunId} --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark get-job-run --workspace-id {workspaceId} --job-run-id {jobRunId} --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 
 # ⚠️ Cancel job (completed compute results may be lost)
-aliyun emr-serverless-spark DELETE "/api/v1/workspaces/{workspaceId}/jobRuns/{jobRunId}?regionId=cn-hangzhou" --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark cancel-job-run --workspace-id {workspaceId} --job-run-id {jobRunId} --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 Status change after cancellation: `Running` → `Cancelling` → `Cancelled`
@@ -227,9 +224,8 @@ Session clusters provide long-running interactive environments, suitable for dev
 ### Create Session Cluster
 
 ```bash
-aliyun emr-serverless-spark POST "/api/v1/workspaces/{workspaceId}/sessionClusters?regionId=cn-hangzhou" \
+aliyun emr-serverless-spark create-session-cluster --workspace-id {workspaceId} \
   --region cn-hangzhou \
-  --header "Content-Type=application/json" \
   --body '{
     "name": "my-session",
     "queueName": "default",
@@ -240,45 +236,43 @@ aliyun emr-serverless-spark POST "/api/v1/workspaces/{workspaceId}/sessionCluste
       "idleTimeoutMinutes": 30
     }
   }' \
-  --force --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ### View Session Cluster List
 
 ```bash
-aliyun emr-serverless-spark GET /api/v1/workspaces/{workspaceId}/sessionClusters --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark list-session-clusters --workspace-id {workspaceId} --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ### Start Session Cluster
 
 ```bash
-aliyun emr-serverless-spark POST "/api/v1/workspaces/{workspaceId}/sessionClusters/action/startSessionCluster?regionId=cn-hangzhou" \
+aliyun emr-serverless-spark start-session-cluster --workspace-id {workspaceId} \
   --region cn-hangzhou \
-  --header "Content-Type=application/json" \
   --body '{
     "sessionClusterId": "sc-xxx",
     "queueName": "default"
   }' \
-  --force --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ### Stop Session Cluster
 
 ```bash
-aliyun emr-serverless-spark POST "/api/v1/workspaces/{workspaceId}/sessionClusters/action/stopSessionCluster?regionId=cn-hangzhou" \
+aliyun emr-serverless-spark stop-session-cluster --workspace-id {workspaceId} \
   --region cn-hangzhou \
-  --header "Content-Type=application/json" \
   --body '{
     "sessionClusterId": "sc-xxx",
     "queueName": "default"
   }' \
-  --force --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ### View Session Cluster Details
 
 ```bash
-aliyun emr-serverless-spark GET /api/v1/workspaces/{workspaceId}/sessionClusters/{sessionClusterId} --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark get-session-cluster --workspace-id {workspaceId} --session-cluster-id {sessionClusterId} --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ### Session Cluster Status Description
@@ -300,10 +294,10 @@ aliyun emr-serverless-spark GET /api/v1/workspaces/{workspaceId}/sessionClusters
 
 ```bash
 # First confirm session cluster status
-aliyun emr-serverless-spark GET /api/v1/workspaces/{workspaceId}/sessionClusters/{sessionClusterId} --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark get-session-cluster --workspace-id {workspaceId} --session-cluster-id {sessionClusterId} --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 
 # ⚠️ Delete session cluster (irreversible)
-aliyun emr-serverless-spark DELETE "/api/v1/workspaces/{workspaceId}/sessionClusters/{sessionClusterId}?regionId=cn-hangzhou" --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark delete-session-cluster --workspace-id {workspaceId} --session-cluster-id {sessionClusterId} --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ## 5. SQL Statements
@@ -313,21 +307,20 @@ Submit and execute SQL statements through session clusters.
 ### Submit SQL Statement
 
 ```bash
-aliyun emr-serverless-spark PUT "/api/interactive/v1/workspace/{workspaceId}/statement?regionId=cn-hangzhou" \
+aliyun emr-serverless-spark create-sql-statement --workspace-id {workspaceId} \
   --region cn-hangzhou \
-  --header "Content-Type=application/json" \
   --body '{
     "sqlComputeId": "sc-xxx",
     "codeContent": "SELECT * FROM my_table LIMIT 10",
     "defaultDatabase": "default"
   }' \
-  --force --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ### Query SQL Execution Status
 
 ```bash
-aliyun emr-serverless-spark GET /api/interactive/v1/workspace/{workspaceId}/statement/{statementId} --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark get-sql-statement --workspace-id {workspaceId} --statement-id {statementId} --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 **Status Description**:
@@ -342,7 +335,7 @@ aliyun emr-serverless-spark GET /api/interactive/v1/workspace/{workspaceId}/stat
 ### Terminate SQL Query
 
 ```bash
-aliyun emr-serverless-spark POST "/api/interactive/v1/workspace/{workspaceId}/statement/{statementId}/terminate?regionId=cn-hangzhou" --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark terminate-sql-statement --workspace-id {workspaceId} --statement-id {statementId} --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ### Query SQL Execution Results
@@ -352,10 +345,10 @@ aliyun emr-serverless-spark POST "/api/interactive/v1/workspace/{workspaceId}/st
 > `ListSqlStatementContents` is a backup method to read results via OSS log file, requires session cluster to be stopped and logs written to OSS before available. `fileName` needs to be obtained by concatenating statementId from session cluster's associated JobRun log path.
 
 ```bash
-aliyun emr-serverless-spark GET /api/v1/workspaces/{workspaceId}/action/listSqlStatementContents \
+aliyun emr-serverless-spark list-sql-statement-contents --workspace-id {workspaceId} \
   --region cn-hangzhou \
   --fileName 'oss://bucket/w-xxx/spark/logs/jr-xxx/driver/st-xxx' \
-  --force --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ## Common Job Failure Causes

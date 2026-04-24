@@ -8,7 +8,7 @@ description: >
   "execute SQL via Kyuubi", "scale resource queue", "view job logs", etc.
 license: MIT
 compatibility: >
-  Requires Alibaba Cloud CLI (aliyun >= 3.0) or Python SDK,
+  Requires Alibaba Cloud CLI (aliyun >= 3.3.3) or Python SDK,
   API version 2023-08-08, ROA style.
   Supports Alibaba Cloud default credential chain, including environment variables, configuration files, instance roles, etc.
 metadata:
@@ -71,6 +71,18 @@ EMR Serverless Spark is a fully-managed Serverless Spark service provided by Ali
 
 ## Prerequisites
 
+**Pre-check: Aliyun CLI >= 3.3.3 required**
+> Run `aliyun version` to verify >= 3.3.3. If not installed or version too low,
+> run `curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash` to update,
+> or see `references/cli-installation-guide.md` for installation instructions.
+
+**Pre-check: Aliyun CLI plugin update required**
+> [MUST] run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+> [MUST] run `aliyun plugin update` to ensure that any existing plugins are always up-to-date.
+
+**[MUST] CLI User-Agent** — Every `aliyun` CLI command invocation must include:
+`--user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage`
+
 ### 1. Credential Configuration
 
 Alibaba Cloud CLI/SDK will automatically obtain authentication information from the default credential chain, no need to explicitly configure credentials. Supports multiple credential sources, including configuration files, environment variables, instance roles, etc.
@@ -104,37 +116,51 @@ Spark jobs typically need OSS storage for JAR packages, Python scripts, and outp
 
 ```bash
 # Check for available OSS Buckets
-aliyun oss ls --user-agent AlibabaCloud-Agent-Skills
+aliyun oss ls --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ## CLI/SDK Invocation
 
-### Invocation Method
+### AI-Mode Lifecycle
 
-All APIs are version `2023-08-08`, request method is ROA style (RESTful).
+Before executing any CLI commands, must enable AI-Mode and set User-Agent; after workflow ends, must disable AI-Mode:
 
 ```bash
-# Using Alibaba Cloud CLI (ROA style)
+# [MUST] Enable AI-Mode before executing CLI commands
+aliyun configure ai-mode enable
+
+# [MUST] Set User-Agent
+aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage"
+
+# ... execute CLI commands ...
+
+# [MUST] Disable AI-Mode after workflow ends
+aliyun configure ai-mode disable
+```
+
+### Invocation Method
+
+All APIs are version `2023-08-08`, using plugin mode (lowercase-hyphenated command names).
+
+```bash
+# Using Alibaba Cloud CLI (plugin mode)
 # Important:
-#   1. Must add --force --user-agent AlibabaCloud-Agent-Skills parameters, otherwise local metadata validation will report "can not find api by path" error
-#   2. Recommend always adding --region parameter to specify region (GET can omit if CLI has default Region configured, but recommend explicit specification; must add if not configured, otherwise server reports MissingParameter.regionId error)
-#   3. POST/PUT/DELETE write operations need to append ?regionId=cn-hangzhou at end of URL, --region alone is not enough
-#      GET requests only need --region
+#   1. Must add --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage parameter
+#   2. Recommend always adding --region parameter to specify region
 
-# POST request (note URL append ?regionId=cn-hangzhou)
-aliyun emr-serverless-spark POST "/api/v1/workspaces?regionId=cn-hangzhou" \
+# POST example: CreateWorkspace
+aliyun emr-serverless-spark create-workspace \
   --region cn-hangzhou \
-  --header "Content-Type=application/json" \
   --body '{"workspaceName":"my-workspace","ossBucket":"oss://my-bucket","ramRoleName":"AliyunEMRSparkJobRunDefaultRole","paymentType":"PayAsYouGo","resourceSpec":{"cu":8}}' \
-  --force --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 
-# GET request (only need --region)
-aliyun emr-serverless-spark GET /api/v1/workspaces --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+# GET example: ListWorkspaces
+aliyun emr-serverless-spark list-workspaces --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 
-# DELETE request example: CancelJobRun (note URL append ?regionId=cn-hangzhou)
+# DELETE example: CancelJobRun
 # WARNING: DELETE on workspace itself (DeleteWorkspace) is STRICTLY PROHIBITED — see Prohibited Operations
-aliyun emr-serverless-spark DELETE "/api/v1/workspaces/{workspaceId}/jobRuns/{jobRunId}?regionId=cn-hangzhou" \
-  --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark cancel-job-run --workspace-id {workspaceId} --job-run-id {jobRunId} \
+  --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ### Idempotency Rules
@@ -218,12 +244,14 @@ Before submitting Spark jobs, must:
 
 | Error Code | Cause | Agent Should Execute |
 |------------|-------|---------------------|
-| MissingParameter.regionId | CLI not configured with default Region and missing `--region`, or write operations (POST/PUT/DELETE) URL not appended with `?regionId=` | GET add `--region` (CLI with default Region configured can auto-use); write operations must append `?regionId=cn-hangzhou` to URL |
-| Throttling | API rate limiting | Wait 5-10 seconds before retry |
+| MissingParameter.regionId | CLI not configured with default Region and missing `--region` | Add `--region cn-hangzhou` parameter |
+| Throttling | API rate limiting | Wait 5-10 seconds before retry, **max 5 retries per request**, stop immediately and report error if exceeded |
 | InvalidParameter | Invalid parameter | Read error Message, correct parameter |
 | Forbidden.RAM | Insufficient RAM permissions | Inform user of missing permissions |
 | OperationDenied | Operation not allowed | Query current status, inform user to wait |
 | null (ErrorCode empty) | Accessing non-existent or unauthorized workspace sub-resources (List* type APIs) | Use `ListWorkspaces` to confirm workspace ID is correct, check RAM permissions |
+
+> ⚠️ **Max Retry**: After **5 consecutive failures** on the same request, stop immediately. Do not continue retrying. Report error details to the user.
 
 ## Related Documentation
 

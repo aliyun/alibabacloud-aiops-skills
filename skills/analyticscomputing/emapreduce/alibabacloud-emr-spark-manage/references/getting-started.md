@@ -31,10 +31,10 @@ Spark jobs need OSS storage to store program files and output data. **Confirm Re
 
 ```bash
 # Check for available OSS Buckets
-aliyun oss ls --user-agent AlibabaCloud-Agent-Skills
+aliyun oss ls --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 
 # If none, create one
-aliyun oss mb oss://my-spark-bucket --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills
+aliyun oss mb oss://my-spark-bucket --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ### 4. Confirm Region Information
@@ -46,7 +46,7 @@ Record the following information, will be used when creating workspace and submi
 ## Step 1: View Available Engine Versions
 
 ```bash
-aliyun emr-serverless-spark GET /api/v1/releaseVersions --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark list-release-versions --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 Note the latest `releaseVersion` (e.g., `esr-4.7.0 (Spark 3.5.2, Scala 2.12, Java Runtime)`), will be needed when submitting jobs later.
@@ -54,9 +54,8 @@ Note the latest `releaseVersion` (e.g., `esr-4.7.0 (Spark 3.5.2, Scala 2.12, Jav
 ## Step 2: Create Workspace
 
 ```bash
-aliyun emr-serverless-spark POST "/api/v1/workspaces?regionId=cn-hangzhou" \
+aliyun emr-serverless-spark create-workspace \
   --region cn-hangzhou \
-  --header "Content-Type=application/json" \
   --body '{
     "workspaceName": "my-first-spark-workspace",
     "ossBucket": "oss://my-spark-bucket",
@@ -64,7 +63,7 @@ aliyun emr-serverless-spark POST "/api/v1/workspaces?regionId=cn-hangzhou" \
     "paymentType": "PayAsYouGo",
     "resourceSpec": {"cu": 8}
   }' \
-  --force --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 Returns `workspaceId` (e.g., `w-xxx`), note it for subsequent operations.
@@ -75,7 +74,7 @@ Returns `workspaceId` (e.g., `w-xxx`), note it for subsequent operations.
 
 ```bash
 # View workspace status, wait for workspaceStatus to become RUNNING
-aliyun emr-serverless-spark GET /api/v1/workspaces --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark list-workspaces --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 **Workspace Status Description**:
@@ -91,7 +90,7 @@ aliyun emr-serverless-spark GET /api/v1/workspaces --region cn-hangzhou --force 
 After workspace is ready, there will be default resource queues:
 
 ```bash
-aliyun emr-serverless-spark GET /api/v1/workspaces/{workspaceId}/queues --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark list-workspace-queues --workspace-id {workspaceId} --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 Note the `queueName` (e.g., `root_queue`, `dev_queue`), fill in `resourceQueueId` field when submitting jobs.
@@ -101,9 +100,8 @@ Note the `queueName` (e.g., `root_queue`, `dev_queue`), fill in `resourceQueueId
 ### Submit Spark SQL Example (Simplest Way to Get Started)
 
 ```bash
-aliyun emr-serverless-spark POST "/api/v1/workspaces/{workspaceId}/jobRuns?regionId=cn-hangzhou" \
+aliyun emr-serverless-spark start-job-run --workspace-id {workspaceId} \
   --region cn-hangzhou \
-  --header "Content-Type=application/json" \
   --body '{
     "name": "my-first-sql-job",
     "jobDriver": {
@@ -116,7 +114,7 @@ aliyun emr-serverless-spark POST "/api/v1/workspaces/{workspaceId}/jobRuns?regio
     "resourceQueueId": "root_queue",
     "releaseVersion": "<replace with version from step 1>"
   }' \
-  --force --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 > **Important**:
@@ -132,9 +130,8 @@ Returns `jobRunId` (e.g., `jr-xxx`), note it for querying status.
 # First upload Python script to OSS
 # aliyun oss cp my_script.py oss://my-spark-bucket/scripts/my_script.py
 
-aliyun emr-serverless-spark POST "/api/v1/workspaces/{workspaceId}/jobRuns?regionId=cn-hangzhou" \
+aliyun emr-serverless-spark start-job-run --workspace-id {workspaceId} \
   --region cn-hangzhou \
-  --header "Content-Type=application/json" \
   --body '{
     "name": "my-pyspark-job",
     "jobDriver": {
@@ -147,13 +144,13 @@ aliyun emr-serverless-spark POST "/api/v1/workspaces/{workspaceId}/jobRuns?regio
     "resourceQueueId": "root_queue",
     "releaseVersion": "<replace with version from step 1>"
   }' \
-  --force --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ## Step 5: View Job Status
 
 ```bash
-aliyun emr-serverless-spark GET /api/v1/workspaces/{workspaceId}/jobRuns/{jobRunId} --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark get-job-run --workspace-id {workspaceId} --job-run-id {jobRunId} --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 **Status Flow**: `Submitted` → `Running` → `Success` / `Failed` / `Cancelled`
@@ -176,11 +173,11 @@ Wait for `state` to become `Success` to indicate job completion.
 ```bash
 # View standard output (need to get log file path from GetJobRun response first)
 # Note: offset and length parameters are required, not passing will cause server error
-aliyun emr-serverless-spark GET /api/v1/workspaces/{workspaceId}/action/listLogContents \
+aliyun emr-serverless-spark list-log-contents --workspace-id {workspaceId} \
   --region cn-hangzhou \
   --fileName 'oss://my-spark-bucket/w-xxx/spark/logs/jr-xxx/driver/stdout.log' \
   --offset 0 --length 9999 \
-  --force --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 > **Note**: `fileName` path is obtained from the `log` field in `GetJobRun` response.

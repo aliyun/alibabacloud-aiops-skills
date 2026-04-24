@@ -40,23 +40,21 @@ Before submission, need to confirm:
 ### Create Basic Kyuubi Service
 
 ```bash
-aliyun emr-serverless-spark POST "/api/v1/kyuubi/{workspaceId}?regionId=cn-hangzhou" \
+aliyun emr-serverless-spark create-kyuubi-service --workspace-id {workspaceId} \
   --region cn-hangzhou \
-  --header "Content-Type=application/json" \
   --body '{
     "name": "my-kyuubi",
     "queue": "default",
     "releaseVersion": "esr-2.1 (Spark 3.3.1, Scala 2.12, Java Runtime)"
   }' \
-  --force --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ### Create Kyuubi Service with Public Network Access
 
 ```bash
-aliyun emr-serverless-spark POST "/api/v1/kyuubi/{workspaceId}?regionId=cn-hangzhou" \
+aliyun emr-serverless-spark create-kyuubi-service --workspace-id {workspaceId} \
   --region cn-hangzhou \
-  --header "Content-Type=application/json" \
   --body '{
     "name": "my-kyuubi-public",
     "queue": "default",
@@ -64,15 +62,14 @@ aliyun emr-serverless-spark POST "/api/v1/kyuubi/{workspaceId}?regionId=cn-hangz
     "publicEndpointEnabled": true,
     "replica": 2
   }' \
-  --force --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ### Create Kyuubi Service with Custom Configuration
 
 ```bash
-aliyun emr-serverless-spark POST "/api/v1/kyuubi/{workspaceId}?regionId=cn-hangzhou" \
+aliyun emr-serverless-spark create-kyuubi-service --workspace-id {workspaceId} \
   --region cn-hangzhou \
-  --header "Content-Type=application/json" \
   --body '{
     "name": "my-kyuubi-custom",
     "queue": "default",
@@ -81,7 +78,7 @@ aliyun emr-serverless-spark POST "/api/v1/kyuubi/{workspaceId}?regionId=cn-hangz
     "kyuubiConfigs": "kyuubi.session.idle.timeout=PT1H",
     "sparkConfigs": "spark.executor.memory=20g;spark.executor.cores=4"
   }' \
-  --force --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ## 3. Start/Stop Management
@@ -89,7 +86,7 @@ aliyun emr-serverless-spark POST "/api/v1/kyuubi/{workspaceId}?regionId=cn-hangz
 ### Start Kyuubi Service
 
 ```bash
-aliyun emr-serverless-spark POST "/api/v1/kyuubi/{workspaceId}/{kyuubiServiceId}/start?regionId=cn-hangzhou" --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark start-kyuubi-service --workspace-id {workspaceId} --kyuubi-service-id {kyuubiServiceId} --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ### Stop Kyuubi Service
@@ -101,13 +98,13 @@ aliyun emr-serverless-spark POST "/api/v1/kyuubi/{workspaceId}/{kyuubiServiceId}
 
 ```bash
 # ⚠️ Stop Kyuubi Service (all active JDBC connections will be disconnected)
-aliyun emr-serverless-spark POST "/api/v1/kyuubi/{workspaceId}/{kyuubiServiceId}/stop?regionId=cn-hangzhou" --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark stop-kyuubi-service --workspace-id {workspaceId} --kyuubi-service-id {kyuubiServiceId} --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ### View Service Status
 
 ```bash
-aliyun emr-serverless-spark GET /api/v1/kyuubi/{workspaceId}/{kyuubiServiceId} --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark get-kyuubi-service --workspace-id {workspaceId} --kyuubi-service-id {kyuubiServiceId} --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 Key information in the response:
@@ -128,7 +125,7 @@ Key information in the response:
 ### List All Kyuubi Services
 
 ```bash
-aliyun emr-serverless-spark GET /api/v1/kyuubi/{workspaceId} --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark list-kyuubi-services --workspace-id {workspaceId} --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ## 4. Connect to Kyuubi and Execute SQL
@@ -138,7 +135,7 @@ aliyun emr-serverless-spark GET /api/v1/kyuubi/{workspaceId} --region cn-hangzho
 First query service details to get Endpoint:
 
 ```bash
-aliyun emr-serverless-spark GET /api/v1/kyuubi/{workspaceId}/{kyuubiServiceId} --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark get-kyuubi-service --workspace-id {workspaceId} --kyuubi-service-id {kyuubiServiceId} --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ### Connect Using beeline
@@ -178,38 +175,36 @@ Kyuubi service uses Token for identity authentication.
 # First generate a random token (32-character hexadecimal)
 # TOKEN=$(python3 -c "import secrets; print(secrets.token_hex(16))")
 
-aliyun emr-serverless-spark POST "/api/v1/workspaces/{workspaceId}/kyuubiService/{kyuubiServiceId}/token?regionId=cn-hangzhou" \
+aliyun emr-serverless-spark create-kyuubi-token --workspace-id {workspaceId} --kyuubi-service-id {kyuubiServiceId} \
   --region cn-hangzhou \
-  --header "Content-Type=application/json" \
   --body '{
     "name": "my-token",
     "token": "<replace with random string of 32+ characters>"
   }' \
-  --force --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ### Query Token Details
 
 ```bash
-aliyun emr-serverless-spark GET /api/v1/workspaces/{workspaceId}/kyuubiService/{kyuubiServiceId}/token/{tokenId} --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark get-kyuubi-token --workspace-id {workspaceId} --kyuubi-service-id {kyuubiServiceId} --token-id {tokenId} --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ### List Tokens
 
 ```bash
-aliyun emr-serverless-spark GET /api/v1/workspaces/{workspaceId}/kyuubiService/{kyuubiServiceId}/token --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark list-kyuubi-token --workspace-id {workspaceId} --kyuubi-service-id {kyuubiServiceId} --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ### Modify Token
 
 ```bash
-aliyun emr-serverless-spark PUT "/api/v1/workspaces/{workspaceId}/kyuubiService/{kyuubiServiceId}/token/{tokenId}?regionId=cn-hangzhou" \
+aliyun emr-serverless-spark update-kyuubi-token --workspace-id {workspaceId} --kyuubi-service-id {kyuubiServiceId} --token-id {tokenId} \
   --region cn-hangzhou \
-  --header "Content-Type=application/json" \
   --body '{
     "name": "new-token-name"
   }' \
-  --force --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 > Modifiable fields: `name` (name), `token` (Token content, >=32 characters), `autoExpireConfiguration` (auto expire configuration), `memberArns` (authorized users).
@@ -223,10 +218,10 @@ aliyun emr-serverless-spark PUT "/api/v1/workspaces/{workspaceId}/kyuubiService/
 
 ```bash
 # First confirm Token information
-aliyun emr-serverless-spark GET /api/v1/workspaces/{workspaceId}/kyuubiService/{kyuubiServiceId}/token/{tokenId} --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark get-kyuubi-token --workspace-id {workspaceId} --kyuubi-service-id {kyuubiServiceId} --token-id {tokenId} --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 
 # ⚠️ Delete Token (connections using this Token will fail authentication)
-aliyun emr-serverless-spark DELETE "/api/v1/workspaces/{workspaceId}/kyuubiService/{kyuubiServiceId}/token/{tokenId}?regionId=cn-hangzhou" --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark delete-kyuubi-token --workspace-id {workspaceId} --kyuubi-service-id {kyuubiServiceId} --token-id {tokenId} --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ## 6. Application Management
@@ -236,7 +231,7 @@ View and manage Spark applications submitted through Kyuubi.
 ### List Kyuubi Applications
 
 ```bash
-aliyun emr-serverless-spark GET /api/v1/kyuubi/{workspaceId}/{kyuubiServiceId}/applications --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark list-kyuubi-spark-applications --workspace-id {workspaceId} --kyuubi-service-id {kyuubiServiceId} --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ### Cancel Kyuubi Application
@@ -248,7 +243,7 @@ aliyun emr-serverless-spark GET /api/v1/kyuubi/{workspaceId}/{kyuubiServiceId}/a
 
 ```bash
 # ⚠️ Cancel Kyuubi Application (running Spark query will be aborted)
-aliyun emr-serverless-spark DELETE "/api/v1/kyuubi/{workspaceId}/{kyuubiServiceId}/application/{applicationId}?regionId=cn-hangzhou" --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark cancel-kyuubi-spark-application --workspace-id {workspaceId} --kyuubi-service-id {kyuubiServiceId} --application-id {applicationId} --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ## 7. Modify and Delete
@@ -256,9 +251,8 @@ aliyun emr-serverless-spark DELETE "/api/v1/kyuubi/{workspaceId}/{kyuubiServiceI
 ### Modify Kyuubi Service Configuration
 
 ```bash
-aliyun emr-serverless-spark PUT "/api/v1/kyuubi/{workspaceId}/{kyuubiServiceId}?regionId=cn-hangzhou" \
+aliyun emr-serverless-spark update-kyuubi-service --workspace-id {workspaceId} --kyuubi-service-id {kyuubiServiceId} \
   --region cn-hangzhou \
-  --header "Content-Type=application/json" \
   --body '{
     "name": "my-kyuubi",
     "queue": "root_queue",
@@ -266,7 +260,7 @@ aliyun emr-serverless-spark PUT "/api/v1/kyuubi/{workspaceId}/{kyuubiServiceId}?
     "publicEndpointEnabled": true,
     "restart": true
   }' \
-  --force --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ### Delete Kyuubi Service
@@ -279,13 +273,13 @@ aliyun emr-serverless-spark PUT "/api/v1/kyuubi/{workspaceId}/{kyuubiServiceId}?
 
 ```bash
 # First confirm service status
-aliyun emr-serverless-spark GET /api/v1/kyuubi/{workspaceId}/{kyuubiServiceId} --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark get-kyuubi-service --workspace-id {workspaceId} --kyuubi-service-id {kyuubiServiceId} --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 
 # ⚠️ Stop Kyuubi Service (all active JDBC connections will be disconnected)
-aliyun emr-serverless-spark POST "/api/v1/kyuubi/{workspaceId}/{kyuubiServiceId}/stop?regionId=cn-hangzhou" --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark stop-kyuubi-service --workspace-id {workspaceId} --kyuubi-service-id {kyuubiServiceId} --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 
 # ⚠️ Delete Kyuubi Service (irreversible! Kyuubi service will be permanently deleted)
-aliyun emr-serverless-spark DELETE "/api/v1/kyuubi/{workspaceId}/{kyuubiServiceId}?regionId=cn-hangzhou" --region cn-hangzhou --force --user-agent AlibabaCloud-Agent-Skills
+aliyun emr-serverless-spark delete-kyuubi-service --workspace-id {workspaceId} --kyuubi-service-id {kyuubiServiceId} --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-spark-manage
 ```
 
 ## Common Issues
