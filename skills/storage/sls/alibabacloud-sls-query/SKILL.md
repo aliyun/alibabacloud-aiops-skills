@@ -170,7 +170,13 @@ Syntax follows regular SQL (see 3.2), with one difference: **every field is `var
 
 Generate `--from` / `--to` as **Unix timestamps in seconds** before building the CLI command. `--from` is inclusive and `--to` is exclusive.
 
-**Relative time**
+Choose one of three input patterns:
+
+1. **Relative time** — user says "recent / last N minutes|hours|days".
+2. **Natural-language absolute time without timezone** — normalize to `YYYY-MM-DD HH:MM:SS`, then parse using the machine's local timezone.
+3. **Absolute time with explicit timezone** — parse using the customer-provided timezone or UTC offset.
+
+**1. Relative time**
 
 ```bash
 # recent 15 minutes
@@ -178,7 +184,23 @@ FROM=$(($(date +%s) - 900))
 TO=$(date +%s)
 ```
 
-**Date/time with timezone**
+**2. Natural-language absolute time without timezone**
+
+If the user gives a date/time but no timezone, use the machine's local timezone. First normalize natural language such as `2026年3月13日12点` to `2026-03-13 12:00:00`, then parse it as local time.
+
+```bash
+# Example: 2026年3月13日12点 -> 2026-03-13 12:00:00
+
+# Linux (GNU date): local timezone
+FROM=$(date -d "2026-03-13 12:00:00" +%s)
+
+# macOS (BSD date): local timezone
+FROM=$(date -j -f "%Y-%m-%d %H:%M:%S" "2026-03-13 12:00:00" +%s)
+```
+
+For a time range such as "2026年3月13日12点到13点", compute both endpoints the same way. For a single point-in-time request, infer a practical window from the user's intent; if unclear, ask for the range before executing.
+
+**3. Absolute time with explicit timezone**
 
 To convert a local date/time to a Unix timestamp: parse the input as UTC with `date -u`, then **subtract** the timezone's UTC offset in seconds.
 
