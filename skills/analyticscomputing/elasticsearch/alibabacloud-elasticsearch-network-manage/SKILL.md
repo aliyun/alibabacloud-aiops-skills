@@ -1,13 +1,13 @@
 ---
 name: alibabacloud-elasticsearch-network-manage
 description: |
-  Alibaba Cloud Elasticsearch Instance Network Management Skill. Use for managing ES instance network configurations including triggering network, Kibana PVL network, white IP list, and HTTPS settings.
-  Triggers: "elasticsearch network", "ES network", "kibana pvl", "white ip", "https", "trigger network", "modify white ips".
+  Alibaba Cloud Elasticsearch Instance Network Management Skill. Use for managing ES instance network configurations including triggering network, Kibana PVL network, white IP list, HTTPS settings, and Kibana SSO authentication.
+  Triggers: "elasticsearch network", "ES network", "kibana pvl", "white ip", "https", "trigger network", "modify white ips", "kibana sso", "kibana authentication".
 ---
 
 # Elasticsearch Instance Network Management
 
-A skill for managing Alibaba Cloud Elasticsearch instance network configurations, including network triggering, Kibana PVL network, white IP list, and HTTPS settings.
+A skill for managing Alibaba Cloud Elasticsearch instance network configurations, including network triggering, Kibana PVL network, white IP list, HTTPS settings, and Kibana SSO authentication.
 
 ## Architecture
 
@@ -16,23 +16,49 @@ Alibaba Cloud Account → Elasticsearch Service → ES Instance(s) → Network C
                                                         ├── Public Network Access
                                                         ├── Kibana PVL Network
                                                         ├── White IP List
-                                                        └── HTTPS Settings
+                                                        ├── HTTPS Settings
+                                                        └── Kibana SSO Authentication
 ```
 
 ---
 
 ## Installation
 
-> **Pre-check: Aliyun CLI >= 3.3.1 required**
-> Run `aliyun version` to verify >= 3.3.1. If not installed or version too low,
-> see `references/cli-installation-guide.md` for installation instructions.
-> Then [MUST] run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+> **Pre-check: Aliyun CLI >= 3.3.3 required**
+> Run `aliyun version` to verify >= 3.3.3. If not installed or version too low,
+> run `curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash` to update,
+> or see `references/cli-installation-guide.md` for installation instructions.
+
+**[MUST] AI-Mode Configuration**
+
+Before executing any CLI commands, enable AI-Mode and set User-Agent. After the workflow completes, disable AI-Mode.
 
 ```bash
-# Install Aliyun CLI
-curl -fsSL --connect-timeout 10 --max-time 60 https://aliyuncli.alicdn.com/install.sh | bash
+# Step 1: Enable AI-Mode (before CLI operations)
+aliyun configure ai-mode enable
 
-# Verify installation
+# Step 2: Set User-Agent for traceability
+aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-network-manage"
+```
+
+After all CLI operations are complete:
+
+```bash
+# Step 3: Disable AI-Mode (after workflow ends)
+aliyun configure ai-mode disable
+```
+
+**[MUST] Plugin Update**
+
+```bash
+aliyun configure set --auto-plugin-install true
+aliyun plugin update
+```
+
+**[MUST] CLI Installation** (if not already installed or version < 3.3.3):
+
+```bash
+curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash
 aliyun version
 ```
 
@@ -45,6 +71,14 @@ aliyun version
 | `ALIBABA_CLOUD_ACCESS_KEY_ID` | Yes | Alibaba Cloud AccessKey ID |
 | `ALIBABA_CLOUD_ACCESS_KEY_SECRET` | Yes | Alibaba Cloud AccessKey Secret |
 | `ALIBABA_CLOUD_REGION_ID` | No | Default Region ID (e.g., cn-hangzhou) |
+
+---
+
+## CLI User-Agent Requirement
+
+**[MUST] CLI User-Agent** — The user-agent is set globally via `aliyun configure ai-mode set-user-agent` during installation.
+As a fallback, every `aliyun` CLI command invocation must also include:
+`--user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-network-manage`
 
 ---
 
@@ -73,27 +107,15 @@ aliyun version
 > **Pre-check: Alibaba Cloud Credentials Required**
 >
 > **Security Rules:**
-> - **NEVER** read, echo, or print AK/SK values (e.g., `echo $ALIBABA_CLOUD_ACCESS_KEY_ID` is FORBIDDEN)
-> - **NEVER** ask the user to input AK/SK directly in the conversation or command line
-> - **NEVER** use `aliyun configure set` with literal credential values
+> - **NEVER** read, echo, or print AK/SK values
+> - **NEVER** ask user to input AK/SK in conversation or command line
 > - **ONLY** use `aliyun configure list` to check credential status
 >
 > ```bash
 > aliyun configure list
 > ```
-> Check the output for a valid profile (AK, STS, or OAuth identity).
 >
-> **Credential Issue Handling:**
->
-> If `aliyun configure list` shows no valid credentials or incorrect configuration:
->
-> 1. **Identify the issue**: Inform the user that credentials are not configured or misconfigured
-> 2. **Guide proper configuration**: Direct the user to configure credentials **in the terminal** (not in the chat dialog):
->    - Run `aliyun configure` for interactive configuration
->    - Or set environment variables in shell profile
-> 3. **Prohibit plaintext input**: **Absolutely forbidden** to let user input AK/SK in plaintext in the chat dialog
-> 4. **Wait for re-verification**: After configuration, re-run `aliyun configure list` to verify
->
+> If no valid credentials, guide user to run `aliyun configure` in terminal (never accept plaintext AK/SK in chat).
 > Credential portal: [Alibaba Cloud RAM Console](https://ram.console.aliyun.com/manage/ak)
 
 ---
@@ -112,21 +134,36 @@ RAM permissions required for Elasticsearch instance network configuration operat
 > Network configuration changes **cannot be executed** when instance status is `activating`, `invalid`, or `inactive`.
 >
 > ```bash
-> # Check instance status
-> aliyun elasticsearch describe-instance \
->   --instance-id <InstanceId> \
->   --read-timeout 30 \
->   --user-agent AlibabaCloud-Agent-Skills | jq -r '.Result.status'
+> # Check instance status with retry logic
+> max_retries=10
+> retry_count=0
+> while [ $retry_count -lt $max_retries ]; do
+>   status=$(aliyun elasticsearch describe-instance \
+>     --instance-id <InstanceId> \
+>     --read-timeout 30 \
+>     --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-network-manage | jq -r '.Result.status')
+>
+>   if [ "$status" == "active" ]; then
+>     echo "✅ Instance status is active, proceeding..."
+>     break
+>   else
+>     echo "⚠️ Instance status is $status, waiting 30s before retry..."
+>     sleep 30
+>     retry_count=$((retry_count + 1))
+>   fi
+> done
+>
+> if [ $retry_count -eq $max_retries ]; then
+>   echo "❌ Instance did not become active after $max_retries retries, aborting"
+>   exit 1
+> fi
 > ```
-> If the return value is not `active`, wait until the instance status becomes `active` before proceeding.
 
 ### Task 1: Trigger Network (Enable/Disable Public/Private Network Access)
 
 Enable or disable public or private network access for Elasticsearch or Kibana clusters.
 
-> **Scope**: Supports enabling/disabling public/private network for both cluster and Kibana on basic management instances. Supports enabling/disabling public and private network for cluster on cloud-native instances. Supports enabling/disabling Kibana public network on cloud-native instances. For Kibana private network on cloud-native instances, use:
-> - EnableKibanaPvlNetwork to enable Kibana private link
-> - DisableKibanaPvlNetwork to disable Kibana private link
+> **Scope**: Supports all network types on basic management instances. On cloud-native instances, supports cluster public/private network and Kibana public network. For **Kibana private network on cloud-native instances**, use EnableKibanaPvlNetwork / DisableKibanaPvlNetwork instead.
 
 **Parameters:**
 
@@ -137,67 +174,50 @@ Enable or disable public or private network access for Elasticsearch or Kibana c
 | `actionType` | String | Yes | Action Type: OPEN (enable) / CLOSE (disable) |
 
 ```bash
-# Enable Kibana public network access (timeout 30s)
+# Example: Enable Kibana public network access
 aliyun elasticsearch trigger-network \
-  --instance-id <InstanceId> \
-  --read-timeout 30 \
-  --body '{
-    "nodeType": "KIBANA",
-    "networkType": "PUBLIC",
-    "actionType": "OPEN"
-  }' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --instance-id <InstanceId> --read-timeout 30 \
+  --body '{"nodeType":"KIBANA","networkType":"PUBLIC","actionType":"OPEN"}' \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-network-manage
 
-# Disable Kibana public network access
+# Example: Disable Elasticsearch public network access
 aliyun elasticsearch trigger-network \
-  --instance-id <InstanceId> \
-  --read-timeout 30 \
-  --body '{
-    "nodeType": "KIBANA",
-    "networkType": "PUBLIC",
-    "actionType": "CLOSE"
-  }' \
-  --user-agent AlibabaCloud-Agent-Skills
-
-# Enable Elasticsearch private network access
-aliyun elasticsearch trigger-network \
-  --instance-id <InstanceId> \
-  --read-timeout 30 \
-  --body '{
-    "nodeType": "WORKER",
-    "networkType": "PRIVATE",
-    "actionType": "OPEN"
-  }' \
-  --user-agent AlibabaCloud-Agent-Skills
-
-# Disable Elasticsearch public network access
-aliyun elasticsearch trigger-network \
-  --instance-id <InstanceId> \
-  --read-timeout 30 \
-  --body '{
-    "nodeType": "WORKER",
-    "networkType": "PUBLIC",
-    "actionType": "CLOSE"
-  }' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --instance-id <InstanceId> --read-timeout 30 \
+  --body '{"nodeType":"WORKER","networkType":"PUBLIC","actionType":"CLOSE"}' \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-network-manage
 ```
 
 **Pre-check (Required):**
 
+> **Network Status Fields** (via DescribeInstance):
+> - `Result.enablePublic`: ES public network (private network is always on, cannot be disabled)
+> - `Result.enableKibanaPublicNetwork`: Kibana public network
+> - `Result.enableKibanaPrivateNetwork`: Kibana private network
+>
+> If the target network is already in the desired state, **skip the TriggerNetwork call** and inform the user.
+
 ```bash
-# 1. Check instance architecture type (timeout 30s)
-arch_type=$(aliyun elasticsearch describe-instance \
-  --instance-id <InstanceId> \
-  --read-timeout 30 \
-  --user-agent AlibabaCloud-Agent-Skills | jq -r '.Result.archType')
+# Pre-check: architecture + current network status
+instance_info=$(aliyun elasticsearch describe-instance \
+  --instance-id <InstanceId> --read-timeout 30 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-network-manage)
 
-echo "Instance architecture type: $arch_type"
+arch_type=$(echo "$instance_info" | jq -r '.Result.archType')
 
-# 2. If cloud-native (public) and trying to open/close Kibana private network, TriggerNetwork is not supported
+# Cloud-native Kibana private network: use EnableKibanaPvlNetwork/DisableKibanaPvlNetwork instead
 if [ "$arch_type" == "public" ] && [ "$node_type" == "KIBANA" ] && [ "$network_type" == "PRIVATE" ]; then
-  echo "❌ Cloud-native instances do not support TriggerNetwork for Kibana private network, use EnableKibanaPvlNetwork/DisableKibanaPvlNetwork instead"
+  echo "❌ Use EnableKibanaPvlNetwork/DisableKibanaPvlNetwork for cloud-native Kibana private network"
   exit 1
 fi
+
+# Check if target network already in desired state
+enable_public=$(echo "$instance_info" | jq -r '.Result.enablePublic')
+enable_kibana_public=$(echo "$instance_info" | jq -r '.Result.enableKibanaPublicNetwork')
+enable_kibana_private=$(echo "$instance_info" | jq -r '.Result.enableKibanaPrivateNetwork')
+
+# Map nodeType+networkType to status field (ES private is always on)
+# WORKER+PUBLIC -> enablePublic | KIBANA+PUBLIC -> enableKibanaPublicNetwork | KIBANA+PRIVATE -> enableKibanaPrivateNetwork
+# If actionType=OPEN and already true, or actionType=CLOSE and already false, skip
 ```
 
 ---
@@ -226,7 +246,7 @@ Enable Kibana private network access (PrivateLink) for an Elasticsearch instance
 instance_info=$(aliyun elasticsearch describe-instance \
   --instance-id <InstanceId> \
   --read-timeout 30 \
-  --user-agent AlibabaCloud-Agent-Skills)
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-network-manage)
 
 pvl_enabled=$(echo "$instance_info" | jq -r '.Result.enableKibanaPrivateNetwork')
 current_vpc=$(echo "$instance_info" | jq -r '.Result.networkConfig.vpcId')
@@ -250,7 +270,7 @@ aliyun elasticsearch enable-kibana-pvl-network \
     "vpcId": "<VpcId>"
   }' \
   --read-timeout 30 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-network-manage
 ```
 ---
 
@@ -264,7 +284,7 @@ Disable Kibana private network access for an Elasticsearch instance.
 aliyun elasticsearch disable-kibana-pvl-network \
   --instance-id <InstanceId> \
   --read-timeout 30 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-network-manage
 ```
 
 ---
@@ -292,24 +312,9 @@ Update the access white IP list for the specified instance. Two update methods a
 ```bash
 # Modify ES public network white list (overwrite Default group)
 aliyun elasticsearch modify-white-ips \
-  --instance-id <InstanceId> \
+  --instance-id <InstanceId> --read-timeout 30 \
   --body '{"nodeType":"WORKER","networkType":"PUBLIC","whiteIpList":["59.0.0.0/8","120.0.0.0/8"]}' \
-  --read-timeout 30 \
-  --user-agent AlibabaCloud-Agent-Skills
-
-# Modify ES private network white list
-aliyun elasticsearch modify-white-ips \
-  --instance-id <InstanceId> \
-  --body '{"nodeType":"WORKER","networkType":"PRIVATE","whiteIpList":["192.168.1.0/24","10.0.0.0/8"]}' \
-  --read-timeout 30 \
-  --user-agent AlibabaCloud-Agent-Skills
-
-# Modify Kibana public network white list
-aliyun elasticsearch modify-white-ips \
-  --instance-id <InstanceId> \
-  --body '{"nodeType":"KIBANA","networkType":"PUBLIC","whiteIpList":["0.0.0.0/0"]}' \
-  --read-timeout 30 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-network-manage
 ```
 
 **Method 2: IP White Group (Supports Incremental/Overwrite/Delete)**
@@ -333,47 +338,29 @@ aliyun elasticsearch modify-white-ips \
 ```bash
 # Overwrite specified white group (Cover mode)
 aliyun elasticsearch modify-white-ips \
-  --instance-id <InstanceId> \
+  --instance-id <InstanceId> --read-timeout 30 \
   --body '{"modifyMode":"Cover","whiteIpGroup":{"groupName":"default","ips":["59.0.0.0/8","120.0.0.0/8"],"whiteIpType":"PUBLIC_ES"}}' \
-  --read-timeout 30 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-network-manage
 
 # Append IPs to white group (Append mode, group must exist)
 aliyun elasticsearch modify-white-ips \
-  --instance-id <InstanceId> \
+  --instance-id <InstanceId> --read-timeout 30 \
   --body '{"modifyMode":"Append","whiteIpGroup":{"groupName":"default","ips":["172.16.0.0/12"],"whiteIpType":"PRIVATE_ES"}}' \
-  --read-timeout 30 \
-  --user-agent AlibabaCloud-Agent-Skills
-
-# Delete IPs from white group (Delete mode, at least one IP must remain)
-aliyun elasticsearch modify-white-ips \
-  --instance-id <InstanceId> \
-  --body '{"modifyMode":"Delete","whiteIpGroup":{"groupName":"default","ips":["192.168.1.100"],"whiteIpType":"PRIVATE_ES"}}' \
-  --read-timeout 30 \
-  --user-agent AlibabaCloud-Agent-Skills
-
-# Create new white group (Cover mode + new group name)
-aliyun elasticsearch modify-white-ips \
-  --instance-id <InstanceId> \
-  --body '{"modifyMode":"Cover","whiteIpGroup":{"groupName":"new_group","ips":["10.0.0.0/8"],"whiteIpType":"PRIVATE_ES"}}' \
-  --read-timeout 30 \
-  --user-agent AlibabaCloud-Agent-Skills
-
-# Delete white group (Cover mode + empty ips)
-aliyun elasticsearch modify-white-ips \
-  --instance-id <InstanceId> \
-  --body '{"modifyMode":"Cover","whiteIpGroup":{"groupName":"group_to_delete","ips":[],"whiteIpType":"PRIVATE_ES"}}' \
-  --read-timeout 30 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-network-manage
 ```
 
 **modifyMode Description:**
 
 | Mode | Description |
 |------|-------------|
-| `Cover` | Overwrite mode (default). Empty ips deletes the group; non-existent groupName creates new group |
+| `Cover` | Overwrite mode (default). Empty ips deletes group; non-existent groupName creates new |
 | `Append` | Append mode. Group must exist, otherwise NotFound error |
-| `Delete` | Delete mode. Delete specified IPs, at least one IP must remain |
+| `Delete` | Delete mode. Remove specified IPs, at least one IP must remain |
+
+> **IMPORTANT: modifyMode Selection Guidelines**
+> - Use `Append` for incremental addition, `Cover` for full replacement, `Delete` for removal
+> - **If user intent is unclear, MUST ask user** which mode to use before executing
+> - If Append fails with NotFound: inform user, suggest Cover mode to create group. Do NOT silently switch modes.
 
 ---
 
@@ -388,7 +375,7 @@ Enable HTTPS access for an Elasticsearch instance.
 protocol=$(aliyun elasticsearch describe-instance \
   --instance-id <InstanceId> \
   --read-timeout 30 \
-  --user-agent AlibabaCloud-Agent-Skills | jq -r '.Result.protocol')
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-network-manage | jq -r '.Result.protocol')
 
 if [ "$protocol" == "HTTPS" ]; then
   echo "✅ HTTPS is already enabled, no action needed"
@@ -397,7 +384,7 @@ else
   aliyun elasticsearch open-https \
     --instance-id <InstanceId> \
     --read-timeout 30 \
-    --user-agent AlibabaCloud-Agent-Skills
+    --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-network-manage
 fi
 ```
 
@@ -414,7 +401,7 @@ Disable HTTPS access for an Elasticsearch instance.
 protocol=$(aliyun elasticsearch describe-instance \
   --instance-id <InstanceId> \
   --read-timeout 30 \
-  --user-agent AlibabaCloud-Agent-Skills | jq -r '.Result.protocol')
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-network-manage | jq -r '.Result.protocol')
 
 if [ "$protocol" == "HTTP" ]; then
   echo "✅ HTTPS is already disabled, no action needed"
@@ -423,7 +410,7 @@ else
   aliyun elasticsearch close-https \
     --instance-id <InstanceId> \
     --read-timeout 30 \
-    --user-agent AlibabaCloud-Agent-Skills
+    --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-network-manage
 fi
 ```
 
@@ -456,38 +443,51 @@ aliyun elasticsearch update-kibana-pvl-network \
   --pvl-id <InstanceId>-kibana-internal-internal \
   --body '{"securityGroups": ["<NewSecurityGroupId>"]}' \
   --read-timeout 30 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-network-manage
+```
+
+---
+
+### Task 8: Update Kibana SSO (Enable/Disable Kibana Alibaba Cloud Account Authentication)
+
+Enable or disable Kibana Alibaba Cloud account SSO authentication. When enabled, users must log in with their Alibaba Cloud account before using Kibana.
+
+> **Prerequisites**: This API **only supports cloud-native instances** (archType=public).
+
+> **Pre-check**: Call DescribeInstance to check `Result.enableKibanaPublicSSO` / `Result.enableKibanaPrivateSSO`. If desired state already achieved, skip the call.
+
+**Parameters:** See [references/related-apis.md](references/related-apis.md) for full details.
+
+```bash
+# Enable Kibana SSO for public network
+aliyun elasticsearch update-kibana-sso \
+  --instance-id <InstanceId> \
+  --body '{"enable":true,"networkType":"PUBLIC"}' \
+  --read-timeout 30 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-network-manage
+
+# Disable Kibana SSO for private network
+aliyun elasticsearch update-kibana-sso \
+  --instance-id <InstanceId> \
+  --body '{"enable":false,"networkType":"PRIVATE"}' \
+  --read-timeout 30 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-network-manage
 ```
 
 ---
 
 ## Success Verification Method
 
-For detailed verification steps, see [references/verification-method.md](references/verification-method.md)
-
-**Quick Verification:**
-
-1. **TriggerNetwork**: Check `RequestId`, use DescribeInstance to confirm network config changes
-2. **EnableKibanaPvlNetwork/DisableKibanaPvlNetwork**: Check return status, use DescribeInstance to confirm PVL status
-3. **ModifyWhiteIps**: Check return status, use DescribeInstance to confirm whitelist updated
-4. **OpenHttps/CloseHttps**: Check return status, use DescribeInstance to confirm HTTPS status
+For detailed verification steps, see [references/verification-method.md](references/verification-method.md). After each operation, check `RequestId` in response and call DescribeInstance to confirm changes.
 
 ---
 
 ## Best Practices
 
-1. **Check architecture type for Kibana private network**: For cloud-native instances (archType=public), TriggerNetwork does not support Kibana private network (nodeType=KIBANA, networkType=PRIVATE). Use EnableKibanaPvlNetwork/DisableKibanaPvlNetwork instead.
-2. **Kibana private network whitelist for cloud-native instances**: For cloud-native instances (archType=public), Kibana private network access control should be done via UpdateKibanaPvlNetwork to modify security groups, not ModifyWhiteIps
-3. **Backup whitelist**: Record existing configuration before modifying whitelist
-4. **Use 0.0.0.0/0 with caution**: Opening access to all IPs poses security risks; only open necessary IP ranges
-5. **HTTPS recommendation**: Enable HTTPS in production environments to ensure data transmission security
-6. **Network change impact**: TriggerNetwork operations may cause brief service interruptions; execute during off-peak hours
-7. **Use clientToken**: Use clientToken for write operations to ensure idempotency
-8. **Retry on instance status errors**: If API calls fail with `InstanceStatusNotSupportCurrentAction`, `TargetInstanceStatusNotSupportCurrentAction`, or `ConcurrencyUpdateInstanceConflict`, wait 30-60 seconds and retry. See `references/verification-method.md` for details.
-9. **Idempotent operations**: Check current state before making changes. Skip API calls if desired state is already achieved.
-
+1. **Cloud-native Kibana**: Private network uses EnableKibanaPvlNetwork/DisableKibanaPvlNetwork. Whitelist via UpdateKibanaPvlNetwork. SSO via UpdateKibanaSso (archType=public only).
+2. **Security**: Use 0.0.0.0/0 with caution. Enable HTTPS in production.
+3. **Reliability**: Use clientToken for idempotency. Retry on `InstanceStatusNotSupportCurrentAction`/`ConcurrencyUpdateInstanceConflict` (wait 30-60s). Check current state before changes, skip if desired state already achieved.
 ---
-
 ## Reference Links
 
 | Reference | Description |

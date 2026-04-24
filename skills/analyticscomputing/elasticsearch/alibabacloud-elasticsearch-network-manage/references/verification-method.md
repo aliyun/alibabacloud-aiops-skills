@@ -11,7 +11,7 @@ This document describes methods to verify whether various API operations are suc
 ```bash
 aliyun elasticsearch describe-instance \
   --instance-id <InstanceId> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-network-manage
 ```
 
 **Success Criteria:**
@@ -25,7 +25,7 @@ aliyun elasticsearch describe-instance \
 
 ```bash
 INSTANCE_ID="es-cn-xxxxxx"
-result=$(aliyun elasticsearch describe-instance --instance-id $INSTANCE_ID --user-agent AlibabaCloud-Agent-Skills 2>&1)
+result=$(aliyun elasticsearch describe-instance --instance-id $INSTANCE_ID --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-network-manage 2>&1)
 
 if echo "$result" | jq -e '.Result.instanceId' > /dev/null 2>&1; then
     returned_id=$(echo "$result" | jq -r '.Result.instanceId')
@@ -70,7 +70,7 @@ VSWITCH_ID="vsw-xxxxxx"
 # 1. Check architecture type
 arch_type=$(aliyun elasticsearch describe-instance \
   --instance-id $INSTANCE_ID \
-  --user-agent AlibabaCloud-Agent-Skills | jq -r '.Result.archType')
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-network-manage | jq -r '.Result.archType')
 
 if [ "$arch_type" == "public" ] && [ "$node_type" == "KIBANA" ] && [ "$network_type" == "PRIVATE" ]; then
   echo "❌ Cloud-native instance does not support TriggerNetwork for Kibana private network"
@@ -82,7 +82,7 @@ echo "Triggering network change..."
 result=$(aliyun elasticsearch trigger-network \
   --instance-id $INSTANCE_ID \
   --body '{"nodeType":"WORKER","networkType":"PUBLIC","actionType":"OPEN"}' \
-  --user-agent AlibabaCloud-Agent-Skills 2>&1)
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-network-manage 2>&1)
 
 if echo "$result" | jq -e '.RequestId' > /dev/null 2>&1; then
   echo "✅ TriggerNetwork request submitted"
@@ -113,7 +113,7 @@ while [ $retry_count -lt $max_retries ]; do
   
   network_config=$(aliyun elasticsearch describe-instance \
     --instance-id $INSTANCE_ID \
-    --user-agent AlibabaCloud-Agent-Skills 2>/dev/null | jq -r '.Result.networkConfig')
+    --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-network-manage 2>/dev/null | jq -r '.Result.networkConfig')
   
   current_vpc=$(echo "$network_config" | jq -r '.vpcId')
   current_vswitch=$(echo "$network_config" | jq -r '.vswitchId')
@@ -156,7 +156,7 @@ INSTANCE_ID="es-cn-xxxxxx"
 echo "Enabling Kibana PVL..."
 result=$(aliyun elasticsearch enable-kibana-pvl-network \
   --instance-id $INSTANCE_ID \
-  --user-agent AlibabaCloud-Agent-Skills 2>&1)
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-network-manage 2>&1)
 
 if echo "$result" | jq -e '.RequestId' > /dev/null 2>&1; then
   echo "✅ EnableKibanaPvlNetwork request submitted"
@@ -185,7 +185,7 @@ while [ $retry_count -lt $max_retries ]; do
   
   pvl_enabled=$(aliyun elasticsearch describe-instance \
     --instance-id $INSTANCE_ID \
-    --user-agent AlibabaCloud-Agent-Skills 2>/dev/null | jq -r '.Result.enableKibanaPrivateNetwork')
+    --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-network-manage 2>/dev/null | jq -r '.Result.enableKibanaPrivateNetwork')
   
   if [ "$pvl_enabled" == "true" ]; then
     echo "✅ EnableKibanaPvlNetwork succeeded, Kibana PVL is enabled"
@@ -226,7 +226,7 @@ INSTANCE_ID="es-cn-xxxxxx"
 echo "Disabling Kibana PVL..."
 result=$(aliyun elasticsearch disable-kibana-pvl-network \
   --instance-id $INSTANCE_ID \
-  --user-agent AlibabaCloud-Agent-Skills 2>&1)
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-network-manage 2>&1)
 
 if echo "$result" | jq -e '.RequestId' > /dev/null 2>&1; then
   echo "✅ DisableKibanaPvlNetwork request submitted"
@@ -255,7 +255,7 @@ while [ $retry_count -lt $max_retries ]; do
   
   pvl_enabled=$(aliyun elasticsearch describe-instance \
     --instance-id $INSTANCE_ID \
-    --user-agent AlibabaCloud-Agent-Skills 2>/dev/null | jq -r '.Result.enableKibanaPrivateNetwork')
+    --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-network-manage 2>/dev/null | jq -r '.Result.enableKibanaPrivateNetwork')
   
   if [ "$pvl_enabled" == "false" ] || [ "$pvl_enabled" == "null" ]; then
     echo "✅ DisableKibanaPvlNetwork succeeded, Kibana PVL is disabled"
@@ -300,7 +300,7 @@ result=$(aliyun elasticsearch update-kibana-pvl-network \
   --pvl-id $PVL_ID \
   --body "{\"securityGroups\": [\"$NEW_SG\"]}" \
   --read-timeout 30 \
-  --user-agent AlibabaCloud-Agent-Skills 2>&1)
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-network-manage 2>&1)
 
 if echo "$result" | jq -e '.RequestId' > /dev/null 2>&1; then
   echo "✅ UpdateKibanaPvlNetwork request submitted"
@@ -331,7 +331,7 @@ while [ $retry_count -lt $max_retries ]; do
   instance_info=$(aliyun elasticsearch describe-instance \
     --instance-id $INSTANCE_ID \
     --read-timeout 30 \
-    --user-agent AlibabaCloud-Agent-Skills 2>/dev/null)
+    --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-network-manage 2>/dev/null)
   
   status=$(echo "$instance_info" | jq -r '.Result.status')
   
@@ -382,7 +382,7 @@ result=$(aliyun elasticsearch modify-white-ips \
       }
     ]
   }' \
-  --user-agent AlibabaCloud-Agent-Skills 2>&1)
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-network-manage 2>&1)
 
 if echo "$result" | jq -e '.RequestId' > /dev/null 2>&1; then
   echo "✅ ModifyWhiteIps request submitted"
@@ -397,7 +397,7 @@ sleep 5
 echo "Verifying whitelist update..."
 white_ips=$(aliyun elasticsearch describe-instance \
   --instance-id $INSTANCE_ID \
-  --user-agent AlibabaCloud-Agent-Skills | jq -r '.Result.networkConfig.whiteIpList')
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-network-manage | jq -r '.Result.networkConfig.whiteIpList')
 
 echo "Current whitelist: $white_ips"
 echo "✅ ModifyWhiteIps succeeded"
@@ -426,7 +426,7 @@ INSTANCE_ID="es-cn-xxxxxx"
 echo "Enabling HTTPS..."
 result=$(aliyun elasticsearch open-https \
   --instance-id $INSTANCE_ID \
-  --user-agent AlibabaCloud-Agent-Skills 2>&1)
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-network-manage 2>&1)
 
 if echo "$result" | jq -e '.RequestId' > /dev/null 2>&1; then
   echo "✅ OpenHttps request submitted"
@@ -455,7 +455,7 @@ while [ $retry_count -lt $max_retries ]; do
   
   protocol=$(aliyun elasticsearch describe-instance \
     --instance-id $INSTANCE_ID \
-    --user-agent AlibabaCloud-Agent-Skills 2>/dev/null | jq -r '.Result.protocol')
+    --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-network-manage 2>/dev/null | jq -r '.Result.protocol')
   
   if [ "$protocol" == "HTTPS" ]; then
     echo "✅ OpenHttps succeeded, HTTPS is enabled"
@@ -495,7 +495,7 @@ INSTANCE_ID="es-cn-xxxxxx"
 echo "Disabling HTTPS..."
 result=$(aliyun elasticsearch close-https \
   --instance-id $INSTANCE_ID \
-  --user-agent AlibabaCloud-Agent-Skills 2>&1)
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-network-manage 2>&1)
 
 if echo "$result" | jq -e '.RequestId' > /dev/null 2>&1; then
   echo "✅ CloseHttps request submitted"
@@ -524,7 +524,7 @@ while [ $retry_count -lt $max_retries ]; do
   
   protocol=$(aliyun elasticsearch describe-instance \
     --instance-id $INSTANCE_ID \
-    --user-agent AlibabaCloud-Agent-Skills 2>/dev/null | jq -r '.Result.protocol')
+    --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-network-manage 2>/dev/null | jq -r '.Result.protocol')
   
   if [ "$protocol" == "HTTP" ]; then
     echo "✅ CloseHttps succeeded, HTTPS is disabled"
@@ -564,7 +564,7 @@ fi
 **Error Handling Script Template:**
 
 ```bash
-result=$(aliyun elasticsearch <command> --user-agent AlibabaCloud-Agent-Skills 2>&1)
+result=$(aliyun elasticsearch <command> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-network-manage 2>&1)
 exit_code=$?
 
 if [ $exit_code -ne 0 ]; then

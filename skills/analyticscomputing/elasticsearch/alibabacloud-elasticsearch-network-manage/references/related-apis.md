@@ -341,6 +341,24 @@ aliyun elasticsearch modify-white-ips \
 | `Append` | Append mode. Group must exist, otherwise NotFound error |
 | `Delete` | Delete mode. Remove specified IPs, at least one IP must remain |
 
+**modifyMode Selection Guidelines:**
+
+> **CRITICAL**: The `modifyMode` and `whiteIpList` parameters have destructive potential. Incorrect mode selection can overwrite or delete existing whitelist entries.
+>
+> **Selection Rules:**
+> - `Append` — User wants to **add** IPs to an existing group without affecting current entries
+> - `Cover` — User wants to **replace** the entire group content, or create a new group, or delete a group (empty ips)
+> - `Delete` — User wants to **remove** specific IPs from an existing group
+> - Method 1 (`whiteIpList`) — Always **overwrites** the Default group; use only when user explicitly wants full replacement
+>
+> **When user intent is unclear, MUST ask the user** which mode to use. Never assume Cover mode by default.
+>
+> **Append NotFound Error Recovery:**
+> If Append fails because the group does not exist:
+> 1. Inform the user that the group does not exist
+> 2. Suggest creating it using Cover mode with the desired IPs
+> 3. Do NOT silently switch to Cover mode — this could overwrite an existing group with the same name
+
 ---
 
 ### 6. OpenHttps - Enable HTTPS
@@ -459,6 +477,97 @@ aliyun elasticsearch describe-instance \
 
 ---
 
+### 9. UpdateKibanaSso - Enable/Disable Kibana Alibaba Cloud Account Authentication
+
+| Property | Value |
+|----------|-------|
+| **API** | UpdateKibanaSso |
+| **HTTP Method** | POST |
+| **Path** | /openapi/instances/{InstanceId}/actions/kibana-sso |
+| **CLI Command** | `aliyun elasticsearch update-kibana-sso` |
+| **Description** | Enable or disable Kibana Alibaba Cloud account SSO authentication. When enabled, users must log in with Alibaba Cloud account to use Kibana. |
+| **Architecture** | **Cloud-native only** (archType=public) |
+
+**Request Parameters:**
+
+| Parameter | Type | Location | Required | Description |
+|-----------|------|----------|----------|-------------|
+| InstanceId | String | Path | Yes | Instance ID |
+| enable | Boolean | Body | Yes | `true` (enable) / `false` (disable) |
+| networkType | String | Body | Yes | Network type: `PUBLIC` / `PRIVATE` |
+
+**Status Check Fields (via DescribeInstance):**
+
+| Field | Description |
+|-------|-------------|
+| `Result.enableKibanaPublicSSO` | Kibana public network SSO status (true/false) |
+| `Result.enableKibanaPrivateSSO` | Kibana private network SSO status (true/false) |
+
+**Pre-check Script:**
+
+```bash
+# Verify architecture and current SSO status
+instance_info=$(aliyun elasticsearch describe-instance \
+  --instance-id es-cn-xxxxxx \
+  --read-timeout 30 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-network-manage)
+
+arch_type=$(echo "$instance_info" | jq -r '.Result.archType')
+if [ "$arch_type" != "public" ]; then
+  echo "❌ UpdateKibanaSso only supports cloud-native instances (archType=public)"
+  exit 1
+fi
+
+public_sso=$(echo "$instance_info" | jq -r '.Result.enableKibanaPublicSSO')
+private_sso=$(echo "$instance_info" | jq -r '.Result.enableKibanaPrivateSSO')
+echo "Current SSO status: public=$public_sso, private=$private_sso"
+```
+
+**CLI Examples:**
+
+```bash
+# Enable Kibana SSO for public network
+aliyun elasticsearch update-kibana-sso \
+  --instance-id es-cn-xxxxxx \
+  --body '{"enable":true,"networkType":"PUBLIC"}' \
+  --read-timeout 30 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-network-manage
+
+# Disable Kibana SSO for public network
+aliyun elasticsearch update-kibana-sso \
+  --instance-id es-cn-xxxxxx \
+  --body '{"enable":false,"networkType":"PUBLIC"}' \
+  --read-timeout 30 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-network-manage
+
+# Enable Kibana SSO for private network
+aliyun elasticsearch update-kibana-sso \
+  --instance-id es-cn-xxxxxx \
+  --body '{"enable":true,"networkType":"PRIVATE"}' \
+  --read-timeout 30 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-network-manage
+
+# Disable Kibana SSO for private network
+aliyun elasticsearch update-kibana-sso \
+  --instance-id es-cn-xxxxxx \
+  --body '{"enable":false,"networkType":"PRIVATE"}' \
+  --read-timeout 30 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-network-manage
+```
+
+**Response:**
+
+```json
+{
+  "RequestId": "C82758DD-282F-4D48-934F-92170A33****",
+  "Result": true
+}
+```
+
+**RAM Permission:** `elasticsearch:UpdateKibanaSso`
+
+---
+
 ## API Version Information
 
 | Property | Value |
@@ -503,4 +612,5 @@ fi
 - [ModifyWhiteIps API Documentation](https://help.aliyun.com/zh/es/developer-reference/api-modifywhiteips)
 - [OpenHttps API Documentation](https://help.aliyun.com/zh/es/developer-reference/api-openhttps)
 - [CloseHttps API Documentation](https://help.aliyun.com/zh/es/developer-reference/api-closehttps)
+- [UpdateKibanaSso API Documentation](https://api.aliyun.com/document/elasticsearch/2017-06-13/UpdateKibanaSso)
 - [DescribeInstance API Documentation](https://help.aliyun.com/zh/es/developer-reference/api-describeinstance)

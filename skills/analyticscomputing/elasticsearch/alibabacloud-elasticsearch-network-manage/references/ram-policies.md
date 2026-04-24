@@ -22,7 +22,8 @@ To execute all network management operations, use the following full permission 
         "elasticsearch:UpdateKibanaPvlNetwork",
         "elasticsearch:ModifyWhiteIps",
         "elasticsearch:OpenHttps",
-        "elasticsearch:CloseHttps"
+        "elasticsearch:CloseHttps",
+        "elasticsearch:UpdateKibanaSso"
       ],
       "Resource": "*"
     }
@@ -169,6 +170,21 @@ Limit to specific instance:
 }
 ```
 
+### 9. UpdateKibanaSso - Enable/Disable Kibana SSO Authentication
+
+```json
+{
+  "Version": "1",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "elasticsearch:UpdateKibanaSso",
+      "Resource": "acs:elasticsearch:*:*:instances/*"
+    }
+  ]
+}
+```
+
 ---
 
 ## Read-Only Permission Policy
@@ -209,7 +225,8 @@ Allow viewing and managing network configurations (excluding architecture change
         "elasticsearch:UpdateKibanaPvlNetwork",
         "elasticsearch:ModifyWhiteIps",
         "elasticsearch:OpenHttps",
-        "elasticsearch:CloseHttps"
+        "elasticsearch:CloseHttps",
+        "elasticsearch:UpdateKibanaSso"
       ],
       "Resource": "*"
     }
