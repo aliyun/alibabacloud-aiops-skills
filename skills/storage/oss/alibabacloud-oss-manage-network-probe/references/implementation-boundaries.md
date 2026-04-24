@@ -9,14 +9,14 @@ However, there are clear boundaries: some capabilities are composite client-side
 
 | Item | CLI/Code Status | Notes |
 | --- | --- | --- |
-| `aliyun ossutil probe --upload ... --user-agent AlibabaCloud-Agent-Skills` | Supported | Tests local-to-OSS link status via upload or temporary object |
-| `aliyun ossutil probe --download ... --user-agent AlibabaCloud-Agent-Skills` | Supported | Supports URL download probe or Bucket/Object download probe |
-| `aliyun ossutil probe --probe-item upload-speed ... --user-agent AlibabaCloud-Agent-Skills` | Supported | Outputs upload bandwidth and suggested concurrency |
-| `aliyun ossutil probe --probe-item download-speed ... --user-agent AlibabaCloud-Agent-Skills` | Supported | Outputs download bandwidth and suggested concurrency |
-| `aliyun ossutil probe --probe-item download-time ... --user-agent AlibabaCloud-Agent-Skills` | Supported | Outputs download time and throughput statistics |
-| `aliyun ossutil probe --probe-item cycle-symlink ... --user-agent AlibabaCloud-Agent-Skills` | Supported for detection only | Local symlink anomaly detection only |
-| `aliyun ossutil presign ... --user-agent AlibabaCloud-Agent-Skills` | Supported | Generates presigned URL for private object download probe |
-| `aliyun ossutil cp ... --user-agent AlibabaCloud-Agent-Skills` | Supported | Prepares test objects for `download-speed` |
+| `aliyun ossutil probe --upload ... --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-network-probe` | Supported | Tests local-to-OSS link status via upload or temporary object |
+| `aliyun ossutil probe --download ... --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-network-probe` | Supported | Supports URL download probe or Bucket/Object download probe |
+| `aliyun ossutil probe --probe-item upload-speed ... --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-network-probe` | Supported | Outputs upload bandwidth and suggested concurrency |
+| `aliyun ossutil probe --probe-item download-speed ... --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-network-probe` | Supported | Outputs download bandwidth and suggested concurrency |
+| `aliyun ossutil probe --probe-item download-time ... --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-network-probe` | Supported | Outputs download time and throughput statistics |
+| `aliyun ossutil probe --probe-item cycle-symlink ... --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-network-probe` | Supported for detection only | Local symlink anomaly detection only |
+| `aliyun ossutil presign ... --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-network-probe` | Supported | Generates presigned URL for private object download probe |
+| `aliyun ossutil cp ... --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-network-probe` | Supported | Prepares test objects for `download-speed` |
 
 
 ## Not a Single OpenAPI Primitive

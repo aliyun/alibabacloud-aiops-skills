@@ -45,9 +45,9 @@ Therefore, permissions should be granted per scenario at the minimum required le
 ## Example Policy: download-only probing
 
 Applicable to:
-- `aliyun ossutil probe --download --bucket <bucket> --object <object> --user-agent AlibabaCloud-Agent-Skills`
-- `aliyun ossutil probe --probe-item download-speed --bucket <bucket> --object <object> --user-agent AlibabaCloud-Agent-Skills`
-- `aliyun ossutil probe --probe-item download-time --bucket <bucket> --object <object> --user-agent AlibabaCloud-Agent-Skills`
+- `aliyun ossutil probe --download --bucket <bucket> --object <object> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-network-probe`
+- `aliyun ossutil probe --probe-item download-speed --bucket <bucket> --object <object> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-network-probe`
+- `aliyun ossutil probe --probe-item download-time --bucket <bucket> --object <object> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-network-probe`
 
 ```json
 {
@@ -67,9 +67,9 @@ Applicable to:
 ## Example Policy: upload / temporary-object probing
 
 Applicable to:
-- `aliyun ossutil probe --upload --bucket <bucket> --user-agent AlibabaCloud-Agent-Skills`
-- `aliyun ossutil probe --probe-item upload-speed --bucket <bucket> --user-agent AlibabaCloud-Agent-Skills`
-- `aliyun ossutil probe --download --bucket <bucket> --user-agent AlibabaCloud-Agent-Skills` without explicit object
+- `aliyun ossutil probe --upload --bucket <bucket> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-network-probe`
+- `aliyun ossutil probe --probe-item upload-speed --bucket <bucket> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-network-probe`
+- `aliyun ossutil probe --download --bucket <bucket> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-network-probe` without explicit object
 
 ```json
 {

@@ -45,10 +45,15 @@ Only after `configure list` confirms a valid profile, proceed:
 ```bash
 aliyun configure set --auto-plugin-install true
 aliyun configure ai-mode enable
+aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-network-probe"
 aliyun ossutil version
+aliyun plugin update
 ```
 
 > **AI safety mode**: `configure ai-mode enable` activates the CLI's built-in safety guard, which blocks dangerous operations (e.g. deleting critical resources) at the CLI level. This must be enabled before executing any ossutil commands.
+
+**[MUST] CLI User-Agent** — Every `aliyun` CLI command invocation must include:
+`--user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-network-probe`
 
 ## Environment Variables
 
@@ -136,6 +141,7 @@ aliyun configure list
 ```bash
 aliyun configure set --auto-plugin-install true
 aliyun configure ai-mode enable
+aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-network-probe"
 aliyun ossutil version
 ```
 
@@ -160,7 +166,7 @@ aliyun ossutil probe \
   --addr "<ADDR_IF_CONFIRMED>" \
   --upmode "<UPMODE_IF_CONFIRMED>" \
   --region "<REGION_ID_IF_NEEDED>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-network-probe
 ```
 
 When `LOCAL_PATH_IF_ANY` is not provided, remove that positional parameter entirely — do not pass an empty string.
@@ -178,7 +184,7 @@ aliyun ossutil presign \
   "oss://<BUCKET_NAME>/<OBJECT_NAME>" \
   --expires-duration 1h \
   --region "<REGION_ID_IF_NEEDED>" \
-  --user-agent AlibabaCloud-Agent-Skills > /tmp/_presign_url.txt
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-network-probe > /tmp/_presign_url.txt
 ```
 
 **Step 2** — Create a probe script that reads the URL from the file and runs the download probe:
@@ -190,7 +196,7 @@ aliyun ossutil probe \
   --download \
   --url "$PRESIGN_URL" \
   "<LOCAL_PATH_IF_USER_WANTS_TO_RENAME>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-network-probe
 PROBE_SCRIPT
 bash /tmp/_run_presign_probe.sh
 ```
@@ -218,7 +224,7 @@ aliyun ossutil probe \
   --addr "<ADDR_IF_CONFIRMED>" \
   "<LOCAL_PATH_IF_USER_WANTS_TO_RENAME>" \
   --region "<REGION_ID_IF_NEEDED>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-network-probe
 ```
 
 - If the command reports `NoSuchBucket`, `NoSuchKey`, or other object-level errors, prefer running `ossutil stat "oss://<BUCKET_NAME>/<OBJECT_NAME>" --region "<REGION_ID_IF_NEEDED>"` for same-target validation.
@@ -232,7 +238,7 @@ This mode only checks local directory/file paths — it does not access OSS.
 aliyun ossutil probe \
   --probe-item cycle-symlink \
   "<LOCAL_DIRECTORY_OR_FILE>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-network-probe
 ```
 
 - If the command returns `stat <path>: no such file or directory`, explicitly state that the local path does not exist in the current execution environment; this is still a local-only flow with no OSS access.
@@ -262,7 +268,7 @@ aliyun ossutil probe \
   --probe-item upload-speed \
   --bucket "<BUCKET_NAME>" \
   --region "<REGION_ID_IF_NEEDED>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-network-probe
 ```
 
 To limit runtime, add:
@@ -272,7 +278,7 @@ aliyun ossutil probe \
   --bucket "<BUCKET_NAME>" \
   --runtime "<RUNTIME_IF_CONFIRMED>" \
   --region "<REGION_ID_IF_NEEDED>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-network-probe
 ```
 
 Successful output will contain `suggest parallel is <N>`.
@@ -289,7 +295,7 @@ aliyun ossutil cp \
   "<LOCAL_FILE_TO_UPLOAD>" \
   "oss://<BUCKET_NAME>/<OBJECT_NAME>" \
   --region "<REGION_ID_IF_NEEDED>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-network-probe
 ```
 
 Run download bandwidth probe:
@@ -300,7 +306,7 @@ aliyun ossutil probe \
   --object "<OBJECT_NAME>" \
   --runtime "<RUNTIME_IF_CONFIRMED>" \
   --region "<REGION_ID_IF_NEEDED>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-network-probe
 ```
 
 #### G. Download time probe
@@ -312,7 +318,7 @@ aliyun ossutil probe \
   --bucket "<BUCKET_NAME>" \
   --object "<OBJECT_NAME>" \
   --region "<REGION_ID_IF_NEEDED>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-network-probe
 ```
 
 To explicitly control concurrency and part size, add:
@@ -324,7 +330,7 @@ aliyun ossutil probe \
   --parallel "<PARALLEL_IF_CONFIRMED>" \
   --part-size "<PART_SIZE_IF_CONFIRMED>" \
   --region "<REGION_ID_IF_NEEDED>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-network-probe
 ```
 
 `--parallel` and `--part-size` are only meaningful in the `download-time` scenario; do not misuse them with `upload-speed`.
@@ -360,7 +366,7 @@ Delete an OSS test object:
 ```bash
 aliyun ossutil rm \
   "oss://<BUCKET_NAME>/<OBJECT_NAME>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-network-probe
 ```
 
 If a temporary test file was downloaded locally, it should also be deleted or retained based on user confirmation.

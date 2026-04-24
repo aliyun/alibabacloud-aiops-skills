@@ -34,7 +34,7 @@ Failure guardrails:
 aliyun ossutil stat \
   "oss://<BUCKET_NAME>/<OBJECT_NAME>" \
   --region "<REGION_ID_IF_NEEDED>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-network-probe
 ```
 
 Success indicator:
@@ -49,7 +49,7 @@ aliyun ossutil presign \
   "oss://<BUCKET_NAME>/<OBJECT_NAME>" \
   --expires-duration 1h \
   --region "<REGION_ID_IF_NEEDED>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-network-probe
 ```
 
 Success indicator:
@@ -67,7 +67,7 @@ aliyun ossutil probe \
   --upload \
   --bucket "<BUCKET_NAME>" \
   --region "<REGION_ID_IF_NEEDED>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-network-probe
 ```
 
 Success indicators:
@@ -84,7 +84,7 @@ aliyun ossutil probe \
   --bucket "<BUCKET_NAME>" \
   --object "<OBJECT_NAME_IF_ANY>" \
   --region "<REGION_ID_IF_NEEDED>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-network-probe
 ```
 
 Success indicators:
@@ -99,7 +99,7 @@ Success indicators:
 aliyun ossutil probe \
   --download \
   --url "<DOWNLOAD_URL>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-network-probe
 ```
 
 Success indicators:
@@ -114,7 +114,7 @@ aliyun ossutil probe \
   --probe-item upload-speed \
   --bucket "<BUCKET_NAME>" \
   --region "<REGION_ID_IF_NEEDED>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-network-probe
 ```
 
 To limit runtime, add `--runtime`:
@@ -124,7 +124,7 @@ aliyun ossutil probe \
   --bucket "<BUCKET_NAME>" \
   --runtime "<RUNTIME_IF_CONFIRMED>" \
   --region "<REGION_ID_IF_NEEDED>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-network-probe
 ```
 
 Success indicators:
@@ -140,7 +140,7 @@ aliyun ossutil probe \
   --object "<OBJECT_NAME>" \
   --runtime "<RUNTIME_IF_CONFIRMED>" \
   --region "<REGION_ID_IF_NEEDED>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-network-probe
 ```
 
 Success indicators:
@@ -157,7 +157,7 @@ aliyun ossutil probe \
   --bucket "<BUCKET_NAME>" \
   --object "<OBJECT_NAME>" \
   --region "<REGION_ID_IF_NEEDED>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-network-probe
 ```
 
 To explicitly control concurrency and part size, add:
@@ -169,7 +169,7 @@ aliyun ossutil probe \
   --parallel "<PARALLEL_IF_CONFIRMED>" \
   --part-size "<PART_SIZE_IF_CONFIRMED>" \
   --region "<REGION_ID_IF_NEEDED>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-network-probe
 ```
 
 Success indicators:
@@ -183,7 +183,7 @@ Success indicators:
 aliyun ossutil probe \
   --probe-item cycle-symlink \
   "<LOCAL_DIRECTORY_OR_FILE>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-network-probe
 ```
 
 Success indicators:
@@ -213,7 +213,7 @@ If a test object was explicitly uploaded and is planned for deletion, execute:
 ```bash
 aliyun ossutil rm \
   "oss://<BUCKET_NAME>/<OBJECT_NAME>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-network-probe
 ```
 
 Then verify the object no longer exists:
@@ -222,7 +222,7 @@ Then verify the object no longer exists:
 aliyun ossutil stat \
   "oss://<BUCKET_NAME>/<OBJECT_NAME>" \
   --region "<REGION_ID_IF_NEEDED>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-network-probe
 ```
 
 Success indicator:
