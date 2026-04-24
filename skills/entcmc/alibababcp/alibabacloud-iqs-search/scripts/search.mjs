@@ -74,12 +74,25 @@ async function search(options) {
     throw new Error('Query is required. Use --query "search terms"');
   }
 
+  // Validate query length
+  if (typeof options.query === 'string' && (options.query.length < 1 || options.query.length > 500)) {
+    throw new Error('Query length must be between 1 and 500 characters');
+  }
+
+  // Validate numResults range
+  if (options.numResults !== undefined) {
+    const numResults = parseInt(options.numResults, 10);
+    if (isNaN(numResults) || numResults < 1 || numResults > 10) {
+      throw new Error('numResults must be a number between 1 and 10');
+    }
+  }
+
   const body = {
     query: options.query,
     engineType: options.engineType || 'LiteAdvanced',
     timeRange: options.timeRange || 'NoLimit',
     contents: {
-      mainText: options.contents == 'mainText',
+      mainText: options.contents !== 'summary',  // 默认为 true，除非显式指定为 'summary'
       summary: options.contents == 'summary'
     }
   };
@@ -105,7 +118,8 @@ async function search(options) {
       headers: {
         'Content-Type': 'application/json',
         'X-API-Key': apiKey,
-        'User-Agent': 'AlibabaCloud-Agent-Skills'
+        'User-Agent': 'AlibabaCloud-Agent-Skills/alibabacloud-iqs-search',
+        'x-iqs-source': 'skill.alibabacloud-iqs-search',
       },
       body: JSON.stringify(body),
       signal: controller.signal

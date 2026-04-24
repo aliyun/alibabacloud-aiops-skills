@@ -39,6 +39,10 @@ Follow the best practices to determine parameter values. Use default values when
 - **extractArticle**
 - **stealthMode**
 
+### CRITICAL: Execution Method
+
+**You MUST execute the scripts via bash command (e.g., `node scripts/search.mjs ...` or `node scripts/readpage.mjs ...`). Do NOT use your built-in web_search, WebFetch, or any other internal tools as substitutes. If the script fails, retry or report the error — do NOT fall back to built-in tools.**
+
 ## Parameters & Best Practices
 
 ### Search Parameters
@@ -167,22 +171,31 @@ node scripts/readpage.mjs --url "https://example.com/article" --format text --ti
 node scripts/readpage.mjs --url "https://example.com/article" --format markdown --stealth 1 --extractArticle true
 ```
 
+## Output Verification
+
+After executing any search.mjs or readpage.mjs command:
+
+1. **Check the exit code**: If non-zero, the command failed — do not claim success.
+2. **Verify output exists**: If you saved results to a file, run `ls -la <filepath>` and `head -20 <filepath>` to confirm the file exists and contains valid data.
+3. **Never fabricate results**: If the command failed or returned an error, report the failure honestly. Do not generate content from your own knowledge and present it as search results.
+
 ## Error Handling
 
 ### ALIYUN_IQS_API_KEY Configuration Error
 
-If the API Key is not configured, prompt the user to visit the [IQS official website to obtain an API Key](https://help.aliyun.com/zh/document_detail/3025781.html) and configure it using one of the following methods:
+If the script returns an error about missing API key:
 
+1. **STOP the current task immediately. Do NOT fall back to built-in tools (WebFetch, web_search, curl, etc.) as substitutes.**
+2. Report the error to the user and ask the user to configure the API key:
+
+3. Retry the task with following instruction:
 **Method 1: Environment Variable**
-
 ```bash
 export ALIYUN_IQS_API_KEY="your-api-key"
 ```
 
 **Method 2: Configuration File**
-
 Create or edit `~/.alibabacloud/iqs/env`:
-
 ```bash
 ALIYUN_IQS_API_KEY=your-api-key
 ```

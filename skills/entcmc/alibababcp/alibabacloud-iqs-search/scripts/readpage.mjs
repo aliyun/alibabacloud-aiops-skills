@@ -87,6 +87,22 @@ async function readPage(options) {
     throw new Error('URL must start with http:// or https://');
   }
 
+  // Validate timeout range
+  if (options.timeout !== undefined) {
+    const timeout = parseInt(options.timeout, 10);
+    if (isNaN(timeout) || timeout < 1000 || timeout > 180000) {
+      throw new Error('timeout must be a number between 1000ms (1s) and 180000ms (180s)');
+    }
+  }
+
+  // Validate pageTimeout range
+  if (options.pageTimeout !== undefined) {
+    const pageTimeout = parseInt(options.pageTimeout, 10);
+    if (isNaN(pageTimeout) || pageTimeout < 1000 || pageTimeout > 120000) {
+      throw new Error('pageTimeout must be a number between 1000ms (1s) and 120000ms (120s)');
+    }
+  }
+
   const format = options.format || 'markdown';
   const body = {
     url: options.url,
@@ -99,15 +115,46 @@ async function readPage(options) {
     }
   };
 
-  const response = await fetch(API_ENDPOINT, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-API-Key': apiKey,
-      'User-Agent': 'AlibabaCloud-Agent-Skills'
-    },
-    body: JSON.stringify(body)
-  });
+  // Create an AbortController to handle timeouts
+  const controller = new AbortController();
+  const timeoutDuration = Math.max(parseInt(options.timeout, 10) || 60000, 5000); // Minimum 5 seconds timeout
+
+  // Set up timeout
+  const timeoutId = setTimeout(() => {
+    controller.abort();
+  }, timeoutDuration);
+
+  try {
+    const response = await fetch(API_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': apiKey,
+        'User-Agent': 'AlibabaCloud-Agent-Skills/alibabacloud-iqs-search',
+        'x-iqs-source': 'skill.alibabacloud-iqs-readpage',
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
+
+    const data = await response.json();
+
+    if (data.errorCode) {
+      throw new Error(`${data.errorCode}: ${data.errorMessage}`);
+    }
+
+    return formatContent(data.data, format);
+  } catch (error) {
+    clearTimeout(timeoutId);
+
+    if (error.name === 'AbortError') {
+      throw new Error(`Request timed out after ${timeoutDuration}ms`);
+    }
+
+    throw error;
+  }
 
   const data = await response.json();
 
