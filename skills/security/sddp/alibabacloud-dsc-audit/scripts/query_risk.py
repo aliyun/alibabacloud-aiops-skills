@@ -23,7 +23,7 @@ def create_client():
     credential = CredentialClient()
     config = open_api_models.Config(credential=credential)
     config.endpoint = 'sddp.cn-zhangjiakou.aliyuncs.com'
-    config.user_agent = 'AlibabaCloud-Agent-Skills'
+    config.user_agent = 'AlibabaCloud-Agent-Skills/alibabacloud-dsc-audit'
     return OpenApiClient(config)
 
 
