@@ -17,7 +17,7 @@ Success verification methods for OpenSearch instance management operations.
 ```bash
 aliyun opensearch describe-app-group \
   --app-group-identity <instance_name> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-opensearch-app-manage
 ```
 
 **Success Criteria**:
@@ -81,7 +81,7 @@ aliyun opensearch create-app-group \
       "spec": "opensearch.private.common"
     }
   }' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-opensearch-app-manage
 ```
 
 **Success Criteria**:
@@ -115,7 +115,7 @@ aliyun opensearch create-app-group \
       "spec": "opensearch.private.common"
     }
   }' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-opensearch-app-manage
 
 # Second request with same token (using same CLIENT_TOKEN)
 aliyun opensearch create-app-group \
@@ -131,7 +131,7 @@ aliyun opensearch create-app-group \
       "spec": "opensearch.private.common"
     }
   }' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-opensearch-app-manage
 ```
 
 **Success Criteria**:
@@ -151,7 +151,7 @@ aliyun opensearch list-app-groups \
   --engine-type ha3 \
   --page-number 1 \
   --page-size 10 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-opensearch-app-manage
 ```
 
 **Success Criteria**:
@@ -170,7 +170,7 @@ aliyun opensearch list-app-groups \
 ```bash
 aliyun opensearch describe-app-group \
   --app-group-identity <instance_name> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-opensearch-app-manage
 ```
 
 **Success Criteria**:
@@ -230,7 +230,7 @@ aliyun opensearch create-app-group \
       \"spec\": \"opensearch.private.common\"
     }
   }" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-opensearch-app-manage
 
 echo ""
 echo "=== 2. Wait for Instance Production ==="
@@ -240,7 +240,7 @@ echo ""
 echo "=== 3. Describe Instance (Verify Creation) ==="
 aliyun opensearch describe-app-group \
   --app-group-identity $APP_NAME \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-opensearch-app-manage
 
 echo ""
 echo "=== 4. List Instances ==="
@@ -248,7 +248,7 @@ aliyun opensearch list-app-groups \
   --engine-type ha3 \
   --page-number 1 \
   --page-size 10 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-opensearch-app-manage
 
 echo ""
 echo "=== Test Complete ==="
@@ -273,5 +273,5 @@ echo "Note: To delete test instance, please use OpenSearch Console"
 
 ```bash
 # Enable debug mode for detailed request/response
-aliyun opensearch list-app-groups --log-level=debug --user-agent AlibabaCloud-Agent-Skills
+aliyun opensearch list-app-groups --log-level=debug --user-agent AlibabaCloud-Agent-Skills/alibabacloud-opensearch-app-manage
 ```

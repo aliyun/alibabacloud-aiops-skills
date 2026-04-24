@@ -28,24 +28,38 @@ Alibaba Cloud OpenSearch Instance Management
 ├── DescribeAppGroup   (Describe Instance)
 └── ListAppGroups      (List Instances)
 ```
-
 ---
 
 ## Installation
 
-> **Pre-check: Aliyun CLI >= 3.3.1 required**
-> Run `aliyun version` to verify >= 3.3.1. If not installed or version too low,
-> see [references/cli-installation-guide.md](references/cli-installation-guide.md) for installation instructions.
-> Then **[MUST]** run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+> **Pre-check: Aliyun CLI >= 3.3.3 required**
+> Run `aliyun version` to verify >= 3.3.3. If not installed or version too low,
+> run `curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash` to update,
+> or see [references/cli-installation-guide.md](references/cli-installation-guide.md) for installation instructions.
+
+**Pre-check: Aliyun CLI plugin update required**
+> [MUST] run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+> [MUST] run `aliyun plugin update` to ensure that any existing plugins are always up-to-date.
 
 ```bash
 # Install/Upgrade Aliyun CLI
-curl --connect-timeout 10 --max-time 60 -fsSL https://aliyuncli.alicdn.com/install.sh | bash
-aliyun version  # Ensure >= 3.3.1
+curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash
+aliyun version  # Ensure >= 3.3.3
 
 # Enable auto plugin installation
 aliyun configure set --auto-plugin-install true
+
+# Update plugins
+aliyun plugin update
 ```
+
+**[MUST] CLI User-Agent** — Every `aliyun` CLI command invocation must include:
+`--user-agent AlibabaCloud-Agent-Skills/alibabacloud-opensearch-app-manage`
+
+**[MUST] AI-Mode** — Before executing CLI commands, run:
+1. `aliyun configure ai-mode enable`
+2. `aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-opensearch-app-manage"`
+After all CLI operations complete, run: `aliyun configure ai-mode disable`
 
 ---
 
@@ -92,7 +106,6 @@ aliyun configure set --auto-plugin-install true
 ---
 
 ## RAM Permissions
-
 > **[MUST] RAM Permission Pre-check:** 
 > Before executing any operation, ensure the current user has the required RAM permissions.
 > See [references/ram-policies.md](references/ram-policies.md) for detailed permission list.
@@ -100,13 +113,11 @@ aliyun configure set --auto-plugin-install true
 ---
 
 ## Parameter Confirmation
-
 > **IMPORTANT: Parameter Confirmation** — Before executing any command or API call,
 > ALL user-customizable parameters (e.g., instance name, instance type, charge type, quota spec, etc.) MUST be confirmed with the user. 
 > Do NOT assume or use default values without explicit user approval.
 
 ### Required Parameters
-
 | Parameter | Required | Description | Default |
 |-----------|----------|-------------|---------|
 | `name` | Yes | Instance name | None |
@@ -122,7 +133,6 @@ aliyun configure set --auto-plugin-install true
 | `order.autoRenew` | No | Auto-renewal | `false` |
 
 ### Spec Types
-
 | Spec Code | Description |
 |-----------|-------------|
 | `opensearch.share.common` | Shared Common |
@@ -131,7 +141,6 @@ aliyun configure set --auto-plugin-install true
 | `opensearch.private.storage` | Dedicated Storage |
 
 ### Industry Types (for enhanced type only)
-
 | Industry Code | Description |
 |---------------|-------------|
 | `general` | General (default) |
@@ -172,7 +181,7 @@ aliyun opensearch create-app-group \
   }' \
   --connect-timeout 3 \
   --read-timeout 10 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-opensearch-app-manage
 ```
 
 **Optional Parameters** (add in body):
@@ -203,7 +212,7 @@ aliyun opensearch create-app-group \
   }' \
   --connect-timeout 3 \
   --read-timeout 10 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-opensearch-app-manage
 ```
 
 **Example**: Create a standard (High-performance) instance
@@ -226,7 +235,7 @@ aliyun opensearch create-app-group \
   }' \
   --connect-timeout 3 \
   --read-timeout 10 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-opensearch-app-manage
 ```
 
 **Example**: Create a subscription (prepaid) instance
@@ -257,7 +266,7 @@ aliyun opensearch create-app-group \
   }' \
   --connect-timeout 3 \
   --read-timeout 10 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-opensearch-app-manage
 ```
 
 **Dry-run Mode Example** (validates parameters only, no actual creation):
@@ -277,7 +286,7 @@ aliyun opensearch create-app-group \
   }' \
   --connect-timeout 3 \
   --read-timeout 10 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-opensearch-app-manage
 ```
 
 **Idempotent Creation Example** (prevents duplicate creation):
@@ -300,7 +309,7 @@ aliyun opensearch create-app-group \
   }' \
   --connect-timeout 3 \
   --read-timeout 10 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-opensearch-app-manage
 ```
 
 ### Task 2: List Instances
@@ -310,7 +319,7 @@ aliyun opensearch list-app-groups \
   --engine-type ha3 \
   --page-number <page> \
   --page-size <size> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-opensearch-app-manage
 ```
 
 **Supported Filter Parameters**:
@@ -331,7 +340,7 @@ aliyun opensearch list-app-groups \
   --page-size 10 \
   --connect-timeout 3 \
   --read-timeout 10 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-opensearch-app-manage
 ```
 
 ### Task 3: Describe Instance
@@ -341,7 +350,7 @@ aliyun opensearch describe-app-group \
   --app-group-identity <instance_name_or_id> \
   --connect-timeout 3 \
   --read-timeout 10 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-opensearch-app-manage
 ```
 
 **Example**: Get instance details
@@ -351,7 +360,7 @@ aliyun opensearch describe-app-group \
   --app-group-identity my_search_instance \
   --connect-timeout 3 \
   --read-timeout 10 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-opensearch-app-manage
 ```
 
 **Response includes**:
@@ -365,7 +374,6 @@ aliyun opensearch describe-app-group \
 ---
 
 ## Success Verification
-
 For operation verification, see [references/verification-method.md](references/verification-method.md)
 
 ### Quick Verification
@@ -376,7 +384,7 @@ aliyun opensearch describe-app-group \
   --app-group-identity <instance_name> \
   --connect-timeout 3 \
   --read-timeout 10 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-opensearch-app-manage
 ```
 
 Check if `result.instanceId` field is non-empty; if non-empty, instance creation succeeded.
@@ -384,13 +392,11 @@ Check if `result.instanceId` field is non-empty; if non-empty, instance creation
 ---
 
 ## Resource Cleanup
-
 To delete instances, please use [OpenSearch Console](https://opensearch.console.aliyun.com/).
 
 ---
 
 ## API and Command Reference
-
 For complete API list, see [references/related-apis.md](references/related-apis.md)
 
 | Operation | CLI Command | API Action |
@@ -484,7 +490,6 @@ aliyun opensearch create-app-group --client-token $CLIENT_TOKEN ...
 ---
 
 ## Reference Links
-
 | Document | Description |
 |----------|-------------|
 | [references/related-apis.md](references/related-apis.md) | Complete API List |
