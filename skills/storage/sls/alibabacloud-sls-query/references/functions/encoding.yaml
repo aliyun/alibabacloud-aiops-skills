@@ -1,0 +1,37 @@
+category: encoding_functions
+name: 编码解码函数
+description: 数据编码和解码
+
+support:
+  sql: true
+  spl: true
+
+functions:
+  - name: url_encode
+    syntax: "url_encode(str)"
+    description: URL编码
+    examples:
+      sql: "* | SELECT url_encode(query)"
+      spl: "* | extend encoded_query = url_encode(query)"
+  
+  - name: url_decode
+    syntax: "url_decode(str)"
+    description: URL解码
+    examples:
+      sql: "* | SELECT url_decode(encoded_param)"
+      spl: "* | extend decoded_param = url_decode(encoded_param)"
+  
+  - name: base64_encode
+    syntax: "base64_encode(str)"
+    description: Base64编码
+    examples:
+      sql: "* | SELECT base64_encode(data)"
+      spl: "* | extend encoded_data = base64_encode(data)"
+  
+  - name: base64_decode
+    syntax: "base64_decode(str)"
+    description: Base64解码
+    examples:
+      sql: "* | SELECT base64_decode(encoded_data)"
+      spl: "* | extend decoded_data = base64_decode(encoded_data)"
+

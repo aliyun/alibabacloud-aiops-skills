@@ -1,0 +1,38 @@
+category: mobile_functions
+name: 电话号码函数
+description: 分析中国内地地域电话号码的归属地、运营商等信息
+
+support:
+  sql: true
+  spl: false
+
+functions:
+  - name: mobile_carrier
+    syntax: "mobile_carrier(mobile_number)"
+    description: 获取手机号码的运营商
+    returns: varchar类型（中国移动、中国联通、中国电信）
+    example: "* | SELECT mobile_carrier('13900000000')"
+  
+  - name: mobile_city
+    syntax: "mobile_city(mobile_number)"
+    description: 获取手机号码的归属城市
+    returns: varchar类型
+    example: "* | SELECT mobile_city('13900000000')"
+  
+  - name: mobile_province
+    syntax: "mobile_province(mobile_number)"
+    description: 获取手机号码的归属省份
+    returns: varchar类型
+    example: "* | SELECT mobile_province('13900000000')"
+
+use_cases:
+  - 用户地域分析
+  - 运营商分布统计
+  - 号码归属地查询
+  - 区域用户画像
+
+important_notes:
+  - 仅支持中国内地手机号码
+  - 号码格式需为11位数字字符串
+  - 数据库会定期更新
+  - 对于无效号码返回NULL

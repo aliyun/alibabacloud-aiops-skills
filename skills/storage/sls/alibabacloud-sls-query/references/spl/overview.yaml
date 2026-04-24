@@ -1,0 +1,207 @@
+# 使用场景
+scenarios:
+  - name: Logtail采集
+    description: Logtail采集时使用SPL指令处理日志
+  - name: 写入处理器
+    description: 写入处理器时使用SPL指令处理数据
+  - name: 实时消费
+    description: 实时消费时使用SPL指令处理数据
+  - name: 扫描查询
+    description: 扫描查询时使用SPL指令处理数据
+
+grammar:
+  - name: SPL 基本语法
+    description: <data-source> | <spl-cmd> | <spl-cmd> | ...
+    note: 
+      - SPL语句是多级数据处理语句，通过英文管道符(|)连接，以英文分号(;)作为语句结束符
+      - 指令（command）是 SPL 中的基本单位，每个指令可以有参数和表达式
+      - 在SPL中数据源一般使用星号(*)，表示所有数据作为输入
+      - 管道前面指令的输出会作为管道后面指令的输入
+      - 单条语句或多语句中最后一条的结束符(;)可选
+      - 关于转义说明，SPL不支持转义处理，所以正则表达式中的反斜杠不需要双重转义，比如\d 直接写 \d即可
+
+     limitations:
+      - 关于<data-source>说明，处理在扫描查询这个使用场景下，其他场景只能填*
+      - 扫描查询模式下是大小写不敏感的，其他场景是大小写敏感的
+      - SPL管道之后不能再写SQL语句，反之亦然
+      
+  
+  - name: 数据源说明
+    description: 数据源(data-source)包括SLS Logstore以及SPL定义的数据集
+    note:
+      - 在不同场景中数据源定义存在差异
+      - 除了扫描查询场景，其他场景都使用*(星号)表示全部原始数据，字段名大小写敏感
+      - 在扫描查询场景下 <data-source> 可以写符合 `../query_analysis/indexSearch.yaml` 中 query 语法规则的查询语句
+  
+  - name: 类型说明
+    note: 
+      - 字段默认为VARCHAR类型，数值运算前必须用cast()或try_cast()转换
+      - 特殊情况：__time__ 和 __time__ns_part__ 字段默认按照bigint类型处理，如果要做数字运算，无需cast
+
+  - name: 语法符号
+    description: SPL语法中的特殊符号说明
+    symbols:
+      - symbol: "*"
+        description: "SLS Logstore数据作为SPL输入数据时的占位符"
+      - symbol: "|"
+        description: "SPL管道符，用于引出SPL指令表达式"
+      - symbol: ";"
+        description: "SPL语句结束标识"
+      - symbol: "'...'"
+        description: "字符串常量引用符号"
+      - symbol: '"..."'
+        description: "字段名称、字段名模式引用符号。当字段名包含字母、数字、下划线以外的特殊字符时必须使用双引号包裹"
+      - symbol: "--"
+        description: "注释单行内容"
+      - symbol: "$"
+        description: "命名数据集引用符，格式为$<dataset-name>"
+
+# SPL指令索引
+commands:
+  # 字段操作指令
+  - name: project
+    file: project.yaml
+    category: 字段操作指令
+    description: 
+      - 保留与给定模式相匹配的字段，同时可重命名指定字段
+      - 注意这里的project和sql的select是不一样的，不能写project *, 而是需要确定的字段列表
+    applicable_scenarios: [所有场景]
+  
+  - name: project-away
+    file: project-away.yaml
+    category: 字段操作指令
+    description: 移除与给定模式相匹配的字段，保留其他所有字段
+    applicable_scenarios: [所有场景]
+  
+  - name: project-rename
+    file: project-rename.yaml
+    category: 字段操作指令
+    description: 重命名指定字段，并保留其他所有字段
+    applicable_scenarios: [所有场景]
+  
+  # 结构化数据计算指令
+  - name: where
+    file: where.yaml
+    category: 结构化数据SQL计算指令
+    description: 根据SQL表达式过滤数据，保留满足条件的数据条目
+    applicable_scenarios: [所有场景]
+  
+  - name: extend
+    file: extend.yaml
+    category: 结构化数据SQL计算指令
+    description: 
+    - 通过SQL表达式计算结果产生新字段
+    - 通过extend可以生成复杂结构的字段, 比如ARRAY、MAP、JSON等
+    - 如果有复杂的计算需求, 可以考虑使用Lambda表达式
+    applicable_scenarios: [所有场景]
+  
+  # 弱结构化数据提取指令
+  - name: parse-json
+    file: parse-json.yaml
+    category: 弱结构化数据提取指令
+    description: 提取指定字段中的第一层JSON信息
+    applicable_scenarios: [所有场景]
+  
+  - name: parse-regexp
+    file: parse-regexp.yaml
+    category: 弱结构化数据提取指令
+    description: 使用正则表达式提取指定字段中的信息
+    applicable_scenarios: [所有场景]
+  
+  - name: parse-csv
+    file: parse-csv.yaml
+    category: 弱结构化数据提取指令
+    description: 提取指定字段中的CSV格式信息
+    applicable_scenarios: [所有场景]
+  
+  - name: parse-kv
+    file: parse-kv.yaml
+    category: 弱结构化数据提取指令
+    description: 提取指定字段中的键值对信息
+    applicable_scenarios: [所有场景]
+
+  - name: pack-fields
+    file: pack-fields.yaml
+    category: 弱结构化数据提取指令
+    description: 将一个或多个字段打包为一个 JSON Object 格式的字段
+    applicable_scenarios: [规则消费]
+
+  # 聚合指令
+  - name: stats
+    file: stats.yaml
+    category: 聚合指令
+    description: 
+      - 对日志数据进行统计、分组和聚合操作， 注意stats指令中聚合的字段必须使用extend指令计算后才能使用
+      - 注意stats是是 stats field=agg_func(field) 这种形式
+    example: |
+      * | stats total = count(*)
+      * | extend avg_latency = avg(cast(latency as double)) |stats avg_latency = avg(avg_latency) by status
+      * | extend total_bytes = sum(cast(bytes as BIGINT)) | stats cnt = count(*), total_bytes = sum(total_bytes) by method, status
+      * | stats pv = count(*) by ip
+    applicable_scenarios: [扫描查询]
+  
+  - name: sort
+    file: sort.yaml
+    category: 聚合指令
+    description: 对查询结果进行排序, 注意sort使用有特殊要求，具体查看sort.yaml文件
+    applicable_scenarios: [扫描查询]
+  
+  - name: limit
+    file: limit.yaml
+    category: 聚合指令
+    description: 限制查询结果返回的日志行数, 注意limit使用有特殊要求，具体查看limit.yaml文件
+    applicable_scenarios: [扫描查询]
+
+best_practices:
+
+  - name: 性能优化
+    tips:
+      - 尽早使用where过滤，减少后续处理的数据量
+      - 字符串常量使用单引号，字段名包含特殊字符使用双引号
+
+  - name: JSON字符串提取等处理
+    file: json_string_process.yaml
+    tips:
+      - 注意把json对象转换为string需要用json_format函数
+
+  - name: 数据处理顺序
+    tips:
+      - 推荐处理顺序：where过滤 -> parse解析 -> extend计算 -> project选择字段
+      - 在扫描查询中：where -> parse -> extend -> stats -> sort -> limit
+  
+faq:
+  - name: 同样的正则在SQL中可以正常匹配，但是在SPL中无法匹配
+    answer: 
+      - SPL使用RE2正则引擎，某些正则特性受到限制,RE2不支持的特性包括：后向引用(\1)、环视(?<=...)、贪婪模式修饰符等,建议使用RE2兼容的正则表达式语法
+
+  - name: SPL支持对字符串进行转义吗
+    answer:
+      - SPL对于字符串处理默认都是按字面量处理，也就是不带转义。有一些需要转义的场景可以这样处理
+        - 比如要表达ASCII码的字符，可以在extend/where指令使用chr函数，比如chr(10) 表示ASCII码为10的\n
+        - 使用ascii_escape/ascii_unescape/unicode_unescape等函数进行转义，参考 `../functions/string.yaml` 文档
+        - 如果用户写了一个`* | extend x=split(column, '\n')` 这里的\n实际上是一个字面量，不会被转义，正确的写法是`* | extend x=split(column, chr(10))`
+
+  - name: SPL中如何删除一个字段
+    anser:
+      - 把一个字段的值设置为NULL, 就会在最终输出的时候删除这个字段
+
+特别注意点:
+    - name: 字段名注意事项
+    tips:
+      - 处理扫描查询场景，其他场景默认是字段名大小写敏感
+      - 在扫描查询场景中，字段名大小写不敏感
+      - 字段名包含特殊字符时必须用双引号包裹
+      - 需要双引号的特殊字符包括：冒号(:)、点(.)、中划线(-)、空格等字母数字下划线以外的字符
+        - 需要用双引号的字段示例: fieldA.x 因为有. 需要加双引号变成 "fieldA.x", 这个带点的字段可能是json字段，看下面“对带.的字符名处理，特别注意点”
+      - 示例：正确写法 "__tag__:__path__"，错误写法 __tag__:__path__
+      - 系统字段如 __time__、__source__、__topic__ 等不包含特殊字符，不需要双引号
+      - 标签字段格式为 __tag__:<key>，其中<key>如果不含特殊字符可以不用双引号，如 __tag__:hostname
+      - 正则表达式中要用到反斜杠不需要双重转义，比如\d 直接写 \d即可，不需要写成\\d
+      - 但完整的标签字段名 "__tag__:hostname" 因为包含冒号，在某些指令中建议加双引号以保证兼容性
+
+  - name: 对带.的字符名处理，特别注意点
+    tips:
+      - 特别注意点：如果字段名中包含.，可能是因为这个字段实际是一个json类型的字符串, 而.是这个json字符串里的一个子key
+      - 在SLS索引查询场景可能因为单独配置了JSON子key可以直接做查询
+      - 这个情况的处理方法是在SPL中先使用json_extract/json_extract_scalar等函数提取key后做处理，注意一般不需要用parse-json
+      - 处理方法示例：* | where json_extract(fieldA, '$.xxx') = 'value' # 对应索引查询的 fieldA.xxx: 'value'

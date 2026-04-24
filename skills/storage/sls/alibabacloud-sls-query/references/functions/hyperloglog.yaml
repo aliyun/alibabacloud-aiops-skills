@@ -1,0 +1,47 @@
+category: hyperloglog_functions
+name: HyperLogLog函数
+description: 对大数据集进行统计处理，牺牲精度以节省内存
+
+support:
+  sql: true
+  spl: false
+
+functions:
+  - name: approx_set
+    syntax: "approx_set(x)"
+    description: 将x的值转换为HyperLogLog对象
+    returns: HyperLogLog类型
+    example: "* | SELECT approx_set(client_ip)"
+  
+  - name: cardinality
+    syntax: "cardinality(hll)"
+    description: 计算HyperLogLog对象中唯一值的估算数量
+    returns: bigint类型
+    example: "* | SELECT cardinality(approx_set(client_ip)) AS uv"
+  
+  - name: empty_approx_set
+    syntax: "empty_approx_set()"
+    description: 创建一个空的HyperLogLog对象
+    example: "* | SELECT empty_approx_set()"
+  
+  - name: merge
+    syntax: "merge(hll)"
+    description: 合并多个HyperLogLog对象
+    returns: HyperLogLog类型
+    example: "* | SELECT cardinality(merge(approx_set(client_ip))) FROM log GROUP BY status"
+
+use_cases:
+  - UV（独立访客）统计
+  - 去重计数
+  - 多维度UV分析
+  - 实时大数据去重
+
+important_notes:
+  - HyperLogLog是一种概率数据结构
+  - 标准误差约2.3%
+  - 内存占用固定约12KB
+  - 适合大数据量的去重统计
+  - 比count(distinct)更高效
+
+related:
+  - approx_distinct函数是HyperLogLog的便捷封装

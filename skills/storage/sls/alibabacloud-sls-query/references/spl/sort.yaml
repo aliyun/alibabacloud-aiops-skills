@@ -1,0 +1,19 @@
+name: sort
+category: 聚合指令
+description: 对查询结果进行排序
+grammar: sort [<field1> [asc|desc]] [, <field2> [asc|desc]], ...
+example: |
+  * | stats cnt = count(*) by status | sort cnt desc
+  * | extend status_num = cast(status as BIGINT) | project host,client_ip,status_num | sort status_num asc, __time__ desc
+scenarios:
+  - 扫描查询
+note:
+  - 默认为升序(asc)
+  - 可以指定多个排序字段
+  - sort实际被当成聚合指令来执行，对于聚合指令执行的时候要求最终列确定
+  - 以下指令可以让列确定
+    - stats
+    - project
+  - 比如 `* | sort status` 这样是不合适的，由于sort后的列不固定无法执行会报错
+  - 正确的写法是 `* | project host,client_ip,status | sort  status`  
+

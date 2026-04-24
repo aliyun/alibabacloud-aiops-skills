@@ -1,0 +1,35 @@
+name: stats
+category: 聚合指令
+description: 对日志数据进行统计、分组和聚合操作
+grammar: stats <output1> = <aggOperator1> [, <output2> = <aggOperator2>, ...] [by <group1>, <group2>, ...]
+example: |
+  * | stats total = count(*)
+  * | extend avg_latency = avg(latency) | stats avg_latency = avg(avg_latency) by status
+  * | extend total_bytes = sum(bytes) | stats cnt = count(*), total_bytes = sum(total_bytes) by method, status
+  * | stats pv = count(*) by ip
+scenarios:
+  - 扫描查询
+supportedAggregators:
+  - count
+  - count_if
+  - min
+  - max
+  - sum
+  - avg
+  - skewness
+  - kurtosis
+  - approx_percentile
+  - approx_distinct
+  - bool_and
+  - bool_or
+  - every
+  - arbitrary
+  - array_agg
+note:
+  - 使用等号(=)指定输出字段名，不使用as关键字
+  - 使用by子句进行分组统计
+  - 可以在一条stats指令中使用多个聚合函数，用逗号分隔
+  - 默认返回前100条聚合结果，需要更多结果可结合limit指令使用
+  - 特别注意，stats中聚合函数里只能使用字段不能写表达式，如果需要计算表达式，需要先使用extend指令计算后才能使用
+  - 聚合操作里的字段如果有类型转换，需要先使用extend先做好cast再使用stats
+

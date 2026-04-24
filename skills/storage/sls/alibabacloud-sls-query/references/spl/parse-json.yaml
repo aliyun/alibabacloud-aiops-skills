@@ -1,0 +1,17 @@
+name: parse-json
+category: 弱结构化数据提取指令
+description: 提取指定字段中的第一层JSON信息
+grammar: parse-json <field>
+example: |
+  * | parse-json message
+  * | parse-json body | extend user_id = cast(user_id as BIGINT)
+scenarios:
+  - 在所有场景中都适用
+note:
+  - 只提取第一层JSON字段, 提取后字段名默认就是json里dict的key名，不带前缀的，比如 `{"msg" : "hello"}` 提取后字段名就是msg
+  - 提取的字段会添加到原有字段中
+  - 如果JSON解析失败，不会报错，继续处理
+  - parse-json 和 * | extend x=json_extract(x, '$.key') 有区别？
+    - parse-json会提取json第一层所有字段出来，而json_extract/json_extract_scalar等只会提取指定字段
+    - 如果用户的需求是明确的使用或者提取某个json中字段的场景，应该优先使用json_extract/json_extract_scalar等函数，而不是parse-json
+    - json_extract等相关函数使用场景可以参考 `json_string_process.yaml` 文档

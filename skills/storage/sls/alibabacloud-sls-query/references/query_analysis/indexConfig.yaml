@@ -1,0 +1,120 @@
+concept:
+  - name: 索引
+    description:
+    - 类似数据库索引的概念，不过SLS中字段索引需要开启后才能进行查询分析
+
+  - name: 索引配置
+    description:
+    - 索引配置由下面多个配置组成，包括下面的全文索引、字段所哟、分词、中文分词、字段类型
+
+  - name: 全文索引
+    description:
+    - 当需要对整个日志建立索引，并通过不指定字段的方式进行查询时候，需要开启全文索引
+
+  - name: 字段索引
+    description:
+    - 当需要对日志中的某个字段建立索引，并通过指定字段的方式进行查询和分析时候，需要开启字段索引
+    - 对于字段索引，有text、long、double和JSON四种类型
+  
+  - name: 字段类型
+    description:
+    - 字段类型有text、long、double和JSON四种类型
+
+  - name: 分词与分词符
+    description:
+    - 分词符由一堆ASCII字符组成
+    - 分词的作用是将日志拆成多个term，分词的过程相当于是把内容按照预设的分词符（一组ASCII码）进行split
+    - 在建立索引的时候, 会根据分词符将日志拆成多个term, 然后建立term的倒排索引
+    - 在查询的时候，query会按照分词配置进行分词，然后匹配对应的term，然后查倒排索引，从而找到对应的日志
+    - 这里说的分词是指ASCII分词，中文分词有单独的开关
+  
+  - name: 中文分词
+    description:
+    - 中文分词是针对中文的特殊处理，在索引配置有单独的开关
+    - 开启中文分词后索引的性能有所下降
+
+  - name: 开启统计
+    description:
+    - 开启统计后，才能进行SQL分析
+    - 目前 查询型logstore 不支持开启统计，因此也不支持跑SQL分析
+    - 对于 标准型logstore 开启统计分析没有额外的费用
+
+  - name: 统计字段（text）最大长度
+    description:
+    - 统计字段（text）最大长度是SQL分析时，默认截取一定长度，日志服务的默认配置为 2048 字节（2KB）。
+    - 可以在页面上调大到16KB, 调大索引字段最大长度没有额外的费用
+
+  - name: 重建索引
+    description:
+    - 索引配置提交后会对后面新写入的日志生效
+    - 如果希望对历史数据生效，需要使用重建索引功能
+
+  - name: 日志聚类（LogReduce）
+    description:
+    - 打开日志聚类开关后，日志服务在采集文本日志时会自动聚合相似度高的日志，提取共同的日志模式。
+
+  - name: 自动生成索引
+    description:
+    - 这个是前端提供的自动抽样一部分日志来推导出索引配置的功能，客户可以根据推导出的索引配置点击追加或者覆盖现有索引配置
+    - 由于自动生成索引的时候是抽样了一部分日志，所以不一定能推导出所有字段。客户可以按需再追剧新的字段
+
+  - name: 索引流量
+    description:
+    - 索引流量决定了索引的费用，按每GB为单位收费
+    - 如果开启了全文索引后，索引流量等同日志流量
+
+  - name: 开启索引后默认可查的字段
+    description:
+    - 开启索引后，默认会为 __time__、__topic__、__source__
+    - 高精度时间的纳秒部分如果需要在SQL中分析使用，需要额外加字段索引,`__time__ns_part__` 类型为bigint
+
+api:
+  - name: CreateIndex
+    aliyun_doc: https://help.aliyun.com/zh/sls/developer-reference/create-index
+    description: 注意Index的创建需要传入全量的Index配置，不支持对单个字段进行操作
+
+  - name: DeleteIndex
+    aliyun_doc: https://help.aliyun.com/zh/sls/developer-reference/delete-index
+
+  - name: GetIndexConfig
+    aliyun_doc: https://help.aliyun.com/zh/sls/developer-reference/get-index-config
+
+  - name: UpdateIndex
+    aliyun_doc: https://help.aliyun.com/zh/sls/developer-reference/update-index
+    description: 注意Index的更新需要传入全量的Index配置，不支持对单个字段进行操作
+
+faq:
+  - question: 之前 logstore 没有开启索引配置，后来才开启的，可以在控制台或 GetLogs 接口查到日志吗？
+    answer: 由于索引配置只对配置后写入的数据生效，所以之前没有开启索引配置的日志无法被查询到。如需查询历史日志，请使用重建索引功能。
+  
+  - question: 即使在控制台不加任何查询或者分析条件，如果我想在控制台查到日志也要求开索引配置吗？
+    answer: 是的，即使在控制台不加任何查询或者分析条件，如果想在控制台查到日志也要求开索引配置。索引是查询和分析的前提条件
+  
+  - question: 调大统计分析的字段长度（默认限制 2KB）调大到最大 16KB，会有什么影响吗？
+    answer: 调大后对新写入的数据生效，如果历史数据要生效可以重建索引。调大字段长度没有额外的费用
+  
+  - question: 如何在日志中搜索包含空格的关键字？
+    answer: 
+    - 一般情况下空格是一个分词符，可以通过SPL过滤的方式来处理，比如要查的是Hello World这个词可以这样写 "Hello World" | where content like '%Hello World%'
+    - 在| 前面加上Hello World过滤是为了减少SPL处理的数据量，加速查询过程
+  
+  - question: 为什么查询和分析时，字段值会被截断？
+    answer: 
+    - 查询时，单个字段值最大长度为 512 KB，超出部分不参与查询。
+    - 分析时，默认支持的字段值最大长度为 2 KB，最大可调整为 16 KB。
+    - 可以通过修改索引配置中的"统计字段（text）最大长度"来调整，该配置修改仅对新增采集的日志数据生效。
+  
+  - question: 如何分析非索引字段？
+    answer: 
+    - 如果是分析新写入的日志，则直接为目标字段创建索引且开启统计功能。
+    - 如果是分析历史日志，则需要对历史日志重建索引且开启统计功能。
+    - 如果无法创建索引，可以打开扫描（Scan）模式，通过扫描分析功能分析日志。
+  
+  - question: 为什么我的字段索引看起来没有生效
+    answer:
+    - 可能的原因1, 字段索引刚配置，只能对新写入的数据生效，历史数据需要重建索引
+    - 另一个可能的原因是日志中的字段名和索引配置的字段名大小写可能不一致，比如配置的字段索引是Status，但是日志中的字段名是status
+
+
+limitation:
+  - 索引配置的大小上限是64KB

@@ -1,0 +1,216 @@
+sql_query:
+  # 适用范围
+  target:
+    - logstore
+    - storeview
+  
+  # 前置条件
+  prerequisites:
+    - requirement: 必须开启索引统计功能
+      description: SQL分析依赖索引配置，SQL中使用到的字段必须在索引配置中开启统计功能
+      scope: logstore级别
+      note: 索引只对配置后写入的数据生效，历史数据需重建索引
+  
+  # 语法说明
+  syntax:
+    base: "查询语句 | 分析语句"
+    description: SQL分析需要跟在索引查询语句之后，使用竖线(|)分割
+    sql_dialect: Presto SQL
+    analysis_statement:
+      description: 分析语句对查询结果或全量数据进行计算和统计
+      rules:
+        - 分析语句必须与查询语句一起使用，查询语句和分析语句以竖线 | 分割
+        - 分析语句默认分析当前 Logstore 中的数据，不需要填写 FROM 子句和 WHERE 子句
+        - 分析语句不支持使用 offset，不区分大小写，末尾不需要加分号
+        - 执行分析操作后，默认最多返回 100 行数据，最大返回 100MB 的数据
+      aliyun_doc: https://help.aliyun.com/zh/sls/query-and-analyze-logs-in-index-mode
+    notes:
+      - 索引查询语法参考 `indexSearch.yaml`
+      - 支持标准SQL语法和丰富的SQL函数
+      - 函数列表参考 `../functions/overview.yaml`
+      - 在logstore中执行的时候，表名默认是log，表示当前logstore。所以一般都写from log
+      - sql后不能再接SPL语句，反之亦然
+      - sls的presto sql版本暂时不支持在lambda中使用try, 比如 transform(array[1, 2, 3], x -> try(cast(x as BIGINT))) 这样是不支持的, 可以使用try_cast代替try, 比如 transform(array[1, 2, 3], x -> try_cast(x as BIGINT))
+    
+    # 时间范围选择
+    time_range:
+      description: 时间范围不在SQL中指定，而是通过接口参数或控制台界面指定
+      methods:
+        # SDK方式
+        - method: SDK调用
+          implementation: 在GetLogs接口中通过from_time和to_time参数指定时间范围
+          example: |
+            # Python示例
+            response = client.get_logs(
+                project=project_name,
+                logstore=logstore_name,
+                from_time=1609459200,  # 起始时间（Unix时间戳，秒）
+                to_time=1609545600,    # 结束时间（Unix时间戳，秒）
+                query="status: 200 | SELECT count(*) as pv"
+            )
+          note: 不需要在SQL的WHERE子句中再次过滤__time__字段
+        
+        # 控制台方式
+        - method: 控制台使用
+          implementation: 在查询分析页面的时间选择器中直接选择时间范围
+          steps:
+            - 打开Logstore的查询分析页面
+            - 在页面顶部的时间选择器中选择时间范围（相对时间或绝对时间）
+            - 输入查询分析语句，无需在SQL中添加时间过滤条件
+          note: 控制台会自动将选择的时间范围传递给后端
+      
+      important_notes:
+        - SQL中的__time__字段已经是过滤后的结果，代表日志的时间戳
+        - 如需在SQL中对时间进行分组、格式化等操作，使用date_format等函数
+        - 不建议在SQL WHERE子句中过滤__time__，这样会降低查询效率
+  
+  # 费用说明
+  pricing:
+    # 普通模式
+    - mode: standard
+      name: 普通SQL分析
+      cost: 免费
+      limitations:
+        concurrent: 15  # 单个Project最大并发数
+        timeout: "55秒"
+      description: 默认开启，适用于小规模数据分析
+    
+    # SQL独享版（增强模式）
+    - mode: enhanced
+      name: SQL独享版（增强模式）
+      cost: 按CPU时间计费
+      billing: "CPU时间（小时）× 单价（0.35元/核·小时）"
+      limitations:
+        concurrent: 100  # 单个Project最大并发数
+        timeout: "55秒"
+      description: 高性能与高并发，资源弹性伸缩
+      scenarios:
+        - 实时数据分析，对性能要求高
+        - 长周期数据分析（如月维度）
+        - 超大规模数据分析（千亿行级别）
+        - 高并发场景（SQL并发数大于15）
+    
+    # SQL完全精确模式
+    - mode: accurate
+      name: SQL完全精确
+      cost: 按CPU时间计费
+      billing: "CPU时间（小时）× 单价（0.35元/核·小时）"
+      limitations:
+        concurrent: 5  # 单个Project最大并发数
+        timeout: "55秒"
+      description: 零误差保证，确保数据完整加载
+      scenarios:
+        - 业务监控告警（关键指标）
+        - 严肃分析场景（财务、营收、安全审计）
+        - 在线数据服务，要求结果完全精确
+  
+  features:
+    # SCAN模式
+    - name: SCAN模式
+      description: 支持对未建索引的字段进行SQL分析
+      syntax: "查询语句 | set session mode = scan; SQL分析语句"
+      example: "* | set session mode = scan; SELECT count(1) as pv, api FROM log GROUP BY api"
+      limitations:
+        - 单Shard限制分析50万条日志
+        - 扫描总行数限制1000万条（查询过滤后）
+        - 所有字段视为varchar类型，需使用cast转换
+        - 查询语句部分仍依赖索引
+        - 不支持 *|select * 语句
+        - 性能相对较慢，适用于百万级别数据
+      pricing:
+        cost: 免费
+      notes:
+        - 已有索引的字段建议放在竖线前作为过滤条件
+        - 建议缩小时间范围减少扫描数据量
+        - 大规模数据建议使用索引分析模式
+    
+    # SQL增强
+    - name: SQL增强（SQL独享版）
+      description: 对于数据规模较大的logstore，可开启SQL增强提升执行速度
+      enable_methods:
+        # Project级别开启
+        - level: project
+          steps:
+            - 在SLS控制台首页点击小房子图标，进入项目首页
+            - 找到"SQL独享版CU数"设置
+            - 设置对应的CU数（计算单元）
+          note: 全局生效，所有查询都会使用
+        
+        # 单次查询开启
+        - level: query
+          method: 在SLS控制台查询分析框中开启SQL独享版开关
+          note: 仅对当前查询生效
+      advantages:
+        - 单节点处理能力达2GB
+        - 支持最多100个并发
+        - 资源弹性伸缩
+        - 秒级响应千亿级数据分析
+  
+  # 整体限制
+  limitations:
+    common:
+      - item: 字段值大小
+        value: "默认2KB（2048字节），最大16KB（16384字节）"
+        note: 超出部分不参与分析，可在索引配置中调整
+      
+      - item: 返回结果
+        value: "默认最多返回100行"
+        extended: "使用LIMIT最多返回100万行，最大输出数据量20GB"
+      
+      - item: 超时时间
+        value: "55秒"
+        note: SQL分析最大执行时间
+      
+      - item: Double类型精度
+        value: "最多52位"
+        note: 超过52位会造成精度损失
+      
+      - item: 数据生效机制
+        value: "只对开启统计功能后写入的数据生效"
+        solution: 历史数据需重建索引
+    
+    by_mode:
+      standard:
+        concurrent: 15
+        scan_data: "400MB（不含缓存）"
+        accuracy: "超出部分截断，标记为不精确"
+      
+      enhanced:
+        concurrent: 100
+        scan_data: "2GB（不含缓存）"
+        accuracy: "超出部分截断，标记为不精确"
+      
+      accurate:
+        concurrent: 5
+        scan_data: "无限制"
+        accuracy: "完全精确，零误差"
+  
+  # 使用示例
+  examples:
+    - query: "status: 200 | SELECT count(*) as pv FROM log"
+      description: 统计状态码为200的日志数量
+      mode: standard
+    
+    - query: "* | SELECT status, count(*) as cnt FROM log GROUP BY status ORDER BY cnt DESC LIMIT 10"
+      description: 统计各状态码出现次数，取前10
+      mode: standard
+    
+    - query: "* | set session mode = scan; SELECT api, count(*) as pv FROM log GROUP BY api"
+      description: 使用SCAN模式对未建索引的api字段进行分析
+      mode: scan
+    
+    - query: "status: 500 | SELECT date_format(__time__, '%Y-%m-%d %H:00:00') as time, count(*) as error_count FROM log GROUP BY time ORDER BY time"
+      description: 按小时统计错误日志数量（适合大数据量）
+      mode: enhanced
+      note: 建议开启SQL增强以提升性能
+
+  # 最佳实践
+  best_practices:
+    - 尽量在|前提前过滤好数据，减少需要分析的数据量
+    - 大规模或高并发场景开启SQL增强模式
+    - 关键业务指标分析使用完全精确模式
+    - 合理使用LIMIT控制返回结果数量
+    - 建议为常用查询字段配置索引并开启统计
+    - 时间范围通过接口参数或控制台选择器指定，不要在SQL的WHERE子句中过滤__time__
+    - 如需对时间进行操作，使用date_format、date_trunc等时间函数
+    - 正则表达式中的反斜杠不需要双重转义，比如\d 直接写 \d即可

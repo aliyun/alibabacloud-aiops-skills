@@ -1,0 +1,236 @@
+# SLS 函数参考索引
+
+description: |
+  本文件是当前目录下函数文档的索引。
+  当前目录包含 SLS SQL/SPL 查询支持的所有函数，按功能分类存放。
+  需要具体函数详情时，请查阅对应的 YAML 文件。
+
+# 重要说明
+important_notes:
+  - SPL中字段默认为VARCHAR类型，数值运算前必须用cast()或try_cast()转换
+  - SQL语法：* | SELECT ... (使用SELECT、WHERE、GROUP BY)
+  - SPL语法：* | extend/where/stats ... (使用extend、where、stats)
+  - 字符串必须用单引号''，双引号""或无引号表示字段名
+  - 正则表达式中反斜杠不需要双重转义，\d 直接写 \d
+
+# 函数分类目录
+function_files:
+  - file: aggregate.yaml
+    name: 聚合函数
+    functions: [count, sum, avg, max, min, count_if, arbitrary]
+    support: SQL
+    description: 数据统计和汇总，配合GROUP BY使用
+  
+  - file: string.yaml
+    name: 字符串函数
+    functions: [concat, substr, lower, upper, trim, length, split, replace, position]
+    support: SQL + SPL
+    description: 文本处理、拼接、截取、查找替换
+  
+  - file: regex.yaml
+    name: 正则表达式函数
+    functions: [regexp_like, regexp_extract, regexp_replace]
+    support: SQL + SPL
+    description: 正则匹配、提取、替换（SPL使用RE2引擎）
+  
+  - file: datetime.yaml
+    name: 日期时间函数
+    functions: [date_format, date_parse, date_trunc, from_unixtime, to_unixtime, current_timestamp]
+    support: SQL + SPL
+    description: 时间格式化、解析、截断、转换
+  
+  - file: type_conversion.yaml
+    name: 类型转换函数
+    functions: [cast, try_cast]
+    support: SQL + SPL
+    description: 数据类型转换（必须转换后才能进行数值运算）
+  
+  - file: conditional.yaml
+    name: 条件函数
+    functions: [if, case, coalesce, nullif]
+    support: SQL + SPL
+    description: 条件判断、分支逻辑、NULL处理
+  
+  - file: json.yaml
+    name: JSON函数
+    functions: [json_extract, json_extract_scalar]
+    support: SQL + SPL
+    description: 从JSON字符串提取数据
+  
+  - file: math.yaml
+    name: 数学函数
+    functions: [abs, round, floor, ceil, power, sqrt, mod]
+    support: SQL + SPL
+    description: 数学运算和计算
+  
+  - file: url.yaml
+    name: URL函数
+    functions: [url_extract_host, url_extract_path, url_extract_parameter, url_extract_protocol]
+    support: SQL + SPL
+    description: URL解析和参数提取
+  
+  - file: ip_geo.yaml
+    name: IP地理位置函数
+    functions: [ip_to_province, ip_to_city, ip_to_country, ip_to_geo]
+    support: 仅SPL
+    description: IP地址转地理位置（省份、城市、国家、经纬度）
+  
+  - file: encoding.yaml
+    name: 编码解码函数
+    functions: [url_encode, url_decode, base64_encode, base64_decode]
+    support: SQL + SPL
+    description: URL和Base64编码解码
+  
+  - file: hash.yaml
+    name: 哈希函数
+    functions: [md5, sha1, sha256]
+    support: SQL + SPL
+    description: 哈希值计算
+  
+  - file: comparison.yaml
+    name: 同比和环比函数
+    functions: [compare, ts_compare]
+    support: SQL + SPL
+    description: 计算时间序列数据的相对变化，用于同比环比分析
+  
+  - file: array.yaml
+    name: 数组函数和运算符
+    functions: [array_distinct, array_intersect, array_join, array_union, reverse, slice, contains]
+    support: SQL + SPL
+    description: 对数组进行增删改查、遍历和转换
+  
+  - file: map.yaml
+    name: Map映射函数和运算符
+    functions: [cardinality, element_at, histogram, histogram_u, map, map_keys, map_values]
+    support: SQL + SPL
+    description: 操作键值对数据结构
+  
+  - file: statistical.yaml
+    name: 数学统计函数
+    functions: [corr, covar_pop, covar_samp, stddev, variance, regr_intercept, regr_slope]
+    support: SQL
+    description: 数据分布分析、相关性分析与数值统计计算
+  
+  - file: window.yaml
+    name: 窗口函数
+    functions: [row_number, rank, dense_rank, lag, lead, first_value, last_value]
+    support: SQL
+    description: 基于数据窗口的聚合、排序和分析
+  
+  - file: approximate.yaml
+    name: 估算函数
+    functions: [approx_distinct, approx_percentile, numeric_histogram, numeric_histogram_u]
+    support: SQL
+    description: 基于数据预测或填充缺失值的近似计算
+  
+  - file: binary.yaml
+    name: 二进制函数
+    functions: [from_base64, to_base64, from_hex, to_hex, from_big_endian_64, to_big_endian_64]
+    support: SQL + SPL
+    description: 处理二进制类型的数据
+  
+  - file: bitwise.yaml
+    name: 位运算函数
+    functions: [bit_count, bitwise_and, bitwise_or, bitwise_xor, bitwise_not]
+    support: SQL
+    description: 直接操作二进制位
+  
+  - file: geospatial.yaml
+    name: 空间几何函数
+    functions: [ST_AsText, ST_GeometryFromText, ST_Point, ST_Contains, ST_Distance, ST_Intersects]
+    support: SQL
+    description: 处理空间几何体和地理位置数据
+  
+  - file: geo.yaml
+    name: 地理函数
+    functions: [geohash, geohash_decode]
+    support: SQL
+    description: 地理位置分析与地图计算
+  
+  - file: color.yaml
+    name: 颜色函数
+    functions: [bar, color, render, rgb]
+    support: SQL
+    description: 颜色表示与转换，用于可视化展示
+  
+  - file: hyperloglog.yaml
+    name: HyperLogLog函数
+    functions: [approx_set, cardinality, empty_approx_set, merge]
+    support: SQL
+    description: 对大数据集进行统计处理，牺牲精度以节省内存
+  
+  - file: mobile.yaml
+    name: 电话号码函数
+    functions: [mobile_carrier, mobile_city, mobile_province]
+    support: SQL
+    description: 分析中国内地地域电话号码的归属地、运营商等信息
+  
+  - file: operators.yaml
+    name: 比较与逻辑运算符
+    functions: [AND, OR, NOT, BETWEEN, IN, LIKE, IS NULL, IS NOT NULL]
+    support: SQL + SPL
+    description: 判断参数的大小关系，组合多个布尔条件
+  
+  - file: conversion.yaml
+    name: 单位换算函数
+    functions: [convert_data_size, format_duration]
+    support: SQL
+    description: 换算数据量或时间间隔的单位
+  
+  - file: window_funnel.yaml
+    name: 窗口漏斗函数
+    functions: [window_funnel]
+    support: SQL
+    description: 分析用户行为、APP流量、产品目标转化等数据
+  
+  - file: lambda.yaml
+    name: Lambda表达式
+    functions: [filter, reduce, transform, any_match, all_match]
+    support: SQL + SPL
+    description: 定义Lambda表达式并传递给指定函数，丰富函数表达
+
+# 常见场景快速查找
+quick_lookup:
+  数据统计: aggregate.yaml
+  文本处理: string.yaml
+  正则匹配: regex.yaml
+  时间处理: datetime.yaml
+  类型转换: type_conversion.yaml
+  条件判断: conditional.yaml
+  JSON解析: json.yaml
+  数值计算: math.yaml
+  URL解析: url.yaml
+  IP分析: ip_geo.yaml
+  编码解码: encoding.yaml
+  哈希计算: hash.yaml
+  同比环比: comparison.yaml
+  数组操作: array.yaml
+  Map操作: map.yaml
+  统计分析: statistical.yaml
+  窗口分析: window.yaml
+  近似计算: approximate.yaml
+  二进制处理: binary.yaml
+  位运算: bitwise.yaml
+  空间几何: geospatial.yaml
+  地理分析: geo.yaml
+  颜色处理: color.yaml
+  大数据统计: hyperloglog.yaml
+  手机号分析: mobile.yaml
+  逻辑运算: operators.yaml
+  单位转换: conversion.yaml
+  漏斗分析: window_funnel.yaml
+  Lambda表达式: lambda.yaml
+
+# 关键使用提示
+usage_tips:
+  类型转换: 数值比较必须先cast，如 cast(status as BIGINT) >= 500
+  安全转换: 用try_cast避免转换失败，如 try_cast(value as DOUBLE)
+  时间分组: 用date_trunc按时间粒度统计，如 date_trunc('hour', __time__)
+  GROUP BY: SELECT只能包含分组字段或聚合函数，非分组字段用arbitrary()
+  NULL处理: 用coalesce提供默认值，如 coalesce(user_name, 'anonymous')
+
+# 相关文档
+related_docs:
+  - ../query_analysis/sql.yaml: SQL查询完整语法
+  - ../spl/overview.yaml: SPL查询基础语法
+  - ../query_analysis/indexSearch.yaml: 索引查询和关键字搜索

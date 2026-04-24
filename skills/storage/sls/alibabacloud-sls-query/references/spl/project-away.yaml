@@ -1,0 +1,13 @@
+name: project-away
+category: 字段操作指令
+description: 移除与给定模式相匹配的字段，保留其他所有字段
+grammar: project-away <field1>, <field2>, ...
+example: |
+  * | project-away "__tag__:__path__", __source__
+scenarios:
+  - 在所有场景中都适用
+note:
+  - 支持字段名通配符
+  - 字段名包含特殊字符（如冒号:）时需用双引号包裹
+  - 适用于所有场景
+

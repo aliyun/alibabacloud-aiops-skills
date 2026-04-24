@@ -1,0 +1,52 @@
+category: comparison_functions
+name: 同比和环比函数
+description: 计算时间序列数据的相对变化，用于同比环比分析
+
+support:
+  sql: true
+  spl: false
+
+functions:
+  - name: compare
+    syntax: "compare(x, n)"
+    description: 对比当前时间周期内的计算结果与n秒之前时间周期内的计算结果
+    params:
+      - x: double或long类型的计算结果
+      - n: 时间窗口，单位为秒。如3600(1小时)、86400(1天)、604800(1周)
+    returns: 数组格式 [当前结果, n秒前结果, 比值]
+    examples:
+      sql: "* | SELECT compare(PV, 86400) FROM (SELECT count(*) AS PV FROM log)"
+    note: 对比的时间必须相同，支持对比当前1小时与昨天同时段，不支持对比当前1小时与上1小时
+  
+  - name: compare (multiple)
+    syntax: "compare(x, n1, n2, n3...)"
+    description: 对比当前时间周期与多个历史时间周期的计算结果
+    params:
+      - x: double或long类型的计算结果
+      - n1, n2, n3: 多个时间窗口，单位为秒
+    returns: 数组格式，包含当前结果和各历史时间点的结果及比值
+    examples:
+      sql: "* | SELECT status, request_method, compare(PV, 3600) FROM (SELECT status, request_method, count(*) AS PV FROM log GROUP BY status, request_method) GROUP BY status, request_method"
+  
+  - name: ts_compare
+    syntax: "ts_compare(x, n)"
+    description: 对比当前时间周期内的计算结果与n秒之前时间周期内的计算结果，必须按照时间列分组
+    params:
+      - x: double或long类型的计算结果
+      - n: 时间窗口，单位为秒
+    returns: 数组格式 [当前结果, n秒前结果, 比值, n秒前的Unix时间戳]
+    examples:
+      sql: "* | SELECT time, ts_compare(PV, 86400) as diff FROM (SELECT count(*) as PV, date_trunc('hour', __time__) AS time FROM log GROUP BY time) GROUP BY time ORDER BY time"
+    note: 必须按照时间列进行分组（GROUP BY），不支持嵌套使用
+
+important_notes:
+  - compare函数要求对比的时间周期必须相同
+  - ts_compare函数必须按照时间列进行GROUP BY
+  - compare和ts_compare不支持嵌套使用
+  - 返回结果为数组，可使用下标[1][2][3]获取具体值
+
+use_cases:
+  - 对比今天与昨天同时段的访问量
+  - 计算周同比增长率
+  - 分析各时段流量趋势
+  - 监控关键指标的环比变化

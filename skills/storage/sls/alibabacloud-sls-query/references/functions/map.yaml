@@ -1,0 +1,99 @@
+category: map_functions
+name: Map映射函数和运算符
+description: 操作键值对数据结构，进行Map的创建、查询、合并等操作
+
+support:
+  sql: true
+  spl: partial
+
+functions:
+  - name: map
+    syntax: "map() 或 map(x, y)"
+    description: 返回空Map或将两个数组映射为Map
+    params:
+      - x: 键数组（可选）
+      - y: 值数组（可选）
+    examples:
+      sql: "* | SELECT map()"
+      sql_with_arrays: "* | SELECT map(try_cast(json_parse(class) AS array(varchar)), try_cast(json_parse(number) AS array(bigint)))"
+      spl: "* | extend mapped = map(keys_arr, values_arr)"
+  
+  - name: element_at
+    syntax: "element_at(x, key)"
+    description: 获取Map中指定键的值
+    examples:
+      sql: "* | SELECT element_at(histogram(request_method), 'DELETE') AS count"
+      spl: "* | extend value = element_at(map_field, 'key1')"
+  
+  - name: cardinality
+    syntax: "cardinality(x)"
+    description: 计算Map的大小（键值对数量）
+    examples:
+      sql: "* | SELECT cardinality(histogram(request_method)) AS kinds"
+  
+  - name: map_keys
+    syntax: "map_keys(x)"
+    description: 提取Map中所有的键，以数组形式返回
+    examples:
+      sql: "* | SELECT map_keys(try_cast(json_parse(etl_context) AS map(varchar, varchar)))"
+      spl: "* | extend keys = map_keys(map_field)"
+  
+  - name: map_values
+    syntax: "map_values(x)"
+    description: 提取Map中所有键的值，以数组形式返回
+    examples:
+      sql: "* | SELECT map_values(try_cast(json_parse(etl_context) AS map(varchar, varchar)))"
+      spl: "* | extend values = map_values(map_field)"
+  
+  - name: map_concat
+    syntax: "map_concat(x, y...)"
+    description: 将多个Map合并为一个Map
+    examples:
+      sql: "* | SELECT map_concat(cast(json_parse(etl_context) AS map(varchar, varchar)), cast(json_parse(progress) AS map(varchar, varchar)))"
+      spl: "* | extend merged = map_concat(map1, map2)"
+  
+  - name: map_filter
+    syntax: "map_filter(x, lambda_expression)"
+    description: 结合Lambda表达式过滤Map中的元素
+    examples:
+      sql: "* | SELECT map_filter(map(array[10, 20, 30], array['a', NULL, 'c']), (k, v) -> v is not null)"
+      spl: "* | extend filtered = map_filter(map_field, (k, v) -> v > 100)"
+  
+  - name: histogram
+    syntax: "histogram(x)"
+    description: 对数据进行分组，返回JSON格式的Map
+    examples:
+      sql: "* | SELECT histogram(request_method) AS request_method"
+    note: 类似于GROUP BY，返回Map格式
+  
+  - name: histogram_u
+    syntax: "histogram_u(x)"
+    description: 对数据进行分组，返回多行多列格式
+    examples:
+      sql: "* | SELECT histogram_u(request_method) as request_method"
+    note: 适合用柱状图展示结果
+  
+  - name: map_agg
+    syntax: "map_agg(x, y)"
+    description: 将x和y映射为Map，x为键，y为键值。当y有多个值时随机选一个
+    examples:
+      sql: "* | SELECT map_agg(request_method, request_time)"
+  
+  - name: multimap_agg
+    syntax: "multimap_agg(x, y)"
+    description: 将x和y映射为Map，x为键，y为键值（数组格式）。当y有多个值时全部保留
+    examples:
+      sql: "* | SELECT multimap_agg(request_method, request_time)"
+
+use_cases:
+  - 分析请求方法分布
+  - 统计状态码出现次数
+  - 合并多个配置Map
+  - 从JSON字段提取Map结构
+  - 对Map进行条件过滤
+
+important_notes:
+  - 使用下标运算符[key]可直接获取值
+  - histogram函数适合快速分组统计
+  - 配合cast和json_parse处理JSON格式的Map字段
+  - Map的键和值类型需要一致

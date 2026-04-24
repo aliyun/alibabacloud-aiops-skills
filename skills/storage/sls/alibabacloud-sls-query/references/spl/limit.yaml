@@ -1,0 +1,19 @@
+name: limit
+category: 聚合指令
+description: 限制查询结果返回的日志行数
+grammar: limit <number>
+example: |
+  * | project host,client_ip,status | limit 100
+  * | where cast(status as BIGINT) >= 500 | project host,client_ip,status | sort __time__ desc | limit 10
+scenarios:
+  - 扫描查询
+note:
+  - 用于控制返回数据量，防止结果过大
+  - 通常与sort配合使用获取TopN结果
+  - limit实际被当成聚合指令来执行，对于聚合指令执行的时候要求最终列确定
+  - 以下指令可以让列确定
+    - stats
+    - project
+  - 比如 `* | limit 100` 这样是不合适的，由于limit后的列不固定无法执行会报错
+  - 正确的写法是 `* | project host,client_ip,status | limit 100`  
+

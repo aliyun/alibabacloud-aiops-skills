@@ -1,0 +1,74 @@
+json_process:
+  - name: json_extract(x, json_path)
+    input: 
+    - x: STRING 或者 JSON
+    - json_path: STRING
+    return: JSON
+    description: 从JSON对象或JSON数组中提取一组JSON值（数组或对象）。
+
+  - name: json_size(x, json_path)
+    input: 
+    - x: STRING
+    - json_path: STRING
+    return: BIGINT
+    description: 计算JSON对象或数组中元素的数量。
+
+  - name: json_parse(x)
+    input: 
+    - x:STRING
+    return: JSON
+    description: 把字符串类型转换为JSON类型。
+
+  - name: json_format(x)
+    input: 
+    - x: JSON
+    return: STRING
+    description: 
+    - 把JSON类型转换为字符串类型
+
+  - name: json_extract_scalar(x, json_path)
+    input: 
+    - x: STRING
+    - json_path: STRING
+    return: STRING
+    description: 从JSON对象或JSON数组中提取标量值。
+
+  - name: json_array_length(x)
+    input: 
+    - x: STRING
+    return: BIGINT
+    description: 计算JSON数组中元素的数量。
+
+  - name: json_array_contains(x, value)
+    input: 
+    - x: STRING
+    - value: STRING
+    return: BOOLEAN
+    description: 判断JSON数组中是否包含指定值。
+
+note:
+  - name: json_extract和json_extract_scalar的区别
+    description:
+    - json_extract函数的返回值是JSON类型，json_extract_scalar函数的返回值是varchar类型。
+    - json_extract函数可以解析JSON对象中任意一块子结构，json_extract_scalar函数只解析标量类型（字符串、布尔值或者整型值）的叶子节点，返回对应的字符串。
+
+  - name: 如何设置 json_path
+    description:
+    - 字典取值一般用$.key，表示从根节点开始，向下遍历所有key为key的节点，如果key名带.需要使用中括号[]代替半角句号（.），然后使用双引号（""）包裹字段名，例如$["http.path"]。
+    - 数组取值一般用$[index]，表示从数组中提取指定索引的元素。注意这里是不支持* 的统配方式
+    - 根节点用$，表示从根节点开始。
+    - 例子
+      - 查看用户第一个订单的金额。 * | extend x=json_extract_scalar(request, '$.param.orders[0].payment')
+      - 查看用户第一个订单中购买的第二件商品。 * | extend x=json_extract_scalar(request, '$.param.orders[0].items[1].name')
+      - 取字典中的数组。 * | extend x='{"input" : {"messsage": ["a","b"]}}' | project x | extend y=json_extract(x, '$.input.messsage')
+      - 取数组中的第二个元素。 * | extend x='["a","b","c"]' | project x | extend y=json_extract(x, '$[1]')
+      - 取数组中的值，并继续取字典的值 * | extend x='["a","b",{"msg" : "hello"}]' | project x | extend y=json_extract(x, '$[2].msg')
+
+  - name: 如何分析JSON中的数组
+    description:
+    - 要充分利用json类型和array<json>类型特点，结合array做复杂处理。
+    - 一般可以用json_extract 提取json对象，然后可以cast成array<json>类型，接着做一些transform操作。
+    - 如果有需要可以再用把复杂的array<json>类型转换为json对象，接着使用json_format变成字符串
+    - 如果遇到需要对json类型做判断的，可以借助case when + try_cast来做一些处理, 注意json_type、typeof等检查类型的函数是不支持的
+    - 例子
+      - 查看用户订单中购买的商品数量。 * | extend x=json_extract(request, '$.param.orders') | extend y=cardinality(cast(x as array))

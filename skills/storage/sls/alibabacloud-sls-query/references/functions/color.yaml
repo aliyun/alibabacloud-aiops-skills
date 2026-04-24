@@ -1,0 +1,51 @@
+category: color_functions
+name: 颜色函数
+description: 颜色表示与转换，用于可视化展示
+
+support:
+  sql: true
+  spl: false
+
+functions:
+  - name: bar
+    syntax: "bar(x, width [, low, high])"
+    description: 生成ASCII条形图
+    params:
+      - x: 数值
+      - width: 条形图宽度
+      - low: 最小值（可选）
+      - high: 最大值（可选）
+    example: "* | SELECT request_time, bar(cast(request_time as double), 20) as bar"
+  
+  - name: color
+    syntax: "color(string [, color])"
+    description: 为字符串添加颜色标记（ANSI颜色码）
+    params:
+      - string: 要着色的字符串
+      - color: 颜色名称（可选）
+    example: "* | SELECT color('ERROR', 'red')"
+  
+  - name: render
+    syntax: "render(x, color)"
+    description: 使用指定颜色渲染布尔值
+    example: "* | SELECT render(cast(status as bigint) >= 400, 'red')"
+  
+  - name: rgb
+    syntax: "rgb(red, green, blue)"
+    description: 根据RGB值创建颜色
+    params:
+      - red: 红色分量(0-255)
+      - green: 绿色分量(0-255)
+      - blue: 蓝色分量(0-255)
+    example: "* | SELECT rgb(255, 0, 0)"
+
+use_cases:
+  - 控制台输出美化
+  - 日志级别着色
+  - 可视化标记
+  - ASCII图表
+
+important_notes:
+  - 主要用于控制台输出
+  - 支持标准ANSI颜色
+  - 在Web界面可能不显示颜色

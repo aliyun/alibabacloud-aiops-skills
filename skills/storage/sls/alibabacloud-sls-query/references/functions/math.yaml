@@ -1,0 +1,58 @@
+category: math_functions
+name: 数学函数
+description: 数学运算
+
+support:
+  sql: true
+  spl: true
+
+functions:
+  - name: abs
+    syntax: "abs(x)"
+    description: 绝对值
+    examples:
+      sql: "* | SELECT abs(cast(value1 as BIGINT) - cast(value2 as BIGINT))"
+      spl: "* | extend diff_abs = abs(cast(value1 as BIGINT) - cast(value2 as BIGINT))"
+  
+  - name: round
+    syntax: "round(x [, decimals])"
+    description: 四舍五入
+    examples:
+      sql: "* | SELECT round(cast(price as DOUBLE), 2)"
+      spl: "* | extend price_rounded = round(cast(price as DOUBLE), 2)"
+  
+  - name: floor
+    syntax: "floor(x)"
+    description: 向下取整
+    examples:
+      sql: "* | SELECT floor(cast(value as DOUBLE))"
+      spl: "* | extend value_floor = floor(cast(value as DOUBLE))"
+  
+  - name: ceil
+    syntax: "ceil(x)"
+    description: 向上取整
+    examples:
+      sql: "* | SELECT ceil(cast(value as DOUBLE))"
+      spl: "* | extend value_ceil = ceil(cast(value as DOUBLE))"
+  
+  - name: power
+    syntax: "power(x, y)"
+    description: 幂运算 x^y
+    examples:
+      sql: "* | SELECT power(2, 10)"
+      spl: "* | extend result = power(2, 10)"
+  
+  - name: sqrt
+    syntax: "sqrt(x)"
+    description: 平方根
+    examples:
+      sql: "* | SELECT sqrt(cast(value as DOUBLE))"
+      spl: "* | extend value_sqrt = sqrt(cast(value as DOUBLE))"
+  
+  - name: mod
+    syntax: "mod(x, y)"
+    description: 取模运算
+    examples:
+      sql: "* | SELECT mod(cast(count as BIGINT), 2)"
+      spl: "* | extend is_even = mod(cast(count as BIGINT), 2)"
+

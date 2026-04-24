@@ -1,0 +1,12 @@
+name: project-rename
+category: 字段操作指令  
+description: 重命名指定字段，并保留其他所有字段
+grammar: project-rename <new_field1> = <old_field1>, <new_field2> = <old_field2>, ...
+example: |
+  * | project-rename status_code = status, uri = request_uri
+scenarios:
+  - 在所有SPL场景下都可以使用
+note:
+  - 只进行字段重命名，不删除任何字段
+  - 适用于所有场景
+

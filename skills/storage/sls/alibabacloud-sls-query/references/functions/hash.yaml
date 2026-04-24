@@ -1,0 +1,31 @@
+category: hash_functions
+name: 哈希函数
+description: 计算哈希值
+
+support:
+  sql: true
+  spl: true
+
+functions:
+  - name: md5
+    syntax: "md5(str)"
+    description: 计算MD5哈希
+    returns: 32位十六进制字符串
+    examples:
+      sql: "* | SELECT md5(user_id)"
+      spl: "* | extend user_id_hash = md5(user_id)"
+  
+  - name: sha1
+    syntax: "sha1(str)"
+    description: 计算SHA1哈希
+    examples:
+      sql: "* | SELECT sha1(token)"
+      spl: "* | extend token_hash = sha1(token)"
+  
+  - name: sha256
+    syntax: "sha256(str)"
+    description: 计算SHA256哈希
+    examples:
+      sql: "* | SELECT sha256(token)"
+      spl: "* | extend token_hash = sha256(token)"
+

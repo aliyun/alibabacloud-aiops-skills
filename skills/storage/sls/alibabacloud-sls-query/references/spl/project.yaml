@@ -1,0 +1,14 @@
+name: project
+category: 字段操作指令
+description: 保留与给定模式相匹配的字段，同时可重命名指定字段
+grammar: project <field1>, <field2>, ... [, <new_field> = <old_field>]
+example: |
+  * | project status, body
+  * | project status, request_uri, time = __time__
+scenarios:
+  - 在所有SPL场景下都可以使用
+note:
+  - 先完成所有字段保留表达式的执行，再执行重命名表达式
+  - 字段名包含特殊字符需用双引号包裹，如 project "a:b:c"
+  - 支持通配符*，如 project "__tag__:*"
+  - 适用于所有场景

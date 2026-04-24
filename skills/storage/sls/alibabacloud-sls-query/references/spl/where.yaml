@@ -1,0 +1,16 @@
+name: where
+category: 结构化数据SQL计算指令
+description: 根据SQL表达式过滤数据，保留满足条件的数据条目
+grammar: where <boolean_expression>
+example: |
+  * | where status = '500'
+  * | where cast(status as BIGINT) >= 500
+  * | where status = '200' and method = 'GET'
+scenarios:
+  - 在所有SPL场景下都可以使用
+note:
+  - 布尔表达式中可以使用SQL函数，具体可以读取 `../functions/overview.yaml`
+  - 数据类型转换必须显式使用cast函数
+  - 字符串需使用单引号包裹
+  - 适用于所有场景
+  - 建议尽早使用where过滤，提升性能

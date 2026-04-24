@@ -1,0 +1,150 @@
+category: array_functions
+name: 数组函数和运算符
+description: 对数组进行增删改查、遍历和转换操作
+
+support:
+  sql: true
+  spl: partial
+
+functions:
+  - name: array_distinct
+    syntax: "array_distinct(x)"
+    description: 删除数组中重复的元素
+    examples:
+      sql: "* | SELECT array_distinct(cast(json_parse(number) as array(bigint)))"
+      spl: "* | extend unique_arr = array_distinct(arr_field)"
+  
+  - name: array_intersect
+    syntax: "array_intersect(x, y)"
+    description: 计算两个数组的交集
+    examples:
+      sql: "* | SELECT array_intersect(array[1,2,3,4,5], array[1,3,5,7])"
+      spl: "* | extend intersection = array_intersect(arr1, arr2)"
+  
+  - name: array_union
+    syntax: "array_union(x, y)"
+    description: 计算两个数组的并集
+    examples:
+      sql: "* | SELECT array_union(array[1,2,3,4,5], array[1,3,5,7])"
+    note: 仅支持SQL
+  
+  - name: array_except
+    syntax: "array_except(x, y)"
+    description: 计算两个数组的差集
+    examples:
+      sql: "* | SELECT array_except(array[1,2,3,4,5], array[1,3,5,7])"
+      spl: "* | extend diff = array_except(arr1, arr2)"
+  
+  - name: array_join
+    syntax: "array_join(x, delimiter [, null_replacement])"
+    description: 使用指定连接符将数组元素拼接为字符串
+    params:
+      - x: 数组
+      - delimiter: 连接符
+      - null_replacement: 可选，用于替换null元素的字符串
+    examples:
+      sql: "* | SELECT array_join(array[null,'Log','Service'], ' ', 'Alicloud')"
+      spl: "* | extend joined = array_join(arr_field, ',')"
+    note: 返回结果最大1KB，超出会被截断
+  
+  - name: array_max
+    syntax: "array_max(x)"
+    description: 获取数组中的最大值
+    examples:
+      sql: "* | SELECT array_max(try_cast(json_parse(number) as array(bigint))) AS max_number"
+  
+  - name: array_min
+    syntax: "array_min(x)"
+    description: 获取数组中的最小值
+    examples:
+      sql: "* | SELECT array_min(try_cast(json_parse(number) as array(bigint))) AS min_number"
+  
+  - name: array_position
+    syntax: "array_position(x, element)"
+    description: 获取指定元素的下标（从1开始），不存在返回0
+    examples:
+      sql: "* | SELECT array_position(array[49,45,47], 45)"
+  
+  - name: array_remove
+    syntax: "array_remove(x, element)"
+    description: 删除数组中指定的元素
+    examples:
+      sql: "* | SELECT array_remove(array[49,45,47], 45)"
+  
+  - name: array_sort
+    syntax: "array_sort(x)"
+    description: 对数组元素进行升序排序，null元素排在最后
+    examples:
+      sql: "* | SELECT array_sort(array['b','d',null,'c','a'])"
+  
+  - name: cardinality
+    syntax: "cardinality(x)"
+    description: 计算数组中元素的个数
+    examples:
+      sql: "* | SELECT cardinality(cast(json_parse(number) as array(bigint)))"
+  
+  - name: contains
+    syntax: "contains(x, element)"
+    description: 判断数组中是否包含指定元素
+    returns: boolean类型
+    examples:
+      sql: "* | SELECT contains(cast(json_parse(region) as array(varchar)), 'cn-beijing')"
+  
+  - name: reverse
+    syntax: "reverse(x)"
+    description: 对数组中的元素进行反向排列
+    examples:
+      sql: "* | SELECT reverse(array[1,2,3,4,5])"
+      spl: "* | extend reversed = reverse(arr_field)"
+  
+  - name: slice
+    syntax: "slice(x, start, length)"
+    description: 获取数组的子集
+    params:
+      - start: 索引开始位置（负数从末尾开始，正数从头部开始）
+      - length: 子集元素个数
+    examples:
+      sql: "* | SELECT slice(array[1,2,4,5,6,7,7], 3, 2)"
+  
+  - name: filter
+    syntax: "filter(x, lambda_expression)"
+    description: 结合Lambda表达式过滤数组元素
+    examples:
+      sql: "* | SELECT filter(array[5,-6,null,7], x -> x > 0)"
+      spl: "* | extend filtered = filter(arr_field, x -> x > 0)"
+  
+  - name: transform
+    syntax: "transform(x, lambda_expression)"
+    description: 将Lambda表达式应用到数组的每个元素
+    examples:
+      sql: "* | SELECT transform(array[5,6], x -> x + 1)"
+      spl: "* | extend transformed = transform(arr_field, x -> x * 2)"
+  
+  - name: reduce
+    syntax: "reduce(x, lambda_expression)"
+    description: 根据Lambda表达式对数组元素进行累加计算
+    examples:
+      sql: "* | SELECT reduce(array[5,20,50], 0, (s, x) -> s + x, s -> s)"
+  
+  - name: sequence
+    syntax: "sequence(x, y [, step])"
+    description: 返回起始值范围内连续递增的数组
+    params:
+      - x: 起始值
+      - y: 结束值
+      - step: 可选，递增间隔（默认为1）
+    examples:
+      sql: "* | SELECT sequence(0, 10, 2)"
+      spl: "* | extend seq = sequence(1, 100)"
+  
+  - name: zip
+    syntax: "zip(x, y...)"
+    description: 将多个数组合并为二维数组
+    examples:
+      sql: "* | SELECT zip(array[1,2,3], array['1b',null,'3b'], array[1,2,3])"
+
+important_notes:
+  - 数组下标从1开始
+  - array_join返回结果最大1KB
+  - 使用Lambda表达式可以实现复杂的数组处理逻辑
+  - 配合cast和json_parse处理JSON格式的数组字段

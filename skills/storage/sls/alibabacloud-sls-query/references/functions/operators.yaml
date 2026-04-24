@@ -1,0 +1,81 @@
+category: operators
+name: 比较与逻辑运算符
+description: 判断参数的大小关系，组合多个布尔条件
+
+support:
+  sql: true
+  spl: true
+
+comparison_operators:
+  - name: "="
+    description: 等于
+    example: "status = 200"
+  
+  - name: "!= 或 <>"
+    description: 不等于
+    example: "status != 200"
+  
+  - name: "<"
+    description: 小于
+    example: "cast(request_time as bigint) < 100"
+  
+  - name: "<="
+    description: 小于等于
+    example: "cast(request_time as bigint) <= 100"
+  
+  - name: ">"
+    description: 大于
+    example: "cast(request_time as bigint) > 100"
+  
+  - name: ">="
+    description: 大于等于
+    example: "cast(request_time as bigint) >= 100"
+  
+  - name: BETWEEN
+    syntax: "x BETWEEN min AND max"
+    description: 判断x是否在min和max之间（包含边界）
+    example: "* | SELECT * WHERE cast(status as bigint) BETWEEN 200 AND 299"
+  
+  - name: IN
+    syntax: "x IN (value1, value2, ...)"
+    description: 判断x是否在值列表中
+    example: "* | SELECT * WHERE status IN ('200', '201', '204')"
+  
+  - name: IS NULL
+    description: 判断是否为NULL
+    example: "* | SELECT * WHERE user_name IS NULL"
+  
+  - name: IS NOT NULL
+    description: 判断是否不为NULL
+    example: "* | SELECT * WHERE user_name IS NOT NULL"
+  
+  - name: LIKE
+    syntax: "x LIKE pattern"
+    description: 字符串模式匹配，%匹配任意字符，_匹配单个字符
+    example: "* | SELECT * WHERE request_uri LIKE '/api/%'"
+
+logical_operators:
+  - name: AND
+    description: 逻辑与，所有条件都为true时返回true
+    example: "cast(status as bigint) >= 200 AND cast(status as bigint) < 300"
+  
+  - name: OR
+    description: 逻辑或，任一条件为true时返回true
+    example: "status = '404' OR status = '500'"
+  
+  - name: NOT
+    description: 逻辑非，对布尔值取反
+    example: "NOT status = '200'"
+
+important_notes:
+  - 字符串比较区分大小写
+  - NULL参与的比较运算结果为NULL
+  - 使用IS NULL / IS NOT NULL判断NULL值
+  - SPL中字段默认为VARCHAR类型，数值比较前需要cast
+  - 组合多个条件时注意运算符优先级，必要时使用括号
+
+use_cases:
+  - 过滤特定状态码的日志
+  - 筛选特定时间范围的数据
+  - 组合多个条件查询
+  - NULL值处理

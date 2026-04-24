@@ -1,0 +1,14 @@
+name: parse-csv
+category: 弱结构化数据提取指令
+description: 提取指定字段中的CSV格式信息
+grammar: parse-csv <field> [options] as <field1>, <field2>, ...
+example: |
+  * | parse-csv content as name, age, city
+  * | parse-csv data -delimiter='|' as col1, col2, col3
+scenarios:
+  - 在所有场景中都适用
+note:
+  - 可以通过-delimiter指定分隔符，默认为逗号
+  - 可以通过-quote指定引用符，默认为双引号
+  - 适用于所有场景
+

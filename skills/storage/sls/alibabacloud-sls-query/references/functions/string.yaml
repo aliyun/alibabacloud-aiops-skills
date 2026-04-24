@@ -1,0 +1,110 @@
+category: string_functions
+name: 字符串函数
+description: 处理文本数据
+
+support:
+  sql: true
+  spl: true
+
+functions:
+  - name: concat
+    syntax: "concat(x, y, ...)"
+    description: 拼接字符串
+    examples:
+      sql: "* | SELECT concat(region, '-', status)"
+      spl: "* | extend full_info = concat(region, '-', status)"
+  
+  - name: substr
+    syntax: "substr(x, start [, length])"
+    description: 提取子字符串
+    params:
+      - start: 起始位置（从1开始）
+      - length: 提取长度（可选）
+    examples:
+      sql: "* | SELECT substr(message, 1, 100)"
+      spl: "* | extend short_msg = substr(message, 1, 100)"
+  
+  - name: lower
+    syntax: "lower(x)"
+    description: 转换为小写
+    examples:
+      sql: "* | SELECT lower(method)"
+      spl: "* | extend method_lower = lower(method)"
+  
+  - name: upper
+    syntax: "upper(x)"
+    description: 转换为大写
+    examples:
+      sql: "* | SELECT upper(method)"
+      spl: "* | extend method_upper = upper(method)"
+  
+  - name: trim
+    syntax: "trim(x)"
+    description: 去除首尾空格
+    examples:
+      sql: "* | SELECT trim(user_name)"
+      spl: "* | extend user_clean = trim(user_name)"
+  
+  - name: ltrim
+    syntax: "ltrim(x)"
+    description: 去除左侧空格
+    examples:
+      sql: "* | SELECT ltrim(user_name)"
+      spl: "* | extend user_clean = ltrim(user_name)"
+  
+  - name: rtrim
+    syntax: "rtrim(x)"
+    description: 去除右侧空格
+    examples:
+      sql: "* | SELECT rtrim(user_name)"
+      spl: "* | extend user_clean = rtrim(user_name)"
+  
+  - name: length
+    syntax: "length(x)"
+    description: 返回字符串长度
+    examples:
+      sql: "* | SELECT length(message) AS msg_len"
+      spl: "* | extend msg_len = length(message)"
+  
+  - name: split
+    syntax: "split(x, delimiter)"
+    description: 按分隔符分割字符串
+    returns: 数组类型
+    examples:
+      sql: "* | SELECT split(tags, ',')"
+      spl: "* | extend tags_array = split(tags, ',')"
+  
+  - name: replace
+    syntax: "replace(x, search, replacement)"
+    description: 替换字符串
+    examples:
+      sql: "* | SELECT replace(url, 'http://', 'https://')"
+      spl: "* | extend url_https = replace(url, 'http://', 'https://')"
+  
+  - name: position
+    syntax: "position(substring in string)"
+    description: 返回子串位置
+    examples:
+      sql: "* | SELECT position('error' in message)"
+      spl: 暂时还没支持
+
+  - name: ascii_escape
+    syntax: "ascii_escape(x)"
+    description: 将字符串转换为ASCII码
+    examples:
+      sql: 暂时还没支持
+      spl: "* | extend message_ascii = ascii_escape(message)"
+
+  - name: ascii_unescape
+    syntax: "ascii_unescape(x)"
+    description: 执行ASCII码转义，支持\n、\r、\t、\b、\f、\xXX等转义
+    examples:
+      sql: 暂时还没支持
+      spl: "* | extend message_ascii = ascii_unescape(message)"
+
+  - name: unicode_unescape
+    syntax: "unicode_unescape(x)"
+    description: 执行Unicode码转义，支持\uXXXX等转义
+    examples:
+      sql: 暂时还没支持
+      spl: "* | extend message_unicode = unicode_unescape(message)" 

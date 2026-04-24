@@ -1,0 +1,14 @@
+name: extend
+category: 结构化数据SQL计算指令
+description: 通过SQL表达式计算结果产生新字段
+grammar: extend <new_field1> = <expression1> [, <new_field2> = <expression2>, ...]
+example: |
+  * | extend status_num = cast(status as BIGINT)
+  * | extend request_time = from_unixtime(__time__)
+  * | extend is_error = if(cast(status as BIGINT) >= 500, 'yes', 'no')
+scenarios:
+  - 在所有场景中都适用
+note:
+  - 表达式中可以使用SQL函数，参考 `../functions/overview.yaml`
+  - 如果新字段名与已有字段名相同，会覆盖原字段
+  - 支持在一条extend指令中定义多个新字段

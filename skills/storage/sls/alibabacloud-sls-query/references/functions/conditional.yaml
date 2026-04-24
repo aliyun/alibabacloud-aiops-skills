@@ -1,0 +1,47 @@
+category: conditional_functions
+name: 条件函数
+description: 条件判断和分支
+
+support:
+  sql: true
+  spl: true
+
+functions:
+  - name: if
+    syntax: "if(condition, true_value, false_value)"
+    description: 条件表达式
+    examples:
+      sql: "* | SELECT if(cast(status as BIGINT) >= 500, 'error', 'normal') AS level"
+      spl: "* | extend level = if(cast(status as BIGINT) >= 500, 'error', 'normal')"
+  
+  - name: case
+    syntax: "CASE WHEN condition THEN result [...] ELSE default END"
+    description: 多条件分支
+    examples:
+      sql: |
+        * | SELECT CASE 
+              WHEN cast(status as BIGINT) >= 500 THEN 'error'
+              WHEN cast(status as BIGINT) >= 400 THEN 'client_error'
+              ELSE 'success'
+            END AS status_type
+      spl: |
+        * | extend status_type = CASE 
+              WHEN cast(status as BIGINT) >= 500 THEN 'error'
+              WHEN cast(status as BIGINT) >= 400 THEN 'client_error'
+              ELSE 'success'
+            END
+  
+  - name: coalesce
+    syntax: "coalesce(value1, value2, ..., default)"
+    description: 返回第一个非NULL值
+    examples:
+      sql: "* | SELECT coalesce(user_name, user_id, 'anonymous') AS user"
+      spl: "* | extend user = coalesce(user_name, user_id, 'anonymous')"
+  
+  - name: nullif
+    syntax: "nullif(value1, value2)"
+    description: 相等则返回NULL，否则返回第一个值
+    examples:
+      sql: "* | SELECT nullif(status, '')"
+      spl: "* | extend valid_status = nullif(status, '')"
+
