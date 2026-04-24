@@ -1,0 +1,12 @@
+requests
+pyyaml
+matplotlib
+numpy
+openpyxl
+xlrd
+
+PyMuPDF
+python-docx
+pandas
+pytesseract
+Pillow
