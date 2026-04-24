@@ -32,10 +32,21 @@ This skill covers the case where a local folder changes over time and must be up
 > Run `aliyun version` to verify `>= 3.3.3`. If not installed or version too low,
 > see `references/cli-installation-guide.md` for installation instructions.
 > Then run `aliyun configure set --auto-plugin-install true`.
-> Finally, enable AI safety mode to prevent dangerous operations:
+> At the **start** of the Core Workflow (before any CLI invocation):
+> **[MUST] Enable AI-Mode** — AI-mode is required for Agent Skill execution.
+> Run the following commands before any CLI invocation:
 > ```bash
 > aliyun configure ai-mode enable
+> aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-cron-upload"
 > ```
+> **[MUST] Disable AI-Mode at EVERY exit point** — Before delivering the final response for ANY reason, always disable AI-mode first. This applies to ALL exit paths: workflow success, workflow failure, error/exception, user cancellation, session end, or any other scenario where no further CLI commands will be executed.
+> AI-mode is only used for Agent Skill invocation scenarios and MUST NOT remain enabled after the skill stops running.
+> ```bash
+> aliyun configure ai-mode disable
+> ```
+
+> **[MUST] CLI User-Agent** — Every `aliyun` CLI command invocation must include:
+> `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-cron-upload`
 
 Required local tools:
 
@@ -146,7 +157,7 @@ Verify that:
 - at least one valid profile is present
 - AI safety mode is enabled (dangerous operations will be blocked)
 
-If the version is too low or `aliyun` is missing, see `references/cli-installation-guide.md`. Do not work around a missing CLI by switching to standalone `ossutil` or `aliyun oss sync`.
+If the version is too low or `aliyun` is missing, see `references/cli-installation-guide.md`. Do not work around a missing CLI by switching to standalone `ossutil` or `aliyun ossutil sync`.
 
 ### Step 2: Verify or create the bucket prerequisite `[aliyun CLI]`
 
@@ -155,7 +166,7 @@ Always start by checking the candidate bucket inventory:
 ```bash
 aliyun ossutil api list-buckets --output-format json \
   --read-timeout 60 --connect-timeout 30 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-cron-upload
 ```
 
 If `BucketAlreadyExists=yes`, verify the selected bucket explicitly:
@@ -163,7 +174,7 @@ If `BucketAlreadyExists=yes`, verify the selected bucket explicitly:
 ```bash
 aliyun ossutil stat "oss://${BucketName}" --region "${RegionId}" --output-format json \
   --read-timeout 60 --connect-timeout 30 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-cron-upload
 ```
 
 > **Cross-region note**: When the active CLI profile's region (shown by `aliyun configure list`) differs from the target bucket's `RegionId`, you **must** add `--region "${RegionId}"` to `stat`, `ls`, and `cp` commands. Using `--endpoint` alone is insufficient because the request signing region must also match. The `--region` flag overrides both the endpoint and the signing region in a single step.
@@ -182,7 +193,7 @@ If `BucketAlreadyExists=no`, use the **check-then-act** idempotent pattern:
 ```bash
 aliyun ossutil stat "oss://${BucketName}" --region "${RegionId}" --output-format json \
   --read-timeout 60 --connect-timeout 30 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-cron-upload
 ```
 
 Optional recommendation for recurring backup scenarios:
@@ -201,7 +212,7 @@ aliyun ossutil cp "${LocalSourcePath}" "oss://${BucketName}/${TargetOssPrefix}" 
   --max-age "${MaxAge}" \
   --region "${RegionId}" \
   --read-timeout 300 --connect-timeout 30 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-cron-upload
 ```
 
 Key rules for this command:
@@ -212,7 +223,7 @@ Key rules for this command:
 - Add `-f` only for unattended runs (cron, Task Scheduler, CI)
 - Use absolute paths for `LocalSourcePath` (never `~`)
 - Normalize `TargetOssPrefix` without a leading `/`
-- Do **not** substitute with bare `ossutil`, `aliyun oss sync`, or `Cache-Control` metadata rewrites
+- Do **not** substitute with bare `ossutil`, `aliyun ossutil sync`, or `Cache-Control` metadata rewrites
 
 If `TargetOssPrefix` is empty, use `oss://${BucketName}/` (with trailing slash). Otherwise use `oss://${BucketName}/${TargetOssPrefix}` after prefix normalization.
 
@@ -222,10 +233,10 @@ If `TargetOssPrefix` is empty, use `oss://${BucketName}/` (with trailing slash).
 > aliyun ossutil cp "${LocalSourcePath}" "oss://${BucketName}/${TargetOssPrefix}" \
 >   -r -u --max-age "${MaxAge}" --region "${RegionId}" \
 >   --read-timeout 300 --connect-timeout 30 \
->   --user-agent AlibabaCloud-Agent-Skills
+>   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-cron-upload
 > aliyun ossutil ls "oss://${BucketName}/${TargetOssPrefix}" --region "${RegionId}" \
 >   --read-timeout 60 --connect-timeout 30 \
->   --user-agent AlibabaCloud-Agent-Skills
+>   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-cron-upload
 > ```
 
 ### Step 4: Wrap the upload in a local script `[aliyun CLI + OS-local]`
@@ -264,7 +275,7 @@ fi
   --max-age "${MAX_AGE}" \
   --region "${REGION_ID}" \
   --read-timeout "${READ_TIMEOUT}" --connect-timeout "${CONNECT_TIMEOUT}" \
-  --user-agent AlibabaCloud-Agent-Skills >> "${LOG_FILE}" 2>&1
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-cron-upload >> "${LOG_FILE}" 2>&1
 ```
 
 > **Note**: The `-f` flag is included in the script template because the script is intended for unattended cron/Task Scheduler execution where interactive prompts must not block the job. The `--region` flag is preferred over `--endpoint` because it sets both the endpoint and signing region correctly, which is required when the CLI profile's default region differs from the target bucket's region.
@@ -306,7 +317,7 @@ Always run this verification after any upload (including test uploads from Step 
 ```bash
 aliyun ossutil ls "oss://${BucketName}/${TargetOssPrefix}" --region "${RegionId}" \
   --read-timeout 60 --connect-timeout 30 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-cron-upload
 ```
 
 Confirm that the expected objects appear under the target prefix. Do **not** skip this step — it proves end-to-end connectivity and permissions.
@@ -355,7 +366,7 @@ schtasks /Delete /TN "OSS Scheduled Sync" /F
 ```bash
 aliyun ossutil rm "oss://${BucketName}/${TargetOssPrefix}test-object.txt" --region "${RegionId}" \
   --read-timeout 60 --connect-timeout 30 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-cron-upload
 ```
 
 Do not delete the bucket or production objects unless the user explicitly asks for that cleanup scope.

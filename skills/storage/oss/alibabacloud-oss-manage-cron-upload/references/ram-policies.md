@@ -118,10 +118,10 @@ After the policy is attached, verify with:
 aliyun configure list
 aliyun ossutil api list-buckets --output-format json \
   --read-timeout 60 --connect-timeout 30 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-cron-upload
 aliyun ossutil ls "oss://${BucketName}/${TargetOssPrefix}" --region "${RegionId}" \
   --read-timeout 60 --connect-timeout 30 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-cron-upload
 ```
 
 Expected behavior:

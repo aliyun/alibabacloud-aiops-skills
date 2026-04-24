@@ -22,7 +22,7 @@ Success criteria:
 - AI safety mode is enabled (dangerous operations will be blocked).
 - No credentials are echoed manually.
 - No separate standalone `ossutil` installation is required for this skill.
-- The workflow does not drift into `ossutil config`, `brew install ossutil`, `aliyun oss sync`, or simulated local test-data creation.
+- The workflow does not drift into `ossutil config`, `brew install ossutil`, `aliyun ossutil sync`, or simulated local test-data creation.
 
 ## Bucket Prerequisite Verification
 
@@ -31,10 +31,10 @@ If the bucket is expected to exist already:
 ```bash
 aliyun ossutil api list-buckets --output-format json \
   --read-timeout 60 --connect-timeout 30 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-cron-upload
 aliyun ossutil stat "oss://${BucketName}" --region "${RegionId}" --output-format json \
   --read-timeout 60 --connect-timeout 30 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-cron-upload
 ```
 
 Verify that:
@@ -46,7 +46,7 @@ Verify that:
 If the bucket does not exist:
 - create the bucket first before configuring scheduled upload
 - follow the existing bucket-creation flow documented by this skill
-- re-run `aliyun ossutil stat "oss://${BucketName}" --region "${RegionId}" --output-format json --read-timeout 60 --connect-timeout 30 --user-agent AlibabaCloud-Agent-Skills` to confirm the bucket now exists
+- re-run `aliyun ossutil stat "oss://${BucketName}" --region "${RegionId}" --output-format json --read-timeout 60 --connect-timeout 30 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-cron-upload` to confirm the bucket now exists
 - do not generate fake upload logs, demo local payloads, placeholder batch/shell wrappers, or pretend success outputs to make the answer look complete
 
 If the bucket already exists:
@@ -64,7 +64,7 @@ aliyun ossutil cp "${LocalSourcePath}" "oss://${BucketName}/${TargetOssPrefix}" 
   --max-age "${MaxAge}" \
   --region "${RegionId}" \
   --read-timeout 300 --connect-timeout 30 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-cron-upload
 ```
 
 Verify that:
@@ -74,7 +74,7 @@ Verify that:
 - if `-f` is mentioned, it is framed only as an optional flag for explicitly requested non-interactive unattended runs such as cron, Task Scheduler, or CI
 - `--region "${RegionId}"` is used to set both the endpoint and signing region correctly (using `--endpoint` alone without `--region` will fail with "Invalid signing region" when the CLI profile region differs from the target bucket region)
 - `TargetOssPrefix` is normalized as a bucket-relative path without a leading `/` before the command is run
-- the answer does not silently replace this command with a separate standalone `ossutil` install, `ossutil config` credential setup, `aliyun oss sync`, `Cache-Control:max-age=...` metadata mapping, or placeholder-only local filtering scripts
+- the answer does not silently replace this command with a separate standalone `ossutil` install, `ossutil config` credential setup, `aliyun ossutil sync`, `Cache-Control:max-age=...` metadata mapping, or placeholder-only local filtering scripts
 
 ### 1.1 Verify the `-u` incremental behavior
 
@@ -87,7 +87,7 @@ After the first successful upload, verify the incremental semantics explicitly:
 ```bash
 aliyun ossutil ls "oss://${BucketName}/${TargetOssPrefix}" --region "${RegionId}" \
   --read-timeout 60 --connect-timeout 30 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-cron-upload
 ```
 
 Verify that:
@@ -139,7 +139,7 @@ The workflow should stop clearly in these cases:
 5. `AccessDenied` indicates missing bucket-list, bucket-management, or upload permissions.
 6. the endpoint was built incorrectly (for example by adding `https://`), or `--endpoint` was used without `--region` causing a signing-region mismatch.
 7. the scheduler entry is missing after configuration.
-8. the answer falls back to standalone `ossutil`, `ossutil config`, `aliyun oss sync`, or fake local test-data creation instead of reporting the real blocker.
+8. the answer falls back to standalone `ossutil`, `ossutil config`, `aliyun ossutil sync`, or fake local test-data creation instead of reporting the real blocker.
 
 ## Validation Status for This Repository
 
