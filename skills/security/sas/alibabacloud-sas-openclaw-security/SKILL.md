@@ -24,6 +24,17 @@ For the detailed workflow, see [references/security_workflow.md](references/secu
 
 All API calls are made through the **aliyun CLI**. Complete the following steps before use:
 
+**Pre-check: Aliyun CLI >= 3.3.3 required**
+> Run `aliyun version` to verify >= 3.3.3. If not installed or version too low,
+> run `curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash` to update.
+
+**Pre-check: Aliyun CLI plugin update required**
+> [MUST] run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+> [MUST] run `aliyun plugin update` to ensure that any existing plugins are always up-to-date.
+
+**[MUST] CLI User-Agent** — Every `aliyun` CLI command invocation must include:
+`--user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-openclaw-security`
+
 ### 1. Confirm aliyun CLI Is Installed
 
 Run the aliyun command to check installation status:
@@ -35,7 +46,7 @@ aliyun version
 ### 2. Check Credential Configuration
 
 ```bash
-aliyun sts GetCallerIdentity
+aliyun sts get-caller-identity
 ```
 
 If not yet configured, run `aliyun configure` and follow the prompts. Credentials are stored in `~/.aliyun/config.json`.
@@ -55,7 +66,7 @@ All CLI calls in this Skill require the corresponding RAM Action authorizations 
 
 ### About User-Agent
 
-All aliyun CLI calls made through `base_client.py` automatically append `--user-agent AlibabaCloud-Agent-Skills`. No manual configuration is needed.
+All aliyun CLI calls made through `base_client.py` automatically append `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-openclaw-security`. No manual configuration is needed.
 
 
 ## Quick Start

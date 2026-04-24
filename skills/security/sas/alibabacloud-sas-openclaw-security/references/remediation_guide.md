@@ -165,8 +165,8 @@ Based on the security needs of the OpenClaw environment, the following products 
 **Integration example**:
 ```bash
 # Retrieve a secret using the KMS SDK
-aliyun kms GetSecretValue \
-    --SecretName openclaw-api-key
+aliyun kms get-secret-value \
+    --secret-name openclaw-api-key
 ```
 
 **Product link**: [Key Management Service (KMS)](https://www.aliyun.com/product/kms)

@@ -78,7 +78,7 @@ class BaseClient:
         cmd = [
             "aliyun",
             "--region", effective_region,
-            "--user-agent", "AlibabaCloud-Agent-Skills",
+            "--user-agent", "AlibabaCloud-Agent-Skills/alibabacloud-sas-openclaw-security",
         ] + args
         api_name = args[1] if len(args) > 1 else args[0]
         try:
@@ -134,9 +134,9 @@ class BaseClient:
         all_items: list[dict] = []
         for page in range(1, mp + 1):
             args = base_args + [
-                "--PageSize",
+                "--page-size",
                 str(ps),
-                "--CurrentPage",
+                "--current-page",
                 str(page),
             ]
             body = self._run_cli(args, region=region)

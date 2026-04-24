@@ -45,17 +45,17 @@ class SasClient(BaseClient):
             page_size: 每页条数
 
         CLI 等价命令：
-            aliyun sas DescribePropertyScaDetail --Lang zh
-                [--Biz <biz>] [--ScaNamePattern <pattern>] [--Remark <name>]
-                --PageSize <n> --CurrentPage <p>
+            aliyun sas describe-property-sca-detail --lang zh
+                [--biz <biz>] [--sca-name-pattern <pattern>] [--remark <name>]
+                --page-size <n> --current-page <p>
         """
-        args = ["sas", "DescribePropertyScaDetail", "--Lang", "zh"]
+        args = ["sas", "describe-property-sca-detail", "--lang", "zh"]
         if biz:
-            args += ["--Biz", biz]
+            args += ["--biz", biz]
         if sca_name_pattern:
-            args += ["--ScaNamePattern", sca_name_pattern]
+            args += ["--sca-name-pattern", sca_name_pattern]
         if name:
-            args += ["--Remark", name]
+            args += ["--remark", name]
         return self._paginate_cli(args, "Propertys", max_pages, page_size)
 
     # ---------------------------------------------------------------
@@ -84,26 +84,26 @@ class SasClient(BaseClient):
             page_size: 每页条数
 
         CLI 等价命令：
-            aliyun sas DescribeVulList --Lang zh --Type <type> --Dealed <y/n>
-                [--Name <name>] [--Necessity <level>] [--Uuids <uuids>]
-                --PageSize <n> --CurrentPage <p>
+            aliyun sas describe-vul-list --lang zh --type <type> --dealed <y/n>
+                [--name <name>] [--necessity <level>] [--uuids <uuids>]
+                --page-size <n> --current-page <p>
         """
         args = [
             "sas",
-            "DescribeVulList",
-            "--Lang",
+            "describe-vul-list",
+            "--lang",
             "zh",
-            "--Type",
+            "--type",
             vul_type,
-            "--Dealed",
+            "--dealed",
             dealed,
         ]
         if name:
-            args += ["--Name", name]
+            args += ["--name", name]
         if necessity:
-            args += ["--Necessity", necessity]
+            args += ["--necessity", necessity]
         if uuids:
-            args += ["--Uuids", uuids]
+            args += ["--uuids", uuids]
         return self._paginate_cli(args, "VulRecords", max_pages, page_size)
 
     # ---------------------------------------------------------------
@@ -118,14 +118,14 @@ class SasClient(BaseClient):
         """根据 UUID 下发漏洞和基线检查任务。
 
         CLI 等价命令：
-            aliyun sas ModifyPushAllTask --Uuids <uuids> --Tasks <tasks>
+            aliyun sas modify-push-all-task --uuids <uuids> --tasks <tasks>
         """
         args = [
             "sas",
-            "ModifyPushAllTask",
-            "--Uuids",
+            "modify-push-all-task",
+            "--uuids",
             uuids,
-            "--Tasks",
+            "--tasks",
             tasks,
         ]
         return self._run_cli(args)
@@ -144,11 +144,11 @@ class SasClient(BaseClient):
             uuids: 资产 UUID（逗号分隔），不传则返回全部资产汇总
 
         CLI 等价命令：
-            aliyun sas DescribeCheckWarningSummary [--Uuids <uuids>]
+            aliyun sas describe-check-warning-summary [--uuids <uuids>]
         """
-        args = ["sas", "DescribeCheckWarningSummary"]
+        args = ["sas", "describe-check-warning-summary"]
         if uuids:
-            args += ["--Uuids", uuids]
+            args += ["--uuids", uuids]
         return self._run_cli(args)
 
     def describe_check_warnings(
@@ -159,22 +159,22 @@ class SasClient(BaseClient):
         """根据 UUID + 风险项 ID 查询基线检查详情。
 
         CLI 等价命令：
-            aliyun sas DescribeCheckWarnings --Lang zh
-                --Uuid <uuid> --RiskId <risk_id>
-                --PageSize 100 --CurrentPage 1
+            aliyun sas describe-check-warnings --lang zh
+                --uuid <uuid> --risk-id <risk_id>
+                --page-size 100 --current-page 1
         """
         args = [
             "sas",
-            "DescribeCheckWarnings",
-            "--Lang",
+            "describe-check-warnings",
+            "--lang",
             "zh",
-            "--Uuid",
+            "--uuid",
             uuid,
-            "--RiskId",
+            "--risk-id",
             str(risk_id),
-            "--PageSize",
+            "--page-size",
             "100",
-            "--CurrentPage",
+            "--current-page",
             "1",
         ]
         return self._run_cli(args)
@@ -194,12 +194,12 @@ class SasClient(BaseClient):
             客户端状态、区域等字段。
 
         CLI 等价命令：
-            aliyun sas GetAssetDetailByUuid --Lang zh --Uuid <uuid>
+            aliyun sas get-asset-detail-by-uuid --lang zh --uuid <uuid>
         """
         args = [
-            "sas", "GetAssetDetailByUuid",
-            "--Lang", "zh",
-            "--Uuid", uuid,
+            "sas", "get-asset-detail-by-uuid",
+            "--lang", "zh",
+            "--uuid", uuid,
         ]
         body = self._run_cli(args)
         return body.get("AssetDetail", body)
@@ -224,22 +224,22 @@ class SasClient(BaseClient):
             page_size: 每页条数
 
         CLI 等价命令：
-            aliyun sas DescribeSuspEvents --Lang zh --Dealed <Y/N>
-                [--Levels <levels>] [--Uuids <uuids>] [--Name <name>]
-                --PageSize <n> --CurrentPage <p>
+            aliyun sas describe-susp-events --lang zh --dealed <Y/N>
+                [--levels <levels>] [--uuids <uuids>] [--name <name>]
+                --page-size <n> --current-page <p>
         """
         args = [
             "sas",
-            "DescribeSuspEvents",
-            "--Lang",
+            "describe-susp-events",
+            "--lang",
             "zh",
-            "--Dealed",
+            "--dealed",
             dealed,
         ]
         if levels:
-            args += ["--Levels", levels]
+            args += ["--levels", levels]
         if uuids:
-            args += ["--Uuids", uuids]
+            args += ["--uuids", uuids]
         if name:
-            args += ["--Name", name]
+            args += ["--name", name]
         return self._paginate_cli(args, "SuspEvents", max_pages, page_size)

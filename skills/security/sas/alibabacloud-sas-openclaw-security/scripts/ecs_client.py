@@ -48,10 +48,10 @@ class EcsClient(BaseClient):
             keep_command: 是否保留命令
 
         CLI 等价命令：
-            aliyun ecs RunCommand --RegionId <region>
-                --Type RunShellScript --CommandContent <b64> --ContentEncoding Base64
-                --InstanceId.1 <id1> [--InstanceId.2 <id2> ...]
-                [--Name <name>] [--Timeout <sec>] ...
+            aliyun ecs run-command --biz-region-id <region>
+                --type RunShellScript --command-content <b64> --content-encoding Base64
+                --instance-id <id1> [<id2> ...]
+                [--name <name>] [--timeout <sec>] ...
         """
         if not instance_ids:
             raise ValueError("instance_ids 不能为空")
@@ -60,30 +60,29 @@ class EcsClient(BaseClient):
         command_b64 = base64.b64encode(command_content.encode()).decode()
         args = [
             "ecs",
-            "RunCommand",
-            "--RegionId",
+            "run-command",
+            "--biz-region-id",
             effective_region,
-            "--Type",
+            "--type",
             command_type,
-            "--CommandContent",
+            "--command-content",
             command_b64,
-            "--ContentEncoding",
+            "--content-encoding",
             "Base64",
         ]
-        for idx, iid in enumerate(instance_ids, start=1):
-            args += [f"--InstanceId.{idx}", iid]
+        args += ["--instance-id"] + instance_ids
         if name:
-            args += ["--Name", name]
+            args += ["--name", name]
         if description:
-            args += ["--Description", description]
+            args += ["--description", description]
         if timeout is not None:
-            args += ["--Timeout", str(timeout)]
+            args += ["--timeout", str(timeout)]
         if working_dir:
-            args += ["--WorkingDir", working_dir]
+            args += ["--working-dir", working_dir]
         if username:
-            args += ["--Username", username]
+            args += ["--username", username]
         if keep_command is not None:
-            args += ["--KeepCommand", str(keep_command).lower()]
+            args += ["--keep-command", str(keep_command).lower()]
 
         return self._run_cli(args, region=effective_region)
 
@@ -95,17 +94,17 @@ class EcsClient(BaseClient):
         """按 invoke_id 查询单台实例的命令执行结果。
 
         CLI 等价命令：
-            aliyun ecs DescribeInvocationResults --RegionId <region>
-                --InvokeId <invoke_id> --InstanceId <instance_id>
+            aliyun ecs describe-invocation-results --biz-region-id <region>
+                --invoke-id <invoke_id> --instance-id <instance_id>
         """
         args = [
             "ecs",
-            "DescribeInvocationResults",
-            "--RegionId",
+            "describe-invocation-results",
+            "--biz-region-id",
             self._region,
-            "--InvokeId",
+            "--invoke-id",
             invoke_id,
-            "--InstanceId",
+            "--instance-id",
             instance_id,
         ]
         body = self._run_cli(args)
