@@ -12,38 +12,38 @@
 
 ```bash
 # 1. View all cluster statuses (focus on non-RUNNING states)
-aliyun emr ListClusters --RegionId cn-hangzhou \
-  --force --ClusterStates.1 RUNNING
+aliyun emr list-clusters --biz-region-id cn-hangzhou \
+  --cluster-states RUNNING
 
 # 2. View cluster details (focus on ClusterState, ExpireTime)
-aliyun emr GetCluster --RegionId cn-hangzhou --ClusterId c-xxx
+aliyun emr get-cluster --biz-region-id cn-hangzhou --cluster-id c-xxx
 
 # 3. Check node group health
-aliyun emr ListNodeGroups --RegionId cn-hangzhou --ClusterId c-xxx
+aliyun emr list-node-groups --biz-region-id cn-hangzhou --cluster-id c-xxx
 
 # 4. Check abnormal nodes
-aliyun emr ListNodes --RegionId cn-hangzhou --ClusterId c-xxx \
-  --force --NodeStates.1 Stopped --NodeStates.2 Terminated
+aliyun emr list-nodes --biz-region-id cn-hangzhou --cluster-id c-xxx \
+  --node-states Stopped Terminated
 
 # 5. Check all node running status
-aliyun emr ListNodes --RegionId cn-hangzhou --ClusterId c-xxx \
-  --force --NodeStates.1 Running
+aliyun emr list-nodes --biz-region-id cn-hangzhou --cluster-id c-xxx \
+  --node-states Running
 ```
 
 ### Discover Abnormal Clusters
 
 ```bash
 # Find all abnormal state clusters
-aliyun emr ListClusters --RegionId cn-hangzhou \
-  --force --ClusterStates.1 START_FAILED --ClusterStates.2 TERMINATED_WITH_ERRORS --ClusterStates.3 TERMINATE_FAILED
+aliyun emr list-clusters --biz-region-id cn-hangzhou \
+  --cluster-states START_FAILED TERMINATED_WITH_ERRORS TERMINATE_FAILED
 ```
 
 ### Check Expiring Clusters
 
 ```bash
 # View subscription clusters (check ExpireTime field)
-aliyun emr ListClusters --RegionId cn-hangzhou \
-  --force --PaymentTypes.1 Subscription
+aliyun emr list-clusters --biz-region-id cn-hangzhou \
+  --payment-types Subscription
 ```
 
 > **Timestamp Note**: ExpireTime, CreateTime etc. returned by API are all millisecond timestamps, need to convert to readable format when displaying.
@@ -54,7 +54,7 @@ aliyun emr ListClusters --RegionId cn-hangzhou \
 
 ```bash
 # View subscription cluster expiration time
-aliyun emr GetCluster --RegionId cn-hangzhou --ClusterId c-xxx
+aliyun emr get-cluster --biz-region-id cn-hangzhou --cluster-id c-xxx
 # Focus on ExpireTime field in response (millisecond timestamp)
 ```
 
@@ -62,20 +62,20 @@ aliyun emr GetCluster --RegionId cn-hangzhou --ClusterId c-xxx
 
 ```bash
 # Enable auto renewal (renew 1 month each time)
-aliyun emr UpdateClusterAutoRenew --RegionId cn-hangzhou --ClusterId c-xxx \
-  --ClusterAutoRenew true --ClusterAutoRenewDuration 1 --ClusterAutoRenewDurationUnit Month
+aliyun emr update-cluster-auto-renew --biz-region-id cn-hangzhou --cluster-id c-xxx \
+  --cluster-auto-renew true --cluster-auto-renew-duration 1 --cluster-auto-renew-duration-unit Month
 
 # Enable auto renewal for all instances
-aliyun emr UpdateClusterAutoRenew --RegionId cn-hangzhou --ClusterId c-xxx \
-  --ClusterAutoRenew true --ClusterAutoRenewDuration 1 --ClusterAutoRenewDurationUnit Month \
-  --RenewAllInstances true
+aliyun emr update-cluster-auto-renew --biz-region-id cn-hangzhou --cluster-id c-xxx \
+  --cluster-auto-renew true --cluster-auto-renew-duration 1 --cluster-auto-renew-duration-unit Month \
+  --renew-all-instances true
 ```
 
 ### Disable Auto Renewal
 
 ```bash
-aliyun emr UpdateClusterAutoRenew --RegionId cn-hangzhou --ClusterId c-xxx \
-  --ClusterAutoRenew false
+aliyun emr update-cluster-auto-renew --biz-region-id cn-hangzhou --cluster-id c-xxx \
+  --cluster-auto-renew false
 ```
 
 ## 3. Troubleshooting
@@ -84,23 +84,23 @@ aliyun emr UpdateClusterAutoRenew --RegionId cn-hangzhou --ClusterId c-xxx \
 
 ```bash
 # View failure reason
-aliyun emr GetCluster --RegionId cn-hangzhou --ClusterId c-xxx
+aliyun emr get-cluster --biz-region-id cn-hangzhou --cluster-id c-xxx
 # Focus on Code and Message in StateChangeReason
 ```
 
 | Common Cause | Diagnosis Method |
 |---------|---------|
-| VPC/VSwitch doesn't exist or not in same zone | `aliyun vpc DescribeVSwitches --VpcId vpc-xxx` |
-| Security group type error (enterprise security group) | `aliyun ecs DescribeSecurityGroups --SecurityGroupId sg-xxx`, confirm Type=normal |
-| Instance type stock insufficient | Change zone or spec, `aliyun emr ListInstanceTypes ...` |
+| VPC/VSwitch doesn't exist or not in same zone | `aliyun vpc describe-vswitches --vpc-id vpc-xxx` |
+| Security group type error (enterprise security group) | `aliyun ecs describe-security-groups --security-group-id sg-xxx`, confirm Type=normal |
+| Instance type stock insufficient | Change zone or spec, `aliyun emr list-instance-types ...` |
 | RAM role missing | Check if AliyunECSInstanceForEMRRole exists |
-| Key pair doesn't exist | `aliyun ecs DescribeKeyPairs --KeyPairName my-keypair` |
+| Key pair doesn't exist | `aliyun ecs describe-key-pairs --biz-key-pair-name my-keypair` |
 | Account balance insufficient | Recharge then retry |
 
 ### TERMINATED_WITH_ERRORS (Cluster Abnormal Termination)
 
 ```bash
-aliyun emr GetCluster --RegionId cn-hangzhou --ClusterId c-xxx
+aliyun emr get-cluster --biz-region-id cn-hangzhou --cluster-id c-xxx
 # Check StateChangeReason
 ```
 
@@ -114,12 +114,12 @@ aliyun emr GetCluster --RegionId cn-hangzhou --ClusterId c-xxx
 
 ```bash
 # Find abnormal nodes
-aliyun emr ListNodes --RegionId cn-hangzhou --ClusterId c-xxx \
-  --force --NodeStates.1 Stopped --NodeStates.2 Terminated
+aliyun emr list-nodes --biz-region-id cn-hangzhou --cluster-id c-xxx \
+  --node-states Stopped Terminated
 
 # View node group for specific node
-aliyun emr GetNodeGroup --RegionId cn-hangzhou --ClusterId c-xxx \
-  --NodeGroupId ng-xxx
+aliyun emr get-node-group --biz-region-id cn-hangzhou --cluster-id c-xxx \
+  --node-group-id ng-xxx
 ```
 
 ### Operation Denied

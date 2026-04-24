@@ -25,7 +25,7 @@ When encountering ANY error, follow these steps:
 **Recovery steps**:
 1. Read the exact error message — note the ErrorCode and the field name mentioned in Message
 2. Check exact parameter name in `api-reference.md` for that specific API
-3. Verify parameter format matches API requirements (RunCluster uses JSON strings, CreateCluster and others use flat `--force` dot-notation)
+3. Verify parameter format matches API requirements (plugin mode: complex nested objects use JSON strings, simple objects use key=value pairs)
 4. Confirm all required parameters are present
 5. Validate parameter values against API constraints
 6. **Do NOT vary the same wrong parameter randomly** — if 2 attempts with the same field name both fail, the name itself is wrong; go back to docs
@@ -61,11 +61,11 @@ When encountering ANY error, follow these steps:
 
 **ListInstanceTypes** requires:
 ```bash
-aliyun emr ListInstanceTypes --RegionId <region> \
-  --ZoneId <zone> \              # Required: Get from DescribeVSwitches
-  --ClusterType <type> \         # Required: DATALAKE/OLAP/DATAFLOW/etc.
-  --PaymentType <payment> \      # Required: PayAsYouGo/Subscription
-  --NodeGroupType <role>         # Required: MASTER/CORE/TASK
+aliyun emr list-instance-types --biz-region-id <region> \
+  --zone-id <zone> \             # Required: Get from describe-vswitches
+  --cluster-type <type> \        # Required: DATALAKE/OLAP/DATAFLOW/etc.
+  --payment-type <payment> \     # Required: PayAsYouGo/Subscription
+  --node-group-type <role>       # Required: MASTER/CORE/TASK
 ```
 
 **RunCluster/CreateCluster** requires in NodeAttributes:

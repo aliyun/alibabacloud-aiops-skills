@@ -27,7 +27,7 @@ All APIs version `2021-03-20`, request method RPC style. Common parameter `Regio
 **Key Response Fields**: `ReleaseVersions[]` (ReleaseVersion, Series)
 
 ```bash
-aliyun emr ListReleaseVersions --RegionId cn-hangzhou --ClusterType DATALAKE
+aliyun emr list-release-versions --biz-region-id cn-hangzhou --cluster-type DATALAKE
 ```
 
 ---
@@ -51,8 +51,8 @@ aliyun emr ListReleaseVersions --RegionId cn-hangzhou --ClusterType DATALAKE
 **Key Response Fields**: `InstanceTypes[]` (InstanceType, CpuCore, CpuArchitecture, InstanceCategory, InstanceTypeFamily, Status, StockStatus)
 
 ```bash
-aliyun emr ListInstanceTypes --RegionId cn-hangzhou --ZoneId cn-hangzhou-h \
-  --ClusterType DATALAKE --PaymentType PayAsYouGo --NodeGroupType CORE
+aliyun emr list-instance-types --biz-region-id cn-hangzhou --zone-id cn-hangzhou-h \
+  --cluster-type DATALAKE --payment-type PayAsYouGo --node-group-type CORE
 ```
 
 ---
@@ -95,41 +95,22 @@ aliyun emr ListInstanceTypes --RegionId cn-hangzhou --ZoneId cn-hangzhou-h \
 **Complete working example** (dev/test DATALAKE cluster with HIVE + SPARK3, local metastore):
 
 ```bash
-aliyun emr RunCluster --RegionId cn-hangzhou \
-  --ClientToken a1b2c3d4-e5f6-7890-abcd-ef1234567890 \
-  --ClusterName "team-etl-dev" \
-  --ClusterType "DATALAKE" \
-  --ReleaseVersion "EMR-5.21.0" \
-  --DeployMode "NORMAL" \
-  --PaymentType "PayAsYouGo" \
-  --Applications '[
-    {"ApplicationName": "HADOOP-COMMON"},
-    {"ApplicationName": "HDFS"},
-    {"ApplicationName": "YARN"},
-    {"ApplicationName": "HIVE"},
-    {"ApplicationName": "SPARK3"}
-  ]' \
-  --ApplicationConfigs '[
-    {
-      "ApplicationName": "HIVE",
-      "ConfigFileName": "hivemetastore-site.xml",
-      "ConfigItemKey": "hive.metastore.type",
-      "ConfigItemValue": "LOCAL"
-    },
-    {
-      "ApplicationName": "SPARK3",
-      "ConfigFileName": "hive-site.xml",
-      "ConfigItemKey": "hive.metastore.type",
-      "ConfigItemValue": "LOCAL"
-    }
-  ]' \
-  --NodeAttributes '{
-    "VpcId": "vpc-xxx",
-    "ZoneId": "cn-hangzhou-h",
-    "SecurityGroupId": "sg-xxx",
-    "KeyPairName": "my-keypair"
-  }' \
-  --NodeGroups '[
+aliyun emr run-cluster --biz-region-id cn-hangzhou \
+  --client-token a1b2c3d4-e5f6-7890-abcd-ef1234567890 \
+  --cluster-name "team-etl-dev" \
+  --cluster-type "DATALAKE" \
+  --release-version "EMR-5.21.0" \
+  --deploy-mode "NORMAL" \
+  --payment-type "PayAsYouGo" \
+  --applications ApplicationName=HADOOP-COMMON \
+  --applications ApplicationName=HDFS \
+  --applications ApplicationName=YARN \
+  --applications ApplicationName=HIVE \
+  --applications ApplicationName=SPARK3 \
+  --application-configs ApplicationName=HIVE ConfigFileName=hivemetastore-site.xml ConfigItemKey=hive.metastore.type ConfigItemValue=LOCAL \
+  --application-configs ApplicationName=SPARK3 ConfigFileName=hive-site.xml ConfigItemKey=hive.metastore.type ConfigItemValue=LOCAL \
+  --node-attributes VpcId=vpc-xxx ZoneId=cn-hangzhou-h SecurityGroupId=sg-xxx KeyPairName=my-keypair \
+  --node-groups '[
     {
       "NodeGroupType": "MASTER",
       "NodeGroupName": "master",
@@ -149,10 +130,10 @@ aliyun emr RunCluster --RegionId cn-hangzhou \
       "DataDisks": [{"Category": "cloud_essd", "Size": 80, "Count": 2}]
     }
   ]' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-emr-cluster-manage
 ```
 
-> **Note**: RunCluster passes complex parameters individually via `--param 'JSONString'` (e.g., `--Applications '[...]'`). This is the only EMR API supporting this format; all other APIs with complex and array parameters must use `--force` + dot expansion format (flat format).
+> **Note**: In plugin mode, `run-cluster` passes simple arrays via repeated key=value flags (e.g., `--applications ApplicationName=X`), objects via key=value pairs (e.g., `--node-attributes VpcId=X ZoneId=Y`), and complex nested structures via JSON strings (e.g., `--node-groups '[...]'`).
 
 ---
 
@@ -161,9 +142,11 @@ aliyun emr RunCluster --RegionId cn-hangzhou \
 Parameters same as RunCluster, but uses RPC flat syntax for passing parameters. RunCluster is the recommended method.
 
 ```bash
-aliyun emr CreateCluster --RegionId cn-hangzhou --ClusterName "test" \
-  --ClusterType DATALAKE --ReleaseVersion "EMR-5.16.0" \
-  --NodeGroups.1.NodeGroupType MASTER ...
+aliyun emr create-cluster --biz-region-id cn-hangzhou --cluster-name "test" \
+  --cluster-type DATALAKE --release-version "EMR-5.16.0" \
+  --node-attributes VpcId=vpc-xxx ZoneId=cn-hangzhou-h SecurityGroupId=sg-xxx \
+  --applications ApplicationName=HADOOP-COMMON --applications ApplicationName=HDFS \
+  --node-groups '[{"NodeGroupType":"MASTER","NodeGroupName":"master","NodeCount":1,"InstanceTypes":["ecs.g8i.xlarge"],"VSwitchIds":["vsw-xxx"],"SystemDisk":{"Category":"cloud_essd","Size":120},"DataDisks":[{"Category":"cloud_essd","Size":80,"Count":1}]}]'
 ```
 
 ---
@@ -179,7 +162,7 @@ aliyun emr CreateCluster --RegionId cn-hangzhou --ClusterName "test" \
 **Key Response Fields**: Cluster (ClusterId, ClusterName, ClusterType, ClusterState, StateChangeReason{Code,Message}, PaymentType, CreateTime, ReadyTime, ExpireTime, EndTime, ReleaseVersion, DeployMode, NodeAttributes, Tags, DeletionProtection, SubscriptionConfig)
 
 ```bash
-aliyun emr GetCluster --RegionId cn-hangzhou --ClusterId c-xxx
+aliyun emr get-cluster --biz-region-id cn-hangzhou --cluster-id c-xxx
 ```
 
 ---
@@ -202,8 +185,8 @@ aliyun emr GetCluster --RegionId cn-hangzhou --ClusterId c-xxx
 **Key Response Fields**: `Clusters[]` (ClusterId, ClusterName, ClusterType, ClusterState, PaymentType, CreateTime, ReadyTime, ExpireTime, EndTime, ReleaseVersion, StateChangeReason), TotalCount, NextToken
 
 ```bash
-aliyun emr ListClusters --RegionId cn-hangzhou \
-  --force --ClusterStates.1 RUNNING
+aliyun emr list-clusters --biz-region-id cn-hangzhou \
+  --cluster-states RUNNING
 ```
 
 ---
@@ -219,7 +202,7 @@ aliyun emr ListClusters --RegionId cn-hangzhou \
 **Key Response Fields**: `Applications[]` (ApplicationName, ApplicationState, ApplicationVersion, CommunityVersion)
 
 ```bash
-aliyun emr ListApplications --RegionId cn-hangzhou --ClusterId c-xxx
+aliyun emr list-applications --biz-region-id cn-hangzhou --cluster-id c-xxx
 ```
 
 ---
@@ -236,8 +219,8 @@ aliyun emr ListApplications --RegionId cn-hangzhou --ClusterId c-xxx
 | DeletionProtection | Boolean | No | Deletion protection switch |
 
 ```bash
-aliyun emr UpdateClusterAttribute --RegionId cn-hangzhou --ClusterId c-xxx \
-  --DeletionProtection true
+aliyun emr update-cluster-attribute --biz-region-id cn-hangzhou --cluster-id c-xxx \
+  --deletion-protection true
 ```
 
 ---
@@ -253,7 +236,7 @@ aliyun emr UpdateClusterAttribute --RegionId cn-hangzhou --ClusterId c-xxx \
 **Key Response Fields**: ClusterCloneMeta (complete cluster configuration object, can modify then pass to RunCluster)
 
 ```bash
-aliyun emr GetClusterCloneMeta --RegionId cn-hangzhou --ClusterId c-xxx
+aliyun emr get-cluster-clone-meta --biz-region-id cn-hangzhou --cluster-id c-xxx
 ```
 
 ---
@@ -274,8 +257,8 @@ Only valid for subscription clusters.
 | AutoRenewInstances | Array | No | Specified instance list |
 
 ```bash
-aliyun emr UpdateClusterAutoRenew --RegionId cn-hangzhou --ClusterId c-xxx \
-  --ClusterAutoRenew true --ClusterAutoRenewDuration 1 --ClusterAutoRenewDurationUnit Month
+aliyun emr update-cluster-auto-renew --biz-region-id cn-hangzhou --cluster-id c-xxx \
+  --cluster-auto-renew true --cluster-auto-renew-duration 1 --cluster-auto-renew-duration-unit Month
 ```
 
 ---
@@ -298,17 +281,8 @@ aliyun emr UpdateClusterAutoRenew --RegionId cn-hangzhou --ClusterId c-xxx \
 **Key Response Fields**: NodeGroupId
 
 ```bash
-aliyun emr CreateNodeGroup --RegionId cn-hangzhou --ClusterId c-xxx \
-  --force \
-  --NodeGroup.NodeGroupType TASK \
-  --NodeGroup.NodeGroupName task-1 \
-  --NodeGroup.NodeCount 3 \
-  --NodeGroup.InstanceTypes.1 ecs.g8i.xlarge \
-  --NodeGroup.SystemDisk.Category cloud_essd \
-  --NodeGroup.SystemDisk.Size 120 \
-  --NodeGroup.DataDisks.1.Category cloud_essd \
-  --NodeGroup.DataDisks.1.Size 80 \
-  --NodeGroup.DataDisks.1.Count 1
+aliyun emr create-node-group --biz-region-id cn-hangzhou --cluster-id c-xxx \
+  --node-group '{"NodeGroupType":"TASK","NodeGroupName":"task-1","NodeCount":3,"InstanceTypes":["ecs.g8i.xlarge"],"SystemDisk":{"Category":"cloud_essd","Size":120},"DataDisks":[{"Category":"cloud_essd","Size":80,"Count":1}]}'
 ```
 
 ---
@@ -330,7 +304,7 @@ aliyun emr CreateNodeGroup --RegionId cn-hangzhou --ClusterId c-xxx \
 **Key Response Fields**: `NodeGroups[]` (NodeGroupId, NodeGroupName, NodeGroupType, NodeGroupState, RunningNodeCount, InstanceTypes, PaymentType, SystemDisk, DataDisks), TotalCount
 
 ```bash
-aliyun emr ListNodeGroups --RegionId cn-hangzhou --ClusterId c-xxx
+aliyun emr list-node-groups --biz-region-id cn-hangzhou --cluster-id c-xxx
 ```
 
 ---
@@ -347,7 +321,7 @@ aliyun emr ListNodeGroups --RegionId cn-hangzhou --ClusterId c-xxx
 **Key Response Fields**: NodeGroup (NodeGroupId, NodeGroupName, NodeGroupType, NodeGroupState, RunningNodeCount, InstanceTypes, PaymentType, SystemDisk, DataDisks, ZoneId, VSwitchIds, SpotStrategy)
 
 ```bash
-aliyun emr GetNodeGroup --RegionId cn-hangzhou --ClusterId c-xxx --NodeGroupId ng-xxx
+aliyun emr get-node-group --biz-region-id cn-hangzhou --cluster-id c-xxx --node-group-id ng-xxx
 ```
 
 ---
@@ -379,8 +353,8 @@ aliyun emr GetNodeGroup --RegionId cn-hangzhou --ClusterId c-xxx --NodeGroupId n
 > **Note**: IncreaseNodes CLI doesn't support `--ClientToken` parameter, need other ways (like recording operation state) to avoid duplicate submission.
 
 ```bash
-aliyun emr IncreaseNodes --RegionId cn-hangzhou --ClusterId c-xxx \
-  --NodeGroupId ng-xxx --IncreaseNodeCount 3
+aliyun emr increase-nodes --biz-region-id cn-hangzhou --cluster-id c-xxx \
+  --node-group-id ng-xxx --increase-node-count 3
 ```
 
 ---
@@ -411,8 +385,8 @@ aliyun emr IncreaseNodes --RegionId cn-hangzhou --ClusterId c-xxx \
 **Key Response Fields**: OperationId
 
 ```bash
-aliyun emr DecreaseNodes --RegionId cn-hangzhou --ClusterId c-xxx \
-  --NodeGroupId ng-xxx --force --NodeIds.1 i-xxx1 --NodeIds.2 i-xxx2
+aliyun emr decrease-nodes --biz-region-id cn-hangzhou --cluster-id c-xxx \
+  --node-group-id ng-xxx --node-ids i-xxx1 i-xxx2
 ```
 
 ---
@@ -436,7 +410,7 @@ aliyun emr DecreaseNodes --RegionId cn-hangzhou --ClusterId c-xxx \
 **Key Response Fields**: `Nodes[]` (NodeId, NodeName, NodeGroupId, NodeGroupType, NodeState, InstanceType, PrivateIp, PublicIp, ZoneId, ExpireTime, AutoRenew), TotalCount
 
 ```bash
-aliyun emr ListNodes --RegionId cn-hangzhou --ClusterId c-xxx
+aliyun emr list-nodes --biz-region-id cn-hangzhou --cluster-id c-xxx
 ```
 
 ---
@@ -464,19 +438,21 @@ aliyun emr ListNodes --RegionId cn-hangzhou --ClusterId c-xxx
 **Key Response Fields**: RequestId
 
 ```bash
-aliyun emr PutAutoScalingPolicy --RegionId cn-hangzhou \
-  --ClusterId c-xxx --NodeGroupId ng-xxx \
-  --force \
-  --Constraints.MinCapacity 0 \
-  --Constraints.MaxCapacity 20 \
-  --ScalingRules.1.RuleName rule-name \
-  --ScalingRules.1.TriggerType TIME_TRIGGER \
-  --ScalingRules.1.ActivityType SCALE_OUT \
-  --ScalingRules.1.AdjustmentValue 5 \
-  --ScalingRules.1.TimeTrigger.LaunchTime "09:00" \
-  --ScalingRules.1.TimeTrigger.StartTime 1700000000000 \
-  --ScalingRules.1.TimeTrigger.RecurrenceType WEEKLY \
-  --ScalingRules.1.TimeTrigger.RecurrenceValue "MON,TUE,WED,THU,FRI"
+aliyun emr put-auto-scaling-policy --biz-region-id cn-hangzhou \
+  --cluster-id c-xxx --node-group-id ng-xxx \
+  --constraints MinCapacity=0 MaxCapacity=20 \
+  --scaling-rules '[{
+    "RuleName": "rule-name",
+    "TriggerType": "TIME_TRIGGER",
+    "ActivityType": "SCALE_OUT",
+    "AdjustmentValue": 5,
+    "TimeTrigger": {
+      "LaunchTime": "09:00",
+      "StartTime": 1700000000000,
+      "RecurrenceType": "WEEKLY",
+      "RecurrenceValue": "MON,TUE,WED,THU,FRI"
+    }
+  }]'
 ```
 
 ---
@@ -493,8 +469,8 @@ aliyun emr PutAutoScalingPolicy --RegionId cn-hangzhou \
 **Key Response Fields**: ScalingPolicy (ScalingPolicyId, ClusterId, NodeGroupId, Disabled, ScalingRules[], Constraints)
 
 ```bash
-aliyun emr GetAutoScalingPolicy --RegionId cn-hangzhou \
-  --ClusterId c-xxx --NodeGroupId ng-xxx
+aliyun emr get-auto-scaling-policy --biz-region-id cn-hangzhou \
+  --cluster-id c-xxx --node-group-id ng-xxx
 ```
 
 ---
@@ -516,8 +492,8 @@ aliyun emr GetAutoScalingPolicy --RegionId cn-hangzhou \
 | NodeGroupId | String | Yes | Node group ID |
 
 ```bash
-aliyun emr RemoveAutoScalingPolicy --RegionId cn-hangzhou \
-  --ClusterId c-xxx --NodeGroupId ng-xxx
+aliyun emr remove-auto-scaling-policy --biz-region-id cn-hangzhou \
+  --cluster-id c-xxx --node-group-id ng-xxx
 ```
 
 ---
@@ -536,7 +512,7 @@ aliyun emr RemoveAutoScalingPolicy --RegionId cn-hangzhou \
 **Key Response Fields**: `ScalingActivities[]` (ScalingActivityId, NodeGroupId, ActivityType, ActivityState, StartTime, EndTime, ExpectNum, TotalCapacity, Cause, Description), TotalCount, NextToken
 
 ```bash
-aliyun emr ListAutoScalingActivities --RegionId cn-hangzhou --ClusterId c-xxx
+aliyun emr list-auto-scaling-activities --biz-region-id cn-hangzhou --cluster-id c-xxx
 ```
 
 ---

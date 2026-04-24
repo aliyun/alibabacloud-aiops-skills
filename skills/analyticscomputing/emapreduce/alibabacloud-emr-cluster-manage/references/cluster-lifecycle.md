@@ -109,7 +109,7 @@ When selecting components need to satisfy dependency relationships, otherwise cl
 
 **HA Mode Additional Requirements**:
 - **Must select ZOOKEEPER**——HA mode NameNode/ResourceManager depends on ZooKeeper for master-standby switching
-- **Hive Metastore metadata must use external RDS**——Multiple MASTER need shared metadata storage, need to prepare RDS MySQL instance before creating HA cluster (in same VPC as cluster)
+- **Hive Metastore metadata must use external RDS**——Multiple MASTER need shared metadata storage, need to prepare RDS MySQL instance before creating HA cluster (in same VPC as cluster), and RDS must already allow access from the EMR cluster on MySQL port `3306` (for example via CIDR whitelist or security-group/network policy rules)
 - **Ranger uses MASTER internal MYSQL component**——No need for external RDS
 - NORMAL mode can use MASTER local MySQL, no RDS needed
 
@@ -136,6 +136,8 @@ When selecting components need to satisfy dependency relationships, otherwise cl
 | cloud_ssd | - | - | Older generation SSD, not recommended for new clusters |
 | cloud_efficiency | - | - | High efficiency cloud disk, lowest cost but average performance |
 
+> **Creation note**: For `OLAP`, `DATAFLOW`, and `CUSTOM` clusters, avoid overly small data disk counts. When using general-purpose instances with `cloud_efficiency` data disks, prefer a more conservative `DataDisks.Count` setting such as `4`, and adjust based on `RunCluster` feedback.
+
 ### Payment Method
 
 | Payment Method | Use Case | Description |
@@ -148,12 +150,12 @@ When selecting components need to satisfy dependency relationships, otherwise cl
 Check versions and specs:
 
 ```bash
-# Query available versions (replace ClusterType and RegionId)
-aliyun emr ListReleaseVersions --RegionId cn-hangzhou --ClusterType DATALAKE
+# Query available versions (replace cluster-type and biz-region-id)
+aliyun emr list-release-versions --biz-region-id cn-hangzhou --cluster-type DATALAKE
 
 # Query available instance types
-aliyun emr ListInstanceTypes --RegionId cn-hangzhou --ZoneId cn-hangzhou-h \
-  --ClusterType DATALAKE --PaymentType PayAsYouGo --NodeGroupType CORE
+aliyun emr list-instance-types --biz-region-id cn-hangzhou --zone-id cn-hangzhou-h \
+  --cluster-type DATALAKE --payment-type PayAsYouGo --node-group-type CORE
 ```
 
 ### Storage-Compute Architecture Selection
@@ -174,41 +176,22 @@ Before creating cluster, first determine storage-compute architecture, this dete
 NORMAL mode + pay-as-you-go + minimum specs, suitable for function verification and learning.
 
 ```bash
-aliyun emr RunCluster --RegionId cn-hangzhou \
-  --ClientToken $(uuidgen) \
-  --ClusterName "dev-datalake" \
-  --ClusterType "DATALAKE" \
-  --ReleaseVersion "EMR-5.21.0" \
-  --DeployMode "NORMAL" \
-  --PaymentType "PayAsYouGo" \
-  --Applications '[
-    {"ApplicationName": "HADOOP-COMMON"},
-    {"ApplicationName": "HDFS"},
-    {"ApplicationName": "YARN"},
-    {"ApplicationName": "HIVE"},
-    {"ApplicationName": "SPARK3"}
-  ]' \
-  --ApplicationConfigs '[
-    {
-      "ApplicationName": "HIVE",
-      "ConfigFileName": "hivemetastore-site.xml",
-      "ConfigItemKey": "hive.metastore.type",
-      "ConfigItemValue": "LOCAL"
-    },
-    {
-      "ApplicationName": "SPARK3",
-      "ConfigFileName": "hive-site.xml",
-      "ConfigItemKey": "hive.metastore.type",
-      "ConfigItemValue": "LOCAL"
-    }
-  ]' \
-  --NodeAttributes '{
-    "VpcId": "vpc-xxx",
-    "ZoneId": "cn-hangzhou-h",
-    "SecurityGroupId": "sg-xxx",
-    "KeyPairName": "my-keypair"
-  }' \
-  --NodeGroups '[
+aliyun emr run-cluster --biz-region-id cn-hangzhou \
+  --client-token $(uuidgen) \
+  --cluster-name "dev-datalake" \
+  --cluster-type "DATALAKE" \
+  --release-version "EMR-5.21.0" \
+  --deploy-mode "NORMAL" \
+  --payment-type "PayAsYouGo" \
+  --applications ApplicationName=HADOOP-COMMON \
+  --applications ApplicationName=HDFS \
+  --applications ApplicationName=YARN \
+  --applications ApplicationName=HIVE \
+  --applications ApplicationName=SPARK3 \
+  --application-configs ApplicationName=HIVE ConfigFileName=hivemetastore-site.xml ConfigItemKey=hive.metastore.type ConfigItemValue=LOCAL \
+  --application-configs ApplicationName=SPARK3 ConfigFileName=hive-site.xml ConfigItemKey=hive.metastore.type ConfigItemValue=LOCAL \
+  --node-attributes VpcId=vpc-xxx ZoneId=cn-hangzhou-h SecurityGroupId=sg-xxx KeyPairName=my-keypair \
+  --node-groups '[
     {
       "NodeGroupType": "MASTER",
       "NodeGroupName": "master",
@@ -237,69 +220,30 @@ HA + OSS-HDFS storage + g series general purpose instances + JINDOCACHE local ca
 > **Prerequisite**: Need to enable HDFS service for target Bucket in OSS console first. When creating cluster, set `OSS_ROOT_URI` via `ApplicationConfigs` to point to that Bucket (format `oss://<bucket-name>.<region>.oss-dls.aliyuncs.com/`), table data, job logs, temporary data will all be stored under this path.
 
 ```bash
-aliyun emr RunCluster --RegionId cn-hangzhou \
-  --ClientToken $(uuidgen) \
-  --ClusterName "prod-datalake-disaggregated" \
-  --ClusterType "DATALAKE" \
-  --ReleaseVersion "EMR-5.21.0" \
-  --DeployMode "HA" \
-  --PaymentType "PayAsYouGo" \
-  --DeletionProtection true \
-  --Applications '[
-    {"ApplicationName": "HADOOP-COMMON"},
-    {"ApplicationName": "OSS-HDFS"},
-    {"ApplicationName": "YARN"},
-    {"ApplicationName": "ZOOKEEPER"},
-    {"ApplicationName": "HIVE"},
-    {"ApplicationName": "SPARK3"},
-    {"ApplicationName": "TEZ"},
-    {"ApplicationName": "JINDOCACHE"}
-  ]' \
-  --ApplicationConfigs '[
-    {
-      "ApplicationName": "OSS-HDFS",
-      "ConfigFileName": "common.conf",
-      "ConfigItemKey": "OSS_ROOT_URI",
-      "ConfigItemValue": "oss://your-bucket.cn-hangzhou.oss-dls.aliyuncs.com/"
-    },
-    {
-      "ApplicationName": "HIVE",
-      "ConfigFileName": "hivemetastore-site.xml",
-      "ConfigItemKey": "hive.metastore.type",
-      "ConfigItemValue": "DLF"
-    },
-    {
-      "ApplicationName": "HIVE",
-      "ConfigFileName": "hivemetastore-site.xml",
-      "ConfigItemKey": "javax.jdo.option.ConnectionURL",
-      "ConfigItemValue": "jdbc:mysql://rm-xxx.mysql.rds.aliyuncs.com:3306/hivemeta?createDatabaseIfNotExist=true&characterEncoding=UTF-8"
-    },
-    {
-      "ApplicationName": "HIVE",
-      "ConfigFileName": "hivemetastore-site.xml",
-      "ConfigItemKey": "javax.jdo.option.ConnectionUserName",
-      "ConfigItemValue": "hive_user"
-    },
-    {
-      "ApplicationName": "HIVE",
-      "ConfigFileName": "hivemetastore-site.xml",
-      "ConfigItemKey": "javax.jdo.option.ConnectionPassword",
-      "ConfigItemValue": "YourRdsPassword123"
-    },
-    {
-      "ApplicationName": "SPARK3",
-      "ConfigFileName": "hive-site.xml",
-      "ConfigItemKey": "hive.metastore.type",
-      "ConfigItemValue": "DLF"
-    }    
-  ]' \
-  --NodeAttributes '{
-    "VpcId": "vpc-xxx",
-    "ZoneId": "cn-hangzhou-h",
-    "SecurityGroupId": "sg-xxx",
-    "KeyPairName": "my-keypair"
-  }' \
-  --NodeGroups '[
+aliyun emr run-cluster --biz-region-id cn-hangzhou \
+  --client-token $(uuidgen) \
+  --cluster-name "prod-datalake-disaggregated" \
+  --cluster-type "DATALAKE" \
+  --release-version "EMR-5.21.0" \
+  --deploy-mode "HA" \
+  --payment-type "PayAsYouGo" \
+  --deletion-protection true \
+  --applications ApplicationName=HADOOP-COMMON \
+  --applications ApplicationName=OSS-HDFS \
+  --applications ApplicationName=YARN \
+  --applications ApplicationName=ZOOKEEPER \
+  --applications ApplicationName=HIVE \
+  --applications ApplicationName=SPARK3 \
+  --applications ApplicationName=TEZ \
+  --applications ApplicationName=JINDOCACHE \
+  --application-configs ApplicationName=OSS-HDFS ConfigFileName=common.conf ConfigItemKey=OSS_ROOT_URI ConfigItemValue=oss://your-bucket.cn-hangzhou.oss-dls.aliyuncs.com/ \
+  --application-configs ApplicationName=HIVE ConfigFileName=hivemetastore-site.xml ConfigItemKey=hive.metastore.type ConfigItemValue=USER_RDS \
+  --application-configs ApplicationName=HIVE ConfigFileName=hivemetastore-site.xml ConfigItemKey=javax.jdo.option.ConnectionURL ConfigItemValue=jdbc:mysql://rm-xxx.mysql.rds.aliyuncs.com:3306/hivemeta?createDatabaseIfNotExist=true&characterEncoding=UTF-8 \
+  --application-configs ApplicationName=HIVE ConfigFileName=hivemetastore-site.xml ConfigItemKey=javax.jdo.option.ConnectionUserName ConfigItemValue=hive_user \
+  --application-configs ApplicationName=HIVE ConfigFileName=hivemetastore-site.xml ConfigItemKey=javax.jdo.option.ConnectionPassword ConfigItemValue=YourRdsPassword123 \
+  --application-configs ApplicationName=SPARK3 ConfigFileName=hive-site.xml ConfigItemKey=hive.metastore.type ConfigItemValue=USER_RDS \
+  --node-attributes VpcId=vpc-xxx ZoneId=cn-hangzhou-h SecurityGroupId=sg-xxx KeyPairName=my-keypair \
+  --node-groups '[
     {
       "NodeGroupType": "MASTER",
       "NodeGroupName": "master",
@@ -332,76 +276,36 @@ aliyun emr RunCluster --RegionId cn-hangzhou \
 
 > **Storage-Compute Separation Key Points**: CORE node DataDisks are for JindoCache local cache and Spark shuffle data, not storing persistent data. Scaling CORE nodes doesn't affect data safety. Storage capacity is determined by OSS bucket, no need to estimate disk.
 >
-> **HA + Hive Metadata**: HA mode must use external RDS to store Hive Metastore metadata (multiple MASTER need to share), RDS instance must be in same VPC as EMR cluster. Replace `ConnectionURL`, `ConnectionUserName`, `ConnectionPassword` in above example with actual RDS connection info.
+> **HA + Hive Metadata**: HA mode must use external RDS to store Hive Metastore metadata (multiple MASTER need to share). For user-managed external RDS, set `hive.metastore.type=USER_RDS`. The RDS instance must be in same VPC as EMR cluster, and before creation, confirm the RDS side already allows access from the EMR cluster on MySQL port `3306` (for example via CIDR whitelist or security-group/network policy rules). Replace `ConnectionURL`, `ConnectionUserName`, `ConnectionPassword` in above example with actual RDS connection info.
 
 ### Template 3: Production Cluster — Storage-Compute Integrated
 
 HA + HDFS local storage + d series local disk instance types. Data stored on CORE node local disks, low read/write latency but limited elasticity.
 
 ```bash
-aliyun emr RunCluster --RegionId cn-hangzhou \
-  --ClientToken $(uuidgen) \
-  --ClusterName "prod-datalake-converged" \
-  --ClusterType "DATALAKE" \
-  --ReleaseVersion "EMR-5.16.0" \
-  --DeployMode "HA" \
-  --PaymentType "Subscription" \
-  --DeletionProtection true \
-  --SubscriptionConfig '{
-    "PaymentDurationUnit": "Month",
-    "PaymentDuration": 1,
-    "AutoRenew": true,
-    "AutoRenewDurationUnit": "Month",
-    "AutoRenewDuration": 1
-  }' \
-  --Applications '[
-    {"ApplicationName": "HADOOP-COMMON"},
-    {"ApplicationName": "HDFS"},
-    {"ApplicationName": "YARN"},
-    {"ApplicationName": "ZOOKEEPER"},
-    {"ApplicationName": "HIVE"},
-    {"ApplicationName": "SPARK3"},
-    {"ApplicationName": "TEZ"}
-  ]' \
-  --ApplicationConfigs '[
-    {
-      "ApplicationName": "HDFS",
-      "ConfigFileName": "hdfs-site.xml",
-      "ConfigItemKey": "dfs.replication",
-      "ConfigItemValue": "3"
-    },
-    {
-      "ApplicationName": "HIVE",
-      "ConfigFileName": "hivemetastore-site.xml",
-      "ConfigItemKey": "hive.metastore.type",
-      "ConfigItemValue": "DLF"
-    },
-    {
-      "ApplicationName": "HIVE",
-      "ConfigFileName": "hivemetastore-site.xml",
-      "ConfigItemKey": "javax.jdo.option.ConnectionURL",
-      "ConfigItemValue": "jdbc:mysql://rm-xxx.mysql.rds.aliyuncs.com:3306/hivemeta?createDatabaseIfNotExist=true&characterEncoding=UTF-8"
-    },
-    {
-      "ApplicationName": "HIVE",
-      "ConfigFileName": "hivemetastore-site.xml",
-      "ConfigItemKey": "javax.jdo.option.ConnectionUserName",
-      "ConfigItemValue": "hive_user"
-    },
-    {
-      "ApplicationName": "HIVE",
-      "ConfigFileName": "hivemetastore-site.xml",
-      "ConfigItemKey": "javax.jdo.option.ConnectionPassword",
-      "ConfigItemValue": "YourRdsPassword123"
-    }
-  ]' \
-  --NodeAttributes '{
-    "VpcId": "vpc-xxx",
-    "ZoneId": "cn-hangzhou-h",
-    "SecurityGroupId": "sg-xxx",
-    "KeyPairName": "my-keypair"
-  }' \
-  --NodeGroups '[
+aliyun emr run-cluster --biz-region-id cn-hangzhou \
+  --client-token $(uuidgen) \
+  --cluster-name "prod-datalake-converged" \
+  --cluster-type "DATALAKE" \
+  --release-version "EMR-5.16.0" \
+  --deploy-mode "HA" \
+  --payment-type "Subscription" \
+  --deletion-protection true \
+  --subscription-config PaymentDurationUnit=Month PaymentDuration=1 AutoRenew=true AutoRenewDurationUnit=Month AutoRenewDuration=1 \
+  --applications ApplicationName=HADOOP-COMMON \
+  --applications ApplicationName=HDFS \
+  --applications ApplicationName=YARN \
+  --applications ApplicationName=ZOOKEEPER \
+  --applications ApplicationName=HIVE \
+  --applications ApplicationName=SPARK3 \
+  --applications ApplicationName=TEZ \
+  --application-configs ApplicationName=HDFS ConfigFileName=hdfs-site.xml ConfigItemKey=dfs.replication ConfigItemValue=3 \
+  --application-configs ApplicationName=HIVE ConfigFileName=hivemetastore-site.xml ConfigItemKey=hive.metastore.type ConfigItemValue=USER_RDS \
+  --application-configs ApplicationName=HIVE ConfigFileName=hivemetastore-site.xml ConfigItemKey=javax.jdo.option.ConnectionURL ConfigItemValue=jdbc:mysql://rm-xxx.mysql.rds.aliyuncs.com:3306/hivemeta?createDatabaseIfNotExist=true&characterEncoding=UTF-8 \
+  --application-configs ApplicationName=HIVE ConfigFileName=hivemetastore-site.xml ConfigItemKey=javax.jdo.option.ConnectionUserName ConfigItemValue=hive_user \
+  --application-configs ApplicationName=HIVE ConfigFileName=hivemetastore-site.xml ConfigItemKey=javax.jdo.option.ConnectionPassword ConfigItemValue=YourRdsPassword123 \
+  --node-attributes VpcId=vpc-xxx ZoneId=cn-hangzhou-h SecurityGroupId=sg-xxx KeyPairName=my-keypair \
+  --node-groups '[
     {
       "NodeGroupType": "MASTER",
       "NodeGroupName": "master",
@@ -435,67 +339,33 @@ aliyun emr RunCluster --RegionId cn-hangzhou \
 
 > **Storage-Compute Integrated Key Points**: CORE uses d series local disk instance types, data stored in local HDFS. Shrinking CORE nodes needs to wait for HDFS data migration to complete, recommend subscription to lock resources. TASK nodes still use g series, pure compute without data. CORE nodes recommend enabling `DeploymentSetStrategy: "CLUSTER"` to分散 deploy instances on different physical servers, avoid single physical server failure causing multiple HDFS replicas lost simultaneously.
 >
-> **HA + Hive Metadata**: HA mode must use external RDS to store Hive Metastore metadata (multiple MASTER need to share), RDS instance must be in same VPC as EMR cluster. Replace `ConnectionURL`, `ConnectionUserName`, `ConnectionPassword` in above example with actual RDS connection info.
+> **HA + Hive Metadata**: HA mode must use external RDS to store Hive Metastore metadata (multiple MASTER need to share). For user-managed external RDS, set `hive.metastore.type=USER_RDS`. The RDS instance must be in same VPC as EMR cluster, and before creation, confirm the RDS side already allows access from the EMR cluster on MySQL port `3306` (for example via CIDR whitelist or security-group/network policy rules). Replace `ConnectionURL`, `ConnectionUserName`, `ConnectionPassword` in above example with actual RDS connection info.
 
 ### Template 4: Spot Instance TASK Nodes (Reduce Compute Cost)
 
 Create complete cluster with Spot TASK node group. To add Spot TASK node group to existing cluster, refer to CreateNodeGroup operation in [Scaling Guide](scaling.md).
 
 ```bash
-aliyun emr RunCluster --RegionId cn-hangzhou \
-  --ClientToken $(uuidgen) \
-  --ClusterName "cost-optimized-cluster" \
-  --ClusterType "DATALAKE" \
-  --ReleaseVersion "EMR-5.16.0" \
-  --DeployMode "HA" \
-  --PaymentType "PayAsYouGo" \
-  --Applications '[
-    {"ApplicationName": "HADOOP-COMMON"},
-    {"ApplicationName": "OSS-HDFS"},
-    {"ApplicationName": "YARN"},
-    {"ApplicationName": "ZOOKEEPER"},
-    {"ApplicationName": "HIVE"},
-    {"ApplicationName": "SPARK3"}
-  ]' \
-  --ApplicationConfigs '[
-    {
-      "ApplicationName": "OSS-HDFS",
-      "ConfigFileName": "common.conf",
-      "ConfigItemKey": "OSS_ROOT_URI",
-      "ConfigItemValue": "oss://your-bucket.cn-hangzhou.oss-dls.aliyuncs.com/"
-    },
-    {
-      "ApplicationName": "HIVE",
-      "ConfigFileName": "hivemetastore-site.xml",
-      "ConfigItemKey": "hive.metastore.type",
-      "ConfigItemValue": "DLF"
-    },
-    {
-      "ApplicationName": "HIVE",
-      "ConfigFileName": "hivemetastore-site.xml",
-      "ConfigItemKey": "javax.jdo.option.ConnectionURL",
-      "ConfigItemValue": "jdbc:mysql://rm-xxx.mysql.rds.aliyuncs.com:3306/hivemeta?createDatabaseIfNotExist=true&characterEncoding=UTF-8"
-    },
-    {
-      "ApplicationName": "HIVE",
-      "ConfigFileName": "hivemetastore-site.xml",
-      "ConfigItemKey": "javax.jdo.option.ConnectionUserName",
-      "ConfigItemValue": "hive_user"
-    },
-    {
-      "ApplicationName": "HIVE",
-      "ConfigFileName": "hivemetastore-site.xml",
-      "ConfigItemKey": "javax.jdo.option.ConnectionPassword",
-      "ConfigItemValue": "YourRdsPassword123"
-    }
-  ]' \
-  --NodeAttributes '{
-    "VpcId": "vpc-xxx",
-    "ZoneId": "cn-hangzhou-h",
-    "SecurityGroupId": "sg-xxx",
-    "KeyPairName": "my-keypair"
-  }' \
-  --NodeGroups '[
+aliyun emr run-cluster --biz-region-id cn-hangzhou \
+  --client-token $(uuidgen) \
+  --cluster-name "cost-optimized-cluster" \
+  --cluster-type "DATALAKE" \
+  --release-version "EMR-5.16.0" \
+  --deploy-mode "HA" \
+  --payment-type "PayAsYouGo" \
+  --applications ApplicationName=HADOOP-COMMON \
+  --applications ApplicationName=OSS-HDFS \
+  --applications ApplicationName=YARN \
+  --applications ApplicationName=ZOOKEEPER \
+  --applications ApplicationName=HIVE \
+  --applications ApplicationName=SPARK3 \
+  --application-configs ApplicationName=OSS-HDFS ConfigFileName=common.conf ConfigItemKey=OSS_ROOT_URI ConfigItemValue=oss://your-bucket.cn-hangzhou.oss-dls.aliyuncs.com/ \
+  --application-configs ApplicationName=HIVE ConfigFileName=hivemetastore-site.xml ConfigItemKey=hive.metastore.type ConfigItemValue=USER_RDS \
+  --application-configs ApplicationName=HIVE ConfigFileName=hivemetastore-site.xml ConfigItemKey=javax.jdo.option.ConnectionURL ConfigItemValue=jdbc:mysql://rm-xxx.mysql.rds.aliyuncs.com:3306/hivemeta?createDatabaseIfNotExist=true&characterEncoding=UTF-8 \
+  --application-configs ApplicationName=HIVE ConfigFileName=hivemetastore-site.xml ConfigItemKey=javax.jdo.option.ConnectionUserName ConfigItemValue=hive_user \
+  --application-configs ApplicationName=HIVE ConfigFileName=hivemetastore-site.xml ConfigItemKey=javax.jdo.option.ConnectionPassword ConfigItemValue=YourRdsPassword123 \
+  --node-attributes VpcId=vpc-xxx ZoneId=cn-hangzhou-h SecurityGroupId=sg-xxx KeyPairName=my-keypair \
+  --node-groups '[
     {
       "NodeGroupType": "MASTER",
       "NodeGroupName": "master",
@@ -535,28 +405,28 @@ aliyun emr RunCluster --RegionId cn-hangzhou \
 
 ```bash
 # All clusters
-aliyun emr ListClusters --RegionId cn-hangzhou
+aliyun emr list-clusters --biz-region-id cn-hangzhou
 
 # Only running clusters
-aliyun emr ListClusters --RegionId cn-hangzhou \
-  --force --ClusterStates.1 RUNNING
+aliyun emr list-clusters --biz-region-id cn-hangzhou \
+  --cluster-states RUNNING
 
 # Filter by type and payment method
-aliyun emr ListClusters --RegionId cn-hangzhou \
-  --force --ClusterTypes.1 DATALAKE --PaymentTypes.1 PayAsYouGo
+aliyun emr list-clusters --biz-region-id cn-hangzhou \
+  --cluster-types DATALAKE --payment-types PayAsYouGo
 
 # Search by name
-aliyun emr ListClusters --RegionId cn-hangzhou --ClusterName "prod"
+aliyun emr list-clusters --biz-region-id cn-hangzhou --cluster-name "prod"
 
 # Find abnormal clusters
-aliyun emr ListClusters --RegionId cn-hangzhou \
-  --force --ClusterStates.1 START_FAILED --ClusterStates.2 TERMINATED_WITH_ERRORS --ClusterStates.3 TERMINATE_FAILED
+aliyun emr list-clusters --biz-region-id cn-hangzhou \
+  --cluster-states START_FAILED TERMINATED_WITH_ERRORS TERMINATE_FAILED
 ```
 
 ### Cluster Details
 
 ```bash
-aliyun emr GetCluster --RegionId cn-hangzhou --ClusterId c-xxx
+aliyun emr get-cluster --biz-region-id cn-hangzhou --cluster-id c-xxx
 ```
 
 ### Cluster State Machine
@@ -576,33 +446,33 @@ aliyun emr GetCluster --RegionId cn-hangzhou --ClusterId c-xxx
 
 ```bash
 # Modify cluster name
-aliyun emr UpdateClusterAttribute --RegionId cn-hangzhou --ClusterId c-xxx \
-  --ClusterName "new-cluster-name"
+aliyun emr update-cluster-attribute --biz-region-id cn-hangzhou --cluster-id c-xxx \
+  --cluster-name "new-cluster-name"
 
 # Modify description
-aliyun emr UpdateClusterAttribute --RegionId cn-hangzhou --ClusterId c-xxx \
-  --Description "Production data lake for team-A"
+aliyun emr update-cluster-attribute --biz-region-id cn-hangzhou --cluster-id c-xxx \
+  --description "Production data lake for team-A"
 
 # Enable deletion protection (recommended for production clusters)
-aliyun emr UpdateClusterAttribute --RegionId cn-hangzhou --ClusterId c-xxx \
-  --DeletionProtection true
+aliyun emr update-cluster-attribute --biz-region-id cn-hangzhou --cluster-id c-xxx \
+  --deletion-protection true
 ```
 
 ### Auto Renewal Management (Subscription Clusters Only)
 
 ```bash
 # Enable auto renewal (renew monthly)
-aliyun emr UpdateClusterAutoRenew --RegionId cn-hangzhou --ClusterId c-xxx \
-  --ClusterAutoRenew true --ClusterAutoRenewDuration 1 --ClusterAutoRenewDurationUnit Month
+aliyun emr update-cluster-auto-renew --biz-region-id cn-hangzhou --cluster-id c-xxx \
+  --cluster-auto-renew true --cluster-auto-renew-duration 1 --cluster-auto-renew-duration-unit Month
 
 # Disable auto renewal
-aliyun emr UpdateClusterAutoRenew --RegionId cn-hangzhou --ClusterId c-xxx \
-  --ClusterAutoRenew false
+aliyun emr update-cluster-auto-renew --biz-region-id cn-hangzhou --cluster-id c-xxx \
+  --cluster-auto-renew false
 
 # Enable renewal for all cluster instances
-aliyun emr UpdateClusterAutoRenew --RegionId cn-hangzhou --ClusterId c-xxx \
-  --ClusterAutoRenew true --ClusterAutoRenewDuration 1 --ClusterAutoRenewDurationUnit Month \
-  --RenewAllInstances true
+aliyun emr update-cluster-auto-renew --biz-region-id cn-hangzhou --cluster-id c-xxx \
+  --cluster-auto-renew true --cluster-auto-renew-duration 1 --cluster-auto-renew-duration-unit Month \
+  --renew-all-instances true
 ```
 
 ## 5. Clone Cluster
@@ -611,7 +481,7 @@ When need to create a new cluster with same configuration as existing cluster (e
 
 ```bash
 # Step 1: Get clone metadata
-aliyun emr GetClusterCloneMeta --RegionId cn-hangzhou --ClusterId c-xxx
+aliyun emr get-cluster-clone-meta --biz-region-id cn-hangzhou --cluster-id c-xxx
 ```
 
 Returned metadata contains complete cluster configuration. Modify fields that need adjustment (cluster name, node count, etc.), then create new cluster:
@@ -620,17 +490,17 @@ Returned metadata contains complete cluster configuration. Modify fields that ne
 # Step 2: Create new cluster based on metadata (modify ClusterName etc. fields)
 # Extract Applications, NodeGroups, NodeAttributes etc. fields from clone metadata,
 # Pass in RunCluster named parameter format (don't use --body)
-aliyun emr RunCluster --RegionId cn-hangzhou \
-  --ClientToken $(uuidgen) \
-  --ClusterName "cloned-cluster" \
-  --ClusterType "DATALAKE" \
-  --ReleaseVersion "EMR-5.16.0" \
-  --DeployMode "HA" \
-  --PaymentType "PayAsYouGo" \
-  --Applications '[... # Copy from clone metadata]' \
-  --ApplicationConfigs '[... # Copy from clone metadata]' \
-  --NodeAttributes '{... # Modify network parameters}' \
-  --NodeGroups '[... # Adjust node count and specs as needed]'
+aliyun emr run-cluster --biz-region-id cn-hangzhou \
+  --client-token $(uuidgen) \
+  --cluster-name "cloned-cluster" \
+  --cluster-type "DATALAKE" \
+  --release-version "EMR-5.16.0" \
+  --deploy-mode "HA" \
+  --payment-type "PayAsYouGo" \
+  --applications ... \               # Copy from clone metadata
+  --application-configs ... \         # Copy from clone metadata
+  --node-attributes ... \             # Modify network parameters
+  --node-groups '[... ]'              # Adjust node count and specs as needed
 ```
 
 **Cross-Region Clone Notes**:

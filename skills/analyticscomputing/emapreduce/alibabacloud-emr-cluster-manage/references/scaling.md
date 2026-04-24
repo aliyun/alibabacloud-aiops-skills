@@ -61,27 +61,27 @@ Before executing ANY scaling operation, these constraints are **absolute prohibi
 
 ```bash
 # View current node group info
-aliyun emr ListNodeGroups --RegionId cn-hangzhou --ClusterId c-xxx
+aliyun emr list-node-groups --biz-region-id cn-hangzhou --cluster-id c-xxx
 
 # Confirm TASK node group ID
-aliyun emr ListNodeGroups --RegionId cn-hangzhou --ClusterId c-xxx \
-  --force --NodeGroupTypes.1 TASK
+aliyun emr list-node-groups --biz-region-id cn-hangzhou --cluster-id c-xxx \
+  --node-group-types TASK
 ```
 
 ### TASK Node Scale Out (Recommended)
 
 ```bash
 # Scale out 3 TASK nodes
-aliyun emr IncreaseNodes --RegionId cn-hangzhou --ClusterId c-xxx \
-  --NodeGroupId ng-xxx --IncreaseNodeCount 3
+aliyun emr increase-nodes --biz-region-id cn-hangzhou --cluster-id c-xxx \
+  --node-group-id ng-xxx --increase-node-count 3
 ```
 
 ### CORE Node Scale Out (Need Caution)
 
 ```bash
 # Scale out 2 CORE nodes (will trigger HDFS rebalance)
-aliyun emr IncreaseNodes --RegionId cn-hangzhou --ClusterId c-xxx \
-  --NodeGroupId ng-core-xxx --IncreaseNodeCount 2
+aliyun emr increase-nodes --biz-region-id cn-hangzhou --cluster-id c-xxx \
+  --node-group-id ng-core-xxx --increase-node-count 2
 ```
 
 > **Note**: After CORE scale out, HDFS will automatically perform data rebalancing, IO load will increase during this period.
@@ -92,24 +92,24 @@ When target spec stock insufficient, use `MinIncreaseNodeCount` to allow partial
 
 ```bash
 # Expect 5 nodes, at least 2 nodes
-aliyun emr IncreaseNodes --RegionId cn-hangzhou --ClusterId c-xxx \
-  --NodeGroupId ng-xxx --IncreaseNodeCount 5 --MinIncreaseNodeCount 2
+aliyun emr increase-nodes --biz-region-id cn-hangzhou --cluster-id c-xxx \
+  --node-group-id ng-xxx --increase-node-count 5 --min-increase-node-count 2
 ```
 
 ### Subscription Scale Out
 
 ```bash
-aliyun emr IncreaseNodes --RegionId cn-hangzhou --ClusterId c-xxx \
-  --NodeGroupId ng-xxx --IncreaseNodeCount 2 \
-  --PaymentDuration 1 --PaymentDurationUnit Month --AutoPayOrder true --AutoRenew true
+aliyun emr increase-nodes --biz-region-id cn-hangzhou --cluster-id c-xxx \
+  --node-group-id ng-xxx --increase-node-count 2 \
+  --payment-duration 1 --payment-duration-unit Month --auto-pay-order true --auto-renew true
 ```
 
 ### Verify Scale Out Result
 
 ```bash
 # After scale out completes, check node status
-aliyun emr ListNodes --RegionId cn-hangzhou --ClusterId c-xxx \
-  --force --NodeGroupIds.1 ng-xxx --NodeStates.1 Running
+aliyun emr list-nodes --biz-region-id cn-hangzhou --cluster-id c-xxx \
+  --node-group-ids ng-xxx --node-states Running
 ```
 
 ## 2. Manual Scale In
@@ -125,12 +125,12 @@ aliyun emr ListNodes --RegionId cn-hangzhou --ClusterId c-xxx \
 
 ```bash
 # First view TASK node list, select nodes to release
-aliyun emr ListNodes --RegionId cn-hangzhou --ClusterId c-xxx \
-  --force --NodeGroupIds.1 ng-task-xxx --NodeStates.1 Running
+aliyun emr list-nodes --biz-region-id cn-hangzhou --cluster-id c-xxx \
+  --node-group-ids ng-task-xxx --node-states Running
 
 # ⚠️ Scale in by node ID precisely (recommended)
-aliyun emr DecreaseNodes --RegionId cn-hangzhou --ClusterId c-xxx \
-  --NodeGroupId ng-task-xxx --force --NodeIds.1 i-xxx1 --NodeIds.2 i-xxx2
+aliyun emr decrease-nodes --biz-region-id cn-hangzhou --cluster-id c-xxx \
+  --node-group-id ng-task-xxx --node-ids i-xxx1 i-xxx2
 ```
 
 > **Important**: DecreaseNodes only supports TASK node groups. To reduce CORE nodes, need to operate in ECS console or contact technical support.
@@ -141,10 +141,10 @@ Avoid taking大量 nodes offline at once causing cluster instability:
 
 ```bash
 # Scale in 2 nodes per batch, batch interval 300 seconds
-aliyun emr DecreaseNodes --RegionId cn-hangzhou --ClusterId c-xxx \
-  --NodeGroupId ng-xxx \
-  --force --NodeIds.1 i-xxx1 --NodeIds.2 i-xxx2 --NodeIds.3 i-xxx3 --NodeIds.4 i-xxx4 \
-  --BatchSize 2 --BatchInterval 300
+aliyun emr decrease-nodes --biz-region-id cn-hangzhou --cluster-id c-xxx \
+  --node-group-id ng-xxx \
+  --node-ids i-xxx1 i-xxx2 i-xxx3 i-xxx4 \
+  --batch-size 2 --batch-interval 300
 ```
 
 ## 3. Create New Node Group
@@ -159,37 +159,31 @@ aliyun emr DecreaseNodes --RegionId cn-hangzhou --ClusterId c-xxx \
 ### Create Regular TASK Node Group
 
 ```bash
-aliyun emr CreateNodeGroup --RegionId cn-hangzhou --ClusterId c-xxx \
-  --force \
-  --NodeGroup.NodeGroupType TASK \
-  --NodeGroup.NodeGroupName task-compute \
-  --NodeGroup.NodeCount 3 \
-  --NodeGroup.InstanceTypes.1 ecs.g8i.2xlarge \
-  --NodeGroup.SystemDisk.Category cloud_essd \
-  --NodeGroup.SystemDisk.Size 120 \
-  --NodeGroup.DataDisks.1.Category cloud_essd \
-  --NodeGroup.DataDisks.1.Size 80 \
-  --NodeGroup.DataDisks.1.Count 1
+aliyun emr create-node-group --biz-region-id cn-hangzhou --cluster-id c-xxx \
+  --node-group '{
+    "NodeGroupType": "TASK",
+    "NodeGroupName": "task-compute",
+    "NodeCount": 3,
+    "InstanceTypes": ["ecs.g8i.2xlarge"],
+    "SystemDisk": {"Category": "cloud_essd", "Size": 120},
+    "DataDisks": [{"Category": "cloud_essd", "Size": 80, "Count": 1}]
+  }'
 ```
 
 ### Create Spot Instance TASK Node Group
 
 ```bash
 # Multi-spec disaster tolerance, improve Spot availability
-aliyun emr CreateNodeGroup --RegionId cn-hangzhou --ClusterId c-xxx \
-  --force \
-  --NodeGroup.NodeGroupType TASK \
-  --NodeGroup.NodeGroupName task-spot \
-  --NodeGroup.NodeCount 5 \
-  --NodeGroup.InstanceTypes.1 ecs.g8i.2xlarge \
-  --NodeGroup.InstanceTypes.2 ecs.g8i.xlarge \
-  --NodeGroup.InstanceTypes.3 ecs.c8i.2xlarge \
-  --NodeGroup.SystemDisk.Category cloud_essd \
-  --NodeGroup.SystemDisk.Size 120 \
-  --NodeGroup.DataDisks.1.Category cloud_essd \
-  --NodeGroup.DataDisks.1.Size 80 \
-  --NodeGroup.DataDisks.1.Count 1 \
-  --NodeGroup.SpotStrategy SpotAsPriceGo
+aliyun emr create-node-group --biz-region-id cn-hangzhou --cluster-id c-xxx \
+  --node-group '{
+    "NodeGroupType": "TASK",
+    "NodeGroupName": "task-spot",
+    "NodeCount": 5,
+    "InstanceTypes": ["ecs.g8i.2xlarge", "ecs.g8i.xlarge", "ecs.c8i.2xlarge"],
+    "SystemDisk": {"Category": "cloud_essd", "Size": 120},
+    "DataDisks": [{"Category": "cloud_essd", "Size": 80, "Count": 1}],
+    "SpotStrategy": "SpotAsPriceGo"
+  }'
 ```
 
 > **Spot Best Practice**: Configure 3+ InstanceTypes to improve availability. TASK nodes have no HDFS data, Spot being reclaimed doesn't affect data.
@@ -262,24 +256,20 @@ Only supports TASK node groups + pay-as-you-go. Can associate ECS private pool, 
 **Complete Example: Spot TASK Node Group with Advanced Configuration**
 
 ```bash
-aliyun emr CreateNodeGroup --RegionId cn-hangzhou --ClusterId c-xxx \
-  --force \
-  --NodeGroup.NodeGroupType TASK \
-  --NodeGroup.NodeGroupName task-spot-advanced \
-  --NodeGroup.NodeCount 5 \
-  --NodeGroup.InstanceTypes.1 ecs.g8i.2xlarge \
-  --NodeGroup.InstanceTypes.2 ecs.g8i.xlarge \
-  --NodeGroup.InstanceTypes.3 ecs.c8i.2xlarge \
-  --NodeGroup.SystemDisk.Category cloud_essd \
-  --NodeGroup.SystemDisk.Size 120 \
-  --NodeGroup.DataDisks.1.Category cloud_essd \
-  --NodeGroup.DataDisks.1.Size 80 \
-  --NodeGroup.DataDisks.1.Count 1 \
-  --NodeGroup.SpotStrategy SpotAsPriceGo \
-  --NodeGroup.NodeResizeStrategy COST_OPTIMIZED \
-  --NodeGroup.SpotInstanceRemedy true \
-  --NodeGroup.CompensateWithOnDemand true \
-  --NodeGroup.GracefulShutdown true
+aliyun emr create-node-group --biz-region-id cn-hangzhou --cluster-id c-xxx \
+  --node-group '{
+    "NodeGroupType": "TASK",
+    "NodeGroupName": "task-spot-advanced",
+    "NodeCount": 5,
+    "InstanceTypes": ["ecs.g8i.2xlarge", "ecs.g8i.xlarge", "ecs.c8i.2xlarge"],
+    "SystemDisk": {"Category": "cloud_essd", "Size": 120},
+    "DataDisks": [{"Category": "cloud_essd", "Size": 80, "Count": 1}],
+    "SpotStrategy": "SpotAsPriceGo",
+    "NodeResizeStrategy": "COST_OPTIMIZED",
+    "SpotInstanceRemedy": true,
+    "CompensateWithOnDemand": true,
+    "GracefulShutdown": true
+  }'
 ```
 
 ## 4. Auto Scaling Policy
@@ -316,27 +306,35 @@ Configure精细 scheduled/load rules via PutAutoScalingPolicy API.
 Weekday 9:00 scale out, 20:00 scale back:
 
 ```bash
-aliyun emr PutAutoScalingPolicy --RegionId cn-hangzhou \
-  --ClusterId c-xxx --NodeGroupId ng-task-xxx \
-  --force \
-  --Constraints.MinCapacity 0 \
-  --Constraints.MaxCapacity 20 \
-  --ScalingRules.1.RuleName workday-scaleout \
-  --ScalingRules.1.TriggerType TIME_TRIGGER \
-  --ScalingRules.1.ActivityType SCALE_OUT \
-  --ScalingRules.1.AdjustmentValue 5 \
-  --ScalingRules.1.TimeTrigger.LaunchTime "09:00" \
-  --ScalingRules.1.TimeTrigger.StartTime 1700000000000 \
-  --ScalingRules.1.TimeTrigger.RecurrenceType WEEKLY \
-  --ScalingRules.1.TimeTrigger.RecurrenceValue "MON,TUE,WED,THU,FRI" \
-  --ScalingRules.2.RuleName workday-scalein \
-  --ScalingRules.2.TriggerType TIME_TRIGGER \
-  --ScalingRules.2.ActivityType SCALE_IN \
-  --ScalingRules.2.AdjustmentValue 5 \
-  --ScalingRules.2.TimeTrigger.LaunchTime "20:00" \
-  --ScalingRules.2.TimeTrigger.StartTime 1700000000000 \
-  --ScalingRules.2.TimeTrigger.RecurrenceType WEEKLY \
-  --ScalingRules.2.TimeTrigger.RecurrenceValue "MON,TUE,WED,THU,FRI"
+aliyun emr put-auto-scaling-policy --biz-region-id cn-hangzhou \
+  --cluster-id c-xxx --node-group-id ng-task-xxx \
+  --constraints MinCapacity=0 MaxCapacity=20 \
+  --scaling-rules '[
+    {
+      "RuleName": "workday-scaleout",
+      "TriggerType": "TIME_TRIGGER",
+      "ActivityType": "SCALE_OUT",
+      "AdjustmentValue": 5,
+      "TimeTrigger": {
+        "LaunchTime": "09:00",
+        "StartTime": 1700000000000,
+        "RecurrenceType": "WEEKLY",
+        "RecurrenceValue": "MON,TUE,WED,THU,FRI"
+      }
+    },
+    {
+      "RuleName": "workday-scalein",
+      "TriggerType": "TIME_TRIGGER",
+      "ActivityType": "SCALE_IN",
+      "AdjustmentValue": 5,
+      "TimeTrigger": {
+        "LaunchTime": "20:00",
+        "StartTime": 1700000000000,
+        "RecurrenceType": "WEEKLY",
+        "RecurrenceValue": "MON,TUE,WED,THU,FRI"
+      }
+    }
+  ]'
 ```
 
 **TimeTrigger Parameter Description**:
@@ -350,37 +348,51 @@ aliyun emr PutAutoScalingPolicy --RegionId cn-hangzhou \
 Auto scale based on YARN available VCore percentage:
 
 ```bash
-aliyun emr PutAutoScalingPolicy --RegionId cn-hangzhou \
-  --ClusterId c-xxx --NodeGroupId ng-task-xxx \
-  --force \
-  --Constraints.MinCapacity 2 \
-  --Constraints.MaxCapacity 50 \
-  --ScalingRules.1.RuleName yarn-vcore-scaleout \
-  --ScalingRules.1.TriggerType METRICS_TRIGGER \
-  --ScalingRules.1.ActivityType SCALE_OUT \
-  --ScalingRules.1.AdjustmentValue 3 \
-  --ScalingRules.1.MetricsTrigger.TimeWindow 300 \
-  --ScalingRules.1.MetricsTrigger.EvaluationCount 3 \
-  --ScalingRules.1.MetricsTrigger.CoolDownInterval 300 \
-  --ScalingRules.1.MetricsTrigger.Conditions.1.MetricName yarn_resourcemanager_queue_AvailableVCoresPercentage \
-  --ScalingRules.1.MetricsTrigger.Conditions.1.Statistics AVG \
-  --ScalingRules.1.MetricsTrigger.Conditions.1.ComparisonOperator LT \
-  --ScalingRules.1.MetricsTrigger.Conditions.1.Threshold 20.0 \
-  --ScalingRules.1.MetricsTrigger.Conditions.1.Tags.1.Key queue_name \
-  --ScalingRules.1.MetricsTrigger.Conditions.1.Tags.1.Value root \
-  --ScalingRules.2.RuleName yarn-vcore-scalein \
-  --ScalingRules.2.TriggerType METRICS_TRIGGER \
-  --ScalingRules.2.ActivityType SCALE_IN \
-  --ScalingRules.2.AdjustmentValue 2 \
-  --ScalingRules.2.MetricsTrigger.TimeWindow 300 \
-  --ScalingRules.2.MetricsTrigger.EvaluationCount 5 \
-  --ScalingRules.2.MetricsTrigger.CoolDownInterval 600 \
-  --ScalingRules.2.MetricsTrigger.Conditions.1.MetricName yarn_resourcemanager_queue_AvailableVCoresPercentage \
-  --ScalingRules.2.MetricsTrigger.Conditions.1.Statistics AVG \
-  --ScalingRules.2.MetricsTrigger.Conditions.1.ComparisonOperator GT \
-  --ScalingRules.2.MetricsTrigger.Conditions.1.Threshold 80.0 \
-  --ScalingRules.2.MetricsTrigger.Conditions.1.Tags.1.Key queue_name \
-  --ScalingRules.2.MetricsTrigger.Conditions.1.Tags.1.Value root
+aliyun emr put-auto-scaling-policy --biz-region-id cn-hangzhou \
+  --cluster-id c-xxx --node-group-id ng-task-xxx \
+  --constraints MinCapacity=2 MaxCapacity=50 \
+  --scaling-rules '[
+    {
+      "RuleName": "yarn-vcore-scaleout",
+      "TriggerType": "METRICS_TRIGGER",
+      "ActivityType": "SCALE_OUT",
+      "AdjustmentValue": 3,
+      "MetricsTrigger": {
+        "TimeWindow": 300,
+        "EvaluationCount": 3,
+        "CoolDownInterval": 300,
+        "Conditions": [
+          {
+            "MetricName": "yarn_resourcemanager_queue_AvailableVCoresPercentage",
+            "Statistics": "AVG",
+            "ComparisonOperator": "LT",
+            "Threshold": 20.0,
+            "Tags": [{"Key": "queue_name", "Value": "root"}]
+          }
+        ]
+      }
+    },
+    {
+      "RuleName": "yarn-vcore-scalein",
+      "TriggerType": "METRICS_TRIGGER",
+      "ActivityType": "SCALE_IN",
+      "AdjustmentValue": 2,
+      "MetricsTrigger": {
+        "TimeWindow": 300,
+        "EvaluationCount": 5,
+        "CoolDownInterval": 600,
+        "Conditions": [
+          {
+            "MetricName": "yarn_resourcemanager_queue_AvailableVCoresPercentage",
+            "Statistics": "AVG",
+            "ComparisonOperator": "GT",
+            "Threshold": 80.0,
+            "Tags": [{"Key": "queue_name", "Value": "root"}]
+          }
+        ]
+      }
+    }
+  ]'
 ```
 
 **Common YARN Metrics and Recommended Thresholds**:
@@ -411,60 +423,82 @@ aliyun emr PutAutoScalingPolicy --RegionId cn-hangzhou \
 Scheduled scaling provides baseline + load-based scaling handles bursts:
 
 ```bash
-aliyun emr PutAutoScalingPolicy --RegionId cn-hangzhou \
-  --ClusterId c-xxx --NodeGroupId ng-task-xxx \
-  --force \
-  --Constraints.MinCapacity 0 \
-  --Constraints.MaxCapacity 30 \
-  --ScalingRules.1.RuleName workday-baseline \
-  --ScalingRules.1.TriggerType TIME_TRIGGER \
-  --ScalingRules.1.ActivityType SCALE_OUT \
-  --ScalingRules.1.AdjustmentValue 5 \
-  --ScalingRules.1.TimeTrigger.LaunchTime "08:30" \
-  --ScalingRules.1.TimeTrigger.StartTime 1700000000000 \
-  --ScalingRules.1.TimeTrigger.RecurrenceType WEEKLY \
-  --ScalingRules.1.TimeTrigger.RecurrenceValue "MON,TUE,WED,THU,FRI" \
-  --ScalingRules.2.RuleName evening-shrink \
-  --ScalingRules.2.TriggerType TIME_TRIGGER \
-  --ScalingRules.2.ActivityType SCALE_IN \
-  --ScalingRules.2.AdjustmentValue 5 \
-  --ScalingRules.2.TimeTrigger.LaunchTime "21:00" \
-  --ScalingRules.2.TimeTrigger.StartTime 1700000000000 \
-  --ScalingRules.2.TimeTrigger.RecurrenceType WEEKLY \
-  --ScalingRules.2.TimeTrigger.RecurrenceValue "MON,TUE,WED,THU,FRI" \
-  --ScalingRules.3.RuleName burst-scaleout \
-  --ScalingRules.3.TriggerType METRICS_TRIGGER \
-  --ScalingRules.3.ActivityType SCALE_OUT \
-  --ScalingRules.3.AdjustmentValue 3 \
-  --ScalingRules.3.MetricsTrigger.TimeWindow 300 \
-  --ScalingRules.3.MetricsTrigger.EvaluationCount 2 \
-  --ScalingRules.3.MetricsTrigger.CoolDownInterval 300 \
-  --ScalingRules.3.MetricsTrigger.Conditions.1.MetricName yarn_resourcemanager_queue_AvailableVCoresPercentage \
-  --ScalingRules.3.MetricsTrigger.Conditions.1.Statistics AVG \
-  --ScalingRules.3.MetricsTrigger.Conditions.1.ComparisonOperator LT \
-  --ScalingRules.3.MetricsTrigger.Conditions.1.Threshold 15.0 \
-  --ScalingRules.3.MetricsTrigger.Conditions.1.Tags.1.Key queue_name \
-  --ScalingRules.3.MetricsTrigger.Conditions.1.Tags.1.Value root \
-  --ScalingRules.4.RuleName idle-scalein \
-  --ScalingRules.4.TriggerType METRICS_TRIGGER \
-  --ScalingRules.4.ActivityType SCALE_IN \
-  --ScalingRules.4.AdjustmentValue 2 \
-  --ScalingRules.4.MetricsTrigger.TimeWindow 300 \
-  --ScalingRules.4.MetricsTrigger.EvaluationCount 5 \
-  --ScalingRules.4.MetricsTrigger.CoolDownInterval 600 \
-  --ScalingRules.4.MetricsTrigger.Conditions.1.MetricName yarn_resourcemanager_queue_AvailableVCoresPercentage \
-  --ScalingRules.4.MetricsTrigger.Conditions.1.Statistics AVG \
-  --ScalingRules.4.MetricsTrigger.Conditions.1.ComparisonOperator GT \
-  --ScalingRules.4.MetricsTrigger.Conditions.1.Threshold 80.0 \
-  --ScalingRules.4.MetricsTrigger.Conditions.1.Tags.1.Key queue_name \
-  --ScalingRules.4.MetricsTrigger.Conditions.1.Tags.1.Value root
+aliyun emr put-auto-scaling-policy --biz-region-id cn-hangzhou \
+  --cluster-id c-xxx --node-group-id ng-task-xxx \
+  --constraints MinCapacity=0 MaxCapacity=30 \
+  --scaling-rules '[
+    {
+      "RuleName": "workday-baseline",
+      "TriggerType": "TIME_TRIGGER",
+      "ActivityType": "SCALE_OUT",
+      "AdjustmentValue": 5,
+      "TimeTrigger": {
+        "LaunchTime": "08:30",
+        "StartTime": 1700000000000,
+        "RecurrenceType": "WEEKLY",
+        "RecurrenceValue": "MON,TUE,WED,THU,FRI"
+      }
+    },
+    {
+      "RuleName": "evening-shrink",
+      "TriggerType": "TIME_TRIGGER",
+      "ActivityType": "SCALE_IN",
+      "AdjustmentValue": 5,
+      "TimeTrigger": {
+        "LaunchTime": "21:00",
+        "StartTime": 1700000000000,
+        "RecurrenceType": "WEEKLY",
+        "RecurrenceValue": "MON,TUE,WED,THU,FRI"
+      }
+    },
+    {
+      "RuleName": "burst-scaleout",
+      "TriggerType": "METRICS_TRIGGER",
+      "ActivityType": "SCALE_OUT",
+      "AdjustmentValue": 3,
+      "MetricsTrigger": {
+        "TimeWindow": 300,
+        "EvaluationCount": 2,
+        "CoolDownInterval": 300,
+        "Conditions": [
+          {
+            "MetricName": "yarn_resourcemanager_queue_AvailableVCoresPercentage",
+            "Statistics": "AVG",
+            "ComparisonOperator": "LT",
+            "Threshold": 15.0,
+            "Tags": [{"Key": "queue_name", "Value": "root"}]
+          }
+        ]
+      }
+    },
+    {
+      "RuleName": "idle-scalein",
+      "TriggerType": "METRICS_TRIGGER",
+      "ActivityType": "SCALE_IN",
+      "AdjustmentValue": 2,
+      "MetricsTrigger": {
+        "TimeWindow": 300,
+        "EvaluationCount": 5,
+        "CoolDownInterval": 600,
+        "Conditions": [
+          {
+            "MetricName": "yarn_resourcemanager_queue_AvailableVCoresPercentage",
+            "Statistics": "AVG",
+            "ComparisonOperator": "GT",
+            "Threshold": 80.0,
+            "Tags": [{"Key": "queue_name", "Value": "root"}]
+          }
+        ]
+      }
+    }
+  ]'
 ```
 
 ### View Current Policy
 
 ```bash
-aliyun emr GetAutoScalingPolicy --RegionId cn-hangzhou \
-  --ClusterId c-xxx --NodeGroupId ng-task-xxx
+aliyun emr get-auto-scaling-policy --biz-region-id cn-hangzhou \
+  --cluster-id c-xxx --node-group-id ng-task-xxx
 ```
 
 Check returned `Disabled` field to confirm if policy is effective.
@@ -477,8 +511,8 @@ Simply use PutAutoScalingPolicy to resubmit complete rules (full replacement).
 
 ```bash
 # ⚠️ After deletion, node group no longer auto scales
-aliyun emr RemoveAutoScalingPolicy --RegionId cn-hangzhou \
-  --ClusterId c-xxx --NodeGroupId ng-task-xxx
+aliyun emr remove-auto-scaling-policy --biz-region-id cn-hangzhou \
+  --cluster-id c-xxx --node-group-id ng-task-xxx
 ```
 
 ## Common Issues
