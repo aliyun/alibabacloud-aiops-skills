@@ -1,0 +1,58 @@
+category: datetime_functions
+name: 日期时间函数
+description: 处理日期和时间
+
+support:
+  sql: true
+  spl: true
+
+functions:
+  - name: date_format
+    syntax: "date_format(timestamp, format)"
+    description: 格式化时间戳
+    format_examples:
+      - "%Y-%m-%d": "2024-01-01"
+      - "%Y-%m-%d %H:%i:%s": "2024-01-01 12:30:45"
+      - "%H:%i": "12:30"
+    examples:
+      sql: "* | SELECT date_format(__time__, '%Y-%m-%d %H:%i:%s') AS time"
+      spl: "* | extend time_str = date_format(__time__, '%Y-%m-%d %H:%i:%s')"
+    note: __time__是日志时间戳（Unix秒）
+  
+  - name: date_parse
+    syntax: "date_parse(string, format)"
+    description: 解析时间字符串为时间戳
+    examples:
+      sql: "* | SELECT date_parse(time_str, '%Y-%m-%d %H:%i:%s')"
+      spl: "* | extend timestamp = date_parse(time_str, '%Y-%m-%d %H:%i:%s')"
+  
+  - name: from_unixtime
+    syntax: "from_unixtime(unix_timestamp)"
+    description: Unix时间戳转时间对象
+    examples:
+      sql: "* | SELECT from_unixtime(__time__)"
+      spl: "* | extend time_obj = from_unixtime(__time__)"
+  
+  - name: to_unixtime
+    syntax: "to_unixtime(timestamp)"
+    description: 时间对象转Unix时间戳
+    examples:
+      sql: "* | SELECT to_unixtime(cast(time_str as TIMESTAMP))"
+      spl: "* | extend unix_ts = to_unixtime(cast(time_str as TIMESTAMP))"
+  
+  - name: date_trunc
+    syntax: "date_trunc(unit, timestamp)"
+    description: 时间截断到指定粒度
+    units: [second, minute, hour, day, week, month, quarter, year]
+    examples:
+      sql: "* | SELECT date_trunc('hour', __time__) AS hour"
+      spl: "* | extend hour = date_trunc('hour', __time__)"
+    note: 常用于按时间分组统计
+  
+  - name: current_timestamp
+    syntax: "current_timestamp"
+    description: 获取当前时间戳
+    examples:
+      sql: "* | SELECT current_timestamp"
+      spl: "* | extend now = current_timestamp"
+

@@ -1,0 +1,46 @@
+category: aggregate_functions
+name: 聚合函数
+description: 对数据进行汇总计算，通常与GROUP BY配合使用
+
+support: 
+  sql: true
+  spl: false
+
+functions:
+  - name: count
+    syntax: "count(*) 或 count(x)"
+    description: 统计日志条数
+    example: "* | SELECT count(*) AS pv"
+    note: "count(*) 统计所有，count(x) 统计x非NULL的数量"
+  
+  - name: sum
+    syntax: "sum(x)"
+    description: 计算总和
+    example: "* | SELECT sum(cast(response_size as BIGINT)) AS total_size"
+  
+  - name: avg
+    syntax: "avg(x)"
+    description: 计算平均值
+    example: "* | SELECT avg(cast(request_time as DOUBLE)) AS avg_time"
+  
+  - name: max
+    syntax: "max(x)"
+    description: 返回最大值
+    example: "* | SELECT max(cast(response_time as BIGINT)) AS max_time"
+  
+  - name: min
+    syntax: "min(x)"
+    description: 返回最小值
+    example: "* | SELECT min(cast(response_time as BIGINT)) AS min_time"
+  
+  - name: count_if
+    syntax: "count_if(condition)"
+    description: 统计满足条件的日志数
+    example: "* | SELECT count_if(cast(status as BIGINT) >= 500) AS error_count"
+  
+  - name: arbitrary
+    syntax: "arbitrary(x)"
+    description: 返回任意一个非空值
+    example: "* | SELECT status, arbitrary(request_time) GROUP BY status"
+    note: 用于GROUP BY时获取非分组字段的值
+

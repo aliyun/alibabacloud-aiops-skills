@@ -1,0 +1,62 @@
+category: bitwise_functions
+name: 位运算函数
+description: 直接操作二进制位的运算函数
+
+support:
+  sql: true
+  spl: false
+
+functions:
+  - name: bit_count
+    syntax: "bit_count(x, bits)"
+    description: 统计二进制表示中1的个数
+    params:
+      - x: bigint类型的数值
+      - bits: 位数（32或64）
+    example: "* | SELECT bit_count(5, 64)"
+  
+  - name: bitwise_and
+    syntax: "bitwise_and(x, y)"
+    description: 按位与运算
+    example: "* | SELECT bitwise_and(5, 3)"
+  
+  - name: bitwise_or
+    syntax: "bitwise_or(x, y)"
+    description: 按位或运算
+    example: "* | SELECT bitwise_or(5, 3)"
+  
+  - name: bitwise_xor
+    syntax: "bitwise_xor(x, y)"
+    description: 按位异或运算
+    example: "* | SELECT bitwise_xor(5, 3)"
+  
+  - name: bitwise_not
+    syntax: "bitwise_not(x)"
+    description: 按位取反运算
+    example: "* | SELECT bitwise_not(5)"
+  
+  - name: bitwise_left_shift
+    syntax: "bitwise_left_shift(x, n)"
+    description: 按位左移n位
+    example: "* | SELECT bitwise_left_shift(5, 2)"
+  
+  - name: bitwise_right_shift
+    syntax: "bitwise_right_shift(x, n)"
+    description: 按位右移n位
+    example: "* | SELECT bitwise_right_shift(5, 1)"
+  
+  - name: bitwise_right_shift_arithmetic
+    syntax: "bitwise_right_shift_arithmetic(x, n)"
+    description: 算术右移n位（保留符号位）
+    example: "* | SELECT bitwise_right_shift_arithmetic(-8, 2)"
+
+use_cases:
+  - 权限位掩码操作
+  - 标志位检查
+  - 位图运算
+  - 低级别数据处理
+
+important_notes:
+  - 所有位运算函数参数必须为bigint类型
+  - 需要先cast转换为bigint
+  - 位运算结果也是bigint类型

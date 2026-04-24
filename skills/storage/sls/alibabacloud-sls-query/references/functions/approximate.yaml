@@ -1,0 +1,54 @@
+category: approximate_functions
+name: 估算函数
+description: 基于数据预测或填充缺失值的近似计算
+
+support:
+  sql: true
+  spl: false
+
+functions:
+  - name: approx_distinct
+    syntax: "approx_distinct(x)"
+    description: 估算唯一值的个数，使用HyperLogLog算法
+    returns: 近似计数
+    example: "* | SELECT approx_distinct(client_ip) AS uv"
+    note: 比count(distinct x)更快，但是近似值
+  
+  - name: approx_percentile
+    syntax: "approx_percentile(x, percentage)"
+    description: 计算近似百分位数
+    params:
+      - x: 列名
+      - percentage: 百分位，取值0~1
+    example: "* | SELECT approx_percentile(cast(request_time as double), 0.99) AS p99"
+  
+  - name: approx_percentile (with array)
+    syntax: "approx_percentile(x, array[p1, p2,...])"
+    description: 同时计算多个百分位数
+    example: "* | SELECT approx_percentile(cast(request_time as double), array[0.5, 0.95, 0.99]) AS percentiles"
+  
+  - name: numeric_histogram
+    syntax: "numeric_histogram(bucket_count, x)"
+    description: 按照bucket数量统计x列的近似直方图
+    params:
+      - bucket_count: 桶的数量
+      - x: 数值列
+    returns: Map类型，键为桶的代表值，值为该桶的近似计数
+    example: "* | SELECT numeric_histogram(10, cast(request_time as double))"
+  
+  - name: numeric_histogram_u
+    syntax: "numeric_histogram_u(bucket_count, x)"
+    description: 按照bucket数量统计x列的近似直方图，返回多行格式
+    example: "* | SELECT numeric_histogram_u(10, cast(request_time as double))"
+
+use_cases:
+  - 快速估算UV（独立访客）
+  - 计算性能指标的P50、P95、P99
+  - 生成数值分布直方图
+  - 大数据量下的快速统计
+
+important_notes:
+  - 估算函数牺牲精度换取性能
+  - approx_distinct使用HyperLogLog算法，标准误差约2.3%
+  - approx_percentile误差在1%以内
+  - 适用于大数据量场景

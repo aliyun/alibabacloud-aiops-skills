@@ -1,0 +1,70 @@
+category: statistical_functions
+name: 数学统计函数
+description: 数据分布分析、相关性分析与数值统计计算
+
+support:
+  sql: true
+  spl: false
+
+functions:
+  - name: corr
+    syntax: "corr(y, x)"
+    description: 计算两列的相关系数（皮尔逊相关系数）
+    returns: double类型，范围[-1, 1]
+    example: "* | SELECT corr(request_time, request_length)"
+  
+  - name: covar_pop
+    syntax: "covar_pop(y, x)"
+    description: 计算两列的总体协方差
+    example: "* | SELECT covar_pop(request_time, request_length)"
+  
+  - name: covar_samp
+    syntax: "covar_samp(y, x)"
+    description: 计算两列的样本协方差
+    example: "* | SELECT covar_samp(request_time, request_length)"
+  
+  - name: stddev
+    syntax: "stddev(x)"
+    description: 计算标准差
+    example: "* | SELECT stddev(cast(request_time as double))"
+  
+  - name: stddev_pop
+    syntax: "stddev_pop(x)"
+    description: 计算总体标准差
+    example: "* | SELECT stddev_pop(cast(request_time as double))"
+  
+  - name: stddev_samp
+    syntax: "stddev_samp(x)"
+    description: 计算样本标准差
+    example: "* | SELECT stddev_samp(cast(request_time as double))"
+  
+  - name: variance
+    syntax: "variance(x)"
+    description: 计算方差
+    example: "* | SELECT variance(cast(request_time as double))"
+  
+  - name: var_pop
+    syntax: "var_pop(x)"
+    description: 计算总体方差
+    example: "* | SELECT var_pop(cast(request_time as double))"
+  
+  - name: var_samp
+    syntax: "var_samp(x)"
+    description: 计算样本方差
+    example: "* | SELECT var_samp(cast(request_time as double))"
+  
+  - name: regr_intercept
+    syntax: "regr_intercept(y, x)"
+    description: 计算线性回归的截距
+    example: "* | SELECT regr_intercept(cast(request_time as double), cast(body_bytes_sent as double))"
+  
+  - name: regr_slope
+    syntax: "regr_slope(y, x)"
+    description: 计算线性回归的斜率
+    example: "* | SELECT regr_slope(cast(request_time as double), cast(body_bytes_sent as double))"
+
+use_cases:
+  - 分析请求时间和响应大小的相关性
+  - 计算性能指标的波动情况
+  - 线性回归预测
+  - 数据质量评估

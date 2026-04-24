@@ -1,0 +1,37 @@
+category: regex_functions
+name: 正则表达式函数
+description: 使用正则表达式处理字符串
+
+support:
+  sql: true
+  spl: true
+
+notes:
+  - SPL使用RE2正则引擎，某些正则特性受到限制,RE2不支持的特性包括：后向引用(\1)、环视(?<=...)、贪婪模式修饰符等,建议使用RE2兼容的正则表达式语法
+  - 特别注意，正则表达式中的反斜杠不需要双重转义，比如\d 直接写 \d即可，不需要写成\\d
+
+functions:
+  - name: regexp_like
+    syntax: "regexp_like(x, pattern)"
+    description: 检查是否匹配正则, 正则表达式中的反斜杠不需要双重转义，比如\d 直接写 \d即可
+    returns: 布尔值
+    examples:
+      sql: "* | SELECT * WHERE regexp_like(message, 'ERROR|FATAL')"
+      spl: "* | where regexp_like(message, 'ERROR|FATAL')"
+  
+  - name: regexp_extract
+    syntax: "regexp_extract(x, pattern [, group])"
+    description: 提取匹配的内容
+    params:
+      - group: 捕获组索引（默认0）
+    examples:
+      sql: "* | SELECT regexp_extract(message, 'code:(\d+)', 1) AS error_code"
+      spl: "* | extend error_code = regexp_extract(message, 'code:(\d+)', 1)"
+  
+  - name: regexp_replace
+    syntax: "regexp_replace(x, pattern, replacement)"
+    description: 正则替换
+    examples:
+      sql: "* | SELECT regexp_replace(phone, '(\d{3})\d{4}(\d{4})', '$1****$2')"
+      spl: "* | extend phone_masked = regexp_replace(phone, '(\d{3})\d{4}(\d{4})', '$1****$2')"
+

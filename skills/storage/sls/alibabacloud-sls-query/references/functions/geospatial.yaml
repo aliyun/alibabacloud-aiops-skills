@@ -1,0 +1,66 @@
+category: geospatial_functions
+name: 空间几何函数
+description: 处理空间几何体和地理位置数据
+
+support:
+  sql: true
+  spl: false
+
+functions:
+  - name: ST_Point
+    syntax: "ST_Point(longitude, latitude)"
+    description: 根据经纬度创建一个点
+    example: "* | SELECT ST_Point(120.13, 30.26)"
+  
+  - name: ST_GeometryFromText
+    syntax: "ST_GeometryFromText(wkt_string)"
+    description: 从WKT(Well-Known Text)字符串创建几何对象
+    example: "* | SELECT ST_GeometryFromText('POINT(120.13 30.26)')"
+  
+  - name: ST_AsText
+    syntax: "ST_AsText(geometry)"
+    description: 将几何对象转换为WKT字符串
+    example: "* | SELECT ST_AsText(ST_Point(120.13, 30.26))"
+  
+  - name: ST_Contains
+    syntax: "ST_Contains(geometry1, geometry2)"
+    description: 判断geometry1是否完全包含geometry2
+    returns: boolean
+    example: "* | SELECT ST_Contains(ST_GeometryFromText('POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))'), ST_Point(5, 5))"
+  
+  - name: ST_Distance
+    syntax: "ST_Distance(geometry1, geometry2)"
+    description: 计算两个几何对象之间的距离
+    example: "* | SELECT ST_Distance(ST_Point(120.13, 30.26), ST_Point(121.47, 31.23))"
+  
+  - name: ST_Intersects
+    syntax: "ST_Intersects(geometry1, geometry2)"
+    description: 判断两个几何对象是否相交
+    returns: boolean
+    example: "* | SELECT ST_Intersects(ST_GeometryFromText('POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))'), ST_Point(5, 5))"
+  
+  - name: ST_Boundary
+    syntax: "ST_Boundary(geometry)"
+    description: 返回几何对象的边界
+    example: "* | SELECT ST_Boundary(ST_GeometryFromText('POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))'))"
+  
+  - name: ST_Buffer
+    syntax: "ST_Buffer(geometry, distance)"
+    description: 返回距离几何对象指定距离内的区域
+    example: "* | SELECT ST_Buffer(ST_Point(0, 0), 1.0)"
+  
+  - name: ST_Area
+    syntax: "ST_Area(geometry)"
+    description: 计算几何对象的面积
+    example: "* | SELECT ST_Area(ST_GeometryFromText('POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))'))"
+
+use_cases:
+  - 地理围栏判断
+  - 距离计算
+  - 区域分析
+  - 空间查询
+
+important_notes:
+  - 支持WKT格式的几何对象
+  - 坐标系统为WGS84
+  - 距离单位与坐标单位一致

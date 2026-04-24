@@ -1,0 +1,15 @@
+name: parse-regexp
+category: 弱结构化数据提取指令
+description: 使用正则表达式提取指定字段中的信息
+grammar: parse-regexp <field>, '<regexp>' [as <field1>, <field2>, ...]
+example: |
+  * | parse-regexp message, '(\d+\.\d+\.\d+\.\d+).*status:(\d+)' as ip, status
+  * | parse-regexp content, 'Error: (.*)' as error_msg
+scenarios:
+  - 在所有场景中都适用
+note:
+  - 使用RE2正则表达式语法
+  - 正则表达式需用单引号包裹
+  - 正则表达式中的反斜杠不需要双重转义，比如\d 直接写 \d即可
+  - 使用括号()创建捕获组，每个捕获组对应一个输出字段
+

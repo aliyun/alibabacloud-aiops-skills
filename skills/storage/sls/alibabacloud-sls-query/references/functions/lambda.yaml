@@ -1,0 +1,95 @@
+category: lambda_expressions
+name: Lambda表达式
+description: 定义Lambda表达式并传递给指定函数，丰富函数表达
+
+support:
+  sql: true
+  spl: partial
+
+functions:
+  - name: filter
+    syntax: "filter(array, lambda_expression)"
+    description: 过滤数组元素，只保留满足条件的元素
+    lambda_syntax: "x -> condition"
+    example: "* | SELECT filter(array[5, -6, null, 7], x -> x > 0)"
+    spl_example: "* | extend filtered = filter(arr, x -> x > 0)"
+  
+  - name: transform
+    syntax: "transform(array, lambda_expression)"
+    description: 对数组每个元素应用转换
+    lambda_syntax: "x -> expression"
+    example: "* | SELECT transform(array[5, 6], x -> x + 1)"
+    spl_example: "* | extend transformed = transform(arr, x -> x * 2)"
+  
+  - name: reduce
+    syntax: "reduce(array, initial_value, combine_function, final_function)"
+    description: 累加计算数组元素
+    lambda_syntax: "(accumulator, element) -> expression"
+    example: "* | SELECT reduce(array[5, 20, 50], 0, (s, x) -> s + x, s -> s)"
+  
+  - name: any_match
+    syntax: "any_match(array, lambda_expression)"
+    description: 判断数组中是否有元素满足条件
+    returns: boolean
+    example: "* | SELECT any_match(array[1, 2, 3], x -> x > 2)"
+  
+  - name: all_match
+    syntax: "all_match(array, lambda_expression)"
+    description: 判断数组中所有元素是否都满足条件
+    returns: boolean
+    example: "* | SELECT all_match(array[1, 2, 3], x -> x > 0)"
+  
+  - name: map_filter
+    syntax: "map_filter(map, lambda_expression)"
+    description: 过滤Map中的键值对
+    lambda_syntax: "(key, value) -> condition"
+    example: "* | SELECT map_filter(map(array[1,2,3], array['a','b','c']), (k, v) -> k > 1)"
+  
+  - name: zip_with
+    syntax: "zip_with(array1, array2, lambda_expression)"
+    description: 将两个数组元素两两组合并计算
+    lambda_syntax: "(x, y) -> expression"
+    example: "* | SELECT zip_with(array[1, 2], array[3, 4], (x, y) -> x + y)"
+
+lambda_syntax:
+  single_parameter:
+    format: "x -> expression"
+    example: "x -> x * 2"
+    description: 单参数Lambda表达式
+  
+  multiple_parameters:
+    format: "(x, y, ...) -> expression"
+    example: "(x, y) -> x + y"
+    description: 多参数Lambda表达式
+  
+  complex_expression:
+    format: "x -> complex_expression"
+    example: "x -> if(x > 0, x, 0)"
+    description: 复杂条件表达式
+
+use_cases:
+  - 数组元素过滤
+  - 数组元素转换
+  - 累加计算
+  - 复杂条件判断
+  - Map数据处理
+
+important_notes:
+  - Lambda表达式是匿名函数
+  - 参数名可以自定义（如x, y, element等）
+  - 表达式可以包含条件、运算等
+  - 配合数组和Map函数使用
+  - SPL中部分支持Lambda表达式
+
+examples:
+  - desc: 过滤正数
+    sql: "* | SELECT filter(array[5, -6, 7], x -> x > 0)"
+  
+  - desc: 元素翻倍
+    sql: "* | SELECT transform(array[1, 2, 3], x -> x * 2)"
+  
+  - desc: 计算数组和
+    sql: "* | SELECT reduce(array[1, 2, 3], 0, (s, x) -> s + x, s -> s)"
+  
+  - desc: 过滤Map
+    sql: "* | SELECT map_filter(my_map, (k, v) -> v is not null)"

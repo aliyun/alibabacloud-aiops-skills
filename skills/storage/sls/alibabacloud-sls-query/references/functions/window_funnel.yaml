@@ -1,0 +1,66 @@
+category: window_funnel_function
+name: 窗口漏斗函数
+description: 分析用户行为、APP流量、产品目标转化等数据
+
+support:
+  sql: true
+  spl: false
+
+functions:
+  - name: window_funnel
+    syntax: "window_funnel(window, mode, timestamp, event1, event2, ...)"
+    description: 在指定时间窗口内分析用户行为序列，计算漏斗转化
+    params:
+      - window: 时间窗口大小（秒）
+      - mode: 模式，可选值为default（默认）、strict（严格模式）
+      - timestamp: 时间戳列
+      - event1, event2, ...: 事件条件（布尔表达式）
+    returns: 用户完成的最大事件级数
+    example: |
+      * | SELECT 
+          window_funnel(
+            3600,
+            'default',
+            cast(__time__ as bigint),
+            action='page_view',
+            action='add_to_cart',
+            action='purchase'
+          ) AS level,
+          count(*) AS user_count
+        FROM log
+        GROUP BY user_id
+        
+use_cases:
+  - 电商购买转化漏斗
+  - APP使用流程分析
+  - 注册转化分析
+  - 用户行为路径分析
+
+mode_options:
+  default:
+    description: 默认模式，事件可以不连续，中间可以有其他事件
+    example: 用户可以在浏览、加购之间进行其他操作
+  
+  strict:
+    description: 严格模式，事件必须连续发生，中间不能有其他事件
+    example: 用户必须依次完成浏览、加购，中间不能有其他操作
+
+important_notes:
+  - 返回值范围为0到事件数量
+  - 返回值表示用户完成到第几个步骤
+  - 需要按用户ID分组
+  - 时间窗口单位为秒
+  - 事件需要按时间戳排序
+
+examples:
+  - desc: 分析3个步骤的购买漏斗
+    sql: |
+      * | SELECT 
+          window_funnel(1800, 'default', cast(__time__ as bigint),
+            page='product',
+            action='add_cart', 
+            action='payment'
+          ) AS step,
+          count(distinct user_id) AS users
+        GROUP BY step
+        ORDER BY step

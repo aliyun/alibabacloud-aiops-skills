@@ -1,0 +1,44 @@
+category: conversion_functions
+name: 单位换算函数
+description: 换算数据量或时间间隔的单位
+
+support:
+  sql: true
+  spl: false
+
+functions:
+  - name: convert_data_size
+    syntax: "convert_data_size(size, unit)"
+    description: 将数据大小转换为指定单位
+    params:
+      - size: 数据大小（字节）
+      - unit: 目标单位（B、KB、MB、GB、TB、PB）
+    returns: 转换后的数据大小（保留两位小数）
+    example: "* | SELECT convert_data_size(cast(body_bytes_sent as double), 'MB') AS size_mb"
+  
+  - name: format_duration
+    syntax: "format_duration(duration)"
+    description: 将毫秒数转换为可读的时间格式
+    params:
+      - duration: 时间长度（毫秒）
+    returns: 格式化的时间字符串（如 1d 2h 3m 4s）
+    example: "* | SELECT format_duration(cast(request_time as bigint) * 1000) AS duration"
+
+use_cases:
+  - 数据大小可读化展示
+  - 时间间隔格式化
+  - 性能指标展示
+  - 报表生成
+
+important_notes:
+  - convert_data_size输入单位为字节(Byte)
+  - format_duration输入单位为毫秒
+  - 返回结果为字符串类型
+  - 适合用于结果展示，不适合用于计算
+
+examples:
+  - desc: 将响应大小从字节转换为MB
+    sql: "* | SELECT convert_data_size(cast(body_bytes_sent as double), 'MB')"
+  
+  - desc: 格式化请求时间
+    sql: "* | SELECT format_duration(cast(request_time as bigint))"

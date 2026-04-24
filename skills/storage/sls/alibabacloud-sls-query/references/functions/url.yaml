@@ -1,0 +1,37 @@
+category: url_functions
+name: URL函数
+description: 解析URL
+
+support:
+  sql: true
+  spl: true
+
+functions:
+  - name: url_extract_host
+    syntax: "url_extract_host(url)"
+    description: 提取主机名
+    examples:
+      sql: "* | SELECT url_extract_host(request_url)"
+      spl: "* | extend host = url_extract_host(request_url)"
+  
+  - name: url_extract_path
+    syntax: "url_extract_path(url)"
+    description: 提取路径
+    examples:
+      sql: "* | SELECT url_extract_path(request_url)"
+      spl: "* | extend path = url_extract_path(request_url)"
+  
+  - name: url_extract_parameter
+    syntax: "url_extract_parameter(url, param_name)"
+    description: 提取查询参数
+    examples:
+      sql: "* | SELECT url_extract_parameter(request_url, 'user_id')"
+      spl: "* | extend user_id = url_extract_parameter(request_url, 'user_id')"
+  
+  - name: url_extract_protocol
+    syntax: "url_extract_protocol(url)"
+    description: 提取协议
+    examples:
+      sql: "* | SELECT url_extract_protocol(request_url)"
+      spl: "* | extend protocol = url_extract_protocol(request_url)"
+

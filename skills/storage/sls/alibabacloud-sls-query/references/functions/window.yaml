@@ -1,0 +1,67 @@
+category: window_functions
+name: 窗口函数
+description: 基于数据窗口的聚合、排序和分析
+
+support:
+  sql: true
+  spl: false
+
+functions:
+  - name: row_number
+    syntax: "row_number() OVER ([PARTITION BY col] ORDER BY col)"
+    description: 为每行分配唯一的行号
+    example: "* | SELECT request_time, row_number() OVER (ORDER BY request_time DESC) AS row_num"
+  
+  - name: rank
+    syntax: "rank() OVER ([PARTITION BY col] ORDER BY col)"
+    description: 计算排名，相同值排名相同，后续排名跳跃
+    example: "* | SELECT status, count(*) as cnt, rank() OVER (ORDER BY count(*) DESC) AS rank FROM log GROUP BY status"
+  
+  - name: dense_rank
+    syntax: "dense_rank() OVER ([PARTITION BY col] ORDER BY col)"
+    description: 计算排名，相同值排名相同，后续排名连续
+    example: "* | SELECT status, count(*) as cnt, dense_rank() OVER (ORDER BY count(*) DESC) AS rank FROM log GROUP BY status"
+  
+  - name: lag
+    syntax: "lag(col [, offset] [, default]) OVER ([PARTITION BY col] ORDER BY col)"
+    description: 获取当前行之前第offset行的值
+    params:
+      - offset: 偏移量，默认为1
+      - default: 默认值，当偏移超出范围时返回
+    example: "* | SELECT time, pv, lag(pv, 1, 0) OVER (ORDER BY time) AS prev_pv FROM (SELECT date_trunc('hour', __time__) as time, count(*) as pv FROM log GROUP BY time)"
+  
+  - name: lead
+    syntax: "lead(col [, offset] [, default]) OVER ([PARTITION BY col] ORDER BY col)"
+    description: 获取当前行之后第offset行的值
+    params:
+      - offset: 偏移量，默认为1
+      - default: 默认值，当偏移超出范围时返回
+    example: "* | SELECT time, pv, lead(pv, 1, 0) OVER (ORDER BY time) AS next_pv FROM (SELECT date_trunc('hour', __time__) as time, count(*) as pv FROM log GROUP BY time)"
+  
+  - name: first_value
+    syntax: "first_value(col) OVER ([PARTITION BY col] ORDER BY col)"
+    description: 返回窗口中第一个值
+    example: "* | SELECT time, pv, first_value(pv) OVER (ORDER BY time) AS first_pv FROM (SELECT date_trunc('hour', __time__) as time, count(*) as pv FROM log GROUP BY time)"
+  
+  - name: last_value
+    syntax: "last_value(col) OVER ([PARTITION BY col] ORDER BY col)"
+    description: 返回窗口中最后一个值
+    example: "* | SELECT time, pv, last_value(pv) OVER (ORDER BY time) AS last_pv FROM (SELECT date_trunc('hour', __time__) as time, count(*) as pv FROM log GROUP BY time)"
+  
+  - name: ntile
+    syntax: "ntile(n) OVER ([PARTITION BY col] ORDER BY col)"
+    description: 将有序数据分为n个桶，返回当前行所在桶号
+    example: "* | SELECT request_time, ntile(4) OVER (ORDER BY request_time) AS quartile"
+
+use_cases:
+  - TOP N查询
+  - 计算排名
+  - 环比分析（对比相邻时间段）
+  - 累计计算
+  - 移动平均
+
+important_notes:
+  - 窗口函数必须配合OVER子句使用
+  - PARTITION BY用于分组，ORDER BY用于排序
+  - 窗口函数不能在WHERE子句中使用
+  - 可以在窗口函数中使用聚合函数

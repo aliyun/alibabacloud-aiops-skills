@@ -1,0 +1,35 @@
+category: ip_geo_functions
+name: IP地理位置函数
+description: IP地址转换为地理位置
+
+support:
+  sql: false
+  spl: true
+
+note: 这些函数仅在SPL模式下可用
+
+functions:
+  - name: ip_to_province
+    syntax: "ip_to_province(ip)"
+    description: IP转省份
+    returns: 省份名称（中文）
+    example: "* | extend province = ip_to_province(client_ip)"
+  
+  - name: ip_to_city
+    syntax: "ip_to_city(ip)"
+    description: IP转城市
+    returns: 城市名称（中文）
+    example: "* | extend city = ip_to_city(client_ip)"
+  
+  - name: ip_to_country
+    syntax: "ip_to_country(ip)"
+    description: IP转国家
+    returns: 国家名称（中文）
+    example: "* | extend country = ip_to_country(client_ip)"
+  
+  - name: ip_to_geo
+    syntax: "ip_to_geo(ip)"
+    description: IP转经纬度
+    returns: 经纬度字符串（格式：纬度,经度）
+    example: "* | extend geo = ip_to_geo(client_ip)"
+

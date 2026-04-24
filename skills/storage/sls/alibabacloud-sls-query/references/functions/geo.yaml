@@ -1,0 +1,38 @@
+category: geo_functions
+name: 地理函数
+description: 地理位置分析与地图计算
+
+support:
+  sql: true
+  spl: false
+
+functions:
+  - name: geohash
+    syntax: "geohash(latitude, longitude)"
+    description: 将经纬度编码为geohash字符串
+    returns: varchar类型
+    example: "* | SELECT geohash(39.9075, 116.3972)"
+  
+  - name: geohash (with precision)
+    syntax: "geohash(latitude, longitude, precision)"
+    description: 将经纬度编码为指定精度的geohash字符串
+    params:
+      - precision: 精度，取值1-12，默认为12
+    example: "* | SELECT geohash(39.9075, 116.3972, 8)"
+  
+  - name: geohash_decode
+    syntax: "geohash_decode(geohash_string)"
+    description: 将geohash字符串解码为经纬度
+    returns: 包含latitude和longitude的Row类型
+    example: "* | SELECT geohash_decode('wx4g0s')"
+
+use_cases:
+  - 地理位置编码
+  - 附近位置查询
+  - 地理聚类
+  - 热力图展示
+
+important_notes:
+  - geohash精度越高，表示的区域越小
+  - 常用精度：6位约±0.61km，8位约±19m
+  - geohash具有前缀特性，前缀相同表示位置接近

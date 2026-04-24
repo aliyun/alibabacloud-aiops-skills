@@ -1,0 +1,218 @@
+index_search:
+  # 适用范围
+  target:
+    - logstore
+    - storeview
+  
+  # 前置条件
+  prerequisites:
+    - requirement: 必须配置索引
+      description: 索引查询依赖索引配置，索引只对配置后写入的数据生效
+      scope: logstore级别
+    - requirement: 字段索引配置
+      description: 需要查询的字段必须在索引配置中开启（全文索引或字段索引）
+      note: 未配置索引的字段无法被查询
+    - 关于索引配置的问题，可以参考 `indexConfig.yaml`
+
+  # 费用说明
+  pricing:
+    free: true
+    description: 普通索引查询功能是免费的
+  
+  # 整体限制
+  limitations:
+    - concurrent_queries: 100  # 单个Project最多并发查询数
+    - max_keywords: 128  # 每次查询最多关键词数（除布尔逻辑符外）
+    - page_size: 100  # 每页最多返回结果数
+    - field_value_size: "512 KB"  # 单个字段值最大为512KB，超出部分不参与查询
+    - sort_order: "按时间倒序（秒级或纳秒级）"
+    - fuzzy_query_limit: 100  # 模糊查询最多查询到符合条件的100个词
+    - 索引查询不支持注释，如果写注释会被当作索引查询关键词的进行查询，最终可能导致结果错误
+
+  
+  # 查询语法
+  query_syntax_base:
+    description: 查询语句用于指定日志查询时的过滤规则，返回符合条件的日志
+    basic_rules:
+      - 查询条件可使用关键词、数值、数值范围、空格、* 等
+      - 如果为空格或 *，表示无过滤条件
+      - 查询语句中建议不超过 128 个条件
+      - 支持布尔运算符（AND、OR、NOT）、括号分组、模糊查询、短语查询等
+    aliyun_doc: https://help.aliyun.com/zh/sls/query-syntax
+
+  query_syntax:
+
+    # 大小写是否敏感？
+    - type: case_sensitivity
+      description: 大小写不敏感
+      
+    # 布尔运算
+    - type: and_or_not
+      description: 使用AND/OR/NOT组合条件
+      limitations:
+        - 最多30个条件（除布尔逻辑符外）
+      examples:
+        - query: "status: 200 and request_method: GET"
+          description: 查询status为200且request_method为GET的日志
+    
+    # 范围查询
+    - type: range_query
+      description: 使用范围查询, field in [min max] 或者 field in (min max)
+      limitations:
+        - 只对索引字段为long或double的日志有效
+      examples:
+        - query: "status in [200 300]"
+          description: 查询status为200到300的日志
+    
+    # 模糊查询
+    - type: fuzzy_query
+      description: 使用模糊查询, * 表示匹配任意字符, ? 表示匹配单个字符
+      limitations:
+        - 最多匹配100个term
+        - 通配符*不能出现在开头
+      examples:
+        - query: "status: 200*"
+          description: 查询status为200开头的日志
+    
+    # 关键词查询
+    - type: keyword_query
+      description: 使用关键词查询
+      limitations:
+        - 索引配置中的分词配置决定了keyword最终的分词方式
+      examples:
+        - query: "host: www.example.com"
+          description: 查询host为www.example.com的日志
+          note: 如果.是分词符号，会查询www、example、com
+    
+    # 全文查询
+    - type: full_text_query
+      description: 不指定key，直接输入查询字符串
+      limitations:
+        - 全文查询会使用全文索引对查询进行分词，如果目标内容所在的key单独配置了索引，并且两者索引配置不同（如分词符不一致、是否支持中文不一致），可能会查询不到结果，这时候推荐使用关键词查询
+        - 当没有配置全文索引时，会使用默认分词符"! " # $ % & ' ( ) * + , - . / : ; < = > ? @ [ ] { }"对输入进行分词
+      examples:
+        - query: '"www.example.com"'
+          description: 如果.是分词符，查询准确包含www、example、com的日志
+    
+    # 短语查询
+    - type: phrase_query
+      description: 使用短语查询，精确匹配
+      limitations:
+        - 不能在NOT语句中使用
+      examples:
+        - query: '#"www.example.com"'
+          description: 查询准确包含www.example.com的日志
+  
+  # 关于时间范围查询
+  time_filter:
+    - description: SDK查询请在GetLogs接口中指定开始结束时间，控制台查询请直接选好具体查询时间范围。不需要也无法在query中指定时间范围
+
+  # 使用示例
+  usage_examples:
+    - query: "status: 200 and request_method: GET"
+      description: 查询status为200且request_method为GET的日志
+    
+    - query: "NOT status: 200 NOT request_method: GET"
+      description: 查询status不为200且request_method不为GET的日志
+    
+    - query: "request_method: GE* AND status: 200"
+      description: 查询request_method为GET且status为200的日志
+
+  # 高级功能
+  advanced_features:
+    - name: 字段分析（Field Analysis）
+      description: 提供字段分布、统计指标及 TOP5 时间序列图，帮助理解数据
+      features:
+        - 可以快速了解字段的取值分布、数量统计等信息
+        - 支持对数值型字段进行统计分析，包括最大值、最小值、平均值等
+        - 在查询结果页面，点击字段名称可以查看字段分析
+      aliyun_doc: https://help.aliyun.com/zh/sls/field-analysis
+
+    - name: 上下文查询（Context Query）
+      description: 支持查看指定日志的上下文信息，方便故障排查和问题定位
+      usage: 在日志详情页面，点击"上下文"按钮
+      aliyun_doc: https://help.aliyun.com/zh/sls/contextual-query
+
+    - name: LiveTail（实时监控）
+      description: 实时监控线上日志，减轻运维压力
+      features:
+        - 类似 tail -f 命令，可以实时查看最新产生的日志
+        - 适用于实时监控、故障诊断等场景
+      aliyun_doc: https://help.aliyun.com/zh/sls/livetail
+
+  FAQ:
+    - question: 为什么模糊查询结果不全
+      answer: 模糊查询默认只匹配100个term，如果需要完整匹配，可以使用SPL语句，例如
+      ```
+        * | where column like '%keyword%'
+      ```
+
+    - question: 为什么查不到数据
+      answer:
+        - 确定一下时间范围是否正确
+        - 确定一下查询语句是否正确
+        - 如果索引配置刚打开，索引配置只对新写入的数据生效，历史数据需要重建索引
+        - 如果查询中包含了中文，需要确认一下索引配置中是否开启了中文索引
+        - 可能是索引分词配置导致，需要确认一下索引分词配置是否正确
+        - 如果是SDK查询的话，需要确认一下offset和topic是否设置正确
+        - 需要确认是否使用全文查询查询字段，并且配置不一样，参考full_text_query
+        - 如果是使用全文查询，需要确认全文索引和字段索引配置是否一致，参考full_text_query
+        - 检查数据写入延迟：日志写入SLS后，构建索引通常有几秒的延迟（取决于集群负载），刚写入的日志可能无法立即被检索到
+        - 检查逻辑运算符优先级：AND 的优先级高于 OR，例如 "a or b and c" 会被解析为 "a or (b and c)"，如果预期是 "(a or b) and c"，必须使用括号显式分组
+        - 检查Logtail采集状态：确认Logtail心跳正常且无解析错误（Logtail配置错误导致日志根本没发到SLS，自然查不到）
+        - 检查是否存在不可见字符：日志中可能包含不可见的控制字符（如颜色代码 \033 等），导致关键词匹配失败，建议先用模糊查询排查
+        - 检查数值类型字段：如果字段在JSON中是数值（如 age: 20），但在索引配置中配成了“文本”类型，由于构建索引失败会导致查不到
+    
+    - question: 查询（Search）和 分析（Analysis）有什么区别？
+      answer: |
+        - 查询（Search）：仅用于过滤和返回原始日志内容。语法如 `status:200`。
+        - 分析（Analysis）：基于 SQL 92 语法对日志进行聚合、统计、计算。语法如 `* | SELECT method, count(1) group by method`。
+        - 两者通过管道符 `|` 分割，管道符左边是查询语句，右边是分析语句。
+
+    - question: 为什么数值范围查询（如 latency > 100）报错或结果不符合预期？
+      answer: |
+        - **索引类型错误**：范围查询要求该字段在索引配置中必须设置为 **数值类型（Long/Double）**。如果配置的是 **文本类型（Text）**，即便是数字内容，SLS 也会将其视为字符串处理，不支持数学比较运算。
+
+    - question: 为什么 JSON 日志无法通过 `key.subkey: value` 的方式查询？
+      answer: |
+        - **未开启 JSON 索引**：默认情况下，如果字段索引配置为“文本”，SLS 会将整个 JSON 对象视为一长串字符串。你只能通过全文搜索查询其中的片段。
+        - **配置层级**：要支持 `object.field: value` 这种 key-value 对齐的查询，必须在索引配置中，将该父字段的数据类型设置为 **JSON**，并开启“索引所有文本字段（针对string的叶子节点）”或手动逐个添加子字段的索引。
+
+    - question: 为什么我搜索 `User-Agent: Chrome` 查不到数据，但直接搜 `Chrome` 能查到？
+      answer: |
+        - **字段大小写不一致**：检查索引配置中，该字段的 Key 配置日志实际的 Key是否不一致，比如日志实际的 Key 是 `user_agent` 而索引配置中配置的 `User-Agent`。
+
+    - question: 为什么精确搜索（例如 `id: "123-456"`）匹配到了不该匹配的日志（例如 `123-456-789`）？
+      answer: |
+        - **分词符问题**：这是最容易被忽视的配置。如果索引配置中，连字符 `-` 被设置为了分词符：
+          - 输入内容 `123-456` 会被切分为 `123` 和 `456`。
+          - 目标日志 `123-456-789` 也会被切分为 `123`, `456`, `789`。
+          - 因为同时包含 `123` 和 `456`，所以匹配成功。
+        - **解决方法**：如果需要绝对精确匹配，应从分词符列表中移除该符号，或者将该字段配置为“不分词”（只有完全相等才匹配），或者使用spl或sql。
+
+    - question: 为什么使用通配符查询（如 `*error`）报错？
+      answer: |
+        - **前缀通配符限制**：为了保障集群性能，SLS 的查询语法（Search）**禁止**通配符出现在查询词的**开头**（如 `*keyword`）。
+        - **后缀通配符**：支持后缀通配符（如 `keyword*`），但注意后缀通配符匹配的 Term 数量有限制（默认 100 个），如果匹配到的词过多，可能会导致部分结果丢失。
+
+    - question: 如何查询包含引号等特殊字符的内容？
+      answer: |
+        - **转义查询**：如果查询的值中包含双引号 `"`，需要使用反斜杠转义，例如 `content: "error message with \"quote\""`，注意在查询语句中，串用双引号包裹，单引号没有任何特殊含义
+
+    - question: 如何查询“存在某个字段”的日志（即字段非空）？
+      answer: |
+        - 使用通配符语法：`key: *`。
+        - 例如 `user_id: *` 可以筛选出所有包含 `user_id` 字段且不为空的日志。
+        - 注意：这依赖于 `user_id` 字段必须配置了索引。
+
+    - question: 为什么我修改了索引的分词符配置，原来的日志还是查不到？
+      answer: |
+        - **不可追溯性**：这是 SLS 索引机制的核心特性。索引是写入时构建的（Write-Once）。
+        - **修改后果**：修改索引配置（如增加分词符、改变字段类型）**仅对修改后新写入**的日志生效。
+        - **解决方案**：如果必须查询历史数据，唯一的办法是使用“重建索引（Reindex）”功能或者将数据导出重导。
+
+trouble_shooting:
+  - name: 怀疑索引配置相关问题导致查不到数据
+    description:
+    - 参考 `indexConfig.yaml` 文档排查索引配置相关问题
+    - 结合 上述索引查询相关问题给出排查结论

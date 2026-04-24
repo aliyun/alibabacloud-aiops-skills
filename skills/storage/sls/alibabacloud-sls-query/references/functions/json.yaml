@@ -1,0 +1,29 @@
+category: json_functions
+name: JSON函数
+description: 处理JSON数据
+
+support:
+  sql: true
+  spl: true
+
+functions:
+  - name: json_extract
+    syntax: "json_extract(json_string, json_path)"
+    description: 提取JSON值（返回JSON）
+    path_syntax:
+      - "$": 根节点
+      - "$.key": 对象属性
+      - "$[index]": 数组索引
+      - "$[*]": 数组所有元素
+    examples:
+      sql: "* | SELECT json_extract(payload, '$.user.id')"
+      spl: "* | extend user_id = json_extract(payload, '$.user.id')"
+  
+  - name: json_extract_scalar
+    syntax: "json_extract_scalar(json_string, json_path)"
+    description: 提取JSON标量值（返回字符串）
+    examples:
+      sql: "* | SELECT json_extract_scalar(payload, '$.user.name') AS user_name"
+      spl: "* | extend user_name = json_extract_scalar(payload, '$.user.name')"
+    note: 提取后可能需要cast转换为其他类型
+

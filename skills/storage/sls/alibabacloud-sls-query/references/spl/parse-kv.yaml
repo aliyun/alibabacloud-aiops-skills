@@ -1,0 +1,14 @@
+name: parse-kv
+category: 弱结构化数据提取指令
+description: 提取指定字段中的键值对信息
+grammar: parse-kv <field> [options]
+example: |
+  * | parse-kv message
+  * | parse-kv content -pair_separator='&' -kv_separator='='
+scenarios:
+  - 在所有场景中都适用
+note:
+  - 默认使用空格或制表符作为键值对分隔符
+  - 默认使用等号(=)作为键和值的分隔符
+  - 可以通过-pair_separator和-kv_separator自定义分隔符
+

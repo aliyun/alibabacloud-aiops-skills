@@ -1,0 +1,122 @@
+concept:
+  - name: 查询
+    description: 
+    - 一般通过若干关键词组合来过滤出符合条件的日志，我们叫做查询
+  
+  - name: 分析
+    description: 
+    - 一般带有聚合指令、函数的查询语句就是分析
+    - 客户有可能分不清楚查询和分析的区别，可能把分析也叫查询
+
+  - name: 索引查询
+    description: 
+    - 索引查询是SLS的查询能力，通过关键词的and/or/not组合查询,过滤出符合条件的日志
+
+  - name: SQL
+    description: 
+    - SLS 提供了SQL分析能力，语法符合PrestoSQL语法
+    - SQL一般是跟在索引查询之后，通过竖线 | 分割
+
+  - name: SPL
+    description: 
+    - SPL可以在查询分析场景使用，一般跟在索引查询之后，通过竖线 | 分割
+
+  - name: 不精确
+    description:
+    - 当数据量过大的时候，索引查询或者SQL/SPL可能返回部分结果数据（部分查询结果或者部分数据的聚合结果）
+    - 一般情况下通过重试多次可以获得精确结果
+    - 控制台页面在显示日志柱状图的上方有显示"查询不精确"的提示
+    - SDK使用的话一般对于GetLogs的结果有isComplete字段来标识是否精确
+
+  - name: 索引配置
+    description: 
+    - 需要开启索引配置后才能使用查询分析的功能
+
+  - name: 数据集/Storeview
+    description: 
+    - 默认情况下查询分析只能在单个logstore/metricstore中使用
+    - Storeview提供了将多个logsrore或metricstore的数据联合起来查询的能力
+    - Storeview定义的时候关联到的store要么都是logstore，要么都是metricstore
+
+  - name: SCAN模式
+    description:
+    - SCAN场景是为了满足不建索引的情况下进行查询分析的需求，一般情况下性能会低
+    - SCAN场景要求至少建有__time__的索引, 也就是默认情况下开启索引即可(不开字段索引和全文索引的情况)
+    - SCAN模式下可以用SPL或者SQL进行查询分析, 对于| 前面的部分是查询语句（这部分依赖具体建了哪些索引），后面的部分是分析语句
+
+  - name: 上下文查询
+    description:
+    - logtail或者producer上报日志的时候会带上上下文信息，从而可以看到每个上报的日志前后的日志，这就是上下文
+    - 上下文信息依赖__pack_id__(这个由客户端上报）和__pack_meta__（服务端生成）这两个字段
+
+  - name: Livetail
+    description:
+    - 可以理解为tail -f命令，可以实时查看最新产生的日志，在SLS控制台可以使用
+
+  - name: 增强SQL
+    description:
+    - 对于并发能力或者单Logstore有较大数据量的情况，可以开启增强SQL来提升查询分析的性能
+  
+  - name: 完全精确SQL
+    description:
+    - 对于需要完全精确结果的场景，可以开启完全精确SQL来提升查询分析的性能
+  
+  - name: Shard和查询分析的性能关系
+    description:
+    - shard即是logstore中的存储数据的分区，也决定了查询分析的并发能力
+    - 一般情况下SQL查询能不足的时候，可以通过分裂shard来解决。但分裂shard一般对后面生成的数据有效
+    - 如果对历史数据shard还没分裂，可以使用增强SQL来提升查询分析的性能
+
+  - name: 日志聚类
+    description:
+    - 日志聚类是SLS的日志聚类能力，通过日志聚类可以快速发现日志的模式
+
+  - name: 外表
+    description:
+    - SQL提供了外表关联的能力，可以将外表和logstore进行关联分析
+    - 外表需要创建后才能在SLS中和Logstore进行Join
+    - 目前支持的外表有MySQL、OSS、Postgres
+    - 除此之外，还支持CSV数据托管，即将CSV数据通过SDK上传到SLS的external_store（当前只支持csv上传）
+
+  - name: 物化视图
+    description:
+    - 物化视图是SQL的能力，通过提供物化视图提升查询分析的性能
+
+  - name: 定时SQL
+    description:
+    - 定时SQL支持将SQL分析的结果存储到目标Logstore中
+
+  - name: 短语查询
+    description:
+    - sls的索引查询的原理是通过倒排来实现的，对于一个query会通过分词来匹配对应的日志；由于分词后不关心词的顺序，所以短语查询无法使用索引查询
+    - 为了精准匹配一个keyword，短语查询的语法是：#"www.example.com"，也就是在字符串前面加#
+    - 目前短语查询只支持加在and条件中，如果有or或者not无法生效; 如果希望在or not中生效，可以使用SPL来做，比如 * | where column like '%www.example.com%'
+
+  - name: 大小写敏感问题
+    description:
+    - 在查询分析场景下，关键词以及字段名称都是大小写不敏感的
+    - 索引配置里的字段名称是大小写敏感的，如果索引配置中的字段名和日志中的不一致，会导致索引不生效
+
+
+  - name: 时间字段过滤
+    description:
+    - 在SLS中时间是一个特殊的内置字段(__time__), 一般情况下在查询分析的时候不需要在query中过滤时间范围，而是通过接口参数或者控制台界面指定时间范围
+    - 在SDK查询的时候GetLogs接口需要指定from_time和to_time参数来指定时间范围
+    - 在控制台查询的时候直接选择时间范围即可
+
+related_docs:
+  - name: 索引配置细节参考 `indexConfig.yaml`
+  - name: 索引查询细节参考 `indexSearch.yaml`
+  - name: SQL细节参考 `sql.yaml`
+
+
+faq:
+  - question: 为什么写入日志后查询不到日志？
+    answer: 
+    - 检查已设置的分词符是否符合要求。
+    - 索引配置只对新增日志生效，如果要查询和分析历史数据，请使用重建索引功能。
+    - 确认是否已经开启索引配置。
+
+  - question: SQL的select * 为什么不返回所有字段？
+    answer:
+    - SQL的select * 返回的结果是所有索引字段的内容，而不是日志中所有字段。如果要返回所有字段需要用索引查询或者用扫描查询进行SCAN

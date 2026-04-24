@@ -1,0 +1,26 @@
+category: type_conversion_functions
+name: 类型转换函数
+description: 数据类型转换
+
+support:
+  sql: true
+  spl: true
+
+functions:
+  - name: cast
+    syntax: "cast(value as TYPE)"
+    description: 类型转换（失败抛出错误）
+    types: [BIGINT, INTEGER, DOUBLE, VARCHAR, BOOLEAN, TIMESTAMP]
+    examples:
+      sql: "* | SELECT cast(status as BIGINT) WHERE cast(status as BIGINT) >= 500"
+      spl: "* | extend status_num = cast(status as BIGINT) | where status_num >= 500"
+    note: 字段默认为VARCHAR，数值运算前必须转换。SPL中尤其需要注意类型转换
+  
+  - name: try_cast
+    syntax: "try_cast(value as TYPE)"
+    description: 安全类型转换（失败返回NULL）
+    examples:
+      sql: "* | SELECT try_cast(status as BIGINT) AS status_num"
+      spl: "* | extend status_num = try_cast(status as BIGINT)"
+    note: 推荐使用，避免转换错误导致查询失败
+
