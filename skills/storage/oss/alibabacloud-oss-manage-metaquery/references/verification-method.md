@@ -18,10 +18,10 @@
 
 ```bash
 # Check if Bucket exists
-aliyun ossutil api get-bucket-info --bucket <bucket-name> --user-agent AlibabaCloud-Agent-Skills
+aliyun ossutil api get-bucket-info --bucket <bucket-name> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-metaquery
 
 # View detailed Bucket information
-aliyun ossutil api get-bucket-stat --bucket <bucket-name> --output-format json --user-agent AlibabaCloud-Agent-Skills
+aliyun ossutil api get-bucket-stat --bucket <bucket-name> --output-format json --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-metaquery
 ```
 
 **Success Indicators:**
@@ -36,10 +36,10 @@ aliyun ossutil api get-bucket-stat --bucket <bucket-name> --output-format json -
 
 ```bash
 # List files in the Bucket
-aliyun ossutil ls oss://<bucket-name>/<prefix>/ --user-agent AlibabaCloud-Agent-Skills
+aliyun ossutil ls oss://<bucket-name>/<prefix>/ --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-metaquery
 
 # View individual file information
-aliyun ossutil api head-object --bucket <bucket-name> --key <object-key> --user-agent AlibabaCloud-Agent-Skills
+aliyun ossutil api head-object --bucket <bucket-name> --key <object-key> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-metaquery
 ```
 
 **Success Indicators:**
@@ -53,7 +53,7 @@ aliyun ossutil api head-object --bucket <bucket-name> --key <object-key> --user-
 ### CLI Verification
 
 ```bash
-aliyun ossutil api get-meta-query-status --bucket <bucket-name> --output-format json --user-agent AlibabaCloud-Agent-Skills
+aliyun ossutil api get-meta-query-status --bucket <bucket-name> --output-format json --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-metaquery
 ```
 
 **Success Indicators:**
@@ -83,7 +83,7 @@ aliyun ossutil api get-meta-query-status --bucket <bucket-name> --output-format 
 **2. Execute semantic search:**
 
 ```bash
-aliyun ossutil api do-meta-query --bucket <bucket-name> --meta-query file://meta-query.xml --meta-query-mode semantic --user-agent AlibabaCloud-Agent-Skills
+aliyun ossutil api do-meta-query --bucket <bucket-name> --meta-query file://meta-query.xml --meta-query-mode semantic --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-metaquery
 ```
 
 **Success Indicators:**
@@ -123,16 +123,16 @@ Execute the following CLI commands in order for end-to-end verification:
 
 ```bash
 # [1/4] Verify Bucket exists
-aliyun ossutil api get-bucket-info --bucket <bucket-name> --user-agent AlibabaCloud-Agent-Skills
+aliyun ossutil api get-bucket-info --bucket <bucket-name> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-metaquery
 
 # [2/4] Verify files are uploaded
-aliyun ossutil ls oss://<bucket-name>/<prefix>/ --user-agent AlibabaCloud-Agent-Skills
+aliyun ossutil ls oss://<bucket-name>/<prefix>/ --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-metaquery
 
 # [3/4] Verify data index status (confirm State=Running, MetaQueryMode=semantic)
-aliyun ossutil api get-meta-query-status --bucket <bucket-name> --output-format json --user-agent AlibabaCloud-Agent-Skills
+aliyun ossutil api get-meta-query-status --bucket <bucket-name> --output-format json --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-metaquery
 
 # [4/4] Execute semantic search (create meta-query.xml first, refer to Step 4)
-aliyun ossutil api do-meta-query --bucket <bucket-name> --meta-query file://meta-query.xml --meta-query-mode semantic --user-agent AlibabaCloud-Agent-Skills
+aliyun ossutil api do-meta-query --bucket <bucket-name> --meta-query file://meta-query.xml --meta-query-mode semantic --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-metaquery
 ```
 
 **Verification Pass Criteria:**

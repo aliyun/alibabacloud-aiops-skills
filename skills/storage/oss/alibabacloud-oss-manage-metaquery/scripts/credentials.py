@@ -43,5 +43,5 @@ def create_oss_bucket(auth, endpoint, bucket_name, region=None):
         配置好 User-Agent 的 Bucket 对象
     """
     bucket = oss2.Bucket(auth, endpoint, bucket_name, region=region, connect_timeout=60)
-    bucket.user_agent = 'AlibabaCloud-Agent-Skills'
+    bucket.user_agent = 'AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-metaquery'
     return bucket

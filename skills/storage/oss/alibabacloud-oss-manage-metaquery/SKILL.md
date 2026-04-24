@@ -11,16 +11,17 @@ description: |
 Leverage multimodal AI models to extract semantic descriptions and concise summaries from images, videos, audio, and documents stored in OSS Buckets. Build searchable vector indexes to enable advanced retrieval capabilities such as text-to-image and text-to-video search.
 
 ## Prerequisites
-1. Aliyun CLI (>= 3.3.1)
-> **Pre-check: Aliyun CLI >= 3.3.1 required**
+1. Aliyun CLI (>= 3.3.3)
+> **Pre-check: Aliyun CLI >= 3.3.3 required**
 > This skill uses Aliyun CLI for all OSS operations except opening MetaQuery.
 If Aliyun CLI is already installed, ossutil does not need to be installed separately.
 > Run the following command to verify the version: `aliyun version`
-> If not installed or the version is below 3.3.1, refer to [references/cli-installation-guide.md](references/cli-installation-guide.md) for installation instructions, then run:
-```
-aliyun configure set --auto-plugin-install true
-```
-> This configuration enables automatic plugin installation.
+> If not installed or the version is below 3.3.3,
+> run `curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash` to install/update,
+> or refer to [references/cli-installation-guide.md](references/cli-installation-guide.md) for installation instructions.
+>
+> Then [MUST] run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+> [MUST] run `aliyun plugin update` to ensure that any existing plugins on your local machine are always up-to-date.
 2. Update the aliyun ossutil plugin
 > **Troubleshooting: `--user-agent` unknown flag error**
 > If you encounter `Error: unknown flag: --user-agent` when running a command, the ossutil plugin version is too old. Run the following command to update to the latest version:
@@ -39,6 +40,22 @@ pip install oss2==2.19.1 alibabacloud-credentials==1.0.8
 > **Security Rules:**
 > - **NEVER** read, echo, or print AK/SK values (e.g., `echo $ALIBABA_CLOUD_ACCESS_KEY_ID` is FORBIDDEN)
 > - **NEVER** ask the user to input AK/SK directly in the conversation or command line
+
+At the **start** of the Core Workflow (before any CLI invocation):
+**[MUST] Enable AI-Mode** — AI-mode is required for Agent Skill execution.
+Run the following commands before any CLI invocation:
+```bash
+aliyun configure ai-mode enable
+aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-metaquery"
+```
+**[MUST] Disable AI-Mode at EVERY exit point** — Before delivering the final response for ANY reason, always disable AI-mode first. This applies to ALL exit paths: workflow success, workflow failure, error/exception, user cancellation, session end, or any other scenario where no further CLI commands will be executed.
+AI-mode is only used for Agent Skill invocation scenarios and MUST NOT remain enabled after the skill stops running.
+```bash
+aliyun configure ai-mode disable
+```
+
+**[MUST] CLI User-Agent** — Every `aliyun` CLI command invocation must include:
+`--user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-metaquery`
 
 ## Architecture
 ```
@@ -87,12 +104,12 @@ User Request -> OSS Bucket -> AI Content Awareness Engine -> Semantic Feature Ex
 
 ## Dangerous Operation Confirmation
 Before executing any of the following dangerous operations, **you MUST confirm with the user first** and obtain explicit consent before proceeding:
-- **Delete Bucket**: `aliyun ossutil rm oss://<bucket-name> -b --user-agent AlibabaCloud-Agent-Skills` -- Deletes the entire Bucket, irreversible
-- **Delete Object**: `aliyun ossutil rm oss://<bucket-name>/<object-key> --user-agent AlibabaCloud-Agent-Skills` -- Deletes a specific file
-- **Batch Delete Objects**: `aliyun ossutil rm oss://<bucket-name>/ --recursive --user-agent AlibabaCloud-Agent-Skills` -- Recursively deletes all files in the Bucket
-- **Close MetaQuery**: `aliyun ossutil api close-meta-query --bucket <bucket-name> --user-agent AlibabaCloud-Agent-Skills` -- Closes the metadata index; all indexed data will be cleared
+- **Delete Bucket**: `aliyun ossutil rm oss://<bucket-name> -b --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-metaquery` -- Deletes the entire Bucket, irreversible
+- **Delete Object**: `aliyun ossutil rm oss://<bucket-name>/<object-key> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-metaquery` -- Deletes a specific file
+- **Batch Delete Objects**: `aliyun ossutil rm oss://<bucket-name>/ --recursive --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-metaquery` -- Recursively deletes all files in the Bucket
+- **Close MetaQuery**: `aliyun ossutil api close-meta-query --bucket <bucket-name> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-metaquery` -- Closes the metadata index; all indexed data will be cleared
 - **Open MetaQuery**: `python scripts/open_metaquery.py --region <your-region> --bucket <your-bucket-name> --endpoint <your-endpoint>` -- Opens the metadata index; existing data will start being indexed. If the bucket has more than 1000 objects, confirm with the user first.
-- **Create Bucket**: `aliyun ossutil api put-bucket --bucket <bucket> --region <region-id> --user-agent AlibabaCloud-Agent-Skills` -- Creates a Bucket
+- **Create Bucket**: `aliyun ossutil api put-bucket --bucket <bucket> --region <region-id> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-metaquery` -- Creates a Bucket
 
 When confirming, explain the following to the user:
 1. The specific operation to be performed
@@ -142,7 +159,7 @@ The following operations should use Aliyun CLI by default:
 
 ### Rule 4: If Aliyun CLI is installed, ossutil is not needed
 This skill does not require ossutil to be installed by default.
-As long as Aliyun CLI >= 3.3.1 is installed and the following has been executed:
+As long as Aliyun CLI >= 3.3.3 is installed and the following has been executed:
 ```bash
 aliyun configure set --auto-plugin-install true
 ```
@@ -153,11 +170,11 @@ It can be used as the default execution tool.
 Always confirm with the user before creating a bucket. Proceed only after the user agrees.
 ```bash
 # 1.1 Create Bucket
-aliyun ossutil api put-bucket --bucket examplebucket --region <region-id> --user-agent AlibabaCloud-Agent-Skills
+aliyun ossutil api put-bucket --bucket examplebucket --region <region-id> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-metaquery
 # 1.2 Download files
-aliyun ossutil cp oss://example-bucket/test_medias/ /tmp/test_medias_download/ -r --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills
+aliyun ossutil cp oss://example-bucket/test_medias/ /tmp/test_medias_download/ -r --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-metaquery
 # 1.3 Upload files
-aliyun ossutil cp /tmp/test_medias_download/ oss://example-bucket/test_medias/ -r --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills
+aliyun ossutil cp /tmp/test_medias_download/ oss://example-bucket/test_medias/ -r --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-metaquery
 ```
 
 ### Task 2: Enable Vector Search & AI Content Awareness (Python script or SDK only)
@@ -181,26 +198,26 @@ If the user encounters an `AccessDenied` error, check that RAM permissions are c
 **Enablement Process:**
 1. **Prepare the Bucket**:
    **a. If the user requests creating a new Bucket:**
-   - Run `aliyun ossutil api put-bucket --bucket examplebucket --user-agent AlibabaCloud-Agent-Skills` with the user-specified bucket name
+   - Run `aliyun ossutil api put-bucket --bucket examplebucket --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-metaquery` with the user-specified bucket name
    - If creation fails with a `BucketAlreadyExists` error:
      - **Immediately stop the operation**
      - Inform the user: "The Bucket name `<bucket-name>` is already taken (it may have been created by you or another user)"
      - **You MUST ask the user**: "Would you like to: 1) Use this existing bucket? or 2) Choose a new bucket name?"
      - **Wait for the user's explicit response before continuing**. Do not modify the bucket name or use the existing bucket without permission.
    **b. If the user provides an existing bucket:**
-   - First verify the bucket exists using `aliyun ossutil api get-bucket-info --bucket <bucket-name> --user-agent AlibabaCloud-Agent-Skills`
+   - First verify the bucket exists using `aliyun ossutil api get-bucket-info --bucket <bucket-name> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-metaquery`
    - If it does not exist, ask the user whether to create it
 
 2. **Verify Bucket object count**: After the user provides a bucket, check the object count. If it exceeds 1000, warn the user that enabling MetaQuery will incur costs.
    Use the following command to get the bucket's object count:
    ```bash
-   aliyun ossutil api get-bucket-stat --bucket <your-bucket-name> --output-format json --user-agent AlibabaCloud-Agent-Skills
+   aliyun ossutil api get-bucket-stat --bucket <your-bucket-name> --output-format json --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-metaquery
    ```
    The `ObjectCount` field in the response indicates the number of objects.
    - If the object count exceeds 1000, warn the user that enabling MetaQuery will incur costs and confirm whether to proceed.
    - If the object count is 0, ask the user which files to upload. Upload command:
      ```bash
-     aliyun ossutil api put-object --bucket <your-bucket-name> --key <object-key> --body file://<local-file-path> --user-agent AlibabaCloud-Agent-Skills
+     aliyun ossutil api put-object --bucket <your-bucket-name> --key <object-key> --body file://<local-file-path> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-metaquery
      ```
 
 3. **Run the Python script**: After the above steps are complete, attempt to open MetaQuery using the Python script.
@@ -212,7 +229,7 @@ python scripts/open_metaquery.py --region <your-region> --bucket <your-bucket-na
 #### Troubleshooting MetaQuery Enablement Issues
 Use the `get-meta-query-status` command to check MetaQuery status:
 ```bash
-aliyun ossutil api get-meta-query-status --bucket <your-bucket-name> --output-format json --user-agent AlibabaCloud-Agent-Skills
+aliyun ossutil api get-meta-query-status --bucket <your-bucket-name> --output-format json --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-metaquery
 ```
 Based on the returned status:
 - **Status is `Deleted`**: MetaQuery is being closed. The user should retry later.
@@ -233,7 +250,7 @@ Based on the returned status:
 Before using MetaQuery for search, confirm the following:
 1. **Verify MetaQuery is enabled**:
    ```bash
-   aliyun ossutil api get-meta-query-status --bucket <your-bucket-name> --output-format json --user-agent AlibabaCloud-Agent-Skills
+   aliyun ossutil api get-meta-query-status --bucket <your-bucket-name> --output-format json --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-metaquery
 2. **If MetaQuery is not enabled**: Complete the enablement process first. Refer to Task 2 to enable it using the Python script.
 3. **Check index scan status**: The `Phase` field from `get-meta-query-status` indicates the current scan phase:
     - `FullScanning`: Full scan in progress. **Search is not available yet**. Wait for the full scan to complete.
@@ -259,7 +276,7 @@ Example of scalar search where file size > 30B and file modification time > 2025
 **2. Execute the search command:**
 This example uses semantic vector search. The `meta-query.xml` file defines the query conditions, and search results return the most similar files.
 ```bash
-aliyun ossutil api do-meta-query --bucket <bucket-name> --meta-query file://meta-query.xml --meta-query-mode semantic --user-agent AlibabaCloud-Agent-Skills
+aliyun ossutil api do-meta-query --bucket <bucket-name> --meta-query file://meta-query.xml --meta-query-mode semantic --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-metaquery
 ```
 For scalar search, use `--meta-query-mode basic`
 > For detailed command parameters, see the DoMetaQuery section in [references/related-apis.md](references/related-apis.md).
@@ -269,17 +286,17 @@ After search completes, when displaying results to the user, use the `x-oss-proc
 
 **Video files -- Get video cover snapshot:**
 ```bash
-aliyun ossutil presign oss://<bucket-name>/<video-object-key> --query-param x-oss-process=video/snapshot,t_0,f_png,w_0,h_0 --user-agent AlibabaCloud-Agent-Skills
+aliyun ossutil presign oss://<bucket-name>/<video-object-key> --query-param x-oss-process=video/snapshot,t_0,f_png,w_0,h_0 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-metaquery
 ```
 Parameters: `t_0`: Capture frame at 0ms as cover; `f_png`: Output format PNG; `w_0,h_0`: Width/height 0 means original resolution.
 
 **Image files -- Get image preview link:**
 ```bash
-aliyun ossutil presign oss://<bucket-name>/<image-object-key> --user-agent AlibabaCloud-Agent-Skills
+aliyun ossutil presign oss://<bucket-name>/<image-object-key> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-metaquery
 ```
 > **Note**: The `aliyun ossutil presign` command generates a signed temporary access URL that can be opened directly in a browser for preview during its validity period. For image files, you can also add image processing parameters via `x-oss-process` (e.g., resize, crop):
 > ```bash
-> aliyun ossutil presign oss://<bucket-name>/<image-object-key> --query-param x-oss-process=image/resize,w_200 --user-agent AlibabaCloud-Agent-Skills
+> aliyun ossutil presign oss://<bucket-name>/<image-object-key> --query-param x-oss-process=image/resize,w_200 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-metaquery
 > ```
 > This generates a thumbnail preview to reduce loading time.
 
@@ -289,13 +306,13 @@ When a user reports that a specific uploaded file is missing from search results
 
 **a. Content awareness is NOT enabled:**
 If the user's MetaQuery does not have content awareness enabled (i.e., `VideoInsightEnable` or `ImageInsightEnable` is not `True` in `WorkflowParameters`), possible reasons include:
-- The file's metadata index has not been fully built yet. Wait for the index scan to complete (check the `Phase` field via `aliyun ossutil api get-meta-query-status --bucket <bucket-name> --output-format json --user-agent AlibabaCloud-Agent-Skills`).
+- The file's metadata index has not been fully built yet. Wait for the index scan to complete (check the `Phase` field via `aliyun ossutil api get-meta-query-status --bucket <bucket-name> --output-format json --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-metaquery`).
 - Without content awareness, search is based only on basic file metadata (filename, size, type, etc.) and cannot perform semantic understanding of file contents, resulting in limited search effectiveness.
 - **Recommendation**: Suggest the user enable content awareness to improve search quality. Since existing MetaQuery configurations cannot be directly modified, recommend the user switch to a new bucket and re-enable MetaQuery with content awareness following the Task 2 process.
 
 **b. Content awareness IS enabled:**
 If the user's MetaQuery has content awareness enabled but a specific file still cannot be found, possible reasons include:
-- **File is still being processed**: Content awareness requires deep analysis of files (e.g., image recognition, video understanding), which takes longer, especially for video files. Check the `Phase` field via `aliyun ossutil api get-meta-query-status --bucket <bucket-name> --output-format json --user-agent AlibabaCloud-Agent-Skills`:
+- **File is still being processed**: Content awareness requires deep analysis of files (e.g., image recognition, video understanding), which takes longer, especially for video files. Check the `Phase` field via `aliyun ossutil api get-meta-query-status --bucket <bucket-name> --output-format json --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-metaquery`:
   - `FullScanning`: The overall index is still in full scan mode. Wait patiently.
   - `IncrementalScanning`: Newly uploaded files are being processed incrementally. Usually wait a few minutes.
 - **Unsupported file format**: Some file formats may not be supported by content awareness. In this case, search can only use basic metadata.
@@ -303,7 +320,7 @@ If the user's MetaQuery has content awareness enabled but a specific file still 
 
 ### Task 4: Query Data Index Status (aliyun ossutil)
 ```bash
-aliyun ossutil api get-meta-query-status --bucket <bucket-name> --output-format json --user-agent AlibabaCloud-Agent-Skills
+aliyun ossutil api get-meta-query-status --bucket <bucket-name> --output-format json --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-metaquery
 ```
 > For detailed descriptions of returned fields (State, Phase, MetaQueryMode, etc.), see the GetMetaQueryStatus section in [references/related-apis.md](references/related-apis.md).
 
@@ -313,7 +330,7 @@ See [references/verification-method.md](references/verification-method.md)
 ## Resource Cleanup
 ```bash
 # Close the data index. (Dangerous operation -- confirm with the user first)
-aliyun ossutil api close-meta-query --bucket <bucket-name> --user-agent AlibabaCloud-Agent-Skills
+aliyun ossutil api close-meta-query --bucket <bucket-name> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-oss-manage-metaquery
 ```
 > **Warning**: After closing the data index, all indexed data will be cleared. (Dangerous operation -- confirm with the user first)
 
