@@ -89,10 +89,10 @@ After granting permissions, verify access:
 
 ```bash
 # Test ListInstances permission
-aliyun hologram POST /api/v1/instances --header "Content-Type=application/json" --body "{}" --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills
+aliyun hologram POST /api/v1/instances --header "Content-Type=application/json" --body "{}" --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-hologres-instance-manage
 
 # Test GetInstance permission (replace with actual instance ID)
-aliyun hologram GET /api/v1/instances/hgprecn-cn-your-instance-id --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills
+aliyun hologram GET /api/v1/instances/hgprecn-cn-your-instance-id --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-hologres-instance-manage
 ```
 
 ## Common Permission Errors

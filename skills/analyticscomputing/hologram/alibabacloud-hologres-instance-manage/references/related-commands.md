@@ -22,7 +22,7 @@ Complete reference for all CLI commands used in the Hologres Instance Management
 aliyun hologram POST /api/v1/instances \
   --header "Content-Type=application/json" \
   --body '{}' \
-  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills
+  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-hologres-instance-manage
 ```
 
 **Request Parameters:**
@@ -48,31 +48,31 @@ aliyun hologram POST /api/v1/instances \
 aliyun hologram POST /api/v1/instances \
   --header "Content-Type=application/json" \
   --body '{}' \
-  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills
+  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-hologres-instance-manage
 
 # Filter by resource group
 aliyun hologram POST /api/v1/instances \
   --header "Content-Type=application/json" \
   --body '{"resourceGroupId":"rg-acfmvscak73zmby"}' \
-  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills
+  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-hologres-instance-manage
 
 # Filter by tags
 aliyun hologram POST /api/v1/instances \
   --header "Content-Type=application/json" \
   --body '{"tag":[{"key":"environment","value":"production"}]}' \
-  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills
+  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-hologres-instance-manage
 
 # Filter by CMS instance type
 aliyun hologram POST /api/v1/instances \
   --header "Content-Type=application/json" \
   --body '{"cmsInstanceType":"standard"}' \
-  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills
+  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-hologres-instance-manage
 
 # Combined filters
 aliyun hologram POST /api/v1/instances \
   --header "Content-Type=application/json" \
   --body '{"resourceGroupId":"rg-xxx","cmsInstanceType":"standard","tag":[{"key":"env","value":"prod"}]}' \
-  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills
+  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-hologres-instance-manage
 ```
 
 **Response Structure:**
@@ -126,7 +126,7 @@ aliyun hologram POST /api/v1/instances \
 **CLI Command:**
 ```bash
 aliyun hologram GET /api/v1/instances/{instanceId} \
-  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills
+  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-hologres-instance-manage
 ```
 
 **Path Parameters:**
@@ -140,12 +140,12 @@ aliyun hologram GET /api/v1/instances/{instanceId} \
 ```bash
 # Get instance details
 aliyun hologram GET /api/v1/instances/hgprecn-cn-i7m2v08uu00a \
-  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills
+  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-hologres-instance-manage
 
 # With specific region endpoint
 aliyun hologram GET /api/v1/instances/hgpostcn-cn-aaab9ad2d8fb \
   --endpoint hologram.cn-hangzhou.aliyuncs.com \
-  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills
+  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-hologres-instance-manage
 ```
 
 **Response Structure:**
@@ -266,7 +266,7 @@ aliyun hologram GET /api/v1/instances/hgpostcn-cn-aaab9ad2d8fb \
 
 ## Important Notes
 
-1. **User-Agent Header**: All commands must include `--user-agent AlibabaCloud-Agent-Skills`
+1. **User-Agent Header**: All commands must include `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-hologres-instance-manage`
 2. **Timeout**: All commands must include `--read-timeout 4` (4 seconds)
 3. **Content-Type**: POST requests require `--header "Content-Type=application/json"`
 4. **ROA Style**: These APIs use RESTful style, not RPC

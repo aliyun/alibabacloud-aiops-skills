@@ -14,7 +14,7 @@ This document provides detailed verification steps to confirm successful executi
 aliyun hologram POST /api/v1/instances \
   --header "Content-Type=application/json" \
   --body '{}' \
-  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills
+  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-hologres-instance-manage
 ```
 
 **Success Indicators:**
@@ -31,7 +31,7 @@ aliyun hologram POST /api/v1/instances \
 RESPONSE=$(aliyun hologram POST /api/v1/instances \
   --header "Content-Type=application/json" \
   --body '{}' \
-  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills 2>&1)
+  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-hologres-instance-manage 2>&1)
 
 # Check if response contains success indicator
 if echo "$RESPONSE" | grep -q '"Success"'; then
@@ -66,13 +66,13 @@ fi
 INSTANCE_ID=$(aliyun hologram POST /api/v1/instances \
   --header "Content-Type=application/json" \
   --body '{}' \
-  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills \
+  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-hologres-instance-manage \
   | grep -o '"InstanceId":"[^"]*"' | head -1 | cut -d'"' -f4)
 
 # Then verify GetInstance with that ID
 if [ -n "$INSTANCE_ID" ]; then
   aliyun hologram GET /api/v1/instances/$INSTANCE_ID \
-    --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills
+    --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-hologres-instance-manage
 fi
 ```
 
@@ -92,7 +92,7 @@ fi
 INSTANCE_ID=$(aliyun hologram POST /api/v1/instances \
   --header "Content-Type=application/json" \
   --body '{}' \
-  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills 2>/dev/null \
+  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-hologres-instance-manage 2>/dev/null \
   | grep -o '"InstanceId":"[^"]*"' | head -1 | cut -d'"' -f4)
 
 if [ -z "$INSTANCE_ID" ]; then
@@ -103,7 +103,7 @@ fi
 echo "Testing GetInstance with ID: $INSTANCE_ID"
 
 RESPONSE=$(aliyun hologram GET /api/v1/instances/$INSTANCE_ID \
-  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills 2>&1)
+  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-hologres-instance-manage 2>&1)
 
 # Check for success
 if echo "$RESPONSE" | grep -q '"Success"[[:space:]]*:[[:space:]]*true'; then
@@ -153,7 +153,7 @@ echo "Step 2: Testing ListInstances..."
 RESPONSE=$(aliyun hologram POST /api/v1/instances \
   --header "Content-Type=application/json" \
   --body '{}' \
-  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills 2>&1)
+  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-hologres-instance-manage 2>&1)
 
 if echo "$RESPONSE" | grep -qiE '"Success"[[:space:]]*:[[:space:]]*"?true'; then
   echo "✅ ListInstances: SUCCESS"
@@ -173,7 +173,7 @@ echo ""
 if [ -n "$INSTANCE_ID" ]; then
   echo "Step 3: Testing GetInstance with ID: $INSTANCE_ID..."
   RESPONSE=$(aliyun hologram GET /api/v1/instances/$INSTANCE_ID \
-    --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills 2>&1)
+    --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-hologres-instance-manage 2>&1)
   
   if echo "$RESPONSE" | grep -qiE '"Success"[[:space:]]*:[[:space:]]*true'; then
     echo "✅ GetInstance: SUCCESS"
@@ -256,7 +256,7 @@ check_hologres_api() {
   result=$(aliyun hologram POST /api/v1/instances \
     --header "Content-Type=application/json" \
     --body '{}' \
-    --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills 2>&1)
+    --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-hologres-instance-manage 2>&1)
   
   if echo "$result" | grep -qiE '"Success"[[:space:]]*:[[:space:]]*"?true'; then
     return 0

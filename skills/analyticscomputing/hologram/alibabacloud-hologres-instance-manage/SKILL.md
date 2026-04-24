@@ -17,15 +17,22 @@ User → Aliyun CLI → Hologres API (hologram) → Instance List / Instance Det
 
 ## Installation
 
-> **Pre-check: Aliyun CLI >= 3.3.1 required**
-> Run `aliyun version` to verify >= 3.3.1. If not installed or version too low,
-> see `references/cli-installation-guide.md` for installation instructions.
-> Then [MUST] run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+**Pre-check: Aliyun CLI >= 3.3.3 required**
+> Run `aliyun version` to verify >= 3.3.3. If not installed or version too low,
+> run `curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash` to update,
+> or see `references/cli-installation-guide.md` for installation instructions.
+
+**Pre-check: Aliyun CLI plugin update required**
+> [MUST] run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+> [MUST] run `aliyun plugin update` to ensure that any existing plugins are always up-to-date.
 
 ```bash
-curl -fsSL --connect-timeout 4 --max-time 120 https://aliyuncli.alicdn.com/install.sh | bash
+curl -fsSL --connect-timeout 4 --max-time 120 https://aliyuncli.alicdn.com/setup.sh | bash
 aliyun version
 ```
+
+**[MUST] CLI User-Agent** — Every `aliyun` CLI command invocation must include:
+`--user-agent AlibabaCloud-Agent-Skills/alibabacloud-hologres-instance-manage`
 
 ## Authentication
 
@@ -85,25 +92,25 @@ Query all Hologres instances in the specified region.
 # List all instances
 aliyun hologram POST /api/v1/instances \
   --header "Content-Type=application/json" --body "{}" \
-  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills
+  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-hologres-instance-manage
 
 # List instances with resource group filter
 aliyun hologram POST /api/v1/instances \
   --header "Content-Type=application/json" \
   --body '{"resourceGroupId":"rg-acfmvscak73zmby"}' \
-  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills
+  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-hologres-instance-manage
 
 # List instances with tag filter
 aliyun hologram POST /api/v1/instances \
   --header "Content-Type=application/json" \
   --body '{"tag":[{"key":"env","value":"production"}]}' \
-  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills
+  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-hologres-instance-manage
 
 # List instances by CMS instance type
 aliyun hologram POST /api/v1/instances \
   --header "Content-Type=application/json" \
   --body '{"cmsInstanceType":"standard"}' \
-  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills
+  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-hologres-instance-manage
 ```
 
 **Response Fields:**
@@ -122,11 +129,11 @@ Get detailed information about a specific Hologres instance.
 ```bash
 # Get instance details by ID
 aliyun hologram GET /api/v1/instances/{instanceId} \
-  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills
+  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-hologres-instance-manage
 
 # Example with actual instance ID
 aliyun hologram GET /api/v1/instances/hgprecn-cn-i7m2v08uu00a \
-  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills
+  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-hologres-instance-manage
 ```
 
 **Response Fields:**
@@ -157,11 +164,11 @@ See [references/verification-method.md](references/verification-method.md) for d
 # Verify ListInstances
 aliyun hologram POST /api/v1/instances \
   --header "Content-Type=application/json" --body "{}" \
-  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills | jq '.InstanceList'
+  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-hologres-instance-manage | jq '.InstanceList'
 
 # Verify GetInstance
 aliyun hologram GET /api/v1/instances/{your-instance-id} \
-  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills | jq '.Instance.InstanceStatus'
+  --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-hologres-instance-manage | jq '.Instance.InstanceStatus'
 ```
 
 **Success Indicators:**
@@ -179,8 +186,8 @@ See [references/related-commands.md](references/related-commands.md) for the com
 
 | Action | CLI Command | Description |
 |--------|------------|-------------|
-| List Instances | `aliyun hologram POST /api/v1/instances --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills` | Get list of all Hologres instances |
-| Get Instance | `aliyun hologram GET /api/v1/instances/{instanceId} --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills` | Get details of a specific instance |
+| List Instances | `aliyun hologram POST /api/v1/instances --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-hologres-instance-manage` | Get list of all Hologres instances |
+| Get Instance | `aliyun hologram GET /api/v1/instances/{instanceId} --read-timeout 4 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-hologres-instance-manage` | Get details of a specific instance |
 
 ## Best Practices
 
