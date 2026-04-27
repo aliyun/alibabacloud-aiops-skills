@@ -32,10 +32,24 @@ Retrieves the 5 core modules of the Security Center (SAS) overview dashboard:
 
 ## Prerequisites
 
-> **Pre-check: Aliyun CLI >= 3.3.1 required**
-> Run `aliyun version` to verify >= 3.3.1. If not installed or version too low,
-> see `references/cli-installation-guide.md` for installation instructions.
-> Then run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+> **Pre-check: Aliyun CLI >= 3.3.3 required**
+> Run `aliyun version` to verify >= 3.3.3. If not installed or version too low,
+> run `curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash` to update,
+> or see `references/cli-installation-guide.md` for installation instructions.
+
+> **Pre-check: Aliyun CLI plugin update required**
+> [MUST] run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+> [MUST] run `aliyun plugin update` to ensure that any existing plugins are always up-to-date.
+
+**[MUST] Enable AI-Mode and set User-Agent** — Before executing any `aliyun` CLI commands in this workflow, you MUST enable AI-Mode and set the User-Agent:
+
+```bash
+# [MUST] Enable AI-Mode before running any CLI commands
+aliyun configure ai-mode enable
+
+# [MUST] Set User-Agent for this skill
+aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-sas-overview"
+```
 
 Install required CLI plugins:
 
@@ -88,7 +102,7 @@ Based on the user's query, execute the relevant module(s) below. Each module —
 
 ```bash
 # 1a. Security Score (region-agnostic)
-aliyun sas describe-secure-suggestion --cal-type home_security_score --user-agent AlibabaCloud-Agent-Skills
+aliyun sas describe-secure-suggestion --cal-type home_security_score --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-overview
 # Extract: Score field from response as current security score
 #
 # NOTE: DescribeScreenScoreThread is currently unavailable (CalType not supported).
@@ -98,30 +112,30 @@ aliyun sas describe-secure-suggestion --cal-type home_security_score --user-agen
 #   aliyun sas describe-screen-score-thread \
 #     --cal-type home_security_score \
 #     --start-time "$START" --end-time "$END" \
-#     --user-agent AlibabaCloud-Agent-Skills
+#     --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-overview
 #   Extract: Data.SocreThread[-1] = current score, full SocreThread list = historical trend
 
 # 1b. Fixed Vulnerabilities (multi-region: sum FixTotal)
-aliyun sas describe-vul-fix-statistics --region cn-shanghai --user-agent AlibabaCloud-Agent-Skills
-aliyun sas describe-vul-fix-statistics --region ap-southeast-1 --user-agent AlibabaCloud-Agent-Skills
+aliyun sas describe-vul-fix-statistics --region cn-shanghai --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-overview
+aliyun sas describe-vul-fix-statistics --region ap-southeast-1 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-overview
 
 # 1c. Baseline Risk Statistics (multi-region: sum each Summary field)
-aliyun sas get-check-risk-statistics --region cn-shanghai --user-agent AlibabaCloud-Agent-Skills
-aliyun sas get-check-risk-statistics --region ap-southeast-1 --user-agent AlibabaCloud-Agent-Skills
+aliyun sas get-check-risk-statistics --region cn-shanghai --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-overview
+aliyun sas get-check-risk-statistics --region ap-southeast-1 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-overview
 # Extract: Summary.RiskCheckCnt, Summary.RiskWarningCnt,
 #          Summary.HandledCheckTotal, Summary.HandledCheckToday
 # Sum each field across regions
 
 # 1d. Handled Alerts (multi-region: sum SuspiciousDealtCount)
-aliyun sas get-defence-count --region cn-shanghai --user-agent AlibabaCloud-Agent-Skills
-aliyun sas get-defence-count --region ap-southeast-1 --user-agent AlibabaCloud-Agent-Skills
+aliyun sas get-defence-count --region cn-shanghai --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-overview
+aliyun sas get-defence-count --region ap-southeast-1 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-overview
 ```
 
 ### Module 2: Usage Info
 
 ```bash
 # 2a. Service Duration + Subscription (region-agnostic)
-aliyun sas describe-version-config --user-agent AlibabaCloud-Agent-Skills
+aliyun sas describe-version-config --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-overview
 # Check IsPaidUser first:
 #   IsPaidUser == true  → Extract CreateTime, calculate (now - CreateTime) as days
 #   IsPaidUser == false → Service duration not applicable, display N/A
@@ -130,17 +144,17 @@ aliyun sas describe-version-config --user-agent AlibabaCloud-Agent-Skills
 # 2b. Host Asset Info (multi-region: sum TotalCount and Cores)
 aliyun sas describe-cloud-center-instances \
   --region cn-shanghai --machine-types ecs --current-page 1 --page-size 20 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-overview
 aliyun sas describe-cloud-center-instances \
   --region ap-southeast-1 --machine-types ecs --current-page 1 --page-size 20 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-overview
 # Extract: PageInfo.TotalCount (sum across regions) for host count
 # Extract: Sum all instances' Cores field for total core count
 # Optionally list host details if user requests
 
 # 2c. Uninstalled Clients (multi-region: sum TotalCount)
-aliyun sas list-uninstall-aegis-machines --region cn-shanghai --current-page 1 --page-size 1 --user-agent AlibabaCloud-Agent-Skills
-aliyun sas list-uninstall-aegis-machines --region ap-southeast-1 --current-page 1 --page-size 1 --user-agent AlibabaCloud-Agent-Skills
+aliyun sas list-uninstall-aegis-machines --region cn-shanghai --current-page 1 --page-size 1 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-overview
+aliyun sas list-uninstall-aegis-machines --region ap-southeast-1 --current-page 1 --page-size 1 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-overview
 ```
 
 ### Module 3: Security Operations
@@ -148,7 +162,7 @@ aliyun sas list-uninstall-aegis-machines --region ap-southeast-1 --current-page 
 #### 3a. Risk Governance (region-agnostic, single API call)
 
 ```bash
-aliyun sas describe-secure-suggestion --cal-type home_security_score --user-agent AlibabaCloud-Agent-Skills
+aliyun sas describe-secure-suggestion --cal-type home_security_score --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-overview
 # Process Suggestions[] by SuggestType:
 #   SS_AI_RISK → AI Risk (SubType not fixed, e.g. SSI_AISPM_RISK; analyze Description for unknown SubTypes)
 #     Aggregate riskCount by region
@@ -165,8 +179,8 @@ aliyun sas describe-secure-suggestion --cal-type home_security_score --user-agen
 
 ```bash
 # Step 1: Get WAF Instance ID (per region)
-aliyun waf-openapi describe-instance --region cn-shanghai --user-agent AlibabaCloud-Agent-Skills
-aliyun waf-openapi describe-instance --region ap-southeast-1 --user-agent AlibabaCloud-Agent-Skills
+aliyun waf-openapi describe-instance --region cn-shanghai --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-overview
+aliyun waf-openapi describe-instance --region ap-southeast-1 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-overview
 # Extract: InstanceId from each region's response
 
 # Step 2: Query WAF flow chart using each region's InstanceId
@@ -176,13 +190,13 @@ aliyun waf-openapi describe-flow-chart \
   --instance-id "<InstanceId from cn-shanghai>" \
   --start-timestamp "$START_SEC" \
   --interval 3600 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-overview
 aliyun waf-openapi describe-flow-chart \
   --region ap-southeast-1 \
   --instance-id "<InstanceId from ap-southeast-1>" \
   --start-timestamp "$START_SEC" \
   --interval 3600 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-overview
 # Sum all WafBlockSum values from both regions
 ```
 
@@ -198,26 +212,26 @@ aliyun waf-openapi describe-flow-chart \
 # 4a. Host Assets (multi-region)
 aliyun sas describe-cloud-center-instances \
   --region cn-shanghai --machine-types ecs --current-page 1 --page-size 1 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-overview
 # Extract: PageInfo.TotalCount
 
 aliyun sas describe-field-statistics \
   --region cn-shanghai \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-overview
 # Extract: GroupedFields.RiskInstanceCount
 # Repeat for ap-southeast-1, sum both
 
 # 4b. Container Assets (multi-region)
 aliyun sas describe-container-field-statistics \
   --region cn-shanghai \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-overview
 # Extract: ClusterCount, RiskClusterCount
 # Repeat for ap-southeast-1, sum both
 
 # 4c. Cloud Product Assets (multi-region)
 aliyun sas get-cloud-asset-summary \
   --region cn-shanghai \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-overview
 # Extract: GroupedFields.InstanceCountTotal, GroupedFields.InstanceRiskCountTotal
 # Repeat for ap-southeast-1, sum both
 
@@ -229,7 +243,7 @@ aliyun sas describe-chart-data \
   --chart-id CID_ASSET_RISK_TREND \
   --report-id -1 \
   --time-start "$START_MS" --time-end "$END_MS" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-overview
 # Returns time series: host / container / cloud risk counts
 ```
 
@@ -237,7 +251,7 @@ aliyun sas describe-chart-data \
 
 ```bash
 # 5a. Query billing mode (from Module 2a response, can reuse cached result)
-aliyun sas describe-version-config --user-agent AlibabaCloud-Agent-Skills
+aliyun sas describe-version-config --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-overview
 # Check IsPaidUser field to determine billing mode:
 #
 # If IsPaidUser == true → Pre-pay (subscription) user:
@@ -264,13 +278,13 @@ BILLING_CYCLE=$(date +%Y-%m)
 aliyun bssopenapi query-bill \
   --region cn-shanghai \
   --billing-cycle "$BILLING_CYCLE" --product-code sas \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-overview
 # If the above returns a permission error, skip cn-shanghai and continue
 
 aliyun bssopenapi query-bill \
   --region ap-southeast-1 \
   --billing-cycle "$BILLING_CYCLE" --product-code sas \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-overview
 # If the above returns a permission error, skip ap-southeast-1 and continue
 # Aggregate results from whichever regions succeeded
 ```
@@ -306,6 +320,12 @@ See [references/verification-method.md](references/verification-method.md) for s
 ## Cleanup
 
 This skill is read-only (query operations only). No resources are created, so no cleanup is needed.
+
+**[MUST] Disable AI-Mode after workflow completion** — Once the workflow is finished, you MUST disable AI-Mode:
+
+```bash
+aliyun configure ai-mode disable
+```
 
 ## Best Practices
 
