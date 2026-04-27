@@ -2,7 +2,7 @@
 
 Complete guide for installing and configuring Aliyun CLI.
 
-> **Aliyun CLI 3.3.0+**: Supports installing and using all published Alibaba Cloud product plugins. Make sure to upgrade to 3.3.0 or later for full plugin ecosystem coverage.
+> **Aliyun CLI 3.3.3+**: Supports installing and using all published Alibaba Cloud product plugins. Make sure to upgrade to 3.3.3 or later for full plugin ecosystem coverage.
 
 ## Installation
 
@@ -16,7 +16,7 @@ One command to install or update — works on both macOS and Linux, auto-detects
 
 After installation, verify:
 ```bash
-aliyun version   # should be >= 3.3.0
+aliyun version   # should be >= 3.3.3
 ```
 
 ### macOS — Homebrew (Alternative)
@@ -459,7 +459,7 @@ export ALIBABA_CLOUD_READ_TIMEOUT=30
 
 After installation and configuration:
 
-1. **Install plugins** for services you need (v3.3.0+ supports all published product plugins):
+1. **Install plugins** for services you need (v3.3.3+ supports all published product plugins):
    ```bash
    aliyun plugin install --names ecs vpc rds
 

@@ -28,17 +28,54 @@ Guide users to manage Alibaba Cloud resources effectively using the `aliyun` com
 
 ## Instructions
 
-### User-Agent (this skill)
+### Agent execution: AI-mode and User-Agent (this skill)
 
-Any `aliyun` invocation that **calls Alibaba Cloud APIs** while following this skill MUST identify the client with:
+**Skill identifier** (same string whichever path you use): `AlibabaCloud-Agent-Skills/alibabacloud-cli-guidance`
+
+Use **exactly one** way to attach this skill to requests. **Do not combine** AI-mode (`configure ai-mode` + `set-user-agent`) with `ALIBABA_CLOUD_USER_AGENT` or a per-command env prefix for the **same** skill token — the CLI stacks those sources, and **User-Agent / attribution will duplicate** (bad for telemetry).
+
+| Path | When to use | Start | End / cleanup |
+| ---- | ----------- | ----- | ------------- |
+| **A — AI-mode (preferred for agents)** | Agent session, many `aliyun` calls | `aliyun configure ai-mode enable` then `aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-cli-guidance"` | **[MUST]** `aliyun configure ai-mode disable` before the final response on **every** exit (success, failure, error, cancel, session end). **Do not** `export ALIBABA_CLOUD_USER_AGENT` to the same value while AI-mode is on. |
+| **B — Environment or one-shot** | One-off commands, scripts without `configure`, or no AI-mode | `export ALIBABA_CLOUD_USER_AGENT=AlibabaCloud-Agent-Skills/alibabacloud-cli-guidance` for the session, **or** prefix each API call: `ALIBABA_CLOUD_USER_AGENT=AlibabaCloud-Agent-Skills/alibabacloud-cli-guidance aliyun ...` | If you used **`export`**, run `unset ALIBABA_CLOUD_USER_AGENT` when done so other skills are not mis-attributed. Inline prefix needs no unset. **Do not** enable AI-mode on path B for the same skill string. |
+
+Path A — start (before the first `aliyun` that hits the API; local `aliyun configure` without cloud calls may run first if needed):
 
 ```bash
-export ALIBABA_CLOUD_USER_AGENT=AlibabaCloud-Agent-Skills
+aliyun configure ai-mode enable
+aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-cli-guidance"
 ```
 
-Use the **same shell** for subsequent commands, or prefix a single run: `ALIBABA_CLOUD_USER_AGENT=AlibabaCloud-Agent-Skills aliyun ...`. Omit this only for steps that do not call cloud APIs (for example local `aliyun configure` browser OAuth setup before any API call). When you give the user copy-paste blocks, include this `export` once at the top of the block (or the inline prefix on each `aliyun` line).
+Path A — **[MUST] disable at every exit** (AI-mode must not remain on after the skill stops):
 
-Examples below assume `ALIBABA_CLOUD_USER_AGENT` is set whenever an `aliyun` command hits the API.
+```bash
+aliyun configure ai-mode disable
+```
+
+Path B — examples (one carrier per workflow: `export`, inline env, or root `--user-agent`; never stack the same token or mix with path A):
+
+```bash
+export ALIBABA_CLOUD_USER_AGENT=AlibabaCloud-Agent-Skills/alibabacloud-cli-guidance
+# … aliyun … calls … then: unset ALIBABA_CLOUD_USER_AGENT
+```
+
+```bash
+ALIBABA_CLOUD_USER_AGENT=AlibabaCloud-Agent-Skills/alibabacloud-cli-guidance aliyun ecs DescribeRegions
+```
+
+Root **`--user-agent`** is path B semantics too — do not combine with path A for the same token. **Non-agent** copy-paste: path B is often enough; **agent** sessions: path A + disable on exit. Examples below use path A or B only, never both.
+
+**Pre-check: Aliyun CLI >= 3.3.3 required** — Run `aliyun version`. If too low: `curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash` or see `references/installation-guide.md`.
+
+**Pre-check: Aliyun CLI plugin update required** — [MUST] `aliyun configure set --auto-plugin-install true`; [MUST] `aliyun plugin update`.
+
+**CLI version milestones (agents and users)**
+
+| From version | What you gain |
+| ------------- | -------------- |
+| **>= 3.3.3** | Baseline for product plugins and flows in this skill (see pre-checks above). |
+| **>= 3.3.5** | **`aliyun upgrade`** — update the CLI from the binary itself when the subcommand exists. Prefer it over re-running the install script for routine upgrades once the CLI is new enough. |
+| **>= 3.3.8** | **`aliyun plugin show --name <plugin>`** — details for an **installed** plugin (version, product code, descriptions, API versions when present). On older CLIs, use `aliyun plugin list` and product `--help` only. |
 
 ### 1. Install and configure the CLI
 
@@ -48,6 +85,13 @@ See `./references/installation-guide.md` for full details. Quick path:
 ```bash
 # Install or update (macOS / Linux — one command)
 /bin/bash -c "$(curl -fsSL --connect-timeout 10 --max-time 120 https://aliyuncli.alicdn.com/setup.sh)"
+```
+
+After the CLI is at **3.3.5 or newer**, routine self-updates can use **`aliyun upgrade`** instead of the curl installer (the installer remains appropriate for first-time install or when `upgrade` is not available):
+
+```bash
+aliyun version   # confirm >= 3.3.5 before relying on upgrade
+aliyun upgrade
 ```
 
 #### OAuth (browser login)
@@ -70,15 +114,14 @@ export ALIBABA_CLOUD_REGION_ID=cn-hangzhou
 # Temporary credentials (StsToken) — add:
 # export ALIBABA_CLOUD_SECURITY_TOKEN=<sts-token>
 
-# Required when using this skill for API calls — see "User-Agent (this skill)" above
-export ALIBABA_CLOUD_USER_AGENT=AlibabaCloud-Agent-Skills
+# API calls + this skill: use path A (ai-mode) OR path B (ALIBABA_CLOUD_USER_AGENT) — not both — see "Agent execution: AI-mode and User-Agent (this skill)"
 
 # Verify
-aliyun version      # Should be >= 3.3.0
+aliyun version      # Should be >= 3.3.3
 aliyun ecs describe-regions   # Tests authentication
 ```
 
-Aliyun CLI 3.3.0+ supports all published Alibaba Cloud product plugins.
+Aliyun CLI 3.3.3+ supports all published Alibaba Cloud product plugins. Newer commands (`aliyun upgrade` from **3.3.5**, `aliyun plugin show` from **3.3.8**) are summarized under **CLI version milestones** near the top of these instructions.
 
 #### Authentication modes (environment variables)
 
@@ -133,7 +176,10 @@ To discover or verify plugins:
 aliyun plugin list                    # Installed plugins
 aliyun plugin list-remote             # All available plugins
 aliyun plugin search <keyword>        # Search by keyword
+aliyun plugin show --name ecs         # Aliyun CLI >= 3.3.8 — details for one installed plugin
 ```
+
+`plugin show` requires **Aliyun CLI >= 3.3.8** and only works for **installed** plugins (use `plugin list-remote` / `plugin search` to inspect the catalog). On older versions, omit `plugin show` and rely on `plugin list` plus `aliyun <product> --help`.
 
 Plugin names accept both short form (`ecs`) and full form (`aliyun-cli-ecs`), case-insensitive.
 
@@ -318,18 +364,14 @@ entirely different command availability. Not all products have multiple versions
 aliyun <product> list-api-versions
 ```
 
-Example output (ESS):
+Example (ESS; `*` = default):
 
 ```text
-Product: ESS
-Supported API versions:
 * 2014-08-28 (default)
-  2016-07-22
   2022-02-22
 ```
 
-The `*` marks the default version. Each version may expose a different set of commands — newer
-versions often add commands or change parameter names.
+Each version may expose different commands or parameter names.
 
 #### Specify version per command
 
@@ -361,9 +403,9 @@ aliyun ess <cmd> --api-version 2022-02-22 --help   # Help for a specific command
 
 #### When to specify version
 
-- **Default version works for most cases** — only specify when you need features from a newer version
-- **Check `--help` output** — if a parameter you expect is missing, it may exist in a different version
-- **Pinning versions in scripts** — use the environment variable to ensure reproducible behavior
+- **Default** — enough unless you need newer features.
+- **`--help`** — missing parameter may exist only in another API version.
+- **Scripts / CI** — pin `ALIBABA_CLOUD_<PRODUCT>_API_VERSION` for reproducibility.
 
 ## Global Flags Reference
 
@@ -446,7 +488,7 @@ When providing CLI commands:
 2. Show the complete command with all required parameters
 3. Call out non-obvious values — especially `--biz-` prefixed parameters and their reason
 4. Suggest `--log-level debug` when the user is troubleshooting
-5. For API calls, ensure `ALIBABA_CLOUD_USER_AGENT=AlibabaCloud-Agent-Skills` is set in the same shell or inlined before `aliyun` (see **User-Agent (this skill)**)
+5. For API attribution, use **either** AI-mode + `set-user-agent` **or** env/inline `ALIBABA_CLOUD_USER_AGENT`, never both for the same skill token; agents should disable AI-mode on every exit or `unset` after `export` (see **Agent execution: AI-mode and User-Agent (this skill)**)
 
 ## References
 
