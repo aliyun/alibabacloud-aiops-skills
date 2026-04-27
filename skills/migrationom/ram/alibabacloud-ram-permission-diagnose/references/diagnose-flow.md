@@ -10,7 +10,7 @@ Detailed decision logic for RAM permission diagnosis. Consult this file when enc
 
 | `AuthPrincipalType` | `AuthPrincipalDisplayName` format | Resolution |
 |---------------------|----------------------------------|------------|
-| `SubUser` | Numeric UserId (e.g., `206007273725819551`) | Call `aliyun ims GetUser --UserId <DisplayName>`, use returned `User.UserName` |
+| `SubUser` | Numeric UserId (e.g., `206007273725819551`) | Call `aliyun ims get-user --user-id <DisplayName>`, use returned `User.UserName` |
 | `AssumedRoleUser` | `roleName:sessionName` (e.g., `my-role:session-1`) | Take the part before the colon as RoleName — no API needed |
 | `RootUser` | Primary account identifier | Use directly — no resolution needed |
 
@@ -117,7 +117,7 @@ Before generating recommendations in Step 3:
 **Role trust policy not allowing caller** (PolicyType=AssumeRolePolicy or medium-confidence sts:AssumeRole):
 - Explain: trust policy of the target role must be updated to add the caller's ARN to Principal
 - If role name is known: provide modification command directly (see `references/ram-cli-commands.md` → Trust Policy section)
-- If unknown: provide `aliyun ram ListRoles` and a template for the user to fill in
+- If unknown: provide `aliyun ram list-roles` and a template for the user to fill in
 - Also note: caller's identity policy must also have `sts:AssumeRole` (see `AliyunSTSAssumeRoleAccess`)
 - For medium-confidence: describe both possible root causes and guide user to verify first
 
@@ -129,7 +129,7 @@ Before generating recommendations in Step 3:
 
 **SLR missing**: Provide creation command:
 ```bash
-aliyun ram CreateServiceLinkedRole --ServiceName <service>.aliyuncs.com
+aliyun resourcemanager create-service-linked-role --service-name <service>.aliyuncs.com
 ```
 
 **CP control policy**: Beyond single-account RAM scope; contact ResourceDirectory administrator.

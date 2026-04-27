@@ -16,7 +16,34 @@ compatibility:
 
 # RAM Permission Diagnosis and Repair
 
-> **Execution constraint**: When executing `aliyun` CLI commands directly (not generating commands for the user to copy), always append `--user-agent AlibabaCloud-Agent-Skills`. Do not add this flag to commands shown to users in Path B output or Path C console guidance.
+## Installation
+
+**Pre-check: Aliyun CLI >= 3.3.3 required**
+> Run `aliyun version` to verify >= 3.3.3. If not installed or version too low,
+> run `curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash` to update,
+> or see `references/cli-installation-guide.md` for installation instructions.
+
+**Pre-check: Aliyun CLI plugin update required**
+> [MUST] run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+> [MUST] run `aliyun plugin update` to ensure that any existing plugins are always up-to-date.
+
+At the **start** of the Core Workflow (before any CLI invocation):
+**[MUST] Enable AI-Mode** — AI-mode is required for Agent Skill execution.
+Run the following commands before any CLI invocation:
+```bash
+aliyun configure ai-mode enable
+aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ram-permission-diagnose"
+```
+**[MUST] Disable AI-Mode at EVERY exit point** — Before delivering the final response for ANY reason, always disable AI-mode first. This applies to ALL exit paths: workflow success, workflow failure, error/exception, user cancellation, session end, or any other scenario where no further CLI commands will be executed.
+AI-mode is only used for Agent Skill invocation scenarios and MUST NOT remain enabled after the skill stops running.
+```bash
+aliyun configure ai-mode disable
+```
+
+**[MUST] CLI User-Agent** — Every `aliyun` CLI command invocation must include:
+`--user-agent AlibabaCloud-Agent-Skills/alibabacloud-ram-permission-diagnose`
+
+> **Execution constraint**: When executing `aliyun` CLI commands directly (not generating commands for the user to copy), always append `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-ram-permission-diagnose`. Do not add this flag to commands shown to users in Path B output or Path C console guidance.
 
 ## Overview
 
@@ -81,7 +108,7 @@ First attempt classification using the raw fields from Step 1. `DecodeDiagnostic
 Transcribe `EncodedDiagnosticMessage` from the raw error and call:
 
 ```bash
-aliyun ram DecodeDiagnosticMessage --EncodedDiagnosticMessage "<transcribed-value>"
+aliyun ram decode-diagnostic-message --encoded-diagnostic-message "<transcribed-value>"
 ```
 
 If the call returns `EntityNotExist`, re-run the original failing command and save its output to a temp file (use the system temp dir; name the file after the command context, e.g. `/tmp/aliyun_ecs_stopinstance.txt`). Extract `EncodedDiagnosticMessage` from the file and retry the decode. If the field is not found in the file, mark as L0 and continue.

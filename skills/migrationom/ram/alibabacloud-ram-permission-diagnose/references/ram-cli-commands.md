@@ -9,20 +9,20 @@
 Transcribe `EncodedDiagnosticMessage` from the error output and call directly:
 
 ```bash
-aliyun ram DecodeDiagnosticMessage --EncodedDiagnosticMessage "<transcribed-value>"
+aliyun ram decode-diagnostic-message --encoded-diagnostic-message "<transcribed-value>"
 ```
 
 If `EntityNotExist` is returned (transcription error), re-run the original failing command to a temp file and extract the token:
 
 ```bash
 aliyun <product> <operation> [params] > /tmp/<context>.txt 2>&1
-aliyun ram DecodeDiagnosticMessage \
-  --EncodedDiagnosticMessage "$(grep -o 'EncodedDiagnosticMessage:[^ ]*' /tmp/<context>.txt | cut -d: -f2)"
+aliyun ram decode-diagnostic-message \
+  --encoded-diagnostic-message "$(grep -o 'EncodedDiagnosticMessage:[^ ]*' /tmp/<context>.txt | cut -d: -f2)"
 ```
 
 ### Query Current Identity
 ```bash
-aliyun ram GetUser
+aliyun ram get-user
 ```
 
 ### Resolve User Identity (UserId → UserName)
@@ -30,37 +30,37 @@ aliyun ram GetUser
 When `DecodeDiagnosticMessage` returns `AuthPrincipalType = SubUser`, the `AuthPrincipalDisplayName` is a numeric UserId that cannot be used directly in RAM APIs. Use the following command to resolve the UserName:
 
 ```bash
-aliyun ims GetUser --UserId <UserId>
+aliyun ims get-user --user-id <UserId>
 # Use User.UserName from the response for subsequent RAM operations
 ```
 
 ### List Policies Attached to a User
 ```bash
-aliyun ram ListPoliciesForUser --UserName <username>
+aliyun ram list-policies-for-user --user-name <username>
 ```
 
 ### List Policies Attached to a Role
 ```bash
-aliyun ram ListPoliciesForRole --RoleName <rolename>
+aliyun ram list-policies-for-role --role-name <rolename>
 ```
 
 ### Read Policy Content (get current version document)
 ```bash
 # First get the policy default version
-aliyun ram GetPolicy --PolicyName <policy-name> --PolicyType Custom
+aliyun ram get-policy --policy-name <policy-name> --policy-type Custom
 
 # Read the policy document for a specific version
-aliyun ram GetPolicyVersion \
-  --PolicyName <policy-name> \
-  --PolicyType Custom \
-  --VersionId <version-id>
+aliyun ram get-policy-version \
+  --policy-name <policy-name> \
+  --policy-type Custom \
+  --version-id <version-id>
 ```
 
 ### List Policy Versions
 ```bash
-aliyun ram ListPolicyVersions \
-  --PolicyName <policy-name> \
-  --PolicyType Custom
+aliyun ram list-policy-versions \
+  --policy-name <policy-name> \
+  --policy-type Custom
 ```
 
 ---
@@ -69,33 +69,33 @@ aliyun ram ListPolicyVersions \
 
 ### Attach System Policy to a RAM User
 ```bash
-aliyun ram AttachPolicyToUser \
-  --PolicyName <system-policy-name> \
-  --PolicyType System \
-  --UserName <username>
+aliyun ram attach-policy-to-user \
+  --policy-name <system-policy-name> \
+  --policy-type System \
+  --user-name <username>
 ```
 
 ### Attach System Policy to a RAM Role
 ```bash
-aliyun ram AttachPolicyToRole \
-  --PolicyName <system-policy-name> \
-  --PolicyType System \
-  --RoleName <rolename>
+aliyun ram attach-policy-to-role \
+  --policy-name <system-policy-name> \
+  --policy-type System \
+  --role-name <rolename>
 ```
 
 ### Detach System Policy
 ```bash
 # Detach from user
-aliyun ram DetachPolicyFromUser \
-  --PolicyName <system-policy-name> \
-  --PolicyType System \
-  --UserName <username>
+aliyun ram detach-policy-from-user \
+  --policy-name <system-policy-name> \
+  --policy-type System \
+  --user-name <username>
 
 # Detach from role
-aliyun ram DetachPolicyFromRole \
-  --PolicyName <system-policy-name> \
-  --PolicyType System \
-  --RoleName <rolename>
+aliyun ram detach-policy-from-role \
+  --policy-name <system-policy-name> \
+  --policy-type System \
+  --role-name <rolename>
 ```
 
 ---
@@ -104,76 +104,74 @@ aliyun ram DetachPolicyFromRole \
 
 ### Create Custom Policy (first time)
 ```bash
-aliyun ram CreatePolicy \
-  --PolicyName <policy-name> \
-  --PolicyDocument '{"Version":"1","Statement":[{"Effect":"Allow","Action":["svc:Action"],"Resource":"acs:svc:*:*:*"}]}'
+aliyun ram create-policy \
+  --policy-name <policy-name> \
+  --policy-document '{"Version":"1","Statement":[{"Effect":"Allow","Action":["svc:Action"],"Resource":"acs:svc:*:*:*"}]}'
 ```
 
 ### Attach Custom Policy to a User
 ```bash
-aliyun ram AttachPolicyToUser \
-  --PolicyName <policy-name> \
-  --PolicyType Custom \
-  --UserName <username>
+aliyun ram attach-policy-to-user \
+  --policy-name <policy-name> \
+  --policy-type Custom \
+  --user-name <username>
 ```
 
 ### Attach Custom Policy to a Role
 ```bash
-aliyun ram AttachPolicyToRole \
-  --PolicyName <policy-name> \
-  --PolicyType Custom \
-  --RoleName <rolename>
+aliyun ram attach-policy-to-role \
+  --policy-name <policy-name> \
+  --policy-type Custom \
+  --role-name <rolename>
 ```
 
 ### Append New Actions (update policy version)
 ```bash
 # Step 1: Get current policy content (check version first)
-aliyun ram GetPolicy --PolicyName <policy-name> --PolicyType Custom
+aliyun ram get-policy --policy-name <policy-name> --policy-type Custom
 # Note the DefaultVersion field value, e.g., v3
 
 # Step 2: Read the current version document
-aliyun ram GetPolicyVersion \
-  --PolicyName <policy-name> \
-  --PolicyType Custom \
-  --VersionId v3
+aliyun ram get-policy-version \
+  --policy-name <policy-name> \
+  --policy-type Custom \
+  --version-id v3
 
 # Step 3 (if 5 versions already exist): delete the oldest non-default version
-aliyun ram DeletePolicyVersion \
-  --PolicyName <policy-name> \
-  --PolicyType Custom \
-  --VersionId v1
+aliyun ram delete-policy-version \
+  --policy-name <policy-name> \
+  --version-id v1
 
 # Step 4: Create new version (complete JSON with existing + new Actions)
-aliyun ram CreatePolicyVersion \
-  --PolicyName <policy-name> \
-  --PolicyType Custom \
-  --PolicyDocument '{"Version":"1","Statement":[...all Actions...]}' \
-  --SetAsDefault true
+aliyun ram create-policy-version \
+  --policy-name <policy-name> \
+  --policy-document '{"Version":"1","Statement":[...all Actions...]}' \
+  --set-as-default true
 ```
 
 ### Detach Custom Policy
 ```bash
 # Detach from user
-aliyun ram DetachPolicyFromUser \
-  --PolicyName <policy-name> \
-  --PolicyType Custom \
-  --UserName <username>
+aliyun ram detach-policy-from-user \
+  --policy-name <policy-name> \
+  --policy-type Custom \
+  --user-name <username>
 
 # Detach from role
-aliyun ram DetachPolicyFromRole \
-  --PolicyName <policy-name> \
-  --PolicyType Custom \
-  --RoleName <rolename>
+aliyun ram detach-policy-from-role \
+  --policy-name <policy-name> \
+  --policy-type Custom \
+  --role-name <rolename>
 ```
 
 ### Delete Custom Policy (all versions + the policy itself)
 ```bash
 # First delete all non-default versions
-aliyun ram DeletePolicyVersion --PolicyName <policy-name> --PolicyType Custom --VersionId v1
+aliyun ram delete-policy-version --policy-name <policy-name> --version-id v1
 # ...repeat until only the default version remains
 
 # Then delete the policy (automatically removes the last version)
-aliyun ram DeletePolicy --PolicyName <policy-name> --PolicyType Custom
+aliyun ram delete-policy --policy-name <policy-name>
 ```
 
 ---
@@ -184,37 +182,37 @@ Use this sequence when root cause is "trust policy not allowing caller":
 
 ```bash
 # Step 1: Get current trust policy content
-aliyun ram GetRole --RoleName <role-name>
+aliyun ram get-role --role-name <role-name>
 # Note the AssumeRolePolicyDocument field
 
 # Step 2: Update trust policy (add caller ARN to Principal.RAM array)
-aliyun ram UpdateRole \
-  --RoleName <role-name> \
-  --NewAssumeRolePolicyDocument '{"Statement":[{"Action":"sts:AssumeRole","Effect":"Allow","Principal":{"RAM":["acs:ram::<account-id>:root","acs:ram::<account-id>:user/<caller-username>"]}}],"Version":"1"}'
+aliyun ram update-role \
+  --role-name <role-name> \
+  --new-assume-role-policy-document '{"Statement":[{"Action":"sts:AssumeRole","Effect":"Allow","Principal":{"RAM":["acs:ram::<account-id>:root","acs:ram::<account-id>:user/<caller-username>"]}}],"Version":"1"}'
 
 # Undo: restore original Principal by calling UpdateRole again with original JSON
-aliyun ram UpdateRole \
-  --RoleName <role-name> \
-  --NewAssumeRolePolicyDocument '<original-json>'
+aliyun ram update-role \
+  --role-name <role-name> \
+  --new-assume-role-policy-document '<original-json>'
 ```
 
 If caller identity policy also lacks `sts:AssumeRole`, attach the system policy:
 ```bash
-aliyun ram AttachPolicyToUser \
-  --PolicyName AliyunSTSAssumeRoleAccess \
-  --PolicyType System \
-  --UserName <username>
+aliyun ram attach-policy-to-user \
+  --policy-name AliyunSTSAssumeRoleAccess \
+  --policy-type System \
+  --user-name <username>
 
 # Undo
-aliyun ram DetachPolicyFromUser \
-  --PolicyName AliyunSTSAssumeRoleAccess \
-  --PolicyType System \
-  --UserName <username>
+aliyun ram detach-policy-from-user \
+  --policy-name AliyunSTSAssumeRoleAccess \
+  --policy-type System \
+  --user-name <username>
 ```
 
 If role name is unknown, list roles first:
 ```bash
-aliyun ram ListRoles
+aliyun ram list-roles
 ```
 
 ---
@@ -223,11 +221,11 @@ aliyun ram ListRoles
 
 ```bash
 # Create a service-linked role
-aliyun ram CreateServiceLinkedRole \
-  --ServiceName <service>.aliyuncs.com
+aliyun resourcemanager create-service-linked-role \
+  --service-name <service>.aliyuncs.com
 
 # Check whether a service-linked role exists
-aliyun ram GetRole --RoleName AliyunServiceRole<ServiceName>
+aliyun ram get-role --role-name AliyunServiceRole<ServiceName>
 ```
 
 ---
@@ -236,8 +234,8 @@ aliyun ram GetRole --RoleName AliyunServiceRole<ServiceName>
 
 ```bash
 # List all control policies
-aliyun ram ListControlPolicies
+aliyun resourcemanager list-control-policies
 
 # View a specific control policy's content
-aliyun ram GetControlPolicy --PolicyId <policy-id>
+aliyun resourcemanager get-control-policy --policy-id <policy-id>
 ```
