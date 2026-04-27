@@ -87,12 +87,8 @@ User requests ECS backup/restore
 3. **Recommend alternatives** - Provide specific alternative products/features
 4. **End current task** - After outputting the warning and alternatives, the agent **MUST stop** and **NOT continue with any subsequent steps of this Skill**
 
-> **Sole recovery condition**: Only when the user, after receiving the warning, **proactively and explicitly** states "I understand the risks and still want to use ECS File Backup Essential Edition" (or semantically equivalent explicit confirmation), may the agent continue with subsequent steps.
-> The following are **NOT** considered valid confirmations; the agent must remain stopped:
-> - User does not reply
-> - User only replies with vague confirmations like "OK", "Continue", "Help me backup" without mentioning "ECS File Backup Essential Edition"
-> - User changes the topic
-> - User asks for details about alternatives (indicates user is considering alternatives; do not force continuation)
+> **Sole recovery condition**: Only when the user **proactively and explicitly** states "I understand the risks and still want to use ECS File Backup Essential Edition" (or semantically equivalent), may the agent continue.
+> The following are **NOT** valid confirmations (agent must remain stopped): no reply; vague confirmations ("OK", "Continue", "Help me backup") without mentioning "ECS File Backup Essential Edition"; topic changes; asking about alternatives.
 
 ---
 
@@ -100,17 +96,31 @@ User requests ECS backup/restore
 
 > **CRITICAL**: The agent **MUST** complete the following pre-checks before executing any core workflow.
 
-### Pre-check: Aliyun CLI >= 3.3.1 required
+### Pre-check: Aliyun CLI >= 3.3.3 required
 
-See [references/cli-installation-guide.md](references/cli-installation-guide.md) for installation instructions.
-
+> Run `aliyun version` to verify >= 3.3.3. If not installed or version too low,
+> run `curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash` to update,
+> or see [references/cli-installation-guide.md](references/cli-installation-guide.md) for installation instructions.
 ```bash
 aliyun version
 ```
-
+Then [MUST] run `aliyun plugin update` to ensure that any existing plugins on your local machine are always up-to-date.
+**[MUST] CLI User-Agent** — Every `aliyun` CLI command invocation must include:
+`--user-agent AlibabaCloud-Agent-Skills/alibabacloud-cloudbackup-ecs-file-backup-essential-edition`
 Enable automatic plugin installation:
 ```bash
 aliyun configure set --auto-plugin-install true
+```
+
+### Pre-check: AI-Mode Configuration
+**[MUST] Enable AI-Mode** — Run before any CLI invocation:
+```bash
+aliyun configure ai-mode enable
+aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-cloudbackup-ecs-file-backup-essential-edition"
+```
+**[MUST] Disable AI-Mode at EVERY exit point** — Before delivering the final response for ANY reason (success, failure, error, cancellation), always disable AI-mode first. AI-mode MUST NOT remain enabled after the skill stops running.
+```bash
+aliyun configure ai-mode disable
 ```
 
 ### Pre-check: aliyun-cli-hbr plugin >= 0.1.3 required
@@ -187,6 +197,7 @@ Recommended system policy: `AliyunHBRFullAccess`
 
 > **CRITICAL**: Before executing any of the following workflows, the agent **MUST** complete all steps in "Scenario Eligibility Check" and "Installation Requirements (Mandatory Pre-check)".
 > If Aliyun CLI or the aliyun-cli-hbr plugin is not installed or does not meet version requirements, it **MUST be installed/updated first** before proceeding.
+> **Note**: All CLI operations below are idempotent and safe to retry.
 
 ### 1. Activate Backup
 
@@ -197,9 +208,8 @@ Activate ECS File Backup Essential Edition for a specified ECS instance.
 aliyun hbr open-hbr-service \
   --endpoint hbr.aliyuncs.com \
   --read-timeout 60 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cloudbackup-ecs-file-backup-essential-edition
 ```
-> Idempotent operation; safe to run repeatedly.
 
 **Step 2: Activate ECS Instance Backup**
 ```bash
@@ -211,7 +221,7 @@ aliyun hbr create-backup-plan \
   --keep-latest-snapshots 1 \
   --options '{"performanceLevel":"<LEVEL>"}' \
   --read-timeout 60 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cloudbackup-ecs-file-backup-essential-edition
 ```
 > Idempotent operation; repeated calls for the same instance will not create duplicate backup plans. Safe to retry on timeout.
 
@@ -235,7 +245,7 @@ aliyun hbr describe-backup-plans \
   --source-type ECS_FILE \
   --filters '[{"Key":"instanceId","Values":["<INSTANCE_ID>"]}]' \
   --read-timeout 60 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cloudbackup-ecs-file-backup-essential-edition
 ```
 > Extract `PlanId` from the response.
 
@@ -246,9 +256,8 @@ aliyun hbr disable-backup-plan \
   --plan-id <PLAN_ID> \
   --edition BASIC \
   --read-timeout 60 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cloudbackup-ecs-file-backup-essential-edition
 ```
-> Idempotent operation; safe to call repeatedly.
 
 ---
 
@@ -262,9 +271,8 @@ aliyun hbr enable-backup-plan \
   --plan-id <PLAN_ID> \
   --edition BASIC \
   --read-timeout 60 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cloudbackup-ecs-file-backup-essential-edition
 ```
-> Idempotent operation; safe to call repeatedly.
 
 ---
 
@@ -281,7 +289,7 @@ aliyun hbr describe-backup-plans \
   --edition BASIC \
   --filters '[{"Key":"instanceId","Values":["<INSTANCE_ID>"]}]' \
   --read-timeout 60 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cloudbackup-ecs-file-backup-essential-edition
 ```
 
 **Step 2: Delete Backup Plan**
@@ -291,10 +299,9 @@ aliyun hbr delete-backup-plan \
   --plan-id <PLAN_ID> \
   --edition BASIC \
   --read-timeout 60 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cloudbackup-ecs-file-backup-essential-edition
 ```
-> After cancellation, the instance stops incurring charges; deleted backup data cannot be recovered.
-> Idempotent operation; safe to call repeatedly on an already-deleted plan.
+> After cancellation, the instance stops incurring charges; deleted backup data cannot be recovered. Safe to call repeatedly on an already-deleted plan.
 
 ---
 
@@ -308,7 +315,7 @@ aliyun hbr describe-backup-plans \
   --source-type ECS_FILE \
   --filters '[{"Key":"instanceId","Values":["<INSTANCE_ID>"]}]' \
   --read-timeout 60 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cloudbackup-ecs-file-backup-essential-edition
 ```
 
 **Step 2: Query Latest Backup Job**
@@ -319,7 +326,7 @@ aliyun hbr describe-backup-jobs-2 \
   --source-type ECS_FILE \
   --filters '[{"Key":"instanceId","Values":["<INSTANCE_ID>"]}]' \
   --read-timeout 60 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cloudbackup-ecs-file-backup-essential-edition
 ```
 > `describe-backup-jobs-2` returns backup jobs sorted by creation time in descending order; the first record is the latest execution result.
 
@@ -346,7 +353,7 @@ aliyun hbr describe-backup-clients \
   --client-type ECS_CLIENT \
   --instance-ids '["<INSTANCE_ID>"]' \
   --read-timeout 60 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cloudbackup-ecs-file-backup-essential-edition
 ```
 
 View backup history (Snapshot list):
@@ -357,7 +364,7 @@ aliyun hbr search-historical-snapshots \
   --source-type ECS_FILE \
   --query '[{"field":"instanceId","value":"<INSTANCE_ID>","operation":"MATCH_TERM"}]' \
   --read-timeout 60 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cloudbackup-ecs-file-backup-essential-edition
 ```
 
 ---
@@ -368,7 +375,7 @@ aliyun hbr search-historical-snapshots \
 aliyun hbr get-basic-statistics \
   --source-type ECS_FILE \
   --read-timeout 60 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cloudbackup-ecs-file-backup-essential-edition
 ```
 
 **Key field**: `GlobalStatistics.ProtectedDataSize` is the total block storage capacity of backed-up ECS instances (in bytes).
@@ -394,7 +401,7 @@ aliyun hbr create-restore-job \
   --options '{"ConflictPolicy":"<CONFLICT_POLICY>"}' \
   --client-token <UUID> \
   --read-timeout 60 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cloudbackup-ecs-file-backup-essential-edition
 ```
 
 > `VaultId`, `SnapshotId`, and `SnapshotHash` can be obtained via `search-historical-snapshots`.
@@ -410,7 +417,7 @@ aliyun hbr describe-restore-jobs-2 \
   --edition BASIC \
   --restore-type ECS_FILE \
   --read-timeout 60 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cloudbackup-ecs-file-backup-essential-edition
 ```
 
 ---
@@ -425,7 +432,7 @@ aliyun hbr describe-backup-plans \
   --source-type ECS_FILE \
   --filters '[{"Key":"instanceId","Values":["<INSTANCE_ID>"]}]' \
   --read-timeout 60 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cloudbackup-ecs-file-backup-essential-edition
 ```
 
 **Step 2: Update Backup Schedule**
@@ -436,10 +443,9 @@ aliyun hbr update-backup-plan \
   --edition BASIC \
   --schedule 'I|<TIMESTAMP>|P1D' \
   --read-timeout 60 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cloudbackup-ecs-file-backup-essential-edition
 ```
 > Schedule format: `I|<start_timestamp>|P1D`, where start_timestamp is a Unix timestamp in seconds, and `P1D` means once per day (fixed for Essential Edition).
-> Idempotent operation; safe to call repeatedly.
 
 ---
 
@@ -454,10 +460,9 @@ aliyun hbr update-backup-plan \
   --edition BASIC \
   --keep-latest-snapshots <0_OR_1> \
   --read-timeout 60 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cloudbackup-ecs-file-backup-essential-edition
 ```
 > `1` = keep the last backup version (recommended); `0` = do not keep; all backup points older than 30 days will be automatically deleted.
-> Idempotent operation; safe to call repeatedly.
 
 ---
 
@@ -470,10 +475,9 @@ aliyun hbr update-backup-plan \
   --edition BASIC \
   --options '{"performanceLevel":"<LEVEL>"}' \
   --read-timeout 60 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cloudbackup-ecs-file-backup-essential-edition
 ```
 > See `performanceLevel` in the Parameter Confirmation table for valid values; detailed use cases are described in [references/related-apis.md](references/related-apis.md).
-> Idempotent operation; safe to call repeatedly.
 
 ---
 

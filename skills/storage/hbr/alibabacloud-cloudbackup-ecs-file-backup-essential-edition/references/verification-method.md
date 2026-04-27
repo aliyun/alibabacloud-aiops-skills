@@ -13,7 +13,7 @@ aliyun hbr describe-backup-plans \
   --edition BASIC \
   --source-type ECS_FILE \
   --filters '[{"Key":"instanceId","Values":["<INSTANCE_ID>"]}]' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cloudbackup-ecs-file-backup-essential-edition
 ```
 
 **Expected Result**:
@@ -27,7 +27,7 @@ aliyun hbr describe-backup-jobs-2 \
   --edition BASIC \
   --source-type ECS_FILE \
   --filters '[{"Key":"instanceId","Values":["<INSTANCE_ID>"]}]' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cloudbackup-ecs-file-backup-essential-edition
 ```
 
 **Expected Result**:
@@ -50,7 +50,7 @@ aliyun hbr describe-backup-plans \
   --edition BASIC \
   --source-type ECS_FILE \
   --filters '[{"Key":"planId","Values":["<PLAN_ID>"]}]' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cloudbackup-ecs-file-backup-essential-edition
 ```
 
 **Expected Result**:
@@ -72,7 +72,7 @@ aliyun hbr describe-backup-plans \
   --edition BASIC \
   --source-type ECS_FILE \
   --filters '[{"Key":"planId","Values":["<PLAN_ID>"]}]' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cloudbackup-ecs-file-backup-essential-edition
 ```
 
 **Expected Result**:
@@ -95,7 +95,7 @@ aliyun hbr describe-backup-plans \
   --edition BASIC \
   --source-type ECS_FILE \
   --filters '[{"Key":"instanceId","Values":["<INSTANCE_ID>"]}]' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cloudbackup-ecs-file-backup-essential-edition
 ```
 
 **Expected Result**:
@@ -116,7 +116,7 @@ aliyun hbr describe-backup-plans \
 aliyun hbr get-basic-statistics \
   --edition BASIC \
   --source-type ECS_FILE \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cloudbackup-ecs-file-backup-essential-edition
 ```
 
 **Expected Result**:
@@ -152,7 +152,7 @@ aliyun hbr describe-restore-jobs-2 \
   --region <REGION_ID> \
   --edition BASIC \
   --restore-type ECS_FILE \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cloudbackup-ecs-file-backup-essential-edition
 ```
 
 **Expected Result**:
@@ -195,5 +195,5 @@ aliyun hbr describe-backup-plans \
   --edition BASIC \
   --source-type ECS_FILE \
   --log-level=debug \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cloudbackup-ecs-file-backup-essential-edition
 ```
