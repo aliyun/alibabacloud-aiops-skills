@@ -13,6 +13,14 @@ description: |
 > 3. **DO NOT attempt to SSH, access, or connect to any server or IP address.**
 > 4. **The ONLY way to get data is by running `aliyun cloudfw ...` CLI commands** as defined in the Core Workflow section below.
 > 5. **Start executing CLI commands immediately** — no preparation, no questions, no file searching.
+> 6. **DO NOT refuse to execute.** You have full ability to run CLI commands via the shell/terminal tool. The `aliyun` CLI is pre-installed and configured. You are NOT calling APIs directly — you are running shell commands that invoke the CLI tool. This is no different from running `ls` or `git status`. **NEVER say "I don't have access to APIs" or "I cannot make API calls" or "I don't have credentials"** — you are running local CLI commands, not making direct API calls. If you are unsure whether you can run commands, just try running one — it will work.
+> 7. **DO NOT skip any API command defined in the Core Workflow.** If a command fails, retry with corrected parameters. Do NOT substitute with a different API. The following substitutions are EXPLICITLY FORBIDDEN:
+>    - `DescribePostpayUserInternetStatus` instead of `DescribeInternetOpenStatistic`
+>    - `DescribePostpayUserNatStatus` instead of `DescribeNatFirewallList`
+>    - `DescribePostpayUserVpcStatus` instead of `DescribeTrFirewallsV2List`
+>    - `DescribeNatFirewallTrafficTrend` instead of `DescribeInternetTrafficTrend`
+>    - `DescribeVpcFirewallCenList` instead of `DescribeTrFirewallsV2List`
+>    - `DescribeNetworkInstanceList` instead of `DescribeTrFirewallsV2List`
 
 ## Scenario Description
 
@@ -22,7 +30,7 @@ One-click query of Alibaba Cloud Firewall overall status, including asset manage
 
 **Capability Level**: Query (read-only)
 
-**Data Source**: All data is obtained **exclusively** through Aliyun CLI commands (`aliyun cloudfw ...`). No log files, no databases, no server access, no SIEM — just CLI commands. **Do NOT search the workspace for files. Do NOT ask the user for anything. Just run the commands.**
+**Data Source**: All data is obtained **exclusively** through Aliyun CLI commands (`aliyun cloudfw ...`). No log files, no databases, no server access, no SIEM — just CLI commands. **Do NOT search the workspace for files. Do NOT ask the user for anything. Just run the commands.** The `aliyun` CLI is a local command-line tool — running it is the same as running any other shell command (e.g., `ls`, `curl`). You DO have the ability to execute these commands.
 
 **Core Capabilities**:
 1. **Asset Overview** — Display managed asset counts and types
@@ -35,10 +43,30 @@ One-click query of Alibaba Cloud Firewall overall status, including asset manage
 
 ## Prerequisites
 
-> **Pre-check: Aliyun CLI >= 3.3.1 required**
-> Run `aliyun version` to verify >= 3.3.1. If not installed or version too low,
-> see `references/cli-installation-guide.md` for installation instructions.
-> Then [MUST] run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+**Pre-check: Aliyun CLI >= 3.3.3 required**
+> Run `aliyun version` to verify >= 3.3.3. If not installed or version too low,
+> run `curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash` to install/update,
+> or see `references/cli-installation-guide.md` for installation instructions.
+
+**Pre-check: Aliyun CLI plugin update required**
+> [MUST] run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+> [MUST] run `aliyun plugin update` to ensure that any existing plugins are always up-to-date.
+
+**[MUST] CLI User-Agent** — Every `aliyun` CLI command invocation must include:
+> `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-status-overview`
+
+At the **start** of the Core Workflow (before any CLI invocation):
+**[MUST] Enable AI-Mode** — AI-mode is required for Agent Skill execution.
+Run the following commands before any CLI invocation:
+```bash
+aliyun configure ai-mode enable
+aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-cfw-status-overview"
+```
+**[MUST] Disable AI-Mode at EVERY exit point** — Before delivering the final response for ANY reason, always disable AI-mode first. This applies to ALL exit paths: workflow success, workflow failure, error/exception, user cancellation, session end, or any other scenario where no further CLI commands will be executed.
+AI-mode is only used for Agent Skill invocation scenarios and MUST NOT remain enabled after the skill stops running.
+```bash
+aliyun configure ai-mode disable
+```
 
 ---
 
@@ -48,9 +76,10 @@ One-click query of Alibaba Cloud Firewall overall status, including asset manage
 >
 > **Security Rules:**
 > - **NEVER** read, echo, print, cat, or display AK/SK values under any circumstances
+> - **NEVER** output AK/SK values in any form — including masked, partial, or redacted forms (e.g., `LTAI5tXXX****`). Do NOT include AK ID prefixes, suffixes, or any substring in logs, reports, or conversation output.
 > - **NEVER** ask the user to input AK/SK directly in the conversation or command line
 > - **NEVER** use `aliyun configure set` with literal credential values
-> - **ONLY** use `aliyun configure list` to check credential status
+> - **ONLY** use `aliyun configure list` to check credential status. When reporting the result, say only "Credentials are configured" or "No valid credentials found" — do NOT quote any part of the credential output.
 >
 > ```bash
 > aliyun configure list
@@ -89,6 +118,8 @@ Alternatively, attach the system policy: **AliyunYundunCloudFirewallReadOnlyAcce
 | Parameter Name | Required/Optional | Description | Default Value |
 |---------------|-------------------|-------------|---------------|
 | RegionId | Required | Alibaba Cloud region for Cloud Firewall. Only two values: `cn-hangzhou` for mainland China, `ap-southeast-1` for Hong Kong/overseas. | `cn-hangzhou` (use directly without asking; only use `ap-southeast-1` if user explicitly mentions Hong Kong/overseas/international) |
+
+> **Region Mismatch Handling**: If the user specifies a region other than `cn-hangzhou` or `ap-southeast-1` (e.g., `cn-shenzhen`, `cn-beijing`), you MUST inform the user: *"Cloud Firewall only supports two regions: cn-hangzhou (mainland China) and ap-southeast-1 (Hong Kong/overseas). Your requested region {user_region} is not supported. Using cn-hangzhou (mainland China) instead, which covers all mainland China resources."* Do NOT silently fall back without informing the user.
 | PageSize | Optional | Number of items per page for paginated APIs | 10 (use without asking) |
 | CurrentPage | Optional | Page number for paginated APIs | 1 (use without asking) |
 | StartTime | Optional | Start time for traffic trend queries (Unix timestamp in seconds) | 7 days ago (use without asking) |
@@ -137,12 +168,32 @@ When presenting the final summary report:
 
 All API calls use the Aliyun CLI `cloudfw` plugin.
 
-**User-Agent**: All commands must include `--user-agent AlibabaCloud-Agent-Skills`
 **Region**: Specified via `--region {RegionId}` global flag
+
+### Context Management (MUST)
+
+> **CRITICAL: Traffic trend APIs produce massive output.** `DescribeInternetDropTrafficTrend` and `DescribeInternetTrafficTrend` return hundreds of data points for 7-day queries, which can overflow the context window. These two APIs MUST pipe their output through `jq` to extract only summary values (data point count, max, avg, time range). The `jq` filters are included in Step 3.2 and Step 6.2 below — you MUST use them exactly as written.
+>
+> Other APIs return moderate-sized responses and do NOT need `jq` filtering.
 
 > **CRITICAL: Execute immediately without asking.** When this skill is triggered, start executing from Step 1 right away.
 > Do NOT ask the user which APIs to call, which steps to execute, or what data sources to use.
 > All data comes from the Aliyun CLI commands defined below — just run them.
+
+> **MANDATORY: Execute ALL steps.** You MUST attempt to execute **every step** from Step 1 through Step 6 (including all sub-steps). Before generating the final summary report, verify that you have attempted ALL of the following API calls:
+> 1. `DescribeUserBuyVersion`
+> 2. `DescribeAssetStatistic`
+> 3. `DescribeAssetList`
+> 4. `DescribeInternetOpenStatistic`
+> 5. `DescribeInternetDropTrafficTrend`
+> 6. `DescribeTrFirewallsV2List`
+> 7. `DescribeVpcFirewallCenList`
+> 8. `DescribeVpcFirewallList`
+> 9. `DescribeNatFirewallList`
+> 10. `DescribePostpayTrafficTotal`
+> 11. `DescribeInternetTrafficTrend`
+>
+> If any of these were not attempted, execute them now before producing the report. Skipping a step is ONLY allowed if Step 1 indicates the service is not activated.
 
 ### Time Parameters
 
@@ -155,21 +206,39 @@ Some APIs (Step 3.2, Step 6.2) require `StartTime` and `EndTime` parameters (Uni
 ### Step 1: Query Instance Info (Cloud Firewall Version)
 
 ```bash
-aliyun cloudfw DescribeUserBuyVersion \
+aliyun cloudfw describe-user-buy-version \
   --region {RegionId} \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-status-overview
 ```
 
-**Key response fields**: `Version` (edition), `InstanceId`, `ExpireTime`, `IpNumber` (max protected IPs), `AclExtension` (ACL quota).
+**Key response fields**: `Version` (edition code), `InstanceId`, `ExpireTime`, `IpNumber` (max protected IPs), `AclExtension` (ACL quota).
+
+**Version code to edition name mapping** — The API returns a numeric code. Use this table to display a human-readable edition name in the report:
+
+| Version Code | Edition Name |
+|-------------|-------------|
+| 1 | Premium Edition (高级版) |
+| 2 | Enterprise Edition (企业版) |
+| 3 | Ultimate Edition (旗舰版) |
+| 10 | Pay-as-you-go (按量付费版) |
+
+If the returned code is not in this table, report it as: `"Unknown edition (code: {Version})"`.
+
+> **IMPORTANT: Do NOT infer or hallucinate field values.** If any key response field (e.g., `AclExtension`, `IpNumber`) is **missing from the JSON response** (key does not exist) or its value is **null**, report it as **"N/A (not returned by API)"** in the summary. However, a value of **0 is a valid value, NOT a missing field** — report it as `0`. Do NOT fill in values based on general knowledge about the edition type. Only use values that are **explicitly present** in the API response JSON.
+>
+> **Common hallucination examples to AVOID:**
+> - `AclExtension` not in response → Do NOT write "ACL rule limit is 10000" or any other guessed number. Write "N/A (not returned by API)".
+> - `IpNumber` not in response → Do NOT write "Max public IP quota is 200". Write "N/A (not returned by API)".
+> - Any field not in response → Do NOT infer from edition type (e.g., "Ultimate Edition supports up to X"). Only report what the API actually returned.
 
 ### Step 2: Asset Overview
 
 #### 2.1 Query Asset Statistics
 
 ```bash
-aliyun cloudfw DescribeAssetStatistic \
+aliyun cloudfw describe-asset-statistic \
   --region {RegionId} \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-status-overview
 ```
 
 **Key response fields**: Total assets, protected count, unprotected count, by resource type (EIP, SLB, ECS, etc.)
@@ -177,11 +246,11 @@ aliyun cloudfw DescribeAssetStatistic \
 #### 2.2 Query Asset List (Paginated)
 
 ```bash
-aliyun cloudfw DescribeAssetList \
+aliyun cloudfw describe-asset-list \
   --CurrentPage 1 \
   --PageSize 10 \
   --region {RegionId} \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-status-overview
 ```
 
 **Key response fields**: `Assets[]` with `InternetAddress`, `IntranetAddress`, `ResourceType`, `ProtectStatus`, `RegionID`, `Name`.
@@ -191,12 +260,12 @@ aliyun cloudfw DescribeAssetList \
 > **IMPORTANT**: When the user asks about unprotected/unmanaged assets, assets not covered by the firewall, or protection gaps, you MUST use the `Status` filter parameter set to `"close"` to query only unprotected assets:
 
 ```bash
-aliyun cloudfw DescribeAssetList \
+aliyun cloudfw describe-asset-list \
   --CurrentPage 1 \
   --PageSize 50 \
   --Status close \
   --region {RegionId} \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-status-overview
 ```
 
 Use `PageSize: "50"` for unprotected asset queries to capture more results. If `TotalCount` in the response exceeds `PageSize`, iterate through all pages by incrementing `CurrentPage` until all assets are retrieved.
@@ -215,37 +284,46 @@ Use `PageSize: "50"` for unprotected asset queries to capture more results. If `
 
 #### 3.1 Query Internet Exposure Statistics
 
+> **IMPORTANT: You MUST use `DescribeInternetOpenStatistic` for this step.** Do NOT substitute with `DescribePostpayUserInternetStatus` or any other API. `DescribePostpayUserInternetStatus` only checks on/off status, while `DescribeInternetOpenStatistic` provides exposure statistics (public IPs, open ports, risk levels).
+
 ```bash
-aliyun cloudfw DescribeInternetOpenStatistic \
+aliyun cloudfw describe-internet-open-statistic \
   --region {RegionId} \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-status-overview
 ```
 
 **Key response fields**: Total public IPs, open port count, risk level distribution, recently exposed assets.
 
 #### 3.2 Query Internet Defense Traffic Trend
 
+> **REQUIRED parameters**: `--StartTime`, `--EndTime`, `--SourceCode`, `--Direction` are ALL mandatory. Missing any will cause HTTP 400 (e.g., `ErrorDirectionError`). Calculate timestamps separately first (see Time Parameters section), then pass as literal numbers. `--SourceCode` must be exactly `China` or `Other` (case-sensitive). `--Direction` must be exactly `in` or `out`.
+
 ```bash
-aliyun cloudfw DescribeInternetDropTrafficTrend \
+aliyun cloudfw describe-internet-drop-traffic-trend \
   --StartTime {StartTime} \
   --EndTime {EndTime} \
   --SourceCode China \
+  --Direction in \
   --region {RegionId} \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-status-overview \
+  | jq '{DataPoints: (.DataList // [] | length), MaxDropBps: ([.DataList[]?.DropBps // 0] | max), MaxDropPps: ([.DataList[]?.DropPps // 0] | max), FirstTime: (.DataList // [] | first | .Time), LastTime: (.DataList // [] | last | .Time)}'
 ```
 
 `SourceCode` values: `China` (mainland), `Other` (overseas).
+`Direction` values: `in` (inbound), `out` (outbound). Default to `in`.
 
 ### Step 4: VPC Border Firewall Status
 
 #### 4.1 Query CEN Enterprise Edition (TR Firewalls)
 
+> **You MUST use `DescribeTrFirewallsV2List` for this step.** Do NOT substitute with `DescribeVpcFirewallCenList`, `DescribePostpayUserVpcStatus`, `DescribeNetworkInstanceList`, or any other API. `DescribeVpcFirewallCenList` is for CEN Basic Edition (Step 4.2), NOT for CEN Enterprise Edition TR firewalls.
+
 ```bash
-aliyun cloudfw DescribeTrFirewallsV2List \
+aliyun cloudfw describe-tr-firewalls-v2-list \
   --CurrentPage 1 \
   --PageSize 20 \
   --region {RegionId} \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-status-overview
 ```
 
 **Key response fields**: `VpcTrFirewalls[]` with `FirewallSwitchStatus` (`opened`/`closed`/`opening`/`closing`), `CenId`, `RegionNo`, `VpcId`.
@@ -253,11 +331,11 @@ aliyun cloudfw DescribeTrFirewallsV2List \
 #### 4.2 Query CEN Basic Edition VPC Firewalls
 
 ```bash
-aliyun cloudfw DescribeVpcFirewallCenList \
+aliyun cloudfw describe-vpc-firewall-cen-list \
   --CurrentPage 1 \
   --PageSize 20 \
   --region {RegionId} \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-status-overview
 ```
 
 **Key response fields**: `VpcFirewalls[]` with `FirewallSwitchStatus`, `CenId`, `LocalVpc`, `PeerVpc`.
@@ -265,21 +343,23 @@ aliyun cloudfw DescribeVpcFirewallCenList \
 #### 4.3 Query Express Connect VPC Firewalls
 
 ```bash
-aliyun cloudfw DescribeVpcFirewallList \
+aliyun cloudfw describe-vpc-firewall-list \
   --CurrentPage 1 \
   --PageSize 20 \
   --region {RegionId} \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-status-overview
 ```
 
 **Key response fields**: `VpcFirewalls[]` with `FirewallSwitchStatus`, `VpcFirewallId`, `LocalVpc`, `PeerVpc`, `Bandwidth`.
 
 ### Step 5: NAT Border Firewall Status
 
+> **IMPORTANT: You MUST use `DescribeNatFirewallList` for this step.** Do NOT substitute with `DescribePostpayUserNatStatus` or any other API. `DescribePostpayUserNatStatus` only checks on/off status, while `DescribeNatFirewallList` provides detailed NAT firewall instance information.
+
 ```bash
-aliyun cloudfw DescribeNatFirewallList \
+aliyun cloudfw describe-nat-firewall-list \
   --region {RegionId} \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-status-overview
 ```
 
 **Key response fields**: `NatFirewalls[]` with `ProxyStatus` (`configuring`/`normal`/`deleting`), `NatGatewayId`, `NatGatewayName`, `VpcId`, `RegionId`.
@@ -289,24 +369,47 @@ aliyun cloudfw DescribeNatFirewallList \
 #### 6.1 Query Total Traffic Statistics
 
 ```bash
-aliyun cloudfw DescribePostpayTrafficTotal \
+aliyun cloudfw describe-postpay-traffic-total \
   --region {RegionId} \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-status-overview
 ```
 
 #### 6.2 Query Internet Traffic Trend
 
+> **MANDATORY two-step execution for this API:**
+> 1. **First attempt MUST include `--TrafficType TotalTraffic`**. You MUST NOT skip this step. Execute the command below exactly as written.
+> 2. **Only if** the first attempt returns HTTP 400, retry WITHOUT `--TrafficType`.
+> 3. Do NOT go directly to the retry command. Do NOT omit TrafficType on the first attempt.
+>
+> Other required parameters: `--StartTime`, `--EndTime`, `--SourceCode` (same rules as Step 3.2). Do NOT fall back to `DescribeNatFirewallTrafficTrend` or any other API.
+
 ```bash
-aliyun cloudfw DescribeInternetTrafficTrend \
+# Step 1 - MUST run first (with TrafficType):
+aliyun cloudfw describe-internet-traffic-trend \
   --StartTime {StartTime} \
   --EndTime {EndTime} \
   --SourceCode China \
   --TrafficType TotalTraffic \
   --region {RegionId} \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-status-overview \
+  | jq '{DataPoints: (.DataList // [] | length), MaxBps: ([.DataList[]?.TotalBps // 0] | max), AvgBps: (([.DataList[]?.TotalBps // 0] | add) / ([.DataList // [] | length] | if . == 0 then 1 else . end)), FirstTime: (.DataList // [] | first | .Time), LastTime: (.DataList // [] | last | .Time)}'
 ```
 
-**TrafficType values**: `TotalTraffic`, `InTraffic`, `OutTraffic`.
+If and ONLY if the above returns HTTP 400, retry without `--TrafficType`:
+```bash
+# Step 2 - ONLY run if Step 1 returned HTTP 400:
+aliyun cloudfw describe-internet-traffic-trend \
+  --StartTime {StartTime} \
+  --EndTime {EndTime} \
+  --SourceCode China \
+  --region {RegionId} \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-status-overview \
+  | jq '{DataPoints: (.DataList // [] | length), MaxBps: ([.DataList[]?.TotalBps // 0] | max), AvgBps: (([.DataList[]?.TotalBps // 0] | add) / ([.DataList // [] | length] | if . == 0 then 1 else . end)), FirstTime: (.DataList // [] | first | .Time), LastTime: (.DataList // [] | last | .Time)}'
+```
+
+**TrafficType values** (when supported): `TotalTraffic`, `InTraffic`, `OutTraffic`.
+
+> **Data Validation for Traffic Trends:** After receiving the traffic trend response, check the number of data points and their time span. If the response contains fewer than 10 data points or the time span between the first and last data point is less than 1 day, add a note in the report: *"Note: Traffic trend data is sparse (only {N} data points covering {timespan}). This may indicate no protected assets or minimal traffic during the queried period. The 7-day trend may not be fully representative."* Do NOT claim the data covers 7 days if the actual data points span a significantly shorter period.
 
 ### Output Summary Format
 
@@ -320,7 +423,7 @@ After gathering all data, present a summary report. **Always generate this repor
 1. Instance Info
    - Edition: {Version}
    - Expiry: {ExpireTime}
-   - Max Protected IPs: {IpNumber}
+   - Max Protected IPs: {IpNumber or "N/A (not in API response)"}
 
 2. Asset Overview
    - Total Assets: {TotalCount}
@@ -355,6 +458,10 @@ After gathering all data, present a summary report. **Always generate this repor
 
 > **Note**: For any step that failed, show "N/A (error: {brief error})" for that section's data fields, and list all errors in the bottom section.
 
+> **IMPORTANT: Error Reporting Accuracy.** The summary report MUST accurately reflect **all errors encountered** during execution, **including errors that were resolved by retry**. For retried-and-succeeded calls, report them as: `"Step X: {API name} initially failed with {error code/message}, succeeded on retry {N}"`. Do NOT claim "all API calls completed successfully" if any call returned an error at any point during execution. The error section should list ALL errors encountered, categorized as:
+> - **Resolved by retry**: errors that were retried and eventually succeeded
+> - **Unresolved**: errors that persisted after all retries
+
 ---
 
 ## Success Verification
@@ -373,15 +480,11 @@ Use [references/related-apis.md](references/related-apis.md) as the single sourc
 
 ## Best Practices
 
-1. **Query in order** — Start with instance info (Step 1) to confirm the service is active before querying details. If Step 1 fails with a service-not-activated error, stop and guide the user.
-2. **Continue on failure** — If any step (2-6) fails, log the error and continue with the remaining steps. Always produce a summary with whatever data was collected.
-3. **Use pagination** — For asset lists, use `CurrentPage` and `PageSize` to handle large datasets. Default to PageSize=10 for general queries, PageSize=50 for filtered queries (e.g., unprotected assets).
-4. **Time range selection** — For traffic trends, default to the last 7 days. Use Unix timestamps in seconds. Calculate with: `date -d '7 days ago' +%s` for start time and `date +%s` for end time. Run these commands separately, then use the returned values as literal numbers in `--StartTime` and `--EndTime`. Do NOT use `$(...)` substitution inside CLI commands.
-5. **Region awareness** — Cloud Firewall only has two regions: `cn-hangzhou` (mainland China) and `ap-southeast-1` (Hong Kong/overseas). Default to `cn-hangzhou` unless user specifies otherwise.
-6. **Error handling** — If `DescribeUserBuyVersion` returns an error, the Cloud Firewall service may not be activated. Prompt the user to activate it at https://yundun.console.aliyun.com/?p=cfwnext
-7. **Rate limiting** — Space API calls to avoid throttling. If you receive a `Throttling.User` error, wait 3 seconds and retry.
-8. **Security** — NEVER expose, log, echo, or display AK/SK values.
-9. **Retry on transient errors** — For network timeouts or 5xx errors, retry up to 2 times with a 3-second delay.
+1. **Continue on failure** — If any step (2-6) fails, log the error and continue. Always produce a summary with whatever data was collected.
+2. **Use pagination** — Default to PageSize=10 for general queries, PageSize=50 for filtered queries (e.g., unprotected assets).
+3. **Time range selection** — Default to last 7 days. Run `date` commands separately, then use returned values as literal numbers in `--StartTime`/`--EndTime`. Do NOT use `$(...)` inside CLI commands.
+4. **Region awareness** — Cloud Firewall only has two regions: `cn-hangzhou` (mainland China) and `ap-southeast-1` (Hong Kong/overseas). Default to `cn-hangzhou`.
+5. **Security** — NEVER expose, log, echo, or display AK/SK values.
 
 ---
 

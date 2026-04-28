@@ -610,8 +610,12 @@ Or using Alibaba Cloud SDK:
 ```python
 from alibabacloud_cloudfw20171207.client import Client
 from alibabacloud_cloudfw20171207 import models
+from alibabacloud_tea_util.models import RuntimeOptions
 
 client = Client(config)
 request = models.DescribeAssetStatisticRequest(lang='zh')
-response = client.describe_asset_statistic(request)
+runtime = RuntimeOptions()
+user_agent = "AlibabaCloud-Agent-Skills/alibabacloud-cfw-status-overview"
+runtime.append_user_agent = user_agent
+response = client.describe_asset_statistic_with_options(request, runtime)
 ```

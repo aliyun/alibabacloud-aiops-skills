@@ -17,9 +17,9 @@ Check the output for a valid profile (AK, STS, or OAuth identity). Do not print 
 Run the following to confirm Cloud Firewall instance exists:
 
 ```bash
-aliyun cloudfw DescribeUserBuyVersion \
+aliyun cloudfw describe-user-buy-version \
   --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-status-overview
 ```
 
 **Expected**: Response contains instance version info (e.g., `Version`, `InstanceId`).
@@ -27,9 +27,9 @@ aliyun cloudfw DescribeUserBuyVersion \
 ### Step 2: Verify Asset Statistics Query
 
 ```bash
-aliyun cloudfw DescribeAssetStatistic \
+aliyun cloudfw describe-asset-statistic \
   --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-status-overview
 ```
 
 **Expected**: Response includes asset counts (total, protected, unprotected).
@@ -37,11 +37,11 @@ aliyun cloudfw DescribeAssetStatistic \
 ### Step 3: Verify Asset List Query
 
 ```bash
-aliyun cloudfw DescribeAssetList \
+aliyun cloudfw describe-asset-list \
   --CurrentPage 1 \
   --PageSize 10 \
   --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-status-overview
 ```
 
 **Expected**: Response includes `Assets` array with asset details (IP, region, status, type).
@@ -49,9 +49,9 @@ aliyun cloudfw DescribeAssetList \
 ### Step 4: Verify Internet Border Firewall Status
 
 ```bash
-aliyun cloudfw DescribeInternetOpenStatistic \
+aliyun cloudfw describe-internet-open-statistic \
   --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-status-overview
 ```
 
 **Expected**: Response includes open IP count, protected count, risk statistics.
@@ -59,11 +59,11 @@ aliyun cloudfw DescribeInternetOpenStatistic \
 ### Step 5: Verify VPC Firewall Summary
 
 ```bash
-aliyun cloudfw DescribeTrFirewallsV2List \
+aliyun cloudfw describe-tr-firewalls-v2-list \
   --CurrentPage 1 \
   --PageSize 20 \
   --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-status-overview
 ```
 
 **Expected**: Response includes list of TR firewalls with switch status.
@@ -71,9 +71,9 @@ aliyun cloudfw DescribeTrFirewallsV2List \
 ### Step 6: Verify NAT Firewall List
 
 ```bash
-aliyun cloudfw DescribeNatFirewallList \
+aliyun cloudfw describe-nat-firewall-list \
   --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-status-overview
 ```
 
 **Expected**: Response includes NAT firewall list with proxy status.
@@ -81,9 +81,9 @@ aliyun cloudfw DescribeNatFirewallList \
 ### Step 7: Verify Traffic Trend Query
 
 ```bash
-aliyun cloudfw DescribePostpayTrafficTotal \
+aliyun cloudfw describe-postpay-traffic-total \
   --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-status-overview
 ```
 
 **Expected**: Response includes traffic summary data.
