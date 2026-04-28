@@ -7,11 +7,11 @@
 
 ## Correct CLI Invocation Patterns
 
-### 1. Command Format — verify product and API name
+### 1. Command Format — verify product and API name (plugin mode)
 
-#### CORRECT
+#### CORRECT — Plugin mode (lowercase-hyphenated)
 ```bash
-aliyun cloudfw DescribeInternetOpenIp \
+aliyun cloudfw describe-internet-open-ip \
   --CurrentPage 1 \
   --PageSize 50 \
   --StartTime 1710000000 \
@@ -22,19 +22,19 @@ aliyun cloudfw DescribeInternetOpenIp \
 
 #### INCORRECT — Wrong product name
 ```bash
-aliyun cloudfirewall DescribeInternetOpenIp --region cn-hangzhou
+aliyun cloudfirewall describe-internet-open-ip --region cn-hangzhou
 ```
 **Why**: Product name is `cloudfw`, not `cloudfirewall` or `cfw`.
 
-#### INCORRECT — Kebab-case API name
+#### INCORRECT — PascalCase API name (legacy format)
 ```bash
-aliyun cloudfw describe-internet-open-ip --region cn-hangzhou
+aliyun cloudfw DescribeInternetOpenIp --region cn-hangzhou
 ```
-**Why**: Cloud Firewall CLI uses PascalCase API names (e.g., `DescribeInternetOpenIp`).
+**Why**: Cloud Firewall CLI uses plugin mode with lowercase-hyphenated API names (e.g., `describe-internet-open-ip`).
 
 #### INCORRECT — Missing --user-agent
 ```bash
-aliyun cloudfw DescribeInternetOpenIp --CurrentPage 1 --PageSize 50 --region cn-hangzhou
+aliyun cloudfw describe-internet-open-ip --CurrentPage 1 --PageSize 50 --region cn-hangzhou
 ```
 **Why**: All commands must include `--user-agent AlibabaCloud-Agent-Skills`.
 
@@ -49,9 +49,9 @@ python3 scripts/call_api.py \
 
 ### 2. Parameter Format
 
-#### CORRECT — PascalCase CLI flags
+#### CORRECT — PascalCase CLI flags with plugin mode command
 ```bash
-aliyun cloudfw DescribeInternetOpenIp \
+aliyun cloudfw describe-internet-open-ip \
   --CurrentPage 1 \
   --PageSize 50 \
   --StartTime 1710000000 \
@@ -62,9 +62,9 @@ aliyun cloudfw DescribeInternetOpenIp \
 
 #### INCORRECT — Kebab-case parameter names
 ```bash
-aliyun cloudfw DescribeInternetOpenIp --current-page 1 --page-size 50
+aliyun cloudfw describe-internet-open-ip --current-page 1 --page-size 50
 ```
-**Why**: Parameters use PascalCase (e.g., `--CurrentPage`, `--PageSize`).
+**Why**: Parameters use PascalCase (e.g., `--CurrentPage`, `--PageSize`), only the API action name uses lowercase-hyphenated format.
 
 #### INCORRECT — Using --region-id instead of --region
 ```bash
@@ -98,25 +98,25 @@ printenv | grep -i credential         # FORBIDDEN: may reveal secrets
 env | grep -i access_key              # FORBIDDEN: may reveal secrets
 ```
 
-### 4. API Names — verify exact casing
+### 4. API Names — verify plugin mode (lowercase-hyphenated)
 
 #### CORRECT
 ```
-DescribeInternetOpenStatistic
-DescribeInternetOpenIp
-DescribeInternetOpenPort
-DescribeAssetList
-DescribeAssetRiskList
-DescribeVulnerabilityProtectedList
-DescribeRiskEventGroup
-DescribeControlPolicy
+describe-internet-open-statistic
+describe-internet-open-ip
+describe-internet-open-port
+describe-asset-list
+describe-asset-risk-list
+describe-vulnerability-protected-list
+describe-risk-event-group
+describe-control-policy
 ```
 
 #### INCORRECT
 ```
+DescribeInternetOpenIp         # PascalCase (legacy, not plugin mode)
 describeInternetOpenIp         # Wrong casing
 Describe_Internet_Open_Ip      # Wrong format
 DescribeInternetOpenIP         # Wrong casing (Ip not IP)
-describe-internet-open-ip      # Kebab-case not supported
 DescribeOpenIp                 # Wrong API name
 ```

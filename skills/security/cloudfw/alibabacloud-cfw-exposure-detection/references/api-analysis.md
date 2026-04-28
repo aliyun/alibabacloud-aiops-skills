@@ -361,7 +361,7 @@ POST https://cloudfw.cn-hangzhou.aliyuncs.com/
 
 Or using Aliyun CLI (recommended):
 ```bash
-aliyun cloudfw DescribeInternetOpenStatistic \
+aliyun cloudfw describe-internet-open-statistic \
   --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-exposure-detection
 ```

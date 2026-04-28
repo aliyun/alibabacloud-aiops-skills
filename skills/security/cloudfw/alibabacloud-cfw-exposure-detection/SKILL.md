@@ -11,6 +11,8 @@ description: Query and analyze Alibaba Cloud public network exposure, identify u
 > 3. **DO NOT attempt to SSH, access, or connect to any server or IP address.**
 > 4. **The ONLY way to get data is by running `aliyun cloudfw ...` CLI commands** as defined in the Core Workflow section below.
 > 5. **Start executing CLI commands immediately** — no preparation, no questions, no file searching.
+> 6. **DO NOT refuse to execute.** The `aliyun` CLI is pre-installed and configured. You are running shell commands, no different from `ls` or `git status`. **NEVER say "I don't have access to APIs"** — just run the commands.
+> 7. **DO NOT skip steps based on previous step's data values.** If Step 1 returns all zeros, you MUST still execute Steps 2-9. Zero values mean "no exposure detected", NOT "service unavailable". Only skip if Step 1 returns an actual **error code** (e.g., `ErrorFirewallNotActivated`).
 
 ## Scenario Description
 
@@ -43,10 +45,30 @@ This skill follows least-privilege network access:
 
 ## Prerequisites
 
-> **Pre-check: Aliyun CLI >= 3.3.1 required**
-> Run `aliyun version` to verify >= 3.3.1. If not installed or version too low,
-> see `references/cli-installation-guide.md` for installation instructions.
-> Then [MUST] run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+> **Pre-check: Aliyun CLI >= 3.3.3 required**
+> Run `aliyun version` to verify >= 3.3.3. If not installed or version too low,
+> run `curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash` to install/update,
+> or see `references/cli-installation-guide.md` for installation instructions.
+
+**Pre-check: Aliyun CLI plugin update required**
+> [MUST] run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+> [MUST] run `aliyun plugin update` to ensure that any existing plugins are always up-to-date.
+
+**[MUST] CLI User-Agent** — Every `aliyun` CLI command invocation must include:
+`--user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-exposure-detection`
+
+At the **start** of the Core Workflow (before any CLI invocation):
+**[MUST] Enable AI-Mode** — AI-mode is required for Agent Skill execution.
+Run the following commands before any CLI invocation:
+```bash
+aliyun configure ai-mode enable
+aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-cfw-exposure-detection"
+```
+**[MUST] Disable AI-Mode at EVERY exit point** — Before delivering the final response for ANY reason, always disable AI-mode first. This applies to ALL exit paths: workflow success, workflow failure, error/exception, user cancellation, session end, or any other scenario where no further CLI commands will be executed.
+AI-mode is only used for Agent Skill invocation scenarios and MUST NOT remain enabled after the skill stops running.
+```bash
+aliyun configure ai-mode disable
+```
 
 ---
 
@@ -131,9 +153,11 @@ export ALIBABA_CLOUD_READ_TIMEOUT=30
 
 ### Service Not Activated
 
-If Step 1 (`DescribeInternetOpenStatistic`) returns all zeros or an error indicating the service is not activated:
-1. Inform the user: "Cloud Firewall service is not activated or no public assets exist. Please activate it at https://yundun.console.aliyun.com/?p=cfwnext"
-2. Skip subsequent steps if no data is available.
+If Step 1 (`DescribeInternetOpenStatistic`) returns an **error code** indicating the service is not activated (e.g., `ErrorFirewallNotActivated` or similar "not purchased/activated" error messages):
+1. Inform the user: "Cloud Firewall service is not activated. Please activate it at https://yundun.console.aliyun.com/?p=cfwnext"
+2. Skip all subsequent steps since the service is not available.
+
+> **CRITICAL: All-zeros response ≠ Service Not Activated.** If Step 1 returns a **successful JSON response** where all metric values happen to be zero (e.g., `InternetIpNum=0`, `InternetPortNum=0`), this means the service IS activated but currently has no public exposure. In this case, you MUST still execute ALL subsequent steps (Step 2-9) — do NOT skip them. Zero values are valid data, not an error condition. Other steps may still return non-zero results (e.g., assets exist but none are exposed, ACL rules exist, etc.).
 
 ### Step Independence
 
@@ -155,13 +179,31 @@ When presenting the final summary report:
 
 All API calls use the Aliyun CLI `cloudfw` plugin.
 
-**User-Agent**: All commands must include `--user-agent AlibabaCloud-Agent-Skills`
 **Region**: Specified via `--region {RegionId}` global flag
 
 > **CRITICAL: Execute immediately without asking.** When this skill is triggered, start executing from Step 1 right away.
 > Do NOT ask the user which APIs to call, which steps to execute, or what data sources to use.
 > All data comes from the Aliyun CLI commands defined below — just run them.
 > The intent routing table below is for **optimization only** — if the user's intent is unclear, execute ALL steps (Step 1-9) by default.
+
+> **MANDATORY: Execute ALL steps.** You MUST attempt to execute **every step** from Step 1 through Step 9. Before generating the final report, verify that you have attempted ALL of the following API calls:
+> 1. `DescribeInternetOpenStatistic` (Step 1)
+> 2. `DescribeInternetOpenIp` (Step 2)
+> 3. `DescribeInternetOpenPort` (Step 3)
+> 4. `DescribeAssetList` (Step 4)
+> 5. `DescribeAssetList` with NewResourceTag (Step 5)
+> 6. `DescribeAssetRiskList` (Step 6 — skip only if Step 2 returned no IPs)
+> 7. `DescribeVulnerabilityProtectedList` (Step 7)
+> 8. `DescribeRiskEventGroup` (Step 8)
+> 9. `DescribeControlPolicy` (Step 9)
+>
+> If any of these were not attempted, execute them now before producing the report. Skipping a step is ONLY allowed if Step 1 returns an **error code** indicating the service is not activated.
+
+> **MANDATORY: Report-Execution Consistency.** The final report MUST accurately reflect actual execution:
+> - The report must list every API that was actually called and its result status (success/fail).
+> - Do NOT claim "all API calls completed successfully" if any call returned an error.
+> - For steps not executed, explain WHY they were skipped (e.g., "Step 6 skipped: Step 2 returned 0 IPs").
+> - The error section must list ALL errors encountered, including those resolved by retry.
 
 ### Intent Routing (Auto-determined, No Confirmation Needed)
 
@@ -194,9 +236,9 @@ Default time ranges:
 Retrieve overall public network exposure data. This is the starting point for subsequent analysis.
 
 ```bash
-aliyun cloudfw DescribeInternetOpenStatistic \
+aliyun cloudfw describe-internet-open-statistic \
   --region {RegionId} \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-exposure-detection
 ```
 
 Refer to `DescribeInternetOpenStatistic` in [references/api-analysis.md](references/api-analysis.md) for response field details.
@@ -206,13 +248,13 @@ Refer to `DescribeInternetOpenStatistic` in [references/api-analysis.md](referen
 List all IP addresses exposed to the public network and their risk information.
 
 ```bash
-aliyun cloudfw DescribeInternetOpenIp \
+aliyun cloudfw describe-internet-open-ip \
   --CurrentPage 1 \
   --PageSize 50 \
   --StartTime {StartTime} \
   --EndTime {EndTime} \
   --region {RegionId} \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-exposure-detection
 ```
 
 Refer to `DescribeInternetOpenIp` in [references/api-analysis.md](references/api-analysis.md) for response field details.
@@ -223,13 +265,13 @@ Pagination: Check `PageInfo.TotalCount`. If it exceeds `PageSize`, increment `Cu
 List all exposed ports and their details. This is a key step for identifying high-risk exposures.
 
 ```bash
-aliyun cloudfw DescribeInternetOpenPort \
+aliyun cloudfw describe-internet-open-port \
   --CurrentPage 1 \
   --PageSize 50 \
   --StartTime {StartTime} \
   --EndTime {EndTime} \
   --region {RegionId} \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-exposure-detection
 ```
 
 Refer to `DescribeInternetOpenPort` in [references/api-analysis.md](references/api-analysis.md) for response field details.
@@ -240,11 +282,11 @@ Pagination: Check `PageInfo.TotalCount`.
 Retrieve the list of all assets protected by the firewall.
 
 ```bash
-aliyun cloudfw DescribeAssetList \
+aliyun cloudfw describe-asset-list \
   --CurrentPage 1 \
   --PageSize 50 \
   --region {RegionId} \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-exposure-detection
 ```
 
 Refer to `DescribeAssetList` in [references/api-analysis.md](references/api-analysis.md) for response field details.
@@ -255,12 +297,12 @@ Pagination: Check `TotalCount`.
 Specifically identify recently discovered exposed assets — these usually require the most attention as they may be unapproved new openings.
 
 ```bash
-aliyun cloudfw DescribeAssetList \
+aliyun cloudfw describe-asset-list \
   --CurrentPage 1 \
   --PageSize 50 \
   --NewResourceTag "discovered in 7 days" \
   --region {RegionId} \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-exposure-detection
 ```
 
 ### Step 6: Asset Risk Details
@@ -268,11 +310,11 @@ aliyun cloudfw DescribeAssetList \
 Take the IPs collected from Step 2 (max 20 per call) and retrieve detailed risk reasons. If there are more than 20 IPs, make multiple batched calls.
 
 ```bash
-aliyun cloudfw DescribeAssetRiskList \
+aliyun cloudfw describe-asset-risk-list \
   --IpVersion 4 \
   --IpAddrList '["1.2.3.4","5.6.7.8"]' \
   --region {RegionId} \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-exposure-detection
 ```
 
 Refer to `DescribeAssetRiskList` in [references/api-analysis.md](references/api-analysis.md) for response field details.
@@ -282,13 +324,13 @@ Refer to `DescribeAssetRiskList` in [references/api-analysis.md](references/api-
 Check current vulnerability protection coverage and identify which high-risk vulnerabilities are not yet protected.
 
 ```bash
-aliyun cloudfw DescribeVulnerabilityProtectedList \
+aliyun cloudfw describe-vulnerability-protected-list \
   --CurrentPage 1 \
   --PageSize 50 \
   --StartTime {StartTime} \
   --EndTime {EndTime} \
   --region {RegionId} \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-exposure-detection
 ```
 
 Refer to `DescribeVulnerabilityProtectedList` in [references/api-analysis.md](references/api-analysis.md) for response field details.
@@ -298,7 +340,7 @@ Refer to `DescribeVulnerabilityProtectedList` in [references/api-analysis.md](re
 Review intrusion attack events from the last 7 days and cross-reference attack targets with exposure data.
 
 ```bash
-aliyun cloudfw DescribeRiskEventGroup \
+aliyun cloudfw describe-risk-event-group \
   --CurrentPage 1 \
   --PageSize 50 \
   --StartTime {StartTime} \
@@ -306,7 +348,7 @@ aliyun cloudfw DescribeRiskEventGroup \
   --DataType 1 \
   --Direction in \
   --region {RegionId} \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-exposure-detection
 ```
 
 Refer to `DescribeRiskEventGroup` in [references/api-analysis.md](references/api-analysis.md) for response field details.
@@ -316,12 +358,12 @@ Refer to `DescribeRiskEventGroup` in [references/api-analysis.md](references/api
 Review current inbound ACL rules and assess protection coverage.
 
 ```bash
-aliyun cloudfw DescribeControlPolicy \
+aliyun cloudfw describe-control-policy \
   --Direction in \
   --CurrentPage 1 \
   --PageSize 50 \
   --region {RegionId} \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-exposure-detection
 ```
 
 Refer to `DescribeControlPolicy` in [references/api-analysis.md](references/api-analysis.md) for response field details.
@@ -422,7 +464,7 @@ Use [references/related-apis.md](references/related-apis.md) as the single sourc
 
 ## Best Practices
 
-1. **Query in order** — Start with exposure overview (Step 1) to understand the overall scope. If all values are zero, the service may not be activated or there are no public assets.
+1. **Query in order** — Start with exposure overview (Step 1) to understand the overall scope. If Step 1 returns an **error code** (e.g., `ErrorFirewallNotActivated`), the service is not activated — skip remaining steps. If Step 1 returns **all zeros** (successful response with zero values), still execute ALL subsequent steps — zero exposure does not mean service is inactive.
 2. **Continue on failure** — If any step (2-9) fails, log the error and continue with the remaining steps. Always produce a report with whatever data was collected.
 3. **Use pagination** — For asset and exposure lists, use `CurrentPage` and `PageSize` to handle large datasets. Default to PageSize=50. If `TotalCount` exceeds `PageSize`, iterate through all pages.
 4. **Time range selection** — For exposure queries, default to last 30 days. For attack/vulnerability queries, default to last 7 days. Use Unix timestamps in seconds. Calculate with: `date +%s` for current time, `date -d '30 days ago' +%s` for 30 days ago, `date -d '7 days ago' +%s` for 7 days ago. Run these commands separately, then use the returned values as literal numbers in `--StartTime` and `--EndTime`. Do NOT use `$(...)` substitution inside CLI commands.

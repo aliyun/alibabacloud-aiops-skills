@@ -17,9 +17,9 @@ Check the output for a valid profile (AK, STS, or OAuth identity). Do not print 
 Run the following to confirm internet exposure data is available:
 
 ```bash
-aliyun cloudfw DescribeInternetOpenStatistic \
+aliyun cloudfw describe-internet-open-statistic \
   --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-exposure-detection
 ```
 
 **Expected**: Response contains exposure statistics including `InternetIpNum`, `InternetPortNum`, `InternetRiskIpNum`, `InternetServiceNum`. If all values are zero, the service may not be activated or there are no public assets.
@@ -30,13 +30,13 @@ aliyun cloudfw DescribeInternetOpenStatistic \
 NOW_TS=$(date +%s)
 THIRTY_DAYS_AGO_TS=$(date -d "30 days ago" +%s)
 
-aliyun cloudfw DescribeInternetOpenIp \
+aliyun cloudfw describe-internet-open-ip \
   --CurrentPage 1 \
   --PageSize 10 \
   --StartTime ${THIRTY_DAYS_AGO_TS} \
   --EndTime ${NOW_TS} \
   --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-exposure-detection
 ```
 
 **Expected**: Response includes `DataList` array with exposed IP details (PublicIp, RiskLevel, PortList, ServiceNameList) and `PageInfo` with `TotalCount`.
@@ -44,11 +44,11 @@ aliyun cloudfw DescribeInternetOpenIp \
 ### Step 3: Verify Asset List Query
 
 ```bash
-aliyun cloudfw DescribeAssetList \
+aliyun cloudfw describe-asset-list \
   --CurrentPage 1 \
   --PageSize 10 \
   --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-exposure-detection
 ```
 
 **Expected**: Response includes `Assets` array with asset details (InternetAddress, ProtectStatus, ResourceType, RiskLevel) and `TotalCount`.
@@ -56,9 +56,9 @@ aliyun cloudfw DescribeAssetList \
 ### Step 4: Verify Default IPS Config Query
 
 ```bash
-aliyun cloudfw DescribeDefaultIPSConfig \
+aliyun cloudfw describe-default-ips-config \
   --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-exposure-detection
 ```
 
 **Expected**: Response contains IPS configuration status including `BasicRules`, `EnableAllPatch`, `RunMode` fields.
@@ -69,13 +69,13 @@ aliyun cloudfw DescribeDefaultIPSConfig \
 SEVEN_DAYS_AGO_TS=$(date -d "7 days ago" +%s)
 NOW_TS=$(date +%s)
 
-aliyun cloudfw DescribeVulnerabilityProtectedList \
+aliyun cloudfw describe-vulnerability-protected-list \
   --CurrentPage 1 \
   --PageSize 10 \
   --StartTime ${SEVEN_DAYS_AGO_TS} \
   --EndTime ${NOW_TS} \
   --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-exposure-detection
 ```
 
 **Expected**: Response includes `VulnList` array with vulnerability details (VulnName, VulnLevel, VulnStatus, CveId, AttackCnt).
@@ -83,12 +83,12 @@ aliyun cloudfw DescribeVulnerabilityProtectedList \
 ### Step 6: Verify Control Policy Query
 
 ```bash
-aliyun cloudfw DescribeControlPolicy \
+aliyun cloudfw describe-control-policy \
   --Direction in \
   --CurrentPage 1 \
   --PageSize 10 \
   --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-cfw-exposure-detection
 ```
 
 **Expected**: Response includes `Policys` array with ACL rules (Source, Destination, DestPort, Proto, AclAction, HitTimes).
