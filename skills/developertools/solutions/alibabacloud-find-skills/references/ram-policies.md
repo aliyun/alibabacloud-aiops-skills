@@ -98,13 +98,13 @@ To verify that your account has the required permissions:
 
 ```bash
 # Test ListCategories permission
-aliyun agentexplorer list-categories --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
+aliyun agentexplorer list-categories --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Test SearchSkills permission
-aliyun agentexplorer search-skills --keyword "test" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
+aliyun agentexplorer search-skills --keyword "test" --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Test GetSkillContent permission
-aliyun agentexplorer get-skill-content --skill-name "example-skill" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
+aliyun agentexplorer get-skill-content --skill-name "example-skill" --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
 If any command returns a permission error (e.g., `403 Forbidden`, `NoPermission`), you need to apply the RAM policy above.

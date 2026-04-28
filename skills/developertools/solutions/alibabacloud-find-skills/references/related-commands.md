@@ -27,6 +27,7 @@ aliyun agentexplorer list-categories [flags]
 **Parameters**: None required.
 
 **Common Flags**:
+- `--region <region>` — **Required**: API region (e.g., `cn-hangzhou`)
 - `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills` — **Required**: Identify requests from this skill
 - `--cli-query <jmespath>` — Filter output using JMESPath expression
 - `-q, --quiet` — Suppress output
@@ -34,11 +35,14 @@ aliyun agentexplorer list-categories [flags]
 **Example Usage**:
 ```bash
 # List all categories
-aliyun agentexplorer list-categories --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
+aliyun agentexplorer list-categories \
+  --region cn-hangzhou \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # List categories with JMESPath filtering
 aliyun agentexplorer list-categories \
   --cli-query "categories[].categoryName" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
@@ -82,6 +86,7 @@ aliyun agentexplorer search-skills [flags]
 | `--skip` | int | No | Number of items to skip |
 
 **Common Flags**:
+- `--region <region>` — **Required**: API region (e.g., `cn-hangzhou`)
 - `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills` — **Required**: Identify requests from this skill
 - `--cli-query <jmespath>` — Filter output using JMESPath expression
 - `--pager` — Auto-merge all pages
@@ -93,16 +98,19 @@ aliyun agentexplorer search-skills [flags]
 # Search by keyword only
 aliyun agentexplorer search-skills \
   --keyword "ECS" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Search by category only
 aliyun agentexplorer search-skills \
   --category-code "computing" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Search by subcategory (dot notation)
 aliyun agentexplorer search-skills \
   --category-code "computing.ecs" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Combined keyword and category
@@ -110,11 +118,13 @@ aliyun agentexplorer search-skills \
   --keyword "backup" \
   --category-code "database.rds" \
   --max-results 10 \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Multiple categories
 aliyun agentexplorer search-skills \
   --category-code "computing,database" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Paginated search (page 2)
@@ -122,6 +132,7 @@ aliyun agentexplorer search-skills \
   --keyword "monitoring" \
   --max-results 20 \
   --next-token "<token-from-previous-response>" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Skip first N results
@@ -129,12 +140,14 @@ aliyun agentexplorer search-skills \
   --keyword "OSS" \
   --skip 10 \
   --max-results 20 \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Filter results with JMESPath
 aliyun agentexplorer search-skills \
   --keyword "ECS" \
   --cli-query "skills[].skillName" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
@@ -177,6 +190,7 @@ aliyun agentexplorer get-skill-content --skill-name <name> [flags]
 | `--skill-name` | string | **Yes** | Unique skill identifier (from search results) |
 
 **Common Flags**:
+- `--region <region>` — **Required**: API region (e.g., `cn-hangzhou`)
 - `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills` — **Required**: Identify requests from this skill
 - `--cli-query <jmespath>` — Filter output using JMESPath expression
 - `-q, --quiet` — Suppress output
@@ -187,12 +201,14 @@ aliyun agentexplorer get-skill-content --skill-name <name> [flags]
 # Get skill content
 aliyun agentexplorer get-skill-content \
   --skill-name "alibabacloud-ecs-batch-command" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Get only the description field
 aliyun agentexplorer get-skill-content \
   --skill-name "alibabacloud-ecs-batch-command" \
   --cli-query "description" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
@@ -254,14 +270,13 @@ aliyun configure list [flags]
 
 **Parameters**: None required.
 
-**Common Flags**:
-- `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills` — **Required**: Identify requests from this skill
+> **Note**: `aliyun configure list` is a local management command. It does **not** support `--user-agent` or `--region` — do not pass them.
 
 **Example Usage**:
 
 ```bash
 # List all profiles
-aliyun configure list --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
+aliyun configure list
 ```
 
 **Output Example**:
@@ -300,7 +315,7 @@ aliyun version
 
 ## 7. aliyun configure set
 
-**Description**: Configure CLI settings (used for enabling auto plugin install).
+**Description**: Configure CLI settings (used for enabling auto plugin install). **Run this only after authentication is complete** (verify with `aliyun configure list`).
 
 **Syntax**:
 ```bash
@@ -310,10 +325,12 @@ aliyun configure set [flags]
 **Common Flags**:
 - `--auto-plugin-install <bool>` — Enable/disable automatic plugin installation
 
+> **Note**: `aliyun configure set` is a local management command. It does **not** support `--user-agent` — do not pass it.
+
 **Example Usage**:
 
 ```bash
-# Enable automatic plugin installation
+# Enable automatic plugin installation (requires an authenticated profile)
 aliyun configure set --auto-plugin-install true
 ```
 
@@ -328,6 +345,7 @@ aliyun configure set --auto-plugin-install true
 aliyun agentexplorer search-skills \
   --keyword "monitoring" \
   --pager \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
@@ -338,12 +356,14 @@ aliyun agentexplorer search-skills \
 aliyun agentexplorer search-skills \
   --keyword "ECS" \
   --cli-query "skills[].skillName" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Get skills with install count > 100
 aliyun agentexplorer search-skills \
   --keyword "ECS" \
   --cli-query "skills[?installCount > \`100\`]" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
@@ -353,11 +373,13 @@ aliyun agentexplorer search-skills \
 # Search all computing skills
 aliyun agentexplorer search-skills \
   --category-code "computing" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Search only ECS skills (computing.ecs)
 aliyun agentexplorer search-skills \
   --category-code "computing.ecs" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
@@ -367,11 +389,13 @@ aliyun agentexplorer search-skills \
 # Search across multiple top-level categories
 aliyun agentexplorer search-skills \
   --category-code "computing,database,storage" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Search across multiple subcategories
 aliyun agentexplorer search-skills \
   --category-code "computing.ecs,database.rds,storage.oss" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
@@ -392,11 +416,13 @@ aliyun plugin list | grep agentexplorer
 ### Verify Credentials
 
 ```bash
-# Check if credentials are configured
-aliyun configure list --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
+# Check if credentials are configured (no --user-agent / --region — local command)
+aliyun configure list
 
 # Test API access
-aliyun agentexplorer list-categories --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
+aliyun agentexplorer list-categories \
+  --region cn-hangzhou \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
 ### Debug Mode
@@ -406,6 +432,7 @@ aliyun agentexplorer list-categories --user-agent AlibabaCloud-Agent-Skills/alib
 aliyun agentexplorer search-skills \
   --keyword "ECS" \
   --log-level DEBUG \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
@@ -416,6 +443,7 @@ aliyun agentexplorer search-skills \
 aliyun agentexplorer search-skills \
   --keyword "ECS" \
   --cli-dry-run \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
@@ -438,7 +466,8 @@ aliyun agentexplorer search-skills \
 
 ## Notes
 
-- **User-Agent Required**: All `aliyun agentexplorer` commands MUST include `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills`
+- **Region Required**: Every `aliyun agentexplorer` command MUST include `--region <region>` (e.g., `--region cn-hangzhou`). Without it the call fails.
+- **User-Agent Required (API only)**: Every `aliyun agentexplorer` command MUST include `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills`. Local management commands (`aliyun configure ...`, `aliyun plugin ...`, `aliyun version`) do **not** support `--user-agent`.
 - **Plugin Mode**: Commands use plugin mode format (lowercase with hyphens)
 - **Pagination**: Use `--next-token` from response for subsequent pages
 - **Category Codes**: Use dot notation for subcategories (e.g., `computing.ecs`)

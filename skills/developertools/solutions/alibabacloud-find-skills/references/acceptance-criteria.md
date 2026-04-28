@@ -63,9 +63,9 @@ aliyun install plugin agentexplorer
 
 ```bash
 # Correct product name
-aliyun agentexplorer list-categories --user-agent AlibabaCloud-Agent-Skills
-aliyun agentexplorer search-skills --user-agent AlibabaCloud-Agent-Skills
-aliyun agentexplorer get-skill-content --user-agent AlibabaCloud-Agent-Skills
+aliyun agentexplorer list-categories --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills
+aliyun agentexplorer search-skills --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills
+aliyun agentexplorer get-skill-content --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills
 ```
 
 #### ❌ INCORRECT
@@ -118,10 +118,12 @@ aliyun agentexplorer search-skills \
   --max-results 20 \
   --next-token "abc123" \
   --skip 10 \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills
 
 aliyun agentexplorer get-skill-content \
   --skill-name "alibabacloud-ecs-batch" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills
 ```
 
@@ -141,21 +143,24 @@ aliyun agentexplorer get-skill-content --name "name"  # wrong parameter
 
 ---
 
-### 4. User-Agent Flag (CRITICAL)
+### 4. User-Agent and Region Flags (CRITICAL — API calls only)
 
 #### ✅ CORRECT
 
 ```bash
-# Every agentexplorer command MUST include user-agent
+# Every agentexplorer API command MUST include both --region and --user-agent
 aliyun agentexplorer list-categories \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills
 
 aliyun agentexplorer search-skills \
   --keyword "ECS" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills
 
 aliyun agentexplorer get-skill-content \
   --skill-name "example" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills
 ```
 
@@ -163,15 +168,25 @@ aliyun agentexplorer get-skill-content \
 
 ```bash
 # Missing user-agent flag
-aliyun agentexplorer list-categories
+aliyun agentexplorer list-categories --region cn-hangzhou
 
-aliyun agentexplorer search-skills --keyword "ECS"
+# Missing --region (the call will fail)
+aliyun agentexplorer search-skills --keyword "ECS" --user-agent AlibabaCloud-Agent-Skills
 
 # Wrong user-agent value
-aliyun agentexplorer list-categories --user-agent "MyAgent"
+aliyun agentexplorer list-categories --region cn-hangzhou --user-agent "MyAgent"
+
+# Passing --user-agent to a local management command (NOT supported)
+aliyun configure list --user-agent AlibabaCloud-Agent-Skills
+aliyun configure set --auto-plugin-install true --user-agent AlibabaCloud-Agent-Skills
+aliyun plugin install --names agentexplorer --user-agent AlibabaCloud-Agent-Skills
+aliyun version --user-agent AlibabaCloud-Agent-Skills
 ```
 
-**Why**: All commands MUST include `--user-agent AlibabaCloud-Agent-Skills` for tracking and compliance.
+**Why**:
+- Every `aliyun agentexplorer` API call MUST include `--region <region>` (e.g., `cn-hangzhou`) — without it, the call fails.
+- Every `aliyun agentexplorer` API call MUST include `--user-agent AlibabaCloud-Agent-Skills` for tracking and compliance.
+- Local management commands (`aliyun configure ...`, `aliyun configure list`, `aliyun configure set`, `aliyun configure ai-mode ...`, `aliyun plugin ...`, `aliyun version`) do **not** support `--user-agent` and do not need `--region`. Do not pass them.
 
 ---
 
@@ -183,14 +198,17 @@ aliyun agentexplorer list-categories --user-agent "MyAgent"
 # get-skill-content requires --skill-name
 aliyun agentexplorer get-skill-content \
   --skill-name "alibabacloud-ecs-batch" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills
 
 # search-skills works with no required parameters (but keyword or category recommended)
 aliyun agentexplorer search-skills \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills
 
 # list-categories has no required parameters
 aliyun agentexplorer list-categories \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills
 ```
 
@@ -199,6 +217,7 @@ aliyun agentexplorer list-categories \
 ```bash
 # Missing required parameter
 aliyun agentexplorer get-skill-content \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills
 # ERROR: --skill-name is required
 ```
@@ -217,21 +236,25 @@ aliyun agentexplorer get-skill-content \
 # Top-level category
 aliyun agentexplorer search-skills \
   --category-code "computing" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills
 
 # Subcategory (dot notation)
 aliyun agentexplorer search-skills \
   --category-code "computing.ecs" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills
 
 # Multiple categories (comma-separated)
 aliyun agentexplorer search-skills \
   --category-code "computing,database,storage" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills
 
 # Mixed levels
 aliyun agentexplorer search-skills \
   --category-code "computing.ecs,database" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills
 ```
 
@@ -262,18 +285,22 @@ aliyun agentexplorer search-skills --category-code "invalid-category"
 # Valid range: 1-100
 aliyun agentexplorer search-skills \
   --max-results 1 \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills
 
 aliyun agentexplorer search-skills \
   --max-results 50 \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills
 
 aliyun agentexplorer search-skills \
   --max-results 100 \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills
 
 # Default (omit parameter)
 aliyun agentexplorer search-skills \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills
 # Uses default: 20
 ```
@@ -302,21 +329,25 @@ aliyun agentexplorer search-skills --max-results "twenty"
 # Single word
 aliyun agentexplorer search-skills \
   --keyword "ECS" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills
 
 # Multiple words (quoted)
 aliyun agentexplorer search-skills \
   --keyword "batch command" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills
 
 # Chinese characters
 aliyun agentexplorer search-skills \
   --keyword "云服务器" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills
 
 # Mixed English and Chinese
 aliyun agentexplorer search-skills \
   --keyword "ECS实例管理" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills
 ```
 
@@ -343,6 +374,7 @@ aliyun agentexplorer search-skills --keyword ECS&RDS
 RESULT=$(aliyun agentexplorer search-skills \
   --keyword "ECS" \
   --max-results 20 \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills)
 
 # Extract nextToken from response
@@ -353,6 +385,7 @@ aliyun agentexplorer search-skills \
   --keyword "ECS" \
   --max-results 20 \
   --next-token "$NEXT_TOKEN" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills
 ```
 
@@ -362,16 +395,19 @@ aliyun agentexplorer search-skills \
 # Manually crafted token
 aliyun agentexplorer search-skills \
   --next-token "page2" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills
 
 # Modified token
 aliyun agentexplorer search-skills \
   --next-token "${NEXT_TOKEN}_modified" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills
 
 # Using skip instead of next-token for pagination
 aliyun agentexplorer search-skills \
   --skip 20 \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills
 # Note: --skip is valid but --next-token is preferred for pagination
 ```
@@ -388,7 +424,7 @@ aliyun agentexplorer search-skills \
 
 ```bash
 # Check credentials before operations
-aliyun configure list --user-agent AlibabaCloud-Agent-Skills
+aliyun configure list
 
 # Never read/print credentials
 # NEVER do: echo $ALIBABA_CLOUD_ACCESS_KEY_ID
@@ -419,7 +455,7 @@ aliyun configure get --key access_key_id
 
 ```bash
 # Use configure list to check status
-aliyun configure list --user-agent AlibabaCloud-Agent-Skills
+aliyun configure list
 
 # Check if output shows valid profile
 # Example valid output:
@@ -432,7 +468,7 @@ aliyun configure list --user-agent AlibabaCloud-Agent-Skills
 
 ```bash
 # Don't test credentials by making API calls
-aliyun agentexplorer list-categories --user-agent AlibabaCloud-Agent-Skills
+aliyun agentexplorer list-categories --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills
 # (Use this for functionality, not credential verification)
 ```
 
@@ -451,18 +487,21 @@ aliyun agentexplorer list-categories --user-agent AlibabaCloud-Agent-Skills
 aliyun agentexplorer search-skills \
   --keyword "ECS" \
   --cli-query "skills[].skillName" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills
 
 # Filter with conditions
 aliyun agentexplorer search-skills \
   --keyword "ECS" \
   --cli-query "skills[?installCount > \`100\`]" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills
 
 # Select first item
 aliyun agentexplorer search-skills \
   --keyword "ECS" \
   --cli-query "skills[0]" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills
 ```
 
@@ -528,7 +567,7 @@ fi
 
 ```bash
 # Assume plugin is installed
-aliyun agentexplorer list-categories --user-agent AlibabaCloud-Agent-Skills
+aliyun agentexplorer list-categories --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills
 # May fail if plugin not installed
 ```
 
@@ -543,6 +582,7 @@ aliyun agentexplorer list-categories --user-agent AlibabaCloud-Agent-Skills
 ```bash
 RESULT=$(aliyun agentexplorer search-skills \
   --keyword "nonexistent" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills)
 
 # Check if skills array is empty
@@ -556,7 +596,7 @@ fi
 
 ```bash
 # Don't treat empty results as error
-RESULT=$(aliyun agentexplorer search-skills --keyword "nonexistent" --user-agent AlibabaCloud-Agent-Skills)
+RESULT=$(aliyun agentexplorer search-skills --keyword "nonexistent" --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills)
 if [ $? -ne 0 ]; then
   echo "Search failed"  # Wrong: empty results return exit code 0
 fi
@@ -576,6 +616,7 @@ fi
 # Step 1: Search
 SEARCH_RESULT=$(aliyun agentexplorer search-skills \
   --keyword "ECS" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills)
 
 # Step 2: Display results to user, get confirmation
@@ -585,6 +626,7 @@ echo "Found skills: ..."
 # Step 3: Get details
 aliyun agentexplorer get-skill-content \
   --skill-name "alibabacloud-ecs-batch" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills
 
 # Step 4: User confirms installation
@@ -595,7 +637,7 @@ npx skills add https://github.com/aliyun/alibabacloud-aiops-skills --skill aliba
 
 ```bash
 # Skip presenting results to user
-SKILL=$(aliyun agentexplorer search-skills --keyword "ECS" --cli-query "skills[0].skillName" --user-agent AlibabaCloud-Agent-Skills)
+SKILL=$(aliyun agentexplorer search-skills --keyword "ECS" --cli-query "skills[0].skillName" --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills)
 npx skills add https://github.com/aliyun/alibabacloud-aiops-skills --skill "$SKILL"
 # Wrong: Should present search results and skill details to user before installing
 ```
@@ -614,6 +656,7 @@ npx skills add https://github.com/aliyun/alibabacloud-aiops-skills --skill "$SKI
 aliyun agentexplorer search-skills \
   --keyword "ECS" \
   --category-code "computing" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills
 ```
 
@@ -625,7 +668,7 @@ aliyun agentexplorer search-skills \
 
 ```bash
 # DON'T ignore errors
-aliyun agentexplorer search-skills --keyword "test" --user-agent AlibabaCloud-Agent-Skills
+aliyun agentexplorer search-skills --keyword "test" --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills
 # Continue regardless of result
 ```
 
@@ -651,7 +694,9 @@ Before completing the skill, verify:
 - [ ] All commands use correct product name: `agentexplorer`
 - [ ] All commands use lowercase-with-hyphens format
 - [ ] All parameters match `--help` output exactly
-- [ ] Every command includes `--user-agent AlibabaCloud-Agent-Skills`
+- [ ] Every `aliyun agentexplorer` command includes `--region <region>` (e.g., `cn-hangzhou`)
+- [ ] Every `aliyun agentexplorer` command includes `--user-agent AlibabaCloud-Agent-Skills`
+- [ ] Local management commands (`aliyun configure ...`, `aliyun plugin ...`, `aliyun version`) do **not** carry `--user-agent` or `--region`
 - [ ] Required parameters are always provided
 - [ ] Category codes use dot notation for subcategories
 - [ ] Pagination uses exact `nextToken` from response
@@ -669,19 +714,19 @@ Run these commands to validate the skill:
 
 ```bash
 # Test 1: List categories
-aliyun agentexplorer list-categories --user-agent AlibabaCloud-Agent-Skills
+aliyun agentexplorer list-categories --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills
 
 # Test 2: Search by keyword
-aliyun agentexplorer search-skills --keyword "ECS" --user-agent AlibabaCloud-Agent-Skills
+aliyun agentexplorer search-skills --keyword "ECS" --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills
 
 # Test 3: Search by category
-aliyun agentexplorer search-skills --category-code "computing" --user-agent AlibabaCloud-Agent-Skills
+aliyun agentexplorer search-skills --category-code "computing" --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills
 
 # Test 4: Get skill content
-aliyun agentexplorer get-skill-content --skill-name "example-skill" --user-agent AlibabaCloud-Agent-Skills
+aliyun agentexplorer get-skill-content --skill-name "example-skill" --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills
 
 # Test 5: Check credentials
-aliyun configure list --user-agent AlibabaCloud-Agent-Skills
+aliyun configure list
 ```
 
 All commands should execute without syntax errors (though some may return "no results" or "skill not found", which is acceptable).

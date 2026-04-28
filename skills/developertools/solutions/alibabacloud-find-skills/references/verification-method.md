@@ -23,6 +23,7 @@ After executing each workflow, verify success by checking:
 aliyun agentexplorer search-skills \
   --keyword "ECS" \
   --max-results 20 \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 echo "Exit code: $?"  # Should be 0
 ```
@@ -33,6 +34,7 @@ echo "Exit code: $?"  # Should be 0
 aliyun agentexplorer search-skills \
   --keyword "ECS" \
   --cli-query "skills[0].skillName" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 # Should return a valid skill name, not null
 ```
@@ -43,6 +45,7 @@ aliyun agentexplorer search-skills \
 aliyun agentexplorer search-skills \
   --keyword "ECS" \
   --cli-query "length(skills)" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 # Should return a number > 0
 ```
@@ -68,6 +71,7 @@ echo "=== Verifying Search Skills by Keyword ==="
 RESULT=$(aliyun agentexplorer search-skills \
   --keyword "$KEYWORD" \
   --max-results 5 \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills 2>&1)
 
 EXIT_CODE=$?
@@ -110,6 +114,7 @@ echo "=== Verification Complete ==="
 
 ```bash
 aliyun agentexplorer list-categories \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 echo "Exit code: $?"  # Should be 0
 ```
@@ -119,6 +124,7 @@ echo "Exit code: $?"  # Should be 0
 ```bash
 aliyun agentexplorer list-categories \
   --cli-query "categories[0].categoryCode" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 # Should return a valid category code
 ```
@@ -129,6 +135,7 @@ aliyun agentexplorer list-categories \
 aliyun agentexplorer search-skills \
   --category-code "computing" \
   --cli-query "skills[0].categoryCode" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 # Should return "computing"
 ```
@@ -143,6 +150,7 @@ echo "=== Verifying Browse Skills by Category ==="
 # Step 1: List categories
 echo "Step 1: Listing categories..."
 CATEGORIES=$(aliyun agentexplorer list-categories \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills 2>&1)
 
 if [ $? -eq 0 ]; then
@@ -168,6 +176,7 @@ echo "Step 2: Searching skills in category '$CATEGORY_CODE'..."
 SKILLS=$(aliyun agentexplorer search-skills \
   --category-code "$CATEGORY_CODE" \
   --max-results 5 \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills 2>&1)
 
 if [ $? -eq 0 ]; then
@@ -199,6 +208,7 @@ echo "=== Verification Complete ==="
 ```bash
 aliyun agentexplorer get-skill-content \
   --skill-name "alibabacloud-ecs-batch-command" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 echo "Exit code: $?"  # Should be 0
 ```
@@ -209,6 +219,7 @@ echo "Exit code: $?"  # Should be 0
 aliyun agentexplorer get-skill-content \
   --skill-name "alibabacloud-ecs-batch-command" \
   --cli-query "content" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 # Should return non-empty markdown content
 ```
@@ -231,6 +242,7 @@ echo "Step 1: Finding a valid skill name..."
 SEARCH_RESULT=$(aliyun agentexplorer search-skills \
   --keyword "ECS" \
   --max-results 1 \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills 2>&1)
 
 SKILL_NAME=$(echo "$SEARCH_RESULT" | grep -o '"skillName":"[^"]*"' | head -1 | cut -d'"' -f4)
@@ -246,6 +258,7 @@ echo "✅ Found skill name: $SKILL_NAME"
 echo "Step 2: Retrieving skill content..."
 CONTENT=$(aliyun agentexplorer get-skill-content \
   --skill-name "$SKILL_NAME" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills 2>&1)
 
 if [ $? -eq 0 ]; then
@@ -323,6 +336,7 @@ echo "Exit code: $?"  # Should be 0
 aliyun agentexplorer search-skills \
   --keyword "backup" \
   --category-code "database.rds" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 echo "Exit code: $?"  # Should be 0
 ```
@@ -347,6 +361,7 @@ RESULT=$(aliyun agentexplorer search-skills \
   --keyword "$KEYWORD" \
   --category-code "$CATEGORY" \
   --max-results 10 \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills 2>&1)
 
 if [ $? -eq 0 ]; then
@@ -383,6 +398,7 @@ echo "=== Verification Complete ==="
 RESULT=$(aliyun agentexplorer search-skills \
   --keyword "monitoring" \
   --max-results 5 \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills)
 
 echo "$RESULT" | grep -q '"nextToken"'
@@ -398,6 +414,7 @@ aliyun agentexplorer search-skills \
   --keyword "monitoring" \
   --max-results 5 \
   --next-token "$NEXT_TOKEN" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 # Should return different results
 ```
@@ -419,6 +436,7 @@ echo "Fetching page 1..."
 PAGE1=$(aliyun agentexplorer search-skills \
   --keyword "$KEYWORD" \
   --max-results $PAGE_SIZE \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills 2>&1)
 
 if [ $? -ne 0 ]; then
@@ -445,6 +463,7 @@ PAGE2=$(aliyun agentexplorer search-skills \
   --keyword "$KEYWORD" \
   --max-results $PAGE_SIZE \
   --next-token "$NEXT_TOKEN" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills 2>&1)
 
 if [ $? -eq 0 ]; then
@@ -527,6 +546,7 @@ echo "========================================"
 # Test 1: List Categories
 echo -e "\n[Test 1] List Categories"
 aliyun agentexplorer list-categories \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills \
   --cli-query "categories[0].categoryCode" > /dev/null
 echo "✅ PASS"
@@ -536,6 +556,7 @@ echo -e "\n[Test 2] Search by Keyword"
 aliyun agentexplorer search-skills \
   --keyword "ECS" \
   --max-results 5 \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills \
   --cli-query "skills[0].skillName" > /dev/null
 echo "✅ PASS"
@@ -545,6 +566,7 @@ echo -e "\n[Test 3] Search by Category"
 aliyun agentexplorer search-skills \
   --category-code "computing" \
   --max-results 5 \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills \
   --cli-query "skills[0].categoryCode" > /dev/null
 echo "✅ PASS"
@@ -555,6 +577,7 @@ aliyun agentexplorer search-skills \
   --keyword "backup" \
   --category-code "database" \
   --max-results 5 \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills > /dev/null
 echo "✅ PASS"
 
@@ -563,12 +586,14 @@ echo -e "\n[Test 5] Get Skill Content"
 SKILL_NAME=$(aliyun agentexplorer search-skills \
   --keyword "ECS" \
   --max-results 1 \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills \
   --cli-query "skills[0].skillName" 2>/dev/null | tr -d '"' | tr -d '\n')
 
 if [ -n "$SKILL_NAME" ]; then
   aliyun agentexplorer get-skill-content \
     --skill-name "$SKILL_NAME" \
+    --region cn-hangzhou \
     --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills \
     --cli-query "content" > /dev/null
   echo "✅ PASS"
@@ -581,6 +606,7 @@ echo -e "\n[Test 6] Pagination"
 RESULT=$(aliyun agentexplorer search-skills \
   --keyword "ECS" \
   --max-results 2 \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills 2>/dev/null)
 
 if echo "$RESULT" | grep -q '"nextToken"'; then
@@ -609,7 +635,7 @@ chmod +x test-skill.sh
 
 **Check**:
 
-1. Credentials configured: `aliyun configure list --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills`
+1. Credentials configured: `aliyun configure list` (local command — does **not** support `--user-agent` or `--region`)
 2. Plugin installed: `aliyun plugin list | grep agentexplorer`
 3. CLI version: `aliyun version` (should be >= 3.3.3)
 4. Network connectivity: `ping api.aliyun.com`

@@ -39,13 +39,30 @@ This skill enables users to:
 > Run `aliyun version` to verify >= 3.3.3. If not installed or version too low,
 > run `curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash` to install/update,
 > or see [references/cli-installation-guide.md](references/cli-installation-guide.md) for installation instructions.
-> Then [MUST] run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
-> Then [MUST] run `aliyun plugin update` to ensure that any existing plugins on your local machine are always up-to-date.
 
-**[MUST] CLI User-Agent** — Every `aliyun` CLI command invocation must include:
+**[MUST] CLI User-Agent (API calls only)** — Every actual API invocation (e.g., `aliyun agentexplorer ...`) must include:
 `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills`
 
-### Enable AI-Mode
+> **Note**: This flag applies only to commands that hit the OpenAPI (such as `aliyun agentexplorer ...`).
+> Local/management commands like `aliyun configure ...`, `aliyun configure list`, `aliyun configure ai-mode ...`,
+> `aliyun plugin ...`, and `aliyun version` do **not** support the `--user-agent` flag — do not pass it to them.
+
+**[MUST] Region** — Every `aliyun agentexplorer ...` invocation must include `--region cn-hangzhou` (or another supported region).
+Without `--region`, the call will fail.
+
+### Step 1: Authenticate
+
+Complete authentication first (see the **Authentication** section below). The next steps require valid credentials.
+
+### Step 2: Enable Auto Plugin Install
+
+Once `aliyun configure list` shows a valid profile, enable automatic plugin installation:
+
+```bash
+aliyun configure set --auto-plugin-install true
+```
+
+### Step 3: Enable AI-Mode (Optional)
 
 Aliyun CLI provides AI-Mode. When enabled, the CLI automatically attaches AI identity information, allowing the server to identify and optimize Agent call chains.
 
@@ -54,29 +71,23 @@ Aliyun CLI provides AI-Mode. When enabled, the CLI automatically attaches AI ide
 aliyun configure ai-mode enable
 
 # Set AI-Mode user-agent identifier
-aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-find-skills"
+aliyun configure ai-mode set-user-agent --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Disable AI-Mode
 aliyun configure ai-mode disable
 ```
 
-### Update Plugin
-
-After installing plugins, update them periodically to get the latest features and fixes:
+### Step 4: Update / Install Plugins
 
 ```bash
-# Update installed CLI plugins
+# Refresh plugin index and update installed plugins
 aliyun plugin update
-```
 
-### Install agentexplorer Plugin
-
-```bash
 # Install the agentexplorer plugin
 aliyun plugin install --names agentexplorer
 
-# Verify installation
-aliyun agentexplorer --help --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
+# Verify installation (this is an API call — UA + region required)
+aliyun agentexplorer --help
 ```
 
 ## Authentication
@@ -91,7 +102,7 @@ aliyun agentexplorer --help --user-agent AlibabaCloud-Agent-Skills/alibabacloud-
 > - **ONLY** use `aliyun configure list` to check credential status
 >
 > ```bash
-> aliyun configure list --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
+> aliyun configure list
 > ```
 >
 > Check the output for a valid profile (AK, STS, or OAuth identity).
@@ -129,16 +140,19 @@ Based on user intent, choose keyword search, category search, or both:
 aliyun agentexplorer search-skills \
   --keyword "<keyword>" \
   --max-results 20 \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Get all categories
 aliyun agentexplorer list-categories \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Category search
 aliyun agentexplorer search-skills \
   --category-code "<category-code>" \
   --max-results 20 \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Combined search (keyword + category)
@@ -146,6 +160,7 @@ aliyun agentexplorer search-skills \
   --keyword "<keyword>" \
   --category-code "<category-code>" \
   --max-results 20 \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
@@ -168,6 +183,7 @@ Optionally retrieve skill content to verify it matches user intent before instal
 ```bash
 aliyun agentexplorer get-skill-content \
   --skill-name "<skill-name>" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
@@ -208,6 +224,7 @@ aliyun agentexplorer search-skills \
   --keyword "<keyword>" \
   --max-results 20 \
   --next-token "<next-token-from-previous-response>" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
@@ -255,8 +272,8 @@ For detailed verification steps, see [references/verification-method.md](referen
 # Drop category filter, search by keyword only
 
 # Strategy 3: Browse by category
-aliyun agentexplorer list-categories --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
-aliyun agentexplorer search-skills --category-code "computing" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
+aliyun agentexplorer list-categories --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
+aliyun agentexplorer search-skills --region cn-hangzhou --category-code "computing" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Strategy 4: Use broader terms
 # Instead of "RDS backup automation" try just "RDS" or "database"
@@ -311,11 +328,13 @@ This skill does not create any resources. No cleanup is required.
 aliyun agentexplorer search-skills \
   --keyword "ECS" \
   --max-results 20 \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Step 2: Display results table and get details for the best match
 aliyun agentexplorer get-skill-content \
   --skill-name "alibabacloud-ecs-batch-command" \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
@@ -326,12 +345,14 @@ aliyun agentexplorer get-skill-content \
 
 # Step 1: List categories to show database category
 aliyun agentexplorer list-categories \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Step 2: Search database category
 aliyun agentexplorer search-skills \
   --category-code "database" \
   --max-results 20 \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Step 3: Display results grouped by subcategory
@@ -346,6 +367,7 @@ aliyun agentexplorer search-skills \
 aliyun agentexplorer search-skills \
   --keyword "OSS" \
   --max-results 20 \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Step 2: Display results in user's preferred language
@@ -361,6 +383,7 @@ aliyun agentexplorer search-skills \
   --keyword "backup" \
   --category-code "database.rds" \
   --max-results 20 \
+  --region cn-hangzhou \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Step 2: Display targeted results
