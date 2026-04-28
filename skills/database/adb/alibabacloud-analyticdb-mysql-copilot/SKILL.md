@@ -1,26 +1,29 @@
 ---
 name: alibabacloud-analyticdb-mysql-copilot
 description: |
-  阿里云 AnalyticDB for MySQL 运维诊断助手。支持集群信息查询、性能监控、慢查询诊断、运行中SQL分析、表级优化建议等。
-  Triggers: "ADB MySQL", "AnalyticDB", "集群列表", "慢查询", "BadSQL", "数据倾斜", "空闲索引", "SQL Pattern", "空间诊断", "表诊断", "性能监控".
+  Alibaba Cloud AnalyticDB for MySQL Operations & Diagnosis Assistant. Supports cluster info queries, performance monitoring, slow query diagnosis, running SQL analysis, table-level optimization suggestions, etc.
+  Triggers: "ADB MySQL", "AnalyticDB", "cluster list", "slow query", "BadSQL", "data skew", "idle index", "SQL Pattern", "space diagnosis", "table diagnosis", "performance monitoring".
 ---
 
-> **Skill 加载提示**：当本 Skill 被加载时，在首次回复的开头输出一行：`[Skill 已加载] alibabacloud-analyticdb-mysql-copilot — ADB MySQL 运维诊断助手`
+> **Skill Load Prompt**: When this Skill is loaded, output the following line at the beginning of the first response: `[Skill Loaded] alibabacloud-analyticdb-mysql-copilot — ADB MySQL Operations & Diagnosis Assistant`
 
-本 Skill 是 **阿里云 AnalyticDB for MySQL (ADB MySQL) 运维诊断助手**，通过 `aliyun-cli` 直接调用 ADB MySQL OpenAPI，获取实时数据并给出诊断建议。
+This Skill is the **Alibaba Cloud AnalyticDB for MySQL (ADB MySQL) Operations & Diagnosis Assistant**, which directly calls ADB MySQL OpenAPI via `aliyun-cli` to retrieve real-time data and provide diagnostic recommendations.
 
-核心能力：
-- **集群管理**：查看集群列表、集群详情、存储空间、账号、网络信息
-- **性能监控**：查询 CPU、QPS、RT、内存、连接数等性能指标
-- **慢查询诊断**：检测 BadSQL、分析 SQL Pattern、定位慢查询根因
-- **运行中 SQL 分析**：查看当前正在执行的 SQL，定位长时间未完成的查询
-- **空间诊断**：实例空间巡检，涵盖分区合理性诊断、过大非分区表诊断、表数据倾斜诊断、复制表合理性诊断、主键合理性诊断、空闲索引与冷热表优化建议
+Core capabilities:
+- **Cluster Management**: View cluster list, cluster details, storage space, accounts, network information
+- **Performance Monitoring**: Query CPU, QPS, RT, memory, connection count and other performance metrics
+- **Slow Query Diagnosis**: Detect BadSQL, analyze SQL Patterns, identify slow query root causes
+- **Running SQL Analysis**: View currently executing SQL, identify long-running queries
+- **Space Diagnosis**: Instance space inspection, covering partition rationality diagnosis, oversized non-partitioned table diagnosis, table data skew diagnosis, replicated table rationality diagnosis, primary key rationality diagnosis, idle index & hot/cold table optimization suggestions
 
 ---
 
-> **Pre-check: Aliyun CLI >= 3.3.1 required**
-> 运行 `aliyun version` 验证版本 >= 3.3.1。若未安装或版本过低，参见 `references/cli-installation-guide.md`。
-> 然后运行 `aliyun configure set --auto-plugin-install true` 启用自动插件安装。
+> **Pre-check: Aliyun CLI >= 3.3.3 required**
+> Run `aliyun version` to verify version >= 3.3.3. If not installed or version is too low,
+> run `curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash` to install/update,
+> or see `references/cli-installation-guide.md`.
+> Then [MUST] run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+> [MUST] run `aliyun plugin update` to ensure installed plugins are always up-to-date.
 
 > **Pre-check: Alibaba Cloud Credentials Required**
 >
@@ -33,267 +36,322 @@ description: |
 > ```bash
 > aliyun configure list
 > ```
-> 检查输出中是否有有效的 profile（AK、STS 或 OAuth 身份）。
+> Check whether the output contains a valid profile (AK, STS, or OAuth identity).
 >
-> **若无有效 profile，在此停止。**
-> 1. 从 [阿里云控制台](https://ram.console.aliyun.com/manage/ak) 获取凭证
-> 2. 在**本会话之外**配置凭证（通过终端中的 `aliyun configure` 或 shell profile 中的环境变量）
-> 3. 待 `aliyun configure list` 显示有效 profile 后返回并重新执行
+> **If no valid profile exists, stop here.**
+> 1. Obtain credentials from [Alibaba Cloud Console](https://ram.console.aliyun.com/manage/ak)
+> 2. Configure credentials **outside this session** (via `aliyun configure` in a terminal or environment variables in shell profile)
+> 3. Return and re-execute once `aliyun configure list` shows a valid profile
+
+> **[MUST] CLI User-Agent** — Every `aliyun` CLI command invocation must include:
+> `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-mysql-copilot`
+
+At the **start** of the Core Workflow (before any CLI invocation):
+**[MUST] Enable AI-Mode** — AI-mode is required for Agent Skill execution.
+Run the following commands before any CLI invocation:
+```bash
+aliyun configure ai-mode enable
+aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-mysql-copilot"
+```
+**[MUST] Disable AI-Mode at EVERY exit point** — Before delivering the final response for ANY reason, always disable AI-mode first. This applies to ALL exit paths: workflow success, workflow failure, error/exception, user cancellation, session end, or any other scenario where no further CLI commands will be executed.
+AI-mode is only used for Agent Skill invocation scenarios and MUST NOT remain enabled after the skill stops running.
+```bash
+aliyun configure ai-mode disable
+```
 
 ---
 
-## 一、RegionId 与 DBClusterId（本 Skill 约定）
+## 1. Region & Cluster ID Conventions
 
-**约定**：凡接口需要传入 **`--DBClusterId`** 的，`aliyun adb` 命令中 **必须同时显式传入 `--RegionId`**。官方/CLI 帮助若未标「必填」，**以本 Skill 为准**补全，避免依赖隐式默认地域。
+### 1.1 Cluster Management (aliyun adb)
 
-**例外**：**仅按地域列举资源**、调用中**不包含** `--DBClusterId` 的接口（如 `DescribeDBClusters`）——仍须传 `--RegionId`，但不适用「与 DBClusterId 成对」这一条。
+**Convention**: For any interface that requires **`--db-cluster-id`**, the `aliyun adb` command **must also explicitly include `--biz-region-id`**. Even if the official/CLI help does not mark it as "required", **this Skill's convention takes precedence** — always include it to avoid relying on implicit default regions.
 
-**`<region-id>` 来源优先级**：用户明确指定 → 对话/工单上下文 → `aliyun configure list` 中配置的默认 region → 向用户确认。
+**Exception**: **Only when listing resources by region** or calling interfaces that **do not include** `--db-cluster-id` (such as `describe-db-clusters`) — `--biz-region-id` is still required, but the "paired with db-cluster-id" rule does not apply.
 
-以下各节与 `references/*.md` 中的示例，凡出现 `--DBClusterId` 而未写 `--RegionId` 的，**一律按本节约定补全**；不在每个 reference 重复展开，**以本节与下表为准**。
+**`<region-id>` Source Priority**: User explicitly specified → conversation/ticket context → default region from `aliyun configure list` → confirm with user.
 
-## 三、场景路由
+### 1.2 Intelligent Diagnosis (aliyun adbai)
 
-> **产品边界**：本 Skill 仅适用于 **AnalyticDB for MySQL (ADB MySQL)**，集群 ID 格式通常为 `am-xxx` 或 `amv-xxx`。若用户提到其他阿里云产品（如 Elasticsearch、RDS MySQL、PolarDB、Clickhouse等），应明确告知用户本 Skill 不适用，并停止执行。
+`aliyun adbai describe-chat-message` supports two scenarios with different workflows:
+
+#### Product Knowledge Q&A (No Region or Cluster Required)
+
+When the user asks about product concepts, syntax, feature questions, etc. (e.g., "What is BUILD", "How to create a partitioned table"), **no need** to confirm region and cluster — **execute directly** with the following command:
+
+```bash
+aliyun adbai describe-chat-message --region cn-beijing --endpoint adbai.cn-beijing.aliyuncs.com --biz-region-id cn-beijing --query "<user question>" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-mysql-copilot
+```
+
+#### Instance-Level Diagnosis (Requires Region + Cluster)
+
+When diagnosis involves specific instance data or status (e.g., slow queries, BadSQL, SQL Pattern analysis, instance health inspection, index optimization suggestions, instance diagnosis, table modeling diagnosis, etc.), **the following steps must be completed**:
+
+1. **Region Confirmation**: `<region-id>` source priority is: user explicitly specified → conversation/ticket context → default region from `aliyun configure list` → confirm with user. If user confirmation is needed, **must read `references/region-list.md`** and present options as option cards — **forbidden** to require manual region ID input.
+2. **Cluster ID Validation**: Before calling `aliyun adbai`, **must first execute** `aliyun adb describe-db-clusters --api-version 2021-12-01 --biz-region-id <region-id> --region <region-id>`, and search for the user's cluster ID in the returned `Items.DBCluster[]`:
+   - Match found → validation passed
+   - Empty list or no match → **do not proceed**, display actual clusters as option cards for user to select
+   - User did not provide cluster ID → display cluster list as option cards (≤10 options) for user to select
+3. **Pre-Execution Confirmation**: After parameter validation, present the operation to be executed as option cards (e.g., "Continue" / "Cancel") for user confirmation — **forbidden** to require manual confirmation input.
+4. **Mandatory Checklist** (all conditions **must be met** before execution, none can be omitted):
+   - [ ] `biz-region-id` confirmed by user
+   - [ ] `cluster-id` confirmed by user and exists in `describe-db-clusters` returned list
+   - [ ] Pre-execution confirmation obtained from user
+5. **Region Routing Rules (P0)**: The `aliyun adbai` service endpoint is not deployed in every region. **For all `aliyun adbai` calls, `--region` and `--endpoint` must be forcibly overridden** according to the following routing table mapping, even if the user has specified a region — do not use the user's specified values:
+
+| biz-region-id | --region | --endpoint |
+|-----------|----------|------------|
+| cn-hangzhou, cn-shanghai, cn-beijing, cn-shenzhen, cn-hongkong, cn-qingdao, cn-heyuan, cn-chengdu, cn-guangzhou, cn-zhangjiakou, cn-wulanchabu, cn-huhehaote, cn-shanghai-cloudspe, cn-hangzhou-finance, cn-beijing-finance-1, cn-shenzhen-finance-1, cn-shanghai-finance-1 | cn-beijing | adbai.cn-beijing.aliyuncs.com |
+| ap-southeast-1, ap-southeast-3, ap-southeast-5, ap-southeast-6, ap-southeast-7, ap-northeast-1, ap-northeast-2, eu-central-1, eu-west-1, me-east-1, me-central-1, na-south-1 | ap-southeast-1 | adbai.ap-southeast-1.aliyuncs.com |
+| us-east-1, us-west-1 | us-west-1 | adbai.us-west-1.aliyuncs.com |
+
+**Example**: User's cluster is in `cn-zhangjiakou` → `--biz-region-id cn-zhangjiakou --region cn-beijing --endpoint adbai.cn-beijing.aliyuncs.com`
+
+All sections below and examples in `references/*.md` that contain `--db-cluster-id` without `--biz-region-id` **are automatically supplemented per this section's convention**; this is not repeated in each reference — **this section takes precedence**.
+
+## 2. Scenario Routing
+
+> **Product Boundary**: This Skill only applies to **AnalyticDB for MySQL (ADB MySQL)**, cluster IDs typically start with `am-xxx` or `amv-xxx`. If the user mentions other Alibaba Cloud products (e.g., Elasticsearch, RDS MySQL, PolarDB, ClickHouse, etc.), clearly inform the user that this Skill does not apply and stop execution.
 
 ---
 
-> **🚨🚨🚨 MUST | P0 | NON-NEGOTIABLE — 强制执行规则（违反即失败）🚨🚨🚨**
+> **🚨🚨🚨 MUST | P0 | NON-NEGOTIABLE — Mandatory Enforcement Rules (Violation = Failure) 🚨🚨🚨**
 >
-> 以下规则具有最高优先级，**无条件强制执行**，任何情况下都**不得违反**：
+> The following rules have the highest priority and **must be enforced unconditionally** — they **must not be violated** under any circumstances:
 >
-> ### 规则1：API调用强制执行
-> 当用户请求匹配以下场景时，**必须立即执行对应的API调用**，**禁止跳过**：
+> ### Rule 1: Mandatory API Invocation
+> When a user request matches the following scenarios, **must immediately execute the corresponding API call** — **skipping is prohibited**:
 >
-> | 用户请求关键词 | MUST 调用的API | 禁止行为 |
+> | User Request Keywords | MUST-Call API | Prohibited Behavior |
 > |---------------|---------------|----------|
-> | "集群列表"、"实例列表"、"所有集群"、"list clusters" | `DescribeDBClusters` | ❌ 不调用直接给建议 |
-> | "数据倾斜"、"倾斜诊断"、"skew" | `DescribeInclinedTables` | ❌ 仅解释概念 |
-> | "BadSQL"、"异常SQL"、"慢SQL检测"、"bad sql" | `DescribeBadSqlDetection` | ❌ 跳过诊断 |
-> | "运行中的SQL"、"正在执行"、"当前查询"、"running sql" | `DescribeDiagnosisRecords` | ❌ 不调用API |
-> | "空闲索引"、"索引建议"、"索引优化"、"index advice" | `DescribeAvailableAdvices` | ❌ 给通用建议 |
-> | "SQL Pattern"、"SQL模式分析"、"sql pattern" | `DescribeSQLPatterns` | ❌ 不调用API |
-> | "空间诊断"、"健康巡检"、"实例诊断" | 7项诊断API | ❌ 仅列举概念 |
+> | "cluster list", "instance list", "all clusters", "list clusters" | `describe-db-clusters` | ❌ Not calling API, giving advice directly |
+> | "data skew", "BadSQL", "slow SQL detection", "running SQL", "idle index", "SQL Pattern", "space diagnosis", "health inspection", "instance diagnosis", "slow query", "RT increase", "cluster stall" and other diagnosis keywords | `DescribeChatMessage` | ❌ Not calling API, only giving advice/explaining concepts |
 >
-> ### 规则2：命令字符串强制输出（回复第一行）
-> **MUST**：每次调用 ADB OpenAPI 时，**必须在回复的【第一行】或【开头位置】显式输出执行的命令字符串**。
+> ### Rule 2: Mandatory Command String Output (First Line of Response)
+> **MUST**: Every ADB OpenAPI call, **must explicitly output the executed command string at the [first line] or [beginning] of the response**.
 >
-> **强制格式**（必须严格遵守）：
+> **Mandatory Format** (must be strictly followed):
 > ```
-> 执行命令：`aliyun adb <APIName> --version 2021-12-01 --RegionId <region-id> [--DBClusterId <cluster-id>] [其他参数]`
+> Command executed: `aliyun adb <command-name> --api-version 2021-12-01 --biz-region-id <region-id> [--db-cluster-id <cluster-id>] [other parameters]`
+> or
+> Command executed: `aliyun adbai describe-chat-message --region <mapped-region> --endpoint <mapped-endpoint> --biz-region-id <region-id> --query "<user question>"`
 >
-> [然后才是诊断结果、表格等内容]
+> [Then diagnostic results, tables, etc.]
 > ```
 >
-> **正确示例**：
+> **Correct Examples**:
 > ```
-> 执行命令：`aliyun adb DescribeDBClusters --version 2021-12-01 --RegionId cn-zhangjiakou`
+> Command executed: `aliyun adb describe-db-clusters --api-version 2021-12-01 --biz-region-id cn-zhangjiakou --region cn-zhangjiakou`
 >
-> 查询完成！张家口区域共有 2 个 ADB MySQL 集群...
-> ```
->
-> **错误示例**（违反=失败）：
-> ```
-> ❌ 查询完成！张家口区域共有 2 个集群... （未输出命令字符串）
-> ❌ 我调用了API查询集群列表... （未输出完整命令）
-> ❌ 命令已执行... （未输出具体命令内容）
-> ❌ aliyun adb DescribeDBClusters --RegionId cn-zhangjiakou （缺少 --version 2021-12-01）
+> Query complete! There are 2 ADB MySQL clusters in the Zhangjiakou region...
 > ```
 >
-> ### 规则3：禁止的逃避行为
-> **NON-NEGOTIABLE**：以下行为**绝对禁止**：
-> - ❌ 不调用API直接给出通用建议或概念解释
-> - ❌ 调用API但不在回复开头输出完整命令字符串
-> - ❌ 以"建议您..."、"可以尝试..."等模糊表述替代实际诊断
-> - ❌ 仅输出文档内容而不执行实际操作
-> - ❌ 将命令字符串放在回复中间或末尾
-> - ❌ 调用 `aliyun adb` 命令时不带 `--version 2021-12-01`（会默认使用旧版 `2019-03-15`）
+> ```
+> Command executed: `aliyun adbai describe-chat-message --region cn-beijing --endpoint adbai.cn-beijing.aliyuncs.com --biz-region-id cn-zhangjiakou --query "amv-xxx slow query diagnosis for the last 3 hours"`
 >
-> **违反上述规则 = 任务失败，无例外**
+> Diagnosis complete! Found the following issues...
+> ```
+>
+> **Incorrect Examples** (violation = failure):
+> ```
+> ❌ Query complete! There are 2 clusters in the Zhangjiakou region... (command string not output)
+> ❌ I called the API to query the cluster list... (complete command not output)
+> ❌ Command executed... (specific command content not output)
+> ❌ aliyun adb describe-db-clusters --biz-region-id cn-zhangjiakou --region cn-zhangjiakou (missing --api-version 2021-12-01)
+> ```
+>
+> ### Rule 3: Prohibited Evasion Behaviors
+> **NON-NEGOTIABLE**: The following behaviors **are absolutely prohibited**:
+> - ❌ Not calling API and directly giving general advice or concept explanations
+> - ❌ Calling API but not outputting the complete command string at the beginning of the response
+> - ❌ Using vague expressions like "We suggest you...", "You can try..." instead of actual diagnosis
+> - ❌ Only outputting documentation content without executing actual operations
+> - ❌ Placing the command string in the middle or end of the response
+> - ❌ Calling `aliyun adb` commands without `--api-version 2021-12-01` (would default to the old version `2019-03-15`)
+>
+> **Violating the above rules = task failure, no exceptions**
 
 ---
 
-> **🔴 集群 ID 识别规则（最高优先级）**：若用户提供的集群 ID 以 `am-` 或 `amv-` 开头，则该集群**一定是** ADB MySQL 集群。**无需**也**不得**通过 `aliyun rds`、`aliyun polardb`、`aliyun clickhouse`、`aliyun hbase` 等其他产品验证其归属，直接使用 `aliyun adb` 命令操作。违反此规则会导致大量无效 API 调用。
+> **🔴 Cluster ID Recognition Rule (Highest Priority)**: If the user-provided cluster ID starts with `am-` or `amv-`, then the cluster **is definitely** an ADB MySQL cluster. **No need** and **must not** verify its ownership through `aliyun rds`, `aliyun polardb`, `aliyun clickhouse`, `aliyun hbase` or other product commands. Violating this rule will result in numerous invalid API calls.
 
-根据用户意图，阅读对应的 `references/` 文件获取详细操作指南。
+Based on the user's intent, read the corresponding `references/` files for detailed operation guidelines.
 
-| 用户意图 | 参考文件 | 何时使用 | MUST 调用的API |
+| User Intent | Reference File | When to Use | MUST-Call API |
 |----------|----------|----------|----------------|
-| 查看实例列表、实例详情、集群配置、存储空间 | `references/cluster-info.md` | 用户想了解有哪些实例、实例规格或磁盘用量时 | `DescribeDBClusters` / `DescribeDBClusterAttribute` |
-| 查询变慢、RT 升高、集群卡顿、BadSQL、运行中查询、SQL Pattern 分析 | `references/slow-query-diagnosis.md` | 用户反馈性能下降、查询异常、或需要从整体视角分析 SQL 执行分布时 | `DescribeDBClusterPerformance` / `DescribeBadSqlDetection` / `DescribeDiagnosisRecords` |
-| 执行实例空间诊断、表建模诊断（含过大非分区表、分区合理性、主键合理性、数据倾斜、复制表合理性、空闲索引、冷热表优化） | `references/table-modeling-diagnosis.md` | 用户想执行指定实例的空间诊断、表建模诊断 | 7项诊断API（见文档） |
+| View instance list, instance details, cluster configuration, storage space | Read `references/cluster-info.md` then execute | When the user wants to know what instances exist, instance specifications, or disk usage | `describe-db-clusters` / `describe-db-cluster-attribute` |
+| Slow query diagnosis, BadSQL, running queries, SQL Pattern, instance diagnosis, instance write diagnosis, space diagnosis, table modeling diagnosis, data skew, idle index, product knowledge Q&A, etc. | Read `references/cluster-diagnosis.md` then execute | When the user reports performance anomalies, needs instance diagnosis, table modeling optimization, or product knowledge Q&A | `describe-chat-message` |
 
-**路由规则**：
-1. 识别用户意图，从上表中找到匹配的场景
-2. **🚨 MUST：立即执行对应的 `aliyun adb` 命令**（不得跳过、不得仅给建议）
-3. **🚨 MUST：在回复中输出命令字符串**（如 `aliyun adb DescribeDBClusters --RegionId <region-id>`）
-4. 读取对应的 `references/*.md` 文件，按其中的步骤执行
-5. 如果用户意图无法匹配上表中的具体场景，执行以下**默认诊断流程**：
-   1. 调用 `DescribeDBClusters` 确认集群存在且状态正常
-   2. 向用户确认诉求，列出最可能匹配的 2–3 个路由选项（参考上表）
-   3. 根据用户回复，跳转到对应的 `references/*.md` 文件继续执行
-6. 多个场景可以组合使用——例如先通过集群信息确认目标实例，再通过慢查询诊断定位问题 SQL
+**Routing Rules**:
+1. Identify the user's intent and find the matching scenario from the table above
+2. **🚨 MUST: Immediately execute the corresponding API command** (do not skip, do not only give advice): cluster management uses `aliyun adb`, intelligent diagnosis uses `aliyun adbai describe-chat-message`
+3. **🚨 MUST: Output the command string in the response** (e.g., `aliyun adb describe-db-clusters --api-version 2021-12-01 --biz-region-id <region-id> --region <region-id>` or `aliyun adbai describe-chat-message --region <mapped-region> --endpoint <mapped-endpoint> --biz-region-id <region-id> --query "<question>"`)
+4. Cluster management scenario: read `references/cluster-info.md`, execute per its steps; diagnosis scenario: read `references/cluster-diagnosis.md`, execute per its steps
+5. If the user's intent cannot be matched to a specific scenario in the table, execute the following **default diagnosis workflow**:
+   1. Call `describe-db-clusters` to confirm the cluster exists and its status is normal
+   2. **Use option cards** to list the 2-3 most likely routing options (refer to the table above) — **forbidden** to require manual diagnosis type input
+   3. Based on user selection, route to the corresponding operation and continue execution
+6. Multiple scenarios can be combined — e.g., first confirm the target instance via cluster info, then diagnose and locate the issue via `describe-chat-message`
 
-**集群 ID 验证规则**：若用户给出的集群 ID 在 API 返回中不存在（错误码 `InvalidDBClusterId.NotFound`），不得中止任务，应先调用 `DescribeDBClusters` 列出该地域实际存在的集群列表，引导用户确认正确的集群 ID 后继续执行。
+**Cluster ID Validation Rule**: If the user-provided cluster ID does not exist in the API response (error code `InvalidDBClusterId.NotFound`), do not abort the task. Instead, call `describe-db-clusters` to list the actual clusters in that region, guide the user to confirm the correct cluster ID, and continue execution.
 
-## 四、时间参数处理
+## 3. Time Parameter Handling
 
-> **前置规则（必须遵守）**
+> **Note**: The `describe-chat-message` interface automatically handles time parameters — no need to manually pass time ranges. The user only needs to describe the time in natural language within `--query` (e.g., "slow queries in the last 3 hours"), and the interface will parse it automatically.
 >
-> - 只要用户描述相对时间（如"最近 X 小时/天"、"过去 3 小时"），**必须先获取当前 UTC 时间**，再进行所有时间计算。不得凭模型自身知识估算当前时间。
-> - 获取当前 UTC 时间使用系统命令：`date -u +"%Y-%m-%dT%H:%M:%SZ"`
-> - 即使用户给出了绝对时间，建议仍获取一次当前时间以校验时区一致性。
-> - 如果用户没有指定时间范围，默认使用最近 1 小时。
+> For cluster information query interfaces like `aliyun adb` (e.g., `describe-db-clusters`), no time parameters are needed.
 
-以下接口需要传入时间范围参数，注意格式差异：
+## 4. Command Reference
 
-| 接口 | 参数名 | 格式 | 示例 |
-|------|--------|------|------|
-| `DescribeDBClusterPerformance` | `--StartTime` / `--EndTime` | ISO 8601 UTC（精确到分钟） | `2026-03-20T07:00Z` |
-| `DescribeBadSqlDetection` | `--StartTime` / `--EndTime` | ISO 8601 UTC（精确到分钟） | `2026-03-20T07:00Z` |
-| `DescribeSQLPatterns` | `--StartTime` / `--EndTime` | ISO 8601 UTC（精确到分钟） | `2026-03-20T07:00Z` |
-| `DescribeDiagnosisRecords` | `--StartTime` / `--EndTime` | **Unix 毫秒时间戳**（字符串，不是 ISO 8601） | `1742479200000` |
+### 4.1 OpenAPI Commands (aliyun-cli)
 
-> **CLI 补充（`DescribeDiagnosisRecords`）**：`aliyun adb` 下 **`--RegionId`、`--QueryCondition` 均为必填**（与 OpenAPI 文档字段一致，但命令行未传会报错）。`--QueryCondition` 为 JSON 字符串，常用：`{"Type":"status","Value":"running"}` / `finished` / `failed`；`{"Type":"maxCost","Value":"100"}`（仅支持 Value=100）；`{"Type":"cost","Min":"10","Max":"200"}`。
+This Skill uses two CLI command formats:
 
-**时间计算示例**（用户说"最近 3 小时"，当前 UTC `2026-03-09T08:30Z`）：
-
-- ISO 8601 格式（用于 Performance / BadSQL / SQLPatterns）：
-  - `--EndTime 2026-03-09T08:30Z`
-  - `--StartTime 2026-03-09T05:30Z`
-
-- Unix 毫秒格式（用于 `DescribeDiagnosisRecords`）：
-  - 换算公式：`Unix ms = POSIX epoch（UTC 秒）× 1000`
-  - 示例：`2026-03-09T05:30Z` → epoch=`1741501800` → `--StartTime 1741501800000`
-  - 示例：`2026-03-09T08:30Z` → epoch=`1741511400` → `--EndTime 1741511400000`
-
-> **注意**：`DescribeDiagnosisRecords` 使用 Unix 毫秒，其他接口使用 ISO 8601，两者不可混用。
-
-## 五、命令参考
-
-### 5.1 OpenAPI 命令（aliyun-cli）
-
-ADB MySQL OpenAPI 通过 `aliyun-cli` 直接调用：
+#### Cluster Management (aliyun adb)
 
 ```bash
-aliyun adb <APIName> --version 2021-12-01 [--参数名 参数值 ...] --user-agent AlibabaCloud-Agent-Skills
+aliyun adb <command-name> --api-version 2021-12-01 --biz-region-id <region-id> --region <region-id> [--db-cluster-id <cluster-id>] [other parameters] --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-mysql-copilot
 ```
 
-> **🚨 API 版本强制规定（P0）**：调用 `aliyun adb` 时，**必须始终显式传入 `--version 2021-12-01`**。
-> ADB MySQL 有两个 API 版本（`2019-03-15` 和 `2021-12-01`），CLI 默认可能选择旧版本 `2019-03-15`，
-> 该版本缺少本 Skill 所需的大量接口（如 `DescribeBadSqlDetection`、`DescribeSQLPatterns`、`DescribeAvailableAdvices` 等）。
-> **不传 `--version 2021-12-01` 的命令将导致调用失败，属于任务失败。**
+> **🚨 API Version Mandatory Requirement (P0)**: When calling `aliyun adb`, **must always explicitly include `--api-version 2021-12-01`**.
+> ADB MySQL has two API versions (`2019-03-15` and `2021-12-01`), and the CLI may default to the old version `2019-03-15`,
+> which lacks the interfaces needed by this Skill. **Commands without `--api-version 2021-12-01` will fail, constituting task failure.**
 
-> **本 Skill 约定（再强调）**：凡下表「需要 `--DBClusterId`」的行，实际拼命令时 **必须同时带 `--RegionId <region-id>`**（见「二、RegionId 与 DBClusterId」）。仅 `DescribeDBClusters` 不按「成对」规则，但仍需 `--RegionId`。
+> **This Skill's Convention**: For any row in the table below that "requires `--db-cluster-id`", the actual command **must also include `--biz-region-id <region-id>`** (see Section 1.1). Only `describe-db-clusters` does not follow the "paired" rule, but still requires `--biz-region-id`.
 
-| API 名称 | 说明 | 是否需要 `--DBClusterId` |
+| CLI Command Name | Description | Requires `--db-cluster-id` |
 |----------|------|:---:|
-| `DescribeDBClusters` | 查询地域内 ADB MySQL 集群列表 | 否 |
-| `DescribeDBClusterAttribute` | 查询集群详细属性 | 是 |
-| `DescribeDBClusterPerformance` | 查询性能指标（CPU、内存、QPS 等） | 是 |
-| `DescribeDBClusterSpaceSummary` | 查询存储空间概览 | 是 |
-| `DescribeDiagnosisRecords` | 查询 SQL 诊断记录（`--StartTime`/`--EndTime` 为 ms；**CLI 另必填** `--RegionId`、`--QueryCondition`） | 是 |
-| `DescribeBadSqlDetection` | 检测影响稳定性的 BadSQL | 是 |
-| `DescribeSQLPatterns` | 查询 SQL Pattern 统计 | 是 |
-| `DescribeTableStatistics` | 查询表级统计信息 | 是 |
-| `DescribeAvailableAdvices` | 获取优化建议；**CLI 必填** `--RegionId`、`--AdviceDate`（`yyyyMMdd` UTC）、`--PageNumber`、`--PageSize`（30/50/100）、`--Lang` 等，见下文 | 是 |
-| `DescribeExcessivePrimaryKeys` | 检测主键过多的表 | 是 |
-| `DescribeOversizeNonPartitionTableInfos` | 检测超大未分区表 | 是 |
-| `DescribeTablePartitionDiagnose` | 分区表问题诊断 | 是 |
-| `DescribeInclinedTables` | 检测数据倾斜表 / 复制表（需 `--TableType` 参数） | 是 |
+| `describe-db-clusters` | Query ADB MySQL cluster list within a region | No |
+| `describe-db-cluster-attribute` | Query cluster detailed attributes | Yes |
+| `describe-db-cluster-space-summary` | Query storage space overview | Yes |
 
-**`DescribeAvailableAdvices`（优化建议）CLI 必填参数**（以 `aliyun adb DescribeAvailableAdvices --help` 为准）：
-
-| 参数 | 说明 |
-|------|------|
-| `--RegionId` | 地域 ID（**必填**） |
-| `--DBClusterId` | 集群 ID（**必填**） |
-| `--AdviceDate` | **Long，格式 `yyyyMMdd`（UTC）**，例如 `20260322`。建议为 **T-1 或更早**（建议数据每日凌晨生成，当天常查不到）。**不要**使用 `YYYY-MM-DD` 或带 `T`/`Z` 的 ISO 字符串，否则会 `InvalidAdviceDate`。 |
-| `--PageNumber` | 页码，≥1（**必填**） |
-| `--PageSize` | **必填**；取值仅 **`30` / `50` / `100`**（默认 30） |
-| `--Lang` | **必填**：`zh` / `en` / `ja` / `zh-tw` |
-| `--AdviceType` | 可选：`INDEX`（索引）或 `TIERING`（冷热） |
-
-示例：
+#### Intelligent Diagnosis (aliyun adbai)
 
 ```bash
-aliyun adb DescribeAvailableAdvices --version 2021-12-01 --RegionId <region-id> --DBClusterId <cluster-id> \
-  --AdviceDate 20260322 --AdviceType INDEX --PageNumber 1 --PageSize 30 --Lang zh \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun adbai describe-chat-message --region <mapped-region> --endpoint <mapped-endpoint> --biz-region-id <region-id> --query "<user question>" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-mysql-copilot
 ```
 
-### 5.3 常用参数
+`DescribeChatMessage` is the SSE streaming interface of the ADB MySQL intelligent diagnosis assistant, providing product RAG retrieval and instance analysis, kernel diagnosis capabilities. It includes the following diagnosis scenarios:
+- **Slow SQL Query Diagnosis**: Performance metric analysis, BadSQL detection, running SQL analysis, SQL Pattern analysis
+- **Instance Diagnosis**: Instance health inspection, capacity assessment, scaling recommendations
+- **Instance Write Diagnosis**: Write performance analysis, write bottleneck identification
+- **Table Modeling Diagnosis**: Oversized non-partitioned tables, partition rationality, primary key rationality, data skew, replicated table rationality, idle indexes, hot/cold table optimization
 
-| 参数 | 说明 | 默认值 |
+| Parameter | Description | Required |
+|------|------|:---:|
+| `--biz-region-id` | User's cluster region ID (product knowledge Q&A uses default value `cn-beijing`, no user confirmation needed) | Conditionally required |
+| `--query` | Query content; for instance diagnosis, format is `"<cluster-id> <diagnosis question>"`; for product knowledge questions, ask directly (e.g., `"What is BUILD"`). | Yes |
+| `--region` | Service endpoint region (Skill auto-maps based on `--biz-region-id`, no user specification needed) | Auto |
+| `--endpoint` | Service endpoint address (Skill auto-maps based on `--biz-region-id`, no user specification needed) | Auto |
+| `--session-id` | Session ID for multi-turn conversations (not passed = new session) | No |
+| `--timezone` | Timezone, default `Asia/Shanghai` | No |
+
+> **Important**: Instance-level diagnosis (slow queries, table modeling, etc.) `--query` must include the cluster ID; no need to separately pass `--db-cluster-id`; product knowledge questions do not need a cluster ID. Examples: `"amv-xxx slow query diagnosis for the last 3 hours"`, `"What is BUILD"`
+
+**Examples**:
+
+```bash
+# Slow query diagnosis
+aliyun adbai describe-chat-message --region cn-beijing --endpoint adbai.cn-beijing.aliyuncs.com --biz-region-id cn-zhangjiakou \
+  --query "amv-xxx slow query diagnosis for the last 3 hours" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-mysql-copilot
+
+# Instance health inspection
+aliyun adbai describe-chat-message --region cn-beijing --endpoint adbai.cn-beijing.aliyuncs.com --biz-region-id cn-zhangjiakou \
+  --query "amv-xxx instance health inspection analysis" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-mysql-copilot
+
+# Table modeling diagnosis
+aliyun adbai describe-chat-message --region cn-beijing --endpoint adbai.cn-beijing.aliyuncs.com --biz-region-id cn-zhangjiakou \
+  --query "amv-xxx instance space diagnosis and table modeling diagnosis" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-mysql-copilot
+
+# Data skew detection
+aliyun adbai describe-chat-message --region cn-beijing --endpoint adbai.cn-beijing.aliyuncs.com --biz-region-id cn-zhangjiakou \
+  --query "amv-xxx detect data skewed tables" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-mysql-copilot
+
+# Product knowledge Q&A
+aliyun adbai describe-chat-message --region cn-beijing --endpoint adbai.cn-beijing.aliyuncs.com --biz-region-id cn-beijing \
+  --query "What is BUILD" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-mysql-copilot
+```
+
+### 4.2 Common Parameters
+
+**Cluster Management Parameters (aliyun adb)**:
+
+| Parameter | Description | Default Value |
 |------|------|--------|
-| `--RegionId` | 地域 ID（凡带 `--DBClusterId` 时本 Skill 要求必传） | — |
-| `--DBClusterId` | ADB MySQL 集群 ID（如 `amv-xxx`） | 必填 |
-| `--StartTime` | 起始时间（ISO 8601 UTC 或 ms 时间戳，视接口而定） | — |
-| `--EndTime` | 结束时间（同上） | — |
-| `--QueryCondition` | SQL 过滤条件（JSON），如 `'{"Type":"status","Value":"running"}'` | — |
-| `--Lang` | 语言：`zh` / `en` / `ja` / `zh-tw` | `zh` |
-| `--Order` | 排序字段（JSON），如 `'[{"Field":"StartTime","Type":"desc"}]'` | — |
-| `--PageNumber` | 页码 | `1` |
-| `--PageSize` | 每页条数 | `30` |
+| `--biz-region-id` | Region ID (this Skill requires it when `--db-cluster-id` is present) | — |
+| `--region` | Service endpoint region (value matches `--biz-region-id`, required for `aliyun adb` commands) | — |
+| `--db-cluster-id` | ADB MySQL cluster ID (e.g., `amv-xxx`) | Required |
+| `--db-cluster-version` | Cluster version (`3.0`/`5.0`/`All`) | `All` |
+| `--page-number` | Page number | `1` |
+| `--page-size` | Items per page | `30` |
 
-> **性能指标 Key**：使用 `DescribeDBClusterPerformance` 时通过 `--Key` 指定，常用值包括 `AnalyticDB_CPU`（CPU使用率）、`AnalyticDB_QPS`（每秒查询数）、`AnalyticDB_QueryRT`（查询响应时间）、`AnalyticDB_Connections`（连接数）等。完整列表可通过 `aliyun adb DescribeDBClusterPerformance --help` 查看。
+**Intelligent Diagnosis Parameters (aliyun adbai)**:
 
-### 5.4 凭证配置
+| Parameter | Description | Default Value |
+|------|------|--------|
+| `--biz-region-id` | User's cluster region ID (product knowledge Q&A uses default value `cn-beijing`, no user confirmation needed) | Conditionally required |
+| `--query` | Query content; instance diagnosis format `"<db-cluster-id> <problem description>"`, knowledge Q&A asks directly (supports natural language time descriptions). | Required |
+| `--region` | Service endpoint region (Skill auto-maps based on `--biz-region-id`, no user specification needed) | Auto |
+| `--endpoint` | Service endpoint address (Skill auto-maps based on `--biz-region-id`, no user specification needed) | Auto |
+| `--session-id` | Session ID (passed for multi-turn conversations) | Empty (new session) |
+| `--timezone` | Timezone: e.g., `Asia/Shanghai`, etc. | `Asia/Shanghai` |
 
-**阿里云 API 凭证**通过 `aliyun configure` 在**本会话之外**配置，CLI 会自动读取。
+### 4.3 Credential Configuration
 
-**凭证状态检查**：
+**Alibaba Cloud API credentials** are configured via `aliyun configure` **outside this session**; the CLI reads them automatically.
+
+**Credential Status Check**:
 
 ```bash
 aliyun configure list
 ```
 
-若输出中 AccessKeyId 列为空或显示 `<empty>`，说明凭证未配置，应提示用户：
-1. 在**本会话之外**通过终端运行 `aliyun configure` 进行配置
-2. 或在 shell profile 中配置环境变量
-3. 配置完成后返回继续执行
+If the AccessKeyId column in the output is empty or shows `<empty>`, credentials are not configured. Prompt the user:
+1. Run `aliyun configure` in a terminal **outside this session** to configure
+2. Or configure environment variables in shell profile
+3. Return and continue after configuration is complete
 
-> **🔴 重要规则**：
-> - **严禁**在会话中引导用户输入 AK/SK 凭证
-> - **严禁**使用 `aliyun configure set --access-key-id` 等显式凭证参数
-> - 凭证检查必须是任务的第一步，检查失败时直接报告并终止
+> **🔴 Important Rules**:
+> - **Strictly prohibited** from guiding users to input AK/SK credentials in the session
+> - **Strictly prohibited** from using `aliyun configure set --access-key-id` and other explicit credential parameters
+> - Credential check must be the first step of the task; if it fails, report and terminate directly
 
-支持多种凭证类型：AK、StsToken、RamRoleArn、EcsRamRole 等。详见 [配置凭证文档](https://help.aliyun.com/zh/cli/configure-credentials)。
+Multiple credential types are supported: AK, StsToken, RamRoleArn, EcsRamRole, etc. See [Credential Configuration Documentation](https://help.aliyun.com/zh/cli/configure-credentials).
 
-## 六、RAM Policy
+## 5. RAM Policy
 
-本 Skill 涉及的 RAM 权限列表详见 `references/ram-policies.md`。
+For the complete RAM permission list required by this Skill, see `references/ram-policies.md`.
 
-> **[MUST] Permission Failure Handling:** 当任何命令或 API 调用在执行过程中因权限错误而失败时，请遵循此流程：
-> 1. 阅读 `references/ram-policies.md` 获取本 SKILL 所需的完整权限列表
-> 2. 使用 `ram-permission-diagnose` skill 引导用户申请必要的权限
-> 3. 暂停并等待用户确认所需权限已授予
+> **[MUST] Permission Failure Handling:** When any command or API call fails due to permission errors during execution, follow this process:
+> 1. Read `references/ram-policies.md` for the complete permission list required by this Skill
+> 2. Use `ram-permission-diagnose` skill to guide the user to apply for necessary permissions
+> 3. Pause and wait for user confirmation that required permissions have been granted
 
-## 七、参数确认
+## 6. Parameter Confirmation
 
-> **IMPORTANT: Parameter Confirmation** — 在执行任何命令或 API 调用之前，所有用户可自定义参数（如 RegionId、实例名称、CIDR 块、密码、域名、资源规格等）**必须**与用户确认。**不得**在未经用户明确批准的情况下假设或使用默认值。
+> **IMPORTANT: Parameter Confirmation** — Before executing any command or API call, all user-configurable parameters (such as biz-region-id, db-cluster-id, --query, etc.) **must be confirmed with the user**. **Do not** assume or use default values without the user's explicit approval.
+>
+> **Interaction Mode Mandatory Rule**: For any step requiring user confirmation or selection (region, cluster, diagnosis scenario, execution confirmation, etc.), **must use option cards** — **forbidden** to require manual input. Specifically:
+> - Region confirmation → option cards (read `references/region-list.md` for options, see Section 1.2 region confirmation rules) — **Product knowledge Q&A does not require this step**
+> - Cluster ID selection → option cards (generated from `describe-db-clusters` results) — **Product knowledge Q&A does not require this step**
+> - Diagnosis scenario selection → option cards (when user intent is unclear, list available diagnosis types)
+> - Pre-execution confirmation → option cards (e.g., "Continue" / "Cancel") — **Product knowledge Q&A does not require this step, execute directly**
 
-| 参数名 | 必填/可选 | 描述 | 默认值 |
-|--------|----------|------|--------|
-| `RegionId` | 必填 | 阿里云地域 ID | 无（需用户确认） |
-| `DBClusterId` | 必填 | ADB MySQL 集群 ID（`am-xxx` 或 `amv-xxx`） | 无（需用户确认） |
-| `StartTime` / `EndTime` | 可选 | 时间范围参数 | 最近 1 小时 |
+## 7. Best Practices
 
-## 八、最佳实践
+1. **CLI-First**: Prioritize using CLI commands for diagnosis; cluster management uses `aliyun adb`, intelligent diagnosis uses `aliyun adbai`
+2. **Command Output**: Every API call must output the complete command string at the beginning of the response
+3. **Error Handling**: When cluster ID does not exist, guide the user to select the correct cluster instead of failing directly
+4. **Product Boundary**: Only handle ADB MySQL clusters (ID prefix `am-` or `amv-`), do not mix other product APIs
+5. **Options First**: For any step requiring user confirmation or selection, always use option cards; do not require manual input
 
-1. **CLI-First**：优先使用 `aliyun adb` CLI 命令进行诊断
-2. **时间校验**：涉及时间范围查询时，必须先获取当前 UTC 时间再计算
-3. **命令输出**：每次 API 调用必须在回复开头输出完整命令字符串
-4. **错误处理**：集群 ID 不存在时，应引导用户选择正确集群而非直接失败
-5. **产品边界**：仅处理 ADB MySQL 集群（ID 前缀 `am-` 或 `amv-`），不混用其他产品 API
+## 8. Reference Links
 
-## 九、参考链接
-
-| 参考文件 | 内容 |
+| Reference File | Content |
 |----------|------|
-| `references/ram-policies.md` | RAM 权限列表 |
-| `references/verification-method.md` | 验证方法 |
-| `references/cli-installation-guide.md` | Aliyun CLI 安装指南 |
-| `references/cluster-info.md` | 集群信息查询详细步骤 |
-| `references/slow-query-diagnosis.md` | 慢查询诊断详细步骤 |
-| `references/table-modeling-diagnosis.md` | 实例空间诊断流程 |
+| `references/ram-policies.md` | RAM permission list |
+| `references/verification-method.md` | Verification methods |
+| `references/cli-installation-guide.md` | Aliyun CLI installation guide |
+| `references/region-list.md` | Alibaba Cloud region ID list |
+| `references/cluster-info.md` | Cluster info query detailed steps |
+| `references/cluster-diagnosis.md` | Cluster intelligent diagnosis detailed steps |

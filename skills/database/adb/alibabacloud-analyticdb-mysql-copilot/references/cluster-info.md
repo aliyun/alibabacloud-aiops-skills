@@ -1,96 +1,96 @@
-# 集群信息查询
+# Cluster Information Query
 
-> **🚨🚨🚨 MUST | P0 | NON-NEGOTIABLE — 执行检查清单 🚨🚨🚨**
+> **🚨🚨🚨 MUST | P0 | NON-NEGOTIABLE — Execution Checklist 🚨🚨🚨**
 >
-> 当用户询问集群信息时，**必须执行以下检查项**：
+> When the user asks about cluster information, **the following checks must be executed**:
 >
-> - [ ] **MUST**：根据用户需求执行对应的 `aliyun adb DescribeDBClusters` 或 `DescribeDBClusterAttribute` 命令
-> - [ ] **MUST**：在回复**第一行**输出命令字符串，格式：`执行命令：aliyun adb <APIName> --RegionId <region-id>`
-> - [ ] **NON-NEGOTIABLE**：不得跳过API调用直接给出建议
+> - [ ] **MUST**: Execute the corresponding `aliyun adb describe-db-clusters` or `describe-db-cluster-attribute` command based on user needs
+> - [ ] **MUST**: Output the command string on the **first line** of the response, format: `Command executed: aliyun adb <command-name> --biz-region-id <region-id>`
+> - [ ] **NON-NEGOTIABLE**: Do not skip API call and directly give advice
 >
-> **违反任一检查项 = 任务失败**
+> **Violating any checklist item = task failure**
 
-当用户想了解"有哪些实例"、"实例配置是什么"、"集群状态"等信息时，按以下步骤操作。
+When the user wants to know "what instances exist", "what is the instance configuration", "cluster status", etc., follow the steps below.
 
-## 一、查询集群列表
+## 1. Query Cluster List
 
-**回复格式模板**（必须遵守）：
+**Response Format Template** (must be followed):
 ```
-执行命令：`aliyun adb DescribeDBClusters --RegionId <region-id>`
+Command executed: `aliyun adb describe-db-clusters --biz-region-id <region-id> --region <region-id>`
 
-[查询结果、表格等内容]
+[Query results, tables, etc.]
 ```
 
-列出指定地域下的所有 ADB MySQL 集群：
+List all ADB MySQL clusters under the specified region:
 
 ```bash
-aliyun adb DescribeDBClusters --version 2021-12-01 --RegionId <region-id> --DBClusterVersion All --PageNumber 1 --PageSize 100
+aliyun adb describe-db-clusters --api-version 2021-12-01 --biz-region-id <region-id> --region <region-id>
 ```
 
-## 二、查询集群详细属性
+## 2. Query Cluster Detailed Attributes
 
-获取单个集群的完整配置信息（规格、VPC、存储、版本等）：
+Get complete configuration information for a single cluster (specification, VPC, storage, version, etc.):
 
 ```bash
-aliyun adb DescribeDBClusterAttribute --version 2021-12-01 --RegionId <region-id> --DBClusterId <cluster-id>
+aliyun adb describe-db-cluster-attribute --api-version 2021-12-01 --biz-region-id <region-id> --region <region-id> --db-cluster-id <cluster-id>
 ```
 
-**返回值关键字段**：
+**Key Fields in Response**:
 
-| 字段 | 含义 |
+| Field | Meaning |
 |------|------|
-| `DBClusterId` | 集群 ID |
-| `DBClusterDescription` | 集群描述 / 别名 |
-| `DBClusterStatus` | 集群状态（Running、Stopped 等） |
-| `DBClusterType` | 集群类型 |
-| `CommodityCode` | 计费方式 |
-| `ComputeResource` | 计算资源规格 |
-| `StorageResource` | 存储资源规格 |
-| `DBVersion` | 内核版本 |
-| `VPCId` / `VSwitchId` | 网络信息 |
-| `ConnectionString` | 连接地址 |
-| `Port` | 端口 |
-| `CreationTime` | 创建时间 |
-| `ExpireTime` | 到期时间（包年包月时有效） |
+| `DBClusterId` | Cluster ID |
+| `DBClusterDescription` | Cluster description / alias |
+| `DBClusterStatus` | Cluster status (Running, Stopped, etc.) |
+| `DBClusterType` | Cluster type |
+| `CommodityCode` | Billing method |
+| `ComputeResource` | Compute resource specification |
+| `StorageResource` | Storage resource specification |
+| `DBVersion` | Kernel version |
+| `VPCId` / `VSwitchId` | Network information |
+| `ConnectionString` | Connection address |
+| `Port` | Port |
+| `CreationTime` | Creation time |
+| `ExpireTime` | Expiration time (valid for subscription billing) |
 
-## 三、查询存储空间概览
+## 3. Query Storage Space Overview
 
-了解集群的磁盘使用情况：
+Understand the cluster's disk usage:
 
 ```bash
-aliyun adb DescribeDBClusterSpaceSummary --version 2021-12-01 --RegionId <region-id> --DBClusterId <cluster-id>
+aliyun adb describe-db-cluster-space-summary --api-version 2021-12-01 --biz-region-id <region-id> --region <region-id> --db-cluster-id <cluster-id>
 ```
 
-**返回值关键字段**：
+**Key Fields in Response**:
 
-| 字段 | 含义 |
+| Field | Meaning |
 |------|------|
-| `TotalSize` | 总数据大小（单位：字节） |
-| **HotData** | **热数据信息** |
-| `HotData.TotalSize` | 热数据总大小（字节） |
-| `HotData.DataSize` | 表记录数据大小（字节） |
-| `HotData.IndexSize` | 普通索引数据大小（字节） |
-| `HotData.PrimaryKeyIndexSize` | 主键索引数据大小（字节） |
-| `HotData.OtherSize` | 其他数据大小（字节） |
-| **ColdData** | **冷数据信息** |
-| `ColdData.TotalSize` | 冷数据总大小（字节） |
-| `ColdData.DataSize` | 表记录数据大小（字节） |
-| `ColdData.IndexSize` | 普通索引数据大小（字节） |
-| `ColdData.PrimaryKeyIndexSize` | 主键索引数据大小（字节） |
-| `ColdData.OtherSize` | 其他数据大小（字节） |
-| **DataGrowth** | **数据增长信息** |
-| `DataGrowth.DayGrowth` | 最近一天数据增长量（字节） |
-| `DataGrowth.WeekGrowth` | 最近七天的日均数据增长量（字节） |
+| `TotalSize` | Total data size (unit: bytes) |
+| **HotData** | **Hot data information** |
+| `HotData.TotalSize` | Hot data total size (bytes) |
+| `HotData.DataSize` | Table record data size (bytes) |
+| `HotData.IndexSize` | Regular index data size (bytes) |
+| `HotData.PrimaryKeyIndexSize` | Primary key index data size (bytes) |
+| `HotData.OtherSize` | Other data size (bytes) |
+| **ColdData** | **Cold data information** |
+| `ColdData.TotalSize` | Cold data total size (bytes) |
+| `ColdData.DataSize` | Table record data size (bytes) |
+| `ColdData.IndexSize` | Regular index data size (bytes) |
+| `ColdData.PrimaryKeyIndexSize` | Primary key index data size (bytes) |
+| `ColdData.OtherSize` | Other data size (bytes) |
+| **DataGrowth** | **Data growth information** |
+| `DataGrowth.DayGrowth` | Last day data growth amount (bytes) |
+| `DataGrowth.WeekGrowth` | Last 7 days average daily data growth amount (bytes) |
 
-> **计算公式**：
-> - 总数据大小 = 热数据大小 + 冷数据大小
-> - 热数据大小 = 表记录数据 + 普通索引 + 主键索引 + 其他数据
-> - 最近七天日均增长 = (当前数据大小 - 7天前数据大小) / 7
+> **Calculation Formula**:
+> - Total data size = Hot data size + Cold data size
+> - Hot data size = Table record data + Regular index + Primary key index + Other data
+> - Last 7 days average daily growth = (Current data size - 7 days ago data size) / 7
 
-## 四、常见使用场景
+## 4. Common Use Cases
 
-- **用户说"帮我看看有哪些 ADB 实例"** → 执行步骤 1
-- **用户说"amv-xxx 这个实例是什么配置"** → 执行步骤 2
-- **用户说"这个集群快到期了吗"** → 执行步骤 2，查看 `ExpireTime`
-- **用户说"磁盘还剩多少空间"** → 执行步骤 3
-- **用户不知道 cluster-id** → 先执行步骤 1 获取列表，再选择目标集群执行后续操作
+- **User says "help me see what ADB instances exist"** → Execute step 1
+- **User says "what is the configuration of instance amv-xxx"** → Execute step 2
+- **User says "is this cluster about to expire"** → Execute step 2, check `ExpireTime`
+- **User says "how much disk space is left"** → Execute step 3
+- **User doesn't know cluster-id** → First execute step 1 to get the list, then select the target cluster for subsequent operations

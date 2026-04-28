@@ -1,168 +1,132 @@
 # Acceptance Criteria: alibabacloud-analyticdb-mysql-copilot
 
-**Scenario**: ADB MySQL 运维诊断
-**Purpose**: Skill 测试验收标准
+**Scenario**: ADB MySQL Operations & Diagnosis
+**Purpose**: Skill test acceptance criteria
 
 ---
 
-# 正确的 CLI 命令模式
+# Correct CLI Command Patterns
 
-## 1. Product — 验证产品名存在
+## 1. Product — Verify Product Name Exists
 
 #### ✅ CORRECT
 ```bash
-aliyun adb DescribeDBClusters --RegionId cn-hangzhou --user-agent AlibabaCloud-Agent-Skills
+aliyun adb describe-db-clusters --biz-region-id cn-hangzhou --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-mysql-copilot
+aliyun adbai describe-chat-message --region cn-beijing --endpoint adbai.cn-beijing.aliyuncs.com --biz-region-id cn-hangzhou --query "What is BUILD" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-mysql-copilot
 ```
 
 #### ❌ INCORRECT
 ```bash
-aliyun adbx DescribeDBClusters --RegionId cn-hangzhou  # 产品名不存在
-aliyun ADB DescribeDBClusters --RegionId cn-hangzhou   # 产品名应小写
+aliyun adbx describe-db-clusters --biz-region-id cn-hangzhou  # Product name does not exist
+aliyun ADB describe-db-clusters --biz-region-id cn-hangzhou   # Product name should be lowercase
+aliyun adb describe-chat-message                       # Product name mismatch, should be adbai
 ```
 
-## 2. Command — 验证 Action 存在
+## 2. Command — Verify Action Exists
 
 #### ✅ CORRECT
 ```bash
-aliyun adb describe-db-clusters --RegionId cn-hangzhou --user-agent AlibabaCloud-Agent-Skills
-aliyun adb DescribeDBClusters --RegionId cn-hangzhou --user-agent AlibabaCloud-Agent-Skills
+aliyun adb describe-db-clusters --biz-region-id cn-hangzhou --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-mysql-copilot
+aliyun adbai describe-chat-message --region cn-beijing --endpoint adbai.cn-beijing.aliyuncs.com --biz-region-id cn-hangzhou --query "What is BUILD" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-mysql-copilot
 ```
 
 #### ❌ INCORRECT
 ```bash
-aliyun adb GetDBClusters --RegionId cn-hangzhou   # Action 名称错误
-aliyun adb list-clusters --RegionId cn-hangzhou   # Action 名称错误
+aliyun adb GetDBClusters --biz-region-id cn-hangzhou   # Action name incorrect
+aliyun adb list-clusters --biz-region-id cn-hangzhou   # Action name incorrect
+aliyun adbai describe-chat --biz-region-id cn-hangzhou # Action name incomplete
 ```
 
-## 3. Parameters — 验证参数名存在
+## 3. Parameters — Verify Parameter Names Exist
 
 #### ✅ CORRECT
 ```bash
-aliyun adb DescribeDBClusters --RegionId cn-hangzhou --PageNumber 1 --PageSize 100 --user-agent AlibabaCloud-Agent-Skills
-aliyun adb DescribeDBClusterAttribute --RegionId cn-hangzhou --DBClusterId am-xxx --user-agent AlibabaCloud-Agent-Skills
+# Cluster management (aliyun adb): parameters use camelCase naming
+aliyun adb describe-db-clusters --biz-region-id cn-hangzhou --region cn-hangzhou --page-number 1 --page-size 100 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-mysql-copilot
+aliyun adb describe-db-cluster-attribute --biz-region-id cn-hangzhou --region cn-hangzhou --db-cluster-id am-xxx --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-mysql-copilot
+
+# Intelligent diagnosis (aliyun adbai)
+aliyun adbai describe-chat-message --region cn-beijing --endpoint adbai.cn-beijing.aliyuncs.com --biz-region-id cn-hangzhou --query "What is BUILD" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-mysql-copilot
 ```
 
 #### ❌ INCORRECT
 ```bash
-aliyun adb DescribeDBClusters --region-id cn-hangzhou          # 参数名格式错误（应使用驼峰）
-aliyun adb DescribeDBClusterAttribute --RegionId cn-hangzhou   # 缺少 --DBClusterId
-aliyun adb DescribeDBClusterAttribute --DBClusterId am-xxx     # 缺少 --RegionId（本 Skill 强制要求）
+aliyun adb describe-db-clusters --RegionId cn-hangzhou          # Parameter name format incorrect (should use --biz-region-id)
+aliyun adb describe-db-cluster-attribute --biz-region-id cn-hangzhou --region cn-hangzhou   # Missing --db-cluster-id
+aliyun adb describe-db-cluster-attribute --db-cluster-id am-xxx     # Missing --biz-region-id, --region (this Skill mandates them)
+aliyun adbai describe-chat-message --biz-region-id cn-hangzhou     # Missing --region, --endpoint
 ```
 
-## 4. Enum Values — 验证枚举值有效
+## 4. Parameter Value Formats — Verify Parameter Value Format
 
-#### ✅ CORRECT
+#### ✅ CORRECT (Query Format)
 ```bash
-# DescribeAvailableAdvices --PageSize
-aliyun adb DescribeAvailableAdvices --RegionId cn-hangzhou --DBClusterId am-xxx \
-  --AdviceDate 20260322 --PageNumber 1 --PageSize 30 --Lang zh \
-  --user-agent AlibabaCloud-Agent-Skills
+# Instance diagnosis: Query includes cluster ID + natural language question
+aliyun adbai describe-chat-message --region cn-beijing --endpoint adbai.cn-beijing.aliyuncs.com --biz-region-id cn-hangzhou --query "am-xxx slow query diagnosis for the last 3 hours" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-mysql-copilot
 
-# DescribeInclinedTables --TableType
-aliyun adb DescribeInclinedTables --RegionId cn-hangzhou --DBClusterId am-xxx \
-  --TableType FactTable --PageSize 30 --Lang zh \
-  --user-agent AlibabaCloud-Agent-Skills
+# Product knowledge Q&A: Query asks directly
+aliyun adbai describe-chat-message --region cn-beijing --endpoint adbai.cn-beijing.aliyuncs.com --biz-region-id cn-hangzhou --query "What is BUILD" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-mysql-copilot
 ```
 
-#### ❌ INCORRECT
+#### ❌ INCORRECT (Query Format)
 ```bash
-# PageSize 只允许 30/50/100
-aliyun adb DescribeAvailableAdvices --PageSize 20   # 无效值
-
-# AdviceDate 格式错误
-aliyun adb DescribeAvailableAdvices --AdviceDate 2026-03-22   # 应为 20260322
-aliyun adb DescribeAvailableAdvices --AdviceDate "2026-03-22T00:00:00Z"  # 格式错误
-```
-
-## 5. Parameter Value Formats — 验证参数值格式
-
-#### ✅ CORRECT (时间格式)
-```bash
-# ISO 8601 UTC（用于 Performance/BadSQL/SQLPatterns）
-aliyun adb DescribeDBClusterPerformance --StartTime 2026-03-20T07:00Z --EndTime 2026-03-20T08:00Z
-
-# Unix 毫秒（用于 DescribeDiagnosisRecords）
-aliyun adb DescribeDiagnosisRecords --StartTime 1742475600000 --EndTime 1742479200000
-
-# QueryCondition JSON
-aliyun adb DescribeDiagnosisRecords --QueryCondition '{"Type":"status","Value":"running"}'
-```
-
-#### ❌ INCORRECT (时间格式)
-```bash
-# 时间格式混用
-aliyun adb DescribeDiagnosisRecords --StartTime 2026-03-20T07:00Z   # 应为 Unix 毫秒
-aliyun adb DescribeDBClusterPerformance --StartTime 1742475600000   # 应为 ISO 8601
-
-# QueryCondition 格式错误
-aliyun adb DescribeDiagnosisRecords --QueryCondition "status=running"  # 应为 JSON
-```
-
-## 6. User-Agent Flag — 验证 --user-agent 存在
-
-#### ✅ CORRECT
-```bash
-aliyun adb DescribeDBClusters --RegionId cn-hangzhou --user-agent AlibabaCloud-Agent-Skills
-```
-
-#### ❌ INCORRECT
-```bash
-aliyun adb DescribeDBClusters --RegionId cn-hangzhou   # 缺少 --user-agent
+# Instance diagnosis Query missing cluster ID
+aliyun adbai describe-chat-message --biz-region-id cn-hangzhou --query "slow query diagnosis for the last 3 hours"  # Missing --region, --endpoint
 ```
 
 ---
 
-# 正确的回复输出模式
+# Correct Response Output Patterns
 
-## 1. 命令字符串必须在回复开头
+## 1. Command String Must Be at the Beginning of the Response
 
 #### ✅ CORRECT
 ```
-执行命令：`aliyun adb DescribeDBClusters --RegionId cn-hangzhou`
+Command executed: `aliyun adb describe-db-clusters --biz-region-id cn-hangzhou --region cn-hangzhou`
 
-查询完成！杭州区域共有 2 个 ADB MySQL 集群...
+Query complete! There are 2 ADB MySQL clusters in the Hangzhou region...
 ```
 
 #### ❌ INCORRECT
 ```
-查询完成！杭州区域共有 2 个集群... （未输出命令字符串）
+Query complete! There are 2 clusters in the Hangzhou region... (command string not output)
 
-我调用了API查询集群列表... （未输出完整命令）
+I called the API to query the cluster list... (complete command not output)
 
-集群列表如下... 命令：aliyun adb DescribeDBClusters... （命令在末尾）
+Cluster list below... Command: aliyun adb describe-db-clusters... (command at the end)
 ```
 
-## 2. 必须执行 API 调用
+## 2. Must Execute API Calls
 
 #### ✅ CORRECT
-- 用户问"查看集群列表" → 执行 `DescribeDBClusters`
-- 用户问"数据倾斜诊断" → 执行 `DescribeInclinedTables`
-- 用户问"BadSQL检测" → 执行 `DescribeBadSqlDetection`
+- User asks "view cluster list" → Execute `describe-db-clusters`
+- User asks "data skew diagnosis", "BadSQL detection", "slow query diagnosis", "instance health inspection" and other diagnosis questions → Execute `describe-chat-message`
 
 #### ❌ INCORRECT
-- 用户问"查看集群列表" → 直接输出文档内容，不调用 API
-- 用户问"数据倾斜诊断" → 仅解释数据倾斜概念，不调用 API
-- 用户问"BadSQL检测" → 给出通用优化建议，不调用 API
+- User asks "view cluster list" → Directly output documentation content, not calling API
+- User asks "data skew diagnosis" → Only explain data skew concept, not calling API
+- User asks "BadSQL detection" → Give general optimization suggestions, not calling API
 
 ---
 
-# 正确的产品边界判断
+# Correct Product Boundary Judgment
 
-## 1. 集群 ID 识别
-
-#### ✅ CORRECT
-- `am-xxx` 或 `amv-xxx` → ADB MySQL，使用 `aliyun adb` 命令
-- 无需通过其他产品 API 验证归属
-
-#### ❌ INCORRECT
-- `am-xxx` → 使用 `aliyun rds` 验证 → 失败
-- `am-xxx` → 使用 `aliyun polardb` 验证 → 失败
-
-## 2. 产品边界告知
+## 1. Cluster ID Identification
 
 #### ✅ CORRECT
-- 用户提到 Elasticsearch → 告知"本 Skill 仅适用于 ADB MySQL"
-- 用户提到 RDS MySQL → 告知"本 Skill 仅适用于 ADB MySQL"
+- `am-xxx` or `amv-xxx` → ADB MySQL, cluster management uses `aliyun adb`, intelligent diagnosis uses `aliyun adbai`
+- No need to verify ownership through other product APIs
 
 #### ❌ INCORRECT
-- 用户提到 Elasticsearch → 尝试使用 `aliyun adb` 命令 → 失败
+- `am-xxx` → Use `aliyun rds` to verify → Failure
+- `am-xxx` → Use `aliyun polardb` to verify → Failure
+- `am-xxx` → Use `aliyun adb describe-chat-message` → Failure (product name mismatch, should be adbai)
+
+## 2. Product Boundary Notification
+
+#### ✅ CORRECT
+- User mentions Elasticsearch → Inform "This Skill only applies to ADB MySQL"
+- User mentions RDS MySQL → Inform "This Skill only applies to ADB MySQL"
+
+#### ❌ INCORRECT
+- User mentions Elasticsearch → Attempt to use `aliyun adb` command → Failure
