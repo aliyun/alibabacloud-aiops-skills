@@ -177,7 +177,7 @@ aliyun agentexplorer search-skills --keyword "ECS" --user-agent AlibabaCloud-Age
 aliyun agentexplorer list-categories --region cn-hangzhou --user-agent "MyAgent"
 
 # Passing --user-agent to a local management command (NOT supported)
-aliyun configure list --user-agent AlibabaCloud-Agent-Skills
+aliyun configure list
 aliyun configure set --auto-plugin-install true --user-agent AlibabaCloud-Agent-Skills
 aliyun plugin install --names agentexplorer --user-agent AlibabaCloud-Agent-Skills
 aliyun version --user-agent AlibabaCloud-Agent-Skills

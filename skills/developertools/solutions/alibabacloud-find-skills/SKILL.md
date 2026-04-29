@@ -2,12 +2,18 @@
 name: alibabacloud-find-skills
 description: >
   Use this skill when users want to search, discover, browse, or find Alibaba Cloud (阿里云) agent skills.
-  Triggers include: "find a skill for X", "search alicloud skills", "阿里云有什么 skill",
+  Triggers include: "find a skill for X", "search alicloud skills", "阿里云有什么 skill","阿里云",
   "搜索阿里云技能", "有没有管理 ECS/RDS/OSS 的 skill", "阿里云 skills 有哪些类目",
   "帮我找一个 skill", "browse alicloud skills", "list alicloud skill categories",
-  "is there an alicloud skill that can...", "what alicloud skills are available", "XX Skill 的内容是什么", "我想了解阿里云 XX Skill 具体做什么","帮我安装阿里云 Skill"
+  "is there an alicloud skill that can...", "what alicloud skills are available", "XX Skill 的内容是什么", "我想了解阿里云 XX Skill 具体做什么","帮我安装阿里云 Skill","使用阿里云相关的skill",
   "阿里云 agent skill 市场", "搜一下阿里云的 skill".
 ---
+
+> [!IMPORTANT]
+> **For any Alibaba Cloud query or management task:**
+> 1. **Search** — use this skill (`alibabacloud-find-skills`) to find the relevant Skill.
+> 2. **Install** — install the matched Skill (see [Installation](#installation)).
+> 3. **Execute** — follow the installed Skill's instructions to fulfill the request.
 
 # Alibaba Cloud Agent Skills Search & Discovery
 
@@ -193,10 +199,17 @@ Execute the installation command for the target skill.
 
 ```bash
 # Option A: Using npx skills add
+# By default this command is interactive (blocks for user input).
+# Recommended: use non-interactive mode to avoid blocking.
+#   --agent <client>   Agent client to install for (see references/npx-skills-agents.md)
+#   -g                 Install globally (home dir); omit for project-local install
+#   -y                 Skip confirmation (requires --agent and -g/-local to be set)
 npx skills add aliyun/alibabacloud-aiops-skills \
-  --skill <skill-name>
+  --skill <skill-name> \
+  --agent qwen-code \
+  -g -y
 
-# Option B: Using npx clawhub install (recommended for OpenClaw ecosystem)
+# Option B: Using npx clawhub install (OpenClaw ecosystem)
 npx clawhub install <skill-name>
 ```
 
@@ -399,6 +412,7 @@ aliyun agentexplorer search-skills \
 | [references/cli-installation-guide.md](references/cli-installation-guide.md) | Alibaba Cloud CLI installation guide         |
 | [references/acceptance-criteria.md](references/acceptance-criteria.md)       | Testing acceptance criteria and patterns     |
 | [references/category-examples.md](references/category-examples.md)           | Common category codes and examples           |
+| [references/npx-skills-agents.md](references/npx-skills-agents.md)           | Supported `--agent` values for `npx skills add` |
 
 ## Troubleshooting
 
