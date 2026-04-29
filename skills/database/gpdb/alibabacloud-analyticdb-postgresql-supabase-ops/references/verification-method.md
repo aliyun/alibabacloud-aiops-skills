@@ -11,7 +11,7 @@ This document describes how to verify whether ADBPG Supabase management operatio
 ```bash
 aliyun gpdb list-supabase-projects \
   --biz-region-id cn-beijing \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-supabase-ops
 ```
 
 **Success Indicators**:
@@ -26,7 +26,7 @@ aliyun gpdb list-supabase-projects \
 ```bash
 aliyun gpdb get-supabase-project \
   --project-id spb-xxxxx \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-supabase-ops
 ```
 
 **Success Indicators**:
@@ -67,7 +67,7 @@ for attempt in $(seq 1 "$MAX_PRIMARY"); do
     RAW=$(aliyun gpdb get-supabase-project \
       --project-id "$PROJECT_ID" \
       --read-timeout 90 \
-      --user-agent AlibabaCloud-Agent-Skills \
+      --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-supabase-ops \
       2>/dev/null) && break
     sleep 5
   done
@@ -94,12 +94,12 @@ done
 # 1. Execute pause
 aliyun gpdb pause-supabase-project \
   --project-id spb-xxxxx \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-supabase-ops
 
 # 2. Query status
 aliyun gpdb get-supabase-project \
   --project-id spb-xxxxx \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-supabase-ops
 ```
 
 **Success Indicators**:
@@ -115,12 +115,12 @@ aliyun gpdb get-supabase-project \
 # 1. Execute resume
 aliyun gpdb resume-supabase-project \
   --project-id spb-xxxxx \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-supabase-ops
 
 # 2. Query status
 aliyun gpdb get-supabase-project \
   --project-id spb-xxxxx \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-supabase-ops
 ```
 
 **Success Indicators**:
@@ -148,12 +148,12 @@ aliyun gpdb get-supabase-project \
 aliyun gpdb modify-supabase-project-security-ips \
   --project-id spb-xxxxx \
   --security-ip-list "10.0.0.1,10.0.0.2/24" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-supabase-ops
 
 # 2. Query project details to confirm whitelist
 aliyun gpdb get-supabase-project \
   --project-id spb-xxxxx \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-supabase-ops
 ```
 
 **Success Indicators**:
@@ -166,7 +166,7 @@ aliyun gpdb get-supabase-project \
 ```bash
 aliyun gpdb get-supabase-project-api-keys \
   --project-id spb-xxxxx \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-supabase-ops
 ```
 
 **Success Indicators**:
@@ -180,7 +180,7 @@ aliyun gpdb get-supabase-project-api-keys \
 ```bash
 aliyun gpdb get-supabase-project-dashboard-account \
   --project-id spb-xxxxx \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-supabase-ops
 ```
 
 **Success Indicators**:

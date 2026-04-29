@@ -16,7 +16,7 @@ Manage the full lifecycle of Supabase projects based on AnalyticDB PostgreSQL (A
 
 - This skill controls projects **provisioned on Alibaba Cloud** via **GPDB / `aliyun gpdb`** APIs.
 - **Do not** use the standalone **`supabase`** CLI (`supabase login`, `supabase projects list`, etc.) for create/list/pause/resume here — that targets **Supabase Cloud or self-hosted** stacks, **not** ADBPG-managed Supabase instances.
-- All lifecycle and query operations in this skill are **`aliyun gpdb …`** with **`--user-agent AlibabaCloud-Agent-Skills`**.
+- All lifecycle and query operations in this skill are **`aliyun gpdb …`** with **`--user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-supabase-ops`**.
 
 ### ProjectId format (`spb-`)
 
@@ -25,10 +25,28 @@ Manage the full lifecycle of Supabase projects based on AnalyticDB PostgreSQL (A
 
 ## Prerequisites
 
-> **Pre-check: Aliyun CLI >= 3.3.1 required**
-> Run `aliyun version` to verify >= 3.3.1. If not installed or version too low,
-> see [references/cli-installation-guide.md](references/cli-installation-guide.md) for installation instructions.
+> **Pre-check: Aliyun CLI >= 3.3.3 required**
+> Run `aliyun version` to verify >= 3.3.3. If not installed or version too low,
+> run `curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash` to install/update,
+> or see [references/cli-installation-guide.md](references/cli-installation-guide.md) for installation instructions.
 > Then **[MUST]** run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+> Then **[MUST]** run `aliyun plugin update` to ensure that any existing plugins on your local machine are always up-to-date.
+
+**[MUST] CLI User-Agent** — Every `aliyun` CLI command invocation must include:
+`--user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-supabase-ops`
+
+At the **start** of the Core Workflow (before any CLI invocation):
+**[MUST] Enable AI-Mode** — AI-mode is required for Agent Skill execution.
+Run the following commands before any CLI invocation:
+```bash
+aliyun configure ai-mode enable
+aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-supabase-ops"
+```
+**[MUST] Disable AI-Mode at EVERY exit point** — Before delivering the final response for ANY reason, always disable AI-mode first. This applies to ALL exit paths: workflow success, workflow failure, error/exception, user cancellation, session end, or any other scenario where no further CLI commands will be executed.
+AI-mode is only used for Agent Skill invocation scenarios and MUST NOT remain enabled after the skill stops running.
+```bash
+aliyun configure ai-mode disable
+```
 
 ## Credential Verification
 
@@ -97,7 +115,7 @@ Ensure the current account has the required permissions before executing operati
 
 ## Core Workflow
 
-All commands use `aliyun gpdb <command>` format, **must include `--user-agent AlibabaCloud-Agent-Skills`**.
+All commands use `aliyun gpdb <command>` format, **must include `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-supabase-ops`**.
 
 Per **[Final execution confirmation](#final-execution-confirmation-read-only-vs-mutating)**: read-only **list / get / describe** may run without a final execute prompt; **create, pause, resume, reset password, modify IPs** require **explicit final user confirmation** before invocation.
 
@@ -107,7 +125,7 @@ Per **[Final execution confirmation](#final-execution-confirmation-read-only-vs-
 aliyun gpdb list-supabase-projects \
   --biz-region-id cn-beijing \
   --max-results 20 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-supabase-ops
 ```
 
 - **Risk**: Low | Read-only — no final execution confirmation
@@ -117,7 +135,7 @@ aliyun gpdb list-supabase-projects \
 ```bash
 aliyun gpdb get-supabase-project \
   --project-id spb-xxxxx \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-supabase-ops
 ```
 
 - **Risk**: Low | Read-only — no final execution confirmation
@@ -127,7 +145,7 @@ aliyun gpdb get-supabase-project \
 ```bash
 aliyun gpdb get-supabase-project-api-keys \
   --project-id spb-xxxxx \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-supabase-ops
 ```
 
 - **Risk**: Low | Read-only — no final execution confirmation
@@ -138,7 +156,7 @@ aliyun gpdb get-supabase-project-api-keys \
 ```bash
 aliyun gpdb get-supabase-project-dashboard-account \
   --project-id spb-xxxxx \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-supabase-ops
 ```
 
 - **Risk**: Low | Read-only — no final execution confirmation
@@ -201,7 +219,7 @@ aliyun gpdb create-supabase-project \
   --disk-performance-level PL0 \
   --pay-type POSTPAY \
   --client-token "<ClientToken>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-supabase-ops
 ```
 
 Then proceed to **Success Verification** (polling) as described below.
@@ -230,7 +248,7 @@ aliyun gpdb create-supabase-project \
   --disk-performance-level PL0 \
   --pay-type POSTPAY \
   --client-token "$CLIENT_TOKEN" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-supabase-ops
 ```
 
 - **Risk**: High | **Final user confirmation** — full parameter plan approved before execution
@@ -242,7 +260,7 @@ aliyun gpdb create-supabase-project \
 ```bash
 aliyun gpdb pause-supabase-project \
   --project-id spb-xxxxx \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-supabase-ops
 ```
 
 - **Risk**: Medium | **Final user confirmation** required before execution
@@ -253,7 +271,7 @@ aliyun gpdb pause-supabase-project \
 ```bash
 aliyun gpdb resume-supabase-project \
   --project-id spb-xxxxx \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-supabase-ops
 ```
 
 - **Risk**: Medium | **Final user confirmation** required before execution (mutating)
@@ -264,7 +282,7 @@ aliyun gpdb resume-supabase-project \
 aliyun gpdb reset-supabase-project-password \
   --project-id spb-xxxxx \
   --account-password 'NewPass456!' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-supabase-ops
 ```
 
 - **Risk**: Medium | **Final user confirmation** required before execution
@@ -276,7 +294,7 @@ aliyun gpdb reset-supabase-project-password \
 aliyun gpdb modify-supabase-project-security-ips \
   --project-id spb-xxxxx \
   --security-ip-list "10.0.0.1,10.0.0.2/24" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-supabase-ops
 ```
 
 - **Risk**: Medium | **Final user confirmation** required before execution
@@ -313,7 +331,7 @@ for attempt in $(seq 1 "$MAX_PRIMARY"); do
     RAW=$(aliyun gpdb get-supabase-project \
       --project-id "$PROJECT_ID" \
       --read-timeout 90 \
-      --user-agent AlibabaCloud-Agent-Skills \
+      --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-supabase-ops \
       2>/dev/null) && break
     sleep 5
   done
@@ -345,7 +363,7 @@ If `jq` is unavailable, inspect the **get** output for `Status` each time; same 
 5. **`ProjectId`** is always **`spb-…`** — if the user’s id is wrong or unknown, use **`list-supabase-projects`** to resolve by name or id
 6. Never substitute **`supabase` CLI** for **`aliyun gpdb`** on this product
 7. Pausing projects saves costs while data is preserved
-8. All commands must include `--user-agent AlibabaCloud-Agent-Skills`
+8. All commands must include `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-supabase-ops`
 9. After **create**, always run **provisioning poll** (or confirm terminal failure) — do not treat “create returned ProjectId” as “instance ready”
 
 ## Reference Documents

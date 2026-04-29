@@ -2,7 +2,7 @@
 
 Official API: [CreateSupabaseProject](https://help.aliyun.com/zh/analyticdb/analyticdb-for-postgresql/developer-reference/api-gpdb-2016-05-03-createsupabaseproject) (ADBPG / GPDB).
 
-CLI command: `aliyun gpdb create-supabase-project` (plugin mode). Every invocation must include `--user-agent AlibabaCloud-Agent-Skills`.
+CLI command: `aliyun gpdb create-supabase-project` (plugin mode). Every invocation must include `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-supabase-ops`.
 
 **Rule**: The skill proposes **defaults** in the table below. The agent **must** show the user a filled-in plan (or short list of options) and obtain **explicit confirmation** or replacement values before calling create.
 
@@ -51,7 +51,7 @@ Per API: length **8–32**; at least **three** of: uppercase, lowercase, digit, 
 
 ## VPC / VSwitch discovery (when `VpcId` or `VSwitchId` is missing)
 
-Use **VPC OpenAPI via CLI** (requires `vpc:DescribeVSwitches` and usually `vpc:DescribeVpcs` — see [ram-policies.md](ram-policies.md)). Always add `--user-agent AlibabaCloud-Agent-Skills`.
+Use **VPC OpenAPI via CLI** (requires `vpc:DescribeVSwitches` and usually `vpc:DescribeVpcs` — see [ram-policies.md](ram-policies.md)). Always add `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-supabase-ops`.
 
 ### Step A — list VSwitches in the target zone (primary path)
 
@@ -60,7 +60,7 @@ aliyun vpc describe-vswitches \
   --biz-region-id <BizRegionId> \
   --zone-id <ZoneId> \
   --page-size 50 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-supabase-ops
 ```
 
 Use **`--pager`** (see `aliyun vpc describe-vswitches --help`) or increase **`--page-number`** until all VSwitches are collected.
@@ -77,7 +77,7 @@ Use **`--pager`** (see `aliyun vpc describe-vswitches --help`) or increase **`--
 aliyun vpc describe-vpcs \
   --biz-region-id <BizRegionId> \
   --page-size 50 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-supabase-ops
 ```
 
 Note: some CLI versions default **`--is-default`** in a way that limits results. If the list looks incomplete, run additional calls with `--is-default true` and `--is-default false` and merge by `VpcId`, or follow local `aliyun vpc describe-vpcs --help`.
