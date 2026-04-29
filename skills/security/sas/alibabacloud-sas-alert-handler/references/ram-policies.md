@@ -75,7 +75,7 @@ Verify whether the current user has the required permissions:
 
 ```bash
 # Test query permission
-aliyun sas DescribeSuspEvents --PageSize 1 --user-agent AlibabaCloud-Agent-Skills
+aliyun sas DescribeSuspEvents --PageSize 1 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-alert-handler
 
 # If "NoPermission" error is returned, it indicates missing permissions
 ```

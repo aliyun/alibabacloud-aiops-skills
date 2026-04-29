@@ -136,7 +136,7 @@ aliyun sas HandleSecurityEvents \
   --SecurityEventIds.1 7009607xx \
   --OperationCode block_ip \
   --OperationParams '{"expireTime":1773991205392}' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-alert-handler
 ```
 
 ### kill_and_quara (Kill and Quarantine Virus)
@@ -145,7 +145,7 @@ aliyun sas HandleSecurityEvents \
   --SecurityEventIds.1 7008619xx \
   --OperationCode kill_and_quara \
   --OperationParams '{"subOperation":"killAndQuaraFileByMd5andPath"}' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-alert-handler
 ```
 
 ### advance_mark_mis_info (Advanced Whitelist + Rules)
@@ -155,7 +155,7 @@ aliyun sas HandleSecurityEvents \
   --OperationCode advance_mark_mis_info \
   --OperationParams '{}' \
   --MarkMissParam '[{"uuid":"ALL","field":"loginSourceIp","operate":"strEqual","fieldValue":"59.82.xx.xx"}]' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-alert-handler
 ```
 
 ### ignore (Ignore)
@@ -164,7 +164,7 @@ aliyun sas HandleSecurityEvents \
   --SecurityEventIds.1 7009586xx \
   --OperationCode ignore \
   --OperationParams '{}' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-alert-handler
 ```
 
 ### manual_handled (Mark as Handled)
@@ -173,7 +173,7 @@ aliyun sas HandleSecurityEvents \
   --SecurityEventIds.1 7009586xx \
   --OperationCode manual_handled \
   --OperationParams '{}' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-alert-handler
 ```
 
 ### virus_quara (Quarantine File)
@@ -182,7 +182,7 @@ aliyun sas HandleSecurityEvents \
   --SecurityEventIds.1 7008619xx \
   --OperationCode virus_quara \
   --OperationParams '{"subOperation":"quaraFileByMd5andPath"}' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-alert-handler
 ```
 
 ### quara (Quarantine)
@@ -191,7 +191,7 @@ aliyun sas HandleSecurityEvents \
   --SecurityEventIds.1 7008619xx \
   --OperationCode quara \
   --OperationParams '{}' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-alert-handler
 ```
 
 ---

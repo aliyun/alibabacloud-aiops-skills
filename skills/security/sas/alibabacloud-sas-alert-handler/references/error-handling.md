@@ -33,7 +33,7 @@ aliyun sas DescribeSuspEvents \
   --CurrentPage 1 \
   --PageSize 100 \
   --Dealed Y \
-  --user-agent AlibabaCloud-Agent-Skills 2>/dev/null | grep -A 20 -B 5 "{AlertID}"
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-alert-handler 2>/dev/null | grep -A 20 -B 5 "{AlertID}"
 ```
 
 ### Step 2: Result Determination
@@ -83,7 +83,7 @@ aliyun sas DescribeSuspEvents \
   --CurrentPage 1 \
   --PageSize 10 \
   --Dealed N \
-  --user-agent AlibabaCloud-Agent-Skills 2>/dev/null | jq '.SuspEvents[] | {Id, Name: .AlarmEventNameDisplay, Level, InternetIp, EventStatus, LastTime}'
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-alert-handler 2>/dev/null | jq '.SuspEvents[] | {Id, Name: .AlarmEventNameDisplay, Level, InternetIp, EventStatus, LastTime}'
 ```
 
 Display format:
@@ -144,7 +144,7 @@ Please confirm:
 aliyun sas DescribeSecurityEventOperationStatus \
   --TaskId {TaskID} \
   --SecurityEventIds.1 {AlertID} \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-alert-handler
 ```
 
 ---

@@ -18,7 +18,7 @@ aliyun sas DescribeSuspEvents \
   --PageSize 5 \
   --Levels "serious,suspicious,remind" \
   --Dealed N \
-  --user-agent AlibabaCloud-Agent-Skills 2>/dev/null | jq '.Count, .TotalCount'
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-alert-handler 2>/dev/null | jq '.Count, .TotalCount'
 ```
 
 ### Success Indicators
@@ -45,7 +45,7 @@ aliyun sas DescribeSuspEvents \
 aliyun sas DescribeSecurityEventOperations \
   --SecurityEventId {AlertID} \
   --Lang zh \
-  --user-agent AlibabaCloud-Agent-Skills 2>/dev/null | jq '.SecurityEventOperationsResponse[] | {OperationCode, UserCanOperate}'
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-alert-handler 2>/dev/null | jq '.SecurityEventOperationsResponse[] | {OperationCode, UserCanOperate}'
 ```
 
 ### Success Indicators
@@ -73,7 +73,7 @@ aliyun sas HandleSecurityEvents \
   --SecurityEventIds.1 {AlertID} \
   --OperationCode {OperationCode} \
   --OperationParams '{}' \
-  --user-agent AlibabaCloud-Agent-Skills 2>/dev/null | jq '.HandleSecurityEventsResponse.TaskId'
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-alert-handler 2>/dev/null | jq '.HandleSecurityEventsResponse.TaskId'
 ```
 
 ### Success Indicators
@@ -99,7 +99,7 @@ aliyun sas HandleSecurityEvents \
 aliyun sas DescribeSecurityEventOperationStatus \
   --TaskId {TaskID} \
   --SecurityEventIds.1 {AlertID} \
-  --user-agent AlibabaCloud-Agent-Skills 2>/dev/null | jq '.SecurityEventOperationStatusResponse'
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-alert-handler 2>/dev/null | jq '.SecurityEventOperationStatusResponse'
 ```
 
 ### Success Indicators
@@ -118,7 +118,7 @@ sleep 2
 aliyun sas DescribeSecurityEventOperationStatus \
   --TaskId {TaskID} \
   --SecurityEventIds.1 {AlertID} \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-alert-handler
 ```
 
 ### Polling Logic
@@ -134,7 +134,7 @@ while [ $RETRY -lt $MAX_RETRY ]; do
   RESULT=$(aliyun sas DescribeSecurityEventOperationStatus \
     --TaskId $TASK_ID \
     --SecurityEventIds.1 $EVENT_ID \
-    --user-agent AlibabaCloud-Agent-Skills 2>/dev/null)
+    --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-alert-handler 2>/dev/null)
   
   STATUS=$(echo $RESULT | jq -r '.SecurityEventOperationStatusResponse.TaskStatus')
   
@@ -165,7 +165,7 @@ After successful handling, re-query the alert to confirm status change:
 ```bash
 aliyun sas DescribeSuspEvents \
   --Id {AlertID} \
-  --user-agent AlibabaCloud-Agent-Skills 2>/dev/null | jq '.SuspEvents[0] | {Id, EventStatus, Dealed: (.Dealed // "unknown")}'
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-alert-handler 2>/dev/null | jq '.SuspEvents[0] | {Id, EventStatus, Dealed: (.Dealed // "unknown")}'
 ```
 
 ### Status Reference Table
@@ -204,7 +204,7 @@ aliyun sas DescribeSuspEvents \
 echo "=== Step 1: Query Alert List ==="
 EVENTS=$(aliyun sas DescribeSuspEvents \
   --Lang zh --From sas --PageSize 5 --Dealed N \
-  --user-agent AlibabaCloud-Agent-Skills 2>/dev/null)
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-alert-handler 2>/dev/null)
 
 COUNT=$(echo $EVENTS | jq '.Count')
 echo "Found $COUNT pending alerts"
@@ -222,7 +222,7 @@ echo ""
 echo "=== Step 2: Query Available Operations ==="
 OPS=$(aliyun sas DescribeSecurityEventOperations \
   --SecurityEventId $EVENT_ID --Lang zh \
-  --user-agent AlibabaCloud-Agent-Skills 2>/dev/null)
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-alert-handler 2>/dev/null)
 
 echo "Available operations:"
 echo $OPS | jq '.SecurityEventOperationsResponse[] | select(.UserCanOperate==true) | .OperationCode'

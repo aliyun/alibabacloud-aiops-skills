@@ -23,14 +23,29 @@ This skill helps users query and handle CWPP host security alerts from Alibaba C
 
 ## Installation Requirements
 
-> **Pre-check: Aliyun CLI >= 3.3.1**
-> Run `aliyun version` to verify version >= 3.3.1. If not installed or version is too low,
-> see `references/cli-installation-guide.md` for installation instructions.
-> Then [MUST] run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+**Pre-check: Aliyun CLI >= 3.3.3 required**
+> Run `aliyun version` to verify >= 3.3.3. If not installed or version too low,
+> run `curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash` to update,
+> or see `references/cli-installation-guide.md` for installation instructions.
 
+**Pre-check: Aliyun CLI plugin update required**
+> [MUST] run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+> [MUST] run `aliyun plugin update` to ensure that any existing plugins are always up-to-date.
+
+**[MUST] CLI User-Agent** — Every `aliyun` CLI command invocation must include:
+`--user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-alert-handler`
+
+At the **start** of the Core Workflow (before any CLI invocation):
+**[MUST] Enable AI-Mode** — AI-mode is required for Agent Skill execution.
+Run the following commands before any CLI invocation:
 ```bash
-aliyun version
-aliyun configure set --auto-plugin-install true
+aliyun configure ai-mode enable
+aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-sas-alert-handler"
+```
+**[MUST] Disable AI-Mode at EVERY exit point** — Before delivering the final response for ANY reason, always disable AI-mode first. This applies to ALL exit paths: workflow success, workflow failure, error/exception, user cancellation, session end, or any other scenario where no further CLI commands will be executed.
+AI-mode is only used for Agent Skill invocation scenarios and MUST NOT remain enabled after the skill stops running.
+```bash
+aliyun configure ai-mode disable
 ```
 
 ---
@@ -85,7 +100,7 @@ For detailed policies, see [references/ram-policies.md](references/ram-policies.
 aliyun sas DescribeSecurityEventOperations \
   --SecurityEventId {AlertID} \
   --Lang zh \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-alert-handler
 ```
 - **Success** → Alert exists, proceed to Step 5
 - **Failure** (`SecurityEventNotExists`) → See [references/error-handling.md](references/error-handling.md)
@@ -104,7 +119,7 @@ aliyun sas DescribeSuspEvents \
   --PageSize 10 \
   --Levels "serious,suspicious,remind" \
   --Dealed N \
-  --user-agent AlibabaCloud-Agent-Skills 2>/dev/null | jq '.SuspEvents[] | {Id, Name: .AlarmEventNameDisplay, AlarmEventType, Level, InternetIp, IntranetIp, LastTime, EventStatus, Uuid}'
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-alert-handler 2>/dev/null | jq '.SuspEvents[] | {Id, Name: .AlarmEventNameDisplay, AlarmEventType, Level, InternetIp, IntranetIp, LastTime, EventStatus, Uuid}'
 ```
 
 **Key Response Fields:**
@@ -167,7 +182,7 @@ Please select (enter number):
 aliyun sas DescribeSecurityEventOperations \
   --SecurityEventId {AlertID} \
   --Lang zh \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-alert-handler
 ```
 
 **⚠️ Critical: Only execute operations where `UserCanOperate=true`**
@@ -194,7 +209,7 @@ aliyun sas HandleSecurityEvents \
   --SecurityEventIds.1 7009586xx \
   --OperationCode ignore \
   --OperationParams '{}' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-alert-handler
 ```
 
 **Example - kill_and_quara:**
@@ -203,7 +218,7 @@ aliyun sas HandleSecurityEvents \
   --SecurityEventIds.1 7008619xx \
   --OperationCode kill_and_quara \
   --OperationParams '{"subOperation":"killAndQuaraFileByMd5andPath"}' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-alert-handler
 ```
 
 **Example - block_ip (7 days):**
@@ -213,7 +228,7 @@ aliyun sas HandleSecurityEvents \
   --SecurityEventIds.1 7009607xx \
   --OperationCode block_ip \
   --OperationParams '{"expireTime":1773991205392}' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-alert-handler
 ```
 
 **Example - advance_mark_mis_info:**
@@ -223,7 +238,7 @@ aliyun sas HandleSecurityEvents \
   --OperationCode advance_mark_mis_info \
   --OperationParams '{}' \
   --MarkMissParam '[{"uuid":"ALL","field":"loginSourceIp","operate":"strEqual","fieldValue":"59.82.xx.xx"}]' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-alert-handler
 ```
 
 > **⚠️ For advanced whitelist (advance_mark_mis_info):**
@@ -243,7 +258,7 @@ For complete CLI examples and parameter details, see [references/workflow-detail
 aliyun sas DescribeSecurityEventOperationStatus \
   --TaskId 290511xx \
   --SecurityEventIds.1 7009607xx \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-alert-handler
 ```
 
 **Polling Logic:**
