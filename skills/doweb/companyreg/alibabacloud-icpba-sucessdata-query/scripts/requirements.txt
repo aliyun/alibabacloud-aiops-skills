@@ -1,0 +1,3 @@
+alibabacloud-credentials==1.0.3
+alibabacloud-tea-openapi==0.4.1
+alibabacloud-tea-util==0.3.13
