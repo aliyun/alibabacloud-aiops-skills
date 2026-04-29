@@ -123,7 +123,15 @@ schema.add_function(my_function)
 ```python
 from pymilvus import MilvusClient, DataType, Function, FunctionType
 
-client = MilvusClient(uri="http://<endpoint>:19530", token="root:password")
+PYMILVUS_GRPC_OPTIONS = {
+    "grpc.primary_user_agent": "AlibabaCloud-Agent-Skills/alibabacloud-milvus-manage"
+}
+
+client = MilvusClient(
+    uri="http://<endpoint>:19530",
+    token="root:password",
+    grpc_options=PYMILVUS_GRPC_OPTIONS,
+)
 
 schema = client.create_schema()
 

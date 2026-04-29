@@ -21,20 +21,17 @@
 
 ### Network Planning
 
-Before creation confirm target RegionId, check network resources. **Before execution ensure User-Agent set**:
+Before creation confirm target RegionId and check network resources. **Every `aliyun` CLI invocation must include `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-milvus-manage`**:
 
 ```bash
-# ⚠️ Set User-Agent environment variable (all aliyun calls must carry)
-export ALIBABA_CLOUD_USER_AGENT="AlibabaCloud-Agent-Skills"
-
 # List available VPCs
-aliyun vpc describe-vpcs --RegionId cn-hangzhou
+aliyun vpc describe-vpcs --biz-region-id cn-hangzhou --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-milvus-manage
 
 # List VSwitches under VPC (record ZoneId and available IP count)
-aliyun vpc describe-vswitches --RegionId cn-hangzhou --VpcId vpc-xxx
+aliyun vpc describe-vswitches --biz-region-id cn-hangzhou --vpc-id vpc-xxx --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-milvus-manage
 
 # List security groups (for reference only, CreateInstance doesn't require passing security group)
-aliyun ecs describe-security-groups --RegionId cn-hangzhou --VpcId vpc-xxx
+aliyun ecs describe-security-groups --biz-region-id cn-hangzhou --vpc-id vpc-xxx --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-milvus-manage
 ```
 
 **Recommended Practice**: List VPC → User selects → List VSwitches → User selects → Create instance.
@@ -55,7 +52,7 @@ For multi-AZ scenarios select one VSwitch in each of different availability zone
 Standalone + pay-as-you-go + 4 CU, suitable for feature verification and dev debugging.
 
 ```bash
-aliyun milvus post "/webapi/instance/create?RegionId=cn-hangzhou" \
+aliyun milvus post "/webapi/instance/create?RegionId=cn-hangzhou" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-milvus-manage \
   --RegionId cn-hangzhou \
   --body '{
     "regionId": "cn-hangzhou",
@@ -84,7 +81,7 @@ Cluster + 5-component distributed deployment, suitable for production environmen
 ⚠️ **Note**: streaming, data, mix_coordinator, query minimum 4 CU.
 
 ```bash
-aliyun milvus post "/webapi/instance/create?RegionId=cn-hangzhou" \
+aliyun milvus post "/webapi/instance/create?RegionId=cn-hangzhou" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-milvus-manage \
   --RegionId cn-hangzhou \
   --body '{
     "regionId": "cn-hangzhou",
@@ -119,7 +116,7 @@ Total CU = 4×2 + 4×2 + 2×2 + 4×2 + 4×2 = **36 CU**
 Suitable for search-intensive scenarios, QueryNode uses cap type large memory, dual-AZ high-availability storage.
 
 ```bash
-aliyun milvus post "/webapi/instance/create?RegionId=cn-hangzhou" \
+aliyun milvus post "/webapi/instance/create?RegionId=cn-hangzhou" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-milvus-manage \
   --RegionId cn-hangzhou \
   --body '{
     "regionId": "cn-hangzhou",
@@ -156,7 +153,7 @@ aliyun milvus post "/webapi/instance/create?RegionId=cn-hangzhou" \
 ### Instance List
 
 ```bash
-aliyun milvus get "/webapi/instance/list?RegionId=cn-hangzhou&pageSize=50" \
+aliyun milvus get "/webapi/instance/list?RegionId=cn-hangzhou&pageSize=50" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-milvus-manage \
   --RegionId cn-hangzhou --force
 ```
 
@@ -165,7 +162,7 @@ aliyun milvus get "/webapi/instance/list?RegionId=cn-hangzhou&pageSize=50" \
 ### Instance Basic Info
 
 ```bash
-aliyun milvus get "/webapi/instance/get?RegionId=cn-hangzhou&instanceId=c-xxx" \
+aliyun milvus get "/webapi/instance/get?RegionId=cn-hangzhou&instanceId=c-xxx" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-milvus-manage \
   --RegionId cn-hangzhou --force
 ```
 
@@ -174,7 +171,7 @@ Focus on return fields: `instanceId`, `instanceName`, `status`, `dbVersion`, `ha
 ### Instance Details (Component Specs, Connection Addresses, Storage Usage)
 
 ```bash
-aliyun milvus post "/webapi/cluster/detail" \
+aliyun milvus post "/webapi/cluster/detail" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-milvus-manage \
   --RegionId cn-hangzhou \
   --InstanceId c-xxx \
   --force
@@ -209,13 +206,13 @@ Adjust component CU count or replica count via UpdateInstance. Before scaling us
 
 ```bash
 # 1. View current component specs
-aliyun milvus post "/webapi/cluster/detail" \
+aliyun milvus post "/webapi/cluster/detail" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-milvus-manage \
   --RegionId cn-hangzhou \
   --InstanceId c-xxx \
   --force
 
 # 2. Scale up query component to 3 replicas × 8 CU
-aliyun milvus put "/webapi/instance/update?RegionId=cn-hangzhou" \
+aliyun milvus put "/webapi/instance/update?RegionId=cn-hangzhou" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-milvus-manage \
   --RegionId cn-hangzhou \
   --body '{
     "instanceId": "c-xxx",
@@ -235,7 +232,7 @@ aliyun milvus put "/webapi/instance/update?RegionId=cn-hangzhou" \
 ### Modify Instance Name
 
 ```bash
-aliyun milvus post "/webapi/cluster/update_name" \
+aliyun milvus post "/webapi/cluster/update_name" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-milvus-manage \
   --RegionId cn-hangzhou \
   --InstanceId c-xxx \
   --ClusterName new-name \

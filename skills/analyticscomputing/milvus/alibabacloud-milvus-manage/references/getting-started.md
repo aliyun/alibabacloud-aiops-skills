@@ -6,16 +6,9 @@ This guide helps first-time users complete: prerequisite check → create first 
 
 ### 1. CLI Environment
 
-```bash
-# Verify Alibaba Cloud CLI installed (needs >= 3.0)
-aliyun --version
-
-# Verify credentials configured (should show current profile)
-aliyun configure list
-
-# ⚠️ Set User-Agent environment variable (all aliyun calls must carry)
-export ALIBABA_CLOUD_USER_AGENT="AlibabaCloud-Agent-Skills"
-```
+- Alibaba Cloud CLI installed, version `>= 3.3.3`.
+- Credentials configured in the active CLI profile.
+- API-calling CLI commands in this guide include the required `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-milvus-manage` flag.
 
 ### 2. Network Resources
 
@@ -23,10 +16,10 @@ Creating Milvus instance requires VPC and VSwitch. **Before execution confirm Re
 
 ```bash
 # Check if available VPC exists
-aliyun vpc describe-vpcs --RegionId <RegionId>
+aliyun vpc describe-vpcs --biz-region-id <RegionId> --region <RegionId> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-milvus-manage
 
 # Check if VSwitch exists under VPC, record ZoneId
-aliyun vpc describe-vswitches --RegionId <RegionId> --VpcId vpc-xxx
+aliyun vpc describe-vswitches --biz-region-id <RegionId> --vpc-id vpc-xxx --region <RegionId> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-milvus-manage
 ```
 
 > **Don't have these resources?** Please first create VPC and VSwitch via Alibaba Cloud console or CLI.
@@ -43,7 +36,7 @@ Record the following info, will be used when creating instance:
 Below creates a **standalone version (standalone_pro)** minimal instance, 4 CU, pay-as-you-go:
 
 ```bash
-aliyun milvus post "/webapi/instance/create?RegionId=cn-hangzhou" \
+aliyun milvus post "/webapi/instance/create?RegionId=cn-hangzhou" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-milvus-manage \
   --RegionId cn-hangzhou \
   --body '{
     "regionId": "cn-hangzhou",
@@ -75,7 +68,7 @@ Instance creation is async operation, usually takes 5-15 minutes.
 
 ```bash
 # View instance status
-aliyun milvus get "/webapi/instance/get?RegionId=cn-hangzhou&instanceId=c-xxx" \
+aliyun milvus get "/webapi/instance/get?RegionId=cn-hangzhou&instanceId=c-xxx" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-milvus-manage \
   --RegionId cn-hangzhou --force
 ```
 
@@ -88,7 +81,7 @@ Wait until `status` becomes `running` to indicate instance ready.
 After instance ready, view connection address and component details:
 
 ```bash
-aliyun milvus post "/webapi/cluster/detail" \
+aliyun milvus post "/webapi/cluster/detail" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-milvus-manage \
   --RegionId cn-hangzhou \
   --InstanceId c-xxx \
   --force
@@ -103,14 +96,25 @@ Focus on key fields in return:
 Connection example (pymilvus):
 ```python
 from pymilvus import connections
-connections.connect(host="c-xxx.milvus.aliyuncs.com", port=19530, user="root", password="YourPassword@123")
+
+PYMILVUS_GRPC_OPTIONS = {
+    "grpc.primary_user_agent": "AlibabaCloud-Agent-Skills/alibabacloud-milvus-manage"
+}
+
+connections.connect(
+    host="c-xxx.milvus.aliyuncs.com",
+    port=19530,
+    user="root",
+    password="YourPassword@123",
+    grpc_options=PYMILVUS_GRPC_OPTIONS,
+)
 ```
 
 ## Step 4: View Instance List
 
 ```bash
 # View all instances under current region
-aliyun milvus get "/webapi/instance/list?RegionId=cn-hangzhou&pageSize=50" \
+aliyun milvus get "/webapi/instance/list?RegionId=cn-hangzhou&pageSize=50" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-milvus-manage \
   --RegionId cn-hangzhou --force
 ```
 

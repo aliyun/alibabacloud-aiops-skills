@@ -13,7 +13,15 @@ Milvus can automatically generate vector embeddings from scalar fields via `Func
 ```python
 from pymilvus import MilvusClient, DataType, Function, FunctionType
 
-client = MilvusClient(uri="http://<endpoint>:19530", token="root:password")
+PYMILVUS_GRPC_OPTIONS = {
+    "grpc.primary_user_agent": "AlibabaCloud-Agent-Skills/alibabacloud-milvus-manage"
+}
+
+client = MilvusClient(
+    uri="http://<endpoint>:19530",
+    token="root:password",
+    grpc_options=PYMILVUS_GRPC_OPTIONS,
+)
 
 schema = client.create_schema()
 
@@ -219,7 +227,15 @@ Full-text search uses Milvus's built-in BM25 tokenizer to convert text into spar
 ```python
 from pymilvus import MilvusClient, DataType, Function, FunctionType
 
-client = MilvusClient(uri="<USER_URI>", token="<USER_TOKEN>")
+PYMILVUS_GRPC_OPTIONS = {
+    "grpc.primary_user_agent": "AlibabaCloud-Agent-Skills/alibabacloud-milvus-manage"
+}
+
+client = MilvusClient(
+    uri="<USER_URI>",
+    token="<USER_TOKEN>",
+    grpc_options=PYMILVUS_GRPC_OPTIONS,
+)
 
 schema = client.create_schema()
 schema.add_field("id", DataType.INT64, is_primary=True, auto_id=True)

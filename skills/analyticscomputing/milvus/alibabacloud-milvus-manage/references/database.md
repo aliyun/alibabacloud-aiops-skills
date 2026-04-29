@@ -15,7 +15,16 @@ client.using_database(db_name="my_database")
 client.drop_database(db_name="my_database")
 
 # Or connect to a specific database at init (use the user's actual URI and credentials)
-client = MilvusClient(uri="<USER_URI>", token="<USER_TOKEN>", db_name="my_database")
+PYMILVUS_GRPC_OPTIONS = {
+    "grpc.primary_user_agent": "AlibabaCloud-Agent-Skills/alibabacloud-milvus-manage"
+}
+
+client = MilvusClient(
+    uri="<USER_URI>",
+    token="<USER_TOKEN>",
+    db_name="my_database",
+    grpc_options=PYMILVUS_GRPC_OPTIONS,
+)
 ```
 
 ## Guidance

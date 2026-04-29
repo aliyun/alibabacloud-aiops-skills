@@ -1,14 +1,22 @@
 # Common Patterns
 
-> **Note:** All patterns below use `<USER_URI>` and `<USER_TOKEN>` as connection placeholders. Always ask the user for their actual connection details before writing code. For local development, use Milvus Lite (`uri="./milvus.db"`) only if the user explicitly requests it.
+> **Note:** All patterns below use `<USER_URI>` and `<USER_TOKEN>` as connection placeholders. Always ask the user for their actual connection details before writing code. Every PyMilvus connection must include `grpc_options={"grpc.primary_user_agent": "AlibabaCloud-Agent-Skills/alibabacloud-milvus-manage"}`. For local development, use Milvus Lite (`uri="./milvus.db"`) only if the user explicitly requests it.
 
 ## RAG Pipeline Pattern
 
 ```python
 from pymilvus import MilvusClient, DataType, model
 
+PYMILVUS_GRPC_OPTIONS = {
+    "grpc.primary_user_agent": "AlibabaCloud-Agent-Skills/alibabacloud-milvus-manage"
+}
+
 # 1. Connect (ask user for URI and credentials)
-client = MilvusClient(uri="<USER_URI>", token="<USER_TOKEN>")
+client = MilvusClient(
+    uri="<USER_URI>",
+    token="<USER_TOKEN>",
+    grpc_options=PYMILVUS_GRPC_OPTIONS,
+)
 
 # 2. Set up embedding model
 embedding_fn = model.dense.SentenceTransformerEmbeddingFunction(model_name="all-MiniLM-L6-v2")
@@ -52,8 +60,12 @@ results = client.search(
 ```python
 from pymilvus import MilvusClient, model
 
+PYMILVUS_GRPC_OPTIONS = {
+    "grpc.primary_user_agent": "AlibabaCloud-Agent-Skills/alibabacloud-milvus-manage"
+}
+
 # Simplest possible setup (Milvus Lite for local dev)
-client = MilvusClient(uri="./search.db")
+client = MilvusClient(uri="./search.db", grpc_options=PYMILVUS_GRPC_OPTIONS)
 embedding_fn = model.dense.SentenceTransformerEmbeddingFunction(model_name="all-MiniLM-L6-v2")
 
 # Prepare data — vectors come from embedding model
@@ -76,8 +88,16 @@ results = client.search("docs", data=query_vectors, limit=10, output_fields=["te
 ```python
 from pymilvus import MilvusClient, DataType, AnnSearchRequest, RRFRanker
 
+PYMILVUS_GRPC_OPTIONS = {
+    "grpc.primary_user_agent": "AlibabaCloud-Agent-Skills/alibabacloud-milvus-manage"
+}
+
 # Ask user for connection details
-client = MilvusClient(uri="<USER_URI>", token="<USER_TOKEN>")
+client = MilvusClient(
+    uri="<USER_URI>",
+    token="<USER_TOKEN>",
+    grpc_options=PYMILVUS_GRPC_OPTIONS,
+)
 
 # Schema with both dense and sparse vectors
 schema = client.create_schema(auto_id=True)
@@ -113,8 +133,16 @@ results = client.hybrid_search(
 ```python
 from pymilvus import MilvusClient, DataType, Function, FunctionType
 
+PYMILVUS_GRPC_OPTIONS = {
+    "grpc.primary_user_agent": "AlibabaCloud-Agent-Skills/alibabacloud-milvus-manage"
+}
+
 # Ask user for connection details
-client = MilvusClient(uri="<USER_URI>", token="<USER_TOKEN>")
+client = MilvusClient(
+    uri="<USER_URI>",
+    token="<USER_TOKEN>",
+    grpc_options=PYMILVUS_GRPC_OPTIONS,
+)
 
 schema = client.create_schema(auto_id=True)
 schema.add_field("id", DataType.INT64, is_primary=True)

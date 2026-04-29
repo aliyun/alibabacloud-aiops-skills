@@ -8,7 +8,8 @@ description: >
   partition/database management, or RBAC with Python.
 license: MIT AND Apache-2.0
 compatibility: >
-  Control-plane requires Alibaba Cloud CLI (`aliyun` >= 3.0) with valid credentials and Milvus calls must use `--force`.
+  Control-plane requires Alibaba Cloud CLI (`aliyun` >= 3.3.3) with valid credentials; every aliyun CLI call must include
+  `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-milvus-manage`, and Milvus calls must use `--force`.
   Data-plane requires Python 3.8+ and `pymilvus`. Works on macOS and Linux.
 metadata:
   domain: vector-database
@@ -18,6 +19,16 @@ allowed-tools: Bash Read Write
 ---
 
 # Alibaba Cloud Milvus Full-Stack Skill
+
+## Prerequisites
+
+**[MUST] CLI User-Agent** — Every `aliyun` CLI command invocation must include:
+`--user-agent AlibabaCloud-Agent-Skills/alibabacloud-milvus-manage`
+
+**[MUST] PyMilvus User-Agent** — Every `pymilvus` SDK connection must include:
+`grpc_options={"grpc.primary_user_agent": "AlibabaCloud-Agent-Skills/alibabacloud-milvus-manage"}`
+
+Alibaba Cloud CLI version must be `>= 3.3.3`.
 
 Handle two distinct planes:
 
@@ -50,7 +61,7 @@ Route here when the user asks about:
 - creating, scaling, renaming, or inspecting a Milvus instance,
 - connection address, component spec, configuration, public network, whitelist,
 - VPC/VSwitch prerequisites for Alibaba Cloud Milvus,
-- `aliyun milvus` APIs, creation parameters, or control-plane troubleshooting.
+- Milvus REST-style CLI APIs, creation parameters, or control-plane troubleshooting.
 
 Read:
 
@@ -93,11 +104,11 @@ Read:
 
 ### Required Environment
 
-- Reuse the configured `aliyun` profile. Check with `aliyun configure list`.
-- Set the required User-Agent before Milvus API calls:
+- Reuse the configured `aliyun` profile. Verify credentials are configured before API calls.
+- Every `aliyun` CLI invocation must include the required User-Agent flag:
 
 ```bash
-export ALIBABA_CLOUD_USER_AGENT="AlibabaCloud-Agent-Skills"
+aliyun ... --user-agent AlibabaCloud-Agent-Skills/alibabacloud-milvus-manage
 ```
 
 - Milvus OpenAPI calls through `aliyun` must include `--force`.
@@ -125,13 +136,13 @@ Use the API's expected parameter mode. Do not improvise.
 
 ```bash
 # get / delete: business params in URL query
-aliyun milvus get "/path?RegionId=<region>&instanceId=<id>" --RegionId <region> --force
+aliyun milvus get "/path?RegionId=<region>&instanceId=<id>" --RegionId <region> --force --user-agent AlibabaCloud-Agent-Skills/alibabacloud-milvus-manage
 
 # post / put with request body: business params in --body JSON
-aliyun milvus post "/path?RegionId=<region>" --RegionId <region> --body '{...}' --force
+aliyun milvus post "/path?RegionId=<region>" --RegionId <region> --body '{...}' --force --user-agent AlibabaCloud-Agent-Skills/alibabacloud-milvus-manage
 
 # post with query-style flags: business params as --Flag value
-aliyun milvus post "/path" --RegionId <region> --InstanceId <id> --force
+aliyun milvus post "/path" --RegionId <region> --InstanceId <id> --force --user-agent AlibabaCloud-Agent-Skills/alibabacloud-milvus-manage
 ```
 
 Rules:
@@ -151,7 +162,7 @@ Rules:
 
 ### Forbidden Operations
 
-- **Instance deletion (DeleteInstance) is strictly forbidden through this Skill.** If the user requests to delete/release a Milvus instance, do **not** execute the `aliyun milvus delete` command. Instead, instruct the user to delete the instance via the [Alibaba Cloud Milvus Console](https://milvus.console.aliyun.com/#/overview).
+- **Instance deletion (DeleteInstance) is strictly forbidden through this Skill.** If the user requests to delete/release a Milvus instance, do **not** execute the Milvus delete command through `aliyun` CLI. Instead, instruct the user to delete the instance via the [Alibaba Cloud Milvus Console](https://milvus.console.aliyun.com/#/overview).
 
 ### Destructive Operations
 
@@ -191,8 +202,19 @@ Minimal connection shape:
 ```python
 from pymilvus import MilvusClient
 
-client = MilvusClient(uri="<USER_URI>", token="<USER_TOKEN>")
+PYMILVUS_GRPC_OPTIONS = {
+    "grpc.primary_user_agent": "AlibabaCloud-Agent-Skills/alibabacloud-milvus-manage"
+}
+
+client = MilvusClient(
+    uri="<USER_URI>",
+    token="<USER_TOKEN>",
+    grpc_options=PYMILVUS_GRPC_OPTIONS,
+)
 ```
+
+- Every `MilvusClient(...)` and `connections.connect(...)` example must pass `grpc_options=PYMILVUS_GRPC_OPTIONS`.
+- Do not emit `pymilvus` SDK connection code without `grpc_options=PYMILVUS_GRPC_OPTIONS`.
 
 For async usage, schema details, and deployment-specific patterns, load the relevant reference doc.
 
@@ -235,7 +257,7 @@ For most SDK tasks:
 
 1. Ask for connection details first.
 2. Read only the references needed for the requested SDK task.
-3. Write or explain `pymilvus` code with real embeddings and real connection placeholders.
+3. Write or explain `pymilvus` code with real embeddings, real connection placeholders, and `grpc_options=PYMILVUS_GRPC_OPTIONS`.
 4. Call out schema, load-state, index, and dimension pitfalls if they matter.
 
 ## Reference Map

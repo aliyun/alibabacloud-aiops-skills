@@ -15,7 +15,6 @@ This Skill calls Alibaba Cloud Milvus and related product APIs, requires the fol
         "milvus:GetInstance",
         "milvus:GetInstanceDetail",
         "milvus:CreateInstance",
-        "milvus:DeleteInstance",
         "milvus:UpdateInstance",
         "milvus:UpdateInstanceName",
         "milvus:DescribeInstanceConfigs",
@@ -55,7 +54,6 @@ This Skill calls Alibaba Cloud Milvus and related product APIs, requires the fol
 | `milvus:GetInstance` | Query instance basic info |
 | `milvus:GetInstanceDetail` | Query instance details |
 | `milvus:CreateInstance` | Create instance |
-| `milvus:DeleteInstance` | Delete instance |
 | `milvus:UpdateInstance` | Change instance config |
 | `milvus:UpdateInstanceName` | Modify instance name |
 | `milvus:DescribeInstanceConfigs` | Query instance config |

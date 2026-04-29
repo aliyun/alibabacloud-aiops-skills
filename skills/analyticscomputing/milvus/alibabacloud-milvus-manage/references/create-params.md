@@ -4,10 +4,7 @@
 
 Calling method: `RegionId` must be placed in both **URL query string** (`?RegionId=<region>`) and **CLI flag** (`--RegionId <region>`), other parameters placed in `--body` JSON (camelCase).
 
-> **Prerequisite**: Before executing any aliyun command, ensure User-Agent environment variable is set:
-> ```bash
-> export ALIBABA_CLOUD_USER_AGENT="AlibabaCloud-Agent-Skills"
-> ```
+> **User-Agent requirement**: Every `aliyun` CLI invocation must include `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-milvus-manage`.
 
 ## Table of Contents
 
@@ -62,7 +59,7 @@ When creating cluster instances, each component has **minimum CU requirements**:
 When `ha=false` creates standalone version, component type is `standalone_pro`:
 
 ```bash
-aliyun milvus post "/webapi/instance/create?RegionId=cn-hangzhou" \
+aliyun milvus post "/webapi/instance/create?RegionId=cn-hangzhou" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-milvus-manage \
   --RegionId cn-hangzhou \
   --body '{
     "regionId": "cn-hangzhou",
@@ -94,7 +91,7 @@ aliyun milvus post "/webapi/instance/create?RegionId=cn-hangzhou" \
 When `ha=true` creates cluster version, need to configure 5 components:
 
 ```bash
-aliyun milvus post "/webapi/instance/create?RegionId=cn-hangzhou" \
+aliyun milvus post "/webapi/instance/create?RegionId=cn-hangzhou" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-milvus-manage \
   --RegionId cn-hangzhou \
   --body '{
     "regionId": "cn-hangzhou",
@@ -178,10 +175,10 @@ Before creating instance, query available network resources:
 
 ```bash
 # List VPCs
-aliyun vpc describe-vpcs --RegionId cn-hangzhou
+aliyun vpc describe-vpcs --biz-region-id cn-hangzhou --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-milvus-manage
 
 # List VSwitches (includes availability zone and available IP count)
-aliyun vpc describe-vswitches --RegionId cn-hangzhou --VpcId vpc-xxx
+aliyun vpc describe-vswitches --biz-region-id cn-hangzhou --vpc-id vpc-xxx --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-milvus-manage
 ```
 
 ## Payment and High Availability
