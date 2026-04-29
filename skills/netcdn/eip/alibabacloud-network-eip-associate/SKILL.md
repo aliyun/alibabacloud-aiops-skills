@@ -23,22 +23,33 @@ Allocate Elastic IP Address (EIP) and bind it to **existing** Alibaba Cloud reso
 3. ✅ **No resource creation** - only bind to existing resources (no new ECS/NAT/VPC creation)
 4. ✅ **User confirmation** - ask for key EIP parameters before allocation
 5. ✅ **Cleanup on failure** - release newly allocated EIPs if binding fails
-
 ## Pre-checks
-### 1. Aliyun CLI version verification (>= 3.3.2)
+### 1. Aliyun CLI version verification (>= 3.3.3)
+
+**Pre-check: Aliyun CLI >= 3.3.3 required**
+> Run `aliyun version` to verify >= 3.3.3. If not installed or version too low,
+> run `curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash` to update,
+> or see `references/cli-installation-guide.md` for installation instructions.
+
+**Pre-check: Aliyun CLI plugin update required**
+> [MUST] run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+> [MUST] run `aliyun plugin update` to ensure that any existing plugins are always up-to-date.
+
 ```bash
 aliyun configure set --auto-plugin-install true
 CLI_VERSION=$(aliyun version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
-[ "$(printf '%s\n' "3.3.2" "$CLI_VERSION" | sort -V | head -n1)" != "3.3.2" ] && echo "❌ CLI < 3.3.2" && exit 1
+[ "$(printf '%s\n' "3.3.3" "$CLI_VERSION" | sort -V | head -n1)" != "3.3.3" ] && echo "❌ CLI < 3.3.3" && exit 1
+aliyun plugin update
 ```
 ### 2. Authentication credential verification
 ```bash
 aliyun configure list  # Check valid profile (AK/STS/OAuth). NEVER echo AK/SK.
 ```
-
 ## Workflow Overview
 **Key rules for ALL commands below:**
-- Every `aliyun` product command MUST include `--user-agent AlibabaCloud-Agent-Skills` (NOT on `configure` commands)
+**[MUST] CLI User-Agent** — Every `aliyun` CLI command invocation must include:
+`--user-agent AlibabaCloud-Agent-Skills/alibabacloud-network-eip-associate`
+- Every `aliyun` product command MUST include `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-network-eip-associate` (NOT on `configure` commands)
 - Use plugin mode (kebab-case): `aliyun vpc allocate-eip-address`, NOT `AllocateEipAddress`
 - VPC commands require `--biz-region-id <Region>`
 - **CRITICAL: `--biz-region-id` only sets the RegionId parameter in the API request body; it does NOT control which API endpoint the CLI connects to.** The API endpoint is determined by the CLI profile's configured region. Before running any VPC command, you MUST set the CLI profile region to match the target region:
@@ -52,6 +63,7 @@ aliyun configure list  # Check valid profile (AK/STS/OAuth). NEVER echo AK/SK.
 - `INSTANCE_TYPE`: Target resource type (EcsInstance/NetworkInterface/SlbInstance/Nat/HaVip/IpAddress)
 - `USE_EXISTING_EIP`: Boolean flag (true = use existing EIP, false = create new EIP)
 - `ALLOCATION_ID`: EIP instance ID (from existing EIP or newly allocated)
+
 **Workflow Phases:**
 1. **Phase 1**: Extract user input, validate resource, choose existing/new EIP
    - Steps 1.1-1.2: Extract parameters, set CLI region
@@ -76,9 +88,7 @@ aliyun configure list  # Check valid profile (AK/STS/OAuth). NEVER echo AK/SK.
   - If `NetworkInterface`: Must have `PrivateIpAddress` (private IP to bind)
   - If `IpAddress`: Must have `VpcId` (VPC ID where IP address resides)
 **If ANY required parameter is missing, STOP and ask user:**
-```
-❌ Missing: Region[REQUIRED] | ResourceType[ECS/ENI/CLB/NAT/HAVIP/IP] | ResourceID | [PrivateIP for ENI] | [VpcId for IP]
-```
+`❌ Missing: Region[REQUIRED] | ResourceType[ECS/ENI/CLB/NAT/HAVIP/IP] | ResourceID | [PrivateIP for ENI] | [VpcId for IP]`
 **CRITICAL:**
 - **Region MUST be explicitly provided by user. Do NOT use default region (like cn-hangzhou).**
 - Do NOT proceed without explicit user-provided values.
@@ -89,14 +99,12 @@ aliyun configure list  # Check valid profile (AK/STS/OAuth). NEVER echo AK/SK.
 - **Resource IDs:** `^(i|eni|lb|ngw|havip|eip|vpc)-[a-z0-9]+$`
 - **IP Address:** `^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$`
 **If validation fails, STOP:** `❌ Invalid input format`
-
 ### Step 1.2: Set CLI region to target region
 **Before any API operation, configure CLI region:**
 ```bash
 aliyun configure set --region {REGION}
 ```
 This ensures the CLI connects to the correct regional API endpoint.
-
 ### Step 1.3: Check if resource already has EIP bound
 **Use DescribeEipAddresses to check if the target resource already has an EIP:**
 **Map user input to InstanceType parameter:**
@@ -114,7 +122,7 @@ aliyun vpc describe-eip-addresses \
   --biz-region-id {REGION} \
   --associated-instance-type {INSTANCE_TYPE} \
   --associated-instance-id {RESOURCE_ID} \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-network-eip-associate
 ```
 **Check response:**
 **If `TotalCount > 0` (resource already has EIP bound):**
@@ -123,13 +131,12 @@ aliyun vpc describe-eip-addresses \
 Existing EIP: {EipAddress} | ID: {AllocationId} | Bandwidth: {Bandwidth}Mbps | Status: {Status}
 To bind a different EIP, first unbind existing: aliyun vpc unassociate-eip-address --biz-region-id {REGION} --allocation-id {AllocationId} --instance-id {RESOURCE_ID} --instance-type {INSTANCE_TYPE}
 ```
-**STOP. Do not proceed.**
+**STOP.**
 **If `TotalCount = 0` (resource has no EIP bound):**
 ```
 ✅ Resource {RESOURCE_ID} has no EIP bound. Proceeding to next validation...
 ```
 **Continue to Step 1.3.5.**
-
 ### Step 1.3.5: Check if ECS instance has PIP (Public IP) - ECS Only
 > **This step is ONLY executed when `INSTANCE_TYPE = EcsInstance`.**
 > **For other resource types (ENI, CLB, NAT, HAVIP, IP), skip directly to Step 1.4.**
@@ -140,7 +147,7 @@ To bind a different EIP, first unbind existing: aliyun vpc unassociate-eip-addre
 ```bash
 aliyun ecs describe-instance-attribute \
   --instance-id {RESOURCE_ID} \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-network-eip-associate
 ```
 **Parse response and check `PublicIpAddress` field:**
 **Case 1: `PublicIpAddress.IpAddress` is not empty (ECS has PIP):**
@@ -155,7 +162,7 @@ Options:
 3. Release and recreate ECS without PIP
 Operation stopped.
 ```
-**STOP. Do not proceed.**
+**STOP.**
 **Case 2: `PublicIpAddress.IpAddress` is empty (no PIP):**
 ```
 ✅ ECS instance {RESOURCE_ID} has no Public IP (PIP). Ready to bind EIP.
@@ -167,8 +174,7 @@ Operation stopped.
 Error: {ERROR_CODE} - {ERROR_MESSAGE}
 Please verify: instance ID, region, and permissions.
 ```
-**STOP. Do not proceed.**
-
+**STOP.**
 ### Step 1.4: Choose between existing EIP or new EIP
 ```
 Options for {RESOURCE_TYPE} {RESOURCE_ID}:
@@ -178,7 +184,6 @@ Choice (A/B):
 ```
 **If user selects Option A (use existing EIP), proceed to Step 1.5.**
 **If user selects Option B (create new EIP), proceed to Step 1.6.**
-
 ### Step 1.5: Use Existing EIP (Option A)
 #### Step 1.5.1: Ask if user has specific EIP ID
 ```
@@ -190,16 +195,14 @@ Have specific EIP ID? (yes: provide ID / no: query available)
 - If EIP not found or not Available, show error and ask again
 - **Skip to Phase 3 (bind existing EIP)**
 **If user wants to see available EIPs, proceed to Step 1.5.2.**
-
 #### Step 1.5.2: Query available EIPs
-
 Query all Available EIPs in the region:
 ```bash
 aliyun vpc describe-eip-addresses \
   --biz-region-id {REGION} \
   --status Available \
   --page-size 100 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-network-eip-associate
 ```
 **Handle pagination if needed:**
 - If `TotalCount > 100`, make multiple requests with `--page-number 2, 3, ...` until all Available EIPs are retrieved
@@ -245,9 +248,8 @@ Config (Enter for defaults): Bandwidth[5Mbps] | ISP[BGP/BGP_PRO] | Billing[PayBy
 ❌ This skill does not support creating PrePaid (subscription) EIPs.
 Please create PrePaid EIPs through the Alibaba Cloud Console: https://vpc.console.aliyun.com/eip
 ```
-**STOP. Do NOT proceed.**
+**STOP.**
 **Continue to Phase 1.7 (pre-allocation validation) if creating new EIP.**
-
 ### Step 1.7: Pre-Allocation Validation (Only for New EIP)
 > **This step is ONLY executed when `USE_EXISTING_EIP = false` (creating new EIP).**
 > **If using existing EIP, skip directly to Phase 3.**
@@ -268,9 +270,7 @@ If approaching 20 (standard limit), show quota warning. This is a soft check.
 **For HaVip:** `aliyun vpc describe-havips --havip-id ID`
 **For IpAddress:** `aliyun vpc describe-vpcs --vpc-id ID`
 **Note:** If resource not found, STOP before Phase 2.
-
 #### Step 1.7.3: Summary of validation results
-
 Show user a summary:
 ```
 ✅ Pre-allocation validation passed!
@@ -279,6 +279,7 @@ EIP Config: {BANDWIDTH}Mbps | {ISP} | {INTERNET_CHARGE_TYPE} [Name: {EIP_NAME}]
 Proceeding to allocate EIP...
 ```
 ## Phase 2: Allocate EIP (Only for New EIP)
+
 > **This phase is ONLY executed when `USE_EXISTING_EIP = false` (creating new EIP).**
 > **If using existing EIP (`USE_EXISTING_EIP = true`), skip directly to Phase 3 (bind).**
 
@@ -296,7 +297,7 @@ aliyun vpc allocate-eip-address \
   --internet-charge-type {INTERNET_CHARGE_TYPE} \
   --client-token $CLIENT_TOKEN \
   [--name "{EIP_NAME}"] \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-network-eip-associate
 ```
 **Notes:**
 - `--client-token` ensures idempotency: same token within 10min returns same EIP
@@ -312,7 +313,6 @@ CREATED_EIPS.append(AllocationId)
 ### Step 2.2: Handle allocation errors (Fail Fast)
 **If `QuotaExceeded.Eip`:** STOP. List current EIPs if user wants.
 **Other errors (InvalidParameter, InsufficientBalance):** STOP immediately.
-
 ### Step 2.3: Wait for EIP to become Available
 Query EIP status with **maximum 30 retries** (5s interval = 150s total):
 ```bash
@@ -320,7 +320,7 @@ for i in {1..30}; do
   aliyun vpc describe-eip-addresses \
     --biz-region-id {REGION} \
     --allocation-id {ALLOCATION_ID} \
-    --user-agent AlibabaCloud-Agent-Skills
+    --user-agent AlibabaCloud-Agent-Skills/alibabacloud-network-eip-associate
 
   # Check if Status = "Available"
   # If Available: break
@@ -331,8 +331,7 @@ done
 ```
 ❌ ERROR: EIP {ALLOCATION_ID} not Available after 150s. Status: {CURRENT_STATUS}. Cleaning up...
 ```
-**Trigger cleanup (go to Phase 4: Cleanup on Failure).**
-
+**Trigger cleanup (go to Phase 5: Cleanup on Failure).**
 ### Step 2.4: Show allocated EIP information
 ```
 ✅ EIP allocated successfully!
@@ -340,6 +339,7 @@ EIP: {EipAddress} | ID: {AllocationId} | {BANDWIDTH}Mbps | {ISP} | {INTERNET_CHA
 Proceeding to bind to {RESOURCE_TYPE} {RESOURCE_ID}...
 ```
 ## Phase 3: Bind EIP to Target Resource
+
 ### Step 3.1: Build AssociateEipAddress command
 **Base command structure:**
 ```bash
@@ -350,7 +350,7 @@ aliyun vpc associate-eip-address \
   --instance-type {INSTANCE_TYPE} \
   [--private-ip-address {PRIVATE_IP}] \
   [--vpc-id {VPC_ID}] \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-network-eip-associate
 ```
 **Instance Type Mapping:**
 | User Input | CLI --instance-type Value | Additional Required Params |
@@ -364,11 +364,9 @@ aliyun vpc associate-eip-address \
 **Validation before execution:**
 - If `INSTANCE_TYPE = NetworkInterface` and `PRIVATE_IP` is empty: **ERROR** - PrivateIpAddress REQUIRED. STOP.
 - If `INSTANCE_TYPE = IpAddress` and `VPC_ID` is empty: **ERROR** - VpcId REQUIRED. STOP.
-
 ### Step 3.2: Execute binding
 Execute the constructed command.
 **Success response:** Extract `RequestId` and proceed to verification.
-
 ### Step 3.3: Handle binding errors (Fail Fast)
 **Common binding errors:**
 | Error Code | Meaning | Action |
@@ -388,9 +386,7 @@ Error: {ERROR_CODE} - {ERROR_MESSAGE}
 Possible causes: Resource not exist, already has EIP bound, wrong state, invalid parameters.
 Cleaning up...
 ```
-**Trigger cleanup (Phase 4).**
-**CRITICAL: Do NOT retry indefinitely. Do NOT query resources to "fix" the issue. Fail fast and cleanup.**
-
+**Trigger cleanup (Phase 5).** Do NOT retry indefinitely. Fail fast and cleanup.
 ## Phase 4: Verify Binding
 ### Step 4.1: Query EIP status to confirm binding
 Wait briefly (5 seconds), then query:
@@ -398,7 +394,7 @@ Wait briefly (5 seconds), then query:
 aliyun vpc describe-eip-addresses \
   --biz-region-id {REGION} \
   --allocation-id {ALLOCATION_ID} \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-network-eip-associate
 ```
 **Expected response:**
 - `Status`: `InUse`
@@ -421,20 +417,18 @@ Actual: Status={ACTUAL_STATUS}, InstanceId={ACTUAL_INSTANCE_ID}
 Please check EIP status manually in Console.
 ```
 **Do NOT trigger cleanup in this case** (binding may be in progress).
-
 ## Phase 5: Cleanup on Failure
 > **This phase is ONLY executed when an unrecoverable error occurs during Phase 2 or Phase 3.**
 > **IMPORTANT: Only applies to newly created EIPs (`USE_EXISTING_EIP = false`). Do NOT release user's existing EIPs.**
 
 ### Step 5.1: Ask user about cleanup
 **If binding failed and `CREATED_EIPS` is not empty (newly created EIP in this session):**
-
 List the newly created EIPs:
 ```bash
 aliyun vpc describe-eip-addresses \
   --biz-region-id {REGION} \
   --allocation-id {ALLOCATION_ID} \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-network-eip-associate
 ```
 Show user the information and ask:
 ```
@@ -445,7 +439,6 @@ Options: A) Keep EIP (bind later) | B) Release EIP (avoid charges)
 Your choice (A/B):
 ```
 **Wait for user decision.**
-
 ### Step 5.2: Execute cleanup if user chooses to release
 **If Option B:** Check EIP status, unbind if InUse, then release:
 ```bash
@@ -454,7 +447,6 @@ Your choice (A/B):
 ```
 **Success:** `✅ Released EIP {AllocationId}`
 **Fail:** `❌ CLEANUP FAILED - Manually release via Console`
-
 ### Step 5.3: If user chooses to keep EIP
 **If user chooses Option A (keep EIP):**
 ```
@@ -465,6 +457,7 @@ Your choice (A/B):
 Operation aborted. Binding: Failed | Error: {ERROR_CODE} | EIP: {AllocationId} | Cleanup: [Kept/Released]
 ```
 ## Error Recovery Reference
+
 | Error Code | Action |
 |------------|--------|
 | `QuotaExceeded.Eip` | STOP. User resolves quota manually. |
@@ -475,7 +468,6 @@ Operation aborted. Binding: Failed | Error: {ERROR_CODE} | EIP: {AllocationId} |
 | `InvalidParameter.*` | STOP. Invalid parameters. |
 | `InsufficientBalance` | STOP. No cleanup (allocation failed). |
 **Fail Fast**: STOP on unrecoverable errors, ask user for cleanup decision.
-
 ## Best Practices
 1. **Region Must Be Explicit**: No default region
 2. **Pre-check EIP Binding**: DescribeEipAddresses before proceeding
@@ -487,8 +479,6 @@ Operation aborted. Binding: Failed | Error: {ERROR_CODE} | EIP: {AllocationId} |
 8. **Default PayByTraffic**: Unless user requests PayByBandwidth. **PrePaid (subscription) is NOT supported.**
 9. **30 Retry Limit**: 150s total for status checks
 10. **Security**: Never read/echo AK/SK values
-
-
 ## Reference Documentation
 | Document | Description |
 |----------|-------------|

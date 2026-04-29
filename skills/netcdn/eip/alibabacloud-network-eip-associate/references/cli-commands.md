@@ -6,14 +6,14 @@ aliyun vpc describe-eip-addresses \
   --biz-region-id cn-beijing \
   --associated-instance-type EcsInstance \
   --associated-instance-id i-bp1xxx \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-network-eip-associate
 ```
 
 ## Check if ECS has Public IP (PIP)
 ```bash
 aliyun ecs describe-instance-attribute \
   --instance-id i-bp1xxx \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-network-eip-associate
 ```
 Check `PublicIpAddress.IpAddress` field in response:
 - If not empty: ECS has PIP, cannot bind EIP
@@ -27,7 +27,7 @@ aliyun vpc allocate-eip-address \
   --isp BGP \
   --internet-charge-type PayByTraffic \
   [--name "my-eip"] \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-network-eip-associate
 ```
 
 ## Bind EIP to ECS
@@ -37,7 +37,7 @@ aliyun vpc associate-eip-address \
   --allocation-id eip-bp1xxx \
   --instance-id i-bp1yyy \
   --instance-type EcsInstance \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-network-eip-associate
 ```
 
 ## Bind EIP to ENI (requires PrivateIpAddress)
@@ -48,7 +48,7 @@ aliyun vpc associate-eip-address \
   --instance-id eni-bp1zzz \
   --instance-type NetworkInterface \
   --private-ip-address 192.168.1.10 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-network-eip-associate
 ```
 
 ## Bind EIP to IP Address (requires VpcId)
@@ -59,7 +59,7 @@ aliyun vpc associate-eip-address \
   --instance-id 192.168.1.100 \
   --instance-type IpAddress \
   --vpc-id vpc-bp1www \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-network-eip-associate
 ```
 
 ## Query EIP Status
@@ -67,7 +67,7 @@ aliyun vpc associate-eip-address \
 aliyun vpc describe-eip-addresses \
   --biz-region-id cn-beijing \
   --allocation-id eip-bp1xxx \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-network-eip-associate
 ```
 
 ## Unbind EIP
@@ -77,7 +77,7 @@ aliyun vpc unassociate-eip-address \
   --allocation-id eip-bp1xxx \
   --instance-id i-bp1yyy \
   --instance-type EcsInstance \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-network-eip-associate
 ```
 
 ## Release EIP
@@ -85,5 +85,5 @@ aliyun vpc unassociate-eip-address \
 aliyun vpc release-eip-address \
   --biz-region-id cn-beijing \
   --allocation-id eip-bp1xxx \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-network-eip-associate
 ```

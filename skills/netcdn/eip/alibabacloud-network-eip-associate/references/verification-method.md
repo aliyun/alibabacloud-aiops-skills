@@ -15,7 +15,7 @@ This document details how to verify the successful execution of the EIP batch as
 aliyun vpc describe-eip-addresses \
   --region cn-hangzhou \
   --allocation-id <EcsEipAllocationId> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-network-eip-associate
 ```
 
 **Success Indicators**:
@@ -44,7 +44,7 @@ aliyun vpc describe-eip-addresses \
 # Query ALB attributes to verify EIP bindng
 aliyun alb get-load-balancer-attribute \
   --load-balancer-id <LoadBalancerId> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-network-eip-associate
 ```
 
 **Success Indicators**:
@@ -59,7 +59,7 @@ aliyun alb get-load-balancer-attribute \
 aliyun vpc describe-eip-addresses \
   --region cn-hangzhou \
   --allocation-id <NatEipAllocationId> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-network-eip-associate
 ```
 
 **Success Indicators**:
@@ -74,7 +74,7 @@ aliyun vpc describe-eip-addresses \
 aliyun vpc describe-eip-addresses \
   --region cn-hangzhou \
   --status InUse \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-network-eip-associate
 ```
 
 ### 5. Verify ECS Instance Public Network Connectivity
@@ -84,7 +84,7 @@ aliyun vpc describe-eip-addresses \
 EIP_ADDRESS=$(aliyun vpc describe-eip-addresses \
   --region cn-hangzhou \
   --allocation-id <EcsEipAllocationId> \
-  --user-agent AlibabaCloud-Agent-Skills \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-network-eip-associate \
   | grep -o '"IpAddress":"[^"]*"' | cut -d'"' -f4)
 
 # Test ping connectivity (requires security group to allow ICMP)
@@ -98,7 +98,7 @@ ping -c 3 $EIP_ADDRESS
 aliyun vpc describe-nat-gateways \
   --region cn-hangzhou \
   --nat-gateway-id <NatGatewayId> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-network-eip-associate
 ```
 
 **Success Indicators**:
@@ -176,13 +176,13 @@ ALB_LB_ID="alb-yyyyy"
 NAT_EIP_ID="eip-zzzzz"
 
 echo "=== Verify ECS EIP bindng ==="
-aliyun vpc describe-eip-addresses --region $REGION --allocation-id $ECS_EIP_ID --user-agent AlibabaCloud-Agent-Skills | grep -E '"Status"|"InstanceId"|"InstanceType"'
+aliyun vpc describe-eip-addresses --region $REGION --allocation-id $ECS_EIP_ID --user-agent AlibabaCloud-Agent-Skills/alibabacloud-network-eip-associate | grep -E '"Status"|"InstanceId"|"InstanceType"'
 
 echo "=== Verify ALB Address Type ==="
-aliyun alb get-load-balancer-attribute --load-balancer-id $ALB_LB_ID --user-agent AlibabaCloud-Agent-Skills | grep -E '"AddressType"'
+aliyun alb get-load-balancer-attribute --load-balancer-id $ALB_LB_ID --user-agent AlibabaCloud-Agent-Skills/alibabacloud-network-eip-associate | grep -E '"AddressType"'
 
 echo "=== Verify NAT EIP bindng ==="
-aliyun vpc describe-eip-addresses --region $REGION --allocation-id $NAT_EIP_ID --user-agent AlibabaCloud-Agent-Skills | grep -E '"Status"|"InstanceId"|"InstanceType"'
+aliyun vpc describe-eip-addresses --region $REGION --allocation-id $NAT_EIP_ID --user-agent AlibabaCloud-Agent-Skills/alibabacloud-network-eip-associate | grep -E '"Status"|"InstanceId"|"InstanceType"'
 
 echo "=== Verification Complete ==="
 ```
