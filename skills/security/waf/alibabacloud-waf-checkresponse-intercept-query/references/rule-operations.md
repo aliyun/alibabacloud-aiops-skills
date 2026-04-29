@@ -35,7 +35,7 @@ aliyun waf-openapi DescribeDefenseRule \
   --RuleId <rule-id> \
   --DefenseScene '<defense-scene>' \
   --RegionId '<region-id>' \
-  --header User-Agent=AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-checkresponse-intercept-query
 
 # Step 2: Only proceed if the rule is NOT already in the target state
 # If the rule is already disabled (Status=0), skip the disable call
@@ -70,7 +70,7 @@ aliyun waf-openapi ModifyDefenseRuleStatus \
   --RuleId 20400384 \
   --RuleStatus 0 \
   --RegionId ap-southeast-1 \
-  --header User-Agent=AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-checkresponse-intercept-query
 ```
 
 **Enable a rule**:
@@ -81,7 +81,7 @@ aliyun waf-openapi ModifyDefenseRuleStatus \
   --RuleId 20400384 \
   --RuleStatus 1 \
   --RegionId ap-southeast-1 \
-  --header User-Agent=AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-checkresponse-intercept-query
 ```
 
 ### Alternative: Use ModifyDefenseRule (Requires Full Configuration)
@@ -92,7 +92,7 @@ aliyun waf-openapi ModifyDefenseRule \
   --InstanceId waf_v2_public_cn-xxx \
   --Rules '{"id": 20400384, "Status": 0, "Config": "..."}' \
   --RegionId ap-southeast-1 \
-  --header User-Agent=AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-checkresponse-intercept-query
 ```
 
 > **Note**: `ModifyDefenseRule` requires passing the complete rule configuration with complex parameters. It is recommended to use `ModifyDefenseRuleStatus` first.

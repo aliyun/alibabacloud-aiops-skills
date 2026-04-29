@@ -12,7 +12,7 @@ import argparse
 import re
 
 # User-Agent header for all Alibaba Cloud API calls
-ALIYUN_USER_AGENT = "AlibabaCloud-Agent-Skills"
+ALIYUN_USER_AGENT = "AlibabaCloud-Agent-Skills/alibabacloud-waf-checkresponse-intercept-query"
 
 # ---------------------------------------------------------------------------
 # Sensitive data masking helpers
@@ -157,7 +157,7 @@ def query_sls_logs(project, logstore, request_id, region, ttl=90):
             "--query", request_id,
             "--reverse", "true",
             "--region", region,
-            "--header", f"User-Agent={ALIYUN_USER_AGENT}"
+            "--user-agent", ALIYUN_USER_AGENT
         ]
         
         try:
@@ -232,7 +232,7 @@ def query_rule_detail(instance_id, rule_id, region):
         "--InstanceId", instance_id,
         "--RuleId", str(rule_id),
         "--RegionId", region,
-        "--header", f"User-Agent={ALIYUN_USER_AGENT}"
+        "--user-agent", ALIYUN_USER_AGENT
     ]
     
     try:

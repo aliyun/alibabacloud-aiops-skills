@@ -10,6 +10,31 @@ description: |
 
 ## Prerequisites
 
+**Pre-check: Aliyun CLI >= 3.3.3 required**
+> Run `aliyun version` to verify >= 3.3.3. If not installed or version too low,
+> run `curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash` to update,
+> or see `references/cli-installation-guide.md` for installation instructions.
+
+**Pre-check: Aliyun CLI plugin update required**
+> [MUST] run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+> [MUST] run `aliyun plugin update` to ensure that any existing plugins are always up-to-date.
+
+At the **start** of the Core Workflow (before any CLI invocation):
+**[MUST] Enable AI-Mode** — AI-mode is required for Agent Skill execution.
+Run the following commands before any CLI invocation:
+```bash
+aliyun configure ai-mode enable
+aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-waf-checkresponse-intercept-query"
+```
+**[MUST] Disable AI-Mode at EVERY exit point** — Before delivering the final response for ANY reason, always disable AI-mode first. This applies to ALL exit paths: workflow success, workflow failure, error/exception, user cancellation, session end, or any other scenario where no further CLI commands will be executed.
+AI-mode is only used for Agent Skill invocation scenarios and MUST NOT remain enabled after the skill stops running.
+```bash
+aliyun configure ai-mode disable
+```
+
+**[MUST] CLI User-Agent** — Every `aliyun` CLI command invocation must include:
+`--user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-checkresponse-intercept-query`
+
 Before execution, you **must** collect the following information from the user:
 
 | Parameter | Description | Required |
@@ -31,8 +56,6 @@ Before execution, you **must** collect the following information from the user:
 
 ## Query Workflow
 
-**Important**: All `aliyun` CLI calls in this skill **must** include the header `--header User-Agent=AlibabaCloud-Agent-Skills` to identify the caller.
-
 ### Step 1: Information Collection
 
 Confirm the Request ID (traceid) with the user. If the user has not provided one, guide them to obtain it from:
@@ -47,8 +70,8 @@ If the user has not provided WAF Instance ID and SLS configuration, perform auto
 
 ```bash
 # Query WAF instances in both regions in parallel
-aliyun waf-openapi DescribeInstance --region cn-hangzhou --RegionId cn-hangzhou --header User-Agent=AlibabaCloud-Agent-Skills
-aliyun waf-openapi DescribeInstance --region ap-southeast-1 --RegionId ap-southeast-1 --header User-Agent=AlibabaCloud-Agent-Skills
+aliyun waf-openapi DescribeInstance --region cn-hangzhou --RegionId cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-checkresponse-intercept-query
+aliyun waf-openapi DescribeInstance --region ap-southeast-1 --RegionId ap-southeast-1 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-checkresponse-intercept-query
 ```
 
 #### Step 2b: Check Log Service Status (Mandatory Before Querying Logs)
@@ -56,7 +79,7 @@ aliyun waf-openapi DescribeInstance --region ap-southeast-1 --RegionId ap-southe
 **Before retrieving SLS configuration, you MUST first verify that the WAF instance has log service enabled** by calling `DescribeSlsLogStoreStatus`:
 
 ```bash
-aliyun waf-openapi DescribeSlsLogStoreStatus --region <region-id> --InstanceId '<instance-id>' --RegionId '<region-id>' --header User-Agent=AlibabaCloud-Agent-Skills
+aliyun waf-openapi DescribeSlsLogStoreStatus --region <region-id> --InstanceId '<instance-id>' --RegionId '<region-id>' --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-checkresponse-intercept-query
 ```
 
 - If the response indicates log service is **already enabled** (`SlsLogStoreStatus` is true/enabled), **skip** the enable operation and proceed directly to **Step 2c** (idempotent: no redundant writes).
@@ -68,7 +91,7 @@ aliyun waf-openapi ModifyUserWafLogStatus \
   --InstanceId '<instance-id>' \
   --Status 1 \
   --RegionId '<region-id>' \
-  --header User-Agent=AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-checkresponse-intercept-query
 ```
 
 > **Constraint**: This skill only supports **enabling** log service (`Status=1`). Disabling log service is **not permitted**. Never call this API with `Status=0`.
@@ -80,7 +103,7 @@ After enabling, wait a moment and re-verify with `DescribeSlsLogStoreStatus` to 
 Once `DescribeSlsLogStoreStatus` confirms that log service is enabled, you **must immediately** call `DescribeSlsLogStore` to obtain the WAF log Project and Logstore information:
 
 ```bash
-aliyun waf-openapi DescribeSlsLogStore --region <region-id> --InstanceId '<instance-id>' --RegionId '<region-id>' --header User-Agent=AlibabaCloud-Agent-Skills
+aliyun waf-openapi DescribeSlsLogStore --region <region-id> --InstanceId '<instance-id>' --RegionId '<region-id>' --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-checkresponse-intercept-query
 ```
 
 Key fields in the `DescribeSlsLogStore` response:
@@ -119,7 +142,7 @@ aliyun sls get-logs \
   --to $TO_TIME \
   --query "<request-id>" \
   --region <sls-region> \
-  --header User-Agent=AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-checkresponse-intercept-query
 ```
 
 **Important**: The `--region` here must be the SLS log storage region, which may differ from the WAF instance region. Check the `DescribeSlsLogStore` response from Step 2 to determine the correct SLS region.
@@ -153,7 +176,7 @@ aliyun waf-openapi DescribeDefenseRule \
   --RuleId <rule-id> \
   --DefenseScene '<defense-scene>' \
   --RegionId '<region-id>' \
-  --header User-Agent=AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-checkresponse-intercept-query
 ```
 
 **Note**: If you don't know the `TemplateId`, first use `DescribeDefenseTemplates` to list templates:
@@ -163,7 +186,7 @@ aliyun waf-openapi DescribeDefenseTemplates \
   --InstanceId '<instance-id>' \
   --DefenseScene '<defense-scene>' \
   --RegionId '<region-id>' \
-  --header User-Agent=AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-checkresponse-intercept-query
 ```
 
 ### Step 5: Output Analysis Report
@@ -194,13 +217,13 @@ Output using the following template:
 
 1. **Re-check global log service status** (should have been verified in Step 2b, but re-confirm):
    ```bash
-   aliyun waf-openapi DescribeSlsLogStoreStatus --region <region-id> --InstanceId '<instance-id>' --RegionId '<region-id>' --header User-Agent=AlibabaCloud-Agent-Skills
+   aliyun waf-openapi DescribeSlsLogStoreStatus --region <region-id> --InstanceId '<instance-id>' --RegionId '<region-id>' --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-checkresponse-intercept-query
    ```
    If not enabled, prompt the user and enable with `ModifyUserWafLogStatus` (see Step 2b). Only enabling (`Status=1`) is allowed.
 
 2. **Check protection object log switch**:
    ```bash
-   aliyun waf-openapi DescribeResourceLogStatus --region <region-id> --InstanceId '<instance-id>' --RegionId '<region-id>' --header User-Agent=AlibabaCloud-Agent-Skills
+   aliyun waf-openapi DescribeResourceLogStatus --region <region-id> --InstanceId '<instance-id>' --RegionId '<region-id>' --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-checkresponse-intercept-query
    ```
 
 3. **Enable protection object log collection** (check-then-act: only if `DescribeResourceLogStatus` shows log collection is disabled for the target resource; skip if already enabled):
@@ -210,7 +233,7 @@ Output using the following template:
      --InstanceId '<instance-id>' \
      --Resource '<resource-name>' \
      --Status true \
-     --header User-Agent=AlibabaCloud-Agent-Skills
+     --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-checkresponse-intercept-query
    ```
 
 See [references/common-block-reasons.md](references/common-block-reasons.md) for protection object naming conventions.
@@ -235,7 +258,7 @@ If you encounter permission errors, check the following:
 
 3. **Try specifying a different profile**:
    ```bash
-   aliyun waf-openapi DescribeInstance --profile <profile-name> --region <region-id> --header User-Agent=AlibabaCloud-Agent-Skills
+   aliyun waf-openapi DescribeInstance --profile <profile-name> --region <region-id> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-checkresponse-intercept-query
    ```
 
 ### Request ID Not Found
@@ -275,7 +298,7 @@ aliyun waf-openapi ModifyDefenseRuleStatus \
   --RuleId <rule-id> \
   --RuleStatus 0 \
   --RegionId '<region-id>' \
-  --header User-Agent=AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-checkresponse-intercept-query
 ```
 
 See [references/rule-operations.md](references/rule-operations.md) for detailed instructions.
