@@ -102,7 +102,7 @@ Please provide the file source:
 10. **Auto-assemble JSON for Q&A**: User only provides question text, agent constructs ModelParams/KnowledgeParams
 11. **Free-form input via text conversation, limited choices via AskUserQuestion**: paths, URLs, passwords should not use AskUserQuestion
 12. Password parameters involve sensitive info, remind user about security
-13. **All CLI commands MUST include** `--user-agent AlibabaCloud-Agent-Skills`
+13. **All CLI commands MUST include** `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-knowledgebase-ops`
 
 ---
 

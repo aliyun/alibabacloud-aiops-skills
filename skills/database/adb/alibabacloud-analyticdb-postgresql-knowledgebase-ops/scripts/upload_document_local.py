@@ -23,7 +23,7 @@ from alibabacloud_tea_openapi.models import Config
 from alibabacloud_tea_util.models import RuntimeOptions
 from Tea.exceptions import TeaException, UnretryableException
 
-USER_AGENT = "AlibabaCloud-Agent-Skills"
+USER_AGENT = "AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-knowledgebase-ops"
 DEFAULT_TIMEOUT_MS = 10_000
 
 _MAX_REGION_LEN = 64

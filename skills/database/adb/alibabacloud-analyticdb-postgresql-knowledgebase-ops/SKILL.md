@@ -23,10 +23,28 @@ The system automatically handles document parsing, chunking, vectorization, and 
 
 ## Environment Setup
 
-> **Pre-check: Aliyun CLI >= 3.3.1 required**
-> Run `aliyun version` to verify >= 3.3.1. If not installed or version too low,
-> see [references/cli-installation-guide.md](references/cli-installation-guide.md) for installation instructions.
+**[MUST] CLI User-Agent** — Every `aliyun` CLI command invocation must include:
+`--user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-knowledgebase-ops`
+
+> **[MUST] Enable AI-Mode** — AI-mode is required for Agent Skill execution.
+> Run the following commands before any CLI invocation:
+> ```bash
+> aliyun configure ai-mode enable
+> aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-knowledgebase-ops"
+> ```
+
+> **[MUST] Disable AI-Mode at EVERY exit point** — Before delivering the final response for ANY reason, always disable AI-mode first. This applies to ALL exit paths: workflow success, workflow failure, error/exception, user cancellation, session end, or any other scenario where no further CLI commands will be executed.
+> AI-mode is only used for Agent Skill invocation scenarios and MUST NOT remain enabled after the skill stops running.
+> ```bash
+> aliyun configure ai-mode disable
+> ```
+
+> **Pre-check: Aliyun CLI >= 3.3.3 required**
+> Run `aliyun version` to verify >= 3.3.3. If not installed or version too low,
+> run `curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash` to install/update,
+> or see [references/cli-installation-guide.md](references/cli-installation-guide.md) for installation instructions.
 > Then **[MUST]** run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+> Then **[MUST]** run `aliyun plugin update` to ensure that any existing plugins on your local machine are always up-to-date.
 
 > **Pre-check: Alibaba Cloud Credentials Required**
 >
@@ -49,7 +67,7 @@ The system automatically handles document parsing, chunking, vectorization, and 
 ### Verify CLI Credentials
 
 ```bash
-aliyun gpdb describe-regions --user-agent AlibabaCloud-Agent-Skills
+aliyun gpdb describe-regions --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-knowledgebase-ops
 ```
 
 ### Script dependencies (Python)
@@ -118,7 +136,7 @@ aliyun gpdb create-document-collection \
   --collection my_knowledge_base \
   --embedding-model text-embedding-v4 \
   --dimension 1024 \
-  --user-agent AlibabaCloud-Agent-Skills \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-knowledgebase-ops \
   --ConnectTimeout 10 \
   --ReadTimeout 10
 ```
@@ -138,7 +156,7 @@ client = Client(Config(
     endpoint='gpdb.aliyuncs.com',
     connect_timeout=10000,
     read_timeout=10000,
-    user_agent='AlibabaCloud-Agent-Skills',
+    user_agent='AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-knowledgebase-ops',
 ))
 ```
 
@@ -162,7 +180,7 @@ aliyun gpdb init-vector-database \
   --db-instance-id gp-xxxxx \
   --manager-account admin_user \
   --manager-account-password '<manager-account-password>' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-knowledgebase-ops
 
 # 2. Create namespace (naming rule: ns_{collection}, public is forbidden)
 aliyun gpdb create-namespace \
@@ -172,7 +190,7 @@ aliyun gpdb create-namespace \
   --manager-account-password '<manager-account-password>' \
   --namespace ns_my_knowledge_base \
   --namespace-password '<namespace-password>' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-knowledgebase-ops
 ```
 
 > **Important**: CreateNamespace MUST be executed before CreateDocumentCollection
@@ -190,7 +208,7 @@ aliyun gpdb create-document-collection \
   --collection my_knowledge_base \
   --embedding-model text-embedding-v4 \
   --dimension 1024 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-knowledgebase-ops
 ```
 
 #### List Knowledge Bases
@@ -201,7 +219,7 @@ aliyun gpdb list-document-collections \
   --db-instance-id gp-xxxxx \
   --namespace ns_my_knowledge_base \
   --namespace-password '<namespace-password>' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-knowledgebase-ops
 ```
 
 #### List Namespaces
@@ -212,7 +230,7 @@ aliyun gpdb list-namespaces \
   --db-instance-id gp-xxxxx \
   --manager-account admin_user \
   --manager-account-password '<manager-account-password>' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-knowledgebase-ops
 ```
 
 ---
@@ -233,7 +251,7 @@ aliyun gpdb upload-document-async \
   --document-loader-name ADBPGLoader \
   --chunk-size 500 \
   --chunk-overlap 50 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-knowledgebase-ops
 ```
 
 #### Upload Document (Local File - SDK)
@@ -262,7 +280,7 @@ aliyun gpdb get-upload-document-job \
   --namespace-password '<namespace-password>' \
   --collection my_knowledge_base \
   --job-id "job-xxxxx" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-knowledgebase-ops
 ```
 
 #### List Documents
@@ -274,7 +292,7 @@ aliyun gpdb list-documents \
   --namespace ns_my_knowledge_base \
   --namespace-password '<namespace-password>' \
   --collection my_knowledge_base \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-knowledgebase-ops
 ```
 
 ---
@@ -293,7 +311,7 @@ aliyun gpdb query-content \
   --content "How to configure database parameters?" \
   --topk 10 \
   --rerank-factor 5 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-knowledgebase-ops
 ```
 
 #### Knowledge Base Q&A
@@ -304,7 +322,7 @@ aliyun gpdb chat-with-knowledge-base \
   --db-instance-id gp-xxxxx \
   --model-params '{"Model":"qwen-max","Messages":[{"Role":"user","Content":"User question"}]}' \
   --knowledge-params '{"SourceCollection":[{"Collection":"my_knowledge_base","Namespace":"ns_my_knowledge_base","NamespacePassword":"<namespace-password>","QueryParams":{"TopK":10}}]}' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-knowledgebase-ops
 ```
 
 ---

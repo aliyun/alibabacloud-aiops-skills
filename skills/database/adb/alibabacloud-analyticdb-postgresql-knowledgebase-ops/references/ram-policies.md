@@ -125,10 +125,10 @@ Use the following commands to verify current user has required permissions:
 
 ```bash
 # Test basic permissions
-aliyun gpdb describe-regions --user-agent AlibabaCloud-Agent-Skills
+aliyun gpdb describe-regions --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-knowledgebase-ops
 
 # Test instance query permission
-aliyun gpdb describe-dbinstances --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills
+aliyun gpdb describe-dbinstances --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-knowledgebase-ops
 ```
 
 ## Reference Documentation

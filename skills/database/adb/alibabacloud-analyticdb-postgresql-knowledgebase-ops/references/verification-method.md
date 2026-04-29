@@ -20,7 +20,7 @@ This document describes how to verify that ADBPG Knowledge Base operations execu
 aliyun version
 ```
 
-**Success Criteria**: Version >= 3.3.1
+**Success Criteria**: Version >= 3.3.3
 
 ### 1.2 Credential Verification
 
@@ -33,7 +33,7 @@ aliyun configure list
 ### 1.3 API Connectivity Verification
 
 ```bash
-aliyun gpdb describe-regions --user-agent AlibabaCloud-Agent-Skills
+aliyun gpdb describe-regions --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-knowledgebase-ops
 ```
 
 **Success Criteria**: Returns region list JSON
@@ -50,7 +50,7 @@ aliyun gpdb init-vector-database \
   --db-instance-id gp-xxxxx \
   --manager-account admin_user \
   --manager-account-password '<manager-account-password>' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-knowledgebase-ops
 ```
 
 **Success Criteria**:
@@ -69,7 +69,7 @@ aliyun gpdb create-namespace \
   --manager-account-password '<manager-account-password>' \
   --namespace ns_test_kb \
   --namespace-password '<namespace-password>' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-knowledgebase-ops
 ```
 
 **Success Criteria**:
@@ -89,7 +89,7 @@ aliyun gpdb create-document-collection \
   --collection test_knowledge_base \
   --embedding-model text-embedding-v4 \
   --dimension 1024 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-knowledgebase-ops
 ```
 
 **Success Criteria**:
@@ -103,7 +103,7 @@ aliyun gpdb list-document-collections \
   --biz-region-id cn-hangzhou \
   --db-instance-id gp-xxxxx \
   --namespace-password '<namespace-password>' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-knowledgebase-ops
 ```
 
 **Verification Criteria**: Result contains `test_knowledge_base`
@@ -125,7 +125,7 @@ aliyun gpdb upload-document-async \
   --document-loader-name ADBPGLoader \
   --chunk-size 500 \
   --chunk-overlap 50 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-knowledgebase-ops
 ```
 
 **Success Criteria**:
@@ -141,7 +141,7 @@ aliyun gpdb get-upload-document-job \
   --namespace-password '<namespace-password>' \
   --collection test_knowledge_base \
   --job-id "job-xxxxx" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-knowledgebase-ops
 ```
 
 **Verification Criteria**:
@@ -156,7 +156,7 @@ aliyun gpdb list-documents \
   --db-instance-id gp-xxxxx \
   --namespace-password '<namespace-password>' \
   --collection test_knowledge_base \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-knowledgebase-ops
 ```
 
 **Success Criteria**:
@@ -177,7 +177,7 @@ aliyun gpdb query-content \
   --collection test_knowledge_base \
   --content "test query" \
   --topk 10 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-knowledgebase-ops
 ```
 
 **Success Criteria**:
@@ -192,7 +192,7 @@ aliyun gpdb chat-with-knowledge-base \
   --db-instance-id gp-xxxxx \
   --model-params '{"Model":"qwen-max","Messages":[{"Role":"user","Content":"test question"}]}' \
   --knowledge-params '{"SourceCollection":[{"Collection":"test_knowledge_base","NamespacePassword":"<namespace-password>","TopK":10}]}' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-knowledgebase-ops
 ```
 
 **Success Criteria**:
