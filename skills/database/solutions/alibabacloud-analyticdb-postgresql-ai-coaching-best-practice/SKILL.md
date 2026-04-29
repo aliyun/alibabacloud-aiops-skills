@@ -17,11 +17,40 @@ Build RAG-driven coaching systems using **ADBPG Supabase** (training data manage
 
 ---
 
-## Pre-check: Aliyun CLI >= 3.3.1 Required
+## Pre-check: Aliyun CLI >= 3.3.3 Required
 
-> **IMPORTANT**: Run `aliyun version` to verify >= 3.3.1. If not installed or version too low, see [references/cli-installation-guide.md](references/cli-installation-guide.md).
+> **IMPORTANT**: Run `aliyun version` to verify >= 3.3.3. If not installed or version too low,
+> run `curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash` to update,
+> or see [references/cli-installation-guide.md](references/cli-installation-guide.md) for installation instructions.
 >
 > Then **[MUST]** run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+> **[MUST]** run `aliyun plugin update` to ensure that any existing plugins on your local machine are always up-to-date.
+
+---
+
+## [MUST] CLI User-Agent
+
+> **Every `aliyun` CLI command invocation must include:**
+> `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-ai-coaching-best-practice`
+
+---
+
+## [MUST] CLI AI-Mode Configuration
+
+At the **start** of the Core Workflow (before any CLI invocation):
+
+**[MUST] Enable AI-Mode** — AI-mode is required for Agent Skill execution.
+Run the following commands before any CLI invocation:
+```bash
+aliyun configure ai-mode enable
+aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-ai-coaching-best-practice"
+```
+
+**[MUST] Disable AI-Mode at EVERY exit point** — Before delivering the final response for ANY reason, always disable AI-mode first. This applies to ALL exit paths: workflow success, workflow failure, error/exception, user cancellation, session end, or any other scenario where no further CLI commands will be executed.
+AI-mode is only used for Agent Skill invocation scenarios and MUST NOT remain enabled after the skill stops running.
+```bash
+aliyun configure ai-mode disable
+```
 
 ---
 
@@ -124,7 +153,7 @@ When user says "Help me set up an AI coaching system" or similar, execute the fo
 # Check existing NAT Gateways in VPC
 aliyun vpc describe-nat-gateways --profile adbpg \
   --biz-region-id <RegionId> --vpc-id <VpcId> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-ai-coaching-best-practice
 ```
 
 - **If `TotalCount > 0`** and SNAT entries cover the VSwitch CIDR → **Skip to Step 1.2**
@@ -134,7 +163,7 @@ aliyun vpc describe-nat-gateways --profile adbpg \
 # 1.1a: Get VSwitch CIDR
 aliyun vpc describe-vswitch-attributes --profile adbpg \
   --biz-region-id <RegionId> --vswitch-id <VSwitchId> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-ai-coaching-best-practice
 # Record: CidrBlock
 
 # 1.1b: Create Enhanced NAT Gateway (requires user confirmation)
@@ -142,7 +171,7 @@ aliyun vpc describe-vswitch-attributes --profile adbpg \
 aliyun vpc create-nat-gateway --profile adbpg \
   --biz-region-id <RegionId> --vpc-id <VpcId> --vswitch-id <VSwitchId> \
   --nat-type Enhanced \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-ai-coaching-best-practice
 # Record: NatGatewayId and SnatTableIds.SnatTableId[0]
 # Poll until Status=Available
 
@@ -150,11 +179,11 @@ aliyun vpc create-nat-gateway --profile adbpg \
 # 💰 Cost note: EIP incurs charges; release via VPC console when no longer needed
 aliyun vpc describe-eip-addresses --profile adbpg \
   --biz-region-id <RegionId> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-ai-coaching-best-practice
 # If no available EIP:
 aliyun vpc allocate-eip-address --profile adbpg \
   --biz-region-id <RegionId> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-ai-coaching-best-practice
 # Record: AllocationId and EipAddress
 
 # 1.1d: Bindind EIP to NAT Gateway (requires user confirmation)
@@ -162,14 +191,14 @@ aliyun vpc associate-eip-address --profile adbpg \
   --biz-region-id <RegionId> \
   --allocation-id <EIP-AllocationId> --instance-id <NatGatewayId> \
   --instance-type Nat \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-ai-coaching-best-practice
 
 # 1.1e: Create SNAT entry (requires user confirmation)
 aliyun vpc create-snat-entry --profile adbpg \
   --biz-region-id <RegionId> \
   --snat-table-id <SnatTableId> \
   --source-cidr "<VSwitch-CidrBlock>" --snat-ip "<EipAddress>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-ai-coaching-best-practice
 ```
 
 #### 1.2 Create Supabase Project
@@ -180,7 +209,7 @@ aliyun gpdb create-supabase-project --profile adbpg \
   --project-name <ProjectName> --account-password '<AccountPassword>' \
   --security-ip-list "127.0.0.1" --vpc-id <VpcId> --vswitch-id <VSwitchId> \
   --project-spec 2C4G --storage-size 20 --pay-type Postpaid \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-ai-coaching-best-practice
 ```
 
 **Record:** `ProjectId` (sbp-xxx), `PublicConnectUrl`, API Keys (store securely; do NOT print full API Keys in logs)
@@ -189,7 +218,7 @@ aliyun gpdb create-supabase-project --profile adbpg \
 > ```bash
 > aliyun gpdb get-supabase-project --profile adbpg \
 >   --biz-region-id <RegionId> --project-id <ProjectId> \
->   --user-agent AlibabaCloud-Agent-Skills
+>   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-ai-coaching-best-practice
 > ```
 > Check `Status` field. Retry every 30 seconds until `Status=running`.
 
@@ -207,7 +236,7 @@ Modify whitelist, then connect via psql and execute schema from [references/data
 aliyun gpdb modify-supabase-project-security-ips --profile adbpg \
   --biz-region-id <RegionId> --project-id <ProjectId> \
   --security-ip-list "<WhitelistIP>" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-ai-coaching-best-practice
 ```
 
 ### Step 3: Insert Preset Coaching Domains
@@ -221,7 +250,7 @@ Execute SQL from [references/database-schema.md](references/database-schema.md) 
 ```bash
 aliyun gpdb describe-db-instances --profile adbpg \
   --biz-region-id <RegionId> --page-size 100 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-ai-coaching-best-practice
 ```
 
 Filter results: `DBInstanceStatus=Running` AND `VectorConfigurationStatus=enabled`.
@@ -247,7 +276,7 @@ Present qualifying instances to user:
 ```bash
 aliyun gpdb describe-db-instance-attribute --profile adbpg \
   --db-instance-id <DBInstanceId> --region <RegionId> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-ai-coaching-best-practice
 ```
 
 Confirm: `DBInstanceStatus=Running` + `VectorConfigurationStatus=enabled`. Then proceed to Step 5.
@@ -277,7 +306,7 @@ Confirm: `DBInstanceStatus=Running` + `VectorConfigurationStatus=enabled`. Then 
 ```bash
 aliyun vpc describe-vswitches --profile adbpg \
   --biz-region-id <RegionId> --zone-id <ZoneId> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-ai-coaching-best-practice
 ```
 
 Present VSwitch options to user, recommend the one with most available IPs.
@@ -292,14 +321,14 @@ aliyun gpdb create-db-instance --profile adbpg \
   --storage-size 50 --seg-storage-type cloud_essd \
   --vpc-id <VpcId> --vswitch-id <VSwitchId> \
   --vector-configuration-status enabled --pay-type Postpaid \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-ai-coaching-best-practice
 ```
 
 > **Timeout:** Instance creation takes **10–15 minutes** (max 30 min). Poll every 30–60 seconds:
 > ```bash
 > aliyun gpdb describe-db-instance-attribute --profile adbpg \
 >   --db-instance-id <DBInstanceId> --region <RegionId> \
->   --user-agent AlibabaCloud-Agent-Skills
+>   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-ai-coaching-best-practice
 > ```
 > Wait until `DBInstanceStatus=Running`.
 
@@ -310,7 +339,7 @@ Check if the ADBPG instance already has a database account:
 ```bash
 aliyun gpdb describe-accounts --profile adbpg \
   --db-instance-id <DBInstanceId> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-ai-coaching-best-practice
 ```
 
 **Case A: No existing account** → Create a new account:
@@ -329,7 +358,7 @@ aliyun gpdb describe-accounts --profile adbpg \
 aliyun gpdb create-account --profile adbpg \
   --db-instance-id <DBInstanceId> --region <RegionId> \
   --account-name <ManagerAccount> --account-password '<ManagerAccountPassword>' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-ai-coaching-best-practice
 ```
 
 **Case B: Account already exists** → Inform the user. If the account was not created by the agent, **ask the user for the existing account password** before proceeding to Step 6.
@@ -354,14 +383,14 @@ Using the `ManagerAccount` and `ManagerAccountPassword` from Step 5, after user 
 aliyun gpdb init-vector-database --profile adbpg \
   --biz-region-id <RegionId> --db-instance-id <DBInstanceId> \
   --manager-account <ManagerAccount> --manager-account-password '<ManagerAccountPassword>' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-ai-coaching-best-practice
 
 # Create namespace
 aliyun gpdb create-namespace --profile adbpg \
   --biz-region-id <RegionId> --db-instance-id <DBInstanceId> \
   --manager-account <ManagerAccount> --manager-account-password '<ManagerAccountPassword>' \
   --namespace <Namespace> --namespace-password '<NamespacePassword>' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-ai-coaching-best-practice
 
 # Create document collection
 aliyun gpdb create-document-collection --profile adbpg \
@@ -369,7 +398,7 @@ aliyun gpdb create-document-collection --profile adbpg \
   --manager-account <ManagerAccount> --manager-account-password '<ManagerAccountPassword>' \
   --namespace <Namespace> --collection <Collection> \
   --embedding-model <EmbeddingModel> --dimension 1024 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-ai-coaching-best-practice
 ```
 
 ### Step 7 (Optional): Upload Domain Knowledge Documents
@@ -383,7 +412,7 @@ aliyun gpdb upload-document-async --profile adbpg \
   --collection <Collection> --file-name "domain_knowledge.pdf" \
   --file-url "https://example.com/knowledge.pdf" \
   --document-loader-name ADBPGLoader --chunk-size 500 --chunk-overlap 50 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-ai-coaching-best-practice
 ```
 
 **Recommended documents by scenario:** Sales methodologies, process guides (Workflow); Architecture patterns, design docs (Decision Support); Communication frameworks, best practices (Skill Development); Tech stack docs, onboarding guides (Onboarding).
@@ -410,7 +439,7 @@ aliyun gpdb chat-with-knowledge-base --profile adbpg \
     "Collection": "<Collection>", "Namespace": "<Namespace>",
     "NamespacePassword": "<NamespacePassword>", "QueryParams": {"TopK": <TopK>}
   }]}' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-ai-coaching-best-practice
 ```
 
 ---

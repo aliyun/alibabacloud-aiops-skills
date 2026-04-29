@@ -15,7 +15,7 @@ This document provides step-by-step verification commands to confirm each stage 
 # Check NAT Gateway exists
 aliyun vpc describe-nat-gateways --profile adbpg \
   --biz-region-id cn-hangzhou --vpc-id vpc-xxxxx \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-ai-coaching-best-practice
 ```
 
 ### Expected Success Indicators
@@ -39,7 +39,7 @@ aliyun vpc describe-nat-gateways --profile adbpg \
 ```bash
 aliyun gpdb get-supabase-project --profile adbpg \
   --project-id sbp-xxxxx \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-ai-coaching-best-practice
 ```
 
 ### Expected Success Indicators
@@ -63,7 +63,7 @@ aliyun gpdb get-supabase-project --profile adbpg \
 aliyun gpdb describe-db-instances --profile adbpg \
   --biz-region-id cn-hangzhou \
   --output cols="DBInstanceId,DBInstanceDescription,DBInstanceStatus,EngineVersion,VectorConfigurationStatus" rows="Items.DBInstance[]" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-ai-coaching-best-practice
 ```
 
 ### Expected Success Indicators
@@ -87,7 +87,7 @@ aliyun gpdb describe-db-instances --profile adbpg \
 aliyun gpdb describe-accounts --profile adbpg \
   --db-instance-id gp-xxxxx \
   --output cols="AccountName,AccountType,AccountStatus" rows="Accounts.DBInstanceAccount[]" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-ai-coaching-best-practice
 ```
 
 ### Expected Success Indicators
@@ -111,7 +111,7 @@ aliyun gpdb describe-namespaces --profile adbpg \
   --db-instance-id gp-xxxxx \
   --manager-account admin_user \
   --manager-account-password '<ManagerAccountPassword>' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-ai-coaching-best-practice
 ```
 
 ### Expected Success Indicators
@@ -133,7 +133,7 @@ aliyun gpdb describe-namespaces --profile adbpg \
   --db-instance-id gp-xxxxx \
   --manager-account admin_user \
   --manager-account-password '<ManagerAccountPassword>' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-ai-coaching-best-practice
 ```
 
 ### Expected Success Indicators
@@ -181,7 +181,7 @@ aliyun gpdb upload-document-async --profile adbpg \
   --document-loader-name ADBPGLoader \
   --chunk-size 500 \
   --chunk-overlap 50 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-ai-coaching-best-practice
 ```
 
 ### Expected Success Indicators
@@ -222,7 +222,7 @@ aliyun gpdb chat-with-knowledge-base --profile adbpg \
       "QueryParams": {"TopK": 5}
     }]
   }' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-ai-coaching-best-practice
 ```
 
 ### Expected Success Indicators
@@ -318,7 +318,7 @@ aliyun gpdb chat-with-knowledge-base --profile adbpg \
       "QueryParams": {"TopK": 5}
     }]
   }' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-ai-coaching-best-practice
 ```
 
 3. **Verify response quality:**
@@ -370,7 +370,7 @@ echo "3. Checking ADBPG instance status..."
 aliyun gpdb describe-db-instances --profile $PROFILE \
   --biz-region-id $REGION \
   --output cols="DBInstanceId,DBInstanceStatus,VectorConfigurationStatus" rows="Items.DBInstance[]" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-ai-coaching-best-practice
 
 # 4. Check accounts
 echo ""
@@ -378,7 +378,7 @@ echo "4. Checking database accounts..."
 aliyun gpdb describe-accounts --profile $PROFILE \
   --db-instance-id $DB_INSTANCE \
   --output cols="AccountName,AccountType,AccountStatus" rows="Accounts.DBInstanceAccount[]" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-ai-coaching-best-practice
 
 # 5. Test ChatWithKnowledgeBase
 echo ""
@@ -388,7 +388,7 @@ aliyun gpdb chat-with-knowledge-base --profile $PROFILE \
   --db-instance-id $DB_INSTANCE \
   --model-params '{"Model": "qwen-max", "Messages": [{"Role": "user", "Content": "Hello"}]}' \
   --knowledge-params "{\"SourceCollection\": [{\"Collection\": \"$COLLECTION\", \"Namespace\": \"$NAMESPACE\", \"NamespacePassword\": \"$NAMESPACE_PASSWORD\", \"QueryParams\": {\"TopK\": 5}}]}" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-analyticdb-postgresql-ai-coaching-best-practice
 
 echo ""
 echo "=== Health Check Complete ==="
