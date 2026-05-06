@@ -37,13 +37,13 @@
 
 ```bash
 # 获取所有地域列表
-aliyun ecs describe-regions --user-agent AlibabaCloud-Agent-Skills
+aliyun ecs describe-regions --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 
 # 在指定地域查找实例
 aliyun ecs describe-instances \
   --biz-region-id cn-hangzhou \
   --instance-ids '["i-xxx"]' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 ```
 
 ---
@@ -82,7 +82,7 @@ Layer 4: 认证配置
 aliyun ecs describe-instances \
   --biz-region-id <region> \
   --instance-ids '["<instance-id>"]' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 ```
 
 **一次调用获取：**
@@ -121,7 +121,7 @@ aliyun ecs describe-security-group-attribute \
   --biz-region-id <region> \
   --security-group-id <sg-id> \
   --direction ingress \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 ```
 
 **重点检查：**
@@ -155,13 +155,13 @@ aliyun ecs describe-security-group-attribute \
 aliyun ecs describe-instance-status \
   --biz-region-id <region> \
   --instance-id.1 <instance-id> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 
 # 检查系统事件（计划内维护、异常等）
 aliyun ecs describe-instance-history-events \
   --biz-region-id <region> \
   --instance-id <instance-id> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 ```
 
 #### 步骤4：检查云助手状态（备用连接方案）
@@ -170,7 +170,7 @@ aliyun ecs describe-instance-history-events \
 aliyun ecs describe-cloud-assistant-status \
   --biz-region-id <region> \
   --instance-id.1 <instance-id> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 ```
 
 #### 步骤5：根据发现问题提供解决方案
@@ -222,7 +222,7 @@ aliyun ecs authorize-security-group \
   --port-range 22/22 \
   --source-cidr-ip 0.0.0.0/0 \
   --description "SSH访问-临时" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 
 # 推荐方案 - 限制为特定IP
 aliyun ecs authorize-security-group \
@@ -232,7 +232,7 @@ aliyun ecs authorize-security-group \
   --port-range 22/22 \
   --source-cidr-ip <user-ip>/32 \
   --description "SSH访问-指定IP" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 ```
 
 **添加RDP访问规则（Windows）：**
@@ -245,7 +245,7 @@ aliyun ecs authorize-security-group \
   --port-range 3389/3389 \
   --source-cidr-ip <user-ip>/32 \
   --description "RDP远程桌面访问" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 ```
 
 **添加Web服务端口：**
@@ -258,7 +258,7 @@ aliyun ecs authorize-security-group \
   --ip-protocol tcp \
   --port-range 80/80 \
   --source-cidr-ip 0.0.0.0/0 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 
 # HTTPS 443
 aliyun ecs authorize-security-group \
@@ -267,7 +267,7 @@ aliyun ecs authorize-security-group \
   --ip-protocol tcp \
   --port-range 443/443 \
   --source-cidr-ip 0.0.0.0/0 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 ```
 
 ### 4.2 实例无公网IP解决方案
@@ -280,7 +280,7 @@ aliyun vpc allocate-eip-address \
   --biz-region-id <region> \
   --bandwidth 5 \
   --internet-charge-type PayByTraffic \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 
 # 2. 绑定EIP到实例
 aliyun vpc associate-eip-address \
@@ -288,7 +288,7 @@ aliyun vpc associate-eip-address \
   --allocation-id <eip-allocation-id> \
   --instance-id <instance-id> \
   --instance-type EcsInstance \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 ```
 
 **方案B：使用NAT网关（私网实例）**
@@ -298,7 +298,7 @@ aliyun vpc associate-eip-address \
 aliyun vpc describe-nat-gateways \
   --biz-region-id <region> \
   --vpc-id <vpc-id> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 ```
 
 ### 4.3 实例未运行解决方案
@@ -307,13 +307,13 @@ aliyun vpc describe-nat-gateways \
 # 启动实例
 aliyun ecs start-instance \
   --instance-id <instance-id> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 
 # 检查启动状态
 aliyun ecs describe-instance-status \
   --biz-region-id <region> \
   --instance-id.1 <instance-id> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 ```
 
 ### 4.4 密码重置（无法登录时）
@@ -323,12 +323,12 @@ aliyun ecs describe-instance-status \
 aliyun ecs modify-instance-attribute \
   --instance-id <instance-id> \
   --password '<NewPassword123!>' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 
 # 重启实例使密码生效
 aliyun ecs reboot-instance \
   --instance-id <instance-id> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 ```
 
 ### 4.5 使用云助手连接（备用方案）
@@ -340,7 +340,7 @@ aliyun ecs reboot-instance \
 aliyun ecs describe-cloud-assistant-status \
   --biz-region-id <region> \
   --instance-id.1 <instance-id> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 
 # 2. 发送诊断命令（命令内容需Base64编码）
 aliyun ecs run-command \
@@ -349,13 +349,13 @@ aliyun ecs run-command \
   --type RunShellScript \
   --command-content '<base64-encoded-command>' \
   --timeout 60 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 
 # 3. 查看命令执行结果
 aliyun ecs describe-invocation-results \
   --biz-region-id <region> \
   --invoke-id <invoke-id> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 ```
 
 ### 4.6 使用VNC控制台（最后手段）
@@ -379,7 +379,7 @@ aliyun ecs describe-security-group-attribute \
   --biz-region-id <region> \
   --security-group-id <sg-id> \
   --direction ingress \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 ```
 
 **验证2：网络层**
@@ -475,9 +475,9 @@ SSH端口已开放但仍无法连接
 
 ```bash
 # 以下检查可同时执行：
-并行任务1: aliyun ecs describe-instances ...        # 实例状态
-并行任务2: aliyun ecs describe-security-group-attribute ...  # 安全组
-并行任务3: aliyun ecs describe-cloud-assistant-status ...    # 云助手
+并行任务1: aliyun ecs describe-instances ... --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose        # 实例状态
+并行任务2: aliyun ecs describe-security-group-attribute ... --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose  # 安全组
+并行任务3: aliyun ecs describe-cloud-assistant-status ... --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose    # 云助手
 并行任务4: nc -zv -w 10 <ip> 22                    # 端口测试（10秒超时）
 ```
 
@@ -506,28 +506,28 @@ SSH端口已开放但仍无法连接
 aliyun ecs describe-instances \
   --biz-region-id <region> \
   --instance-ids '["<id>"]' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 
 # 查询实例状态
 aliyun ecs describe-instance-status \
   --biz-region-id <region> \
   --instance-id.1 <id> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 
 # 启动实例
 aliyun ecs start-instance \
   --instance-id <id> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 
 # 停止实例
 aliyun ecs stop-instance \
   --instance-id <id> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 
 # 重启实例
 aliyun ecs reboot-instance \
   --instance-id <id> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 ```
 
 ### 8.2 安全组操作
@@ -536,14 +536,14 @@ aliyun ecs reboot-instance \
 # 查询实例关联的安全组
 aliyun ecs describe-security-groups \
   --biz-region-id <region> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 
 # 查询安全组规则
 aliyun ecs describe-security-group-attribute \
   --biz-region-id <region> \
   --security-group-id <sg-id> \
   --direction ingress \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 
 # 添加入方向规则
 aliyun ecs authorize-security-group \
@@ -552,7 +552,7 @@ aliyun ecs authorize-security-group \
   --ip-protocol tcp \
   --port-range <port>/<port> \
   --source-cidr-ip <cidr> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 
 # 删除入方向规则
 aliyun ecs revoke-security-group \
@@ -561,7 +561,7 @@ aliyun ecs revoke-security-group \
   --ip-protocol tcp \
   --port-range <port>/<port> \
   --source-cidr-ip <cidr> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 ```
 
 ### 8.3 网络操作
@@ -570,13 +570,13 @@ aliyun ecs revoke-security-group \
 # 查询EIP
 aliyun vpc describe-eip-addresses \
   --biz-region-id <region> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 
 # 分配EIP
 aliyun vpc allocate-eip-address \
   --biz-region-id <region> \
   --bandwidth 5 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 
 # 绑定EIP
 aliyun vpc associate-eip-address \
@@ -584,12 +584,12 @@ aliyun vpc associate-eip-address \
   --allocation-id <eip-id> \
   --instance-id <instance-id> \
   --instance-type EcsInstance \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 
 # 解绑EIP
 aliyun vpc unassociate-eip-address \
   --allocation-id <eip-id> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 ```
 
 ### 8.4 云助手操作
@@ -599,7 +599,7 @@ aliyun vpc unassociate-eip-address \
 aliyun ecs describe-cloud-assistant-status \
   --biz-region-id <region> \
   --instance-id.1 <id> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 
 # 执行Shell命令（Linux）- 命令内容需Base64编码
 aliyun ecs run-command \
@@ -608,7 +608,7 @@ aliyun ecs run-command \
   --type RunShellScript \
   --command-content '<base64-encoded-command>' \
   --timeout 60 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 
 # 执行PowerShell命令（Windows）- 命令内容需Base64编码
 aliyun ecs run-command \
@@ -617,13 +617,13 @@ aliyun ecs run-command \
   --type RunPowerShellScript \
   --command-content '<base64-encoded-command>' \
   --timeout 60 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 
 # 查看命令执行结果
 aliyun ecs describe-invocation-results \
   --biz-region-id <region> \
   --invoke-id <invoke-id> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 ```
 
 ---

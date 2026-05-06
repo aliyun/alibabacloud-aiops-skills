@@ -124,21 +124,21 @@ Create policy file `ecs-diagnostics-policy.json` with the JSON above, then:
 aliyun ram create-policy \
   --policy-name ECS-Diagnostics-Policy \
   --policy-document file://ecs-diagnostics-policy.json \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 
 # Attach to a user
 aliyun ram attach-policy-to-user \
   --policy-name ECS-Diagnostics-Policy \
   --policy-type Custom \
   --user-name <your-ram-user-name> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 
 # Attach to a role
 aliyun ram attach-policy-to-role \
   --policy-name ECS-Diagnostics-Policy \
   --policy-type Custom \
   --role-name <your-ram-role-name> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 ```
 
 ## Least Privilege Principle
@@ -157,24 +157,24 @@ After applying permissions, verify they work correctly:
 aliyun ecs describe-instances \
   --region-id cn-hangzhou \
   --page-size 1 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 
 # Test VPC read permission
 aliyun vpc describe-vpcs \
   --region-id cn-hangzhou \
   --page-size 1 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 
 # Test CMS read permission
 aliyun cms describe-metric-last \
   --namespace acs_ecs_dashboard \
   --metric-name CPUUtilization \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 
 # Test Cloud Assistant permission (only if Deep Diagnostics is needed)
 aliyun ecs describe-invocation-results \
   --region-id cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
 ```
 
 ## Troubleshooting Permission Issues

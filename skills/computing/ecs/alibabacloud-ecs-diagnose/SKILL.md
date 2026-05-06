@@ -31,10 +31,27 @@ This skill provides comprehensive diagnostics for Alibaba Cloud ECS instances ex
 
 ## Prerequisites
 
-> **Pre-check: Aliyun CLI >= 3.3.1 required**
-> Run `aliyun version` to verify >= 3.3.1. If not installed or version too low,
-> see `references/cli-installation-guide.md` for installation instructions.
-> Then [MUST] run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+> **Pre-check: Aliyun CLI >= 3.3.3 required**
+> Run `aliyun version` to verify >= 3.3.3. If not installed or version too low,
+> run `curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash` to install/update,
+> or see `references/cli-installation-guide.md` for installation instructions.
+
+> **Pre-check: Aliyun CLI plugin update required**
+> [MUST] run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+> [MUST] run `aliyun plugin update` to ensure that any existing plugins on your local machine are always up-to-date.
+
+At the **start** of the Core Workflow (before any CLI invocation):
+**[MUST] Enable AI-Mode** — AI-mode is required for Agent Skill execution.
+Run the following commands before any CLI invocation:
+```bash
+aliyun configure ai-mode enable
+aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose"
+```
+**[MUST] Disable AI-Mode at EVERY exit point** — Before delivering the final response for ANY reason, always disable AI-mode first. This applies to ALL exit paths: workflow success, workflow failure, error/exception, user cancellation, session end, or any other scenario where no further CLI commands will be executed.
+AI-mode is only used for Agent Skill invocation scenarios and MUST NOT remain enabled after the skill stops running.
+```bash
+aliyun configure ai-mode disable
+```
 
 > **Pre-check: Alibaba Cloud Credentials Required**
 >
@@ -66,7 +83,10 @@ This skill provides comprehensive diagnostics for Alibaba Cloud ECS instances ex
 >   - Cloud Assistant commands: `--biz-region-id`
 >   - All other commands: `--region-id`
 > - Instance ID format varies: `--instance-id.1`, `--instance-ids '["..."]'`, or `--instance-id`
-> - Always include `--user-agent AlibabaCloud-Agent-Skills`
+> - Always include `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose`
+
+**[MUST] CLI User-Agent** — Every `aliyun` CLI command invocation must include:
+`--user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose`
 
 ## Required Permissions
 
