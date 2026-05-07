@@ -136,7 +136,7 @@ See `references/ram-policies.md` for detailed policy configuration.
 
 | Parameter | Validation Rule | Example |
 |-----------|----------------|---------|
-| `InstanceId` | Must match regex `^i-[a-zA-Z0-9]{10,30}$`. Each ID in the array must pass validation. | `i-bp12z30vh0wadpyv3jo3` |
+| `InstanceId` | Must match regex `^i-[a-zA-Z0-9]{10,30}$`. Each ID in the array must pass validation. | `i-bp12z30vh0xxxxxxxxxx` |
 | `RegionId` | Must be a valid Alibaba Cloud region ID. Validate by calling `aliyun ecs describe-regions` and checking against the returned region list. | `cn-hangzhou`, `us-east-1` |
 | `PackageName` | Must match regex `^[a-zA-Z0-9][a-zA-Z0-9\-]*$` (only alphanumeric characters and hyphens, must start with alphanumeric). | `ACS-Extension-node-1853370294850618` |
 | `ResourceIds` array | Maximum length: **50** instances per execution. | — |
@@ -414,36 +414,6 @@ Installation status explanation:
 | `Success` | Installation successful — proceed to generate the report |
 | `Failed` | Installation failed — view `Outputs` or `Tasks` for error details, then generate the report |
 | `Cancelled` | Installation cancelled — generate the report |
-
-> **[MUST] Post-Installation Version Verification:** When the execution status is `Success`, you MUST verify the actual installed/existing software version by executing the appropriate version check command via Cloud Assistant (using `aliyun ecs run-command` or the OOS_RunCommand MCP tool). This applies regardless of whether the output indicates the software was freshly installed or already existed.
->
-> **Example** (verifying Node.js version via Cloud Assistant — note: ALL flags use kebab-case):
-> ```bash
-> aliyun ecs run-command \
->   --region-id "<region>" \
->   --instance-id '["<instance-id>"]' \
->   --type RunShellScript \
->   --command-content "node -v" \
->   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-install-extension
-> ```
->
-> Standard version check commands:
-> | Software | Command |
-> |----------|---------|
-> | Node.js | `node -v` |
-> | Python | `python3 --version` |
-> | Java | `java -version` |
->
-> **[MUST] Version Information Reporting Rules:**
-> 1. Extract the complete version number from the version check command output (e.g., `v22.13.1`, `3.10.12`, `21.0.7`)
-> 2. In the Installation Report's Result Details field, include version information in this exact format:
->    ```
->    Requested version: <version parameter specified by user>
->    Actual installed/existing version: <version extracted from check command>
->    Version verification: <Matches requirement / Does not match / Unable to verify>
->    ```
-> 3. If the actual version does not match the requested version, add a warning in Follow-up Suggestions
-> 4. **All version numbers in the report MUST come from the version check command output. Do NOT infer or guess version numbers from descriptive log text. Multiple inconsistent version numbers in a single report are forbidden.**
 
 ---
 
