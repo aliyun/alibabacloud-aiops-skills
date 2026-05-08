@@ -1,0 +1,1095 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PAI-Rec Engine Configuration",
+  "description": "JSON Schema for PAI-Rec recommendation engine configuration file",
+  "type": "object",
+  "properties": {
+    "RunMode": {
+      "type": "string",
+      "enum": ["daily", "prepub", "product"],
+      "description": "Run mode: daily, prepub, or product"
+    },
+    "Region": {
+      "type": "string",
+      "description": "Region identifier"
+    },
+    "ListenConf": {
+      "$ref": "#/definitions/ListenConfig"
+    },
+    "RecallConfs": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/RecallConfig" },
+      "description": "Recall configurations array"
+    },
+    "SceneConfs": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "$ref": "#/definitions/CategoryConfig"
+        }
+      },
+      "description": "Scene configurations"
+    },
+    "FilterConfs": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/FilterConfig" },
+      "description": "Filter configurations array"
+    },
+    "FilterNames": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": { "type": "string" }
+      },
+      "description": "Scene to filter names mapping"
+    },
+    "BeFilterConfs": {
+      "type": "array",
+      "items": { "type": "object" },
+      "description": "BE filter configurations"
+    },
+    "AlgoConfs": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/AlgoConfig" },
+      "description": "Algorithm/model configurations"
+    },
+    "GeneralRankConfs": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/definitions/GeneralRankConfig" },
+      "description": "General rank (coarse) configurations"
+    },
+    "RankConf": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/definitions/RankConfig" },
+      "description": "Rank (fine) configurations"
+    },
+    "SortConfs": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/SortConfig" },
+      "description": "Sort (rerank) configurations array"
+    },
+    "DPPConf": {
+      "type": "array",
+      "items": { "type": "object" },
+      "description": "DPP diversity configurations"
+    },
+    "SortNames": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": { "type": "string" }
+      },
+      "description": "Scene to sort names mapping"
+    },
+    "FeatureConfs": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/definitions/SceneFeatureConfig" },
+      "description": "Feature loading configurations"
+    },
+    "UserFeatureConfs": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/definitions/SceneFeatureConfig" },
+      "description": "User feature preloading configurations"
+    },
+    "HologresConfs": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/definitions/HologresConfig" },
+      "description": "Hologres data sources"
+    },
+    "RedisConfs": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/definitions/RedisConfig" },
+      "description": "Redis data sources"
+    },
+    "MysqlConfs": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/definitions/MysqlConfig" },
+      "description": "MySQL data sources"
+    },
+    "ClickHouseConfs": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/definitions/ClickHouseConfig" },
+      "description": "ClickHouse data sources"
+    },
+    "GraphConfs": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/definitions/GraphConfig" },
+      "description": "Graph data sources"
+    },
+    "FeatureStoreConfs": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/definitions/FeatureStoreConfig" },
+      "description": "FeatureStore data sources"
+    },
+    "KafkaConfs": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/definitions/KafkaConfig" },
+      "description": "Kafka data sources"
+    },
+    "SlsConfs": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/definitions/SlsConfig" },
+      "description": "SLS data sources"
+    },
+    "DatahubConfs": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/definitions/DatahubConfig" },
+      "description": "Datahub data sources"
+    },
+    "BEConfs": {
+      "type": "object",
+      "additionalProperties": { "type": "object" },
+      "description": "BE engine data sources"
+    },
+    "Ha3EngineConfs": {
+      "type": "object",
+      "additionalProperties": { "type": "object" },
+      "description": "Ha3 engine data sources"
+    },
+    "OpenSearchConfs": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/definitions/OpenSearchConfig" },
+      "description": "OpenSearch data sources"
+    },
+    "HBaseConfs": {
+      "type": "object",
+      "additionalProperties": { "type": "object" },
+      "description": "HBase data sources"
+    },
+    "HBaseThriftConfs": {
+      "type": "object",
+      "additionalProperties": { "type": "object" },
+      "description": "HBase Thrift data sources"
+    },
+    "TableStoreConfs": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/definitions/TableStoreConfig" },
+      "description": "TableStore data sources"
+    },
+    "LindormConfs": {
+      "type": "object",
+      "additionalProperties": { "type": "object" },
+      "description": "Lindorm data sources"
+    },
+    "RecallEngineConfs": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/definitions/RecallEngineConfig" },
+      "description": "Recall-engine service data sources"
+    },
+    "LogConf": {
+      "type": "object",
+      "description": "Logging configuration"
+    },
+    "ABTestConf": {
+      "type": "object",
+      "description": "A/B testing configuration"
+    },
+    "CallBackConfs": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/definitions/CallBackConfig" },
+      "description": "Callback configurations"
+    },
+    "EmbeddingConfs": {
+      "type": "object",
+      "additionalProperties": { "type": "object" },
+      "description": "Embedding configurations"
+    },
+    "PipelineConfs": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": { "$ref": "#/definitions/PipelineConfig" }
+      },
+      "description": "Custom pipeline configurations"
+    },
+    "PrometheusConfig": {
+      "$ref": "#/definitions/PrometheusConfig"
+    },
+    "DebugConfs": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/definitions/DebugConfig" },
+      "description": "Debug configurations"
+    },
+    "FeatureLogConfs": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/definitions/FeatureLogConfig" },
+      "description": "Feature log configurations"
+    },
+    "UserDefineConfs": {
+      "description": "User-defined configurations"
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "ListenConfig": {
+      "type": "object",
+      "properties": {
+        "HttpAddr": { "type": "string" },
+        "HttpPort": { "type": "integer" }
+      },
+      "additionalProperties": false
+    },
+    "DaoConfig": {
+      "type": "object",
+      "properties": {
+        "Adapter": { "type": "string" },
+        "AdapterType": { "type": "string" },
+        "RedisName": { "type": "string" },
+        "RedisPrefix": { "type": "string" },
+        "RedisDataType": { "type": "string" },
+        "RedisFieldType": { "type": "string" },
+        "RedisDefaultKey": { "type": "string" },
+        "RedisValueDelimeter": { "type": "string" },
+        "MysqlName": { "type": "string" },
+        "MysqlTable": { "type": "string" },
+        "Config": { "type": "string" },
+        "TableStoreName": { "type": "string" },
+        "TableStoreTableName": { "type": "string" },
+        "HBasePrefix": { "type": "string" },
+        "HBaseName": { "type": "string" },
+        "HBaseTable": { "type": "string" },
+        "ColumnFamily": { "type": "string" },
+        "Qualifier": { "type": "string" },
+        "ItemIdField": { "type": "string" },
+        "ItemScoreField": { "type": "string" },
+        "HologresName": { "type": "string" },
+        "HologresTableName": { "type": "string" },
+        "ClickHouseName": { "type": "string" },
+        "ClickHouseTableName": { "type": "string" },
+        "BeName": { "type": "string" },
+        "BizName": { "type": "string" },
+        "BeRecallName": { "type": "string" },
+        "BeTableName": { "type": "string" },
+        "BeExposureUserIdName": { "type": "string" },
+        "BeExposureItemIdName": { "type": "string" },
+        "FeatureStoreName": { "type": "string" },
+        "FeatureStoreModelName": { "type": "string" },
+        "FeatureStoreEntityName": { "type": "string" },
+        "FeatureStoreViewName": { "type": "string" },
+        "GraphName": { "type": "string" },
+        "InstanceId": { "type": "string" },
+        "TableName": { "type": "string" },
+        "UserNode": { "type": "string" },
+        "ItemNode": { "type": "string" },
+        "Edge": { "type": "string" },
+        "LindormTableName": { "type": "string" },
+        "LindormName": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "RecallConfig": {
+      "type": "object",
+      "required": ["Name", "RecallType", "RecallCount"],
+      "properties": {
+        "Name": { "type": "string" },
+        "RecallType": {
+          "type": "string",
+          "enum": [
+            "UserCollaborativeFilterRecall",
+            "UserTopicRecall",
+            "VectorRecall",
+            "UserCustomRecall",
+            "HologresVectorRecall",
+            "ItemCollaborativeFilterRecall",
+            "UserGroupHotRecall",
+            "UserGlobalHotRecall",
+            "I2IVectorRecall",
+            "ColdStartRecall",
+            "MilvusVectorRecall",
+            "RealTimeU2IRecall",
+            "OnlineHologresVectorRecall",
+            "OnlineVectorRecall",
+            "GraphRecall",
+            "MockRecall",
+            "RecallEngineRecall"
+          ]
+        },
+        "RecallCount": { "type": "integer", "minimum": 1 },
+        "RecallAlgo": { "type": "string" },
+        "VectorAlgoType": { "type": "string" },
+        "ItemType": { "type": "string" },
+        "CacheAdapter": { "type": "string", "enum": ["Redis", "localCache"] },
+        "CacheConfig": { "type": "string" },
+        "CachePrefix": { "type": "string" },
+        "CacheTime": { "type": "integer" },
+        "Triggers": { "type": "array", "items": { "type": "object" } },
+        "HologresVectorConf": { "type": "object" },
+        "BeVectorConf": { "type": "object" },
+        "MilvusVectorConf": { "type": "object" },
+        "UserCollaborativeDaoConf": { "type": "object" },
+        "ItemCollaborativeDaoConf": { "type": "object" },
+        "EnableMultipleItemId": { "type": "boolean" },
+        "MultipleItemIdDelimiter": { "type": "string" },
+        "User2ItemDaoConf": { "type": "object" },
+        "UserTopicDaoConf": { "type": "object" },
+        "DaoConf": { "$ref": "#/definitions/DaoConfig" },
+        "VectorDaoConf": { "type": "object" },
+        "ColdStartDaoConf": {
+          "type": "object",
+          "properties": {
+            "AdapterType": { "type": "string", "description": "Adapter type: hologres or featurestore" },
+            "HologresName": { "type": "string", "description": "Data source name defined in HologresConfs (required when Hologres)" },
+            "HologresTableName": { "type": "string", "description": "Cold-start recall table name (required when Hologres)" },
+            "WhereClause": { "type": "string", "description": "Filter clause; supports the $(time) variable and ${user.xxx}/${context.features.xxx} feature variables (Hologres)" },
+            "PrimaryKey": { "type": "string", "description": "Table primary-key field name (required when Hologres)" },
+            "TimeInterval": { "type": "integer", "description": "Time delta in seconds used to compute the $(time) variable (Hologres)" },
+            "FeatureStoreName": { "type": "string", "description": "Data source name defined in FeatureStoreConfs (required when FeatureStore)" },
+            "FeatureStoreViewName": { "type": "string", "description": "FeatureView name for cold-start recall (required when FeatureStore)" }
+          },
+          "required": ["AdapterType"]
+        },
+        "FilterParams": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "Name": { "type": "string" },
+              "Type": { "type": "string" },
+              "Operator": { "type": "string" },
+              "Value": {}
+            }
+          },
+          "description": "Cold-start recall filter clauses (FeatureStore mode)"
+        },
+        "RealTimeUser2ItemDaoConf": { "type": "object" },
+        "UserFeatureConfs": { "type": "array", "items": { "type": "object" } },
+        "BeConf": { "type": "object" },
+        "GraphConf": { "type": "object" },
+        "RecallEngineConf": { "$ref": "#/definitions/RecallEngineConf" }
+      },
+      "additionalProperties": true
+    },
+    "CategoryConfig": {
+      "type": "object",
+      "properties": {
+        "RecallNames": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "AutoInvokeCallBack": { "type": "boolean" },
+        "AutoInvokeCallBackRate": { "type": "integer", "minimum": 0, "maximum": 100 }
+      },
+      "additionalProperties": true
+    },
+    "FilterConfig": {
+      "type": "object",
+      "required": ["Name", "FilterType"],
+      "properties": {
+        "Name": { "type": "string" },
+        "FilterType": {
+          "type": "string",
+          "enum": [
+            "User2ItemExposureFilter",
+            "User2ItemCustomFilter",
+            "AdjustCountFilter",
+            "PriorityAdjustCountFilter",
+            "PriorityAdjustCountFilterV2",
+            "ItemStateFilter",
+            "ItemCustomFilter",
+            "CompletelyFairFilter",
+            "GroupWeightCountFilter",
+            "DimensionFieldUniqueFilter",
+            "User2ItemExposureWithConditionFilter",
+            "ConditionFilter",
+            "DiversityAdjustCountFilter",
+            "SnakeFilter",
+            "UniqueFilter"
+          ]
+        },
+        "Dimension": { "type": "string" },
+        "DaoConf": { "$ref": "#/definitions/DaoConfig" },
+        "AdjustCountConfs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "RecallName": { "type": "string", "description": "Recall source name" },
+              "Count": { "type": "integer", "description": "Count limit for this recall" },
+              "Type": { "type": "string", "enum": ["accumulator", "fix"], "description": "Limit type: accumulator (cumulative) or fix (fixed)" }
+            },
+            "required": ["RecallName", "Count"]
+          },
+          "description": "PriorityAdjustCountFilter whitelist; recalls not listed here are dropped entirely"
+        },
+        "ItemStateDaoConf": { "type": "object" },
+        "FilterParams": { "type": "array" },
+        "DiversityDaoConf": { "type": "object" },
+        "FilterVal": { "type": "object" },
+        "MaxItems": { "type": "integer" },
+        "TimeInterval": { "type": "integer" },
+        "WriteLog": { "type": "boolean" },
+        "OnlyLogUserExposeFlag": { "type": "boolean" },
+        "GenerateItemDataFuncName": { "type": "string" },
+        "WriteLogExcludeScenes": { "type": "array", "items": { "type": "string" } },
+        "ClearLogIfNotEnoughScene": { "type": "string" },
+        "ShuffleItem": { "type": "boolean" },
+        "RetainNum": { "type": "integer" }
+      },
+      "additionalProperties": true
+    },
+    "AlgoConfig": {
+      "type": "object",
+      "required": ["Name", "Type"],
+      "properties": {
+        "Name": { "type": "string" },
+        "Type": { "type": "string" },
+        "EasConf": { "$ref": "#/definitions/EasConfig" },
+        "VectorConf": { "$ref": "#/definitions/VectorConfig" },
+        "MilvusConf": { "$ref": "#/definitions/MilvusConfig" },
+        "LookupConf": { "type": "object" },
+        "SeldonConf": { "type": "object" },
+        "TFservingConf": { "type": "object" }
+      },
+      "additionalProperties": false
+    },
+    "EasConfig": {
+      "type": "object",
+      "required": ["Processor", "Url", "ResponseFuncName"],
+      "properties": {
+        "Processor": {
+          "type": "string",
+          "enum": ["EasyRec", "TensorFlow", "ALINK_FM", "PMML", "TFServing"]
+        },
+        "Url": { "type": "string" },
+        "Auth": { "type": "string" },
+        "EndpointType": { "type": "string", "enum": ["DOCKER", "DIRECT"] },
+        "SignatureName": { "type": "string" },
+        "Timeout": { "type": "integer" },
+        "RetryTimes": { "type": "integer" },
+        "ResponseFuncName": {
+          "type": "string",
+          "description": "Must match one of the response funcs registered in pairec algorithm/eas/client.go SetResponseFunc().",
+          "enum": [
+            "pssmartResponseFunc",
+            "tfResponseFunc",
+            "alinkFMResponseFunc",
+            "tfMutValResponseFunc",
+            "easyrecResponseFunc",
+            "easyrecResponseFuncDebug",
+            "easyrecMutValResponseFunc",
+            "easyrecMutValResponseFuncDebug",
+            "easyrecMutClassificationResponseFunc",
+            "easyrecMutClassificationResponseFuncDebug",
+            "easyrecUserEmbResponseFunc",
+            "easyrecUserRealtimeEmbeddingResponseFunc",
+            "easyrecUserRealtimeEmbeddingMindResponseFunc",
+            "tfServingResponseFunc",
+            "torchrecMutValResponseFunc",
+            "torchrecMutValResponseFuncDebug",
+            "torchrecEmbeddingResponseFunc",
+            "torchrecEmbeddingItemsResponseFunc",
+            "torchrecEmbeddingItemsResponseFuncDebug",
+            "tfUseEmbResponseFunc",
+            "torchrecMutClassificationResponseFunc",
+            "torchrecMutClassificationResponseFuncDebug"
+          ]
+        },
+        "Outputs": { "type": "array", "items": { "type": "string" } },
+        "ModelName": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "VectorConfig": {
+      "type": "object",
+      "properties": {
+        "ServerAddress": { "type": "string" },
+        "Timeout": { "type": "integer" }
+      },
+      "additionalProperties": false
+    },
+    "MilvusConfig": {
+      "type": "object",
+      "properties": {
+        "ServerAddress": { "type": "string" },
+        "Timeout": { "type": "integer" }
+      },
+      "additionalProperties": false
+    },
+    "RankConfig": {
+      "type": "object",
+      "required": ["RankAlgoList", "RankScore"],
+      "properties": {
+        "RankAlgoList": { "type": "array", "items": { "type": "string" } },
+        "RankScore": { "type": "string" },
+        "Processor": { "type": "string" },
+        "BatchCount": { "type": "integer" },
+        "ContextFeatures": { "type": "array", "items": { "type": "string" } },
+        "ItemFeatures": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": true
+    },
+    "GeneralRankConfig": {
+      "type": "object",
+      "properties": {
+        "FeatureLoadConfs": { "type": "array", "items": { "$ref": "#/definitions/FeatureLoadConfig" } },
+        "RankConf": { "$ref": "#/definitions/RankConfig" },
+        "ActionConfs": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/ActionConfig" }
+        }
+      },
+      "additionalProperties": true
+    },
+    "ActionConfig": {
+      "type": "object",
+      "required": ["ActionType", "ActionName"],
+      "properties": {
+        "ActionType": { "type": "string", "enum": ["sort", "filter"] },
+        "ActionName": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "SceneFeatureConfig": {
+      "type": "object",
+      "properties": {
+        "AsynLoadFeature": { "type": "boolean" },
+        "FeatureLoadConfs": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/FeatureLoadConfig" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "FeatureLoadConfig": {
+      "type": "object",
+      "properties": {
+        "FeatureDaoConf": { "$ref": "#/definitions/FeatureDaoConfig" },
+        "Features": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/FeatureConfig" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "FeatureDaoConfig": {
+      "type": "object",
+      "properties": {
+        "Adapter": { "type": "string" },
+        "AdapterType": { "type": "string" },
+        "FeatureKey": { "type": "string" },
+        "FeatureAppendKey": { "type": "string" },
+        "FeatureStore": { "type": "string", "enum": ["user", "item"] },
+        "UserFeatureKeyName": { "type": "string" },
+        "ItemFeatureKeyName": { "type": "string" },
+        "TimestampFeatureKeyName": { "type": "string" },
+        "EventFeatureKeyName": { "type": "string" },
+        "PlayTimeFeatureKeyName": { "type": "string" },
+        "TsFeatureKeyName": { "type": "string" },
+        "UserSelectFields": { "type": "string" },
+        "ItemSelectFields": { "type": "string" },
+        "FeatureAsyncLoad": { "type": "boolean" },
+        "FeatureType": { "type": "string" },
+        "SequenceLength": { "type": "integer" },
+        "SequenceName": { "type": "string" },
+        "SequenceEvent": { "type": "string" },
+        "SequenceDelim": { "type": "string" },
+        "SequencePlayTime": { "type": "string" },
+        "SequenceOfflineTableName": { "type": "string" },
+        "SequenceDimFields": { "type": "string" },
+        "HologresName": { "type": "string" },
+        "HologresTableName": { "type": "string" },
+        "RedisName": { "type": "string" },
+        "RedisPrefix": { "type": "string" },
+        "RedisDataType": { "type": "string" },
+        "RedisFieldType": { "type": "string" },
+        "RedisDefaultKey": { "type": "string" },
+        "RedisValueDelimeter": { "type": "string" },
+        "MysqlName": { "type": "string" },
+        "MysqlTable": { "type": "string" },
+        "TableStoreName": { "type": "string" },
+        "TableStoreTableName": { "type": "string" },
+        "FeatureStoreName": { "type": "string" },
+        "FeatureStoreModelName": { "type": "string" },
+        "FeatureStoreEntityName": { "type": "string" },
+        "FeatureStoreViewName": { "type": "string" },
+        "CacheFeaturesName": { "type": "string" },
+        "LoadFromCacheFeaturesName": { "type": "string" },
+        "CacheSize": { "type": "integer" },
+        "CacheTime": { "type": "integer" },
+        "BeName": { "type": "string" },
+        "BeItemFeatureKeyName": { "type": "string" },
+        "BeTimestampFeatureKeyName": { "type": "string" },
+        "BeEventFeatureKeyName": { "type": "string" },
+        "BePlayTimeFeatureKeyName": { "type": "string" },
+        "BeIsHomeField": { "type": "string" },
+        "BeRTCntFields": { "type": "string" },
+        "BeRTCntFieldInfo": { "type": "array" },
+        "BeRTTable": { "type": "string" },
+        "NoUsePlayTimeField": { "type": "boolean" }
+      },
+      "additionalProperties": true
+    },
+    "FeatureConfig": {
+      "type": "object",
+      "properties": {
+        "FeatureType": { "type": "string" },
+        "FeatureName": { "type": "string" },
+        "FeatureSource": { "type": "string" },
+        "FeatureValue": { "type": "string" },
+        "FeatureStore": { "type": "string", "enum": ["user", "item"] },
+        "RemoveFeatureSource": { "type": "boolean" },
+        "Normalizer": { "type": "string" },
+        "Expression": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "SortConfig": {
+      "type": "object",
+      "required": ["Name", "SortType"],
+      "properties": {
+        "Name": { "type": "string" },
+        "SortType": {
+          "type": "string",
+          "enum": [
+            "ItemRankScore",
+            "BoostScoreSort",
+            "BoostScoreByWeight",
+            "DiversityRuleSort",
+            "DPPSort",
+            "SSDSort",
+            "AlgoScoreSort",
+            "TrafficControlSort",
+            "MultiRecallMixSort",
+            "DistinctIdSort",
+            "CustomFieldSort",
+            "ConditionSort"
+          ]
+        },
+        "Debug": { "type": "boolean" },
+        "BoostScoreConditions": { "type": "array", "items": { "$ref": "#/definitions/BoostScoreCondition" } },
+        "DiversitySize": { "type": "integer" },
+        "DiversityRules": { "type": "array", "items": { "$ref": "#/definitions/DiversityRule" } },
+        "ExcludeRecalls": { "type": "array", "items": { "type": "string" } },
+        "Conditions": { "type": "array", "items": { "$ref": "#/definitions/FilterParamConfig" } },
+        "ExclusionRules": { "type": "array", "items": { "type": "object" } },
+        "ExploreItemSize": { "type": "integer" },
+        "TimeInterval": { "type": "integer" },
+        "BoostScoreByWeightDao": { "type": "object" }
+      },
+      "additionalProperties": true
+    },
+    "BoostScoreCondition": {
+      "type": "object",
+      "required": ["Conditions", "Expression"],
+      "properties": {
+        "Conditions": { "type": "array", "items": { "$ref": "#/definitions/FilterParamConfig" } },
+        "Expression": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "FilterParamConfig": {
+      "type": "object",
+      "required": ["Name", "Domain", "Type", "Value", "Operator"],
+      "properties": {
+        "Name": { "type": "string" },
+        "Domain": { "type": "string", "enum": ["item", "user"] },
+        "Type": { "type": "string" },
+        "Value": {},
+        "Operator": {
+          "type": "string",
+          "enum": ["equal", "not_equal", "in", "not_in", "greater", "greaterThan", "less", "lessThan", "contains", "not_contains"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "DiversityRule": {
+      "type": "object",
+      "required": ["Dimensions"],
+      "properties": {
+        "Dimensions": { "type": "array", "items": { "type": "string" } },
+        "IntervalSize": { "type": "integer" },
+        "WindowSize": { "type": "integer" },
+        "FrequencySize": { "type": "integer" },
+        "Weight": { "type": "integer" }
+      },
+      "additionalProperties": false
+    },
+    "HologresConfig": {
+      "type": "object",
+      "required": ["DSN"],
+      "properties": {
+        "DSN": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "RedisConfig": {
+      "type": "object",
+      "required": ["Host", "Port"],
+      "properties": {
+        "Host": { "type": "string" },
+        "Port": { "type": "integer" },
+        "Password": { "type": "string" },
+        "DbNum": { "type": "integer" },
+        "MaxIdle": { "type": "integer" },
+        "ConnectTimeout": { "type": "integer" },
+        "ReadTimeout": { "type": "integer" },
+        "WriteTimeout": { "type": "integer" }
+      },
+      "additionalProperties": false
+    },
+    "MysqlConfig": {
+      "type": "object",
+      "required": ["DSN"],
+      "properties": {
+        "DSN": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "ClickHouseConfig": {
+      "type": "object",
+      "properties": {
+        "DSN": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "GraphConfig": {
+      "type": "object",
+      "required": ["Host", "UserName", "Passwd"],
+      "properties": {
+        "Host": { "type": "string" },
+        "UserName": { "type": "string" },
+        "Passwd": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "FeatureStoreConfig": {
+      "type": "object",
+      "required": ["RegionId", "ProjectName"],
+      "properties": {
+        "RegionId": { "type": "string" },
+        "ProjectName": { "type": "string" },
+        "FeatureDBUsername": { "type": "string" },
+        "FeatureDBPassword": { "type": "string" },
+        "HologresUsername": { "type": "string" },
+        "HologresPassword": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "KafkaConfig": {
+      "type": "object",
+      "required": ["BootstrapServers", "Topic"],
+      "properties": {
+        "BootstrapServers": { "type": "string" },
+        "Topic": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "SlsConfig": {
+      "type": "object",
+      "required": ["EndPoint", "ProjectName", "LogstoreName"],
+      "properties": {
+        "EndPoint": { "type": "string" },
+        "ProjectName": { "type": "string" },
+        "LogstoreName": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "DatahubConfig": {
+      "type": "object",
+      "required": ["Endpoint", "ProjectName", "TopicName"],
+      "properties": {
+        "Endpoint": { "type": "string" },
+        "ProjectName": { "type": "string" },
+        "TopicName": { "type": "string" },
+        "Schemas": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/DatahubTopicSchema" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "DatahubTopicSchema": {
+      "type": "object",
+      "required": ["Field", "Type"],
+      "properties": {
+        "Field": { "type": "string" },
+        "Type": {
+          "type": "string",
+          "enum": ["string", "integer", "bigint", "double", "float", "timestamp"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "TableStoreConfig": {
+      "type": "object",
+      "required": ["EndPoint", "InstanceName"],
+      "properties": {
+        "EndPoint": { "type": "string" },
+        "InstanceName": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "OpenSearchConfig": {
+      "type": "object",
+      "required": ["EndPoint"],
+      "properties": {
+        "EndPoint": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "CallBackConfig": {
+      "type": "object",
+      "properties": {
+        "DataSource": {
+          "type": "object",
+          "properties": {
+            "Name": { "type": "string" },
+            "Type": { "type": "string" }
+          }
+        },
+        "RankConf": { "$ref": "#/definitions/RankConfig" },
+        "RawFeatures": { "type": "boolean" },
+        "RawFeaturesRate": { "type": "integer" },
+        "ItemSize": { "type": "integer" },
+        "ItemSizeRate": { "type": "integer" },
+        "UseUserFeatures": { "type": "boolean" }
+      },
+      "additionalProperties": true
+    },
+    "PipelineConfig": {
+      "type": "object",
+      "required": ["Name"],
+      "properties": {
+        "Name": { "type": "string" },
+        "RecallNames": { "type": "array", "items": { "type": "string" } },
+        "FilterNames": { "type": "array", "items": { "type": "string" } },
+        "GeneralRankConf": { "$ref": "#/definitions/GeneralRankConfig" },
+        "FeatureLoadConfs": { "type": "array", "items": { "$ref": "#/definitions/FeatureLoadConfig" } },
+        "RankConf": { "$ref": "#/definitions/RankConfig" },
+        "SortNames": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": true
+    },
+    "DebugConfig": {
+      "type": "object",
+      "required": ["OutputType", "Rate"],
+      "properties": {
+        "OutputType": { "type": "string", "enum": ["console", "datahub", "kafka", "file"] },
+        "Rate": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "DebugUsers": { "type": "array", "items": { "type": "string" } },
+        "DatahubName": { "type": "string" },
+        "KafkaName": { "type": "string" },
+        "FilePath": { "type": "string" },
+        "MaxFileNum": { "type": "integer" }
+      },
+      "additionalProperties": false
+    },
+    "FeatureLogConfig": {
+      "type": "object",
+      "required": ["OutputType"],
+      "properties": {
+        "OutputType": { "type": "string" },
+        "DatahubName": { "type": "string" },
+        "Rate": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "UserFeatures": { "type": "string" },
+        "ItemFeatures": { "type": "string" },
+        "SplitUserItemLogs": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "PrometheusConfig": {
+      "type": "object",
+      "properties": {
+        "Enable": { "type": "boolean" },
+        "Subsystem": { "type": "string" },
+        "PushGatewayURL": { "type": "string" },
+        "PushGatewayToken": { "type": "string" },
+        "PushIntervalSecs": { "type": "integer" },
+        "Job": { "type": "string" },
+        "ReqDurBuckets": { "type": "array", "items": { "type": "number" } },
+        "ReqSizeBuckets": { "type": "array", "items": { "type": "number" } },
+        "RespSizeBuckets": { "type": "array", "items": { "type": "number" } }
+      },
+      "additionalProperties": false
+    },
+    "RecallEngineConfig": {
+      "type": "object",
+      "required": ["Username", "Password"],
+      "properties": {
+        "Username": {
+          "type": "string",
+          "description": "Recall-engine username"
+        },
+        "Password": {
+          "type": "string",
+          "description": "Recall-engine password"
+        },
+        "Endpoint": {
+          "type": "string",
+          "description": "Recall-engine service endpoint (optional; auto-detected in PAI-EAS)"
+        },
+        "Authorization": {
+          "type": "string",
+          "description": "Custom auth header (optional)"
+        },
+        "InstanceId": {
+          "type": "string",
+          "description": "Instance ID (optional; read from env vars in PAI-EAS)"
+        }
+      },
+      "additionalProperties": false
+    },
+    "RecallEngineConf": {
+      "type": "object",
+      "required": ["RecallEngineName", "ServiceName", "RecallEngineParams"],
+      "properties": {
+        "RecallEngineName": {
+          "type": "string",
+          "description": "Recall data source name, defined in RecallEngineConfs"
+        },
+        "ServiceName": {
+          "type": "string",
+          "description": "Recall service name"
+        },
+        "VersionName": {
+          "type": "string",
+          "description": "Recall service version (optional; defaults to the active online version)"
+        },
+        "RecallEngineParams": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/RecallEngineParam" },
+          "description": "Specific configuration for this recall"
+        },
+        "FilterNames": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Filter name list (optional)"
+        }
+      },
+      "additionalProperties": false
+    },
+    "RecallEngineParam": {
+      "type": "object",
+      "required": ["RecallType", "RecallName", "Count"],
+      "properties": {
+        "RecallType": {
+          "type": "string",
+          "enum": ["x2i", "vector", "random"],
+          "description": "Recall type: x2i, vector, or random"
+        },
+        "RecallName": {
+          "type": "string",
+          "description": "Recall name configured in the recall-management service"
+        },
+        "Count": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Recall count; if filters are configured, this is the post-filter count"
+        },
+        "TriggerType": {
+          "type": "string",
+          "enum": ["user", "item", "fixvalue", "u2i_realtime"],
+          "description": "Trigger type: user, item, fixvalue, or u2i_realtime"
+        },
+        "TriggerValue": {
+          "type": "string",
+          "description": "Trigger fixed value (for fixvalue type, e.g. -1 for global hot)"
+        },
+        "UserTriggers": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/UserTrigger" },
+          "description": "User trigger configuration (for user type)"
+        },
+        "UserTriggerDaoConf": {
+          "$ref": "#/definitions/UserTriggerDaoConf",
+          "description": "User trigger data configuration (for u2i_realtime type)"
+        }
+      },
+      "additionalProperties": false
+    },
+    "UserTrigger": {
+      "type": "object",
+      "required": ["TriggerKey"],
+      "properties": {
+        "TriggerKey": {
+          "type": "string",
+          "description": "Trigger key, e.g. uid, gender, age"
+        },
+        "Boundaries": {
+          "type": "array",
+          "items": { "type": "number" },
+          "description": "Numeric bucketing boundaries (optional; used for numeric fields such as age)"
+        }
+      },
+      "additionalProperties": false
+    },
+    "UserTriggerDaoConf": {
+      "type": "object",
+      "required": ["AdapterType"],
+      "properties": {
+        "AdapterType": {
+          "type": "string",
+          "enum": ["hologres", "featurestore"],
+          "description": "Data source type"
+        },
+        "HologresName": {
+          "type": "string",
+          "description": "Data source name defined in HologresConfs (required for Hologres)"
+        },
+        "HologresTableName": {
+          "type": "string",
+          "description": "User-behavior table name (required for Hologres)"
+        },
+        "FeatureStoreName": {
+          "type": "string",
+          "description": "Data source name defined in FeatureStoreConfs (required for FeatureStore)"
+        },
+        "FeatureStoreViewName": {
+          "type": "string",
+          "description": "FeatureView name for user behavior (required for FeatureStore)"
+        },
+        "WhereClause": {
+          "type": "string",
+          "description": "SQL filter clause (optional)"
+        },
+        "Limit": {
+          "type": "integer",
+          "description": "Query result limit (optional)"
+        },
+        "TriggerCount": {
+          "type": "integer",
+          "description": "Trigger count (optional)"
+        },
+        "EventPlayTime": {
+          "type": "string",
+          "description": "Event play-time filter; format event1:time1;event2:time2 (optional)"
+        },
+        "EventWeight": {
+          "type": "string",
+          "description": "Event weight configuration; format event1:weight1;event2:weight2 (optional)"
+        },
+        "WeightExpression": {
+          "type": "string",
+          "description": "Weight expression; supports currentTime and eventTime variables (optional)"
+        },
+        "WeightMode": {
+          "type": "string",
+          "enum": ["sum", "max"],
+          "description": "Weight aggregation mode: sum or max; defaults to sum (optional)"
+        },
+        "NoUsePlayTimeField": {
+          "type": "boolean",
+          "description": "Whether to ignore the play-duration field (optional)"
+        },
+        "ItemIdFieldName": {
+          "type": "string",
+          "description": "Item ID field name; defaults to item_id (optional)"
+        },
+        "EventFieldName": {
+          "type": "string",
+          "description": "Event field name; defaults to event (optional)"
+        },
+        "PlayTimeFieldName": {
+          "type": "string",
+          "description": "Play-duration field name; defaults to playtime (optional)"
+        },
+        "TimestampFieldName": {
+          "type": "string",
+          "description": "Timestamp field name; defaults to event_time (optional)"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
