@@ -9,5 +9,6 @@
 | [05-cycle-workflow](05-cycle-workflow/) | Scheduled workflow with 3 child nodes | Mixed | Advanced |
 | [06-manual-workflow](06-manual-workflow/) | Manual workflow | Mixed | Advanced |
 | [07-parallel-workflow](07-parallel-workflow/) | Parallel workflow (fan-out + fan-in dependencies) | Mixed | Advanced |
+| [08-assignment-node](08-assignment-node/) | Assignment node with output passing | CONTROLLER_ASSIGNMENT | Intermediate |
 
 Each example contains spec.json, code files, and dataworks.properties, demonstrating the local file structure in Git Mode.

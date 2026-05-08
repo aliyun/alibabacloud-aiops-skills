@@ -11,68 +11,68 @@
 
 ```bash
 # CORRECT: dataworks-public is the correct product name
-aliyun dataworks-public GetNode --help
+aliyun dataworks-public get-node --help
 
 # INCORRECT: dataworks without the -public suffix
-aliyun dataworks GetNode --help
+aliyun dataworks get-node --help
 ```
 
 ### 2. Command -- Verify Action Exists Under the Product
 
 ```bash
 # CORRECT: Correct action names
-aliyun dataworks-public CreateNode --help
-aliyun dataworks-public ListNodes --help
-aliyun dataworks-public GetNode --help
-aliyun dataworks-public UpdateNode --help
+aliyun dataworks-public create-node --help
+aliyun dataworks-public list-nodes --help
+aliyun dataworks-public get-node --help
+aliyun dataworks-public update-node --help
 
-aliyun dataworks-public CreateWorkflowDefinition --help
-aliyun dataworks-public ListWorkflowDefinitions --help
-aliyun dataworks-public GetWorkflowDefinition --help
+aliyun dataworks-public create-workflow-definition --help
+aliyun dataworks-public list-workflow-definitions --help
+aliyun dataworks-public get-workflow-definition --help
 
-aliyun dataworks-public CreatePipelineRun --help
-aliyun dataworks-public GetPipelineRun --help
-aliyun dataworks-public ExecPipelineRunStage --help
+aliyun dataworks-public create-pipeline-run --help
+aliyun dataworks-public get-pipeline-run --help
+aliyun dataworks-public exec-pipeline-run-stage --help
 
 # INCORRECT: Wrong action names
-aliyun dataworks-public CreateTask --help  # Should be CreateNode
-aliyun dataworks-public ListTask --help    # Should be ListNodes
+aliyun dataworks-public create-task --help  # Should be create-node
+aliyun dataworks-public list-task --help    # Should be list-nodes
 ```
 
 ### 3. Parameters -- Verify Each Parameter Name Exists
 
 ```bash
 # CORRECT: Correct parameter names
-aliyun dataworks-public CreateNode \
-  --ProjectId 123456 \
-  --Scene DATAWORKS_PROJECT \
-  --Spec '{"version":"2.0.0",...}'
+aliyun dataworks-public create-node \
+  --project-id 123456 \
+  --scene DATAWORKS_PROJECT \
+  --spec '{"version":"2.0.0",...}'
 
-aliyun dataworks-public CreateNode \
-  --ProjectId 123456 \
-  --Scene DATAWORKS_PROJECT \
-  --ContainerId 789012 \
-  --Spec '{"version":"2.0.0",...}'
+aliyun dataworks-public create-node \
+  --project-id 123456 \
+  --scene DATAWORKS_PROJECT \
+  --container-id 789012 \
+  --spec '{"version":"2.0.0",...}'
 
 # INCORRECT: Wrong parameter names
-aliyun dataworks-public CreateNode \
-  --projectId 123456        # Should be --ProjectId (uppercase P)
-  --scene DATAWORKS_PROJECT # Should be --Scene (uppercase S)
+aliyun dataworks-public create-node \
+  --projectid 123456        # Should be --project-id (kebab-case)
+  --Scene DATAWORKS_PROJECT  # Should be --scene (lowercase)
 ```
 
 ### 4. user-agent Identifier -- Must Be Included in Every Command
 
 ```bash
 # CORRECT: Includes user-agent
-aliyun dataworks-public GetNode \
-  --ProjectId 123456 \
-  --Id 789012 \
+aliyun dataworks-public get-node \
+  --project-id 123456 \
+  --id 789012 \
   --user-agent AlibabaCloud-Agent-Skills
 
 # INCORRECT: Missing user-agent
-aliyun dataworks-public GetNode \
-  --ProjectId 123456 \
-  --Id 789012
+aliyun dataworks-public get-node \
+  --project-id 123456 \
+  --id 789012
 ```
 
 ---
@@ -167,17 +167,10 @@ aliyun dataworks-public GetNode \
   }
 }
 
-// INCORRECT: Using the old dual-write approach with inputs.nodeOutputs + flow.depends
+// INCORRECT: Using the legacy `flow` field instead of `spec.dependencies`
 {
   "spec": {
-    "nodes": [{
-      "name": "downstream",
-      "inputs": {
-        "nodeOutputs": [{
-          "data": "${projectIdentifier}.upstream"
-        }]
-      }
-    }],
+    "nodes": [{ "name": "downstream" }],
     "flow": [{
       "nodeId": "downstream",
       "depends": [{
@@ -349,36 +342,36 @@ Each CLI command should be verified with `--help`:
 
 ```bash
 # Verify product and action exist
-aliyun dataworks-public CreateNode --help
-aliyun dataworks-public UpdateNode --help
-aliyun dataworks-public GetNode --help
-aliyun dataworks-public ListNodes --help
+aliyun dataworks-public create-node --help
+aliyun dataworks-public update-node --help
+aliyun dataworks-public get-node --help
+aliyun dataworks-public list-nodes --help
 
-aliyun dataworks-public CreateWorkflowDefinition --help
-aliyun dataworks-public UpdateWorkflowDefinition --help
-aliyun dataworks-public GetWorkflowDefinition --help
-aliyun dataworks-public ListWorkflowDefinitions --help
+aliyun dataworks-public create-workflow-definition --help
+aliyun dataworks-public update-workflow-definition --help
+aliyun dataworks-public get-workflow-definition --help
+aliyun dataworks-public list-workflow-definitions --help
 
-aliyun dataworks-public CreatePipelineRun --help
-aliyun dataworks-public GetPipelineRun --help
-aliyun dataworks-public ExecPipelineRunStage --help
-aliyun dataworks-public ListPipelineRuns --help
-aliyun dataworks-public ListPipelineRunItems --help
-aliyun dataworks-public AbolishPipelineRun --help
+aliyun dataworks-public create-pipeline-run --help
+aliyun dataworks-public get-pipeline-run --help
+aliyun dataworks-public exec-pipeline-run-stage --help
+aliyun dataworks-public list-pipeline-runs --help
+aliyun dataworks-public list-pipeline-run-items --help
+aliyun dataworks-public abolish-pipeline-run --help
 
-aliyun dataworks-public GetProject --help
-aliyun dataworks-public ListDataSources --help
-aliyun dataworks-public ListResourceGroups --help
+aliyun dataworks-public get-project --help
+aliyun dataworks-public list-data-sources --help
+aliyun dataworks-public list-resource-groups --help
 ```
 
 ---
 
 ## Critical Anti-Patterns to Avoid
 
-1. **Do not dual-write inputs.nodeOutputs**: Dependencies only need to be configured in the spec.dependencies array, but `dependencies[*].nodeId` must exactly match the node `id`
+1. **Dependencies must only live in `spec.dependencies`**: Do not place dependency declarations anywhere else on the node; `dependencies[*].nodeId` must exactly match the node `id`
 2. **Do not hardcode AK/SK**: Use CredentialClient or environment variables
 3. **Do not forget user-agent**: Every aliyun command must include `--user-agent AlibabaCloud-Agent-Skills`
-4. **Do not assume UpdateNode works for all nodes**: Hologres nodes cannot be updated
+4. **Do not assume update-node works for all nodes**: Hologres nodes cannot be updated
 5. **Do not skip validation**: Always run validate.py after each modification
 6. **Do not echo AK/SK**: Never print credential information
 7. **Do not execute write operations without confirmation**: Except for Create and read-only queries (Get/List), all Delete, Update, Move, Rename, Abolish, and other APIs that modify existing objects must be confirmed with the user first

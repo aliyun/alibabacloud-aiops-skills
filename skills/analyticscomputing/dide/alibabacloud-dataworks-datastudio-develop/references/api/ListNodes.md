@@ -1,4 +1,4 @@
-# ListNodes
+# list-nodes
 
 > Latest API definition: https://api.aliyun.com/meta/v1/products/dataworks-public/versions/2024-05-18/apis/ListNodes/api.json
 > If the call returns an error, you can obtain the latest parameter definitions from the URL above.
@@ -7,12 +7,12 @@
 
 **aliyun CLI**:
 ```bash
-aliyun dataworks-public ListNodes \
-  --ProjectId {{project_id}} \
-  --Scene DATAWORKS_PROJECT \
-  --PageNumber 1 \
-  --PageSize 100 \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public list-nodes \
+  --project-id {{project_id}} \
+  --scene DATAWORKS_PROJECT \
+  --page-number 1 \
+  --page-size 100 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 **Python SDK**:

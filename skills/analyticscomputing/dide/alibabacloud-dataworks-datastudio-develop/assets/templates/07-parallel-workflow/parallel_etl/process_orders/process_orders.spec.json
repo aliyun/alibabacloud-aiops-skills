@@ -51,14 +51,6 @@
               "artifactType": "NodeOutput"
             }
           ]
-        },
-        "inputs": {
-          "nodeOutputs": [
-            {
-              "data": "${projectIdentifier}.prepare_data",
-              "artifactType": "NodeOutput"
-            }
-          ]
         }
       }
     ],

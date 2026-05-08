@@ -1,4 +1,4 @@
-# GetProject
+# get-project
 
 > Latest API definition: https://api.aliyun.com/meta/v1/products/dataworks-public/versions/2024-05-18/apis/GetProject/api.json
 > If the call returns an error, you can obtain the latest parameter definitions from the URL above.
@@ -8,12 +8,12 @@
 **aliyun CLI**:
 ```bash
 # Retrieve project details by projectId (numeric); ProjectName is the projectIdentifier
-aliyun dataworks-public GetProject \
-  --Id {{project_id}} \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public get-project \
+  --id {{project_id}} \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
-> **Note**: `GetProject` only accepts the numeric `--Id` parameter; reverse lookup by projectIdentifier is not supported.
+> **Note**: `get-project` only accepts the numeric `--Id` parameter; reverse lookup by projectIdentifier is not supported.
 
 **Python SDK**:
 ```python

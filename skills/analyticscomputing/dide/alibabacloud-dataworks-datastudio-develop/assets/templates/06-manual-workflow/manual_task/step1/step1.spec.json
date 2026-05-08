@@ -34,14 +34,6 @@
               "artifactType": "NodeOutput"
             }
           ]
-        },
-        "inputs": {
-          "nodeOutputs": [
-            {
-              "data": "${projectIdentifier}_root",
-              "artifactType": "NodeOutput"
-            }
-          ]
         }
       }
     ],

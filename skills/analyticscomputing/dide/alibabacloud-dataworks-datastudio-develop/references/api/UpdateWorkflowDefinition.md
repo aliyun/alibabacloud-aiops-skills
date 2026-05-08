@@ -1,4 +1,4 @@
-# UpdateWorkflowDefinition
+# update-workflow-definition
 
 > Latest API definition: https://api.aliyun.com/meta/v1/products/dataworks-public/versions/2024-05-18/apis/UpdateWorkflowDefinition/api.json
 > If the call returns an error, you can obtain the latest parameter definitions from the URL above.
@@ -7,11 +7,11 @@
 
 **aliyun CLI**:
 ```bash
-aliyun dataworks-public UpdateWorkflowDefinition \
-  --ProjectId {{project_id}} \
-  --Id {{workflow_id}} \
-  --Spec "$(cat /tmp/wf.json)" \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public update-workflow-definition \
+  --project-id {{project_id}} \
+  --id {{workflow_id}} \
+  --spec "$(cat /tmp/wf.json)" \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 **Python SDK**:

@@ -1,4 +1,4 @@
-# ListDataSources
+# list-data-sources
 
 > Latest API definition: https://api.aliyun.com/meta/v1/products/dataworks-public/versions/2024-05-18/apis/ListDataSources/api.json
 
@@ -6,9 +6,9 @@ Query the list of data sources in the project.
 
 **aliyun CLI**:
 ```bash
-aliyun dataworks-public ListDataSources \
-  --ProjectId {{project_id}} \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public list-data-sources \
+  --project-id {{project_id}} \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 **Python SDK**:

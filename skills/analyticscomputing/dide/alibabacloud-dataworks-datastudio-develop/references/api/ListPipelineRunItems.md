@@ -1,4 +1,4 @@
-# ListPipelineRunItems
+# list-pipeline-run-items
 
 > Latest API definition: https://api.aliyun.com/meta/v1/products/dataworks-public/versions/2024-05-18/apis/ListPipelineRunItems/api.json
 > If the call returns an error, you can obtain the latest parameter definitions from the URL above.
@@ -7,12 +7,12 @@
 
 **aliyun CLI**:
 ```bash
-aliyun dataworks-public ListPipelineRunItems \
-  --ProjectId {{project_id}} \
-  --PipelineRunId {{pipeline_run_id}} \
-  --PageNumber 1 \
-  --PageSize 50 \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public list-pipeline-run-items \
+  --project-id {{project_id}} \
+  --pipeline-run-id {{pipeline_run_id}} \
+  --page-number 1 \
+  --page-size 50 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 **Python SDK**:

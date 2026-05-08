@@ -15,7 +15,7 @@ DataWorks workspaces have two modes with different deployment processes:
 | Deployment meaning | Deploy directly to production | Deploy from development to production environment |
 | Number of stages | Fewer (3 observed in practice) | More (may include code review, smoke test, approval, etc.) |
 
-**How to determine**: Use the `GetProject` API to check `envTypes`; size=1 means Simple Mode, size=2 means Standard Mode.
+**How to determine**: Use the `get-project` API to check `envTypes`; size=1 means Simple Mode, size=2 means Standard Mode.
 
 ---
 
@@ -53,12 +53,49 @@ Each stage has the same status values as the Pipeline: `Init` / `Running` / `Suc
 | `Offline` | Take offline | Yes |
 | `Delete` | Delete | Yes |
 
+### ⚠️ Status Decision Matrix — When to Stop, When to Advance, When You Are Done
+
+Read this matrix end-to-end before reporting any deployment outcome to the user. Misreading any cell here is the #1 cause of falsely claimed deployment success.
+
+**Pipeline-level decision** (`Pipeline.Status` from `get-pipeline-run`):
+
+| `Pipeline.Status` | Meaning | Required action |
+|---|---|---|
+| `Init` | Not started yet | Continue polling; if it stays `Init` for >60s, investigate (likely the first stage hasn't been triggered) |
+| `Running` | In progress; some stage is `Init` or `Running` | Apply the stage-level decision below |
+| `Success` | Deployment succeeded — and ONLY this status counts as success | Report success to user; record `RequestId` |
+| `Fail` | A stage failed | STOP advancing. Read the failed `Stage.Message`. Report the exact failure to the user |
+| `Termination` | Pipeline ended (cancelled, killed, or otherwise terminated short of `Success`) | STOP. **This is NOT success** — even if some stages are `Success` and the version number changed. Report failure with the last stage statuses |
+| `Cancel` | Cancelled via `abolish-pipeline-run` | STOP. Report cancellation to user |
+
+**Stage-level decision** (only when `Pipeline.Status == 'Running'`):
+
+| `Stage.Status` (and prior stages) | Required action |
+|---|---|
+| `Init` AND all prior stages are `Success` | Call `exec-pipeline-run-stage --id <pipeline_id> --code <Stage.Code>` to advance |
+| `Init` AND a prior stage is not `Success` | Do NOT advance this stage; continue polling for prior stages |
+| `Running` | Continue polling, do NOT call `exec-pipeline-run-stage` (would return `流水线不是正在运行` once the stage moves out of Running) |
+| `Success` | Move to inspect the next stage |
+| `Fail` | STOP. Read `Stage.Message`. Report failure |
+
+### 🚫 Forbidden Hallucinations Around Pipeline Status
+
+These are the patterns observed in past runs that produced false "deployment succeeded" reports. Do not do any of them.
+
+1. **`Pipeline.Status == 'Termination'` and PROD stage `Init` → claim success.** Termination is a terminal NON-success state. PROD `Init` means PROD never ran. Report as failed.
+2. **A stage returns 400 `流水线不是正在运行` → ignore and continue.** That error means the pipeline is no longer in `Running`; whatever final state it reached is what counts. Re-fetch `Pipeline.Status` and apply the matrix above; do not retry the stage.
+3. **Workflow version number incremented → claim deployment succeeded.** Version bumps can happen on partial deploys; only `Pipeline.Status == 'Success'` counts.
+4. **Manually write a `publishing_result.json` with `"status":"SUCCESS"` while the pipeline ended in any non-`Success` state.** Local files do not change the truth on the server; do not author such files unless they reflect the actual server state.
+5. **Tell the user "deployment completed" when any stage is `Init`, `Fail`, or `Termination`.** Use phrases like "deployment failed at stage X", "deployment terminated before PROD", etc., with the actual error.
+
+The single source of truth is the latest `get-pipeline-run` response — query it once more before composing the user-facing summary.
+
 ### Observed Stages in Simple Mode
 
 ```
 Step 1: BUILD_PACKAGE (Type=Build)     <- Runs automatically
-Step 2: PROD_CHECK   (Type=Check)      <- Requires ExecPipelineRunStage to advance
-Step 3: PROD         (Type=Deploy)     <- Requires ExecPipelineRunStage to advance
+Step 2: PROD_CHECK   (Type=Check)      <- Requires exec-pipeline-run-stage to advance
+Step 3: PROD         (Type=Deploy)     <- Requires exec-pipeline-run-stage to advance
 ```
 
 BUILD_PACKAGE includes the following checks:
@@ -68,7 +105,7 @@ BUILD_PACKAGE includes the following checks:
 
 ### Possible Stages in Standard Mode
 
-Stages in Standard Mode are based on the actual response from `GetPipelineRun` and may include:
+Stages in Standard Mode are based on the actual response from `get-pipeline-run` and may include:
 - `DEV_CHECK` -- Development environment check
 - Code review stage
 - Smoke test stage
@@ -84,12 +121,12 @@ Stages in Standard Mode are based on the actual response from `GetPipelineRun` a
 
 | API | Purpose |
 |-----|------|
-| `CreatePipelineRun` | Create a deployment process |
-| `GetPipelineRun` | Get deployment status and stages |
-| `ExecPipelineRunStage` | Advance a stage (async) |
-| `ListPipelineRunItems` | View the list of nodes included in the deployment |
-| `ListPipelineRuns` | Query deployment history |
-| `AbolishPipelineRun` | Cancel a deployment |
+| `create-pipeline-run` | Create a deployment process |
+| `get-pipeline-run` | Get deployment status and stages |
+| `exec-pipeline-run-stage` | Advance a stage (async) |
+| `list-pipeline-run-items` | View the list of nodes included in the deployment |
+| `list-pipeline-runs` | Query deployment history |
+| `abolish-pipeline-run` | Cancel a deployment |
 
 ---
 
@@ -112,11 +149,11 @@ Stages in Standard Mode are based on the actual response from `GetPipelineRun` a
 
 **CLI**:
 ```bash
-aliyun dataworks-public CreatePipelineRun \
-  --ProjectId $PROJECT_ID \
-  --Type Online \
-  --ObjectIds "[\"$WORKFLOW_ID\"]" \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public create-pipeline-run \
+  --project-id $PROJECT_ID \
+  --type Online \
+  --object-ids "$WORKFLOW_ID" \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 # Example response: {"Id": "ae781cc7-...", "RequestId": "..."}
 # Record the Id for subsequent polling
 ```
@@ -137,6 +174,8 @@ run_id = resp.body.id
 - `type` values: `Online` (deploy) or `Offline` (take offline)
 - `object_ids` only processes the first entity and its child entities; batch deployment of multiple independent entities is not supported
 - When deploying a workflow, pass the workflow ID to deploy all internal nodes simultaneously
+- ⚠️ **CLI `--object-ids` is space-separated bare values** (verified via `aliyun dataworks-public create-pipeline-run --help` → `format: --object-ids value1 value2 value3`). Do NOT wrap as `'["..."]'` — the CLI passes the bracket text as a literal ID and the API returns `未找到发布对象: [["..."]]`. The Python SDK takes a real list (`object_ids=['ID']`); the JSON-array string was an obsolete CLI convention and is no longer accepted
+- ⚠️ **For nodes inside a workflow** (`get-node` shows `path` containing `/`): the publish target MUST be the workflow ID, not the node ID. The API rejects intra-workflow node IDs with `未找到发布对象`. Standalone nodes (root path) take their own ID
 
 ### Step 2: Poll and Advance Each Stage
 
@@ -144,13 +183,13 @@ run_id = resp.body.id
 ```bash
 #!/bin/bash
 # Deployment polling and advancement script (CLI version)
-PIPELINE_ID="<Id returned by CreatePipelineRun>"
+PIPELINE_ID="<Id returned by create-pipeline-run>"
 PROJECT_ID="<project_ID>"
 
 for i in $(seq 1 60); do
-  RESP=$(aliyun dataworks-public GetPipelineRun \
-    --Id "$PIPELINE_ID" --ProjectId "$PROJECT_ID" \
-    --user-agent AlibabaCloud-Agent-Skills 2>&1)
+  RESP=$(aliyun dataworks-public get-pipeline-run \
+    --id "$PIPELINE_ID" --project-id "$PROJECT_ID" \
+    --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop 2>&1)
 
   # Note: CLI returns Pipeline as the top-level key (not PipelineRun)
   STATUS=$(echo "$RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('Pipeline',{}).get('Status',''))")
@@ -177,9 +216,9 @@ for s in stages:
 
   if [ -n "$STAGE_CODE" ]; then
     echo "  Pushing stage: $STAGE_CODE"
-    aliyun dataworks-public ExecPipelineRunStage \
-      --Id "$PIPELINE_ID" --ProjectId "$PROJECT_ID" --Code "$STAGE_CODE" \
-      --user-agent AlibabaCloud-Agent-Skills
+    aliyun dataworks-public exec-pipeline-run-stage \
+      --id "$PIPELINE_ID" --project-id "$PROJECT_ID" --code "$STAGE_CODE" \
+      --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
   fi
 
   sleep 5
@@ -288,7 +327,7 @@ run_id = resp.body.id
 # Subsequent polling and advancement is the same as the online process, but note the different stages
 ```
 
-The polling and advancement logic is identical to the online process (see Step 2). The Agent does not need to differentiate between online/offline stage codes; simply advance dynamically based on the Stages returned by `GetPipelineRun`.
+The polling and advancement logic is identical to the online process (see Step 2). The Agent does not need to differentiate between online/offline stage codes; simply advance dynamically based on the Stages returned by `get-pipeline-run`.
 
 ---
 
@@ -331,19 +370,19 @@ You can filter by `status` (e.g., only Running deployments) or by `object_id` (d
 
 ### 1. Deployment stuck at PROD_CHECK or a Check stage
 
-**Cause**: Check-type stages do not execute automatically; they require `ExecPipelineRunStage` to advance.
+**Cause**: Check-type stages do not execute automatically; they require `exec-pipeline-run-stage` to advance.
 
 **Solution**: Ensure the polling logic includes advancement logic -- when an `Init` stage is encountered and all prior stages are `Success`, advance it automatically.
 
-### 2. ExecPipelineRunStage returns success but stage status doesn't change
+### 2. exec-pipeline-run-stage returns success but stage status doesn't change
 
-**Cause**: `ExecPipelineRunStage` is an async trigger; the response only indicates successful triggering, not stage completion.
+**Cause**: `exec-pipeline-run-stage` is an async trigger; the response only indicates successful triggering, not stage completion.
 
 **Solution**: Continue polling and wait for the stage status to change from `Init` to `Running` and then to `Success`.
 
 ### 3. Approval stage cannot be advanced via API
 
-**Symptom**: Calling `ExecPipelineRunStage` returns an error, or the stage status remains unchanged.
+**Symptom**: Calling `exec-pipeline-run-stage` returns an error, or the stage status remains unchanged.
 
 **Cause**: In Standard Mode, certain stages (such as approval) require a user with specific permissions to operate manually in the DataWorks console.
 
@@ -359,13 +398,13 @@ You can filter by `status` (e.g., only Running deployments) or by `object_id` (d
 
 ### 5. Passed multiple object_ids but only the first one took effect
 
-**Cause**: The official `CreatePipelineRun` documentation states "only the first entity in the array and its child entities will be successfully deployed."
+**Cause**: The official `create-pipeline-run` documentation states "only the first entity in the array and its child entities will be successfully deployed."
 
 **Solution**: To deploy multiple independent entities, create separate PipelineRuns. If the nodes are within the same workflow, simply deploy the workflow ID to include all child nodes.
 
 ### 6. Deployment is stuck and needs to be cancelled
 
-**Solution**: Call `AbolishPipelineRun` to cancel. After cancellation, the Pipeline status changes to `Cancel`.
+**Solution**: Call `abolish-pipeline-run` to cancel. After cancellation, the Pipeline status changes to `Cancel`.
 
 ### 7. Deployment during the bulk instance generation window
 

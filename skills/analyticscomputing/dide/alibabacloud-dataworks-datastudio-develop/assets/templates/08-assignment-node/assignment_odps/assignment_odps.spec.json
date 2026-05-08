@@ -1,0 +1,67 @@
+{
+  "version": "2.0.0",
+  "kind": "Node",
+  "spec": {
+    "nodes": [
+      {
+        "name": "assignment_odps",
+        "id": "assignment_odps",
+        "recurrence": "Normal",
+        "timeout": 4,
+        "timeoutUnit": "HOURS",
+        "instanceMode": "T+1",
+        "rerunMode": "Allowed",
+        "rerunTimes": 0,
+        "rerunInterval": 180000,
+        "script": {
+          "path": "assignment_odps",
+          "language": "odps",
+          "runtime": {
+            "command": "CONTROLLER_ASSIGNMENT"
+          },
+          "content": ""
+        },
+        "trigger": {
+          "type": "Scheduler",
+          "cron": "00 00 00 * * ?",
+          "startTime": "1970-01-01 00:00:00",
+          "endTime": "9999-01-01 00:00:00",
+          "timezone": "Asia/Shanghai"
+        },
+        "runtimeResource": {
+          "resourceGroup": "${spec.runtimeResource.resourceGroup}"
+        },
+        "datasource": {
+          "name": "${spec.datasource.name}",
+          "type": "odps"
+        },
+        "outputs": {
+          "nodeOutputs": [
+            {
+              "data": "${projectIdentifier}.assignment_odps"
+            }
+          ],
+          "variables": [
+            {
+              "name": "outputs",
+              "scope": "NodeContext",
+              "type": "NodeOutput",
+              "value": "${outputs}"
+            }
+          ]
+        }
+      }
+    ],
+    "dependencies": [
+      {
+        "nodeId": "assignment_odps",
+        "depends": [
+          {
+            "type": "Normal",
+            "output": "${projectIdentifier}_root"
+          }
+        ]
+      }
+    ]
+  }
+}

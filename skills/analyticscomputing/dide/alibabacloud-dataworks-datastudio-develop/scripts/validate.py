@@ -143,6 +143,65 @@ def validate_spec_json(spec_path, result):
     return spec_data
 
 
+def find_code_file(directory):
+    """Find the code file (excluding *.spec.json and dataworks.properties)."""
+    candidates = []
+    for f in directory.iterdir():
+        if not f.is_file():
+            continue
+        if f.name == "dataworks.properties":
+            continue
+        if f.name.endswith(".spec.json"):
+            continue
+        candidates.append(f)
+    if len(candidates) == 1:
+        return candidates[0]
+    if len(candidates) > 1:
+        return candidates
+    return None
+
+
+def validate_di_content(content, prefix, result):
+    """Validate DI node script.content."""
+    if not content or not content.strip():
+        result.error(
+            f"{prefix}.script.content",
+            "DI node script.content is empty",
+            "Add a DI job JSON code file beside the .spec.json file and rebuild the spec",
+        )
+        return
+
+    try:
+        job = json.loads(content)
+    except json.JSONDecodeError as e:
+        result.error(f"{prefix}.script.content", f"DI JSON parse failed: {e}")
+        return
+
+    for key in ("type", "version", "steps", "order", "setting"):
+        if key not in job:
+            result.error(f"{prefix}.script.content.{key}", "DI JSON is missing required top-level field")
+
+    steps = job.get("steps")
+    if isinstance(steps, list):
+        has_reader = any(step.get("category") == "reader" for step in steps if isinstance(step, dict))
+        has_writer = any(step.get("category") == "writer" for step in steps if isinstance(step, dict))
+        if not has_reader:
+            result.error(f"{prefix}.script.content.steps", "DI JSON must contain a reader step")
+        if not has_writer:
+            result.error(f"{prefix}.script.content.steps", "DI JSON must contain a writer step")
+        for idx, step in enumerate(steps):
+            if not isinstance(step, dict):
+                continue
+            parameter = step.get("parameter", {})
+            if isinstance(parameter, dict) and not parameter.get("datasource"):
+                result.error(f"{prefix}.script.content.steps[{idx}].parameter.datasource", "DI step datasource is empty")
+            if step.get("category") == "writer" and isinstance(parameter, dict) and not parameter.get("table"):
+                result.error(f"{prefix}.script.content.steps[{idx}].parameter.table", "DI writer table is empty")
+    else:
+        result.error(f"{prefix}.script.content.steps", "DI JSON steps must be a list")
+
+
+
 def validate_node(spec_data, spec_path, directory, result):
     """Validate a Node type spec"""
     if not spec_data or spec_data.get("kind") != "Node":
@@ -153,8 +212,25 @@ def validate_node(spec_data, spec_path, directory, result):
         result.error("spec.nodes", "Node list is empty", "Define at least one node")
         return
 
+    code_file = find_code_file(directory)
+    if isinstance(code_file, list):
+        result.error("code file", f"Multiple code files found: {[f.name for f in code_file]}")
+        code_file = None
+
     for i, node in enumerate(nodes):
         prefix = f"spec.nodes[{i}]"
+
+        script = node.get("script", {})
+        command = script.get("runtime", {}).get("command")
+        content = script.get("content", "")
+        if code_file and not content:
+            try:
+                content = code_file.read_text(encoding="utf-8")
+            except OSError as e:
+                result.error("code file", f"Failed to read code file {code_file}: {e}")
+
+        if command == "DI":
+            validate_di_content(content, prefix, result)
 
         # Timeout default value warning
         timeout = node.get("timeout")

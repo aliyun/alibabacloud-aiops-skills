@@ -1,4 +1,4 @@
-# GetComponent
+# get-component
 
 > Latest API definition: https://api.aliyun.com/meta/v1/products/dataworks-public/versions/2024-05-18/apis/GetComponent/api.json
 > If the call returns an error, you can obtain the latest parameter definitions from the URL above.
@@ -7,10 +7,10 @@
 
 **aliyun CLI**:
 ```bash
-aliyun dataworks-public GetComponent \
-  --ProjectId {{project_id}} \
-  --Id {{component_id}} \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public get-component \
+  --project-id {{project_id}} \
+  --id {{component_id}} \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 **Python SDK**:

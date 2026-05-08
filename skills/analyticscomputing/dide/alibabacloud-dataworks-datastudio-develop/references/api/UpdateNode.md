@@ -1,4 +1,4 @@
-# UpdateNode
+# update-node
 
 > Latest API definition: https://api.aliyun.com/meta/v1/products/dataworks-public/versions/2024-05-18/apis/UpdateNode/api.json
 > If the call returns an error, you can obtain the latest parameter definitions from the URL above.
@@ -9,11 +9,11 @@
 
 **aliyun CLI**:
 ```bash
-aliyun dataworks-public UpdateNode \
-  --ProjectId {{project_id}} \
-  --Id {{node_id}} \
-  --Spec "$(cat /tmp/update_spec.json)" \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public update-node \
+  --project-id {{project_id}} \
+  --id {{node_id}} \
+  --spec "$(cat /tmp/update_spec.json)" \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 **Python SDK**:

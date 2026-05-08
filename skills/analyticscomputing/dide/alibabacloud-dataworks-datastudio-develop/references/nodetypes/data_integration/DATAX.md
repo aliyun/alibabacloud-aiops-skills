@@ -1,51 +1,79 @@
-# DataX Data Sync（DATAX）
+# DataX Content Format (content)
 
-## Overview
-
-- Code: `4`
-- Compute engine: `DI`
-- Content format: json
-- Extension: `.json`
-- LabelType: `DATA_PROCESS`
-- Description: DataX Data sync task (legacy)
-
-DataX is an earlier version of the offline data sync node type. Its content structure is similar to DI nodes, using the DIJob JSON format. For new projects, it is recommended to use the DI (code 23) node type instead.
-
-## Content Structure
-
-`script.content` is a DIJob JSON string containing the following required fields:
-
-| Field | Type | Required | Description |
-|------|------|------|------|
-| `type` | string | Yes | Fixed value `"job"` |
-| `version` | string | Yes | Version number, recommended `"2.0"` |
-| `steps` | array | Yes | Steps array, contains Reader and Writer |
-| `order` | object | Yes | Step execution order |
-
-## Minimum Spec
+## content
 
 ```json
 {
-  "version": "2.0.0",
-  "kind": "Node",
-  "spec": {
-    "nodes": [
-      {
-        "name": "example_datax",
-        "script": {
-          "path": "example_datax",
-          "runtime": {
-            "command": "DATAX"
-          },
-          "content": "{\"type\":\"job\",\"version\":\"2.0\",\"steps\":[],\"order\":{\"hops\":[]},\"setting\":{\"speed\":{\"concurrent\":1}}}"
-        }
-      }
-    ]
+  "type": "job",
+  "version": "2.0",
+  "steps": [
+    {
+      "stepType": "<source datasource type>",
+      "parameter": {
+        "column": [],
+        "datasource": "<source datasource name>"
+      },
+      "name": "Reader",
+      "category": "reader"
+    },
+    {
+      "stepType": "<destination datasource type>",
+      "parameter": {
+        "column": [],
+        "datasource": "<destination datasource name>"
+      },
+      "name": "Writer",
+      "category": "writer"
+    }
+  ],
+  "setting": {
+    "errorLimit": {
+      "record": "0"
+    },
+    "speed": {
+      "throttle": false,
+      "concurrent": 3
+    }
+  },
+  "extend": {
+    "mode": "code",
+    "__new__": true,
+    "formatType": "datax",
+    "resourceGroup": "<resource group identifier>",
+    "cu": "0.5"
   }
 }
 ```
 
-## Restrictions
+## extend
 
-- DATAX is a legacy node type. For new projects, it is recommended to use DI nodes instead.
-- The content structure and configuration are largely consistent with DI nodes. For Reader/Writer configuration, refer to the [DI Data Sync Development Guide](../di-guide.md).
+```json
+{
+  "extend": {
+    "mode": "code",
+    "__new__": true,
+    "formatType": "datax",
+    "resourceGroup": "<resource group identifier>",
+    "cu": "<CU configuration value>"
+  }
+}
+```
+
+| Field | Description                                                                 | Required |
+|-------|-----------------------------------------------------------------------------|----------|
+| mode | Edit mode: `wizard` (wizard mode) or `code` (script mode) ，default `code` | Y |
+| `__new__` | Whether to support the new interaction, default `true`                      | Y |
+| formatType | Format type: `datax` (standard DataX)                                       | Y |
+| resourceGroup | Resource group identifier (use identifier, not name)                        | Y |
+| cu | CU configuration value                                                      | Y |
+
+## Key Fields
+
+| Field | Description |
+|-------|-------------|
+| `steps[].stepType` | Datasource type, e.g. `mysql`, `odps`, `holo`, etc. See each datasource reference document for details |
+| `steps[].parameter.column` | Sync columns, must be explicitly specified; format varies by datasource type |
+| `steps[].parameter.datasource` | Datasource name (must match the name registered in DataWorks datasource management) |
+| `setting.errorLimit.record` | Error tolerance record count; `"0"` means no tolerance |
+| `setting.speed.concurrent` | Maximum concurrency, range 1-32 |
+| `setting.speed.throttle` | Whether to throttle; `false` means no throttle |

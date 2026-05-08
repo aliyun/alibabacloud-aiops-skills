@@ -2,7 +2,7 @@
 
 Look up node type documentation by command name. The file name matches the command name; use Glob to locate directly: `**/ODPS_SQL.md`
 
-130 node types in total.
+132 node types in total.
 
 | Command | Description | Category | Engine | Format | Extension | Doc |
 |---------|-------------|----------|--------|--------|-----------|-----|
@@ -94,8 +94,10 @@ Look up node type documentation by command name. The file name matches the comma
 | `DATA_PUSH` | Data Push | General | `GENERAL` | json | `.json` | [DATA_PUSH.md](general/DATA_PUSH.md) |
 | `DATA_QUALITY_MONITOR` | Data Quality Monitor | General | `GENERAL` | json | `.json` | [DATA_QUALITY_MONITOR.md](general/DATA_QUALITY_MONITOR.md) |
 | `DATA_SYNCHRONIZATION_QUALITY_CHECK` | Data Sync Quality Check | General | `GENERAL` | json | `.json` | [DATA_SYNCHRONIZATION_QUALITY_CHECK.md](general/DATA_SYNCHRONIZATION_QUALITY_CHECK.md) |
+| `DEPENDENT` | Cross-cycle Dependency Check | General | `GENERAL` | json | `.json` | [DEPENDENT.md](general/DEPENDENT.md) |
 | `DIDE_SHELL` | Shell Script | General | `GENERAL` | shell | `.sh` | [DIDE_SHELL.md](general/DIDE_SHELL.md) |
 | `FTP_CHECK` | FTP Check | General | `GENERAL` | - | `.json` | [FTP_CHECK.md](general/FTP_CHECK.md) |
+| `FUNCTION_COMPUTE` | Function Compute Invocation | General | `GENERAL` | json | `.json` | [FUNCTION_COMPUTE.md](general/FUNCTION_COMPUTE.md) |
 | `NOTEBOOK` | Notebook | General | `GENERAL` | python | `.ipynb` | [NOTEBOOK.md](general/NOTEBOOK.md) |
 | `OSS_INSPECT` | OSS Inspect | General | `GENERAL` | - | `.json` | [OSS_INSPECT.md](general/OSS_INSPECT.md) |
 | `PERL` | Perl Script | General | `GENERAL` | shell | `.pl` | [PERL.md](general/PERL.md) |

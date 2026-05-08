@@ -1,4 +1,4 @@
-# UpdateFunction
+# update-function
 
 > Latest API definition: https://api.aliyun.com/meta/v1/products/dataworks-public/versions/2024-05-18/apis/UpdateFunction/api.json
 > If the call returns an error, you can obtain the latest parameter definitions from the URL above.
@@ -7,11 +7,11 @@
 
 **aliyun CLI**:
 ```bash
-aliyun dataworks-public UpdateFunction \
-  --ProjectId {{project_id}} \
-  --Id {{function_id}} \
-  --Spec "$(cat /tmp/func.json)" \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public update-function \
+  --project-id {{project_id}} \
+  --id {{function_id}} \
+  --spec "$(cat /tmp/func.json)" \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 **Python SDK**:

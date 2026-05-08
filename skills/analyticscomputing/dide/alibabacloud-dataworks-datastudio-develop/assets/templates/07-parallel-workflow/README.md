@@ -39,17 +39,20 @@ parallel_etl/
 
 ## Dependency Configuration Key Points
 
-When creating nodes inside a workflow using CreateNode + ContainerId, dependencies are configured via `spec.dependencies` -- there is no need to dual-write `inputs.nodeOutputs`. Note: `spec.dependencies[*].nodeId` MUST exactly match the corresponding node's `id`, otherwise the dependency information will not be recognized.
+When creating nodes inside a workflow using CreateNode + ContainerId, dependencies are configured exclusively via `spec.dependencies`. Note: `spec.dependencies[*].nodeId` MUST exactly match the corresponding node's `id`, otherwise the dependency information will not be recognized.
 
 Multi-upstream dependency (fan-in) example (merge_report depends on both process_orders and process_users):
 
 ```json
-"inputs": {
-  "nodeOutputs": [
-    {"data": "${projectIdentifier}.process_orders", "artifactType": "NodeOutput"},
-    {"data": "${projectIdentifier}.process_users", "artifactType": "NodeOutput"}
-  ]
-}
+"dependencies": [
+  {
+    "nodeId": "merge_report",
+    "depends": [
+      {"type": "Normal", "output": "${projectIdentifier}.process_orders"},
+      {"type": "Normal", "output": "${projectIdentifier}.process_users"}
+    ]
+  }
+]
 ```
 
 ## Deployment Order

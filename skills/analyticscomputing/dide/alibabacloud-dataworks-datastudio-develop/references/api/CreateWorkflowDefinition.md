@@ -1,11 +1,11 @@
-# CreateWorkflowDefinition
+# create-workflow-definition
 
 > Latest API definition: https://api.aliyun.com/meta/v1/products/dataworks-public/versions/2024-05-18/apis/CreateWorkflowDefinition/api.json
 > If the call returns an error, you can obtain the latest parameter definitions from the URL above.
 
 ### Idempotency Note
 
-This API does not support `ClientToken`. If the call times out or returns a network error, **do not blindly retry**. First check whether the workflow was created by calling `ListWorkflowDefinitions` and searching by name. Only retry if the workflow does not exist. Always record the `RequestId` from the response for traceability.
+This API does not support `ClientToken`. If the call times out or returns a network error, **do not blindly retry**. First check whether the workflow was created by calling `list-workflow-definitions` and searching by name. Only retry if the workflow does not exist. Always record the `RequestId` from the response for traceability.
 
 ### Create Workflow
 
@@ -41,10 +41,10 @@ python $SKILL/scripts/build.py ./my_workflow > /tmp/wf.json
 
 **aliyun CLI**:
 ```bash
-aliyun dataworks-public CreateWorkflowDefinition \
-  --ProjectId {{project_id}} \
-  --Spec "$(cat /tmp/wf.json)" \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public create-workflow-definition \
+  --project-id {{project_id}} \
+  --spec "$(cat /tmp/wf.json)" \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 **Python SDK**:

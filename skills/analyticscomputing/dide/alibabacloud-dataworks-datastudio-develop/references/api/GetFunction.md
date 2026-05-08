@@ -1,4 +1,4 @@
-# GetFunction
+# get-function
 
 > Latest API definition: https://api.aliyun.com/meta/v1/products/dataworks-public/versions/2024-05-18/apis/GetFunction/api.json
 > If the call returns an error, you can obtain the latest parameter definitions from the URL above.
@@ -7,10 +7,10 @@
 
 **aliyun CLI**:
 ```bash
-aliyun dataworks-public GetFunction \
-  --ProjectId {{project_id}} \
-  --Id {{function_id}} \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public get-function \
+  --project-id {{project_id}} \
+  --id {{function_id}} \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 **Python SDK**:

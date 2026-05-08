@@ -88,7 +88,7 @@ Node name, must be unique within the same project. The name is also used for ref
 | Required | Yes (must be set equal to `name`) |
 | Constraints | Must exactly match the `name` field value |
 
-Node identifier used for matching `spec.dependencies[*].nodeId`. **Always set `id` equal to `name`** when creating nodes. Without an explicit `id`, the `CreateNode` API may silently drop `spec.dependencies`.
+Node identifier used for matching `spec.dependencies[*].nodeId`. **Always set `id` equal to `name`** when creating nodes. Without an explicit `id`, the `create-node` API may silently drop `spec.dependencies`.
 
 ```json
 "name": "etl_daily_report",
@@ -250,7 +250,7 @@ Specifies the resource group for node execution.
 | `resourceGroup` | string | Yes | Resource group identifier (e.g., `S_res_group_xxx`). Recommend using the `${spec.runtimeResource.resourceGroup}` placeholder, with the actual value configured in `dataworks.properties` |
 | `resourceGroupId` | string | No | Resource group ID, optional |
 
-The resource group identifier can be obtained via the `ListResourceGroups` API.
+The resource group identifier can be obtained via the `list-resource-groups` API.
 
 #### datasource (Data Source)
 
@@ -291,21 +291,9 @@ Defines the node's output identifier, used for downstream dependency.
 
 The output identifier is used for `depends[].output` references in `dependencies` of downstream nodes. `${projectIdentifier}` is defined in `dataworks.properties`. The downstream's `depends[].output` must be **character-for-character identical** to this value.
 
-#### inputs (Input Definition)
+#### Dependencies
 
-Defines the node's input data. **Do not use `inputs.nodeOutputs` to configure dependencies**; dependencies are maintained via the `spec.dependencies` array only. In `spec.dependencies`, `nodeId` is a **self-reference** (current node's own name), and `depends[].output` is the upstream node's output.
-
-```json
-"inputs": {
-  "nodeOutputs": [
-    {
-      "data": "${projectIdentifier}.upstream_node"
-    }
-  ]
-}
-```
-
-> **Note**: This field is NOT recommended for dependency configuration; use `spec.dependencies` instead. Do NOT dual-write both `inputs.nodeOutputs` and `spec.dependencies`.
+Dependencies are maintained **exclusively** via the top-level `spec.dependencies` array (see the `dependencies` section below). Do NOT place dependency declarations on the node object. In `spec.dependencies`, `nodeId` is a **self-reference** (the current node's own name), and `depends[].output` is the upstream node's output identifier.
 
 #### rerunMode / rerunTimes / rerunInterval (Rerun Configuration)
 

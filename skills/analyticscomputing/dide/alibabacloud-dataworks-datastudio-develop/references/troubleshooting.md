@@ -13,8 +13,8 @@ This document compiles common errors encountered during DataWorks data developme
 **Correct action**: **Do NOT install any plugin.** The DataWorks 2024-05-18 APIs work via PascalCase RPC direct invocation without any plugin:
 ```bash
 # CORRECT — no plugin needed
-aliyun dataworks-public CreateNode --ProjectId 585549 --Scene DATAWORKS_PROJECT --Spec '...'
-aliyun dataworks-public CreateWorkflowDefinition --ProjectId 585549 --Spec '...'
+aliyun dataworks-public create-node --project-id 585549 --scene DATAWORKS_PROJECT --spec '...'
+aliyun dataworks-public create-workflow-definition --project-id 585549 --spec '...'
 
 # WRONG — never do this
 aliyun plugin install --names aliyun-cli-dataworks-public   # ← NEVER
@@ -22,7 +22,7 @@ aliyun dataworks-public create-file ...                      # ← NEVER (kebab-
 aliyun dataworks-public create-business ...                  # ← NEVER (kebab-case)
 ```
 
-This requires `aliyun` CLI >= 3.3.1. If the PascalCase command returns "unknown command", upgrade the CLI, do NOT install the plugin.
+This requires `aliyun` CLI >= 3.3.3. If the PascalCase command returns "unknown command", upgrade the CLI, do NOT install the plugin.
 
 ---
 
@@ -308,13 +308,13 @@ These errors are returned when calling DataWorks OpenAPI.
 ErrorCode: 58014884415
 ```
 
-**Cause**: The `--Spec` JSON passed to `CreateWorkflowDefinition` or `CreateNode` has an invalid FlowSpec format. Common mistakes:
+**Cause**: The `--spec` JSON passed to `create-workflow-definition` or `create-node` has an invalid FlowSpec format. Common mistakes:
 - Using `"apiVersion": "v1"` instead of `"version": "2.0.0"`
 - Using `"kind": "Workflow"` instead of `"kind": "CycleWorkflow"`
 - Using `"metadata": {"name": "..."}` (not a FlowSpec field)
 - Missing `script.path` or `script.runtime.command`
 
-**Solution**: Fix the FlowSpec format. **Do NOT fall back to legacy APIs** (`CreateFolder`, `CreateFile`). The correct minimal FlowSpec for a workflow:
+**Solution**: Fix the FlowSpec format. **Do NOT fall back to legacy APIs** (`create-folder`, `create-file`). The correct minimal FlowSpec for a workflow:
 ```json
 {"version":"2.0.0","kind":"CycleWorkflow","spec":{"workflows":[{"name":"my_workflow","script":{"path":"my_workflow","runtime":{"command":"WORKFLOW"}}}]}}
 ```
@@ -326,14 +326,14 @@ The correct minimal FlowSpec for a node:
 
 Refer to the FlowSpec Anti-Patterns table and Quick Start in SKILL.md for the exact format.
 
-### 0a1. UpdateNode: "spec kind and request not match"
+### 0a1. update-node: "spec kind and request not match"
 
 **Error message**:
 ```
 spec kind and request not match
 ```
 
-**Cause**: You passed `"kind":"CycleWorkflow"` (or another wrong kind) in the `--Spec` of `UpdateNode`. `UpdateNode` **always** requires `"kind":"Node"`, even if the node belongs to a workflow.
+**Cause**: You passed `"kind":"CycleWorkflow"` (or another wrong kind) in the `--spec` of `update-node`. `update-node` **always** requires `"kind":"Node"`, even if the node belongs to a workflow.
 
 **Wrong**:
 ```json
@@ -345,7 +345,7 @@ spec kind and request not match
 {"version":"2.0.0","kind":"Node","spec":{"nodes":[{"id":"NODE_ID","script":{"content":"new SQL here"}}]}}
 ```
 
-**Do NOT fall back to `UpdateFile`** — that is a legacy API. Fix the `kind` field and retry `UpdateNode`.
+**Do NOT fall back to `update-file`** — that is a legacy API. Fix the `kind` field and retry `update-node`.
 
 ### 0a2. Anti-Pattern: Creating Wrapper Scripts for API Calls
 
@@ -356,47 +356,47 @@ spec kind and request not match
 **Correct approach**: Run each `aliyun` CLI command **directly** in the shell, one at a time:
 ```bash
 # Step 1: Create workflow — check response
-aliyun dataworks-public CreateWorkflowDefinition --ProjectId 585549 \
-  --Spec '{"version":"2.0.0","kind":"CycleWorkflow","spec":{"workflows":[{"name":"my_wf","script":{"path":"my_wf","runtime":{"command":"WORKFLOW"}}}]}}' \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public create-workflow-definition --project-id 585549 \
+  --spec '{"version":"2.0.0","kind":"CycleWorkflow","spec":{"workflows":[{"name":"my_wf","script":{"path":"my_wf","runtime":{"command":"WORKFLOW"}}}]}}' \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 # → Read the response. Extract the Id. Only proceed if successful.
 
 # Step 2: Create first node — check response
-aliyun dataworks-public CreateNode --ProjectId 585549 --Scene DATAWORKS_PROJECT \
-  --ContainerId $WORKFLOW_ID \
-  --Spec '...' \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public create-node --project-id 585549 --scene DATAWORKS_PROJECT \
+  --container-id $WORKFLOW_ID \
+  --spec '...' \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 # → Read the response. Only proceed if successful.
 ```
 
-### 0a3. Anti-Pattern: Using Legacy Deployment APIs (DeployFile, SubmitFile, ListDeploymentPackages)
+### 0a3. Anti-Pattern: Using Legacy Deployment APIs (deploy-file, submit-file, ListDeploymentPackages)
 
-**Symptom**: Agent tries to deploy a workflow using `DeployFile`, `SubmitFile`, `ListDeploymentPackages`, `GetDeploymentPackage`, or `ListDeploymentPackageFiles`. These calls either fail with "Code does not exist" or return irrelevant results.
+**Symptom**: Agent tries to deploy a workflow using `deploy-file`, `submit-file`, `ListDeploymentPackages`, `GetDeploymentPackage`, or `ListDeploymentPackageFiles`. These calls either fail with "Code does not exist" or return irrelevant results.
 
 **Why this is WRONG**: These are all legacy DataWorks APIs from older API versions. The 2024-05-18 version uses a completely different deployment model based on pipelines.
 
-**Also wrong**: Using `ListFiles` / `GetFile` to find node FileIds for deployment. These are legacy file-model APIs. Use `ListNodes` / `GetNode` / `ListWorkflowDefinitions` instead.
+**Also wrong**: Using `list-files` / `get-file` to find node FileIds for deployment. These are legacy file-model APIs. Use `list-nodes` / `get-node` / `list-workflow-definitions` instead.
 
 **Correct approach**: Use the pipeline-based deployment APIs:
 ```bash
 # Step 1: Find the workflow or node ID
-aliyun dataworks-public ListWorkflowDefinitions --ProjectId 585549 --Type CycleWorkflow \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public list-workflow-definitions --project-id 585549 --type CycleWorkflow \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 # → Find the Id of the target workflow
 
 # Step 2: Create a pipeline run to deploy
-aliyun dataworks-public CreatePipelineRun --ProjectId 585549 \
-  --Type Online --ObjectIds '["WORKFLOW_ID"]' \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public create-pipeline-run --project-id 585549 \
+  --type Online --object-ids WORKFLOW_ID \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 # → Returns {"Id": "PIPELINE_RUN_ID"}
 
 # Step 3: Poll and advance stages
-aliyun dataworks-public GetPipelineRun --ProjectId 585549 --Id PIPELINE_RUN_ID \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public get-pipeline-run --project-id 585549 --id PIPELINE_RUN_ID \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 # → Check Pipeline.Status and Pipeline.Stages[].Status
 # → When Stage.Status=Init and prior stages are Success:
-aliyun dataworks-public ExecPipelineRunStage --ProjectId 585549 --Id PIPELINE_RUN_ID \
-  --Code STAGE_CODE --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public exec-pipeline-run-stage --project-id 585549 --id PIPELINE_RUN_ID \
+  --code STAGE_CODE --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 ### 0b. Used Legacy API (Error Code 1201111431 / folder path Related Errors)
@@ -406,7 +406,7 @@ aliyun dataworks-public ExecPipelineRunStage --ProjectId 585549 --Id PIPELINE_RU
 Error code: 1201111431
 Message: /workflowroot/xxx or /bizroot/xxx or folder path not found
 ```
-Or called commands like `create-file`, `create-folder`, `list-folders`, `CreateFlowProject`, etc.
+Or called commands like `create-file`, `create-folder`, `list-folders`, `create-flow-project`, etc.
 
 **Cause**: Used the legacy DataWorks API (based on the folder/business flow model). This skill uses the 2024-05-18 version OpenAPI, which does not require folder operations.
 
@@ -414,24 +414,24 @@ Or called commands like `create-file`, `create-folder`, `list-folders`, `CreateF
 
 **Solution**:
 1. **Immediately stop** folder-related operations
-2. Return to the "Create Node" process in SKILL.md, using FlowSpec + `CreateNode` API
-3. Use `CreateWorkflowDefinition` to create workflows, not `CreateFlowProject` / `CreateBusiness`
+2. Return to the "Create Node" process in SKILL.md, using FlowSpec + `create-node` API
+3. Use `create-workflow-definition` to create workflows, not `create-flow-project` / `create-business`
 4. No need to install the `aliyun-cli-dataworks-public` legacy plugin
 
 **Correct API call pattern** (PascalCase RPC direct call; DataWorks 2024-05-18 has no plugin mode):
 ```bash
 # Create node (2024-05-18 version)
-aliyun dataworks-public CreateNode \
-  --ProjectId $PROJECT_ID \
-  --Scene DATAWORKS_PROJECT \
-  --Spec "$(cat /tmp/spec.json)" \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public create-node \
+  --project-id $PROJECT_ID \
+  --scene DATAWORKS_PROJECT \
+  --spec "$(cat /tmp/spec.json)" \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 
 # Create workflow (2024-05-18 version)
-aliyun dataworks-public CreateWorkflowDefinition \
-  --ProjectId $PROJECT_ID \
-  --Spec "$(cat /tmp/workflow_spec.json)" \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public create-workflow-definition \
+  --project-id $PROJECT_ID \
+  --spec "$(cat /tmp/workflow_spec.json)" \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 ### 1. Script path not match name
@@ -481,7 +481,7 @@ Failed to parse Spec JSON / Invalid Spec format
 Node type (command) cannot be changed after creation
 ```
 
-**Cause**: Attempted to modify `script.runtime.command` of an existing node via the UpdateNode API. Node type is immutable after creation.
+**Cause**: Attempted to modify `script.runtime.command` of an existing node via the update-node API. Node type is immutable after creation.
 
 **Solution**:
 1. Inform the user that the node type cannot be modified after creation
@@ -499,10 +499,10 @@ Node with the same name already exists in the project
 
 **Solution**:
 1. Rename the new node (recommended)
-2. If the intent is to update an existing node, use the `UpdateNode` API instead
+2. If the intent is to update an existing node, use the `update-node` API instead
 3. Inform the user of the conflict and let them decide (rename / update existing)
 
-**Prevention**: Call `ListNodes` before creation to check if a node with the same name exists (see "Environment Awareness" in SKILL.md)
+**Prevention**: Call `list-nodes` before creation to check if a node with the same name exists (see "Environment Awareness" in SKILL.md)
 
 ### 5. ContainerId required for workflow node
 
@@ -515,12 +515,12 @@ ContainerId is required when creating node in workflow
 
 **Solution**:
 ```bash
-aliyun dataworks-public CreateNode \
-  --ProjectId {{project_id}} \
-  --Scene DATAWORKS_PROJECT \
-  --ContainerId {{workflow_id}} \
-  --Spec "$(cat /tmp/spec.json)" \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public create-node \
+  --project-id {{project_id}} \
+  --scene DATAWORKS_PROJECT \
+  --container-id {{workflow_id}} \
+  --spec "$(cat /tmp/spec.json)" \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 ### 6. Invalid cron expression
@@ -555,9 +555,9 @@ Resource group not found or not available
 **Solution**:
 ```bash
 # Query available resource groups
-aliyun dataworks-public ListResourceGroups \
-  --ProjectId {{project_id}} \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public list-resource-groups \
+  --project-id {{project_id}} \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 Verify the correct resource group identifier is being used.
@@ -574,9 +574,9 @@ Datasource not found in project
 **Solution**:
 ```bash
 # Query registered datasources
-aliyun dataworks-public ListDataSources \
-  --ProjectId {{project_id}} \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public list-data-sources \
+  --project-id {{project_id}} \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 Verify the datasource name is spelled correctly.
@@ -592,7 +592,7 @@ Workflow definition not found
 
 **Solution**:
 - Confirm the workflow was created successfully
-- Check that the `ContainerId` value is the correct ID returned by `CreateWorkflowDefinition`
+- Check that the `ContainerId` value is the correct ID returned by `create-workflow-definition`
 
 ### 10. Pipeline run failed
 
@@ -606,16 +606,36 @@ Pipeline run status: FAIL
 **Troubleshooting steps**:
 ```bash
 # Query deployment details
-aliyun dataworks-public GetPipelineRun \
-  --ProjectId {{project_id}} \
-  --Id {{pipeline_run_id}} \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public get-pipeline-run \
+  --project-id {{project_id}} \
+  --id {{pipeline_run_id}} \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 Common failure causes:
 - Node code compilation errors
 - Dependent node does not exist
 - Insufficient permissions
+
+### 11. `未找到发布对象` (publish object not found, code 5801489541076353033)
+
+**Error message**:
+```
+StatusCode: 400
+Code: 5801489541076353033
+Message: code: 400, 未找到发布对象: [["<ID>"]]
+```
+
+**Cause** (in priority order):
+
+1. **`--object-ids` was wrapped as a JSON array string** (`'["<ID>"]'`). The CLI plugin treats the entire bracketed text as a single literal ID, so the API never finds it. The double brackets in the error message — `[["<ID>"]]` — are exactly the inner literal plus the outer array wrapper, which is the diagnostic signature of this mistake. Fix: pass the bare ID, e.g. `--object-ids 7567482277219412494`. Verify with `aliyun dataworks-public create-pipeline-run --help` (`format: --object-ids value1 value2 value3`).
+2. **The ID belongs to a node inside a workflow** (its `path` from `get-node` contains `/`, e.g. `wf/node`). The publish API only accepts the workflow ID for intra-workflow nodes — `WorkflowDefinition只允许作为整体发布，目前不支持单独发布Workflow内部的单个节点`. Fix: re-issue with the workflow ID.
+3. **The ID does not exist** (typo, wrong project, deleted). Verify with `get-node` / `get-workflow-definition` first.
+
+**Do NOT**:
+- Retry the same payload with a different ID, or with `--pipeline-run-param '{...}'` (that flag does not exist on this command and the CLI returns `required flags missing: --type, --object-ids`).
+- Create a brand new node/workflow as a workaround.
+- Claim the task is done with a note like "publishing failed due to environment issues".
 
 ---
 
@@ -700,7 +720,7 @@ The following issues were discovered through actual API calls and are not yet cl
 
 ### 11. Dependencies Silently Ignored
 
-**Symptom**: Dependencies were set during CreateNode, but after creation the node's dependencies are still the project root node (or none).
+**Symptom**: Dependencies were set during create-node, but after creation the node's dependencies are still the project root node (or none).
 
 There are three common causes:
 
@@ -745,14 +765,14 @@ See `assets/templates/05-cycle-workflow/` for a complete example.
 
 ### 11b. Deployment Fails with "can not exported multiple nodes into the same output"
 
-**Symptom**: `CreatePipelineRun` deployment fails at the PROD stage with error: `"the output name of current workspace:XXX node:YYY and that of workspace:XXX node:YYY are the same one:XXX.YYY, can not exported multiple nodes into the same output"`
+**Symptom**: `create-pipeline-run` deployment fails at the PROD stage with error: `"the output name of current workspace:XXX node:YYY and that of workspace:XXX node:YYY are the same one:XXX.YYY, can not exported multiple nodes into the same output"`
 
 **Cause**: Two nodes in the same project have the same `outputs.nodeOutputs[].data` value. Output names must be **globally unique within the project**, even across different workflows. This commonly happens when recreating nodes that already exist in a different workflow.
 
 **Prevention**: Before creating any node, check for existing nodes with the same name and verify their output names:
 ```bash
-aliyun dataworks-public ListNodes --ProjectId $PID --Name "node_name" \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public list-nodes --project-id $PID --name "node_name" \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 If a node with the same output name already exists, either:
 1. Use a different node name (e.g., add a suffix)
@@ -760,20 +780,20 @@ If a node with the same output name already exists, either:
 
 **Recovery**: If the node was already created with a conflicting output, inform the user of the conflict and let them decide how to resolve it (rename or update existing).
 
-### 11c. CreateNode Silently Drops spec.dependencies
+### 11c. create-node Silently Drops spec.dependencies
 
-**Symptom**: `CreateNode` returns success, but `ListNodeDependencies` for the created node shows `TotalCount: 0` — no dependencies were persisted, despite `spec.dependencies` being correctly formatted in the request.
+**Symptom**: `create-node` returns success, but `list-node-dependencies` for the created node shows `TotalCount: 0` — no dependencies were persisted, despite `spec.dependencies` being correctly formatted in the request.
 
-**Cause**: The `CreateNode` API may silently discard `spec.dependencies` in certain conditions. This is a known API behavior, not a spec formatting issue.
+**Cause**: The `create-node` API may silently discard `spec.dependencies` in certain conditions. This is a known API behavior, not a spec formatting issue.
 
-**Fix**: After creating all nodes, verify each downstream node's dependencies with `ListNodeDependencies`. If `TotalCount` is `0`, re-apply dependencies via `UpdateNode` using `spec.dependencies`:
+**Fix**: After creating all nodes, verify each downstream node's dependencies with `list-node-dependencies`. If `TotalCount` is `0`, re-apply dependencies via `update-node` using `spec.dependencies`:
 ```bash
-aliyun dataworks-public UpdateNode --ProjectId $PID --Id $NODE_ID \
-  --Spec '{"version":"2.0.0","kind":"Node","spec":{"nodes":[{"id":"'$NODE_ID'"}],"dependencies":[{"nodeId":"node_name","depends":[{"type":"Normal","output":"project.upstream_node"}]}]}}' \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public update-node --project-id $PID --id $NODE_ID \
+  --spec '{"version":"2.0.0","kind":"Node","spec":{"nodes":[{"id":"'$NODE_ID'"}],"dependencies":[{"nodeId":"node_name","depends":[{"type":"Normal","output":"project.upstream_node"}]}]}}' \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
-**NEVER use `inputs.nodeOutputs` to fix dependencies** — always use `spec.dependencies` in the UpdateNode call.
+**Always fix dependencies via `spec.dependencies`** in the update-node call.
 
 **Prevention**: Always run the "Verify and Fix Dependencies" step (see workflow-guide.md Step 5) before deploying.
 
@@ -789,13 +809,13 @@ aliyun dataworks-public UpdateNode --ProjectId $PID --Id $NODE_ID \
 
 ### 13. Flink Node Spec Missing dependencies Field
 
-**Symptom**: When retrieving a Flink node's spec via GetNode, the returned JSON does not contain a `dependencies` field.
+**Symptom**: When retrieving a Flink node's spec via get-node, the returned JSON does not contain a `dependencies` field.
 
-**Explanation**: Scheduling dependencies for Flink streaming nodes are configured via `spec.dependencies`. The spec returned by GetNode may not include the `dependencies` field; use the `ListNodeDependencies` API to query instead.
+**Explanation**: Scheduling dependencies for Flink streaming nodes are configured via `spec.dependencies`. The spec returned by get-node may not include the `dependencies` field; use the `list-node-dependencies` API to query instead.
 
 ### 14. Duplicate Resource Created by Network Retry
 
-**Symptom**: A Create API call (e.g., `CreateNode`, `CreateWorkflowDefinition`) timed out or returned a network error, so the agent retried the same call. The retry succeeded, but now two identical resources exist (e.g., two nodes with the same name, or creation fails with "Node with the same name already exists").
+**Symptom**: A Create API call (e.g., `create-node`, `create-workflow-definition`) timed out or returned a network error, so the agent retried the same call. The retry succeeded, but now two identical resources exist (e.g., two nodes with the same name, or creation fails with "Node with the same name already exists").
 
 **Cause**: The original request was actually processed by the server, but the response was lost due to a network issue. The DataWorks 2024-05-18 Create APIs do not support `ClientToken` for idempotent retries, so a blind retry creates a duplicate.
 
@@ -803,8 +823,8 @@ aliyun dataworks-public UpdateNode --ProjectId $PID --Id $NODE_ID \
 1. **Before retrying any Create call that failed with a network/timeout error**, use the corresponding List API to check whether the resource was already created:
    ```bash
    # Example: check if node was created despite the error
-   aliyun dataworks-public ListNodes --ProjectId $PID --Name "my_node" \
-     --user-agent AlibabaCloud-Agent-Skills
+   aliyun dataworks-public list-nodes --project-id $PID --name "my_node" \
+     --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
    ```
 2. If the resource exists → do NOT retry; use the existing resource's ID and continue
 3. If the resource does not exist → safe to retry the Create call
@@ -820,6 +840,6 @@ Code: 9990020002
 Message: Throttling.User
 ```
 
-**Explanation**: API call frequency exceeded the rate limit within a short period. Batch operations (such as looping GetNode to retrieve node details) are prone to triggering this.
+**Explanation**: API call frequency exceeded the rate limit within a short period. Batch operations (such as looping get-node to retrieve node details) are prone to triggering this.
 
-**Solution**: Add intervals between batch operations (e.g., 500ms between each call), or reduce unnecessary GetNode calls.
+**Solution**: Add intervals between batch operations (e.g., 500ms between each call), or reduce unnecessary get-node calls.

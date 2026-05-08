@@ -8,10 +8,10 @@ This document describes how to verify whether DataWorks data development operati
 
 ```bash
 # Query by node ID
-aliyun dataworks-public GetNode \
-  --ProjectId {{project_id}} \
-  --Id {{node_id}} \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public get-node \
+  --project-id {{project_id}} \
+  --id {{node_id}} \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 **Success indicators**:
@@ -22,12 +22,12 @@ aliyun dataworks-public GetNode \
 ### Verify Node List
 
 ```bash
-aliyun dataworks-public ListNodes \
-  --ProjectId {{project_id}} \
-  --Scene DATAWORKS_PROJECT \
-  --PageNumber 1 \
-  --PageSize 100 \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public list-nodes \
+  --project-id {{project_id}} \
+  --scene DATAWORKS_PROJECT \
+  --page-number 1 \
+  --page-size 100 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 **Success indicators**:
@@ -38,10 +38,10 @@ aliyun dataworks-public ListNodes \
 
 ```bash
 # Get node details, check dependency configuration
-aliyun dataworks-public GetNode \
-  --ProjectId {{project_id}} \
-  --Id {{node_id}} \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public get-node \
+  --project-id {{project_id}} \
+  --id {{node_id}} \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 **Success indicators** (parsed from the returned spec JSON):
@@ -53,10 +53,10 @@ aliyun dataworks-public GetNode \
 ### Verify Workflow Creation Success
 
 ```bash
-aliyun dataworks-public GetWorkflowDefinition \
-  --ProjectId {{project_id}} \
-  --Id {{workflow_id}} \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public get-workflow-definition \
+  --project-id {{project_id}} \
+  --id {{workflow_id}} \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 **Success indicators**:
@@ -67,12 +67,12 @@ aliyun dataworks-public GetWorkflowDefinition \
 ### Verify Workflow List
 
 ```bash
-aliyun dataworks-public ListWorkflowDefinitions \
-  --ProjectId {{project_id}} \
-  --Type CycleWorkflow \
-  --PageNumber 1 \
-  --PageSize 100 \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public list-workflow-definitions \
+  --project-id {{project_id}} \
+  --type CycleWorkflow \
+  --page-number 1 \
+  --page-size 100 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 **Success indicators**:
@@ -82,13 +82,13 @@ aliyun dataworks-public ListWorkflowDefinitions \
 
 ```bash
 # Query the node list within a workflow
-aliyun dataworks-public ListNodes \
-  --ProjectId {{project_id}} \
-  --Scene DATAWORKS_PROJECT \
-  --ContainerId {{workflow_id}} \
-  --PageNumber 1 \
-  --PageSize 100 \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public list-nodes \
+  --project-id {{project_id}} \
+  --scene DATAWORKS_PROJECT \
+  --container-id {{workflow_id}} \
+  --page-number 1 \
+  --page-size 100 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 **Success indicators**:
@@ -100,10 +100,10 @@ aliyun dataworks-public ListNodes \
 ### Verify Deployment Process Creation Success
 
 ```bash
-aliyun dataworks-public GetPipelineRun \
-  --ProjectId {{project_id}} \
-  --Id {{pipeline_run_id}} \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public get-pipeline-run \
+  --project-id {{project_id}} \
+  --id {{pipeline_run_id}} \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 **Success indicators**:
@@ -114,10 +114,10 @@ aliyun dataworks-public GetPipelineRun \
 
 ```bash
 # Poll until deployment completes
-aliyun dataworks-public GetPipelineRun \
-  --ProjectId {{project_id}} \
-  --Id {{pipeline_run_id}} \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public get-pipeline-run \
+  --project-id {{project_id}} \
+  --id {{pipeline_run_id}} \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 **Success indicators**:
@@ -130,12 +130,12 @@ aliyun dataworks-public GetPipelineRun \
 ### Verify Deployment Items
 
 ```bash
-aliyun dataworks-public ListPipelineRunItems \
-  --ProjectId {{project_id}} \
-  --PipelineRunId {{pipeline_run_id}} \
-  --PageNumber 1 \
-  --PageSize 50 \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public list-pipeline-run-items \
+  --project-id {{project_id}} \
+  --pipeline-run-id {{pipeline_run_id}} \
+  --page-number 1 \
+  --page-size 50 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 **Success indicators**:
@@ -147,12 +147,12 @@ aliyun dataworks-public ListPipelineRunItems \
 ### Verify Data Source Availability
 
 ```bash
-aliyun dataworks-public ListDataSources \
-  --ProjectId {{project_id}} \
-  --Type odps \
-  --PageNumber 1 \
-  --PageSize 100 \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public list-data-sources \
+  --project-id {{project_id}} \
+  --type odps \
+  --page-number 1 \
+  --page-size 100 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 **Success indicators**:
@@ -161,9 +161,9 @@ aliyun dataworks-public ListDataSources \
 ### Verify Resource Group Availability
 
 ```bash
-aliyun dataworks-public ListResourceGroups \
-  --ProjectId {{project_id}} \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public list-resource-groups \
+  --project-id {{project_id}} \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 **Success indicators**:
@@ -199,5 +199,5 @@ python -m json.tool /tmp/spec.json > /dev/null && echo "JSON valid"
 | Node not found | Create API call failed | Check API response and error message |
 | Dependencies not effective | spec.dependencies not correctly configured or upstream missing outputs | Configure dependencies in spec.dependencies, ensure upstream declares outputs.nodeOutputs |
 | Deployment failed | Code errors or insufficient permissions | Check Stage.Message for details |
-| Data source not found | Name misspelled | Confirm with ListDataSources |
-| Resource group invalid | Identifier is wrong | Confirm with ListResourceGroups |
+| Data source not found | Name misspelled | Confirm with list-data-sources |
+| Resource group invalid | Identifier is wrong | Confirm with list-resource-groups |

@@ -66,7 +66,7 @@ Edit `my_wf.spec.json`, filling in the workflow name and scheduling trigger:
 }
 ```
 
-> **`script.runtime.command: "WORKFLOW"` must be set**, otherwise `CreateWorkflowDefinition` will return an error `"script.runtime.command is empty"`.
+> **`script.runtime.command: "WORKFLOW"` must be set**, otherwise `create-workflow-definition` will return an error `"script.runtime.command is empty"`.
 
 **Manual Workflow**:
 
@@ -100,10 +100,10 @@ Edit `my_manual_wf.spec.json`:
 Build the spec JSON and call the API to create the workflow:
 
 ```bash
-aliyun dataworks-public CreateWorkflowDefinition \
-  --ProjectId {{project_id}} \
-  --Spec "$(cat /tmp/wf.json)" \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public create-workflow-definition \
+  --project-id {{project_id}} \
+  --spec "$(cat /tmp/wf.json)" \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 **Important**: Record the returned `WorkflowId`, as it is needed when creating nodes within the workflow.
@@ -124,13 +124,13 @@ mkdir -p ./my_wf/step1
 # Edit spec.json, write code file, configure properties
 # ...(follow the standard node creation process)
 
-# Build spec JSON and submit, note the --ContainerId parameter
-aliyun dataworks-public CreateNode \
-  --ProjectId {{project_id}} \
-  --Scene DATAWORKS_PROJECT \
-  --ContainerId {{workflow_id}} \
-  --Spec "$(cat /tmp/step1.json)" \
-  --user-agent AlibabaCloud-Agent-Skills
+# Build spec JSON and submit, note the --container-id parameter
+aliyun dataworks-public create-node \
+  --project-id {{project_id}} \
+  --scene DATAWORKS_PROJECT \
+  --container-id {{workflow_id}} \
+  --spec "$(cat /tmp/step1.json)" \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 Repeat this step for each node in the workflow.
@@ -257,8 +257,8 @@ Below is a complete copy-ready example showing the spec structure of nodes withi
 
 **Key points**:
 - Each node **must** declare `outputs.nodeOutputs` (format `${projectIdentifier}.node_name`), otherwise downstream dependencies will silently fail
-- The output name (`${projectIdentifier}.node_name`) must be **globally unique within the project**. If another node (even in a different workflow) already uses the same output name, deployment will fail with `"can not exported multiple nodes into the same output"`. Always check with `ListNodes --Name node_name` before creating
-- Dependencies are configured via `spec.dependencies` only (do NOT dual-write `inputs.nodeOutputs`):
+- The output name (`${projectIdentifier}.node_name`) must be **globally unique within the project**. If another node (even in a different workflow) already uses the same output name, deployment will fail with `"can not exported multiple nodes into the same output"`. Always check with `list-nodes --Name node_name` before creating
+- Dependencies are configured via `spec.dependencies` only:
   - `nodeId` = the **current node's own name** (self-reference, NOT the upstream node)
   - `depends[].output` = the **upstream node's output** (`${projectIdentifier}.upstream_node_name`)
   - The upstream's `outputs.nodeOutputs[].data` and downstream's `depends[].output` must be **character-for-character identical**
@@ -268,7 +268,7 @@ Below is a complete copy-ready example showing the spec structure of nodes withi
 
 ### Step 3: Configure Dependencies
 
-Dependencies between nodes within a workflow are configured via the `spec.dependencies` array only (do NOT dual-write `inputs.nodeOutputs`):
+Dependencies between nodes within a workflow are configured via the `spec.dependencies` array only:
 
 > **Dependency configuration rules**:
 > 1. **Upstream nodes** declare `outputs.nodeOutputs`: `{"data":"${projectIdentifier}.node_name","artifactType":"NodeOutput"}`
@@ -278,7 +278,7 @@ Dependencies between nodes within a workflow are configured via the `spec.depend
 >
 > **`outputs.nodeOutputs[].data` and `dependencies[].depends[].output` must be character-for-character identical** (e.g., `${projectIdentifier}.upstream_node`); any mismatch will cause the dependency to silently fail.
 >
-> **Output names must be globally unique within the project.** Before creating any node, use `ListNodes --Name node_name` to verify the output name `${projectIdentifier}.node_name` is not already used by another node. Duplicate output names cause deployment failure: `"can not exported multiple nodes into the same output"`.
+> **Output names must be globally unique within the project.** Before creating any node, use `list-nodes --Name node_name` to verify the output name `${projectIdentifier}.node_name` is not already used by another node. Duplicate output names cause deployment failure: `"can not exported multiple nodes into the same output"`.
 >
 > Note: The minSpec template does not include the outputs field; it must be added manually when creating workflow nodes.
 
@@ -339,45 +339,45 @@ In step3's `spec.json`:
 After all nodes are created, publish the workflow:
 
 ```bash
-aliyun dataworks-public CreatePipelineRun \
-  --ProjectId {{project_id}} \
-  --Type Online \
-  --ObjectIds '["{{workflow_id}}"]' \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public create-pipeline-run \
+  --project-id {{project_id}} \
+  --type Online \
+  --object-ids {{workflow_id}} \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 Query the publish status:
 
 ```bash
-aliyun dataworks-public GetPipelineRun \
-  --ProjectId {{project_id}} \
-  --Id {{pipeline_run_id}} \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public get-pipeline-run \
+  --project-id {{project_id}} \
+  --id {{pipeline_run_id}} \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 ### Step 5: Verify and Fix Dependencies (MANDATORY)
 
-**The `CreateNode` API may silently drop `spec.dependencies`.** After creating all nodes but before deploying, you MUST verify dependencies by calling `ListNodeDependencies` for each downstream node:
+**The `create-node` API may silently drop `spec.dependencies`.** After creating all nodes but before deploying, you MUST verify dependencies by calling `list-node-dependencies` for each downstream node:
 
 ```bash
-aliyun dataworks-public ListNodeDependencies \
-  --ProjectId {{project_id}} \
-  --Id {{downstream_node_id}} \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public list-node-dependencies \
+  --project-id {{project_id}} \
+  --id {{downstream_node_id}} \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
-Check the response: if `TotalCount` is `0` but the node should have upstream dependencies, **fix immediately** with `UpdateNode`:
+Check the response: if `TotalCount` is `0` but the node should have upstream dependencies, **fix immediately** with `update-node`:
 
 ```bash
-aliyun dataworks-public UpdateNode --ProjectId {{project_id}} --Id {{node_id}} \
-  --Spec '{"version":"2.0.0","kind":"Node","spec":{"nodes":[{"id":"{{node_id}}"}],"dependencies":[{"nodeId":"{{node_name}}","depends":[{"type":"Normal","output":"{{projectIdentifier}}.{{upstream_node_name}}"}]}]}}' \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public update-node --project-id {{project_id}} --id {{node_id}} \
+  --spec '{"version":"2.0.0","kind":"Node","spec":{"nodes":[{"id":"{{node_id}}"}],"dependencies":[{"nodeId":"{{node_name}}","depends":[{"type":"Normal","output":"{{projectIdentifier}}.{{upstream_node_name}}"}]}]}}' \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
-> **NEVER use `inputs.nodeOutputs` in UpdateNode** — always use `spec.dependencies`.
+> Always use `spec.dependencies` in update-node.
 
 **Do NOT proceed to deploy until all dependencies are confirmed.** Common causes of missing dependencies:
-1. `CreateNode` API silently dropped `spec.dependencies` (known behavior — fix with UpdateNode)
+1. `create-node` API silently dropped `spec.dependencies` (known behavior — fix with update-node)
 2. `nodeId` was set to the upstream node's name instead of the current node's own name (self-reference)
 3. `depends[].output` string does not exactly match the upstream's `outputs.nodeOutputs[].data`
 4. Upstream node did not declare `outputs.nodeOutputs`
@@ -388,7 +388,7 @@ aliyun dataworks-public UpdateNode --ProjectId {{project_id}} --Id {{node_id}} \
 
 ### Intra-Workflow Dependencies
 
-Dependencies between nodes within a workflow are configured via the `spec.dependencies` array only (do NOT dual-write `inputs.nodeOutputs`).
+Dependencies between nodes within a workflow are configured via the `spec.dependencies` array only.
 
 **How `spec.dependencies` wiring works** (A → B, where B depends on A):
 
@@ -512,25 +512,27 @@ A node depends on the previous scheduling cycle's result of itself or another no
 
 ## Workflow Directory Structure
 
+子节点文件夹直接放在工作流根目录下，**禁止嵌套子目录**（即节点文件夹内不能再有节点文件夹）：
+
 ```
 my_wf/
 ├── my_wf.spec.json            # Workflow definition (CycleWorkflow or ManualWorkflow)
 ├── dataworks.properties       # Workflow-level configuration
-├── step1/                     # Child node 1
+├── step1/                     # Child node 1 (直接在工作流根目录下)
 │   ├── step1.spec.json        # Node FlowSpec
 │   ├── step1.sh               # Code file
 │   └── dataworks.properties   # Node-level configuration
-├── step2/                     # Child node 2
+├── step2/                     # Child node 2 (直接在工作流根目录下)
 │   ├── step2.spec.json
 │   ├── step2.sql
 │   └── dataworks.properties
-└── step3/                     # Child node 3
+└── step3/                     # Child node 3 (直接在工作流根目录下)
     ├── step3.spec.json
     ├── step3.py
     └── dataworks.properties
 ```
 
-Each child node directory follows the standard node file structure (spec.json + code file + dataworks.properties).
+Each child node directory follows the standard node file structure (spec.json + code file + dataworks.properties). 节点文件夹内只包含这三个文件，不要再创建子目录。
 
 ---
 
@@ -553,14 +555,14 @@ git commit -m "Add workflow: my_wf with step1, step2, step3"
 ## Important Notes
 
 1. **Creation order**: The workflow definition must be created first to obtain the returned WorkflowId before creating nodes within the workflow
-2. **`script.runtime.command` is required**: The workflow spec must include `script.runtime.command: "WORKFLOW"`, otherwise `CreateWorkflowDefinition` will return an error `"script.runtime.command is empty"`
-3. **ContainerId parameter**: Nodes within a workflow are associated to the workflow via the `ContainerId` parameter of the `CreateNode` API (value is the WorkflowId), rather than embedding node definitions inside the workflow spec
-4. **Intra-workflow node dependencies are configured via `spec.dependencies`** only (do NOT dual-write `inputs.nodeOutputs`). `spec.dependencies[*].nodeId` is a **self-reference** — it must be the **current node's own `name`**, NOT the upstream node's name or API-returned ID. `depends[].output` is the **upstream node's output identifier** (see the complete example and template `assets/templates/05-cycle-workflow/`)
+2. **`script.runtime.command` is required**: The workflow spec must include `script.runtime.command: "WORKFLOW"`, otherwise `create-workflow-definition` will return an error `"script.runtime.command is empty"`
+3. **ContainerId parameter**: Nodes within a workflow are associated to the workflow via the `ContainerId` parameter of the `create-node` API (value is the WorkflowId), rather than embedding node definitions inside the workflow spec
+4. **Intra-workflow node dependencies are configured via `spec.dependencies`** only. `spec.dependencies[*].nodeId` is a **self-reference** — it must be the **current node's own `name`**, NOT the upstream node's name or API-returned ID. `depends[].output` is the **upstream node's output identifier** (see the complete example and template `assets/templates/05-cycle-workflow/`)
 5. **Node outputs must be declared**: Each node within a workflow **must** declare `${projectIdentifier}.node_name` in `outputs.nodeOutputs` (minSpec does not include this field; it must be added manually). **Output names must be globally unique within the project** — if another node already uses the same output name, deployment will fail
 6. **Root node dependency**: Nodes with no upstream dependency must be attached to `${projectIdentifier}_root`
 7. **Workflow trigger**: The trigger of a cycle workflow defines the workflow-level scheduling cycle; nodes within the workflow inherit this schedule
 8. **Immutable properties**: The workflow type (CycleWorkflow / ManualWorkflow) cannot be changed after creation
-9. **Updates must be incremental**: When calling `UpdateNode`, only pass the id + fields to be modified; do not pass unchanged fields like `datasource` or `runtimeResource`. The server may have corrected these field values (e.g., `flink` to `flink_serverless`), and passing back the original values will cause errors
-10. **GetNode returns the full workflow spec**: When calling `GetNode` on a node within a workflow, the response returns a complete `kind: CycleWorkflow` workflow spec; the target node is located at `spec.workflows[0].nodes[]` (not `spec.nodes[]`)
+9. **Updates must be incremental**: When calling `update-node`, only pass the id + fields to be modified; do not pass unchanged fields like `datasource` or `runtimeResource`. The server may have corrected these field values (e.g., `flink` to `flink_serverless`), and passing back the original values will cause errors
+10. **get-node returns the full workflow spec**: When calling `get-node` on a node within a workflow, the response returns a complete `kind: CycleWorkflow` workflow spec; the target node is located at `spec.workflows[0].nodes[]` (not `spec.nodes[]`)
 11. **Workflow `strategy` field**: Workflows support a `strategy` configuration (including priority, timeout, rerunMode, failureStrategy, etc.); this field is defined at the workflow level, not the node level
 12. **`datasource.type` auto-correction**: The server may automatically correct the value of `datasource.type` (e.g., `flink` is corrected to `flink_serverless`); refer to the actual returned value

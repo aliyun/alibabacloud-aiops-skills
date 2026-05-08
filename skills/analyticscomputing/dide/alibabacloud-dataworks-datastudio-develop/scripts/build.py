@@ -23,8 +23,6 @@ import re
 import sys
 from pathlib import Path
 
-SKIP_EXTENSIONS = {'.json', '.properties'}
-
 
 def parse_properties(filepath):
     """Parse dataworks.properties into a key=value dict."""
@@ -70,11 +68,24 @@ def find_spec_file(node_dir):
 
 
 def find_code_file(node_dir):
-    """Find the code file (excluding .spec.json and .properties)."""
+    """Find the code file (excluding *.spec.json and dataworks.properties)."""
+    candidates = []
     for f in node_dir.iterdir():
-        if f.is_file() and f.suffix not in SKIP_EXTENSIONS:
-            return f
-    return None
+        if not f.is_file():
+            continue
+        if f.name == 'dataworks.properties':
+            continue
+        if f.name.endswith('.spec.json'):
+            continue
+        candidates.append(f)
+
+    if len(candidates) == 1:
+        return candidates[0]
+    if len(candidates) == 0:
+        return None
+
+    print(f"Error: Multiple code files found in {node_dir}: {[f.name for f in candidates]}", file=sys.stderr)
+    sys.exit(1)
 
 
 def build(node_dir):
@@ -97,13 +108,31 @@ def build(node_dir):
 
     # 3. Find code file + embed into script.content
     code_file = find_code_file(node_dir)
+    nodes = spec.get('spec', {}).get('nodes', [])
     if code_file:
         code_content = code_file.read_text(encoding='utf-8')
-        # Node: spec.nodes[0].script.content
-        nodes = spec.get('spec', {}).get('nodes', [])
+        code_content = replace_placeholders(code_content, props)
         if nodes:
             nodes[0].setdefault('script', {})['content'] = code_content
-        # Workflows have no code file, skip
+    elif nodes:
+        command = nodes[0].get('script', {}).get('runtime', {}).get('command')
+        if command == 'DI':
+            print(f"Error: DI node requires a code JSON file, but none was found in {node_dir}", file=sys.stderr)
+            sys.exit(1)
+
+    if nodes:
+        script = nodes[0].get('script', {})
+        command = script.get('runtime', {}).get('command')
+        content = script.get('content', '')
+        if command == 'DI':
+            if not content.strip():
+                print(f"Error: DI node script.content is empty in {node_dir}", file=sys.stderr)
+                sys.exit(1)
+            try:
+                json.loads(content)
+            except json.JSONDecodeError as e:
+                print(f"Error: Invalid DI JSON content in {code_file}: {e}", file=sys.stderr)
+                sys.exit(1)
 
     return spec
 

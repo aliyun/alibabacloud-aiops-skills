@@ -1,4 +1,4 @@
-# ImportWorkflowDefinition
+# import-workflow-definition
 
 > Latest API definition: https://api.aliyun.com/meta/v1/products/dataworks-public/versions/2024-05-18/apis/ImportWorkflowDefinition/api.json
 > If the call returns an error, you can obtain the latest parameter definitions from the URL above.
@@ -8,10 +8,10 @@
 **aliyun CLI**:
 ```bash
 # spec contains the workflow definition and all child node definitions
-aliyun dataworks-public ImportWorkflowDefinition \
-  --ProjectId {{project_id}} \
-  --Spec "$(cat /tmp/wf_with_nodes.json)" \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public import-workflow-definition \
+  --project-id {{project_id}} \
+  --spec "$(cat /tmp/wf_with_nodes.json)" \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 **Python SDK**:

@@ -1,18 +1,18 @@
-# ListComputeResources
+# list-compute-resources
 
 > Latest API definition: https://api.aliyun.com/meta/v1/products/dataworks-public/versions/2024-05-18/apis/ListComputeResources/api.json
 
-Query the list of compute resources bound to the project. Use this API to discover compute engine bindings (EMR Serverless Spark, Hologres, StarRocks, etc.) that may not appear in `ListDataSources`.
+Query the list of compute resources bound to the project. Use this API to discover compute engine bindings (EMR Serverless Spark, Hologres, StarRocks, etc.) that may not appear in `list-data-sources`.
 
 **aliyun CLI**:
 ```bash
-aliyun dataworks-public ListComputeResources \
-  --ProjectId {{project_id}} \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public list-compute-resources \
+  --project-id {{project_id}} \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 **Key parameters**:
-- `--ProjectId` (Required) — DataWorks workspace ID
+- `--project-id` (Required) — DataWorks workspace ID
 - `--EnvType` (Optional) — `Dev` or `Prod`
 - `--Types.1`, `--Types.2`, ... (Optional) — Filter by compute resource type
 

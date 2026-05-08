@@ -10,11 +10,11 @@ All APIs are based on the DataWorks OpenAPI **2024-05-18** version. Each operati
 ```bash
 $PYTHON $SKILL/scripts/build.py ./my_node > /tmp/spec.json
 
-aliyun dataworks-public CreateNode \
-  --ProjectId {{project_id}} \
-  --Scene DATAWORKS_PROJECT \
-  --Spec "$(cat /tmp/spec.json)" \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public create-node \
+  --project-id {{project_id}} \
+  --scene DATAWORKS_PROJECT \
+  --spec "$(cat /tmp/spec.json)" \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 **Python SDK**:
@@ -27,7 +27,7 @@ from alibabacloud_tea_openapi.models import Config
 credential = CredentialClient()
 config = Config(credential=credential)
 config.endpoint = 'dataworks.{{region}}.aliyuncs.com'
-config.user_agent = 'AlibabaCloud-Agent-Skills'
+config.user_agent = 'AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop'
 client = Client(config)
 
 with open('/tmp/spec.json') as f:
@@ -48,12 +48,12 @@ print(f"NodeId: {response.body.id}")
 ```bash
 $PYTHON $SKILL/scripts/build.py ./my_wf/step1 > /tmp/spec.json
 
-aliyun dataworks-public CreateNode \
-  --ProjectId {{project_id}} \
-  --Scene DATAWORKS_PROJECT \
-  --ContainerId {{workflow_id}} \
-  --Spec "$(cat /tmp/spec.json)" \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public create-node \
+  --project-id {{project_id}} \
+  --scene DATAWORKS_PROJECT \
+  --container-id {{workflow_id}} \
+  --spec "$(cat /tmp/spec.json)" \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 **Python SDK**:
@@ -74,11 +74,11 @@ print(f"NodeId: {response.body.id}")
 ```bash
 $PYTHON $SKILL/scripts/build.py ./my_node > /tmp/spec.json
 
-aliyun dataworks-public UpdateNode \
-  --ProjectId {{project_id}} \
-  --Id {{node_id}} \
-  --Spec "$(cat /tmp/spec.json)" \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public update-node \
+  --project-id {{project_id}} \
+  --id {{node_id}} \
+  --spec "$(cat /tmp/spec.json)" \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 **Python SDK**:
@@ -97,10 +97,10 @@ response = client.update_node(request)
 
 **aliyun CLI**:
 ```bash
-aliyun dataworks-public GetNode \
-  --ProjectId {{project_id}} \
-  --Id {{node_id}} \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public get-node \
+  --project-id {{project_id}} \
+  --id {{node_id}} \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 **Python SDK**:
@@ -119,12 +119,12 @@ response = client.get_node(request)
 
 **aliyun CLI**:
 ```bash
-aliyun dataworks-public ListNodes \
-  --ProjectId {{project_id}} \
-  --Scene DATAWORKS_PROJECT \
-  --PageNumber 1 \
-  --PageSize 100 \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public list-nodes \
+  --project-id {{project_id}} \
+  --scene DATAWORKS_PROJECT \
+  --page-number 1 \
+  --page-size 100 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 **Python SDK**:
@@ -175,10 +175,10 @@ The workflow spec must include `script.runtime.command: "WORKFLOW"`, otherwise c
 ```bash
 $PYTHON $SKILL/scripts/build.py ./my_wf > /tmp/wf.json
 
-aliyun dataworks-public CreateWorkflowDefinition \
-  --ProjectId {{project_id}} \
-  --Spec "$(cat /tmp/wf.json)" \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public create-workflow-definition \
+  --project-id {{project_id}} \
+  --spec "$(cat /tmp/wf.json)" \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 **Python SDK**:
@@ -200,11 +200,11 @@ print(f"WorkflowId: {response.body.id}")
 
 **aliyun CLI**:
 ```bash
-aliyun dataworks-public UpdateWorkflowDefinition \
-  --ProjectId {{project_id}} \
-  --Id {{workflow_id}} \
-  --Spec "$(cat /tmp/wf.json)" \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public update-workflow-definition \
+  --project-id {{project_id}} \
+  --id {{workflow_id}} \
+  --spec "$(cat /tmp/wf.json)" \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 **Python SDK**:
@@ -223,10 +223,10 @@ client.update_workflow_definition(request)
 
 **aliyun CLI**:
 ```bash
-aliyun dataworks-public GetWorkflowDefinition \
-  --ProjectId {{project_id}} \
-  --Id {{workflow_id}} \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public get-workflow-definition \
+  --project-id {{project_id}} \
+  --id {{workflow_id}} \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 **Python SDK**:
@@ -244,12 +244,12 @@ response = client.get_workflow_definition(request)
 
 **aliyun CLI**:
 ```bash
-aliyun dataworks-public ListWorkflowDefinitions \
-  --ProjectId {{project_id}} \
-  --Type CycleWorkflow \
-  --PageNumber 1 \
-  --PageSize 100 \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public list-workflow-definitions \
+  --project-id {{project_id}} \
+  --type CycleWorkflow \
+  --page-number 1 \
+  --page-size 100 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 **Python SDK**:
@@ -273,10 +273,10 @@ response = client.list_workflow_definitions(request)
 ```bash
 $PYTHON $SKILL/scripts/build.py ./my_resource > /tmp/res.json
 
-aliyun dataworks-public CreateResource \
-  --ProjectId {{project_id}} \
-  --Spec "$(cat /tmp/res.json)" \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public create-resource \
+  --project-id {{project_id}} \
+  --spec "$(cat /tmp/res.json)" \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 **Python SDK**:
@@ -295,11 +295,11 @@ print(f"ResourceId: {response.body.id}")
 
 **aliyun CLI**:
 ```bash
-aliyun dataworks-public ListResources \
-  --ProjectId {{project_id}} \
-  --PageNumber 1 \
-  --PageSize 100 \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public list-resources \
+  --project-id {{project_id}} \
+  --page-number 1 \
+  --page-size 100 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 ## Function Operations
@@ -310,10 +310,10 @@ aliyun dataworks-public ListResources \
 ```bash
 $PYTHON $SKILL/scripts/build.py ./my_func > /tmp/func.json
 
-aliyun dataworks-public CreateFunction \
-  --ProjectId {{project_id}} \
-  --Spec "$(cat /tmp/func.json)" \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public create-function \
+  --project-id {{project_id}} \
+  --spec "$(cat /tmp/func.json)" \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 **Python SDK**:
@@ -332,18 +332,18 @@ print(f"FunctionId: {response.body.id}")
 
 **aliyun CLI**:
 ```bash
-aliyun dataworks-public ListFunctions \
-  --ProjectId {{project_id}} \
-  --PageNumber 1 \
-  --PageSize 100 \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public list-functions \
+  --project-id {{project_id}} \
+  --page-number 1 \
+  --page-size 100 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 ## Node Dependency Configuration
 
 ### Dependency Configuration
 
-When configuring inter-node dependencies, there is no need to dual-write `inputs.nodeOutputs`; only maintain dependencies in the `spec.dependencies` array:
+Inter-node dependencies are maintained exclusively in the `spec.dependencies` array:
 
 - Upstream nodes must declare `outputs.nodeOutputs` (`${projectIdentifier}.node_name`)
 - Downstream nodes reference upstream outputs in `spec.dependencies`
@@ -411,7 +411,7 @@ for stage in pipeline.get('Stages', []):
 ```python
 from alibabacloud_dataworks_public20240518.models import ExecPipelineRunStageRequest
 
-# code: Stage code, obtained from Stages[].Code returned by GetPipelineRun
+# code: Stage code, obtained from Stages[].Code returned by get-pipeline-run
 # Must advance in order; stages cannot be skipped
 # Async trigger; continue polling to confirm results
 client.exec_pipeline_run_stage(ExecPipelineRunStageRequest(
@@ -473,9 +473,9 @@ client.abolish_pipeline_run(AbolishPipelineRunRequest(
 **aliyun CLI**:
 ```bash
 # Get projectId by projectIdentifier
-aliyun dataworks-public GetProject \
-  --ProjectIdentifier my_project_name \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public get-project \
+  --project-identifier my_project_name \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 **Python SDK**:
@@ -494,12 +494,12 @@ print(f"ProjectIdentifier: {response.body.project_identifier}")
 
 **aliyun CLI**:
 ```bash
-aliyun dataworks-public ListDataSources \
-  --ProjectId {{project_id}} \
-  --Type odps \
-  --PageNumber 1 \
-  --PageSize 100 \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public list-data-sources \
+  --project-id {{project_id}} \
+  --type odps \
+  --page-number 1 \
+  --page-size 100 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 **Python SDK**:
@@ -521,9 +521,9 @@ for ds in response.body.paging_info.data_sources:
 
 **aliyun CLI**:
 ```bash
-aliyun dataworks-public ListResourceGroups \
-  --ProjectId {{project_id}} \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public list-resource-groups \
+  --project-id {{project_id}} \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 **Python SDK**:

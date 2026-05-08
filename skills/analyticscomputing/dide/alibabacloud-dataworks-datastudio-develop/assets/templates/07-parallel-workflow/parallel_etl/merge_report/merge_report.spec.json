@@ -51,18 +51,6 @@
               "artifactType": "NodeOutput"
             }
           ]
-        },
-        "inputs": {
-          "nodeOutputs": [
-            {
-              "data": "${projectIdentifier}.process_orders",
-              "artifactType": "NodeOutput"
-            },
-            {
-              "data": "${projectIdentifier}.process_users",
-              "artifactType": "NodeOutput"
-            }
-          ]
         }
       }
     ],

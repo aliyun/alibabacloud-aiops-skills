@@ -1,11 +1,11 @@
-# CreateNode
+# create-node
 
 > Latest API definition: https://api.aliyun.com/meta/v1/products/dataworks-public/versions/2024-05-18/apis/CreateNode/api.json
 > If the call returns an error, you can obtain the latest parameter definitions from the URL above.
 
 ### Idempotency Note
 
-This API does not support `ClientToken`. If the call times out or returns a network error, **do not blindly retry**. First check whether the node was created by calling `ListNodes --Name <node_name>`. Only retry if the node does not exist. Always record the `RequestId` from the response for traceability.
+This API does not support `ClientToken`. If the call times out or returns a network error, **do not blindly retry**. First check whether the node was created by calling `list-nodes --Name <node_name>`. Only retry if the node does not exist. Always record the `RequestId` from the response for traceability.
 
 ### Create Node
 
@@ -16,11 +16,11 @@ python $SKILL/scripts/build.py ./my_node > /tmp/spec.json
 
 **aliyun CLI**:
 ```bash
-aliyun dataworks-public CreateNode \
-  --ProjectId {{project_id}} \
-  --Scene DATAWORKS_PROJECT \
-  --Spec "$(cat /tmp/spec.json)" \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public create-node \
+  --project-id {{project_id}} \
+  --scene DATAWORKS_PROJECT \
+  --spec "$(cat /tmp/spec.json)" \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 **Python SDK**:
@@ -33,7 +33,7 @@ from alibabacloud_tea_openapi.models import Config
 credential = CredentialClient()
 config = Config(credential=credential)
 config.endpoint = 'dataworks.{{region}}.aliyuncs.com'
-config.user_agent = 'AlibabaCloud-Agent-Skills'
+config.user_agent = 'AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop'
 client = Client(config)
 
 with open('/tmp/spec.json') as f:
@@ -50,16 +50,16 @@ print(f"NodeId: {response.body.id}")
 
 ### Create Node Inside a Workflow
 
-Same as above, after merging with build.py, add `--ContainerId`:
+Same as above, after merging with build.py, add `--container-id`:
 
 **aliyun CLI**:
 ```bash
-aliyun dataworks-public CreateNode \
-  --ProjectId {{project_id}} \
-  --Scene DATAWORKS_PROJECT \
-  --ContainerId {{workflow_id}} \
-  --Spec "$(cat /tmp/spec.json)" \
-  --user-agent AlibabaCloud-Agent-Skills
+aliyun dataworks-public create-node \
+  --project-id {{project_id}} \
+  --scene DATAWORKS_PROJECT \
+  --container-id {{workflow_id}} \
+  --spec "$(cat /tmp/spec.json)" \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataworks-datastudio-develop
 ```
 
 **Python SDK**:
