@@ -54,9 +54,7 @@ This document lists the RAM permission policies required for MongoDB instance ma
       "Action": [
         "kms:CreateKey",
         "kms:ListKeys",
-        "kms:DescribeKey",
-        "kms:ScheduleKeyDeletion",
-        "kms:CancelKeyDeletion"
+        "kms:DescribeKey"
       ],
       "Resource": "*"
     }
@@ -75,8 +73,7 @@ This document lists the RAM permission policies required for MongoDB instance ma
       "Action": [
         "rm:CreateResourceGroup",
         "rm:ListResourceGroups",
-        "rm:GetResourceGroup",
-        "rm:DeleteResourceGroup"
+        "rm:GetResourceGroup"
       ],
       "Resource": "*"
     }
@@ -289,9 +286,7 @@ The following is the complete policy containing all permissions required for Mon
       "Effect": "Allow",
       "Action": [
         "vpc:DescribeVpcs",
-        "vpc:DescribeVSwitches",
-        "vpc:CreateVpc",
-        "vpc:CreateVSwitch"
+        "vpc:DescribeVSwitches"
       ],
       "Resource": "*"
     },
@@ -301,9 +296,7 @@ The following is the complete policy containing all permissions required for Mon
         "kms:CreateKey",
         "kms:ListKeys",
         "kms:ListKmsInstances",
-        "kms:DescribeKey",
-        "kms:ScheduleKeyDeletion",
-        "kms:CancelKeyDeletion"
+        "kms:DescribeKey"
       ],
       "Resource": "*"
     },
@@ -312,8 +305,7 @@ The following is the complete policy containing all permissions required for Mon
       "Action": [
         "rm:CreateResourceGroup",
         "rm:ListResourceGroups",
-        "rm:GetResourceGroup",
-        "rm:DeleteResourceGroup"
+        "rm:GetResourceGroup"
       ],
       "Resource": "*"
     },
@@ -350,8 +342,6 @@ The following is the complete policy containing all permissions required for Mon
 | Reset password | `dds:ResetAccountPassword` | Reset root password | Optional |
 | Query VPC | `vpc:DescribeVpcs` | Query VPC list | Required |
 | Query VSwitch | `vpc:DescribeVSwitches` | Query VSwitch list | Required |
-| Create VPC | `vpc:CreateVpc` | Create VPC | Optional |
-| Create VSwitch | `vpc:CreateVSwitch` | Create VSwitch | Optional |
 | Create KMS key | `kms:CreateKey` | Create encryption key | Required for disk encryption |
 | Query key list | `kms:ListKeys` | Query KMS key list | Optional |
 | Query key details | `kms:DescribeKey` | Query key details | Optional |
@@ -420,8 +410,6 @@ The following is the complete quick reference table for all permissions required
 | `dds:DeleteNode` | Delete sharded cluster node |
 | `vpc:DescribeVpcs` | Query VPC list (alternative) |
 | `vpc:DescribeVSwitches` | Query VSwitch list (alternative) |
-| `vpc:CreateVpc` | Create VPC (when new VPC is needed) |
-| `vpc:CreateVSwitch` | Create VSwitch (when new VSwitch is needed) |
 | `kms:CreateKey` | Create KMS key (required for disk encryption) |
 | `kms:ListKeys` | Query key list |
 | `kms:ListKmsInstances` | Query KMS instance list |

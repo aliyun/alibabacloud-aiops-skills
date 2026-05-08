@@ -2,26 +2,42 @@
 name: alibabacloud-mongodb-instances-manage
 description: |
   Alibaba Cloud MongoDB full lifecycle management: create/query/scale/delete standalone, replica set, sharded cluster instances.
-  Covers node management, security (whitelist/security group), public & SRV address, password reset, renewal, billing conversion, cloud disk reconfiguration, maintenance window.
+  Covers node management, security (whitelist/security group), public & SRV address, password reset, renewal, billing conversion, cloud disk reconfiguration, maintenance window, backup, version upgrade, HA switchover, account & tag management.
   Triggers: "MongoDB", "create MongoDB", "dds instance", "list instances", "MongoDB scaling", "add Mongos/Shard node",
   "MongoDB whitelist", "reset password", "allocate public address", "SRV address", "MongoDB renewal",
-  "billing type conversion", "cloud disk reconfiguration", "delete MongoDB instance", "maintenance window"
+  "billing type conversion", "cloud disk reconfiguration", "delete MongoDB instance", "maintenance window",
+  "restart MongoDB", "MongoDB backup", "upgrade MongoDB version", "HA switchover", "MongoDB tags", "MongoDB account"
 ---
-
 # Alibaba Cloud MongoDB Instance Management
-
 Create and manage Alibaba Cloud ApsaraDB for MongoDB instances: Standalone (dev/test), Replica Set (read-heavy), Sharded Cluster (high concurrency).
 
 ## Installation Requirements
 
-> **Pre-check: Aliyun CLI >= 3.3.1 required**
-> Run `aliyun version` to verify. If needed, see `references/cli-installation-guide.md`.
-> Then [MUST] run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+> **Pre-check: Aliyun CLI >= 3.3.3 required**
+> Run `aliyun version` to verify >= 3.3.3. If not installed or version too low,
+> see [references/cli-installation-guide.md](references/cli-installation-guide.md) for installation instructions.
+>
+> [MUST] run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+> [MUST] run `aliyun plugin update` to ensure that any existing plugins are always up-to-date.
 
 ```bash
 aliyun version
 aliyun plugin install --names dds kms resourcemanager bssopenapi
 ```
+
+**[MUST] CLI User-Agent** — Every `aliyun` CLI command invocation must include:
+`--user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage`
+
+> **[MUST] Enable AI-Mode** — AI-mode is required for Agent Skill execution.
+> Run the following commands before any CLI invocation:
+> ```bash
+> aliyun configure ai-mode enable
+> aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage"
+> ```
+> **[MUST] Disable AI-Mode at EVERY exit point** — Before delivering the final response for ANY reason, always disable AI-mode first. This applies to ALL exit paths: workflow success, workflow failure, error/exception, user cancellation, session end, or any other scenario where no further CLI commands will be executed.
+> ```bash
+> aliyun configure ai-mode disable
+> ```
 
 ## Information Display Standards
 
@@ -60,7 +76,7 @@ aliyun plugin install --names dds kms resourcemanager bssopenapi
 >
 > ```bash
 > aliyun dds describe-db-instance-attribute --db-instance-id <id> --region <region> \
->   --user-agent AlibabaCloud-Agent-Skills 2>&1 | grep '"DBInstanceStatus"'
+>   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage 2>&1 | grep '"DBInstanceStatus"'
 > ```
 
 ## Authentication
@@ -94,16 +110,17 @@ This skill requires the following RAM permissions. See [references/ram-policies.
 > 4. **List display**: Must be categorized by instance type; Subscription instances must show remaining days; instances expiring within 10 days must display a warning below the list and guide toward renewal
 
 ```bash
-# Query instance list (must query separately in two calls, otherwise sharded clusters will be missed)
-aliyun dds describe-db-instances --biz-region-id <region> --db-instance-type replicate --page-size 50 --user-agent AlibabaCloud-Agent-Skills
-aliyun dds describe-db-instances --biz-region-id <region> --db-instance-type sharding --page-size 50 --user-agent AlibabaCloud-Agent-Skills
+# Query instance list
+# If user specifies instance type, query that type only; if not specified, must query both types separately:
+aliyun dds describe-db-instances --biz-region-id <region> --db-instance-type replicate --page-size 50 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage
+aliyun dds describe-db-instances --biz-region-id <region> --db-instance-type sharding --page-size 50 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage
 # ⚠️ Without --db-instance-type, only replicate is returned by default; sharded clusters will be missed
 
 # Query single instance details
-aliyun dds describe-db-instance-attribute --db-instance-id <id> --region <region> --user-agent AlibabaCloud-Agent-Skills
+aliyun dds describe-db-instance-attribute --db-instance-id <id> --region <region> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage
 
 # Query all supported regions
-aliyun dds DescribeRegions --user-agent AlibabaCloud-Agent-Skills
+aliyun dds describe-regions --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage
 ```
 
 > Cross-region lookup scripts and full-region scan scripts: see [references/operations.md § Query Regions and Instances](references/operations.md)
@@ -158,15 +175,13 @@ aliyun dds DescribeRegions --user-agent AlibabaCloud-Agent-Skills
 
 ```bash
 # Step 1: Query available VPC list for specified zone (DDS-specific)
-aliyun dds describe-rds-vpcs --zone-id <zone> --region <region> --user-agent AlibabaCloud-Agent-Skills
+aliyun dds describe-rds-vpcs --zone-id <zone> --region <region> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage
 
 # Step 2: Query available VSwitches under specified VPC (DDS-specific)
-aliyun dds describe-rds-vswitchs --vpc-id <vpc-id> --zone-id <zone> --region <region> --user-agent AlibabaCloud-Agent-Skills
+aliyun dds describe-rds-vswitchs --vpc-id <vpc-id> --zone-id <zone> --region <region> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage
 ```
 
 > Detailed commands and parameters: see [references/operations.md § Step 2: Query and Validate VPC and VSwitch](references/operations.md)
-
----
 
 ## Create Replica Set Instance
 
@@ -180,7 +195,7 @@ aliyun dds create-db-instance \
   --db-instance-class <class> --db-instance-storage <GB> \
   --vpc-id <vpc> --vswitch-id <vsw> --network-type VPC \
   --replication-factor 3 --storage-type cloud_essd1 --charge-type PostPaid \
-  --db-instance-description <name> --user-agent AlibabaCloud-Agent-Skills
+  --db-instance-description <name> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage
 # Optional: --secondary-zone-id --hidden-zone-id --readonly-replicas --encryption-key --resource-group-id
 # Subscription: --charge-type PrePaid --period 1 --auto-renew true
 ```
@@ -194,7 +209,7 @@ aliyun dds create-db-instance \
 
 ```bash
 aliyun dds create-db-instance ... --db-type replicate --replication-factor 1 \
-  --db-instance-class <standalone-specific-spec> --storage-type cloud_essd1 --user-agent AlibabaCloud-Agent-Skills
+  --db-instance-class <standalone-specific-spec> --storage-type cloud_essd1 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage
 ```
 
 ## Create Sharded Cluster Instance
@@ -211,26 +226,12 @@ aliyun dds create-sharding-db-instance \
   --replica-set Class=<class> ReadonlyReplicas=0 Storage=20 \
   --replica-set Class=<class> ReadonlyReplicas=0 Storage=20 \
   --config-server Class=<class> Storage=20 \
-  --storage-type cloud_essd1 --charge-type PostPaid --user-agent AlibabaCloud-Agent-Skills
+  --storage-type cloud_essd1 --charge-type PostPaid --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage
 ```
 
 ## Instance Creation Error Diagnosis
 
-| Error Code | Solution |
-|------------|----------|
-| `InvalidDBInstanceNodeCount` | Current region/zone does not support standalone; switch region/zone or use replica set |
-| `InvalidVPCId.NotFound` | VPC does not exist; query available VPC list |
-| `InvalidZoneId.NotFound` | Zone does not exist; query supported zones |
-| `InvalidVpcIdRegion.NotSupported` | zone-id does not match the zone of vswitch-id |
-| `QuotaExceeded` | Instance quota exceeded; release idle instances or request quota increase |
-| `InvalidDBInstanceClass.NotFound` | Spec does not exist; query available spec list |
-| `InvalidDBInstanceStorage` | Storage space invalid (minimum/step not met) |
-| `DBInstancePreCheckError` | Pre-check failed; check if instance status is Running |
-| `INSUFFICIENT_RESOURCE_ERROR` | Insufficient resources; retry in order: switch zone → switch spec → switch region (max 3 times) |
-| `InvalidDbType` | --db-type only supports `normal` or `sharding` |
-| `SYSTEM.SALE_VALIDATE_NO_SPECIFIC_CODE_FAILED` | Sales validation failed; switch zone or spec, check account balance |
-
----
+> Error diagnosis table: see [references/operations.md § Instance Creation Error Diagnosis](references/operations.md)
 
 ## Modify Replica Set Instance Configuration
 
@@ -249,24 +250,21 @@ aliyun dds modify-db-instance-spec --db-instance-id <id> \
   [--db-instance-class <class>] [--db-instance-storage <GB>] \
   [--replication-factor 3/5/7] [--readonly-replicas 0-5] \
   [--order-type UPGRADE/DOWNGRADE] [--auto-pay true] \
-  --effective-time Immediately/MaintainTime --user-agent AlibabaCloud-Agent-Skills
+  --effective-time Immediately/MaintainTime --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage
 ```
 
 > Full parameter description: see [references/operations.md § Modify Replica Set Instance](references/operations.md)
 
 ## Delete Instance
 
-> **[MUST]** Must confirm billing type before deletion:
-> - `PostPaid` (Pay-As-You-Go): Can be deleted directly
-> - `PrePaid` (Subscription): **Cannot be deleted directly**; must wait for expiration or request refund via console
->
-> Before deletion, must display confirmation information to the user (instance ID, region, billing type, irreversible data loss warning), requiring the user to reply "confirm delete {instance ID}"
+> **[MUST]** Pre-deletion checklist:
+> 1. Confirm `ChargeType`: `PostPaid` → can delete; `PrePaid` → **cannot delete directly** (wait expiry or console refund)
+> 2. **Cloud disk instances only**: query `describe-backup-policy` → check `BackupRetentionPolicyOnClusterDeletion` (0=delete all on release / 1=keep last backup / 2=keep all backups) → ask user if they want to change it via `modify-backup-policy --backup-retention-policy-on-cluster-deletion` before deleting; see operations.md
+> 3. **[MUST]** Display confirmation to user: instance ID, region, billing type, **irreversible data loss warning** → **requiring the user to reply "confirm delete {instance ID}"** before executing
 
 ```bash
-aliyun dds DeleteDBInstance --DBInstanceId <id> --region <region> --user-agent AlibabaCloud-Agent-Skills
+aliyun dds delete-db-instance --db-instance-id <id> --region <region> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage
 ```
-
----
 
 ## Sharded Cluster Node Management
 
@@ -280,27 +278,25 @@ aliyun dds DeleteDBInstance --DBInstanceId <id> --region <region> --user-agent A
 
 ```bash
 # Query sharded cluster node details (ShardList/MongosList contain NodeId)
-aliyun dds describe-db-instance-attribute --db-instance-id <id> --user-agent AlibabaCloud-Agent-Skills
+aliyun dds describe-db-instance-attribute --db-instance-id <id> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage
 
 # Add single node
-aliyun dds create-node --db-instance-id <id> --node-type mongos/shard --node-class <class> [--node-storage <GB>] --user-agent AlibabaCloud-Agent-Skills
+aliyun dds create-node --db-instance-id <id> --node-type mongos/shard --node-class <class> [--node-storage <GB>] --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage
 
 # Batch add nodes (JSON format)
-aliyun dds create-node-batch --db-instance-id <id> --nodes-info '{"Shards":[{"DBInstanceClass":"spec","Storage":40}],"Mongos":[{"DBInstanceClass":"spec"}]}' --auto-pay true --user-agent AlibabaCloud-Agent-Skills
+aliyun dds create-node-batch --db-instance-id <id> --nodes-info '{"Shards":[{"DBInstanceClass":"spec","Storage":40}],"Mongos":[{"DBInstanceClass":"spec"}]}' --auto-pay true --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage
 
 # Single node modification (strictly serial)
-aliyun dds modify-node-spec --db-instance-id <id> --node-id <node-id> --node-class <class> [--node-storage <GB>] [--readonly-replicas 0-5] --effective-time Immediately/MaintainTime --user-agent AlibabaCloud-Agent-Skills
+aliyun dds modify-node-spec --db-instance-id <id> --node-id <node-id> --node-class <class> [--node-storage <GB>] [--readonly-replicas 0-5] --effective-time Immediately/MaintainTime --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage
 
 # Batch modification (does not support readonly replica changes, requires DBInstanceName)
-aliyun dds modify-node-spec-batch --db-instance-id <id> --nodes-info '{"Shards":[{"DBInstanceClass":"spec","DBInstanceName":"d-xxx","Storage":40}]}' --auto-pay true --effective-time Immediately --user-agent AlibabaCloud-Agent-Skills
+aliyun dds modify-node-spec-batch --db-instance-id <id> --nodes-info '{"Shards":[{"DBInstanceClass":"spec","DBInstanceName":"d-xxx","Storage":40}]}' --auto-pay true --effective-time Immediately --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage
 
 # Release node
-aliyun dds delete-node --db-instance-id <id> --node-id <node-id> --user-agent AlibabaCloud-Agent-Skills
+aliyun dds delete-node --db-instance-id <id> --node-id <node-id> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage
 ```
 
 > Detailed command examples and NodesInfo format: see [references/operations.md § Sharded Cluster Node Management](references/operations.md)
-
----
 
 ## Cloud Disk Reconfiguration (Disk Type Upgrade)
 
@@ -314,7 +310,7 @@ aliyun dds delete-node --db-instance-id <id> --node-id <node-id> --user-agent Al
 ```bash
 aliyun dds modify-db-instance-disk-type --db-instance-id <id> \
   --db-instance-storage-type cloud_auto [--provisioned-iops <0~50000>] \
-  --region <region> --user-agent AlibabaCloud-Agent-Skills
+  --region <region> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage
 ```
 
 > Full parameter description: see [references/operations.md § Cloud Disk Reconfiguration](references/operations.md)
@@ -327,8 +323,6 @@ aliyun dds modify-db-instance-disk-type --db-instance-id <id> \
 > - IOPS improvement priority: Expand storage > Upgrade spec > Change disk type
 >
 > Full spec limit tables and calculation examples: see [references/operations.md § IOPS and Throughput Calculation Rules](references/operations.md)
-
----
 
 ## Reset root Password
 
@@ -348,11 +342,11 @@ aliyun dds modify-db-instance-disk-type --db-instance-id <id> \
 ```bash
 # Replica set / Standalone
 aliyun dds reset-account-password --db-instance-id <id> --account-name root \
-  --account-password <pwd> --region <region> --user-agent AlibabaCloud-Agent-Skills
+  --account-password <pwd> --region <region> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage
 
 # Sharded cluster (--character-type db or cs, required)
 aliyun dds reset-account-password --db-instance-id <id> --account-name root \
-  --account-password <pwd> --character-type db --region <region> --user-agent AlibabaCloud-Agent-Skills
+  --account-password <pwd> --character-type db --region <region> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage
 ```
 
 ---
@@ -367,8 +361,8 @@ aliyun dds reset-account-password --db-instance-id <id> --account-name root \
 > 3. **Do NOT use Cover mode without asking the user**
 
 ```bash
-aliyun dds describe-security-ips --db-instance-id <id> --user-agent AlibabaCloud-Agent-Skills
-aliyun dds modify-security-ips --db-instance-id <id> --security-ips <IPs> --modify-mode Extend --user-agent AlibabaCloud-Agent-Skills
+aliyun dds describe-security-ips --db-instance-id <id> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage
+aliyun dds modify-security-ips --db-instance-id <id> --security-ips <IPs> --modify-mode Extend --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage
 # Specify group: add --security-ip-group-name <name>
 ```
 
@@ -377,8 +371,8 @@ aliyun dds modify-security-ips --db-instance-id <id> --security-ips <IPs> --modi
 > **Note:** ECS security groups bound to sharded clusters only apply to Mongos nodes.
 
 ```bash
-aliyun dds modify-security-group-configuration --db-instance-id <id> --security-group-id <sg-id> --user-agent AlibabaCloud-Agent-Skills
-aliyun dds describe-security-group-configuration --db-instance-id <id> --user-agent AlibabaCloud-Agent-Skills
+aliyun dds modify-security-group-configuration --db-instance-id <id> --security-group-id <sg-id> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage
+aliyun dds describe-security-group-configuration --db-instance-id <id> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage
 ```
 
 ### Manage Global Whitelist Templates
@@ -388,43 +382,39 @@ aliyun dds describe-security-group-configuration --db-instance-id <id> --user-ag
 
 ```bash
 # Create
-aliyun dds create-global-security-ip-group --biz-region-id <region> --region <region> --global-ig-name <name> --gip-list <IPs> --user-agent AlibabaCloud-Agent-Skills
+aliyun dds create-global-security-ip-group --biz-region-id <region> --region <region> --global-ig-name <name> --gip-list <IPs> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage
 # Query
-aliyun dds describe-global-security-ip-group --biz-region-id <region> --region <region> --user-agent AlibabaCloud-Agent-Skills
+aliyun dds describe-global-security-ip-group --biz-region-id <region> --region <region> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage
 # Associate with instance
-aliyun dds modify-global-security-ip-group-relation --db-cluster-id <id> --global-security-group-id <gid> --biz-region-id <region> --region <region> --user-agent AlibabaCloud-Agent-Skills
+aliyun dds modify-global-security-ip-group-relation --db-cluster-id <id> --global-security-group-id <gid> --biz-region-id <region> --region <region> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage
 ```
 
 ---
 
 ## Manage Public Network Address
 
-> **[MUST] Prerequisites for SRV address:**
-> 1. Instance must be **cloud disk** type (`StorageType` starts with `cloud_`). Local disk instances do not support SRV addresses
-> 2. For **public SRV** address: must allocate **public network address first** (`allocate-public-network-address`), then apply for SRV
-> 3. For **sharded clusters**: must first allocate public address for **Mongos node** (`--node-id <s-xxx>`), then call `allocate-db-instance-srv-network-address --srv-connection-type public`
-> 4. After each allocation, wait for instance to return to `Running` before next operation
+> **[MUST] Prerequisites for SRV address:** (1) Cloud disk only; (2) Public SRV: allocate public address first; (3) Sharded cluster: allocate public on Mongos node (`--node-id <s-xxx>`) first; (4) Wait `Running` between each step
 >
-> **Check flow for sharded cluster public SRV:**
-> 1. `describe-sharding-network-address` → check if Mongos has `NetworkType=Public` address
-> 2. If no public address → `allocate-public-network-address --node-id <mongos-s-xxx>` → wait Running
-> 3. `allocate-db-instance-srv-network-address --srv-connection-type public` → wait Running
-> 4. `describe-sharding-network-address` → confirm `NodeType=logic` with `srv` in address
+> **Check flow for sharded cluster public SRV:** `describe-sharding-network-address` → if no public → `allocate-public-network-address --node-id <mongos-s-xxx>` → wait Running → `allocate-db-instance-srv-network-address --srv-connection-type public` → wait Running → confirm `NodeType=logic` with `srv`
 >
-> **Query addresses:** Use `describe-replica-set-role` for replica sets; for sharded clusters, must use `describe-sharding-network-address` (`describe-db-instance-attribute` does not return sharded cluster network addresses)
-> In results, `NetworkType=Public` indicates public network; `NodeType=logic` with `srv` indicates SRV address
+> **[MUST] API Selection Rule for Network Address Query:**
+> - Replica Set: **MUST** use `describe-replica-set-role`
+> - Sharded Cluster: **MUST** use `describe-sharding-network-address`
+> - **FORBIDDEN**: DO NOT use `describe-db-instance-attribute` for network address queries — it does not return complete network info for sharded clusters. In results: `NetworkType=Public`=public; `NodeType=logic`+`ConnectionType=SRV`=SRV address
 
 ```bash
 # Allocate public address (add --node-id <s-xxx> for sharded clusters)
-aliyun dds allocate-public-network-address --db-instance-id <id> [--node-id <s-xxx>] --region <region> --user-agent AlibabaCloud-Agent-Skills
-# Release public address
-aliyun dds release-public-network-address --db-instance-id <id> [--node-id <s-xxx>] --region <region> --user-agent AlibabaCloud-Agent-Skills
+aliyun dds allocate-public-network-address --db-instance-id <id> [--node-id <s-xxx>] --region <region> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage
+# Release non-SRV public address
+aliyun dds release-public-network-address --db-instance-id <id> [--node-id <s-xxx>] --region <region> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage
+# Release SRV public address (sharded cluster MUST use --node-id <mongos-id> + --connection-type SRV; omitting either causes InvalidParameters.Format)
+aliyun dds release-public-network-address --db-instance-id <id> --node-id <s-xxx> --connection-type SRV --region <region> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage
 # Allocate SRV address (vpc=private, public=public; public SRV requires public network address first)
-aliyun dds allocate-db-instance-srv-network-address --db-instance-id <id> --srv-connection-type vpc/public --region <region> --user-agent AlibabaCloud-Agent-Skills
+aliyun dds allocate-db-instance-srv-network-address --db-instance-id <id> --srv-connection-type vpc/public --region <region> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage
 # Query (replica set)
-aliyun dds describe-replica-set-role --db-instance-id <id> --region <region> --user-agent AlibabaCloud-Agent-Skills
+aliyun dds describe-replica-set-role --db-instance-id <id> --region <region> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage
 # Query (sharded cluster)
-aliyun dds describe-sharding-network-address --db-instance-id <id> --region <region> --user-agent AlibabaCloud-Agent-Skills
+aliyun dds describe-sharding-network-address --db-instance-id <id> --region <region> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage
 ```
 
 ---
@@ -435,31 +425,54 @@ aliyun dds describe-sharding-network-address --db-instance-id <id> --region <reg
 
 ```bash
 # Manual renewal (--period: 1~9, 12, 24, 36 months)
-aliyun dds renew-db-instance --db-instance-id <id> --period <months> --auto-pay true --region <region> --user-agent AlibabaCloud-Agent-Skills
+aliyun dds renew-db-instance --db-instance-id <id> --period <months> --auto-pay true --region <region> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage
 # Enable auto-renewal (--duration required, in months)
-aliyun dds modify-instance-auto-renewal-attribute --db-instance-id <id> --auto-renew true --duration 1 --biz-region-id <region> --user-agent AlibabaCloud-Agent-Skills
+aliyun dds modify-instance-auto-renewal-attribute --db-instance-id <id> --auto-renew true --duration 1 --biz-region-id <region> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage
 # Disable auto-renewal
-aliyun dds modify-instance-auto-renewal-attribute --db-instance-id <id> --auto-renew false --biz-region-id <region> --user-agent AlibabaCloud-Agent-Skills
+aliyun dds modify-instance-auto-renewal-attribute --db-instance-id <id> --auto-renew false --biz-region-id <region> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage
 ```
 
 ## Convert Instance Billing Type
 
-> Prerequisites: Instance status `Running`, and not a legacy spec (discontinued specs must be migrated to active specs first)
+> Prerequisites: Instance status `Running`, not a legacy spec
+> **[MUST]** Use `transform-instance-charge-type` (**NOT** `TransformToPrePaid` — that API is forbidden)
 
 ```bash
 # Pay-As-You-Go → Subscription
-aliyun dds transform-instance-charge-type --instance-id <id> --charge-type PrePaid --period 1 --pricing-cycle Month --auto-pay true --region <region> --user-agent AlibabaCloud-Agent-Skills
+aliyun dds transform-instance-charge-type --instance-id <id> --charge-type PrePaid --period 1 --pricing-cycle Month --auto-pay true --region <region> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage
 # Subscription → Pay-As-You-Go (no period needed, may involve refund)
-aliyun dds transform-instance-charge-type --instance-id <id> --charge-type PostPaid --region <region> --user-agent AlibabaCloud-Agent-Skills
+aliyun dds transform-instance-charge-type --instance-id <id> --charge-type PostPaid --region <region> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage
 ```
 
 ## Manage Instance Maintenance Window
 
 ```bash
-aliyun dds modify-db-instance-maintain-time --db-instance-id <id> --maintain-start-time "01:00Z" --maintain-end-time "02:00Z" --user-agent AlibabaCloud-Agent-Skills
+aliyun dds modify-db-instance-maintain-time --db-instance-id <id> --maintain-start-time "01:00Z" --maintain-end-time "02:00Z" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage
 ```
 
 ---
+
+## Additional Operations
+
+> **[MUST]** All operations below require instance status `Running`. Follow write operation response standard (§ Information Display Standards, item 5).
+> Detailed CLI commands and parameters: see [references/operations.md § Additional Operations](references/operations.md)
+
+| Operation | CLI Command | Key Constraint |
+|-----------|-------------|---------------|
+| Restart instance | `restart-db-instance` | **[MUST]** confirm with user before executing: instance ID, expected ~30s disconnection; off-peak recommended |
+| Restart node | `restart-node --node-id --role-id` | **[MUST]** confirm with user: instance ID + target node (RoleType/RoleId) before executing; **Cloud disk only** (`StorageType=cloud_*`), local disk → `InsType.NotSupport`; query RoleId via `describe-role-zone-info` (includes Hidden); `describe-replica-set-role` omits Hidden; **sharded cluster requires both `--node-id` (e.g. `d-xxx`) AND `--role-id`** |
+| Manual backup | `create-backup --backup-method` | Cloud disk: **must** pass `--backup-method Snapshot`; local disk: Physical/Logical; cloud disk replica/sharded: `--backup-retention-period` (7-730 or -1 permanent); response use `BackupJobId` (**NOT** deprecated `BackupId`); poll via `describe-backup-tasks` then query `describe-backups --backup-job-id`; see operations.md |
+| Query backups | `describe-backups --start-time --end-time` | Time: `yyyy-MM-ddTHH:mmZ` (UTC); response: `Backups.Backup[]`; filter by job: `--backup-job-id` |
+| Query backup policy | `describe-backup-policy` | View retention days and window |
+| Modify backup policy | `modify-backup-policy` | **[MUST]** always pass `--preferred-backup-time` AND `--preferred-backup-period` (required even when only changing other fields); query current values first via `describe-backup-policy`; sharded cluster cannot disable log backup |
+| Upgrade major version | `upgrade-db-instance-engine-version` | One-way irreversible; query available versions first |
+| Upgrade kernel version | `upgrade-db-instance-kernel-version` | Replica set & sharded cluster only (not standalone) |
+| HA switchover | `switch-db-instance-ha` | **[MUST]** query nodes via `describe-role-zone-info` first; ask user which **two nodes** to swap roles (e.g. Primary↔Secondary, Secondary↔Hidden, etc.); sharded cluster: `--node-id` required |
+| Create account | `create-account` | Cloud disk sharded cluster only; name: 3-16 chars lowercase |
+| Query accounts | `describe-accounts` | List database accounts |
+| Bind tags | `tag-resources --resource-type INSTANCE` | `--resource-id` space-separated list; `--tag Key=<k> Value=<v>` repeatable; up to 20 tags per instance; use `--biz-region-id`; see operations.md |
+| Unbind tags | `untag-resources --resource-type INSTANCE` | Remove specific tag keys |
+| Query tags | `list-tag-resources --resource-type INSTANCE` | **[MUST]** use `list-tag-resources` as the **ONLY** API for tag queries; **FORBIDDEN**: do NOT use `DescribeDBInstances` Tags field or `describe-tags` as substitute |
 
 ## Features Not Available via CLI
 
@@ -470,15 +483,10 @@ aliyun dds modify-db-instance-maintain-time --db-instance-id <id> --maintain-sta
 
 ## Verification Methods
 
-See [references/verification-method.md](references/verification-method.md) for details.
+> See [references/verification-method.md](references/verification-method.md) for details.
 
 ## Best Practices
-
-1. Choose the same region as ECS, use VPC network to reduce network latency
-2. Multi-zone deployment for production (`--secondary-zone-id` + `--hidden-zone-id`)
-3. Storage type: ESSD PL2/PL3 for high performance, ESSD PL1/AutoPL for cost-sensitive scenarios
-4. Password: At least three of uppercase/lowercase/digits/special characters, 8-32 characters; sharded clusters require separate password reset for db and cs nodes
-5. Whitelist: `0.0.0.0/0` is prohibited in production; prefer Extend mode for whitelist modifications
+> See [references/operations.md § Best Practices](references/operations.md) for details.
 
 ## References
 | Reference | Description |

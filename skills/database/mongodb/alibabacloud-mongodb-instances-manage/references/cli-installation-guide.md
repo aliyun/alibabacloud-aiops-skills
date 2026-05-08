@@ -2,7 +2,7 @@
 
 Complete guide for installing and configuring Aliyun CLI.
 
-> **Aliyun CLI 3.3.1+**: Supports installing and using all published Alibaba Cloud product plugins. Make sure to upgrade to 3.3.1 or later for full plugin ecosystem coverage.
+> **Aliyun CLI 3.3.3+**: Supports installing and using all published Alibaba Cloud product plugins. Make sure to upgrade to 3.3.3 or later for full plugin ecosystem coverage.
 
 ## Installation
 
@@ -14,7 +14,7 @@ brew install aliyun-cli
 # Upgrade to latest
 brew upgrade aliyun-cli
 
-# Verify version (>= 3.3.1)
+# Verify version (>= 3.3.3)
 aliyun version
 ```
 
@@ -26,49 +26,76 @@ wget https://aliyuncli.alicdn.com/aliyun-cli-macosx-latest-amd64.tgz
 # Extract
 tar -xzf aliyun-cli-macosx-latest-amd64.tgz
 
-# Move to PATH
-sudo mv aliyun /usr/local/bin/
-
-# Verify
-aliyun version
+# Use directly for current session (no sudo or global install required)
+./aliyun version
 ```
 
 ### Linux
 
-**Debian/Ubuntu**
-```bash
-# Download
-wget https://aliyuncli.alicdn.com/aliyun-cli-linux-latest-amd64.tgz
+> **Note:** Package manager installation (`dpkg`/`rpm`/`yum`) requires root privileges. Run as root or prepend your preferred privilege escalation method.
 
-# Extract and install
-tar -xzf aliyun-cli-linux-latest-amd64.tgz
-sudo mv aliyun /usr/local/bin/
+**Debian/Ubuntu (dpkg)**
+
+```bash
+# Download the latest Debian package
+wget https://aliyuncli.alicdn.com/aliyun-cli-linux-latest-amd64.deb
+
+# Install via dpkg (requires root)
+dpkg -i aliyun-cli-linux-latest-amd64.deb
+
+# Fix any dependency issues if needed
+apt-get install -f
 
 # Verify
 aliyun version
 ```
 
-**CentOS/RHEL**
-```bash
-# Download
-wget https://aliyuncli.alicdn.com/aliyun-cli-linux-latest-amd64.tgz
+**CentOS/RHEL/Fedora (rpm/yum)**
 
-# Extract and install
-tar -xzf aliyun-cli-linux-latest-amd64.tgz
-sudo mv aliyun /usr/local/bin/
+```bash
+# Download the latest RPM package
+wget https://aliyuncli.alicdn.com/aliyun-cli-linux-latest-amd64.rpm
+
+# Install via rpm (requires root)
+rpm -i aliyun-cli-linux-latest-amd64.rpm
+
+# Or install via yum (handles dependencies, requires root)
+yum localinstall aliyun-cli-linux-latest-amd64.rpm
 
 # Verify
 aliyun version
+```
+
+**Without Root / Current Session Only**
+
+If you do not have root access, download and use the binary directly:
+
+```bash
+# Download binary tarball
+wget https://aliyuncli.alicdn.com/aliyun-cli-linux-latest-amd64.tgz
+
+# Extract
+tar -xzf aliyun-cli-linux-latest-amd64.tgz
+
+# Use directly for current session (no installation required)
+./aliyun version
 ```
 
 **ARM64 Architecture**
-```bash
-# Download ARM64 version
-wget https://aliyuncli.alicdn.com/aliyun-cli-linux-latest-arm64.tgz
 
-# Extract and install
+```bash
+# Debian/Ubuntu ARM64
+wget https://aliyuncli.alicdn.com/aliyun-cli-linux-latest-arm64.deb
+dpkg -i aliyun-cli-linux-latest-arm64.deb
+
+# CentOS/RHEL ARM64
+wget https://aliyuncli.alicdn.com/aliyun-cli-linux-latest-arm64.rpm
+rpm -i aliyun-cli-linux-latest-arm64.rpm
+
+# Or use binary tarball without root (ARM64)
+wget https://aliyuncli.alicdn.com/aliyun-cli-linux-latest-arm64.tgz
 tar -xzf aliyun-cli-linux-latest-arm64.tgz
-sudo mv aliyun /usr/local/bin/
+./aliyun version
 ```
 
 ### Windows
@@ -498,7 +525,7 @@ export ALIBABA_CLOUD_READ_TIMEOUT=30
 
 After installation and configuration:
 
-1. **Install plugins** for services you need (v3.3.1+ supports all published product plugins):
+1. **Install plugins** for services you need (v3.3.3+ supports all published product plugins):
    ```bash
    aliyun plugin install --names ecs vpc rds
 

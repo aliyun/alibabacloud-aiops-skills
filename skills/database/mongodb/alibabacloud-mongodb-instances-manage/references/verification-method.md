@@ -11,7 +11,7 @@ After instance creation, confirm success by querying instance attributes:
 ```bash
 aliyun dds describe-db-instance-attribute \
   --db-instance-id <your-instance-id> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage
 ```
 
 ### 2. Verify Instance Status is Running
@@ -21,7 +21,7 @@ After successful instance creation, `DBInstanceStatus` should be `Running`:
 ```bash
 aliyun dds describe-db-instance-attribute \
   --db-instance-id <your-instance-id> \
-  --user-agent AlibabaCloud-Agent-Skills \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage \
   | grep -E '"DBInstanceStatus"'
 ```
 
@@ -37,7 +37,7 @@ Confirm that the primary/secondary node count matches the configuration:
 ```bash
 aliyun dds describe-db-instance-attribute \
   --db-instance-id <your-instance-id> \
-  --user-agent AlibabaCloud-Agent-Skills \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage \
   | grep -E '"ReplicationFactor"'
 ```
 
@@ -76,7 +76,7 @@ echo "=== Verifying MongoDB Instance: $INSTANCE_ID ==="
 # Get instance attributes
 RESULT=$(aliyun dds describe-db-instance-attribute \
   --db-instance-id "$INSTANCE_ID" \
-  --user-agent AlibabaCloud-Agent-Skills 2>&1)
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage 2>&1)
 
 # Check if command succeeded
 if [ $? -ne 0 ]; then
@@ -124,7 +124,7 @@ ELAPSED=0
 while [ $ELAPSED -lt $MAX_WAIT ]; do
     STATUS=$(aliyun dds describe-db-instance-attribute \
       --db-instance-id "$INSTANCE_ID" \
-      --user-agent AlibabaCloud-Agent-Skills \
+      --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage \
       2>/dev/null | grep -o '"DBInstanceStatus": "[^"]*"' | cut -d'"' -f4)
     
     echo "Current status: $STATUS (elapsed: ${ELAPSED}s)"
@@ -153,7 +153,7 @@ After successful instance creation, verify network connectivity:
 ```bash
 aliyun dds describe-db-instance-attribute \
   --db-instance-id <your-instance-id> \
-  --user-agent AlibabaCloud-Agent-Skills \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage \
   | grep -A5 '"ReplicaSetList"'
 ```
 
@@ -179,7 +179,7 @@ aliyun dds describe-available-resource \
   --region-id cn-hangzhou \
   --zone-id cn-hangzhou-g \
   --db-type replicate \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage
 ```
 
 ### Unable to Connect to Instance
@@ -195,5 +195,5 @@ Checklist:
 ```bash
 aliyun dds describe-security-ips \
   --db-instance-id <your-instance-id> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-mongodb-instances-manage
 ```

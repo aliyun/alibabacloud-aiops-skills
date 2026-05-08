@@ -22,6 +22,12 @@ This document lists all APIs and CLI commands involved in MongoDB instance manag
 | `aliyun dds transform-instance-charge-type` | TransformInstanceChargeType | Convert billing type (Pay-As-You-Go ↔ Subscription) | [Doc](https://help.aliyun.com/zh/mongodb/developer-reference/api-dds-2015-12-01-transforminstancechargetype) |
 | `aliyun dds modify-instance-auto-renewal-attribute` | ModifyInstanceAutoRenewalAttribute | Enable/disable auto-renewal | [Doc](https://help.aliyun.com/zh/mongodb/developer-reference/api-dds-2015-12-01-modifyinstanceautorenewalattribute) |
 | `aliyun dds restart-db-instance` | RestartDBInstance | Restart instance | [Doc](https://help.aliyun.com/zh/mongodb/developer-reference/api-dds-2015-12-01-restartdbinstance) |
+| `aliyun dds restart-node` | RestartNode | Restart specific node in sharded cluster | [Doc](https://help.aliyun.com/zh/mongodb/developer-reference/api-dds-2015-12-01-restartnode) |
+| `aliyun dds upgrade-db-instance-engine-version` | UpgradeDBInstanceEngineVersion | Upgrade MongoDB major version | [Doc](https://help.aliyun.com/zh/mongodb/developer-reference/api-dds-2015-12-01-upgradedbinstanceengineversion) |
+| `aliyun dds upgrade-db-instance-kernel-version` | UpgradeDBInstanceKernelVersion | Upgrade MongoDB kernel version | [Doc](https://help.aliyun.com/zh/mongodb/developer-reference/api-dds-2015-12-01-upgradedbinstancekernelversion) |
+| `aliyun dds describe-available-engine-version` | DescribeAvailableEngineVersion | Query available upgrade versions | [Doc](https://help.aliyun.com/zh/mongodb/developer-reference/api-dds-2015-12-01-describeavailableengineversion) |
+| `aliyun dds switch-db-instance-ha` | SwitchDBInstanceHA | Switch primary/secondary roles | [Doc](https://help.aliyun.com/zh/mongodb/developer-reference/api-dds-2015-12-01-switchdbinstanceha) |
+| `aliyun dds destroy-instance` | DestroyInstance | Destroy instance permanently | [Doc](https://help.aliyun.com/zh/mongodb/developer-reference/api-dds-2015-12-01-destroyinstance) |
 
 ### Sharded Cluster Node Management APIs
 
@@ -48,6 +54,9 @@ This document lists all APIs and CLI commands involved in MongoDB instance manag
 |-------------|------------|-------------|---------------|
 | `aliyun dds describe-backups` | DescribeBackups | Query backup list | [Doc](https://help.aliyun.com/zh/mongodb/developer-reference/api-dds-2015-12-01-describebackups) |
 | `aliyun dds create-backup` | CreateBackup | Create backup | [Doc](https://help.aliyun.com/zh/mongodb/developer-reference/api-dds-2015-12-01-createbackup) |
+| `aliyun dds describe-backup-policy` | DescribeBackupPolicy | Query backup policy | [Doc](https://help.aliyun.com/zh/mongodb/developer-reference/api-dds-2015-12-01-describebackuppolicy) |
+| `aliyun dds modify-backup-policy` | ModifyBackupPolicy | Modify backup policy | [Doc](https://help.aliyun.com/zh/mongodb/developer-reference/api-dds-2015-12-01-modifybackuppolicy) |
+| `aliyun dds restore-db-instance` | RestoreDBInstance | Restore instance from backup | [Doc](https://help.aliyun.com/zh/mongodb/developer-reference/api-dds-2015-12-01-restoredbinstance) |
 
 ### Network Configuration APIs
 
@@ -73,6 +82,9 @@ This document lists all APIs and CLI commands involved in MongoDB instance manag
 | CLI Command | API Action | Description | Documentation |
 |-------------|------------|-------------|---------------|
 | `aliyun dds reset-account-password` | ResetAccountPassword | Reset password | [Doc](https://help.aliyun.com/zh/mongodb/developer-reference/api-dds-2015-12-01-resetaccountpassword) |
+| `aliyun dds create-account` | CreateAccount | Create database account | [Doc](https://help.aliyun.com/zh/mongodb/developer-reference/api-dds-2015-12-01-createaccount) |
+| `aliyun dds describe-accounts` | DescribeAccounts | Query database accounts | [Doc](https://help.aliyun.com/zh/mongodb/developer-reference/api-dds-2015-12-01-describeaccounts) |
+| `aliyun dds modify-account-description` | ModifyAccountDescription | Modify account description | [Doc](https://help.aliyun.com/zh/mongodb/developer-reference/api-dds-2015-12-01-modifyaccountdescription) |
 
 ### Tag Management APIs
 
@@ -81,6 +93,7 @@ This document lists all APIs and CLI commands involved in MongoDB instance manag
 | `aliyun dds tag-resources` | TagResources | Bind tags | [Doc](https://help.aliyun.com/zh/mongodb/developer-reference/api-dds-2015-12-01-tagresources) |
 | `aliyun dds untag-resources` | UntagResources | Unbind tags | [Doc](https://help.aliyun.com/zh/mongodb/developer-reference/api-dds-2015-12-01-untagresources) |
 | `aliyun dds list-tag-resources` | ListTagResources | Query tags | [Doc](https://help.aliyun.com/zh/mongodb/developer-reference/api-dds-2015-12-01-listtagresources) |
+| `aliyun dds describe-tags` | DescribeTags | Query existing tags | [Doc](https://help.aliyun.com/zh/mongodb/developer-reference/api-dds-2015-12-01-describetags) |
 
 ## VPC (Virtual Private Cloud)
 
