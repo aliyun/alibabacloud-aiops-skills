@@ -1,6 +1,6 @@
 ---
 name: alibabacloud-bailian-voice-creator
-description: AI voice creation skill supporting speech recognition (ASR) and text-to-speech (TTS). Uses qwen3-asr-flash-filetrans, qwen-tts and other models. Use this skill when users need speech-to-text, text-to-speech, or audio processing.
+description: AI voice creation skill supporting speech recognition (ASR) and text-to-speech (TTS). Uses qwen3-asr-flash-filetrans, qwen-tts and other models. Use this skill when users need speech-to-text, text-to-speech, or audio processing. Note: on first run, it will auto-manage DashScope API Keys (create/recycle) and may auto-install the Alibaba Cloud CLI ModelStudio plugin.
 ---
 
 # AI Voice Creator
