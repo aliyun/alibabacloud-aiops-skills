@@ -16,7 +16,7 @@ function createClient() {
   const config = new OpenApi.Config({
     credential,
     endpoint: "esa.cn-hangzhou.aliyuncs.com",
-    userAgent: "AlibabaCloud-Agent-Skills",
+    userAgent: "AlibabaCloud-Agent-Skills/alibabacloud-esa-pages-deploy",
   });
   return new Esa20240910.default(config);
 }
@@ -54,7 +54,22 @@ async function deployFolder(name, folderPath, description = "") {
     console.log("Routine created.");
   } catch (e) {
     if (e.code === "RoutineNameAlreadyExist" || e.code === "RoutineAlreadyExist" || e.message?.includes("already exist")) {
-      console.log("Routine already exists, updating...");
+      console.log("Routine already exists, continuing...");
+    } else if (e.code === "Throttling.Api") {
+      console.log("Throttled, retrying in 2 seconds...");
+      await new Promise((r) => setTimeout(r, 2000));
+      try {
+        await client.createRoutine(
+          new Esa20240910.CreateRoutineRequest({ name, description })
+        );
+        console.log("Routine created.");
+      } catch (retryError) {
+        if (retryError.code === "RoutineNameAlreadyExist" || retryError.code === "RoutineAlreadyExist") {
+          console.log("Routine already exists, continuing...");
+        } else {
+          throw retryError;
+        }
+      }
     } else {
       throw e;
     }
@@ -154,43 +169,71 @@ async function deployFolder(name, folderPath, description = "") {
     await new Promise((r) => setTimeout(r, 1000));
   }
 
-  // 5. Deploy to staging and production
-  for (const env of ["staging", "production"]) {
-    console.log(`Deploying to ${env}...`);
-    const deployParams = new OpenApi.Params({
-      action: "CreateRoutineCodeDeployment",
+  // 5. Deploy to production
+  console.log(`Deploying to production...`);
+  const deployParams = new OpenApi.Params({
+    action: "CreateRoutineCodeDeployment",
+    version: "2024-09-10",
+    protocol: "https",
+    method: "POST",
+    authType: "AK",
+    bodyType: "json",
+    reqBodyType: "json",
+    style: "RPC",
+    pathname: "/",
+  });
+  await client.callApi(
+    deployParams,
+    new OpenApi.OpenApiRequest({
+      query: {
+        Name: name,
+        Env: "production",
+        Strategy: "percentage",
+        CodeVersions: JSON.stringify([
+          { Percentage: 100, CodeVersion: codeVersion },
+        ]),
+      },
+    }),
+    runtime
+  );
+
+  // 6. Get access URL with token
+  const routine = await client.getRoutine(
+    new Esa20240910.GetRoutineRequest({ name })
+  );
+  let url = routine.body.defaultRelatedRecord
+    ? `https://${routine.body.defaultRelatedRecord}`
+    : null;
+
+  // Get access token and append to URL
+  if (url) {
+    console.log("Getting access token...");
+    const tokenParams = new OpenApi.Params({
+      action: "GetRoutineAccessToken",
       version: "2024-09-10",
       protocol: "https",
-      method: "POST",
+      method: "GET",
       authType: "AK",
       bodyType: "json",
       reqBodyType: "json",
       style: "RPC",
       pathname: "/",
     });
-    await client.callApi(
-      deployParams,
+    const tokenRes = await client.callApi(
+      tokenParams,
       new OpenApi.OpenApiRequest({
-        query: {
-          Name: name,
-          Env: env,
-          Strategy: "percentage",
-          CodeVersions: JSON.stringify([
-            { Percentage: 100, CodeVersion: codeVersion },
-          ]),
-        },
+        query: { Name: name },
       }),
       runtime
     );
+    const token = tokenRes.body?.Token;
+    if (token) {
+      url += `?esa_er_token=${token}`;
+      console.log("⏰ Token is valid for 1 hour");
+    }
   }
 
-  // 6. Get access URL
-  const routine = await client.getRoutine(
-    new Esa20240910.GetRoutineRequest({ name })
-  );
-  return routine.body.defaultRelatedRecord
-    ? `https://${routine.body.defaultRelatedRecord}`
-    : null;
+  return url;
 }
 
 // Validate name format
@@ -226,6 +269,7 @@ deployFolder(name, folderPath, description || "")
   .then((url) => {
     console.log("\n✅ Deployment successful!");
     console.log(`Access URL: ${url}`);
+    console.log("\n💡 Note: If you access the link too quickly, DNS resolution may not have taken effect yet. Please wait a moment and try again.");
   })
   .catch((err) => {
     console.error("\n❌ Deployment failed:", err.message);

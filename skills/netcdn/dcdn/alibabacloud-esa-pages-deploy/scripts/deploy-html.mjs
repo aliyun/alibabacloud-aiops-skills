@@ -5,6 +5,7 @@
  */
 import Esa20240910 from "@alicloud/esa20240910";
 import OpenApi from "@alicloud/openapi-client";
+import TeaUtil from "@alicloud/tea-util";
 import Credential from "@alicloud/credentials";
 import * as fs from "fs";
 
@@ -13,7 +14,7 @@ function createClient() {
   const config = new OpenApi.Config({
     credential,
     endpoint: "esa.cn-hangzhou.aliyuncs.com",
-    userAgent: "AlibabaCloud-Agent-Skills",
+    userAgent: "AlibabaCloud-Agent-Skills/alibabacloud-esa-pages-deploy",
   });
   return new Esa20240910.default(config);
 }
@@ -60,7 +61,20 @@ export default {
     console.log("Routine created.");
   } catch (e) {
     if (e.code === "RoutineNameAlreadyExist" || e.code === "RoutineAlreadyExist" || e.message?.includes("already exist")) {
-      console.log("Routine already exists, updating...");
+      console.log("Routine already exists, continuing...");
+    } else if (e.code === "Throttling.Api") {
+      console.log("Throttled, retrying in 2 seconds...");
+      await new Promise((r) => setTimeout(r, 2000));
+      try {
+        await client.createRoutine(new Esa20240910.CreateRoutineRequest({ name }));
+        console.log("Routine created.");
+      } catch (retryError) {
+        if (retryError.code === "RoutineNameAlreadyExist" || retryError.code === "RoutineAlreadyExist") {
+          console.log("Routine already exists, continuing...");
+        } else {
+          throw retryError;
+        }
+      }
     } else {
       throw e;
     }
@@ -99,24 +113,54 @@ export default {
   const version = commit.body.codeVersion;
   console.log(`Code version: ${version}`);
 
-  // 5. Deploy to staging and production
-  for (const env of ["staging", "production"]) {
-    console.log(`Deploying to ${env}...`);
-    await client.publishRoutineCodeVersion(
-      new Esa20240910.PublishRoutineCodeVersionRequest({
-        name,
-        env,
-        codeVersion: version,
-      })
-    );
-  }
+  // 5. Deploy to production
+  console.log(`Deploying to production...`);
+  await client.publishRoutineCodeVersion(
+    new Esa20240910.PublishRoutineCodeVersionRequest({
+      name,
+      env: "production",
+      codeVersion: version,
+    })
+  );
 
-  // 6. Get access URL
+  // 6. Get access URL with token
   const routine = await client.getRoutine(
     new Esa20240910.GetRoutineRequest({ name })
   );
-  const domain = routine.body.defaultRelatedRecord;
-  return domain ? `https://${domain}` : null;
+  let url = routine.body.defaultRelatedRecord
+    ? `https://${routine.body.defaultRelatedRecord}`
+    : null;
+
+  // Get access token and append to URL
+  if (url) {
+    console.log("Getting access token...");
+    const tokenParams = new OpenApi.Params({
+      action: "GetRoutineAccessToken",
+      version: "2024-09-10",
+      protocol: "https",
+      method: "GET",
+      authType: "AK",
+      bodyType: "json",
+      reqBodyType: "json",
+      style: "RPC",
+      pathname: "/",
+    });
+    const runtime = new TeaUtil.RuntimeOptions({});
+    const tokenRes = await client.callApi(
+      tokenParams,
+      new OpenApi.OpenApiRequest({
+        query: { Name: name },
+      }),
+      runtime
+    );
+    const token = tokenRes.body?.Token;
+    if (token) {
+      url += `?esa_er_token=${token}`;
+      console.log("⏰ Token is valid for 1 hour");
+    }
+  }
+
+  return url;
 }
 
 // Validate name format
@@ -148,6 +192,7 @@ deployHtml(name, html)
   .then((url) => {
     console.log("\n✅ Deployment successful!");
     console.log(`Access URL: ${url}`);
+    console.log("\n💡 Note: If you access the link too quickly, DNS resolution may not have taken effect yet. Please wait a moment and try again.");
   })
   .catch((err) => {
     console.error("\n❌ Deployment failed:", err.message);

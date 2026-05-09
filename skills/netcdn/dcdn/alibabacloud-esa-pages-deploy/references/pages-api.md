@@ -19,7 +19,7 @@ function createClient() {
   const config = new OpenApi.Config({
     credential,
     endpoint: "esa.cn-hangzhou.aliyuncs.com",
-    userAgent: "AlibabaCloud-Agent-Skills",
+    userAgent: "AlibabaCloud-Agent-Skills/alibabacloud-esa-pages-deploy",
   });
   return new Esa20240910.default(config);
 }
@@ -418,6 +418,37 @@ async function listRoutes(routineName) {
 }
 ```
 
+## Access Token
+
+Generate an access token to append to the deployment URL for authentication (default TTL: 1 hour).
+
+```javascript
+// Get access URL with token
+async function getAccessUrl(name) {
+  const client = createClient();
+
+  // 1. Get base URL from routine info
+  const routine = await client.getRoutine(
+    new Esa20240910.GetRoutineRequest({ name })
+  );
+  const domain = routine.body.defaultRelatedRecord;
+  if (!domain) return null;
+
+  // 2. Get access token
+  const tokenResp = await client.getRoutineAccessToken(
+    new Esa20240910.GetRoutineAccessTokenRequest({ name })
+  );
+  const token = tokenResp.body?.accessToken;
+
+  // 3. Combine URL with token
+  return `https://${domain}?esa_er_token=${token}`;
+}
+
+// Usage
+const url = await getAccessUrl("my-page");
+console.log(`Access URL (valid for 1 hour): ${url}`);
+```
+
 ## API Reference
 
 | Category | APIs |
@@ -425,6 +456,7 @@ async function listRoutes(routineName) {
 | **Function** | `CreateRoutine`, `DeleteRoutine`, `GetRoutine`, `GetRoutineUserInfo`, `ListUserRoutines` |
 | **Code Upload** | `GetRoutineStagingCodeUploadInfo`, `CommitRoutineStagingCode`, `PublishRoutineCodeVersion` |
 | **Assets** | `CreateRoutineWithAssetsCodeVersion`, `GetRoutineCodeVersionInfo`, `CreateRoutineCodeDeployment` |
+| **Access** | `GetRoutineAccessToken` |
 | **Routes** | `CreateRoutineRoute`, `UpdateRoutineRoute`, `DeleteRoutineRoute`, `ListRoutineRoutes` |
 | **Records** | `CreateRoutineRelatedRecord`, `DeleteRoutineRelatedRecord`, `ListRoutineRelatedRecords` |
 

@@ -12,14 +12,18 @@ function createClient() {
   const config = new OpenApi.Config({
     credential,
     endpoint: "esa.cn-hangzhou.aliyuncs.com",
-    userAgent: "AlibabaCloud-Agent-Skills",
+    userAgent: "AlibabaCloud-Agent-Skills/alibabacloud-esa-pages-deploy",
   });
   return new Esa20240910.default(config);
 }
 
 async function listRoutines() {
   const client = createClient();
-  const resp = await client.getRoutineUserInfo();
+  
+  // Use ListUserRoutines API (preferred over GetRoutineUserInfo)
+  const resp = await client.listUserRoutines(
+    new Esa20240910.ListUserRoutinesRequest({})
+  );
   const routines = resp.body.routines || [];
 
   if (routines.length === 0) {

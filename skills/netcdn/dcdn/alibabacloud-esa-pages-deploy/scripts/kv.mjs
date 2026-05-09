@@ -12,7 +12,7 @@ function createClient() {
   const config = new OpenApi.Config({
     credential,
     endpoint: "esa.cn-hangzhou.aliyuncs.com",
-    userAgent: "AlibabaCloud-Agent-Skills",
+    userAgent: "AlibabaCloud-Agent-Skills/alibabacloud-esa-pages-deploy",
   });
   return new Esa20240910.default(config);
 }

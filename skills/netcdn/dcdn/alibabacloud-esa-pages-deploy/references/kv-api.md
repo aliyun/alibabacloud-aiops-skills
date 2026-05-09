@@ -27,13 +27,13 @@ import * as $OpenApi from "@alicloud/openapi-client";
 import Credential from "@alicloud/credentials";
 
 function createClient() {
-  const credential = new Credential();
+  const credential = new Credential.default();
   const config = new $OpenApi.Config({
     credential,
     endpoint: "esa.cn-hangzhou.aliyuncs.com",
-    userAgent: "AlibabaCloud-Agent-Skills",
+    userAgent: "AlibabaCloud-Agent-Skills/alibabacloud-esa-pages-deploy",
   });
-  return new Esa20240910(config);
+  return new Esa20240910.default(config);
 }
 ```
 
@@ -122,6 +122,7 @@ async function listKvs(namespace, prefix = null, pageSize = 100) {
 // Batch write
 async function batchPutKv(namespace, items) {
   // items: [{ Key: "k1", Value: "v1", ExpirationTtl: 3600 }, ...]
+  // Note: Field names MUST be PascalCase (Key, Value, ExpirationTtl)
   const client = createClient();
   const request = new $Esa20240910.BatchPutKvRequest({ namespace });
   request.body = JSON.stringify(items);
