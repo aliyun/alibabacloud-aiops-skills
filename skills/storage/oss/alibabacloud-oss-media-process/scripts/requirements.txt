@@ -1,0 +1,4 @@
+oss2==2.19.1
+alibabacloud-credentials==1.0.8
+alibabacloud_imm20200930==4.8.2
+alibabacloud_tea_openapi==0.4.4
