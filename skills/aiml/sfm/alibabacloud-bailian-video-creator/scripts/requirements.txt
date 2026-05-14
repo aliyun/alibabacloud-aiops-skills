@@ -1,0 +1,2 @@
+dashscope==1.25.17
+requests==2.32.4
