@@ -9,6 +9,7 @@ from typing import Any, Dict, Optional
 
 import requests
 
+from sysom_cli.lib.diagnosis_source import resolve_diagnosis_source
 from sysom_cli.lib.guidance import RAM_CONSOLE_URL
 
 
@@ -376,9 +377,14 @@ def test_sysom_api(credentials: Dict[str, str]) -> Dict[str, Any]:
         # 创建客户端
         client = Client(config)
         
-        # 构造请求
-        request = sysom_models.InitialSysomRequest()
-        
+        # 构造请求：与 InvokeDiagnosis 注入的 __sysom_diagnosis_source 同源（skill_hub）
+        src, _ = resolve_diagnosis_source()
+        request = (
+            sysom_models.InitialSysomRequest(source=src)
+            if src
+            else sysom_models.InitialSysomRequest()
+        )
+
         # 调用 API
         response = client.initial_sysom(request)
         
