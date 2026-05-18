@@ -4,7 +4,7 @@
 
 ```bash
 aliyun resourcecenter get-resource-center-service-status \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-resourcecenter-search
 ```
 
 **Expected Output:**
@@ -39,7 +39,7 @@ aliyun resourcecenter get-resource-center-service-status \
 ```bash
 aliyun resourcecenter search-resources \
   --max-results 5 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-resourcecenter-search
 ```
 
 **Expected Output:** Returns JSON containing a `Resources` array, where each resource includes fields such as `ResourceId`, `ResourceType`, `RegionId`, etc.
@@ -49,7 +49,7 @@ aliyun resourcecenter search-resources \
 ```bash
 aliyun resourcecenter get-resource-counts \
   --group-by-key ResourceType \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-resourcecenter-search
 ```
 
 **Expected Output:** Returns JSON containing a `Filters` array, where each item includes `FilterKey` (resource type) and `FilterValue` (count).
@@ -60,7 +60,7 @@ aliyun resourcecenter get-resource-counts \
 
 ```bash
 aliyun resourcecenter get-multi-account-resource-center-service-status \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-resourcecenter-search
 ```
 
 **Expected Output:**
@@ -79,7 +79,7 @@ aliyun resourcecenter get-multi-account-resource-center-service-status \
 aliyun resourcecenter search-multi-account-resources \
   --scope <ResourceDirectoryId> \
   --max-results 5 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-resourcecenter-search
 ```
 
 **Expected Output:** Returns JSON containing a `Resources` array with resources from multiple member accounts.
@@ -90,7 +90,7 @@ aliyun resourcecenter search-multi-account-resources \
 aliyun resourcecenter get-multi-account-resource-counts \
   --scope <ResourceDirectoryId> \
   --group-by-key ResourceType \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-resourcecenter-search
 ```
 
 **Expected Output:** Returns resource count statistics aggregated across multiple member accounts.

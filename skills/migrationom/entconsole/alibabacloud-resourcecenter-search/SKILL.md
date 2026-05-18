@@ -10,10 +10,22 @@ description: |
 
 ## 1. Prerequisites
 
-> **Pre-check: Aliyun CLI >= 3.3.1 required**
-> Run `aliyun version` to verify >= 3.3.1. If not installed or version too low,
-> see `references/cli-installation-guide.md` for installation instructions.
+> **[MUST] CLI User-Agent** — Every `aliyun` CLI command invocation must include:
+> `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-resourcecenter-search`
+
+> **[MUST] Enable AI-Mode** — AI-mode is required for Agent Skill execution.
+> Run the following commands before any other `aliyun` CLI invocation:
+> ```bash
+> aliyun configure ai-mode enable
+> aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-resourcecenter-search"
+> ```
+
+> **Pre-check: Aliyun CLI >= 3.3.3 required**
+> Run `aliyun version` to verify >= 3.3.3. If not installed or version too low,
+> run `curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash` to install/update,
+> or see `references/cli-installation-guide.md` for installation instructions.
 > Then **[MUST]** run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+> Then **[MUST]** run `aliyun plugin update` to ensure that any existing plugins on your local machine are always up-to-date.
 
 > **Pre-check: Alibaba Cloud Credentials Required**
 >
@@ -35,6 +47,12 @@ description: |
 > 1. Obtain credentials from [Alibaba Cloud Console](https://ram.console.aliyun.com/manage/ak)
 > 2. Configure credentials **outside of this session** (via `aliyun configure` in terminal or environment variables in shell profile)
 > 3. Return and re-run after `aliyun configure list` shows a valid profile
+
+> **[MUST] Disable AI-Mode at EVERY exit point** — Before delivering the final response for ANY reason, always disable AI-mode first. This applies to ALL exit paths: workflow success, workflow failure, error/exception, user cancellation, session end, or any other scenario where no further CLI commands will be executed.
+> AI-mode is only used for Agent Skill invocation scenarios and MUST NOT remain enabled after the skill stops running.
+> ```bash
+> aliyun configure ai-mode disable
+> ```
 
 ---
 
@@ -196,7 +214,7 @@ See [references/verification-method.md](references/verification-method.md) for d
 
 ```bash
 aliyun resourcecenter disable-resource-center \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-resourcecenter-search
 ```
 
 #### Disable Cross-Account Resource Center
@@ -205,14 +223,14 @@ aliyun resourcecenter disable-resource-center \
 
 ```bash
 aliyun resourcecenter disable-multi-account-resource-center \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-resourcecenter-search
 ```
 
 ---
 
 ## 7. Best Practices
 
-1. **`--user-agent` on every Resource Center CLI call** — All `aliyun resourcecenter` examples in this skill include `--user-agent AlibabaCloud-Agent-Skills`. When executing commands for this skill, **always** pass the same flag so usage is consistent with verification, maintainers’ expectations, and any automated checks.
+1. **`--user-agent` on every Resource Center CLI call** — All `aliyun resourcecenter` examples in this skill include `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-resourcecenter-search`. When executing commands for this skill, **always** pass the same flag so usage is consistent with verification, maintainers’ expectations, and any automated checks.
 2. **Use filters for targeted search** — Combining `ResourceType`, `RegionId`, and `Tag` filters improves search efficiency
 3. **Use `GroupByKey` for quick statistics** — Get resource distribution by type, region, or resource group without iterating
 4. **Cross-account scope selection** — Use the most specific scope (member ID > folder ID > root folder ID > directory ID) to narrow search results

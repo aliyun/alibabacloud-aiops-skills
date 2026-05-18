@@ -6,73 +6,34 @@
 
 The following are the minimum RAM permissions required for single-account resource search and inventory:
 
-```json
-{
-  "Version": "1",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "resourcecenter:EnableResourceCenter",
-        "resourcecenter:DisableResourceCenter",
-        "resourcecenter:GetResourceConfiguration",
-        "tag:ListTagKeys",
-        "tag:ListTagValues"
-      ],
-      "Resource": "*"
-    }
-  ]
-}
-```
+`resourcecenter:EnableResourceCenter`
+`resourcecenter:DisableResourceCenter`
+`resourcecenter:GetResourceConfiguration`
+`tag:ListTagKeys`
+`tag:ListTagValues`
 
 ### Cross-Account Operations (Requires Resource Directory Management Account or Delegated Admin)
 
 The following are the RAM permissions required for cross-account resource search and inventory (must be executed by the Resource Directory management account or delegated admin account):
 
-```json
-{
-  "Version": "1",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "resourcecenter:EnableMultiAccountResourceCenter",
-        "resourcecenter:DisableMultiAccountResourceCenter",
-        "resourcecenter:GetMultiAccountResourceCenterServiceStatus",
-        "resourcecenter:SearchMultiAccountResources",
-        "resourcecenter:GetMultiAccountResourceCounts",
-        "resourcecenter:GetMultiAccountResourceConfiguration"
-      ],
-      "Resource": "*"
-    }
-  ]
-}
-```
+`resourcecenter:EnableMultiAccountResourceCenter`
+`resourcecenter:DisableMultiAccountResourceCenter`
+`resourcecenter:GetMultiAccountResourceCenterServiceStatus`
+`resourcecenter:SearchMultiAccountResources`
+`resourcecenter:GetMultiAccountResourceCounts`
+`resourcecenter:GetMultiAccountResourceConfiguration`
 
 ### Read-Only Policy (Recommended for Search & Statistics Only)
 
 If only search and statistics functionality is needed, the following read-only permissions can be used:
 
-```json
-{
-  "Version": "1",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "resourcecenter:GetResourceConfiguration",
-        "tag:ListTagKeys",
-        "tag:ListTagValues",
-        "resourcecenter:GetMultiAccountResourceCenterServiceStatus",
-        "resourcecenter:SearchMultiAccountResources",
-        "resourcecenter:GetMultiAccountResourceCounts",
-        "resourcecenter:GetMultiAccountResourceConfiguration"
-      ],
-      "Resource": "*"
-    }
-  ]
-}
-```
+`resourcecenter:GetResourceConfiguration`
+`resourcecenter:GetMultiAccountResourceCenterServiceStatus`
+`resourcecenter:SearchMultiAccountResources`
+`resourcecenter:GetMultiAccountResourceCounts`
+`resourcecenter:GetMultiAccountResourceConfiguration`
+`tag:ListTagKeys`
+`tag:ListTagValues`
 
 ## System Role
 

@@ -11,7 +11,7 @@ Enable Resource Center service.
 ```bash
 # Enable Resource Center service
 aliyun resourcecenter enable-resource-center \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-resourcecenter-search
 ```
 
 ---
@@ -25,7 +25,7 @@ Disable Resource Center service.
 ```bash
 # Disable Resource Center service
 aliyun resourcecenter disable-resource-center \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-resourcecenter-search
 ```
 
 ---
@@ -39,7 +39,7 @@ Query Resource Center service status.
 ```bash
 # Check if Resource Center is enabled
 aliyun resourcecenter get-resource-center-service-status \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-resourcecenter-search
 ```
 
 ---
@@ -63,37 +63,37 @@ Search resources under the current account.
 # Search all resources (paginated)
 aliyun resourcecenter search-resources \
   --max-results 20 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-resourcecenter-search
 
 # Search by resource type (ECS instances)
 aliyun resourcecenter search-resources \
   --filter '[{"Key":"ResourceType","MatchType":"Equals","Value":["ACS::ECS::Instance"]}]' \
   --max-results 20 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-resourcecenter-search
 
 # Combined search: ECS + Hangzhou region
 aliyun resourcecenter search-resources \
   --filter '[{"Key":"ResourceType","MatchType":"Equals","Value":["ACS::ECS::Instance"]},{"Key":"RegionId","MatchType":"Equals","Value":["cn-hangzhou"]}]' \
   --max-results 20 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-resourcecenter-search
 
 # Search by tag (Environment=Production)
 aliyun resourcecenter search-resources \
   --filter '[{"Key":"Tag","MatchType":"Contains","Value":["{\"key\":\"env\",\"value\":\"prod\"}"]}]' \
   --max-results 20 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-resourcecenter-search
 
 # Find untagged resources
 aliyun resourcecenter search-resources \
   --filter '[{"Key":"Tag","MatchType":"NotExists"}]' \
   --max-results 20 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-resourcecenter-search
 
 # Search including deleted resources (for auditing or recovery)
 aliyun resourcecenter search-resources \
   --include-deleted-resources=true \
   --max-results 20 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-resourcecenter-search
 ```
 
 ---
@@ -114,18 +114,18 @@ Query resource count statistics for the current account.
 # Count by resource type
 aliyun resourcecenter get-resource-counts \
   --group-by-key ResourceType \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-resourcecenter-search
 
 # Count by region
 aliyun resourcecenter get-resource-counts \
   --group-by-key RegionId \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-resourcecenter-search
 
 # Count ECS instance distribution by region
 aliyun resourcecenter get-resource-counts \
   --group-by-key RegionId \
   --filter '[{"Key":"ResourceType","MatchType":"Equals","Value":["ACS::ECS::Instance"]}]' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-resourcecenter-search
 ```
 
 ---
@@ -148,7 +148,7 @@ aliyun resourcecenter get-resource-configuration \
   --resource-type ACS::ECS::Instance \
   --resource-region-id cn-hangzhou \
   --resource-id i-bp1xxx \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-resourcecenter-search
 ```
 
 ---
@@ -168,7 +168,7 @@ Batch query resource configurations for the current account.
 aliyun resourcecenter batch-get-resource-configurations \
   --resources RegionId=cn-hangzhou ResourceId=vtb-xxx ResourceType=ACS::VPC::RouteTable \
   --resources RegionId=cn-shanghai ResourceId=sg-xxx ResourceType=ACS::ECS::SecurityGroup \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-resourcecenter-search
 ```
 
 ---
@@ -190,7 +190,7 @@ Query tag keys under the current account.
 # List all tag keys
 aliyun resourcecenter list-tag-keys \
   --max-results 100 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-resourcecenter-search
 ```
 
 ---
@@ -214,7 +214,7 @@ Query tag values under the current account.
 aliyun resourcecenter list-tag-values \
   --tag-key env \
   --max-results 100 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-resourcecenter-search
 ```
 
 ---
@@ -230,7 +230,7 @@ Enable cross-account resource search.
 ```bash
 # Enable cross-account resource search
 aliyun resourcecenter enable-multi-account-resource-center \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-resourcecenter-search
 ```
 
 ---
@@ -244,7 +244,7 @@ Disable cross-account resource search.
 ```bash
 # Disable cross-account resource search
 aliyun resourcecenter disable-multi-account-resource-center \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-resourcecenter-search
 ```
 
 ---
@@ -258,7 +258,7 @@ Query cross-account resource search service status.
 ```bash
 # Check cross-account Resource Center status
 aliyun resourcecenter get-multi-account-resource-center-service-status \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-resourcecenter-search
 ```
 
 ---
@@ -282,7 +282,7 @@ Search resources across accounts.
 aliyun resourcecenter search-multi-account-resources \
   --scope <ResourceDirectoryId> \
   --max-results 20 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-resourcecenter-search
 ```
 
 ---
@@ -304,7 +304,7 @@ Query resource count statistics across accounts.
 aliyun resourcecenter get-multi-account-resource-counts \
   --scope <ResourceDirectoryId> \
   --group-by-key ResourceType \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-resourcecenter-search
 ```
 
 ---
@@ -329,7 +329,7 @@ aliyun resourcecenter get-multi-account-resource-configuration \
   --resource-type ACS::ECS::Instance \
   --resource-region-id cn-hangzhou \
   --resource-id i-bp1xxx \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-resourcecenter-search
 ```
 
 ---
@@ -353,7 +353,7 @@ Query tag keys across accounts.
 aliyun resourcecenter list-multi-account-tag-keys \
   --scope <ResourceDirectoryId> \
   --max-results 100 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-resourcecenter-search
 ```
 
 ---
@@ -379,7 +379,7 @@ aliyun resourcecenter list-multi-account-tag-values \
   --scope <ResourceDirectoryId> \
   --tag-key env \
   --max-results 100 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-resourcecenter-search
 ```
 ---
 

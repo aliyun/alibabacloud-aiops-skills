@@ -56,7 +56,7 @@ def fetch_resource_types(language: str = "zh-CN") -> Tuple[Optional[dict], Optio
     cmd = [
         "aliyun", "resourcecenter", "list-resource-types",
         "--accept-language", language,
-        "--user-agent", "AlibabaCloud-Agent-Skills",
+        "--user-agent", "AlibabaCloud-Agent-Skills/alibabacloud-resourcecenter-search",
         "--query", "ProductName", "ResourceTypeName", "ResourceType",
     ]
 
