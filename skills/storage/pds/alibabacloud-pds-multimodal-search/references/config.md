@@ -9,13 +9,13 @@
 
 ## Step 1: Verify if configuration already exists (only needs to be configured once during initialization)
 ```bash
-aliyun pds get-user --user-agent AlibabaCloud-Agent-Skills
+aliyun pds get-user --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-multimodal-search
 ```
 If already configured successfully, it will return the current logged-in user information, and you can skip the subsequent steps.
 
 ## Step 2: Query domain list using aliyun pds list-domains (skip this step if you already have the domain_id to configure)
 ```bash
-aliyun pds list-domains --service-code edm --limit 100 --region cn-beijing --user-agent AlibabaCloud-Agent-Skills
+aliyun pds list-domains --service-code edm --limit 100 --region cn-beijing --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-multimodal-search
 ```
 
 The returned JSON structure is as follows. Extract the domain list from the response and display it to the user in a table format with columns `domain_id` and `domain_name`, prompting the user to select one domain. (If there is only one domain, use it directly without asking)
@@ -35,9 +35,9 @@ This step requires obtaining the selected domain_id before proceeding to the nex
 ## Step 3: Query user list under the domain using aliyun pds list-user (skip this step if you already have the user_id to configure)
 ```bash
 # First configure domain_id with ak authentication type
-aliyun pds config --domain-id <domain_id> --authentication-type ak --user-agent AlibabaCloud-Agent-Skills
+aliyun pds config --domain-id <domain_id> --authentication-type ak --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-multimodal-search
 # Then list users under this domain
-aliyun pds list-user --limit 100 --user-agent AlibabaCloud-Agent-Skills
+aliyun pds list-user --limit 100 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-multimodal-search
 ```
 
 The returned JSON structure is as follows. Extract the user list from the response and display it to the user in a table format with columns `user_id`, `nick_name`, `phone`, `email`, and `role`, prompting the user to select one user. (If there is only one user, use it directly without asking)
@@ -65,7 +65,7 @@ aliyun pds config \
   --domain-id <domain_id> \
   --user-id <user_id> \
   --authentication-type token \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-multimodal-search
 ```
 
 **Parameter Description**:
@@ -81,7 +81,7 @@ aliyun pds config \
 ```bash
 
 # Test if configuration is effective, get-user API without parameters returns current logged-in user information in token scenario
-aliyun pds get-user --user-agent AlibabaCloud-Agent-Skills
+aliyun pds get-user --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-multimodal-search
 ```
 Extract the current logged-in user information from the returned JSON: domain_id: `domain_id`, user_id: `user_id`, nick_name: `nick_name`.
 
