@@ -50,7 +50,7 @@ aliyun pds search-file \
   --limit 50 \
   --recursive true \
   --return-total-count true \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
 ```
 
 > **Pagination**: If the response contains `next_marker`, you can pass it via `--marker` parameter in subsequent requests to get the next page. Add `--return-total-count` to get the total count of matches.

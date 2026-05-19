@@ -118,7 +118,7 @@ aliyun pds process \
   --drive-id ${SOURCE_DRIVE_ID} \
   --file-id ${SOURCE_FILE_ID} \
   --x-pds-process "${X_PDS_PROCESS}" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
 ```
 
 **Success Response** (HTTP 200):
@@ -353,7 +353,7 @@ python scripts/render_image_editing_process.py \
     --drive-id "101" \
     --file-id "source_file_id" \
     --x-pds-process "${X_PDS_PROCESS}" \
-    --user-agent AlibabaCloud-Agent-Skills
+    --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
   ```
 - Ensure there are no extra spaces or line breaks in the parameter
 - Check if base64 encoding is correct
@@ -384,7 +384,7 @@ A: You can use `aliyun pds get-file` command to get file information, the return
 aliyun pds get-file \
   --drive-id <drive_id> \
   --file-id <file_id> \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
 ```
 
 response example:

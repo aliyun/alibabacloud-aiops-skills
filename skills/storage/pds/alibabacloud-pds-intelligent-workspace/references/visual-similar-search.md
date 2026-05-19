@@ -13,7 +13,7 @@ If the user has already provided the image file's drive_id, file_id, revision_id
 
 Execute the following command to get the domain's system space configuration:
 ```bash
-aliyun pds get-domain --domain-id <domain-id> --user-agent AlibabaCloud-Agent-Skills
+aliyun pds get-domain --domain-id <domain-id> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
 ```
 
 Response example:
@@ -76,7 +76,7 @@ aliyun pds process \
   --resource-type drive \
   --drive-id ${SEARCH_DRIVE_ID} \
   --x-pds-process ${X_PDS_PROCESS} \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
 ```
 
 ### Search Specific Folder
@@ -86,7 +86,7 @@ aliyun pds process \
   --drive-id ${SEARCH_DRIVE_ID} \
   --file-id ${SEARCH_FOLDER_ID} \
   --x-pds-process ${X_PDS_PROCESS} \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
 ```
 
 ---

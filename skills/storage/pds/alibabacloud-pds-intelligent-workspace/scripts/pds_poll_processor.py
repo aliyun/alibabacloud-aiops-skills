@@ -68,7 +68,7 @@ class PDSPollProcessor:
             "--file-id", str(self.file_id),
             "--revision-id", str(self.revision_id),
             "--x-pds-process", str(self.process_type),
-            "--user-agent", "AlibabaCloud-Agent-Skills"
+            "--user-agent", "AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace"
         ]
         
         attempt = 0

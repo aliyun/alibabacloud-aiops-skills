@@ -10,16 +10,16 @@
 If you want to download a file from a PDS drive but only have the file path (e.g., /Photos/2026/04/vacation.jpg), you need to traverse each level of the path to find the corresponding file's file_id. The steps are as follows:  
 For example, to download the file /Photos/2026/04/vacation.jpg from a personal space:
 
-1. First, use the `aliyun pds list-file --drive-id <drive_id> --type folder --parent-file-id root --user-agent AlibabaCloud-Agent-Skills` command to list all directories under the root directory (parent-file-id=root) and find the file_id of the Photos directory:   
+1. First, use the `aliyun pds list-file --drive-id <drive_id> --type folder --parent-file-id root --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace` command to list all directories under the root directory (parent-file-id=root) and find the file_id of the Photos directory:   
    a. If the Photos directory exists, note down its file_id  
    b. If the Photos directory does not exist, the file path is invalid
-2. Use the `aliyun pds list-file --drive-id <drive_id> --type folder --parent-file-id <parent_file_id> --user-agent AlibabaCloud-Agent-Skills` command to list all directories under the parent directory (parent-file-id=<Photos directory's file_id>) and find the file_id of the 2026 directory:  
+2. Use the `aliyun pds list-file --drive-id <drive_id> --type folder --parent-file-id <parent_file_id> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace` command to list all directories under the parent directory (parent-file-id=<Photos directory's file_id>) and find the file_id of the 2026 directory:  
    a. If the 2026 directory exists, note down its file_id  
    b. If the 2026 directory does not exist, the file path is invalid
-3. Use the `aliyun pds list-file --drive-id <drive_id> --type folder --parent-file-id <2026 directory's file_id> --user-agent AlibabaCloud-Agent-Skills` command to list all directories under the parent directory (parent-file-id=<2026 directory's file_id>) and find the file_id of the 04 directory:  
+3. Use the `aliyun pds list-file --drive-id <drive_id> --type folder --parent-file-id <2026 directory's file_id> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace` command to list all directories under the parent directory (parent-file-id=<2026 directory's file_id>) and find the file_id of the 04 directory:  
    a. If the 04 directory exists, note down its file_id  
    b. If the 04 directory does not exist, the file path is invalid
-4. Use the `aliyun pds list-file --drive-id <drive_id> --type file --parent-file-id <04 directory's file_id> --user-agent AlibabaCloud-Agent-Skills` command to list all files under the parent directory (parent-file-id=<04 directory's file_id>) and find the file_id of the vacation.jpg file:  
+4. Use the `aliyun pds list-file --drive-id <drive_id> --type file --parent-file-id <04 directory's file_id> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace` command to list all files under the parent directory (parent-file-id=<04 directory's file_id>) and find the file_id of the vacation.jpg file:  
    a. If the vacation.jpg file exists, note down its file_id  
    b. If the vacation.jpg file does not exist, the file path is invalid  
 5. After obtaining the file_id of vacation.jpg, you can use this file_id to download the file
@@ -39,7 +39,7 @@ aliyun pds get-download-url \
   --drive-id <drive_id> \
   --file-id <file_id> \
   --expire-sec 3600 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
 ```
 
 **Parameter Description**:

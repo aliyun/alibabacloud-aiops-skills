@@ -64,7 +64,7 @@ For example, the `version` field in the above configuration is the installed ver
 Use command line tool to get the latest mount app version:
 
 ```bash
-aliyun pds mountapp --action get-latest-version --user-agent AlibabaCloud-Agent-Skills
+aliyun pds mountapp --action get-latest-version --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
 ```
 
 Response format:
@@ -95,7 +95,7 @@ Different operating systems require different installation package types:
 
 ```bash
 # Get download URL
-latest_info=$(aliyun pds mountapp --action get-latest-version --user-agent AlibabaCloud-Agent-Skills)
+latest_info=$(aliyun pds mountapp --action get-latest-version --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace)
 download_url=$(echo "$latest_info" | jq -r '.url')
 version=$(echo "$latest_info" | jq -r '.version')
 
@@ -288,7 +288,7 @@ If not running, use following steps to start:
 1. **Get User ID**:
 
 ```powershell
-$userIdJson = aliyun pds mountapp --action get-user-id --user-agent AlibabaCloud-Agent-Skills
+$userIdJson = aliyun pds mountapp --action get-user-id --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
 $userId = ($userIdJson | ConvertFrom-Json).user_id
 ```
 
@@ -381,7 +381,7 @@ Use **launchd (plist)** method to start mount app, which is the most stable and 
 
 ```bash
 # Get user ID
-user_id_json=$(aliyun pds mountapp --action get-user-id --user-agent AlibabaCloud-Agent-Skills)
+user_id_json=$(aliyun pds mountapp --action get-user-id --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace)
 user_id=$(echo "$user_id_json" | jq -r '.user_id')
 
 # Generate random port
@@ -515,7 +515,7 @@ systemctl status mountapp
 Before mounting, you need to enable mount app feature using command line:
 
 ```bash
-aliyun pds mountapp --action enable-mountapp --user-agent AlibabaCloud-Agent-Skills
+aliyun pds mountapp --action enable-mountapp --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
 ```
 
 **Success output**:
@@ -539,7 +539,7 @@ aliyun pds mountapp --action enable-mountapp --user-agent AlibabaCloud-Agent-Ski
 Query mount app status before mounting. If already mounted, skip mounting step:
 
 ```bash
-aliyun pds mountapp --action get-status --user-agent AlibabaCloud-Agent-Skills
+aliyun pds mountapp --action get-status --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
 ```
 
 **Example output**:
@@ -566,10 +566,10 @@ If status is `Init`, execute mounting:
 
 ```bash
 # Basic mount command
-aliyun pds mountapp --action mount --user-agent AlibabaCloud-Agent-Skills
+aliyun pds mountapp --action mount --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
 
 # Linux non-root users need to specify mount-user
-aliyun pds mountapp --action mount --mount-user admin --user-agent AlibabaCloud-Agent-Skills
+aliyun pds mountapp --action mount --mount-user admin --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
 ```
 
 **Note**: For Linux systems, check current running user. If not root user, add `--mount-user` parameter.
@@ -586,7 +586,7 @@ aliyun pds mountapp --action mount --mount-user admin --user-agent AlibabaCloud-
 After command execution succeeds, confirm mounting completion by querying status:
 
 ```bash
-aliyun pds mountapp --action get-status --user-agent AlibabaCloud-Agent-Skills
+aliyun pds mountapp --action get-status --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
 ```
 
 **Expected output**:
@@ -610,7 +610,7 @@ If `MountedStatus` is `MountSuc`, mounting is successful!
 After successful mounting, you can query mount app configuration:
 
 ```bash
-aliyun pds mountapp --action get-config --user-agent AlibabaCloud-Agent-Skills
+aliyun pds mountapp --action get-config --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
 ```
 
 **Example output**:
@@ -636,16 +636,16 @@ aliyun pds mountapp --action get-config --user-agent AlibabaCloud-Agent-Skills
 
 #### 8.5 About Boot Startup and Exception Handling
 
-1. **Not mounted after boot startup**: If after boot startup, query status shows not mounted (`Init`), need to execute mounting using command `aliyun pds mountapp --action mount --user-agent AlibabaCloud-Agent-Skills`
+1. **Not mounted after boot startup**: If after boot startup, query status shows not mounted (`Init`), need to execute mounting using command `aliyun pds mountapp --action mount --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace`
 
-2. **After process abnormal restart**: If process has exception and restarts, query status shows not mounted (`Init`), need to execute mounting using command `aliyun pds mountapp --action mount --user-agent AlibabaCloud-Agent-Skills`
+2. **After process abnormal restart**: If process has exception and restarts, query status shows not mounted (`Init`), need to execute mounting using command `aliyun pds mountapp --action mount --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace`
 
 ---
 
 ### Step 9: Modify Mount App Configuration
 Currently supports modifying mount app language. The command:
 ```bash
-aliyun pds mountapp --action set-config --language zh --user-agent AlibabaCloud-Agent-Skills
+aliyun pds mountapp --action set-config --language zh --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
 ```
 Currently supports three languages:
 - `zh`: Chinese
@@ -938,7 +938,7 @@ Mount app download, install, and startup progress:
 | `aliyun pds mountapp --action get-config` | Query mount app configuration | Used to view current mount settings and mount point |
 | `aliyun pds mountapp --action update-config` | Update mount app configuration | Used to modify mount settings |
 
-**Note**: All `aliyun pds mountapp` commands must include `--user-agent AlibabaCloud-Agent-Skills` flag.
+**Note**: All `aliyun pds mountapp` commands must include `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace` flag.
 
 ### 
 

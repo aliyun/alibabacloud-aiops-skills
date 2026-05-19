@@ -23,7 +23,7 @@ A PDS drive is a cloud storage space that can store files. A drive must have an 
 #### Query Method for Enterprise Space and Team Space
 You can query using the list group drives API. The items field in the response contains the user's team space list, and the root_group_drive field contains the enterprise space object.
 ```bash
-aliyun pds list-my-group-drive --limit 100 --marker "" --user-agent AlibabaCloud-Agent-Skills
+aliyun pds list-my-group-drive --limit 100 --marker "" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
 ```
 
 **Output**: Returns JSON containing enterprise space and team space, including `items`, `root_group_drive`, `next_marker`, etc. Detailed explanation:
@@ -116,7 +116,7 @@ In the above example output, team space drive_ids are: 100 and 101, enterprise s
 #### Query API for Personal Space
 You can query using the list my drives API. The items field in the response contains the user's personal space list.
 ```bash
-aliyun pds list-my-drives --limit 100 --marker "" --user-agent AlibabaCloud-Agent-Skills
+aliyun pds list-my-drives --limit 100 --marker "" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
 ```
 
 The JSON array in the items field returned by the personal space query API contains personal space Drive objects. Important attributes of Drive objects include:

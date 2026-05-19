@@ -22,7 +22,8 @@ description: |
 ## Agent Execution Guidelines
 - **Must execute steps in order**: Do not skip any step, do not proceed to the next step before the previous one is completed.
 - **Must follow documentation**: The aliyun pds cli commands and parameters must follow this document's guidance, do not fabricate commands.
-- **Recommended parameter**: All `aliyun pds` commands should include `--user-agent AlibabaCloud-Agent-Skills` parameter to help server identify request source, track usage, and troubleshoot issues.
+- **[MUST] CLI User-Agent** — Every `aliyun` CLI command invocation must include:
+  `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace`
 
 ## Core Concepts:
 - **Domain**: PDS instance with a unique domain_id, data is completely isolated between domains
@@ -36,12 +37,16 @@ description: |
 
 ## Installation Requirements
 
-> **Prerequisites: Requires Aliyun CLI >= 3.3.1**
+> **Prerequisites: Requires Aliyun CLI >= 3.3.3**
 >
 > Verify CLI version:
 > ```bash
-> aliyun version  # requires >= 3.3.1
+> aliyun version  # requires >= 3.3.3
 > ```
+>
+> If not installed or version too low,
+> run `curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash` to update,
+> or see `references/cli-installation-guide.md` for installation instructions.
 >
 > Verify PDS plugin version:
 > ```bash
@@ -54,6 +59,26 @@ description: |
 > ```bash
 > aliyun configure set --auto-plugin-install true
 > ```
+>
+> Then [MUST] run `aliyun plugin update` to ensure that any existing plugins on your local machine are always up-to-date.
+
+---
+## CLI Initialization (MUST run before Core Workflow)
+
+At the **start** of the Core Workflow (before any CLI invocation):
+
+**[MUST] Enable AI-Mode** — AI-mode is required for Agent Skill execution.
+Run the following commands before any CLI invocation:
+```bash
+aliyun configure ai-mode enable
+aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace"
+```
+
+**[MUST] Disable AI-Mode at EVERY exit point** — Before delivering the final response for ANY reason, always disable AI-mode first. This applies to ALL exit paths: workflow success, workflow failure, error/exception, user cancellation, session end, or any other scenario where no further CLI commands will be executed.
+AI-mode is only used for Agent Skill invocation scenarios and MUST NOT remain enabled after the skill stops running.
+```bash
+aliyun configure ai-mode disable
+```
 
 ---
 
@@ -82,7 +107,7 @@ description: |
 ```bash
 # Install Aliyun CLI (if not installed)
 curl -fsSL --max-time 10 https://aliyuncli.alicdn.com/install.sh | bash
-aliyun version  # confirm >= 3.3.1
+aliyun version  # confirm >= 3.3.3
 
 # Enable auto plugin installation
 aliyun configure set --auto-plugin-install true
@@ -95,13 +120,14 @@ pip3 install requests
 
 Before executing any PDS operations, you must first configure domain_id, user_id, and authentication type -> read `references/config.md`
 
-> **Recommended parameter**: All `aliyun pds` commands should include `--user-agent AlibabaCloud-Agent-Skills` parameter
+> **[MUST] CLI User-Agent** — Every `aliyun` CLI command invocation must include:
+> `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace`
 > 
 > Examples:
 > ```bash
-> aliyun pds get-user --user-agent AlibabaCloud-Agent-Skills
-> aliyun pds list-my-drives --user-agent AlibabaCloud-Agent-Skills
-> aliyun pds upload-file --drive-id <id> --local-path <path> --user-agent AlibabaCloud-Agent-Skills
+> aliyun pds get-user --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
+> aliyun pds list-my-drives --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
+> aliyun pds upload-file --drive-id <id> --local-path <path> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
 > ```
 
 ## References
