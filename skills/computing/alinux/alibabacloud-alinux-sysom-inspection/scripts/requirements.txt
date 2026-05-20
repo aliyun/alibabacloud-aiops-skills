@@ -1,0 +1,3 @@
+requests==2.34.2
+alibabacloud-tea-openapi==0.4.4
+alibabacloud-tea-util==0.3.14

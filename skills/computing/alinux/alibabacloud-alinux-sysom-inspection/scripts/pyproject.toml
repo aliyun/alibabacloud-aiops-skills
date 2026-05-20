@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sysom-inspection"
+version = "0.1.0"
+description = "SysOM inspection CLI"
+requires-python = ">=3.8"
+dependencies = [
+    "requests==2.34.2",
+    "alibabacloud-tea-openapi==0.4.4",
+    "alibabacloud-tea-util==0.3.14",
+]
+
+[project.scripts]
+sysom-inspection = "sysom_cli.__main__:main"
