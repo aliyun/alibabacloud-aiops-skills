@@ -14,7 +14,7 @@
 aliyun r-kvstore describe-instance-attribute \
   --instance-id "${INSTANCE_ID}" \
   --cli-query "Instances.DBInstanceAttribute[0].InstanceStatus" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-tair-devtoolset
 ```
 
 **Success Indicator**: Return value is `Normal`
@@ -24,7 +24,7 @@ aliyun r-kvstore describe-instance-attribute \
 ```bash
 aliyun r-kvstore describe-security-ips \
   --instance-id "${INSTANCE_ID}" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-tair-devtoolset
 ```
 
 **Success Indicator**: Returned `SecurityIpGroups` contains benchmark group, and IP address matches local public IP.
@@ -34,7 +34,7 @@ aliyun r-kvstore describe-security-ips \
 ```bash
 aliyun r-kvstore describe-db-instance-net-info \
   --instance-id "${INSTANCE_ID}" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-tair-devtoolset
 ```
 
 **Success Indicator**: Returned `NetInfoItems.InstanceNetInfo` contains a record with `IPType` as `Public`, and `ConnectionString` is not empty.

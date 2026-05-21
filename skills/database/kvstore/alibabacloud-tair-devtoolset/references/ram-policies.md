@@ -9,6 +9,10 @@
 | R-KVStore | r-kvstore:ModifySecurityIps | * | Modify IP whitelist |
 | R-KVStore | r-kvstore:AllocateInstancePublicConnection | * | Allocate public connection endpoint |
 | R-KVStore | r-kvstore:DescribeDBInstanceNetInfo | * | Query instance network info |
+| R-KVStore | r-kvstore:ModifyBackupPolicy | * | Modify automatic backup policy |
+| R-KVStore | r-kvstore:CreateBackup | * | Create a manual backup |
+| R-KVStore | r-kvstore:DescribeBackups | * | Query backup sets |
+| R-KVStore | r-kvstore:RestoreInstance | * | Restore instance from backup or point-in-time |
 
 ## RAM Policy Document
 
@@ -23,7 +27,11 @@
         "r-kvstore:DescribeInstanceAttribute",
         "r-kvstore:ModifySecurityIps",
         "r-kvstore:AllocateInstancePublicConnection",
-        "r-kvstore:DescribeDBInstanceNetInfo"
+        "r-kvstore:DescribeDBInstanceNetInfo",
+        "r-kvstore:ModifyBackupPolicy",
+        "r-kvstore:CreateBackup",
+        "r-kvstore:DescribeBackups",
+        "r-kvstore:RestoreInstance"
       ],
       "Resource": "*"
     }

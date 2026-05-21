@@ -185,19 +185,19 @@ create_instance() {
         # Generate ClientToken for idempotency
         CLIENT_TOKEN="tair-${INSTANCE_NAME}-$(date +%s)"
         
-        RESULT=$(aliyun r-kvstore CreateTairInstance \
-            --RegionId "$REGION_ID" \
-            --ZoneId "$ZONE_ID" \
-            --VpcId "$VPC_ID" \
-            --VSwitchId "$VSWITCH_ID" \
-            --InstanceName "$INSTANCE_NAME" \
-            --InstanceType "$INSTANCE_TYPE" \
-            --InstanceClass "$INSTANCE_CLASS" \
-            --ChargeType "$CHARGE_TYPE" \
-            --ShardType "MASTER_SLAVE" \
-            --ClientToken "$CLIENT_TOKEN" \
-            --AutoPay true \
-            --user-agent AlibabaCloud-Agent-Skills 2>&1 || true)
+        RESULT=$(aliyun r-kvstore create-tair-instance \
+            --biz-region-id "$REGION_ID" \
+            --zone-id "$ZONE_ID" \
+            --vpc-id "$VPC_ID" \
+            --vswitch-id "$VSWITCH_ID" \
+            --instance-name "$INSTANCE_NAME" \
+            --instance-type "$INSTANCE_TYPE" \
+            --instance-class "$INSTANCE_CLASS" \
+            --charge-type "$CHARGE_TYPE" \
+            --shard-type "MASTER_SLAVE" \
+            --client-token "$CLIENT_TOKEN" \
+            --auto-pay true \
+            --user-agent AlibabaCloud-Agent-Skills/alibabacloud-tair-devtoolset 2>&1 || true)
         
         INSTANCE_ID=$(echo "$RESULT" | jq -r '.InstanceId' 2>/dev/null || true)
         
@@ -228,7 +228,7 @@ wait_for_instance() {
     RETRY_INTERVAL=30
     
     for i in $(seq 1 $MAX_RETRIES); do
-        RESULT=$(aliyun r-kvstore DescribeInstanceAttribute --InstanceId "$INSTANCE_ID" --user-agent AlibabaCloud-Agent-Skills 2>/dev/null || echo '{}')
+        RESULT=$(aliyun r-kvstore describe-instance-attribute --instance-id "$INSTANCE_ID" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-tair-devtoolset 2>/dev/null || echo '{}')
         
         # Try multiple possible JSON paths
         STATUS=$(echo "$RESULT" | jq -r '.Instances.DBInstanceAttribute[0].InstanceStatus // .InstanceStatus // empty' 2>/dev/null || true)
@@ -255,11 +255,11 @@ wait_for_instance() {
 configure_whitelist() {
     log_info "Configuring whitelist..."
     
-    if ! aliyun r-kvstore ModifySecurityIps \
-        --InstanceId "$INSTANCE_ID" \
-        --SecurityIps "$MY_PUBLIC_IP" \
-        --SecurityIpGroupName "benchmark" \
-        --user-agent AlibabaCloud-Agent-Skills > /dev/null 2>&1; then
+    if ! aliyun r-kvstore modify-security-ips \
+        --instance-id "$INSTANCE_ID" \
+        --security-ips "$MY_PUBLIC_IP" \
+        --security-ip-group-name "benchmark" \
+        --user-agent AlibabaCloud-Agent-Skills/alibabacloud-tair-devtoolset > /dev/null 2>&1; then
         log_error "Whitelist configuration failed"
         exit 1
     fi
@@ -275,11 +275,11 @@ allocate_public_connection() {
     CONNECTION_PREFIX=$(echo "$INSTANCE_ID" | tr '[:upper:]' '[:lower:]' | sed 's/-//g' | cut -c1-20)
     CONNECTION_PREFIX="${CONNECTION_PREFIX}pub"
     
-    if ! aliyun r-kvstore AllocateInstancePublicConnection \
-        --InstanceId "$INSTANCE_ID" \
-        --ConnectionStringPrefix "$CONNECTION_PREFIX" \
-        --Port "6379" \
-        --user-agent AlibabaCloud-Agent-Skills > /dev/null 2>&1; then
+    if ! aliyun r-kvstore allocate-instance-public-connection \
+        --instance-id "$INSTANCE_ID" \
+        --connection-string-prefix "$CONNECTION_PREFIX" \
+        --port "6379" \
+        --user-agent AlibabaCloud-Agent-Skills/alibabacloud-tair-devtoolset > /dev/null 2>&1; then
         log_error "Public endpoint allocation failed"
         exit 1
     fi
@@ -292,7 +292,7 @@ allocate_public_connection() {
     RETRY_INTERVAL=30
     
     for i in $(seq 1 $MAX_RETRIES); do
-        RESULT=$(aliyun r-kvstore DescribeInstanceAttribute --InstanceId "$INSTANCE_ID" --user-agent AlibabaCloud-Agent-Skills 2>/dev/null || echo '{}')
+        RESULT=$(aliyun r-kvstore describe-instance-attribute --instance-id "$INSTANCE_ID" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-tair-devtoolset 2>/dev/null || echo '{}')
         
         # Try multiple possible JSON paths
         STATUS=$(echo "$RESULT" | jq -r '.Instances.DBInstanceAttribute[0].InstanceStatus // .InstanceStatus // empty' 2>/dev/null || true)
@@ -319,7 +319,7 @@ allocate_public_connection() {
 get_public_connection() {
     log_info "Getting public connection info..."
     
-    RESULT=$(aliyun r-kvstore DescribeDBInstanceNetInfo --InstanceId "$INSTANCE_ID" --user-agent AlibabaCloud-Agent-Skills 2>&1 || true)
+    RESULT=$(aliyun r-kvstore describe-db-instance-net-info --instance-id "$INSTANCE_ID" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-tair-devtoolset 2>&1 || true)
     
     PUBLIC_HOST=$(echo "$RESULT" | jq -r '.NetInfoItems.InstanceNetInfo[] | select(.IPType=="Public") | .ConnectionString' 2>/dev/null | head -n1 || true)
     PUBLIC_PORT=$(echo "$RESULT" | jq -r '.NetInfoItems.InstanceNetInfo[] | select(.IPType=="Public") | .Port' 2>/dev/null | head -n1 || true)
