@@ -2,11 +2,15 @@
 name: alibabacloud-pai-dlc-job
 description: |
   Alibaba Cloud PAI-DLC (Deep Learning Containers) job management skill.
-  Use for creating, managing, and monitoring DLC training jobs
-  and managing reusable job templates.
+  Covers: distributed training job CRUD, JobTemplate (versioned reusable
+  configs), TensorBoard lifecycle (create / start / stop / update / share),
+  Ray & generic Dashboards, plus monitoring (logs / events / metrics) and
+  GPU sanity check.
   Triggers: "DLC", "PAI-DLC", "JobTemplate", "create-job-template",
   "list-job-templates", "set-job-template-default-version",
-  "create-tensorboard", "list-tensorboards", "get-dashboard".
+  "create-tensorboard", "list-tensorboards", "start-tensorboard",
+  "stop-tensorboard", "update-tensorboard", "get-tensorboard-shared-url",
+  "get-dashboard", "get-ray-dashboard".
 ---
 
 # PAI-DLC Deep Learning Job Management
@@ -45,6 +49,12 @@ quotas / workspaces).
 > (`aliyun version`, `aliyun configure ...`, `aliyun plugin ...`,
 > `aliyun <product> --help`) do not invoke remote APIs and therefore do not require
 > the flag.
+
+> **Network timeout & retry (rule `--help` doesn't enforce):** `aliyun` CLI
+> defaults to 10s connect / 10s read with no retry. For long-running flows
+> (large list, slow region) explicitly raise via global flags
+> `--connect-timeout 15 --read-timeout 30 --retry-count 2`. Never rely on the
+> default for user-confirmed high-risk calls (`stop-job` / `delete-*`).
 
 ```bash
 aliyun version
@@ -127,35 +137,54 @@ For detailed permission list, see [references/ram-policies.md](references/ram-po
 
 ## Parameter Confirmation
 
-> **IMPORTANT: Parameter Confirmation** — Before executing any command or API call,
-> ALL user-customizable parameters (e.g., RegionId, instance names, CIDR blocks,
-> passwords, domain names, resource specifications, etc.) MUST be confirmed with the
-> user. Do NOT assume or use default values without explicit user approval.
+> **Authoritative parameter reference is `aliyun pai-dlc <cmd> --help`** (必读
+> before every call). This skill only documents what `--help` does **not** tell
+> you: cross-field rules, cross-product dependencies, hidden behaviors, business
+> labels, and reject patterns. Whenever a rule below contradicts `--help`, the
+> reason is stated inline.
+>
+> **Confirm before call:** all user-customizable values (region, names, CIDR,
+> specs, etc.) MUST be confirmed with the user — never assume defaults.
 
-### Parameters Requiring User Confirmation
+### Hard rules that override `--help`
 
-| Parameter | Required | Notes |
-|-----------|----------|-------|
-| `--region` | Yes | e.g., `cn-hangzhou` |
-| `--workspace-id` | Yes | From `aliyun aiworkspace list-workspaces` |
-| `--job-type` | Yes | `PyTorchJob`, `TFJob`, `RayJob`, etc. |
-| `--display-name` | Yes | Meaningful name (project + model + date) |
-| `--job-specs[].Image` | Yes | Verbatim `ImageUri` from `list-images` (see §7.6 red line) |
-| `--user-command` | Yes | e.g., `python train.py` |
-| `--job-specs[].EcsSpec` | Conditional | Public pay-as-you-go (mutually exclusive with `ResourceConfig`) |
-| `--resource-id` + `ResourceConfig` | Conditional | Dedicated quota path (mutually exclusive with `EcsSpec`). User MUST manually provide the QuotaId.|
-| `--data-sources` / `--code-source` | Optional | From `list-datasets` / `list-code-sources` |
-| `--template-id` | Conditional | When creating Job from JobTemplate |
+| Rule | Why this skill overrides `--help` |
+|------|-----------------------------------|
+| `--workspace-id` is **always required** | `--help` marks it optional, but server silently falls back to the user's **default workspace** if omitted → job often lands in the wrong workspace. Always confirm with user. |
+| `--job-specs[].Image` MUST be a verbatim `ImageUri` from `aiworkspace list-images` | Cross-product contract; `--help` only describes the field type. See §7.6 red line. |
+| `--data-sources[].DataSourceId` from `aiworkspace list-datasets`; `--code-source.CodeSourceId` from `list-code-sources` | Cross-product discovery; `--help` cannot point you to the source product. |
+| `--resource-id` (QuotaId) is **manually supplied** | No CLI discovery step. |
 
-For all parameters: `aliyun pai-dlc create-job --help`.
+### Cross-field mutual exclusion (`--help` cannot catch these)
 
-**Mutual exclusion summary:**
+- `EcsSpec` ⇄ `ResourceConfig` — within a single TaskSpec, pick exactly one.
+- `Uri` ⇄ `DataSourceId` — within `--data-sources[]`.
+- `Uri` ⇄ `CodeSourceId` — within `--code-source`.
 
-- `EcsSpec` and `ResourceConfig` are **mutually exclusive** within a single TaskSpec.
-- `Uri` and `DataSourceId` within `--data-sources[]` are mutually exclusive.
-- `Uri` and `CodeSourceId` within `--code-source` are mutually exclusive.
+### `--job-type` — Worker `Type` hints per framework
 
-For full parameter reference: see [references/related-apis.md](references/related-apis.md).
+`--help` lists the 9 legal enum values verbatim. What `--help` doesn't tell you
+is which `JobSpecs[].Type` roles each framework expects:
+
+| `--job-type` | Valid `JobSpecs[].Type` roles |
+|---|---|
+| `TFJob` | `Chief` / `PS` / `Worker` / `Evaluator` / `GraphLearn` |
+| `PyTorchJob` | `Worker` (+ optional `Master`, auto-promoted) |
+| `MPIJob` | `Worker` + `Master` |
+| `XGBoostJob` / `OneFlowJob` / `ElasticBatchJob` | `Worker` + optional `Master` |
+| `RayJob` | `Worker` (required for `get-dashboard` / `get-ray-dashboard`) |
+| `SlurmJob` / `DataJuicerJob` | framework-specific roles |
+
+> **Case-sensitive, no aliases.** `tensorflow`, `pytorch`, `tf-job`, `Pytorch`,
+> `PYTORCH_JOB`, `Custom`, `CustomJob` — all rejected.
+>
+> **No `Custom` enum.** For single-container custom workloads, map to
+> `PyTorchJob` (most permissive role set).
+>
+> **Locked after create:** `JobType` cannot be changed via `update-job`. With
+> `--template-id`, the template's `JobType` wins.
+
+Full field reference: see [references/related-apis.md](references/related-apis.md).
 
 ## Core Workflows
 
@@ -190,84 +219,55 @@ Optional flags: `--enable-gang-scheduling true` (all-or-nothing scheduling),
 `Settings.EnableRDMA: true` (high-performance network for multi-node GPU),
 `Settings.EnableSanityCheck: true` (GPU health verification).
 
+> **All commands below require `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job`** (omitted in snippets for brevity — see Installation Requirements).
+
 ### 7.2 Create Training Job
 
+Minimal single-node PyTorch job (public pay-as-you-go) parameter combination:
+
 ```bash
-# Minimal single-node PyTorch job (public pay-as-you-go)
-aliyun pai-dlc create-job \
-  --region <region> \
-  --workspace-id <workspace-id> \
-  --display-name "my-pytorch-training" \
-  --job-type PyTorchJob \
-  --job-specs '[{
-    "Type": "Worker",
-    "PodCount": 1,
-    "Image": "<ImageUri-from-aiworkspace-list-images>",
-    "EcsSpec": "ecs.gn6i-c4g1.xlarge"
-  }]' \
-  --user-command 'python train.py' \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
+aliyun pai-dlc create-job --region <region> --workspace-id <ws-id> \
+  --display-name "my-pytorch-training" --job-type PyTorchJob \
+  --job-specs '[{"Type":"Worker","PodCount":1,"Image":"<ImageUri>","EcsSpec":"ecs.gn6i-c4g1.xlarge"}]' \
+  --user-command 'python train.py'
 ```
 
-For multi-node topologies, see §7.1. For Spot, RDMA, data mounting parameters, use `aliyun pai-dlc create-job --help`.
+Multi-node / Spot / RDMA / data mounting — use `create-job --help`.
 
 ### 7.3 List / Get Job
 
+Use `--cli-query` to project specific fields (essential for log/event flows):
+
 ```bash
-# List running jobs (status filter: Creating/Queuing/Running/Succeeded/Failed/Stopped)
-aliyun pai-dlc list-jobs \
-  --region <region> \
-  --status Running \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
-
-# Get job detail
-aliyun pai-dlc get-job \
-  --region <region> \
-  --job-id <job-id> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
-
-# Get a specific PodId (for log/event queries)
-aliyun pai-dlc get-job \
-  --region <region> \
-  --job-id <job-id> \
-  --cli-query "Pods[0].PodId" \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
+aliyun pai-dlc list-jobs --region <region> --status Running
+aliyun pai-dlc get-job  --region <region> --job-id <id>
+aliyun pai-dlc get-job  --region <region> --job-id <id> --cli-query "Pods[0].PodId"
 ```
 
 ### 7.4 Logs, Events, and Metrics
 
-> **IMPORTANT**: Always limit return size: `--max-lines 100` for logs, `--max-events-num 50` for events.
+> **Always cap return size:** `--max-lines 100` (logs), `--max-events-num 50` (events).
+
+Get `PodId` first, then query logs/events/metrics:
 
 ```bash
-# Get PodId first, then query logs/events/metrics
-POD_ID=$(aliyun pai-dlc get-job --region <region> --job-id <job-id> \
-  --cli-query "Pods[0].PodId" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job)
-
-aliyun pai-dlc get-pod-logs --region <region> --job-id <job-id> --pod-id $POD_ID --max-lines 100 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
-aliyun pai-dlc get-pod-events --region <region> --job-id <job-id> --pod-id $POD_ID --max-events-num 20 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
-aliyun pai-dlc get-job-events --region <region> --job-id <job-id> --max-events-num 50 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
-aliyun pai-dlc get-job-metrics --region <region> --job-id <job-id> --metric-type GpuCoreUsage --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
+POD_ID=$(aliyun pai-dlc get-job --region <r> --job-id <id> --cli-query "Pods[0].PodId")
+aliyun pai-dlc get-pod-logs    --region <r> --job-id <id> --pod-id $POD_ID --max-lines 100
+aliyun pai-dlc get-pod-events  --region <r> --job-id <id> --pod-id $POD_ID --max-events-num 20
+aliyun pai-dlc get-job-events  --region <r> --job-id <id> --max-events-num 50
+aliyun pai-dlc get-job-metrics --region <r> --job-id <id> --metric-type GpuCoreUsage
 ```
 
-**Metric types:** `GpuCoreUsage`, `GpuMemoryUsage`, `CpuCoreUsage`, `MemoryUsage`, `NetworkInputRate`, `NetworkOutputRate`, `DiskReadRate`, `DiskWriteRate`.
+> `--metric-type` 8 valid enum values + default time window: see
+> `aliyun pai-dlc get-job-metrics --help`.
 
 **Diagnosis order:** `get-job` (status) → `get-job-events` → `get-pod-logs` → `get-pod-events`.
 
 ### 7.5 Compute Health Check
 
 ```bash
-# All sanity check results
-aliyun pai-dlc list-job-sanity-check-results \
-  --region <region> \
-  --job-id <job-id> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
-
-# Single sanity check result
-aliyun pai-dlc get-job-sanity-check-result \
-  --region <region> \
-  --job-id <job-id> \
-  --sanity-check-number 1 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
+aliyun pai-dlc list-job-sanity-check-results --region <r> --job-id <id>
+aliyun pai-dlc get-job-sanity-check-result   --region <r> --job-id <id> --sanity-check-number 1
 ```
 
 ### 7.6 Pre-Create Resource Discovery (AIWorkSpace)
@@ -275,53 +275,26 @@ aliyun pai-dlc get-job-sanity-check-result \
 **Discovery flow:** `list-workspaces` → `list-image-labels` →
 `list-images` → `list-datasets` → `list-code-sources` → `pai-dlc create-job`.
 
-> **Quota (--resource-id):** User MUST manually provide the QuotaId. No CLI discovery step.
+> **Quota (`--resource-id`):** user-supplied. No CLI discovery step.
 
 ```bash
-# Step 1: Pick a workspace (yields --workspace-id)
-aliyun aiworkspace list-workspaces \
-  --region <region> --page-number 1 --page-size 20 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
-
-# Step 2: Discover available image labels (MUST run before list-images)
-# list-image-labels returns all label Key-Value pairs available in this region.
-# Use this to discover valid --labels filters for list-images.
-aliyun aiworkspace list-image-labels \
-  --region <region> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
-
-# How to use list-image-labels results:
-# - Extract label Keys (e.g. system.chipType, system.framework, system.cudaVersion)
-#   and their available Values to construct --labels filters
-# - Multiple labels can be combined with comma: --labels "key1=val1,key2=val2"
-# - Labels format: --labels "Key=Value" (single key-value pair), NOT JSON or spaces
-
-# Step 3: Pick an image (yields WorkerSpec.Image / --job-specs[].Image)
-# Labels MUST come from list-image-labels output — NEVER guess or invent label values
-# NOTE: Do NOT pass --workspace-id to list-images; official images are global
-aliyun aiworkspace list-images \
-  --region <region> \
-  --labels "<Key1=Value1,Key2=Value2>" \
-  --page-size 20 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
-
-# RED LINE: --job-specs[].Image MUST be a verbatim ImageUri from list-images.
-# NEVER invent, rewrite, or copy Name/ImageId instead of ImageUri.
-
-# Step 4: Pick a dataset (yields DataSources[].DataSourceId)
-aliyun aiworkspace list-datasets \
-  --region <region> --workspace-id <workspace-id> --page-size 20 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
-
-# Step 5: Pick a code source (yields CodeSource.CodeSourceId)
-aliyun aiworkspace list-code-sources \
-  --region <region> --workspace-id <workspace-id> --page-size 20 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
+aliyun aiworkspace list-workspaces     --region <r>                        # → --workspace-id
+aliyun aiworkspace list-image-labels   --region <r>                        # → valid label Key=Value pairs
+aliyun aiworkspace list-images         --region <r> --labels "K1=V1,K2=V2" # → --job-specs[].Image (use ImageUri verbatim)
+aliyun aiworkspace list-datasets       --region <r> --workspace-id <ws>    # → DataSources[].DataSourceId
+aliyun aiworkspace list-code-sources   --region <r> --workspace-id <ws>    # → CodeSource.CodeSourceId
 ```
 
-> **Red line (also applies in Section 7.7):** Do NOT fall back to ROA generic
-> invocations (`--pathPattern` / `--method GET|POST|PUT|DELETE`) when a plugin
-> is missing or returns an error. Install/upgrade the plugin instead.
+> **Labels rules** (not in `--help`): comma-separated `Key=Value` pairs, no
+> JSON / no spaces. Values MUST come from `list-image-labels` — never invent.
+> Do **not** pass `--workspace-id` to `list-images` (official images are global).
+>
+> **RED LINE:** `--job-specs[].Image` MUST be a verbatim `ImageUri` (not
+> `Name` / `ImageId`).
+>
+> **No ROA fallback** (also applies to §7.7): if a plugin subcommand is
+> missing, install/upgrade the plugin — never use `--pathPattern` /
+> `--method GET|POST|PUT|DELETE`.
 
 Field-mapping, full parameters, and error codes: see
 [references/related-apis.md](references/related-apis.md) and
@@ -330,16 +303,36 @@ Field-mapping, full parameters, and error codes: see
 ### 7.7 JobTemplate Management (Reusable Templates)
 
 JobTemplate stores a `CreateJob` configuration (`JobSpecs`, `UserCommand`,
-`DataSources`, etc.) as a versioned, reusable template. Six subcommands are
-exposed by `aliyun-cli-pai-dlc` >= 0.3.1:
-`create-job-template`, `get-job-template`, `list-job-templates`,
-`update-job-template`, `set-job-template-default-version`. A Job can be launched from a template via
+`DataSources`, etc.) as a versioned, reusable template. Six subcommands under
+`aliyun pai-dlc` (full params: each subcommand's `--help`):
+`create-job-template` / `get-job-template` / `list-job-templates` /
+`update-job-template` / `set-job-template-default-version` /
+`delete-job-template`. Launch a Job from a template via
 `aliyun pai-dlc create-job --template-id <id>`.
 
-> **Constraints format:** When passing `--constraints`, use escaped-quote JSON:
-> `--constraints '{\"JobSpecs[0].Image\":\"locked\",\"UserCommand\":\"locked\"}'`.
+> **Rules `--help` doesn't (clearly) tell you:**
+>
+> - **`--constraints` must be bash-escaped JSON**, e.g.
+>   `--constraints '{\"JobSpecs[0].Image\":\"locked\",\"UserCommand\":\"locked\"}'`.
+>   Constraint values ∈ `locked` / `overridable` / `required` (semantics in
+>   [references/job-template-management.md](references/job-template-management.md)).
+> - **`update-job-template`: `--constraints` cannot be passed alone** — `--help`
+>   states it "must be specified with `Content` and cannot be updated on its own".
+>   Each `--content` push creates a new version; pair `--set-as-default true` to
+>   promote it.
+> - **`get-job-template --biz-version all`** returns every version (omit → default
+>   version only). Useful for auditing version history.
+> - **`delete-job-template` is blocked when the template is referenced by any
+>   job** (per `--help` description). Clean up referencing jobs first, or use a
+>   never-referenced template for delete tests.
+> - **`Content` is a JSON string** (OpenAPI contract, `--help` confirms). Server
+>   stores it verbatim; `get-job-template` returns `Versions[0].Content` as a
+>   JSON string with outer quotes — to inspect inner fields, parse with `jq`.
+>   `create-job --template-id` consumes it directly, no manual parsing needed.
+> - **`list-job-templates --sort-by`** — `--help` doesn't list the enum; default
+>   `GmtCreateTime` is safe, other field names are not publicly documented.
 
-For full CRUD workflow, Constraints semantics, JSONPath rules, and pitfalls, see
+For full CRUD workflow, Constraints semantics, and JSONPath rules, see
 [references/job-template-management.md](references/job-template-management.md).
 
 ### 7.8 Job Lifecycle Management (Stop / Update / Web Terminal)
@@ -347,7 +340,19 @@ For full CRUD workflow, Constraints semantics, JSONPath rules, and pitfalls, see
 Stop is a **high-risk** operation. Before proceeding, query status with
 `get-job`, present the result to the user, and require explicit confirmation.
 
-- Stop Job: applicable only when status is `Running` or `Queuing`.
+> **Rules `--help` doesn't tell you (`update-job` silent-no-op family):**
+>
+> - **Stop Job** applies only when status is `Running` or `Queuing`.
+> - **`update-job --priority`** takes effect **only** when (a) the job uses
+>   **quota resources** (`--resource-id`) AND (b) is still in submission
+>   phase — `Creating` or `Queuing`. Change is applied asynchronously, typically
+>   in 10–60 seconds. Public pay-as-you-go (`EcsSpec`) jobs and jobs past the
+>   submission phase (`EnvPreparing` / `Running` / …) receive `200 OK` but the
+>   priority is **silently NOT applied** — always pre-check status with `get-job`.
+> - **`update-job --accessibility`** takes effect immediately in any status.
+> - **`update-job` does NOT expose `--display-name`** (`--help` lists only
+>   `--job-id`, `--accessibility`, `--description`, `--job-specs`, `--priority`).
+>   To rename a job, recreate it.
 
 For the full pre-check + confirmation + execution templates, plus the
 `update-job` low-risk path and `get-web-terminal` / `get-token` sharing
@@ -355,78 +360,63 @@ commands, see [references/job-management.md](references/job-management.md).
 
 ### 7.9 Ecs Spec Discovery
 
-Discover available instance types before choosing `EcsSpec` in `--job-specs`.
-Results from `list-ecs-specs` provide the exact `EcsSpec` value to use.
+Discover available instance types; the returned `EcsSpec` value goes
+verbatim into `--job-specs[].EcsSpec`.
 
 ```bash
-# GPU public pay-as-you-go instances
-aliyun pai-dlc list-ecs-specs \
-  --region <region> \
-  --accelerator-type GPU \
-  --resource-type ECS \
-  --sort-by GPU \
-  --order desc \
-  --page-size 20 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
-
-# Lingjun dedicated instances
-# Note: --quota-id is only available for whitelisted users
+aliyun pai-dlc list-ecs-specs --region <r> --accelerator-type GPU --resource-type ECS --page-size 20
+# Lingjun dedicated: --quota-id <id> (whitelisted users only)
 ```
 
-Copy the returned `EcsSpec` value verbatim into `--job-specs[].EcsSpec`.
-For full parameters see `aliyun pai-dlc list-ecs-specs --help`.
+> **`--sort-by` enum (per `--help`):** `CPU` / `GPU` / `Memory` /
+> `GmtCreateTime` — note **upper-case** `CPU` / `GPU`. Lowercase or arbitrary
+> field names → `BadRequest`. Fallback: omit `--sort-by`, sort client-side
+> with `jq -r '.EcsSpecs | sort_by(-.AcceleratorNumber)'`.
 
 ### 7.10 Tensorboard Management
 
-TensorBoard visualizes training metrics. Seven subcommands under `aliyun pai-dlc`:
-`create-tensorboard`, `list-tensorboards`, `get-tensorboard`, `start-tensorboard`,
-`stop-tensorboard`, `update-tensorboard`, `get-tensorboard-shared-url`.
+TensorBoard visualizes training metrics. 8 subcommands under `aliyun pai-dlc`
+(`create-tensorboard`, `list-tensorboards`, `get-tensorboard`,
+`start-tensorboard`, `stop-tensorboard`, `update-tensorboard`,
+`get-tensorboard-shared-url`, `delete-tensorboard`).
 
-> `--job-id` and `--data-sources` are mutually exclusive in create.
+> **Rules `--help` doesn't tell you:**
+>
+> - **`--job-id` ⇄ `--data-sources`** in `create-tensorboard` — mutually exclusive.
+> - **`--data-sources` vs `--tensorboard-data-sources`** in `create-tensorboard`:
+>   - `--data-sources [{DataSourceId, MountPath}]` mounts an **existing**
+>     workspace dataset. **`Uri` silently ignored** even if passed.
+>   - `--tensorboard-data-sources [{SourceType, Uri}]` is for raw
+>     `Uri` (OSS / NAS / CPFS) without a pre-registered dataset.
+>   - Pick the parameter that matches your input; never stuff `Uri` into
+>     `--data-sources`.
+> - **`update-tensorboard` does NOT expose `--display-name`** (`--help` lists
+>   only `--tensorboard-id` / `--accessibility` / `--max-running-time-minutes`
+>   / `--priority` / `--workspace-id`). To rename, recreate.
 
 ```bash
-# Create from a job (most common)
-aliyun pai-dlc create-tensorboard \
-  --region <region> \
-  --job-id <job-id> \
-  --display-name "my-training-tb" \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
-
-# Create from a dataset summary path
-aliyun pai-dlc create-tensorboard \
-  --region <region> \
-  --data-sources '[{"DataSourceId":"<dataset-id>","MountPath":"/mnt/logs"}]' \
-  --summary-path /mnt/logs \
-  --display-name "dataset-tb" \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
+# From a job (most common)
+aliyun pai-dlc create-tensorboard --region <r> --job-id <id> --display-name "my-tb"
+# From a dataset summary path
+aliyun pai-dlc create-tensorboard --region <r> \
+  --data-sources '[{"DataSourceId":"<id>","MountPath":"/mnt/logs"}]' \
+  --summary-path /mnt/logs --display-name "dataset-tb"
 ```
 
-For full parameters and lifecycle, see [references/related-apis.md](references/related-apis.md)
-TensorBoard section.
+Full parameters / lifecycle: see
+[references/related-apis.md](references/related-apis.md) §1.3.
 
 ### 7.11 Dashboard & Ray Dashboard
 
-Both `get-dashboard` and `get-ray-dashboard` return a URL only for `RayJob` type
-jobs. For non-Ray jobs, the response is empty.
+`get-dashboard` / `get-ray-dashboard` return a URL **only for `RayJob`**;
+other job types return empty.
 
 ```bash
-# Generic DLC dashboard (RayJob only)
-aliyun pai-dlc get-dashboard \
-  --region <region> \
-  --job-id <job-id> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
-
-# Ray-specific dashboard with optional sharing
-aliyun pai-dlc get-ray-dashboard \
-  --region <region> \
-  --job-id <job-id> \
-  --is-shared true \
-  --token <sharing-token> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
+aliyun pai-dlc get-dashboard     --region <r> --job-id <id>
+aliyun pai-dlc get-ray-dashboard --region <r> --job-id <id> --is-shared true --token <t>
 ```
 
-For shared access, first obtain a token via `get-token --target-type job`,
-then pass it to `get-ray-dashboard --token <token> --is-shared true`.
+For shared access, obtain `<t>` via `get-token --target-type job` first.
 
 ## Success Verification Method
 
@@ -445,39 +435,53 @@ CreateJob → log query → cleanup, plus JobTemplate CRUD verification), see
 
 ## Command Tables
 
-A flat list of every CLI command used by this skill (Product / Command /
-Description) is in [references/related-commands.md](references/related-commands.md).
+The full command index (5 categories × ~40 commands, with plugin
+attribution) is consolidated in
+[references/related-apis.md](references/related-apis.md) §1.
 
 ## Best Practices
 
-1. **Job Naming Convention** — Use meaningful names containing project, model,
-   and date, e.g., `resnet50-imagenet-20260320`.
-2. **Resource Configuration Optimization** — Choose appropriate GPU type and
-   quantity based on model size and dataset size.
-3. **Log Monitoring** — Periodically check logs and events to detect failures
-   early.
-4. **Priority Management** — Set higher priority for critical jobs (1-9, 9 highest).
-5. **Cost Control** — Spot instances reduce cost at the risk of preemption; use
-   `--job-max-running-time-minutes` as an auto-stop guard for any long-running
-   experiment.
-6. **Health Check** — Enable `Settings.EnableSanityCheck: true` to verify GPU
-   devices before training starts.
-7. **Resource Cleanup** — Stop completed jobs promptly to free resource quotas.
-8. **Template Reuse** — Capture standardized training pipelines as JobTemplates;
-   mark `Image` / `DataSources` as `locked` and `UserCommand` / `Envs` as
+> Items below are **decision rules** and **operational habits** — not parameter
+> values (those live in `--help`).
+
+1. **Job naming** — use meaningful, sortable names: `project-model-date`
+   (e.g. `resnet50-imagenet-20260320`). Recreate (not `update-job`) is the
+   only way to rename.
+2. **Resource sizing** — pick GPU type / count by model & dataset size. Verify
+   availability with `list-ecs-specs --accelerator-type GPU` **before** picking
+   `EcsSpec` (see §7.9).
+3. **Diagnose early** — follow the order `get-job` → `get-job-events` →
+   `get-pod-logs` → `get-pod-events`. Cap responses (`--max-lines 100`,
+   `--max-events-num 50`) to keep agent context lean.
+4. **Priority adjustment** — prefer setting `--priority` at `create-job` time.
+   Post-creation `update-job --priority` only works for quota jobs in
+   `Creating` / `Queuing` phase (§7.8); otherwise it silently no-ops.
+5. **Cost control** — use `--job-max-running-time-minutes` as an auto-stop guard
+   for every long-running experiment. Spot via `SpotSpec` reduces cost at the
+   risk of preemption.
+6. **Health check** — enable `Settings.EnableSanityCheck: true` for GPU
+   training to catch faulty devices before training starts.
+7. **Resource cleanup** — `stop-job` on completed jobs to free quota; clean up
+   TensorBoards via `delete-tensorboard` once analysis is done.
+8. **Template reuse** — capture standardized pipelines as JobTemplates. Mark
+   `Image` / `DataSources` as `locked` and `UserCommand` / `Envs` as
    `overridable` so consumers focus on business parameters via
-   `create-job --template-id`.
-9. **TensorBoard Monitoring** — Attach a TensorBoard instance to training jobs for
-   real-time metric visualization.
-10. **Ecs Spec Discovery** — Run `list-ecs-specs --accelerator-type GPU` before
-    choosing `EcsSpec` to confirm which instance types are available in the region.
+   `create-job --template-id` (§7.7).
+9. **TensorBoard wiring** — prefer `create-tensorboard --job-id` (auto-discovers
+   summary path). Use `--tensorboard-data-sources` only when pointing at a raw
+   `Uri` outside any workspace dataset (§7.10).
+10. **Idempotency on writes** — PAI-DLC `create-*` APIs do **NOT** expose
+    `--client-token` (verified via `aliyun pai-dlc create-job --help`). Network
+    retries can therefore create duplicate Jobs / Templates / TensorBoards.
+    Mitigation: before re-issuing a failed `create-*`, run `list-jobs
+    --display-name <name>` (or `list-job-templates --workspace-id <ws>`) to
+    detect a half-committed prior attempt.
 
 ## Reference Links
 
 | Reference Document | Description |
 |--------------------|-------------|
-| [references/related-apis.md](references/related-apis.md) | Complete API and CLI command reference |
-| [references/related-commands.md](references/related-commands.md) | Flat list of all CLI commands |
+| [references/related-apis.md](references/related-apis.md) | Command index, cross-product field map, lifecycle, red lines, error catalog |
 | [references/ram-policies.md](references/ram-policies.md) | RAM permission policy details |
 | [references/verification-method.md](references/verification-method.md) | End-to-end verification scripts |
 | [references/job-management.md](references/job-management.md) | High-risk Stop/Delete/Update flow + Web Terminal |

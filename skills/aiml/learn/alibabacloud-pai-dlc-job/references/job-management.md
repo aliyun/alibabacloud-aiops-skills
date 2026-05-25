@@ -1,51 +1,64 @@
 # Job Lifecycle Management
 
-Detailed flow for `update-job`, `stop-job`, `get-web-terminal`, and
-`get-token`. The Stop operation is **high-risk** and requires a
-pre-check + explicit user confirmation before execution.
+Operational rules for `update-job` / `stop-job` / `get-web-terminal` /
+`get-token` — focused on **what `--help` cannot tell you**: status windows,
+silent-no-op cases, and the high-risk `stop-job` confirmation protocol.
 
-## Status-to-Operation Compatibility
+For the full parameter list of any subcommand, run
+`aliyun pai-dlc <cmd> --help`.
 
-| Operation | Allowed Job Status |
-|-----------|--------------------|
-| `update-job` (mutable fields) | Any status, but only `display-name`, `description`, `priority`, `accessibility`, `job-specs.PodCount` can be modified |
-| `stop-job` | `Running` or `Queuing` only |
-| `get-web-terminal` | `Running` only (Pod must be alive) |
-| `get-token` | Any status (read-only sharing) |
+## 1. Status-to-Operation Compatibility
 
-## 1. `update-job` (Low-Risk)
+| Operation | Allowed Job Status | Caveat |
+|-----------|--------------------|--------|
+| `update-job --accessibility` | Any | Takes effect immediately |
+| `update-job --description` | Any | Metadata only |
+| `update-job --priority` | `Creating` / `Queuing` only | **AND** job uses quota (`--resource-id`); applied async in 10–60s |
+| `update-job --job-specs` (PodCount) | Elastic-enabled jobs only | Restricted to supported phases |
+| `stop-job` | `Running` / `Queuing` only | Irreversible — three-step protocol below |
+| `get-web-terminal` | `Running` only | Pod must be alive |
+| `get-token` | Any | Read-only sharing |
 
-Only mutable fields. No user confirmation required for safe updates such as
-priority adjustments.
+> **`update-job` does NOT expose `--display-name`** — to rename a job,
+> recreate it. (Same applies to `update-tensorboard`.)
 
-```bash
-# Example: bump priority from 1 to 5
-aliyun pai-dlc update-job \
-  --region <region> \
-  --job-id <job-id> \
-  --priority 5 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
-```
+## 2. `update-job --priority` Pre-check Protocol
 
-## 2. `stop-job` (High-Risk)
-
-Stop is irreversible — a running job's training progress is lost unless the
-script has its own checkpointing. Always run the three-step protocol below.
-
-### Step 1: Pre-check Job Status
+Always probe both `Status` and `ResourceId` before issuing a priority update;
+otherwise the API returns `200 OK` while silently dropping the change.
 
 ```bash
 aliyun pai-dlc get-job \
-  --region <region> \
-  --job-id <job-id> \
+  --region <region> --job-id <job-id> \
+  --cli-query '{Status: Status, ResourceId: ResourceId}' \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
+```
+
+Proceed **only if both** hold:
+
+- `Status` ∈ `Creating` / `Queuing` (still in submission phase)
+- `ResourceId` is non-empty (quota-based job, e.g. `quotaXXXX`)
+
+After issuing the update, expect a 10–60 second propagation delay before
+`get-job` reflects the new `Priority`.
+
+## 3. `stop-job` — Three-Step Protocol (HIGH RISK)
+
+Stopping a `Running` job discards in-memory progress unless the user's script
+checkpoints. **Never call `stop-job` without explicit user confirmation.**
+
+### Step 1 — Pre-check
+
+```bash
+aliyun pai-dlc get-job \
+  --region <region> --job-id <job-id> \
   --cli-query '{Status: Status, Name: DisplayName}' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
 ```
 
-### Step 2: Confirm with User
+### Step 2 — Confirm with the user
 
-Present the status + name to the user. Do NOT proceed without an explicit `yes`.
-Recommended prompt template:
+Present `Status` + `DisplayName`. Use this prompt template:
 
 ```
 Job <job-id> ("<DisplayName>") is currently <Status>.
@@ -53,92 +66,49 @@ Stopping a Running job cannot be undone and will discard any in-memory progress.
 Are you sure you want to stop this job? [yes/no]
 ```
 
-### Step 3: Execute Stop (only after user replies `yes`)
+Do NOT proceed without an explicit `yes`.
+
+### Step 3 — Execute, then verify
 
 ```bash
-aliyun pai-dlc stop-job \
-  --region <region> \
-  --job-id <job-id> \
+aliyun pai-dlc stop-job --region <region> --job-id <job-id> \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
-```
 
-### Step 4: Verify Stopped
-
-```bash
-aliyun pai-dlc get-job \
-  --region <region> \
-  --job-id <job-id> \
+# Verify (expected: "Stopped")
+aliyun pai-dlc get-job --region <region> --job-id <job-id> \
   --cli-query "Status" \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
-# Expected: "Stopped"
 ```
 
-## 3. `get-web-terminal` (Live Pod Only)
+## 4. `get-web-terminal`
+
+Requires the Pod to be alive; the URL is short-lived. Typical pattern:
 
 ```bash
-# Requires the Job to be Running and the target Pod to be alive.
 POD_ID=$(aliyun pai-dlc get-job --region <region> --job-id <job-id> \
-  --cli-query "Pods[0].PodId" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job)
+  --cli-query "Pods[0].PodId" \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job)
 
-aliyun pai-dlc get-web-terminal \
-  --region <region> \
-  --job-id <job-id> \
+aliyun pai-dlc get-web-terminal --region <region> --job-id <job-id> \
   --pod-id "$POD_ID" \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
 ```
 
-The response contains a short-lived URL. Open it in a browser to attach an
-interactive shell.
+## 5. `get-token` — Read-Only Sharing
 
-## 4. `get-token` (Read-Only Sharing)
-
-```bash
-# Generate a sharing token valid for 7 days (604800 seconds)
-aliyun pai-dlc get-token \
-  --region <region> \
-  --target-id <job-id> \
-  --target-type job \
-  --expire-time 604800 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
-```
-
-Recipients can use the token to view the job (and its logs / events / metrics)
-without RAM access. The token grants read-only delegation; it cannot modify the
-job.
-
-## Resource Cleanup Template
-
-End-to-end script to stop a job after training completes.
-
-```bash
-JOB_ID=<job-id>
-REGION=<region>
-
-# Step 1: Pre-check status
-aliyun pai-dlc get-job --region $REGION --job-id $JOB_ID \
-  --cli-query '{Status: Status, Name: DisplayName}' \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
-
-# Step 2: Confirm with user (prompt template above), then proceed only on "yes"
-
-# Step 3: Stop if still running
-aliyun pai-dlc stop-job --region $REGION --job-id $JOB_ID \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
-
-# Step 4: Verify stopped
-aliyun pai-dlc get-job --region $REGION --job-id $JOB_ID \
-  --cli-query "Status" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
-# Expected: "Stopped"
-```
+Generates a token recipients can use to view the job (logs / events /
+metrics) without RAM access. The token is read-only delegation; it cannot
+modify the job. **Never share via insecure channels** — logs may contain
+sensitive data.
 
 ## Common Pitfalls
 
-- ❌ Calling `stop-job` on a `Stopped` / `Succeeded` / `Failed` job — the API
-  rejects with `BadRequest` because the Job is already in a terminal state. This
-  is benign (no cost leak) but confusing in scripts; check status before calling.
-- ❌ Calling `get-web-terminal` after the Job exits Running — the Pod is gone
-  and the terminal URL will be unreachable.
-- ❌ Sharing a `get-token` URL via insecure channels — the token allows full
-  read access to logs that may include sensitive data.
-- ⚠ Use `update-job --priority` only between 1 and 9; values outside this range
-  are silently rejected by the scheduler.
+- ❌ `stop-job` on a `Stopped` / `Succeeded` / `Failed` job — API rejects with
+  `BadRequest` (terminal state). Always pre-check.
+- ❌ `get-web-terminal` after the Job exits `Running` — Pod gone, URL
+  unreachable.
+- ⚠ `update-job --priority` on a public-resource (`EcsSpec`) job → silent
+  no-op. Only quota-based jobs (`--resource-id`) honor it.
+- ⚠ `update-job --priority` past submission phase (`EnvPreparing` / `Running`
+  / …) → silent no-op.
+- ⚠ Display name is **not updatable** — pick the right name at `create-job`.

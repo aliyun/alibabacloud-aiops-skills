@@ -1,14 +1,20 @@
 # PAI-DLC Operation Verification Methods
 
-Quick verification commands for each operation. Every command MUST include `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job`.
+End-to-end and per-command verification scripts. These are **runnable
+flows**, not parameter docs — for flag-level details run
+`aliyun pai-dlc <cmd> --help`. The job status enum, common errors, and red
+lines live in [related-apis.md](related-apis.md) (single source of truth).
+
+Every API call MUST include
+`--user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job`. Replace
+`<region>` / `<job-id>` / `<pod-id>` / `<workspace-id>` placeholders before
+running.
 
 ---
 
-## Basic Operations Quick Verify
+## 1. Per-Command Quick Verify
 
-All commands below use `<region>` placeholder. Replace `<region>`, `<job-id>`, `<pod-id>`, `<workspace-id>` etc. with actual values before running.
-
-### 1. Create Job
+### 1.1 Create Job
 
 ```bash
 JOB_ID=$(aliyun pai-dlc create-job \
@@ -21,93 +27,88 @@ JOB_ID=$(aliyun pai-dlc create-job \
   --cli-query "JobId" --output text)
 ```
 
-**Expect:** Valid `JobId` (format `dlcXXXXXXXX`), status in `Creating|Queuing|Running`.
+**Expect:** `JobId` matches `dlc[0-9a-z]+`; status shortly enters
+`Creating` / `Queuing` / `Running`.
 
-### 2. List / Get / Events / Logs / Metrics
+### 1.2 List / Get / Events / Logs / Metrics
 
 ```bash
-# List jobs by status
-aliyun pai-dlc list-jobs --region <region> --status Running --page-size 10 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
+aliyun pai-dlc list-jobs --region <region> --status Running --page-size 10 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
 
-# Get job detail
-aliyun pai-dlc get-job --region <region> --job-id <job-id> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
+aliyun pai-dlc get-job --region <region> --job-id <job-id> \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
 
-# Get pod logs (job must be Running or completed)
-aliyun pai-dlc get-pod-logs --region <region> --job-id <job-id> --pod-id <pod-id> --max-lines 100 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
+aliyun pai-dlc get-pod-logs --region <region> --job-id <job-id> --pod-id <pod-id> \
+  --max-lines 100 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
 
-# Get job/pod events
-aliyun pai-dlc get-job-events --region <region> --job-id <job-id> --max-events-num 50 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
-aliyun pai-dlc get-pod-events --region <region> --job-id <job-id> --pod-id <pod-id> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
+aliyun pai-dlc get-job-events --region <region> --job-id <job-id> \
+  --max-events-num 50 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
 
-# Get GPU metrics (job must be Running)
-aliyun pai-dlc get-job-metrics --region <region> --job-id <job-id> --metric-type GpuCoreUsage --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
+aliyun pai-dlc get-pod-events --region <region> --job-id <job-id> --pod-id <pod-id> \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
+
+aliyun pai-dlc get-job-metrics --region <region> --job-id <job-id> \
+  --metric-type GpuCoreUsage \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
 ```
 
-**Expect:** All return valid data arrays. Logs contain stdout/stderr. Events sorted by time.
+**Expect:** all return non-empty data once the job is past `EnvPreparing`.
+Logs contain stdout/stderr; events sorted by time.
 
-### 3. Update / Stop
+### 1.3 Update / Stop
 
 ```bash
-# Update priority (Running jobs only)
-aliyun pai-dlc update-job --region <region> --job-id <job-id> --priority 5 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
+# Priority update (pre-check status & quota first; see SKILL.md §7.8)
+aliyun pai-dlc update-job --region <region> --job-id <job-id> --priority 5 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
 
-# Stop (Running → Stopping → Stopped)
-aliyun pai-dlc stop-job --region <region> --job-id <job-id> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
+# Stop (HIGH-RISK — follow pre-check + user-confirmation protocol in SKILL.md §7.8)
+aliyun pai-dlc stop-job --region <region> --job-id <job-id> \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
 ```
 
-**Expect:** Stop returns success, status transitions to `Stopped`.
-
-### 4. Health Check (only when `EnableSanityCheck` is enabled)
+### 1.4 Health Check (only when `Settings.EnableSanityCheck=true`)
 
 ```bash
-aliyun pai-dlc list-job-sanity-check-results --region <region> --job-id <job-id> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
-aliyun pai-dlc get-job-sanity-check-result --region <region> --job-id <job-id> --sanity-check-number 1 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
+aliyun pai-dlc list-job-sanity-check-results \
+  --region <region> --job-id <job-id> \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
+
+aliyun pai-dlc get-job-sanity-check-result \
+  --region <region> --job-id <job-id> --sanity-check-number 1 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
+```
+
+### 1.5 Debug Helpers
+
+```bash
+# Verbose logging
+aliyun pai-dlc <cmd> --region <region> --log-level=debug \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
+
+# Dry-run (no API call)
+aliyun pai-dlc <cmd> --region <region> --cli-dry-run \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
 ```
 
 ---
 
-## Job Status Troubleshooting
+## 2. Resource Discovery → CreateJob (E2E)
 
-Status lifecycle: `Creating → Queuing → (Bidding) → EnvPreparing → SanityChecking → Running → (Restarting) → Stopping → Succeeded/Failed/Stopped`
+Verifies the full **discover → fill → create → verify → cleanup** workflow
+using AIWorkSpace resource discovery. Mirrors the §7.6 flow in `SKILL.md`.
 
-| Status | Cause | Debug |
-|--------|-------|-------|
-| Queuing | Insufficient resources | Check `ReasonMessage` via `get-job` |
-| EnvPreparing | Image pulling | Check pod events |
-| Failed | Execution error | Check job events + pod logs |
-| Stopping/Restarting | Transitional | Wait for stable state |
+### 2.1 Pre-flight
 
 ```bash
-# Debug: enable verbose logging
-aliyun pai-dlc <command> --region <region> --log-level=debug --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
-
-# Dry-run (no actual execution)
-aliyun pai-dlc <command> --region <region> --cli-dry-run --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
+aliyun aiworkspace --help >/dev/null 2>&1 \
+  || aliyun plugin install --names aliyun-cli-aiworkspace
 ```
 
-### Common Errors
-
-| Error | Fix |
-|-------|-----|
-| `NotFound` | Verify JobId is correct |
-| `InvalidParameter` | Check parameter format via `--help` |
-| `Forbidden.RAM` | Add RAM permissions (see ram-policies.md) |
-| `Throttling` | Reduce request frequency |
-| `ServiceUnavailable` | Retry later |
-
----
-
-## Resource Discovery → CreateJob End-to-End
-
-Verifies the full "query → fill → create → verify → cleanup" workflow using AIWorkSpace resource discovery APIs.
-
-### Pre-flight
-
-```bash
-aliyun aiworkspace --help >/dev/null 2>&1 || aliyun plugin install --names aliyun-cli-aiworkspace
-```
-
-### Step 1: Discover Resources
+### 2.2 Discover Resources
 
 ```bash
 WORKSPACE_ID=$(aliyun aiworkspace list-workspaces \
@@ -131,11 +132,13 @@ CODE_SOURCE_ID=$(aliyun aiworkspace list-code-sources \
   --cli-query 'CodeSources[0].CodeSourceId' --output text)
 ```
 
-**Expect:** All five variables non-empty. `ImageUri` is full image address. If any optional resource is absent, omit the corresponding field in Step 2.
+**Expect:** all four variables non-empty. Optional resources can be omitted
+in step 2.3 if absent.
 
-### Step 2: Create Job with Discovered Resources
+### 2.3 Create Job with Discovered Resources
 
-> ⚠️ When using `--resource-id` (dedicated quota), use `ResourceConfig` NOT `EcsSpec`. For pay-as-you-go, use `EcsSpec` without `--resource-id`.
+> ⚠ When passing `--resource-id` (dedicated quota), use `ResourceConfig` —
+> NOT `EcsSpec`. For pay-as-you-go, use `EcsSpec` and omit `--resource-id`.
 
 ```bash
 JOB_SPECS=$(cat <<EOF
@@ -162,45 +165,45 @@ JOB_ID=$(aliyun pai-dlc create-job \
   --cli-query 'JobId' --output text)
 ```
 
-**Expect:** Valid `JobId` (`dlcXXXXXXXX`).
-
-### Step 3: Verify
+### 2.4 Verify
 
 ```bash
-# Verify status
 aliyun pai-dlc get-job --region <region> --job-id $JOB_ID \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job \
   --cli-query '{Status:Status,WorkspaceId:WorkspaceId,ResourceId:ResourceId}'
 ```
 
-**Expect:** Status → `Running` or `Succeeded`. `WorkspaceId`/`ResourceId` match discovery values.
+**Expect:** `Status` ∈ `Creating` / `Queuing` / `EnvPreparing` / `Running` /
+`Succeeded`. `WorkspaceId` / `ResourceId` match discovery values.
 
-### Resource Discovery Checklist
+### 2.5 Discovery Checklist
 
 - [ ] `aliyun aiworkspace list-workspaces --help` returns exit 0
-- [ ] All five variables (WorkspaceId, QuotaId, ImageUri, DatasetId, CodeSourceId) non-empty
-- [ ] Step 2 returns valid `JobId`
-- [ ] Step 3 status is `Creating|Queuing|EnvPreparing|Running|Succeeded`
-- [ ] No ROA calls appear in the workflow
-- [ ] EcsSpec/ResourceConfig mutual exclusion respected
+- [ ] All four discovery variables non-empty
+- [ ] §2.3 returns valid `JobId` (`dlc[0-9a-z]+`)
+- [ ] §2.4 status in expected enum
+- [ ] No ROA calls anywhere in the flow
+- [ ] `EcsSpec` ⇄ `ResourceConfig` mutual exclusion respected
 
 ---
 
-## JobTemplate CRUD End-to-End
+## 3. JobTemplate CRUD (E2E)
 
-Verifies the full lifecycle of 5 JobTemplate APIs (CreateJobTemplate / GetJobTemplate / ListJobTemplates / UpdateJobTemplate / SetJobTemplateDefaultVersion).
+Verifies the full lifecycle of all 6 JobTemplate APIs.
 
-> **Plugin:** `aliyun-cli-pai-dlc` >= 0.3.1. Verify: `aliyun pai-dlc create-job-template --help`.
-> **Constraints format:** `--constraints '{\"JobSpecs[0].Image\":\"locked\",\"UserCommand\":\"locked\",\"JobType\":\"locked\"}'`.
+> **Plugin gate:** `aliyun-cli-pai-dlc` ≥ 0.3.1.
+> **Constraints format:** `'{\"JobSpecs[0].Image\":\"locked\",...}'` (semantics
+> in SKILL.md §7.7).
 
-### Pre-flight
+### 3.1 Pre-flight
 
 ```bash
-aliyun pai-dlc create-job-template --help >/dev/null 2>&1 || aliyun plugin update --name aliyun-cli-pai-dlc
+aliyun pai-dlc create-job-template --help >/dev/null 2>&1 \
+  || aliyun plugin update --name aliyun-cli-pai-dlc
 aliyun plugin list | grep aliyun-cli-pai-dlc
 ```
 
-### Step 1: Create Template
+### 3.2 Create
 
 ```bash
 TEMPLATE_CONTENT=$(cat <<'EOF'
@@ -218,85 +221,91 @@ CREATE_RESP=$(aliyun pai-dlc create-job-template \
   --content "$TEMPLATE_CONTENT" \
   --description "Template for CRUD verification" \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job)
+
 TEMPLATE_ID=$(echo "$CREATE_RESP" | python3 -c "import sys,json;print(json.load(sys.stdin)['TemplateId'])")
 ```
 
-**Expect:** Non-empty `TemplateId` (`tplxxxxxxxxxx`), `Version=1`, `DefaultVersion=1`.
+**Expect:** `TemplateId` matches `tpl[0-9a-z]+`; `Version=1`,
+`DefaultVersion=1`.
 
-### Step 2: List & Detail
+### 3.3 List & Get
 
 ```bash
-# List
-aliyun pai-dlc list-job-templates --region <region> --workspace-id $WORKSPACE_ID --template-id $TEMPLATE_ID \
+aliyun pai-dlc list-job-templates --region <region> \
+  --workspace-id $WORKSPACE_ID --template-id $TEMPLATE_ID \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job \
   --cli-query 'JobTemplates[*].{Id:TemplateId,Name:TemplateName,Default:DefaultVersion}'
 
-# Detail (default version)
 aliyun pai-dlc get-job-template --region <region> --template-id $TEMPLATE_ID \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job \
   --cli-query '{Id:TemplateId,Default:DefaultVersion,Total:TotalCount,Versions:Versions[*].Version}'
 ```
 
-**Expect:** List returns 1 record with `DefaultVersion=1`. Detail: `TotalCount=1`, `Versions=[1]`, Content matches input.
+**Expect:** list returns the new template; `TotalCount=1`, `Versions=[1]`.
 
-### Step 3: Update (New Version)
+### 3.4 Update — Two Modes
 
 ```bash
-# 3.1 Metadata only (no new version)
+# 3.4.1 Metadata only (no new version)
 aliyun pai-dlc update-job-template --region <region> --template-id $TEMPLATE_ID \
-  --description "Updated description" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job \
+  --description "Updated description" \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job \
   --cli-query '{VersionCreated:VersionCreated,DefaultVersion:DefaultVersion}'
 
-# 3.2 Content → new version
+# 3.4.2 New content → new version
 NEW_CONTENT=$(echo "$TEMPLATE_CONTENT" | python3 -c "import sys,json;c=json.load(sys.stdin);c['UserCommand']='python train.py';print(json.dumps(c))")
+
 aliyun pai-dlc update-job-template --region <region> --template-id $TEMPLATE_ID \
-  --content "$NEW_CONTENT" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job \
+  --content "$NEW_CONTENT" \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job \
   --cli-query '{Version:Version,VersionCreated:VersionCreated,DefaultVersion:DefaultVersion}'
 ```
 
-**Expect:** 3.1: `VersionCreated=false`, `DefaultVersion=1`. 3.2: `Version=2`, `VersionCreated=true`, `DefaultVersion=1`.
+**Expect:** 3.4.1 → `VersionCreated=false`. 3.4.2 → `Version=2`,
+`VersionCreated=true`, `DefaultVersion=1` (still).
 
-### Step 4: Switch Default Version
+### 3.5 Switch Default Version
 
 ```bash
 aliyun pai-dlc set-job-template-default-version \
-  --region <region> \
-  --template-id $TEMPLATE_ID --biz-version 2 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job \
-  --cli-query '{DefaultVersion:DefaultVersion}'
+  --region <region> --template-id $TEMPLATE_ID --biz-version 2 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
 
-# Verify
-aliyun pai-dlc get-job-template --region <region> --template-id $TEMPLATE_ID --biz-version all \
+aliyun pai-dlc get-job-template --region <region> --template-id $TEMPLATE_ID \
+  --biz-version all \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job \
   --cli-query '{Default:DefaultVersion,Total:TotalCount}'
 ```
 
 **Expect:** `DefaultVersion=2`, `TotalCount=2`.
 
-### Step 5: Create Job from Template
+### 3.6 Launch Job from Template
 
 ```bash
 JOB_ID=$(aliyun pai-dlc create-job \
   --region <region> --workspace-id $WORKSPACE_ID \
   --display-name "from-template-$(date +%s)" --template-id $TEMPLATE_ID \
   --user-command 'python train.py --epochs 1' \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job --cli-query 'JobId' --output text)
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job \
+  --cli-query 'JobId' --output text)
 
 aliyun pai-dlc get-job --region <region> --job-id $JOB_ID \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job \
   --cli-query '{Status:Status,JobSpecsImage:JobSpecs[0].Image}'
 ```
 
-**Expect:** Valid `JobId`. `JobSpecs[0].Image` matches template ImageUri (not overridden in create-job).
+**Expect:** valid `JobId`; `JobSpecs[0].Image` matches the template (not
+overridden by `create-job` since not passed).
 
-> Note: Without `--constraints`, field lock is agent-side only. Use `--constraints` for server-side enforcement.
+> Without `--constraints`, field "lock" is agent-side only. Use
+> `--constraints` for server-side enforcement.
 
-### JobTemplate Checklist
+### 3.7 JobTemplate Checklist
 
-- [ ] `aliyun pai-dlc create-job-template --help` returns exit 0; plugin >= 0.3.1
-- [ ] Step 1: non-empty `TemplateId`, `Version=1`, `DefaultVersion=1`
-- [ ] Step 2: list/detail fields match creation params
-- [ ] Step 3.1: `VersionCreated=false`; Step 3.2: `Version=2`, `VersionCreated=true`
-- [ ] Step 4: `DefaultVersion` switched to `2`
-- [ ] Step 5: template fields retained unless overridden
-- [ ] No ROA calls anywhere in the workflow
+- [ ] Plugin ≥ 0.3.1 verified
+- [ ] §3.2 `TemplateId` non-empty, `Version=1`
+- [ ] §3.3 list / get fields match creation
+- [ ] §3.4.1 `VersionCreated=false`; §3.4.2 `Version=2`, `VersionCreated=true`
+- [ ] §3.5 `DefaultVersion` switched to 2
+- [ ] §3.6 template fields retained on launch
+- [ ] No ROA calls anywhere in the flow
