@@ -1,8 +1,8 @@
 ---
 name: alibabacloud-pds-intelligent-workspace
 description: |
-  Implements file upload, file download, document analysis, video analysis, and image editing features. Image editing supports scaling, cropping, rotation, segmentation, removal, watermark, and other operations with save-as to PDS. Access cloud drive storage via mount app. The mount app installation process involves driver installation and creating scheduled tasks/launchd.
-  Triggers: "upload file to PDS drive", "download file from PDS drive", "PDS drive document analysis", "PDS drive video analysis", "PDS image editing", "PDS image processing", "mount PDS drive", "install mount app", "uninstall mount app", "PDS drive mount access", "stop mount app"
+  Implements PDS file upload, download, search, document/audio/video analysis, image editing, visual search, mount app access, and file sharing features. 
+  Triggers: "upload file to PDS drive", "download file from PDS drive", "PDS drive document analysis", "PDS drive video analysis", "PDS image editing", "PDS image processing", "mount PDS drive", "install mount app", "uninstall mount app", "PDS drive mount access", "stop mount app", "PDS Drive create share", "PDS Drive cancel share", "PDS Drive search share", "PDS Drive share-link"
 ---
 
 # PDS (Cloud Drive)
@@ -18,6 +18,7 @@ description: |
 - For image search, similar image search, image-text hybrid retrieval → read `references/visual-similar-search.md`
 - For mount app, install mount app, uninstall mount app, stop mount app → read `references/mountapp.md`
 - For image editing, image processing → read `references/image-editing.md`
+- For PDS file sharing, share, share-link, share link, shared link, external sharing, create/cancel/update/search share links, or share permission control → read `references/share-link.md`
 
 ## Agent Execution Guidelines
 - **Must execute steps in order**: Do not skip any step, do not proceed to the next step before the previous one is completed.
@@ -32,7 +33,7 @@ description: |
 - **Drive**: Storage space, can belong to a user (personal space) or team (team/enterprise space)
 - **File**: File or folder under a space, has file_id
 - **Mountapp**: PDS mount app plugin, used to mount PDS space to local, allowing users to access and manage files in PDS space conveniently
-
+- **Share / Share Link**:: PDS file sharing for files, folders, or an entire drive. In this skill, "share", "share-link", "share link", "shared link", and "external sharing" all refer to PDS file Sharing.
 ---
 
 ## Installation Requirements
