@@ -1,0 +1,15 @@
+# Alibaba Cloud Content Security SDK
+alibabacloud-green20220302==2.2.0
+
+# OpenAPI core
+alibabacloud-tea-openapi==0.3.12
+alibabacloud-tea-util==0.3.13
+
+# Default credential chain
+alibabacloud-credentials==0.3.5
+
+# Data processing
+openpyxl==3.1.5
+
+# HTTP client (for console automation)
+requests==2.31.0
