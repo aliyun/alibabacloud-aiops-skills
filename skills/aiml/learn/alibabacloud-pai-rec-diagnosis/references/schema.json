@@ -404,13 +404,14 @@
           "items": {
             "type": "object",
             "properties": {
-              "RecallName": { "type": "string", "description": "Recall source name" },
-              "Count": { "type": "integer", "description": "Count limit for this recall" },
-              "Type": { "type": "string", "enum": ["accumulator", "fix"], "description": "Limit type: accumulator (cumulative) or fix (fixed)" }
-            },
-            "required": ["RecallName", "Count"]
+              "RecallName": { "type": "string", "description": "Recall source name (required for PriorityAdjustCountFilter/V2 and SnakeFilter)" },
+              "Count": { "type": "integer", "description": "Count limit (required for PriorityAdjustCountFilter/V2 and DiversityAdjustCountFilter)" },
+              "Type": { "type": "string", "enum": ["accumulator", "fix"], "description": "Limit type: accumulator (cumulative) or fix (fixed)" },
+              "Expression": { "type": "string", "description": "Diversity expression (required for DiversityAdjustCountFilter)" },
+              "Weight": { "type": "integer", "description": "Weight for proportional allocation (required for SnakeFilter)" }
+            }
           },
-          "description": "PriorityAdjustCountFilter whitelist; recalls not listed here are dropped entirely"
+          "description": "AdjustCount configs; required fields vary by FilterType: PriorityAdjustCountFilter/V2 require RecallName+Count, DiversityAdjustCountFilter requires Expression+Count, SnakeFilter requires RecallName+Weight"
         },
         "ItemStateDaoConf": { "type": "object" },
         "FilterParams": { "type": "array" },
@@ -508,7 +509,6 @@
     },
     "RankConfig": {
       "type": "object",
-      "required": ["RankAlgoList", "RankScore"],
       "properties": {
         "RankAlgoList": { "type": "array", "items": { "type": "string" } },
         "RankScore": { "type": "string" },
@@ -759,8 +759,11 @@
       "properties": {
         "RegionId": { "type": "string" },
         "ProjectName": { "type": "string" },
+        "AccessId": { "type": "string", "description": "Alibaba Cloud Access Key ID (optional, can use env vars)" },
+        "AccessKey": { "type": "string", "description": "Alibaba Cloud Access Key Secret (optional, can use env vars)" },
         "FeatureDBUsername": { "type": "string" },
         "FeatureDBPassword": { "type": "string" },
+        "HologresPort": { "type": "integer", "description": "Hologres port (optional)" },
         "HologresUsername": { "type": "string" },
         "HologresPassword": { "type": "string" }
       },

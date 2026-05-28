@@ -112,6 +112,22 @@ For detailed RAM policies required by this skill, see [references/ram-policies.m
 > aliyun configure ai-mode disable
 > ```
 
+> **[MUST] Allocate a per-session work directory** — All transient artifacts
+> (raw config dumps, log dumps, sanitized output) MUST be written under a unique
+> per-session directory to avoid concurrent overwrite between parallel skill
+> invocations. Run the following at the start of the workflow, before any
+> artifact-producing CLI invocation, and reuse `$WORKDIR` for the whole session:
+> ```bash
+> # Create an isolated working directory for this session, pinned under /tmp.
+> # Pass the full template as a positional arg (works on both BSD/macOS and
+> # GNU/Linux mktemp); do NOT use `-t prefix`, which falls back to $TMPDIR
+> # (e.g. /var/folders on macOS) and may even fail under sandboxed shells.
+> export WORKDIR=$(mktemp -d /tmp/pairec-diag-XXXXXX)
+> ```
+> All file paths shown in the steps below (`$WORKDIR/engine_configs_list.json`,
+> `$WORKDIR/raw_engine_config.json`, etc.) live inside this directory and MUST NOT
+> be replaced with hard-coded `/tmp/...` paths.
+
 ### Workflow 1: PAI-Rec Engine Interface Diagnosis
 
 This workflow helps diagnose issues when a PAI-Rec engine API returns errors or unexpected results.
@@ -164,6 +180,24 @@ aliyun eas describe-service-log \
   --page-size 500
 ```
 
+**[CRITICAL] `--keyword <request-id>` is MANDATORY — local post-processing is FORBIDDEN:**
+- You MUST pass `--keyword <request-id>` to the CLI command. This is a server-side filter; the API only returns log lines matching the keyword.
+- You MUST NOT omit `--keyword` and then filter locally (e.g., piping through `head`, `grep`, `python3`, `jq`, or any script to search for the request_id in the output).
+- You MUST NOT make multiple `describe-service-log` calls without `--keyword` hoping to find relevant lines by scanning the full log stream.
+- If a call with `--keyword` returns empty results, report that no matching logs were found — do NOT fall back to fetching unfiltered logs.
+
+> **❌ WRONG** (fetches ALL logs, filters locally — FORBIDDEN):
+> ```bash
+> aliyun eas describe-service-log --cluster-id cn-beijing --service-name embedding_recall | head -300
+> aliyun eas describe-service-log --cluster-id cn-beijing --service-name embedding_recall | python3 filter.py
+> aliyun eas describe-service-log --cluster-id cn-beijing --service-name embedding_recall | grep "request_id"
+> ```
+>
+> **✅ RIGHT** (server-side keyword filter — REQUIRED):
+> ```bash
+> aliyun eas describe-service-log --cluster-id cn-beijing --service-name embedding_recall --keyword 0c6cbd91-5618-4705-8e08-9126bf4600f7 --page-size 500
+> ```
+
 **[CRITICAL] Known CLI pitfall — keyword-only lookup is required for business logs:**
 - When only `--keyword` is supplied (no time range), the CLI returns the full PAI-Rec application trace (`controller.go` / `feed.go` / `recall.go` / `rank_service.go` etc.) matching the request_id.
 - As soon as `--start-time` / `--end-time` are added — even if the window covers the real log timestamp — the CLI silently drops business logs and only returns infrastructure noise (`/bin/sh` wrapper heartbeats, `502 Bad Gateway` retries, `postgres.go dbstat`).
@@ -187,8 +221,14 @@ aliyun pairecservice list-engine-configs \
   --instance-id <instance-id> \
   --environment <Prod|Pre> \
   --status Released \
-  --name <config-name>
+  --name <config-name> > "$WORKDIR/engine_configs_list.json" 2>&1
 ```
+
+**[MUST] Always pass `--name <config-name>` for server-side filtering:**
+- `<config-name>` is already known from Step 1 (`ServiceConfig.envs.CONFIG_NAME`); it MUST be forwarded to this call as `--name`.
+- Omitting `--name` returns the entire instance's config inventory (often hundreds of unrelated entries), forces client-side filtering, wastes tokens, and risks hitting CLI default pagination so the target row is silently dropped.
+- `--name` is an exact-match filter on the server; do NOT substitute with `grep` / `jq select` post-processing.
+- The same rule applies to every `list-engine-configs` invocation in this skill (Workflow 2 Step 1 included).
 
 **What to extract:**
 - Find the configuration with `Status: Released`
@@ -199,8 +239,20 @@ aliyun pairecservice list-engine-configs \
 ```bash
 aliyun pairecservice get-engine-config \
   --instance-id <instance-id> \
-  --engine-config-id <engine-config-id>
+  --engine-config-id <engine-config-id> > "$WORKDIR/raw_engine_config.json" 2>&1
 ```
+
+**[MUST] Sanitize before display** — Config may contain plaintext passwords or
+access keys. Always pipe through the sanitizer before printing to terminal:
+
+```bash
+python3 scripts/sanitize_config.py "$WORKDIR/raw_engine_config.json"
+```
+
+Only the sanitized output (with credentials replaced by `***REDACTED***`) should
+appear in the terminal. The raw file at `$WORKDIR/raw_engine_config.json` can be
+passed directly to `scripts/validate.py` for validation (validate.py does not
+print credential values).
 
 **What to extract:**
 - `ConfigValue`: The actual engine configuration (JSON/YAML)
@@ -295,7 +347,13 @@ Ask user to select a version or provide the `engine-config-id`.
 ```bash
 aliyun pairecservice get-engine-config \
   --instance-id <instance-id> \
-  --engine-config-id <engine-config-id>
+  --engine-config-id <engine-config-id> > "$WORKDIR/raw_engine_config.json" 2>&1
+```
+
+**[MUST] Sanitize before display** — Always sanitize before printing to terminal:
+
+```bash
+python3 scripts/sanitize_config.py "$WORKDIR/raw_engine_config.json"
 ```
 
 #### Step 3: Run Schema + Rule Validation
@@ -309,7 +367,7 @@ with status 0 on pass, 1 on failure.
 printf '%s' "$CONFIG_VALUE" | python3 scripts/validate.py --stdin
 
 # From a saved JSON file
-python3 scripts/validate.py /tmp/engine-config.json
+python3 scripts/validate.py "$WORKDIR/raw_engine_config.json"
 
 # From an inline JSON string
 python3 scripts/validate.py '{"RunMode":"product","RecallConfs":[...]}'
@@ -384,7 +442,15 @@ For detailed verification steps, see [references/verification-method.md](referen
 
 ## Cleanup
 
-This skill performs read-only operations and does not create any resources that require cleanup.
+This skill performs read-only Alibaba Cloud API calls (no remote resources are
+created). Transient artifacts are written to a per-session local working
+directory `$WORKDIR` under `/tmp` (see Core Workflow preamble). The skill does
+NOT delete `$WORKDIR` automatically — the OS-level temporary file policy is
+relied on for eventual reclamation (macOS reaps `/tmp` periodically; most Linux
+distros reap on reboot or via `systemd-tmpfiles`).
+
+If an operator wants to free disk space sooner, they may manually run
+`rm -rf /tmp/pairec-diag-*` outside the workflow.
 
 ---
 
@@ -392,7 +458,7 @@ This skill performs read-only operations and does not create any resources that 
 
 1. **Always capture request_id**: When reporting API issues, include the full response with request_id for accurate log correlation.
 
-2. **Log queries — keyword only, no time range**: For request-level diagnosis, pass `--keyword <request_id>` to `aliyun eas describe-service-log` and leave `--start-time` / `--end-time` unset. Combining keyword with a time range filters out business logs due to a CLI quirk (see Workflow 1, Step 3). Only use time ranges for broad non-request scans, and only with the `yyyy-MM-dd HH:mm:ss` UTC format (no `T` / no `Z`).
+2. **Log queries — keyword only, no time range, no local filtering**: For request-level diagnosis, pass `--keyword <request_id>` to `aliyun eas describe-service-log` and leave `--start-time` / `--end-time` unset. NEVER omit `--keyword` and post-process locally (e.g., `| head`, `| grep`, `| python3`) — this defeats server-side filtering, wastes tokens, and may miss logs beyond the first page. Combining keyword with a time range filters out business logs due to a CLI quirk (see Workflow 1, Step 3). Only use time ranges for broad non-request scans, and only with the `yyyy-MM-dd HH:mm:ss` UTC format (no `T` / no `Z`).
 
 3. **Environment awareness**: Always verify that configurations match the target environment (Prod vs Pre).
 
@@ -425,3 +491,4 @@ This skill performs read-only operations and does not create any resources that 
 | [Configuration Examples](references/configuration-examples.md) | Sample engine configurations and common patterns |
 | [Config Validation](references/config-validation.md) | `scripts/validate.py` usage, exit codes, rule catalogue |
 | [Troubleshooting Guide](references/troubleshooting-guide.md) | Common issues and solutions |
+| [Config Sanitization](scripts/sanitize_config.py) | Credential redaction before LLM analysis |

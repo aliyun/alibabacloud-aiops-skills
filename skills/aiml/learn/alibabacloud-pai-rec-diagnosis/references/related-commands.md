@@ -135,7 +135,7 @@ aliyun pairecservice list-engine-configs \
 **Parameters:**
 - `--instance-id` (required): The PAI-Rec instance ID
 - `--environment` (optional): Environment filter (`Prod` or `Pre`)
-- `--name` (optional): Configuration name filter
+- `--name` (optional but **strongly recommended** when the config name is known): Exact-match server-side filter on configuration name. Always pass this when you already know the target config (e.g. obtained from `ServiceConfig.envs.CONFIG_NAME`); omitting it returns the entire instance inventory and may exceed the default page size.
 - `--status` (optional): Status filter (e.g., `Released`, `Draft`, `Archived`)
 - `--version` (optional): Version filter
 - `--page-number` (optional): Page number for pagination
@@ -326,11 +326,12 @@ aliyun eas describe-service-log \
   --keyword "941b4e14-d1c5-489f-a184-b2b17f8b4fdb" \
   --page-size 500
 
-# 4. List engine configs
+# 4. List engine configs (always pass --name when the config name is known)
 aliyun pairecservice list-engine-configs \
   --instance-id pairec-cn-xxxxx \
   --environment Prod \
-  --status Released
+  --status Released \
+  --name embedding_config
 
 # 5. Get specific config
 aliyun pairecservice get-engine-config \

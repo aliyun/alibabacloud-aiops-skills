@@ -276,9 +276,17 @@ class PairecConfigValidator:
             if filter_type == "User2ItemExposureFilter":
                 self._validate_exposure_filter(path, filt)
 
-            # PriorityAdjustCountFilter: Count must be strictly increasing in accumulator mode
-            if filter_type == "PriorityAdjustCountFilter":
+            # PriorityAdjustCountFilter/V2: require RecallName + Count per entry
+            if filter_type in ("PriorityAdjustCountFilter", "PriorityAdjustCountFilterV2"):
                 self._validate_priority_adjust_count(path, filt)
+
+            # DiversityAdjustCountFilter: require Expression + Count per entry
+            if filter_type == "DiversityAdjustCountFilter":
+                self._validate_diversity_adjust_count(path, filt)
+
+            # SnakeFilter: require RecallName + Weight per entry
+            if filter_type == "SnakeFilter":
+                self._validate_snake_filter_adjust_count(path, filt)
 
     def _validate_exposure_filter(self, path: str, filt: dict):
         """Validate User2ItemExposureFilter settings."""
@@ -301,10 +309,23 @@ class PairecConfigValidator:
                 )
 
     def _validate_priority_adjust_count(self, path: str, filt: dict):
-        """Validate AdjustCountConfs of PriorityAdjustCountFilter."""
+        """Validate AdjustCountConfs of PriorityAdjustCountFilter/V2.
+
+        Required fields per entry: RecallName, Count.
+        """
         adjust_confs = filt.get("AdjustCountConfs", [])
         if not isinstance(adjust_confs, list) or len(adjust_confs) == 0:
             return
+
+        # Check required fields per entry
+        for j, ac in enumerate(adjust_confs):
+            if not isinstance(ac, dict):
+                continue
+            ac_path = f"{path}.AdjustCountConfs[{j}]"
+            if not ac.get("RecallName"):
+                self._add_error(ac_path, "Missing required field 'RecallName'")
+            if ac.get("Count") is None:
+                self._add_error(ac_path, "Missing required field 'Count'")
 
         # Collect entries using accumulator type (default is accumulator)
         counts = []
@@ -331,6 +352,52 @@ class PairecConfigValidator:
                         severity="warning",
                     )
                     break  # Report once to avoid duplicate warnings
+
+    def _validate_diversity_adjust_count(self, path: str, filt: dict):
+        """Validate AdjustCountConfs of DiversityAdjustCountFilter.
+
+        Required fields per entry: Expression, Count.
+        RecallName is NOT required.
+        """
+        adjust_confs = filt.get("AdjustCountConfs", [])
+        if not isinstance(adjust_confs, list) or len(adjust_confs) == 0:
+            return
+
+        for j, ac in enumerate(adjust_confs):
+            if not isinstance(ac, dict):
+                continue
+            ac_path = f"{path}.AdjustCountConfs[{j}]"
+            if not ac.get("Expression"):
+                self._add_error(ac_path, "Missing required field 'Expression'")
+            if ac.get("Count") is None:
+                self._add_error(ac_path, "Missing required field 'Count'")
+
+    def _validate_snake_filter_adjust_count(self, path: str, filt: dict):
+        """Validate AdjustCountConfs of SnakeFilter.
+
+        Required fields:
+          - Filter-level: RetainNum (total items to retain, allocated by Weight ratio)
+          - Per entry: RecallName, Weight.
+        Count is NOT required (computed from Weight/totalWeight * RetainNum).
+        """
+        retain_num = filt.get("RetainNum")
+        if retain_num is None:
+            self._add_error(path, "Missing required field 'RetainNum' (total retain count for SnakeFilter)")
+        elif not isinstance(retain_num, int) or retain_num <= 0:
+            self._add_error(path, f"'RetainNum' must be a positive integer, got: {retain_num}")
+
+        adjust_confs = filt.get("AdjustCountConfs", [])
+        if not isinstance(adjust_confs, list) or len(adjust_confs) == 0:
+            return
+
+        for j, ac in enumerate(adjust_confs):
+            if not isinstance(ac, dict):
+                continue
+            ac_path = f"{path}.AdjustCountConfs[{j}]"
+            if not ac.get("RecallName"):
+                self._add_error(ac_path, "Missing required field 'RecallName'")
+            if ac.get("Weight") is None:
+                self._add_error(ac_path, "Missing required field 'Weight'")
 
     def _validate_sort_confs(self):
         """Validate sort (rerank) configurations."""
