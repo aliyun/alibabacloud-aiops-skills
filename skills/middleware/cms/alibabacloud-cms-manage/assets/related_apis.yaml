@@ -1,0 +1,10 @@
+# 依赖 API 列表
+# 示例结构:
+# - gatewayType: "pop"
+#   popCode: "ecs"
+#   popVersion: "2014-05-26"
+#   apiName: "RunInstance"
+- gatewayType: "pop"
+  popCode: "cms"
+  popVersion: "2024-03-30"
+  apiName: "*"
