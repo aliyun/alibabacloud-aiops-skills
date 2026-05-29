@@ -218,6 +218,11 @@ aliyun rdsai chat-messages \
 
 ### 3. Parse Results and Follow-up Processing
 
+- Only when the response or user-pasted error contains `No valid order found`, stop normal result analysis and directly return this guidance to the user:
+  - The current call did not find a valid RDS AI Assistant Professional Edition order. Enable RDS AI Assistant Professional Edition for the current Alibaba Cloud account, then retry the failed call.
+  - Activation page: https://rdsnext.console.aliyun.com/rdsCopilotProfessional/cn-hangzhou
+  - Operation guide: https://help.aliyun.com/zh/rds/apsaradb-rds-for-mysql/manage-rds-colipot-professional-edition
+  - According to the operation guide, create RDS AI Assistant Professional Edition from the RDS console by choosing **RDS AI Assistant > Professional Edition** and clicking **Activate Now**. After activation succeeds, retry the failed call with the enabled account.
 - Explain RDS Copilot's response to the user in natural language
 - If the response contains SQL or operational steps, assess risks and warn:
   - Avoid executing high-risk statements directly in production (e.g., large table `DELETE` / `UPDATE` / schema changes)

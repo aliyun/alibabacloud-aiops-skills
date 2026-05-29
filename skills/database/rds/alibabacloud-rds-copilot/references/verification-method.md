@@ -188,3 +188,12 @@ aliyun rdsai chat-messages \
   --user-agent 'AlibabaCloud-Agent-Skills/alibabacloud-rds-copilot' \
   --dryrun
 ```
+
+### Q5: Error "No valid order found"
+
+**Solution**: Only handle this as Professional Edition activation guidance when the actual CLI response or user-pasted error contains `No valid order found`. This error means the current call did not find a valid RDS AI Assistant Professional Edition order. Return the Professional Edition activation page directly and ask the user to enable Professional Edition before retrying this failed call.
+
+- Activation page: https://rdsnext.console.aliyun.com/rdsCopilotProfessional/cn-hangzhou
+- Operation guide: https://help.aliyun.com/zh/rds/apsaradb-rds-for-mysql/manage-rds-colipot-professional-edition
+
+The guide describes opening the RDS console, choosing **RDS AI Assistant > Professional Edition**, clicking **Activate Now**, configuring the purchase, and retrying after the Professional Edition instance is available.

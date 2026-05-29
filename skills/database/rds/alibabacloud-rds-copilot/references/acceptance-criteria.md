@@ -113,6 +113,17 @@ aliyun configure list
 aliyun rdsai chat-messages --query 'Test' ... 2>&1 | grep -i error
 ```
 
+### ✅ CORRECT - No Valid Order Error
+
+```text
+No valid order found
+```
+
+Expected handling:
+- Explain that this failed call did not find a valid RDS AI Assistant Professional Edition order, and the current Alibaba Cloud account needs to enable Professional Edition before retrying this failed call.
+- Return the Professional Edition activation page directly: https://rdsnext.console.aliyun.com/rdsCopilotProfessional/cn-hangzhou
+- Return the operation guide: https://help.aliyun.com/zh/rds/apsaradb-rds-for-mysql/manage-rds-colipot-professional-edition
+
 ---
 
 ## 6. User-Agent Verification
