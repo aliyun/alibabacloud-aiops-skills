@@ -630,7 +630,7 @@ aliyun agentexplorer get-skill-content \
   --user-agent AlibabaCloud-Agent-Skills
 
 # Step 4: User confirms installation
-npx skills add https://github.com/aliyun/alibabacloud-aiops-skills --skill alibabacloud-ecs-batch
+npx skills add https://github.com/aliyun/alibabacloud-aiops-skills --skill alibabacloud-ecs-batch --full-depth
 ```
 
 #### ❌ INCORRECT
@@ -638,7 +638,7 @@ npx skills add https://github.com/aliyun/alibabacloud-aiops-skills --skill aliba
 ```bash
 # Skip presenting results to user
 SKILL=$(aliyun agentexplorer search-skills --keyword "ECS" --cli-query "skills[0].skillName" --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills)
-npx skills add https://github.com/aliyun/alibabacloud-aiops-skills --skill "$SKILL"
+npx skills add https://github.com/aliyun/alibabacloud-aiops-skills --skill "$SKILL" --full-depth
 # Wrong: Should present search results and skill details to user before installing
 ```
 

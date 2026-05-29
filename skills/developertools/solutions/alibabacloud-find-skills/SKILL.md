@@ -206,6 +206,7 @@ Execute the installation command for the target skill.
 #   -y                 Skip confirmation (requires --agent and -g/-local to be set)
 npx skills add aliyun/alibabacloud-aiops-skills \
   --skill <skill-name> \
+  --full-depth \
   --agent qwen-code \
   -g -y
 

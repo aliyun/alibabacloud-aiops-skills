@@ -298,7 +298,7 @@ echo "=== Verification Complete ==="
 ✅ **Installation command succeeds**
 
 ```bash
-npx skills add https://github.com/aliyun/alibabacloud-aiops-skills --skill <skill-name>
+npx skills add https://github.com/aliyun/alibabacloud-aiops-skills --skill <skill-name> --full-depth
 echo "Exit code: $?"  # Should be 0
 ```
 
