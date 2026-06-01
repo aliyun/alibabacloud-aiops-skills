@@ -75,7 +75,8 @@ python3 scripts/data_agent_cli.py import \
     --dms-db-id <DMS_DB_ID> \
     --instance-name <INSTANCE_NAME> \
     --db-name employees \
-    --tables "departments,employees,salaries"
+    --tables "departments,employees,salaries" \
+    --yes
 
 # 6. Initiate analysis
 python3 scripts/data_agent_cli.py db \
@@ -117,12 +118,25 @@ python3 scripts/data_agent_cli.py attach --session-id <SESSION_ID> --checkpoint 
 
 ---
 
-## Session Reuse Workflow
+## Session Reuse Workflow (⭐ Always prefer `attach` for follow-ups)
 
-For multiple analyses on the same database, reusing sessions is recommended for efficiency:
+> **Core Principle**: Create a session **once** with `db` / `file`, then drive **all subsequent interactions** (follow-up, confirm, modify plan, monitor, recover) through `attach --session-id <ID>`. Never create a new session for a question that belongs to the same data scope — you will lose context and pay the data-understanding cost again.
+
+### Typical attach scenarios
+
+| Scenario | Command |
+|----------|---------|
+| Follow-up question with full context | `attach --session-id <ID> -q "..."` |
+| Confirm ANALYSIS / INSIGHT plan | `attach --session-id <ID> -q "confirm"` |
+| Modify / refine the plan | `attach --session-id <ID> -q "simplify to 3 steps"` |
+| Tail live progress (no query) | `attach --session-id <ID>` |
+| Replay from beginning | `attach --session-id <ID> --from-start` |
+| Resume precisely after network drop | `attach --session-id <ID> --checkpoint <N>` |
+
+### End-to-end example
 
 ```bash
-# Analysis 1: Create new session
+# Analysis 1: Create new session (async, returns Session ID immediately)
 python3 scripts/data_agent_cli.py db \
     --dms-instance-id <DMS_INSTANCE_ID> --dms-db-id <DMS_DB_ID> \
     --instance-name <INSTANCE_NAME> --db-name internal_data_employees \
@@ -137,19 +151,24 @@ python3 scripts/data_agent_cli.py attach --session-id abc123xyz -q "Break down s
 # Analysis 3: Modify plan
 python3 scripts/data_agent_cli.py attach --session-id abc123xyz -q "Simplify to 3 steps"
 
-# Analysis 4: Confirm execution
-python3 scripts/data_agent_cli.py attach --session-id abc123xyz -q "Confirm execution"
+# Analysis 4: Confirm execution (ANALYSIS/INSIGHT plans are blocked until confirmed)
+python3 scripts/data_agent_cli.py attach --session-id abc123xyz -q "confirm"
 
-# Step 5: Read final results
+# Analysis 5: Recover precisely if the stream was cut (e.g., at event #219)
+python3 scripts/data_agent_cli.py attach --session-id abc123xyz --checkpoint 219
+
+# Step 6: Read final results
 cat sessions/abc123xyz/progress.log
 
-# Step 6: Download generated reports
+# Step 7: Download generated reports
 python3 scripts/data_agent_cli.py reports --session-id abc123xyz
 ```
 
-**Benefits of Reuse**:
-- Avoid repeated data understanding phase
-- Preserve context history
-- Reduce API calls
+**Benefits of Reuse via `attach`**:
+- Preserve conversation context, SQL history, and data profiling — consistent follow-up answers
+- Skip repeated data-understanding phase, reducing latency and API cost
+- Plan governance: ANALYSIS / INSIGHT plans **must** be confirmed through `attach -q "confirm"`
+- Resilience: `--checkpoint` / `--from-start` guarantee safe recovery after network drops or client restarts
+- Collaboration: share the Session ID so teammates can `attach` and watch progress live
 
 > See [ANALYSIS_MODE.md](ANALYSIS_MODE.md) for detailed sub-agent implementation specifications

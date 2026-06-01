@@ -87,16 +87,17 @@ _jsonl_lock = threading.Lock()
 
 
 def init_structured_logging(output_dir: Optional[Path] = None):
-    """Initialize structured logging to plain text format only (progress.jsonl disabled).
+    """Initialize structured logging to progress.log and progress.jsonl.
 
     Args:
-        output_dir: Directory where progress.log should be created
+        output_dir: Directory where progress files should be created
     """
     global _progress_jsonl_file, _progress_log_file
 
     if output_dir:
-        # Disabled JSONL logging - progress.jsonl creation is skipped
-        _progress_jsonl_file = None
+        output_dir.mkdir(parents=True, exist_ok=True)
+        if not _progress_jsonl_file:
+            _progress_jsonl_file = open(output_dir / "progress.jsonl", "w", encoding="utf-8")
 
         # Only open progress.log if not already set
         if not _progress_log_file:
@@ -124,6 +125,8 @@ def close_structured_logging():
     if _progress_log_file and _progress_log_file is not sys.stdout:
         _progress_log_file.close()
         _progress_log_file = None
+    elif _progress_log_file is sys.stdout:
+        _progress_log_file = None
 
 
 def write_to_jsonl(data: dict):
@@ -132,8 +135,15 @@ def write_to_jsonl(data: dict):
     Args:
         data: Dictionary containing structured log data
     """
-    # JSONL logging is disabled - do nothing
-    pass
+    global _progress_jsonl_file
+    if not _progress_jsonl_file:
+        return
+
+    log_data = dict(data)
+    log_data.setdefault("timestamp", datetime.now().isoformat())
+    with _jsonl_lock:
+        _progress_jsonl_file.write(json.dumps(log_data, ensure_ascii=False) + "\n")
+        _progress_jsonl_file.flush()
 
 
 def write_to_progress_log(text: str):

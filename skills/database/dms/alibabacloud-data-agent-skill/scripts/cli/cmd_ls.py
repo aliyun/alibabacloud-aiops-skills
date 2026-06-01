@@ -17,11 +17,18 @@ def _extract_list(resp: dict) -> list:
     Also handles lowercase ``{data: {...}}`` format from some API responses.
     """
     # Try uppercase "Data" first, then lowercase "data"
-    data = resp.get("Data") or resp.get("data", [])
+    data = resp.get("Data") or resp.get("data") or []
     if isinstance(data, list):
         return data
     if isinstance(data, dict):
-        return data.get("List") or data.get("DataList") or data.get("Content") or []
+        return (
+            data.get("MetaEntities")
+            or data.get("metaEntities")
+            or data.get("List")
+            or data.get("DataList")
+            or data.get("Content")
+            or []
+        )
     return []
 
 
@@ -45,16 +52,22 @@ def cmd_ls(args: argparse.Namespace) -> None:
     client = DataAgentClient(config)
 
     search = getattr(args, "search", None)
-    db_id  = getattr(args, "db_id", None)
-    sep    = "-" * 60
+    db_id = getattr(args, "db_id", None)
+    workspace_id_arg = getattr(args, "workspace_id", None)
+    sep = "-" * 60
+
+    # Resolve workspace
+    workspace_id = client._resolve_workspace_id(workspace_id_arg)
+    workspace_source = client._workspace_source or "unknown"
 
     print(f"Region: {config.region}")
+    print(f"Workspace: {workspace_id} (source: {workspace_source})")
 
     # -- list databases --
     if db_id is None:
         print("Fetching databases...")
         try:
-            resp = client.list_databases(search_key=search)
+            resp = client.list_databases(workspace_id=workspace_id_arg, search_key=search)
         except Exception as e:
             print(f"Error: {e}", file=sys.stderr)
             sys.exit(1)
@@ -64,81 +77,27 @@ def cmd_ls(args: argparse.Namespace) -> None:
             print("No databases found.")
             return
 
-        # Separate real DB connections from file-based data sources
-        # Handle both PascalCase and camelCase keys from API response
-        def _get_import_type(d):
-            return d.get("ImportType") or d.get("importType", "")
-
-        real_dbs  = [d for d in items if _get_import_type(d) in ("RDS", "DMS")]
-        file_dbs  = [d for d in items if _get_import_type(d) == "FILE"]
-
-        # -- Real databases (RDS / DMS) --
         print(f"\n{'=' * 60}")
-        print(f"  Database Connections ({len(real_dbs)})  [ImportType: RDS/DMS]")
+        print(f"  Databases ({len(items)})")
         print(f"{'=' * 60}")
-        if real_dbs:
-            for db in real_dbs:
-                db_name         = _get_field(db, "DatabaseName", "databaseName")
-                db_type         = _get_field(db, "DbType", "dbType", default="").lower()
-                import_type     = _get_field(db, "ImportType", "importType")
-                dms_db_id       = _get_field(db, "DmsDbId", "dmsDbId")
-                dms_instance_id = _get_field(db, "DmsInstanceId", "dmsInstanceId")
-                instance_name   = _get_field(db, "InstanceName", "instanceName")
-                db_desc         = _get_field(db, "DatabaseDesc", "databaseDesc")
-                agent_db_id     = _get_field(db, "DbId", "dbId")
+        for db in items:
+            attrs = db.get("MetaEntityAttrs") or db.get("metaEntityAttrs") or {}
+            db_id_val = _get_field(attrs, "dbId", "DbId", default="")
+            schema_name = _get_field(attrs, "schemaName", "SchemaName", default="")
+            catalog_name = _get_field(attrs, "catalogName", "CatalogName", default="")
+            db_type = _get_field(attrs, "dbType", "DbType", default="")
+            instance_id = _get_field(attrs, "instanceId", "InstanceId", default="")
+            instance_resource_id = _get_field(attrs, "instanceResourceId", "InstanceResourceId", default="")
 
-                print(f"\n  {db_name}  [{db_type}]  ({import_type})")
-                if db_desc:
-                    print(f"    Desc          : {db_desc}")
-                print(f"    AgentDbId     : {agent_db_id}")
-                print(f"    DmsDbId       : {dms_db_id}")
-                print(f"    DmsInstanceId : {dms_instance_id}")
-                print(f"    InstanceName  : {instance_name}")
-        else:
-            print("  (none)")
-
-        # -- File-based data sources --
-        print(f"\n{'=' * 60}")
-        print(f"  File Data Sources ({len(file_dbs)})  [ImportType: FILE]")
-        print(f"{'=' * 60}")
-        if file_dbs:
-            for db in file_dbs:
-                db_name     = _get_field(db, "DatabaseName", "databaseName")
-                db_type     = _get_field(db, "DbType", "dbType", default="").lower()
-                agent_db_id = _get_field(db, "DbId", "dbId")
-                db_desc     = _get_field(db, "DatabaseDesc", "databaseDesc")
-                internal    = _get_field(db, "IsInternal", "isInternal", default="N")
-                label       = "[sample]" if internal == "Y" else ""
-                print(f"  {db_name:<45}  [{db_type}]  {label}  DbId={agent_db_id}")
-        else:
-            print("  (none)")
+            print(f"  {schema_name} [{db_type}] dbId={db_id_val} instanceId={instance_id} instanceResourceId={instance_resource_id} catalogName={catalog_name}")
         print()
         return
 
     # -- list tables for a specific db_id --
-    print(f"Fetching tables for DbId={db_id}...")
-
-    # Fetch all databases first to get InstanceName + DatabaseName (required by API)
-    db_meta: dict = {}
-    try:
-        db_resp = client.list_databases()
-        all_dbs = _extract_list(db_resp)
-        for db in all_dbs:
-            if str(db.get("DbId", "")) == str(db_id):
-                db_meta = db
-                break
-    except Exception:
-        pass
-
-    if not db_meta:
-        print(f"Error: DbId '{db_id}' not found in database list.", file=sys.stderr)
-        sys.exit(1)
-
-    inst_name = db_meta.get("InstanceName", "")
-    db_name_q = db_meta.get("DatabaseName", "")
+    print(f"Fetching tables for AgentDbId={db_id}...")
 
     try:
-        resp = client.list_tables(inst_name, db_name_q)
+        resp = client.list_tables(agent_db_id=db_id, workspace_id=workspace_id_arg)
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
@@ -148,39 +107,53 @@ def cmd_ls(args: argparse.Namespace) -> None:
         print("No tables found.")
         return
 
-    table_names = [t.get("TableName", t.get("Name", "")) for t in items]
-    table_ids   = [t.get("TableId", t.get("Id", "")) for t in items]
+    # Extract table names from MetaEntityAttrs
+    table_names = []
+    for t in items:
+        attrs = t.get("MetaEntityAttrs") or t.get("metaEntityAttrs") or {}
+        name = _get_field(attrs, "tableName", "TableName", "Name", default="")
+        if not name:
+            # Fallback: try top-level keys
+            name = _get_field(t, "TableName", "Name", default="")
+        table_names.append(name)
 
-    db_name         = db_meta.get("DatabaseName", "")
-    db_type         = db_meta.get("DbType", "").lower()
-    dms_instance_id = db_meta.get("DmsInstanceId", "")
-    dms_db_id       = db_meta.get("DmsDbId", "")
-    instance_name   = db_meta.get("InstanceName", "")
+    # Also fetch db metadata from the databases list for display
+    schema_name = ""
+    db_type = ""
+    instance_id = ""
+    try:
+        db_resp = client.list_databases(workspace_id=workspace_id_arg)
+        all_dbs = _extract_list(db_resp)
+        for db in all_dbs:
+            attrs = db.get("MetaEntityAttrs") or db.get("metaEntityAttrs") or {}
+            if str(_get_field(attrs, "dbId", "DbId", default="")) == str(db_id):
+                schema_name = _get_field(attrs, "schemaName", "SchemaName", default="")
+                db_type = _get_field(attrs, "dbType", "DbType", default="")
+                instance_id = _get_field(attrs, "instanceId", "InstanceId", default="")
+                break
+    except Exception:
+        pass
 
     print(f"\n{'=' * 60}")
-    print(f"  Database  : {db_name}  [{db_type}]")
+    print(f"  Database  : {schema_name}  [{db_type}]")
     print(f"  AgentDbId : {db_id}")
-    print(f"  DmsDbId   : {dms_db_id}")
-    print(f"  Instance  : {instance_name}  (DmsInstanceId={dms_instance_id})")
     print(f"  Tables    : {len(items)}")
     print(f"{'=' * 60}")
-    for name, tid in zip(table_names, table_ids):
-        print(f"  {name:<30}  {tid}")
+    for name in table_names:
+        print(f"  {name}")
     print()
 
     # Print ready-to-use CLI command
-    tables_arg    = ",".join(table_names)
-    table_ids_arg = ",".join(table_ids)
+    tables_arg = ",".join(table_names)
     print(sep)
     print("  Ready-to-use db command:")
     print(sep)
     print(f"  python3 data_agent_cli.py db \\")
-    print(f"    --dms-instance-id {dms_instance_id} \\")
-    print(f"    --dms-db-id {dms_db_id} \\")
-    print(f"    --instance-name {instance_name} \\")
-    print(f"    --db-name {db_name} \\")
-    print(f"    --engine {db_type} \\")
+    print(f"    --dms-instance-id {instance_id} \\")
+    print(f"    --dms-db-id {db_id} \\")
+    print(f"    --db-name {schema_name} \\")
     print(f"    --tables {tables_arg} \\")
+    print(f"    --workspace-id {workspace_id} \\")
     print(f"    --session-mode ASK_DATA \\")
     print(f"    -q \"your question here\"")
     print(sep)

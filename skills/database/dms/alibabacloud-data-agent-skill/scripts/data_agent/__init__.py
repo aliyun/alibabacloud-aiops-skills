@@ -14,7 +14,7 @@ from data_agent.session import SessionManager, AsyncSessionManager
 from data_agent.message import MessageHandler, AsyncMessageHandler
 from data_agent.file_manager import FileManager, AsyncFileManager
 from data_agent.sse_client import SSEClient, AsyncSSEClient, SSEEvent
-from data_agent.models import SessionInfo, ContentBlock, FileInfo, DataSource
+from data_agent.models import SessionInfo, ContentBlock, FileInfo, DataSource, WorkspaceInfo, CustomAgentInfo
 from data_agent.mcp_tools import DmsMcpTools, AsyncDmsMcpTools, DmsInstance, AskDatabaseResult, PagedResult
 from data_agent.api_adapter import APIAdapter
 from data_agent.exceptions import (
@@ -63,6 +63,8 @@ __all__ = [
     "ContentBlock",
     "FileInfo",
     "DataSource",
+    "WorkspaceInfo",
+    "CustomAgentInfo",
     # Exceptions
     "DataAgentException",
     "ConfigurationError",

@@ -67,7 +67,9 @@ def cmd_file(args: argparse.Namespace) -> None:
             )
 
             # Create regular session without binding to specific data source initially
-            session = session_manager.create_or_reuse(mode=session_mode, enable_search=enable_search, file_id=file_id)
+            workspace_id = getattr(args, 'workspace_id', None)
+            custom_agent_id = getattr(args, 'custom_agent_id', None)
+            session = session_manager.create_or_reuse(mode=session_mode, enable_search=enable_search, file_id=file_id, workspace_id=workspace_id, custom_agent_id=custom_agent_id)
         else:
             # Local file workflow: upload first
             if not Path(file_path).exists():
@@ -99,7 +101,9 @@ def cmd_file(args: argparse.Namespace) -> None:
                 sys.exit(1)
 
             # Create session
-            session = session_manager.create_or_reuse(mode=session_mode, enable_search=enable_search, file_id=file_info.file_id)
+            workspace_id = getattr(args, 'workspace_id', None)
+            custom_agent_id = getattr(args, 'custom_agent_id', None)
+            session = session_manager.create_or_reuse(mode=session_mode, enable_search=enable_search, file_id=file_info.file_id, workspace_id=workspace_id, custom_agent_id=custom_agent_id)
 
         # Store file_data_source as a dict for async worker to use (avoid serialization issues)
         args.file_data_source = file_data_source.to_api_dict()
@@ -252,13 +256,16 @@ def cmd_file(args: argparse.Namespace) -> None:
         "ASK_DATA": "ASK_DATA mode",
         "ANALYSIS": "ANALYSIS mode (recommended for file analysis)",
         "INSIGHT": "INSIGHT mode",
+        "CLAW": "CLAW mode (agentic)",
     }.get(session_mode, session_mode)
 
     print(f"\nCreating session: {mode_desc}...")
     print(f"  Region: {config.region}")
     enable_search = getattr(args, 'enable_search', False)
+    workspace_id = getattr(args, 'workspace_id', None)
+    custom_agent_id = getattr(args, 'custom_agent_id', None)
     # For file analysis, pass file_id to create_or_reuse so the session is bound to the file
-    session = session_manager.create_or_reuse(mode=session_mode, enable_search=enable_search, file_id=file_data_source.file_id if 'file_data_source' in locals() else None)
+    session = session_manager.create_or_reuse(mode=session_mode, enable_search=enable_search, file_id=file_data_source.file_id if 'file_data_source' in locals() else None, workspace_id=workspace_id, custom_agent_id=custom_agent_id)
     print(f"Session ready: {session.session_id}")
     print(f"\n💡 Tip: To continue this session later, use: python3 data_agent_cli.py attach --session-id {session.session_id}")
 

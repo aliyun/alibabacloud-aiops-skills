@@ -61,6 +61,7 @@ class MessageHandler:
                 session_id=session.session_id,
                 message=query,
                 data_source=data_source,
+                workspace_id=session.workspace_id or "",
             )
         except Exception as e:
             raise MessageSendError(f"Failed to send message: {e}")
@@ -107,6 +108,7 @@ class MessageHandler:
                 session_id=session.session_id,
                 message=query,
                 data_source=data_source,
+                workspace_id=session.workspace_id or "",
             )
         except Exception as e:
             raise MessageSendError(f"Failed to send message: {e}")
@@ -173,6 +175,7 @@ class MessageHandler:
                 session_id=session.session_id,
                 message=query,
                 data_source=data_source,
+                workspace_id=session.workspace_id or "",
             )
         except Exception as e:
             raise MessageSendError(f"Failed to send message: {e}")
@@ -219,6 +222,7 @@ class MessageHandler:
                 session_id=session.session_id,
                 message=query,
                 data_source=data_source,
+                workspace_id=session.workspace_id or "",
             )
         except Exception as e:
             raise MessageSendError(f"Failed to send message: {e}")
@@ -306,6 +310,7 @@ class AsyncMessageHandler:
                 session_id=session.session_id,
                 message=query,
                 data_source=data_source,
+                workspace_id=session.workspace_id or "",
             )
         except Exception as e:
             raise MessageSendError(f"Failed to send message: {e}")
@@ -350,6 +355,7 @@ class AsyncMessageHandler:
                 session_id=session.session_id,
                 message=query,
                 data_source=data_source,
+                workspace_id=session.workspace_id or "",
             )
         except Exception as e:
             raise MessageSendError(f"Failed to send message: {e}")
@@ -414,6 +420,7 @@ class AsyncMessageHandler:
                 session_id=session.session_id,
                 message=query,
                 data_source=data_source,
+                workspace_id=session.workspace_id or "",
             )
         except Exception as e:
             raise MessageSendError(f"Failed to send message: {e}")

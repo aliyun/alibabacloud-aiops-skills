@@ -41,6 +41,8 @@ class SessionManager:
         mode: Optional[str] = "ASK_DATA",
         enable_search: bool = False,
         file_id: Optional[str] = None,
+        workspace_id: Optional[str] = None,
+        custom_agent_id: Optional[str] = None,
     ) -> SessionInfo:
         """Create a new session or reuse an existing one.
 
@@ -51,9 +53,11 @@ class SessionManager:
             database_id: Optional database ID to bind to new session.
             wait_for_running: Whether to wait for session to be RUNNING.
             mode: Session mode to use when creating a new session.
-                  One of "ASK_DATA" (default), "ANALYSIS", "INSIGHT".
+                  One of "ASK_DATA" (default), "ANALYSIS", "INSIGHT", "CLAW".
             enable_search: Whether to enable search capability in the session.
             file_id: Optional file ID for file-based analysis session.
+            workspace_id: Optional workspace ID to bind the session to a workspace.
+            custom_agent_id: Optional custom agent ID to use for the session.
 
         Returns:
             SessionInfo for the active session.
@@ -75,6 +79,7 @@ class SessionManager:
                 session = self._client.describe_session(
                     session_id=session_id,
                     agent_id=agent_id or "",
+                    workspace_id=workspace_id or "",
                 )
 
                 # If the session is still in CREATING state, wait for it to become ready
@@ -83,6 +88,7 @@ class SessionManager:
                         session_id=session.session_id,
                         agent_id=session.agent_id,
                         max_wait=600,  # Increase max_wait to 10 minutes (600 seconds) since backend can be slow
+                        workspace_id=workspace_id or "",
                     )
 
                 if session.is_running() or not wait_for_running:
@@ -100,7 +106,7 @@ class SessionManager:
                 ) from e
 
         # Create new session
-        session = self._client.create_session(database_id=database_id, mode=mode, enable_search=enable_search, file_id=file_id)
+        session = self._client.create_session(database_id=database_id, mode=mode, enable_search=enable_search, file_id=file_id, workspace_id=workspace_id, custom_agent_id=custom_agent_id)
 
         # Only wait if session is not already running
         if wait_for_running and not session.is_running():
@@ -108,6 +114,7 @@ class SessionManager:
                 session_id=session.session_id,
                 agent_id=session.agent_id,
                 max_wait=600,  # Increase max_wait to 10 minutes (600 seconds) since backend can be slow
+                workspace_id=workspace_id or "",
             )
 
         self._active_sessions[session.session_id] = session
@@ -118,6 +125,7 @@ class SessionManager:
         session_id: str,
         agent_id: str = "",
         max_wait: int = 120,
+        workspace_id: str = "",
     ) -> SessionInfo:
         """Wait for session to reach RUNNING state.
 
@@ -145,7 +153,7 @@ class SessionManager:
                     waited_seconds=int(elapsed),
                 )
 
-            session = self._client.describe_session(session_id=session_id, agent_id=agent_id)
+            session = self._client.describe_session(session_id=session_id, agent_id=agent_id, workspace_id=workspace_id)
 
             if session.is_running():
                 return session
@@ -183,7 +191,7 @@ class SessionManager:
             return False
 
         try:
-            current = self._client.describe_session(session_id=session_id, agent_id=session.agent_id)
+            current = self._client.describe_session(session_id=session_id, agent_id=session.agent_id, workspace_id=session.workspace_id or "")
             return current.is_running()
         except Exception:
             return False
@@ -215,7 +223,7 @@ class SessionManager:
             raise SessionNotFoundError(f"Session {session_id} not found in cache")
 
         session = self._active_sessions[session_id]
-        updated = self._client.describe_session(session_id=session_id, agent_id=session.agent_id)
+        updated = self._client.describe_session(session_id=session_id, agent_id=session.agent_id, workspace_id=session.workspace_id or "")
         self._active_sessions[session_id] = updated
         return updated
 
@@ -276,6 +284,8 @@ class AsyncSessionManager:
         session_id: Optional[str] = None,
         database_id: Optional[str] = None,
         wait_for_running: bool = True,
+        workspace_id: Optional[str] = None,
+        custom_agent_id: Optional[str] = None,
     ) -> SessionInfo:
         """Create a new session or reuse an existing one asynchronously.
 
@@ -283,6 +293,8 @@ class AsyncSessionManager:
             session_id: Optional existing session ID to reuse.
             database_id: Optional database ID to bind to new session.
             wait_for_running: Whether to wait for session to be RUNNING.
+            workspace_id: Optional workspace ID to bind the session to a workspace.
+            custom_agent_id: Optional custom agent ID to use for the session.
 
         Returns:
             SessionInfo for the active session.
@@ -299,6 +311,7 @@ class AsyncSessionManager:
                 session = await self._client.describe_session(
                     session_id=session_id,
                     agent_id="",
+                    workspace_id=workspace_id or "",
                 )
                 if session.is_running():
                     self._active_sessions[session_id] = session
@@ -307,13 +320,14 @@ class AsyncSessionManager:
                 pass
 
         # Create new session
-        session = await self._client.create_session(database_id=database_id)
+        session = await self._client.create_session(database_id=database_id, workspace_id=workspace_id, custom_agent_id=custom_agent_id)
 
         # Only wait if session is not already running
         if wait_for_running and not session.is_running():
             session = await self.wait_until_running(
                 session_id=session.session_id,
                 agent_id=session.agent_id,
+                workspace_id=workspace_id or "",
             )
 
         self._active_sessions[session.session_id] = session
@@ -324,6 +338,7 @@ class AsyncSessionManager:
         session_id: str,
         agent_id: str = "",
         max_wait: int = 120,
+        workspace_id: str = "",
     ) -> SessionInfo:
         """Wait for session to reach RUNNING state asynchronously.
 
@@ -351,7 +366,7 @@ class AsyncSessionManager:
                     waited_seconds=int(elapsed),
                 )
 
-            session = await self._client.describe_session(session_id=session_id, agent_id=agent_id)
+            session = await self._client.describe_session(session_id=session_id, agent_id=agent_id, workspace_id=workspace_id)
 
             if session.is_running():
                 return session
@@ -382,7 +397,7 @@ class AsyncSessionManager:
             return False
 
         try:
-            current = await self._client.describe_session(session_id=session_id, agent_id=session.agent_id)
+            current = await self._client.describe_session(session_id=session_id, agent_id=session.agent_id, workspace_id=session.workspace_id or "")
             return current.is_running()
         except Exception:
             return False
@@ -414,7 +429,7 @@ class AsyncSessionManager:
             raise SessionNotFoundError(f"Session {session_id} not found in cache")
 
         session = self._active_sessions[session_id]
-        updated = await self._client.describe_session(session_id=session_id, agent_id=session.agent_id)
+        updated = await self._client.describe_session(session_id=session_id, agent_id=session.agent_id, workspace_id=session.workspace_id or "")
         self._active_sessions[session_id] = updated
         return updated
 

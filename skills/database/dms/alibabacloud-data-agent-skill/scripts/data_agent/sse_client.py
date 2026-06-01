@@ -224,7 +224,7 @@ class SSEClient:
             'x-api-key': self._config.api_key,
             'Content-Type': 'application/json',
             'Accept': 'application/json',
-            'User-Agent': 'AlibabaCloud-Agent-Skills',
+            'User-Agent': 'AlibabaCloud-Agent-Skills/alibabacloud-data-agent-skill',
         }
 
         with requests.post(
@@ -310,7 +310,7 @@ class SSEClient:
             params,
             security_token=security_token if security_token else None,
         )
-        headers["User-Agent"] = "AlibabaCloud-Agent-Skills"
+        headers["User-Agent"] = "AlibabaCloud-Agent-Skills/alibabacloud-data-agent-skill"
 
         # Build query string for URL
         query_params = {"Action": "GetChatContent", "Version": "2025-04-14", **params}
@@ -547,7 +547,7 @@ class AsyncSSEClient:
             'x-api-key': self._config.api_key,
             'Content-Type': 'application/json',
             'Accept': 'application/json',
-            'User-Agent': 'AlibabaCloud-Agent-Skills',
+            'User-Agent': 'AlibabaCloud-Agent-Skills/alibabacloud-data-agent-skill',
         }
 
         async with aiohttp.ClientSession() as session:
@@ -622,7 +622,7 @@ class AsyncSSEClient:
             params,
             security_token=security_token if security_token else None,
         )
-        headers["User-Agent"] = "AlibabaCloud-Agent-Skills"
+        headers["User-Agent"] = "AlibabaCloud-Agent-Skills/alibabacloud-data-agent-skill"
 
         # Build query string for URL
         query_params = {"Action": "GetChatContent", "Version": "2025-04-14", **params}

@@ -34,9 +34,9 @@ def _build_data_source(args: argparse.Namespace) -> DataSource:
     table_ids = [t.strip() for t in args.table_ids.split(",")] if args.table_ids else []
 
     return DataSource(
-        dms_instance_id=args.dms_instance_id,
+        dms_instance_id=getattr(args, 'dms_instance_id', None),
         dms_database_id=args.dms_db_id,
-        instance_name=args.instance_name,
+        instance_name=getattr(args, 'instance_name', None) or "",
         db_name=args.db_name,
         tables=tables,
         table_ids=table_ids,
@@ -247,9 +247,7 @@ def cmd_db(args: argparse.Namespace) -> None:
     # Validate required database parameters
     missing = []
     for attr, name in [
-        ("dms_instance_id", "--dms-instance-id"),
         ("dms_db_id", "--dms-db-id"),
-        ("instance_name", "--instance-name"),
         ("db_name", "--db-name"),
         ("tables", "--tables"),
     ]:
@@ -274,7 +272,9 @@ def cmd_db(args: argparse.Namespace) -> None:
         # PARENT PROCESS LOGIC
         enable_search = getattr(args, 'enable_search', False)
         print(f"Creating session for async execution...")
-        session = session_manager.create_or_reuse(mode=session_mode, database_id=str(args.dms_db_id), enable_search=enable_search)
+        workspace_id = getattr(args, 'workspace_id', None)
+        custom_agent_id = getattr(args, 'custom_agent_id', None)
+        session = session_manager.create_or_reuse(mode=session_mode, database_id=str(args.dms_db_id), enable_search=enable_search, workspace_id=workspace_id, custom_agent_id=custom_agent_id)
 
         # Use common async worker setup
         setup_async_worker(args, session)
@@ -308,12 +308,15 @@ def cmd_db(args: argparse.Namespace) -> None:
         "ASK_DATA": "ASK_DATA mode (SQL query + natural language response)",
         "ANALYSIS": "ANALYSIS mode (deep analysis + report generation)",
         "INSIGHT": "INSIGHT mode",
+        "CLAW": "CLAW mode (agentic)",
     }.get(session_mode, session_mode)
 
     print(f"Creating session: {mode_desc}...")
     print(f"  Region: {config.region}")
     enable_search = getattr(args, 'enable_search', False)
-    session = session_manager.create_or_reuse(mode=session_mode, database_id=str(args.dms_db_id), enable_search=enable_search)
+    workspace_id = getattr(args, 'workspace_id', None)
+    custom_agent_id = getattr(args, 'custom_agent_id', None)
+    session = session_manager.create_or_reuse(mode=session_mode, database_id=str(args.dms_db_id), enable_search=enable_search, workspace_id=workspace_id, custom_agent_id=custom_agent_id)
     print(f"Session ready: {session.session_id}")
     print(f"\n💡 Tip: To continue this session later, use: python3 scripts/data_agent_cli.py attach --session-id {session.session_id}")
 

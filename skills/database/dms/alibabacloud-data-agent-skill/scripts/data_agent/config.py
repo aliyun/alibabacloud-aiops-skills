@@ -41,6 +41,7 @@ class DataAgentConfig:
     max_retry: int = 3
     poll_interval: int = 2
     max_poll_count: int = 60
+    workspace_id: Optional[str] = None
 
     def __post_init__(self) -> None:
         """Generate endpoint if not provided and validate config."""
@@ -98,6 +99,7 @@ class DataAgentConfig:
             max_retry=int(os.environ.get("DATA_AGENT_MAX_RETRY", "3")),
             poll_interval=int(os.environ.get("DATA_AGENT_POLL_INTERVAL", "2")),
             max_poll_count=int(os.environ.get("DATA_AGENT_MAX_POLL_COUNT", "60")),
+            workspace_id=os.environ.get("DATA_AGENT_WORKSPACE_ID"),
         )
 
     @classmethod

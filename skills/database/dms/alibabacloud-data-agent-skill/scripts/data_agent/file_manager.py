@@ -44,6 +44,18 @@ class FileManager:
         """
         self._client = client
 
+    @staticmethod
+    def _normalize_file_id(file_id: str) -> Optional[str]:
+        if file_id is None:
+            return None
+        normalized = str(file_id).strip()
+        return normalized or None
+
+    def _file_exists_in_session(self, file_id: str, session_id: Optional[str]) -> bool:
+        if not session_id:
+            return True
+        return any(file.file_id == file_id for file in self.list_files(session_id))
+
     def upload_file(
         self,
         file_path: str,
@@ -271,17 +283,24 @@ class FileManager:
         except requests.RequestException as e:
             raise FileDownloadError(f"Failed to download file: {e}")
 
-    def delete_file(self, file_id: str) -> bool:
+    def delete_file(self, file_id: str, session_id: Optional[str] = None) -> bool:
         """Delete an uploaded file.
 
         Args:
             file_id: The file ID to delete.
+            session_id: Optional session ID used to verify the file exists before deleting.
 
         Returns:
             True if deletion was successful.
         """
+        normalized_file_id = self._normalize_file_id(file_id)
+        if normalized_file_id is None:
+            return False
+
         try:
-            self._client.delete_file(file_id)
+            if not self._file_exists_in_session(normalized_file_id, session_id):
+                return False
+            self._client.delete_file(normalized_file_id)
             return True
         except Exception:
             return False
@@ -324,6 +343,19 @@ class AsyncFileManager:
             client: AsyncDataAgentClient instance for API calls.
         """
         self._client = client
+
+    @staticmethod
+    def _normalize_file_id(file_id: str) -> Optional[str]:
+        if file_id is None:
+            return None
+        normalized = str(file_id).strip()
+        return normalized or None
+
+    async def _file_exists_in_session(self, file_id: str, session_id: Optional[str]) -> bool:
+        if not session_id:
+            return True
+        files = await self.list_files(session_id)
+        return any(file.file_id == file_id for file in files)
 
     async def upload_file(
         self,
@@ -501,17 +533,24 @@ class AsyncFileManager:
         except aiohttp.ClientError as e:
             raise FileDownloadError(f"Failed to download file: {e}")
 
-    async def delete_file(self, file_id: str) -> bool:
+    async def delete_file(self, file_id: str, session_id: Optional[str] = None) -> bool:
         """Delete an uploaded file asynchronously.
 
         Args:
             file_id: The file ID to delete.
+            session_id: Optional session ID used to verify the file exists before deleting.
 
         Returns:
             True if deletion was successful.
         """
+        normalized_file_id = self._normalize_file_id(file_id)
+        if normalized_file_id is None:
+            return False
+
         try:
-            await self._client.delete_file(file_id)
+            if not await self._file_exists_in_session(normalized_file_id, session_id):
+                return False
+            await self._client.delete_file(normalized_file_id)
             return True
         except Exception:
             return False

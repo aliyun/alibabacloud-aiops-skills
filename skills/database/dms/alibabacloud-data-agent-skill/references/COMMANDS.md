@@ -20,13 +20,10 @@ Output is divided into two groups:
 - **Database Connections** (ImportType: RDS/DMS) — Real relational databases, can be used with `db` subcommand
 - **File Data Sources** (ImportType: FILE) — Uploaded file datasets
 
-Each database record displays:
+Output displays databases in compact format:
 ```
-  internal_data_employees  [mysql]  (RDS)
-    AgentDbId     : <AGENT_DB_ID>
-    DmsDbId       : <DMS_DB_ID>
-    DmsInstanceId : <DMS_INSTANCE_ID>
-    InstanceName  : <INSTANCE_NAME>
+chinook [mysql]  dbId=abc123  instanceResourceId=rm-xxx  catalogName=chinook
+employees [mysql]  dbId=def456  instanceResourceId=rm-yyy  catalogName=employees
 ```
 
 > **Tip**: `internal_data_employees` is DataAgent's built-in demo database, containing employee, department, and salary test data, suitable for first-time experience.
@@ -69,6 +66,8 @@ Output includes a `db` command template ready to copy and use.
 | `--session-mode` | `ASK_DATA` (default) / `ANALYSIS` / `INSIGHT` |
 | `--output` | `summary` (default) / `detail` / `raw` |
 | `--enable-search` | Enable search capability (default `false`) |
+| `--workspace-id` | Workspace ID to bind the session to a specific workspace |
+| `--custom-agent-id` | Custom Agent ID to use for the analysis session | No |
 
 ### Query Methods
 
@@ -89,6 +88,8 @@ File analysis uses `ANALYSIS` mode by default.
 | `--session-mode` | `ASK_DATA` / `ANALYSIS` (default) / `INSIGHT` |
 | `--output` | `summary` (default) / `detail` / `raw` |
 | `--enable-search` | Enable search capability (default `false`) |
+| `--workspace-id` | Workspace ID to bind the session to a specific workspace |
+| `--custom-agent-id` | Custom Agent ID to use for the analysis session | No |
 | `-q` / `--query` | Custom query question |
 
 ---
@@ -127,6 +128,54 @@ Direct access to DMS metadata, used for discovering instances, databases, and ta
 | `search-database` | Search databases by schema name |
 | `list-tables` | List tables in specified database |
 
+## workspace Subcommand — List Workspaces
+
+List Data Agent collaboration workspaces under the current account.
+
+### Parameters
+
+| Parameter | Description |
+|------|------|
+| `--workspace-type` | Workspace type: `MY` (default) / `ALL` |
+| `--search` / `-s` | Filter workspaces by name |
+| `--page-number` | Page number (default: 1) |
+| `--page-size` | Page size (default: 50) |
+
+### Examples
+
+```bash
+# List my workspaces
+python3 scripts/data_agent_cli.py workspace
+
+# List all accessible workspaces
+python3 scripts/data_agent_cli.py workspace --workspace-type ALL
+
+# Search by name
+python3 scripts/data_agent_cli.py workspace --search myworkspace
+```
+
+### `agent` — List and Describe Custom Agents
+
+List available custom agents (default: RELEASED status only) or view agent details.
+
+**Usage**:
+```bash
+data-agent agent                           # List RELEASED custom agents
+data-agent agent list --search keyword     # Search agents by keyword
+data-agent agent describe --custom-agent-id <ID>  # View agent details
+```
+
+**Parameters**:
+
+| Parameter | Description | Required |
+|-----------|-------------|----------|
+| `action` | `list` (default) or `describe` | No |
+| `--workspace-id` | Filter agents by workspace ID | No |
+| `--custom-agent-id` | Custom Agent ID (required for describe) | Conditional |
+| `--search` | Search keyword to filter agents | No |
+| `--page-number` | Page number (default: 1) | No |
+| `--page-size` | Page size (default: 20) | No |
+
 ---
 
 ## import Subcommand — Import DMS Database
@@ -144,6 +193,7 @@ Import DMS database tables into Data Agent Data Center.
 | `--tables` | **Required**, Table name list to import (comma-separated) |
 | `--engine` | Database engine type (default: mysql) |
 | `--region` | Region ID (default: cn-hangzhou) |
+| `--yes`, `-y` | Confirm the import operation without an interactive prompt |
 
 ---
 
