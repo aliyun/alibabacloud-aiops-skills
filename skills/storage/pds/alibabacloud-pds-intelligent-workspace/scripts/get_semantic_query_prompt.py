@@ -1,4 +1,4 @@
-# 描述了如何判断是否需要用语义搜索文件，以及如何提取关键语义词
+# Generates the prompt for determining whether semantic search is needed and extracting query terms
 def semantic_search_prompt() -> str:
     output = """
 # 任务

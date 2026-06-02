@@ -1,7 +1,19 @@
 # PDS File Download Guide
 
-**Scenario**: When you have obtained the drive_id and file_id of the file to download and need to download that file
+**Scenario**: When you need to download a file from PDS to local
 **Purpose**: Download file to local
+
+---
+
+## Finding the File
+
+Before downloading, you need the file's `drive_id` and `file_id`. Choose the method based on what you know:
+
+| What you have | Method |
+|---|---|
+| **file_id** | Go directly to [Download File](#download-file) |
+| **File path** (e.g., `/Photos/vacation.jpg`) | Use [Get File ID from File Path](#get-file-id-from-file-path) below |
+| **Filename only** (e.g., `apple1.jpg`) | Use `references/search-file.md` to search by filename first, then download with the returned file_id |
 
 ---
 
@@ -63,28 +75,30 @@ aliyun pds get-download-url \
 
 ### Step 2: Download File
 
-Use the obtained download URL to download the file:
+Save the download URL to a variable first, then pass it to curl. This avoids shell parsing errors caused by special characters (`&`, `+`, `=`, security tokens) in PDS/OSS signed URLs.
 
 ```bash
-curl -L --max-time 3600 --max-redirs 10 -o <output_filename> '<download_URL>'
+# Save the URL from Step 1 response into a variable
+DOWNLOAD_URL="<url_from_get-download-url_response>"
+
+# Download using the variable
+curl -fL --max-time 3600 --retry 3 --retry-delay 5 -o <output_filename> "${DOWNLOAD_URL}"
 ```
 
 **Parameter Description**:
-- `-L`: Follow redirects automatically (when download_URL returns a redirect URL, curl will continue downloading from the new location)
-- `--max-redirs 10`: Maximum number of redirects to follow (prevents infinite redirect loops)
+- `-f`: Fail on HTTP errors (returns non-zero exit code instead of saving error response to file)
+- `-L`: Follow redirects automatically (PDS download URLs redirect to the actual OSS storage URL)
 - `--max-time 3600`: Maximum time for the entire download operation (seconds)
+- `--retry 3`: Retry up to 3 times on transient failures
+- `--retry-delay 5`: Wait 5 seconds between retries
 
-**Note**: The `-L` parameter is critical because PDS download URLs often return a redirect to the actual OSS storage URL. Without this parameter, curl will fail with a 3xx redirect response.
+**Important**: Always use a shell variable for the URL. PDS download URLs contain query parameters with `&`, STS security tokens with `+`/`=`, and URL-encoded characters that will break if pasted directly into the command line without correct quoting. Using `"${DOWNLOAD_URL}"` with double quotes ensures the entire URL is passed intact.
 
 Or use `wget`:
 
 ```bash
-wget --timeout=3600 --max-redirect=10 -O <output_filename> '<download_URL>'
+wget --timeout=3600 --max-redirect=10 -O <output_filename> "${DOWNLOAD_URL}"
 ```
-
-**Parameter Description**:
-- `--max-redirect=10`: Maximum number of redirects to follow
-- `--timeout=3600`: Timeout for the download operation (seconds)
 
 ---
 

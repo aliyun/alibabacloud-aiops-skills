@@ -1,40 +1,40 @@
-# 文件分享 (Share Link)
+# File Sharing (Share Link)
 
-## 概述
+## Overview
 
-文件分享功能允许用户对个人空间或团队空间中的文件/文件夹创建分享链接，支持跨组织向外部用户分享。可设置访问密码、有效期、权限控制（预览/下载/上传/编辑）等。
+The file sharing feature allows users to create share links for files/folders in personal drives or team drives, supporting cross-organization sharing with external users. It supports access passwords, expiration periods, and permission controls (preview/download/upload/edit).
 
-## 前提条件
+## Prerequisites
 
-1. 已完成 PDS 配置（domain_id、user_id、authentication-type），参见 `references/config.md`
-2. **超级管理员或网盘管理员已启用分享功能**：管理控制台 > 安全策略 > 分享设置管理 > 开启「启用分享设置」
+1. PDS configuration is complete (domain_id, user_id, authentication-type). See `references/config.md`.
+2. **A super administrator or drive administrator has enabled the sharing feature**: Admin Console > Security Policy > Share Settings Management > Enable "Share Settings".
 
-> **注意事项**：
-> - 单日最多支持创建和访问分享各 500 次
-> - 若分享链接未设置「仅企业内用户可访问」，则 APK 和 IPA 文件禁止下载（如需解除限制，需管理员完成自定义域名配置）
-> - 管理员开启分享设置后，若用户界面未显示分享按钮，请刷新网页或重启客户端
+> **Important Notes**:
+> - A maximum of 500 share creations and 500 share accesses are supported per day.
+> - If a share link does not have "Only accessible by enterprise users" enabled, APK and IPA files are prohibited from downloading (to lift this restriction, an administrator must complete custom domain configuration).
+> - After the administrator enables share settings, if the share button does not appear in the user interface, refresh the webpage or restart the client.
 
 ---
 
-## 工作流程
+## Workflow
 
-### 创建分享前：解析目标文件
+### Before Creating a Share: Resolve the Target File
 
-创建分享必须先确认目标空间的 `drive_id`。普通文件/文件夹分享还必须取得要分享对象的 `file_id`；分享整个空间时可使用 `--share-all-files true`，此时不要解析或传入 `--file-id-list`。
+Creating a share requires first confirming the target drive's `drive_id`. Sharing regular files/folders also requires obtaining the `file_id` of the object to share; when sharing an entire drive, use `--share-all-files true` and do not resolve or pass `--file-id-list`.
 
-- 如果用户已经提供 `drive_id` 和 `file_id`，直接进入创建分享。
-- 如果用户明确要求分享整个空间，先取得 `drive_id`，创建分享时使用 `--share-all-files true`，不要传 `--file-id-list`。
-- 如果用户提供的是空间名称、文件名或云端路径，先按以下顺序解析：
-  1. 读取 `references/drive.md`，确定目标空间并取得 `drive_id`。
-  2. 读取 `references/search-file.md`，根据文件名或路径搜索目标文件/文件夹并取得 `file_id`。
-  3. 如果搜索到多个候选项，向用户展示候选项的路径、类型、更新时间，并让用户确认。
-  4. 如果未找到目标文件/文件夹，停止创建分享并告知用户无法定位目标对象。
+- If the user has already provided `drive_id` and `file_id`, proceed directly to creating the share.
+- If the user explicitly requests to share an entire drive, first obtain the `drive_id`, then create the share using `--share-all-files true` without passing `--file-id-list`.
+- If the user provides a drive name, file name, or cloud path, resolve in the following order:
+  1. Read `references/drive.md` to identify the target drive and obtain the `drive_id`.
+  2. Read `references/search-file.md` to search for the target file/folder by name or path and obtain the `file_id`.
+  3. If multiple candidates are found, present the candidates' paths, types, and update times to the user and ask for confirmation.
+  4. If the target file/folder is not found, stop creating the share and inform the user that the target object cannot be located.
 
-不要凭文件名猜测 `file_id`，也不要在未确认唯一目标对象时创建分享。
+Do not guess `file_id` from file names, and do not create a share without confirming a unique target object.
 
-### 创建分享
+### Creating a Share
 
-确认 `drive_id` 后，按目标类型选择 `--file-id-list` 或 `--share-all-files true`，创建分享链接：
+After confirming the `drive_id`, choose `--file-id-list` or `--share-all-files true` based on the target type, then create the share link:
 
 ```bash
 aliyun pds create-share-link \
@@ -43,37 +43,37 @@ aliyun pds create-share-link \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
 ```
 
-**过期时间规则**：
+**Expiration Time Rules**:
 
-- 只有用户明确要求分享在某个时间过期时，才传 `--expiration`。
-- 如果用户明确说明“几天后过期”（例如“7 天后过期”），使用当前系统时间加上对应天数，并转换为 RFC 3339 格式，例如 `2026-05-28T15:04:05.000+08:00`。
-- 如果用户明确给出具体日期或时间，将其转换为 RFC 3339 格式后作为 `--expiration`。
-- 如果用户未明确说明过期时间，不要传 `--expiration`，表示分享链接永不过期。
+- Only pass `--expiration` when the user explicitly requests the share to expire at a certain time.
+- If the user explicitly states "expire after N days" (e.g., "expire after 7 days"), add the corresponding number of days to the current system time and convert to RFC 3339 format, e.g., `2026-05-28T15:04:05.000+08:00`.
+- If the user explicitly provides a specific date or time, convert it to RFC 3339 format and use it as `--expiration`.
+- If the user does not explicitly specify an expiration time, do not pass `--expiration`, meaning the share link never expires.
 
-**参数说明**：
+**Parameter Reference**:
 
-| 参数 | 必填 | 说明 |
-|------|------|------|
-| `--drive-id` | 是 | 空间 ID |
-| `--file-id-list` | 条件必填 | 要分享的文件 ID 列表（1~100个），`share-all-files` 为 true 时不生效 |
-| `--share-all-files` | 否 | 是否分享整个空间的所有文件 |
-| `--share-name` | 否 | 分享名称，默认使用第一个文件名，最大 128 字符 |
-| `--share-pwd` | 否 | 访问密码（提取码），0~64 字节，留空则免密访问 |
-| `--expiration` | 否 | 过期时间，RFC 3339 格式；用户未明确说明过期时间时不传该参数，表示永不过期 |
-| `--disable-preview` | 否 | 是否禁止预览 |
-| `--disable-download` | 否 | 是否禁止下载 |
-| `--disable-save` | 否 | 是否禁止转存 |
-| `--preview-limit` | 否 | 预览次数限制，0 表示不限 |
-| `--download-limit` | 否 | 下载次数限制，0 表示不限 |
-| `--save-limit` | 否 | 转存次数限制，0 表示不限 |
-| `--creatable` | 否 | 是否允许上传文件到分享文件夹，需同时指定 `creatable-file-id-list` |
-| `--creatable-file-id-list` | 否 | 允许上传的文件夹 ID 列表 |
-| `--office-editable` | 否 | 是否允许在线编辑文档 |
-| `--require-login` | 否 | 是否仅限登录后访问 |
-| `--description` | 否 | 分享描述/留言，最大 1024 字符 |
-| `--user-id` | 否 | 用户 ID |
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `--drive-id` | Yes | Drive ID |
+| `--file-id-list` | Conditionally required | List of file IDs to share (1-100 items); not effective when `share-all-files` is true |
+| `--share-all-files` | No | Whether to share all files in the entire drive |
+| `--share-name` | No | Share name; defaults to the first file name; maximum 128 characters |
+| `--share-pwd` | No | Access password (extraction code), 0-64 bytes; leave empty for password-free access |
+| `--expiration` | No | Expiration time in RFC 3339 format; do not pass this parameter when the user has not explicitly specified an expiration time, meaning the share never expires |
+| `--disable-preview` | No | Whether to disable preview |
+| `--disable-download` | No | Whether to disable download |
+| `--disable-save` | No | Whether to disable save-to-drive |
+| `--preview-limit` | No | Preview count limit; 0 means unlimited |
+| `--download-limit` | No | Download count limit; 0 means unlimited |
+| `--save-limit` | No | Save-to-drive count limit; 0 means unlimited |
+| `--creatable` | No | Whether to allow uploading files to the shared folder; requires specifying `creatable-file-id-list` simultaneously |
+| `--creatable-file-id-list` | No | List of folder IDs that allow uploads |
+| `--office-editable` | No | Whether to allow online document editing |
+| `--require-login` | No | Whether to restrict access to logged-in users only |
+| `--description` | No | Share description/message; maximum 1024 characters |
+| `--user-id` | No | User ID |
 
-**返回示例**：
+**Response Example**:
 ```json
 {
   "share_id": "<share_id>",
@@ -85,29 +85,29 @@ aliyun pds create-share-link \
 }
 ```
 
-**返回给用户前处理**：
+**Post-processing Before Returning to User**:
 
-- 创建分享后，先检查 `create-share-link` 返回的 `share_url`。
-- 如果 `share_url` 非空，默认直接把该地址返回给用户。
-- 如果 `share_url` 为空，必须先取得 `share_id`、`share_pwd` 和 `domain_id`，再查询当前 domain 是否配置了自定义域名：
+- After creating the share, first check the `share_url` returned by `create-share-link`.
+- If `share_url` is non-empty, return that URL directly to the user by default.
+- If `share_url` is empty, first obtain the `share_id`, `share_pwd`, and `domain_id`, then query whether the current domain has a custom domain configured:
   ```bash
   aliyun pds get-domain \
     --domain-id <domain_id> \
     --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
   ```
-- 计算 `<share_host>`：
-  - 如果 `get-domain` 返回中存在非空 `endpoints.app_endpoint`，使用该值作为自定义域名；如果该值包含 `http://` 或 `https://` 前缀，先去掉协议前缀。
-  - 如果不存在 `endpoints` 对象，或 `endpoints` 中没有 `app_endpoint` 字段，或 `app_endpoint` 为空，表示没有设置自定义域名，使用默认域名 `<domain_id>.apps.aliyunfile.com`。
-- `share_url` 为空时，按以下规则组装并返回分享 URL：
-  - 有分享密码时：`https://<share_host>/disk/s/<share_id>?pwd=<share_pwd>&domainId=<domain_id>`。
-  - 如果 `<share_pwd>` 为空，不要拼接 `pwd` 参数：`https://<share_host>/disk/s/<share_id>?domainId=<domain_id>`。
-- `<domain_id>` 使用用户提供或当前 PDS 配置中的 domain id；`<share_id>` 使用创建分享返回的 `share_id`；`<share_pwd>` 使用创建分享时设置或返回的分享密码。
+- Determine `<share_host>`:
+  - If the `get-domain` response contains a non-empty `endpoints.app_endpoint`, use that value as the custom domain; if the value includes an `http://` or `https://` prefix, strip the protocol prefix first.
+  - If the `endpoints` object does not exist, or `endpoints` does not contain an `app_endpoint` field, or `app_endpoint` is empty, it means no custom domain is configured; use the default domain `<domain_id>.apps.aliyunfile.com`.
+- When `share_url` is empty, assemble and return the share URL according to the following rules:
+  - With a share password: `https://<share_host>/disk/s/<share_id>?pwd=<share_pwd>&domainId=<domain_id>`.
+  - If `<share_pwd>` is empty, do not include the `pwd` parameter: `https://<share_host>/disk/s/<share_id>?domainId=<domain_id>`.
+- `<domain_id>` uses the user-provided or currently configured PDS domain ID; `<share_id>` uses the `share_id` returned from the create-share response; `<share_pwd>` uses the share password set or returned during share creation.
 
 ---
 
-### 查看分享列表
+### Listing Shares
 
-列出当前用户创建的所有分享：
+List all shares created by the current user:
 
 ```bash
 aliyun pds list-share-link \
@@ -117,26 +117,26 @@ aliyun pds list-share-link \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
 ```
 
-**参数说明**：
+**Parameter Reference**:
 
-| 参数 | 必填 | 说明 |
-|------|------|------|
-| `--creator` | 否 | 创建者用户 ID |
-| `--include-cancelled` | 否 | 是否包含已取消的分享 |
-| `--limit` | 否 | 每页最大返回数量，0~100 |
-| `--marker` | 否 | 分页标记，首次请求不填 |
-| `--order-by` | 否 | 排序字段：`created_at`（默认）、`updated_at`、`share_name`、`description` |
-| `--order-direction` | 否 | 排序方向：`ASC` / `DESC` |
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `--creator` | No | Creator user ID |
+| `--include-cancelled` | No | Whether to include cancelled shares |
+| `--limit` | No | Maximum number of results per page, 0-100 |
+| `--marker` | No | Pagination marker; do not pass on the first request |
+| `--order-by` | No | Sort field: `created_at` (default), `updated_at`, `share_name`, `description` |
+| `--order-direction` | No | Sort direction: `ASC` / `DESC` |
 
-**分页处理**：
+**Pagination Handling**:
 
-如果返回结果中包含非空 `next_marker`，说明还有下一页数据。继续执行同一个 `list-share-link` 命令，并将返回的 `next_marker` 作为下一次请求的 `--marker` 参数，直到 `next_marker` 为空。需要统计、筛选或批量处理分享时，必须先遍历全部分页结果。
+If the response contains a non-empty `next_marker`, there is more data on the next page. Continue executing the same `list-share-link` command with the returned `next_marker` as the `--marker` parameter for the next request, until `next_marker` is empty. When counting, filtering, or batch-processing shares, all pages must be traversed first.
 
 ---
 
-### 搜索分享
+### Searching Shares
 
-按条件搜索分享链接（支持模糊搜索名称、按状态/时间过滤）：
+Search share links by conditions (supports fuzzy name search, filtering by status/time):
 
 ```bash
 aliyun pds search-share-link \
@@ -145,27 +145,27 @@ aliyun pds search-share-link \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
 ```
 
-**参数说明**：
+**Parameter Reference**:
 
-| 参数 | 必填 | 说明 |
-|------|------|------|
-| `--query` | 否 | 搜索条件，支持字段：`created_at`、`updated_at`、`share_name_for_fuzzy`、`status`（enabled/disabled）、`expired_time` |
-| `--creators` | 否 | 创建者 ID 列表（管理员可查所有人） |
-| `--limit` | 否 | 每页最大返回数量，1~100，默认 100 |
-| `--marker` | 否 | 分页标记 |
-| `--order-by` | 否 | 排序字段 |
-| `--order-direction` | 否 | 排序方向 |
-| `--return-total-count` | 否 | 是否返回总数 |
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `--query` | No | Search condition; supported fields: `created_at`, `updated_at`, `share_name_for_fuzzy`, `status` (enabled/disabled), `expired_time` |
+| `--creators` | No | List of creator IDs (administrators can query all users) |
+| `--limit` | No | Maximum number of results per page, 1-100, default 100 |
+| `--marker` | No | Pagination marker |
+| `--order-by` | No | Sort field |
+| `--order-direction` | No | Sort direction |
+| `--return-total-count` | No | Whether to return the total count |
 
-**分页处理**：
+**Pagination Handling**:
 
-如果返回结果中包含非空 `next_marker`，说明还有下一页数据。继续执行同一个 `search-share-link` 命令，并将返回的 `next_marker` 作为下一次请求的 `--marker` 参数，直到 `next_marker` 为空。需要统计、筛选或批量处理分享时，必须先遍历全部分页结果。
+If the response contains a non-empty `next_marker`, there is more data on the next page. Continue executing the same `search-share-link` command with the returned `next_marker` as the `--marker` parameter for the next request, until `next_marker` is empty. When counting, filtering, or batch-processing shares, all pages must be traversed first.
 
 ---
 
-### 查看分享详情
+### Viewing Share Details
 
-根据 share_id 查询分享链接详细信息：
+Query detailed information about a share link by share_id:
 
 ```bash
 aliyun pds get-share-link \
@@ -175,9 +175,9 @@ aliyun pds get-share-link \
 
 ---
 
-### 修改分享设置
+### Modifying Share Settings
 
-修改已有分享的权限、密码、有效期等。只传用户明确要求修改的字段，不要传未请求修改的字段：
+Modify permissions, password, expiration, etc. for an existing share. Only pass fields that the user explicitly requests to modify; do not pass fields that were not requested for modification:
 
 ```bash
 aliyun pds update-share-link \
@@ -186,29 +186,29 @@ aliyun pds update-share-link \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
 ```
 
-**参数说明**：
+**Parameter Reference**:
 
-| 参数 | 必填 | 说明 |
-|------|------|------|
-| `--share-id` | 是 | 分享 ID |
-| `--share-name` | 否 | 修改分享名称 |
-| `--share-pwd` | 否 | 修改访问密码 |
-| `--expiration` | 否 | 修改过期时间，按创建分享的过期时间规则计算；用户未明确说明过期时间时不要修改该字段 |
-| `--description` | 否 | 修改描述 |
-| `--disable-preview` | 否 | 是否禁止预览 |
-| `--disable-download` | 否 | 是否禁止下载 |
-| `--disable-save` | 否 | 是否禁止转存 |
-| `--office-editable` | 否 | 是否允许在线编辑 |
-| `--preview-limit` | 否 | 预览次数限制 |
-| `--download-limit` | 否 | 下载次数限制 |
-| `--save-limit` | 否 | 转存次数限制 |
-| `--status` | 否 | 分享状态：`enabled`（生效）/ `disabled`（取消） |
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `--share-id` | Yes | Share ID |
+| `--share-name` | No | Modify share name |
+| `--share-pwd` | No | Modify access password |
+| `--expiration` | No | Modify expiration time; calculate according to the expiration time rules for creating shares; do not modify this field when the user has not explicitly specified an expiration time |
+| `--description` | No | Modify description |
+| `--disable-preview` | No | Whether to disable preview |
+| `--disable-download` | No | Whether to disable download |
+| `--disable-save` | No | Whether to disable save-to-drive |
+| `--office-editable` | No | Whether to allow online editing |
+| `--preview-limit` | No | Preview count limit |
+| `--download-limit` | No | Download count limit |
+| `--save-limit` | No | Save-to-drive count limit |
+| `--status` | No | Share status: `enabled` (active) / `disabled` (cancelled) |
 
 ---
 
-### 取消分享
+### Cancelling a Share
 
-取消（删除）分享链接：
+Cancel (delete) a share link:
 
 ```bash
 aliyun pds cancel-share-link \
@@ -216,15 +216,15 @@ aliyun pds cancel-share-link \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
 ```
 
-取消后分享链接立即失效，接收方无法再访问。
+Once cancelled, the share link becomes immediately invalid and recipients can no longer access it.
 
 ---
 
-### 匿名访问分享（可选）
+### Anonymous Share Access (Optional)
 
-#### 匿名获取分享信息
+#### Anonymously Get Share Information
 
-无需登录即可查看分享的基本信息：
+View basic information about a share without logging in:
 
 ```bash
 aliyun pds get-share-link-by-anonymous \
@@ -232,9 +232,9 @@ aliyun pds get-share-link-by-anonymous \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
 ```
 
-#### 获取分享 Token
+#### Get Share Token
 
-通过分享 ID 和提取码获取访问 Token：
+Obtain an access token using the share ID and extraction code:
 
 ```bash
 aliyun pds get-share-link-token \
@@ -244,17 +244,17 @@ aliyun pds get-share-link-token \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
 ```
 
-| 参数 | 必填 | 说明 |
-|------|------|------|
-| `--share-id` | 是 | 分享 ID |
-| `--share-pwd` | 否 | 访问密码（分享设置了密码时必填） |
-| `--expire-sec` | 否 | Token 有效期，范围 (0, 7200]，默认 7200 秒 |
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `--share-id` | Yes | Share ID |
+| `--share-pwd` | No | Access password (required when the share has a password set) |
+| `--expire-sec` | No | Token validity period; range (0, 7200], default 7200 seconds |
 
 ---
 
-## 常见场景
+## Common Scenarios
 
-### 创建免密、永不过期的分享
+### Create a Password-Free, Never-Expiring Share
 
 ```bash
 aliyun pds create-share-link \
@@ -263,7 +263,7 @@ aliyun pds create-share-link \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
 ```
 
-### 创建有密码、7 天有效期、仅允许预览的分享
+### Create a Password-Protected, 7-Day, Preview-Only Share
 
 ```bash
 aliyun pds create-share-link \
@@ -277,7 +277,7 @@ aliyun pds create-share-link \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
 ```
 
-### 创建允许外部用户上传文件的分享
+### Create a Share That Allows External Users to Upload Files
 
 ```bash
 aliyun pds create-share-link \
@@ -290,43 +290,43 @@ aliyun pds create-share-link \
 
 ---
 
-## CLI 命令速查表
+## CLI Command Quick Reference
 
-| CLI 命令 | 说明 | 必需参数 |
-|----------|------|----------|
-| `aliyun pds create-share-link` | 创建分享链接 | `--drive-id` |
-| `aliyun pds cancel-share-link` | 取消分享链接 | `--share-id` |
-| `aliyun pds get-share-link` | 查询分享详情 | `--share-id` |
-| `aliyun pds list-share-link` | 列出分享 | 无 |
-| `aliyun pds search-share-link` | 搜索分享 | 无 |
-| `aliyun pds update-share-link` | 修改分享设置 | `--share-id` |
-| `aliyun pds get-share-link-by-anonymous` | 匿名获取分享信息 | `--share-id` |
-| `aliyun pds get-share-link-token` | 获取分享访问 Token | `--share-id` |
+| CLI Command | Description | Required Parameters |
+|-------------|-------------|---------------------|
+| `aliyun pds create-share-link` | Create a share link | `--drive-id` |
+| `aliyun pds cancel-share-link` | Cancel a share link | `--share-id` |
+| `aliyun pds get-share-link` | Query share details | `--share-id` |
+| `aliyun pds list-share-link` | List shares | None |
+| `aliyun pds search-share-link` | Search shares | None |
+| `aliyun pds update-share-link` | Modify share settings | `--share-id` |
+| `aliyun pds get-share-link-by-anonymous` | Anonymously get share information | `--share-id` |
+| `aliyun pds get-share-link-token` | Get share access token | `--share-id` |
 
-**注意**：所有命令必须附带 `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace`
-
----
-
-## 错误处理
-
-| 错误场景 | 可能原因 | 解决方案 |
-|----------|----------|----------|
-| 创建分享失败 | 管理员未开启分享功能 | 联系管理员在「安全策略 > 分享设置管理」中启用 |
-| 无法勾选「允许编辑」 | 管理员未开启「分享在线编辑」 | 联系管理员开启后重启客户端 |
-| 超出每日限制 | 单日创建/访问分享超过 500 次 | 等待次日或联系管理员配置自定义域名解除限制 |
-| 无法下载 APK/IPA | 不支持分享访问，需仅限登录后访问 | 设置 `--require-login true` 或管理员配置自定义域名 |
-| 分享链接无法访问 | 分享已过期/已取消/文件被删除 | 联系分享人重新创建 |
+**Note**: All commands must include `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace`
 
 ---
 
-## 最佳实践
+## Error Handling
 
-1. 敏感文件分享务必设置访问密码和有效期
-2. 使用 `--require-login true` 限制仅限登录后访问，提升安全性
-3. 通过 `--preview-limit` / `--download-limit` 限制操作次数防止滥用
-4. 定期清理 `disabled` 状态分享：
+| Error Scenario | Possible Cause | Solution |
+|----------------|----------------|----------|
+| Share creation failed | Administrator has not enabled the sharing feature | Contact the administrator to enable it in "Security Policy > Share Settings Management" |
+| Cannot select "Allow editing" | Administrator has not enabled "Share Online Editing" | Contact the administrator to enable it, then restart the client |
+| Daily limit exceeded | More than 500 share creations/accesses in a single day | Wait until the next day, or contact the administrator to configure a custom domain to lift the restriction |
+| Cannot download APK/IPA | Not supported for share access; requires login-only access | Set `--require-login true` or have the administrator configure a custom domain |
+| Share link inaccessible | Share has expired/been cancelled/file has been deleted | Contact the share creator to create a new share |
 
-   先搜索 `disabled` 状态的 share-link，并按分页规则遍历全部结果：
+---
+
+## Best Practices
+
+1. Always set an access password and expiration period when sharing sensitive files.
+2. Use `--require-login true` to restrict access to logged-in users only, improving security.
+3. Use `--preview-limit` / `--download-limit` to limit operation counts and prevent abuse.
+4. Periodically clean up shares with `disabled` status:
+
+   First search for share links with `disabled` status, traversing all pages following pagination rules:
 
    ```bash
    aliyun pds search-share-link \
@@ -335,7 +335,7 @@ aliyun pds create-share-link \
      --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
    ```
 
-   对确认需要清理的每个 `share_id` 执行取消分享：
+   For each `share_id` confirmed for cleanup, execute cancel-share:
 
    ```bash
    aliyun pds cancel-share-link \
@@ -343,4 +343,4 @@ aliyun pds create-share-link \
      --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
    ```
 
-5. 创建分享前确认文件 ID 正确（可通过 `references/search-file.md` 搜索文件获取 file_id）
+5. Confirm the file ID is correct before creating a share (use `references/search-file.md` to search for files and obtain the file_id).

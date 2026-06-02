@@ -1,6 +1,6 @@
 import json
 
-# 定义了文件元数据搜索的查询语法json结构
+# Query syntax JSON schema for file metadata search
 param_schema = {
     "type": "object",
     "properties": {
@@ -50,7 +50,7 @@ param_schema = {
 }
 
 
-# 定义了文件元数据的字段和对应的值类型
+# File metadata field definitions and their value types
 field_schema = {
     "parent_file_id": {
         "type": "string",
@@ -146,7 +146,7 @@ field_schema = {
     }
 }
 
-# 标准标量查询的 json schema
+# Standard scalar query JSON schema
 def get_json_schema(param_schema: dict) -> dict:
     json_schema = {
         "type": "object",
@@ -162,7 +162,7 @@ def get_json_schema(param_schema: dict) -> dict:
     return json_schema
 
 
-# 描述了是否需要用标准标量查询来搜索文件，以及如何提取标量查询的参数
+# Generates the prompt for determining whether scalar query is needed and extracting parameters
 def schalar_search_prompt() -> str:
     output = f"""
 # 任务

@@ -226,7 +226,7 @@ python scripts/render_image_editing_process.py \
   --file-name "segmented_cat.png"
 ```
 
-> Note: prompt parameter needs to be base64 encoded first, for example "小猫" (kitten) base64 encoding is "5bCP5aqr"
+> Note: prompt parameter needs to be base64 encoded first, for example "kitten" in Chinese base64 encodes to "5bCP5aqr"
 
 ### Scenario 6: Rectangle Area Removal and Save-as
 
@@ -364,7 +364,7 @@ python scripts/render_image_editing_process.py \
 
 ### 1. Operation Order Optimization
 
-Image editing operations are executed from left to right.合理安排顺序可以提高处理效率:
+Image editing operations are executed from left to right. Arranging operations in optimal order improves processing efficiency:
 - Crop first then scale: reduces data volume for subsequent processing
 - Rotate first then crop: avoids coordinate changes after rotation
 
