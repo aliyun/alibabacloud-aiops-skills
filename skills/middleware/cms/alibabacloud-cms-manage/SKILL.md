@@ -32,7 +32,7 @@ metadata:
    - Version too old or unrecognized →
      1. Run `aliyun upgrade --help` to test whether the `upgrade` subcommand exists.
         - Available → run `aliyun upgrade -y` to update to the latest version automatically, then re-check `aliyun version`.
-     2. If `upgrade` not available → run `curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash`, then re-check `aliyun version`.
+     2. If `upgrade` not available → ask the user to upgrade manually following the official guide: <https://help.aliyun.com/zh/cli/update-cli>. Wait for the user to confirm the upgrade is complete, then re-check `aliyun version`.
      3. If upgrade succeeded → go to step 3.
      4. If upgrade failed → ask the user to upgrade manually: <https://help.aliyun.com/zh/cli/update-cli>. Stop and exit.
 
@@ -72,6 +72,7 @@ aliyun configure ai-mode disable
 - **Prefer `-o text`** (default) to reduce token consumption for list/get; use `-o json` only when indented JSON is needed.
 - **Before onboarding concrete resource IDs**, verify them with `entity query --source CloudResource`; do not rely on ID shape alone.
 - **`entity query` default time range**: when the user does not specify `--from`/`--to`, default to the last 7 days (`--from` = now − 7d, `--to` = now, both as Unix seconds).
+- **Human confirmation required for mutations**: before executing any **update**, **delete**, **patch**, **stop**, **start**, or other destructive/mutating operation (excluding **create** and other non-destructive operations), always present the full command to the user and wait for explicit confirmation. Do not auto-execute write operations.
 
 ## Error Handling
 

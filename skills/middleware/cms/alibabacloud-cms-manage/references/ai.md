@@ -83,7 +83,7 @@ Collect from user:
 ### Step 2 — Initialize APM Infrastructure
 
 ```bash
-aliyun sts get-caller-identity --force -o json
+aliyun sts get-caller-identity -o json
 
 # Build workspace name
 workspace=default-cms-{AccountId}-{regionId}

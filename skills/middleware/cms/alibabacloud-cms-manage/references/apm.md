@@ -143,7 +143,7 @@ aliyun cms2 apm configuration get --workspace {workspace} --region {regionId} -o
   "success": true,
   "data": {
     "entryPointInfo": {
-      "authToken": "awy7aw18hz@2694ecf80a44b70",
+      "authToken": "awy7aw18hz@26*44b70",
       "privateDomain": "proj-xtrace-d1265ec453407aba9ef476c91f84542d-cn-hangzhou.cn-hangzhou-intranet.log.aliyuncs.com",
       "project": "proj-xtrace-d1265ec453407aba9ef476c91f84542d-cn-hangzhou",
       "publicDomain": "proj-xtrace-d1265ec453407aba9ef476c91f84542d-cn-hangzhou.cn-hangzhou.log.aliyuncs.com"
@@ -807,7 +807,7 @@ Offboarding is the reverse of onboarding. The general principle: **remove agent 
 
 | Method | What to Remove |
 |--------|----------------|
-| **自研探针 (JVM)** | Remove `-javaagent:/opt/AliyunJavaAgent/...` and all `-Darms.*` from startup command; optionally `rm -rf /opt/AliyunJavaAgent` |
+| **自研探针 (JVM)** | Remove `-javaagent:/opt/AliyunJavaAgent/...` and all `-Darms.*` from startup command; optionally remove the agent directory (`/opt/AliyunJavaAgent`) after confirming no custom configs remain — **requires user confirmation before deletion** |
 | **自研探针 (Golang)** | Re-compile without `instgo` (`go build` instead of `./instgo go build`); remove `ARMS_*` env vars |
 | **自研探针 (Python)** | Remove `aliyun-instrument` wrapper from CMD; `pip3 uninstall aliyun-bootstrap`; remove `ARMS_*` env vars |
 | **自研探针 (Node.js)** | Remove `-r @loongsuite/cms_node_sdk/register` from startup; `npm uninstall @loongsuite/cms_node_sdk`; remove `ARMS_*`/`CMS_*` env vars |
