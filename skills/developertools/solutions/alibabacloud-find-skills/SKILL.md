@@ -6,14 +6,14 @@ description: >
   "搜索阿里云技能", "有没有管理 ECS/RDS/OSS 的 skill", "阿里云 skills 有哪些类目",
   "帮我找一个 skill", "browse alicloud skills", "list alicloud skill categories",
   "is there an alicloud skill that can...", "what alicloud skills are available", "XX Skill 的内容是什么", "我想了解阿里云 XX Skill 具体做什么","帮我安装阿里云 Skill","使用阿里云相关的skill",
-  "阿里云 agent skill 市场", "搜一下阿里云的 skill".
+  "阿里云 agent skill 市场", "搜一下阿里云的 skill", "建一个数据分析项目有没有相关 skill".
 ---
 
 > [!IMPORTANT]
 > **For any Alibaba Cloud query or management task:**
-> 1. **Search** — use this skill (`alibabacloud-find-skills`) to find the relevant Skill.
-> 2. **Install** — install the matched Skill (see [Installation](#installation)).
-> 3. **Execute** — follow the installed Skill's instructions to fulfill the request.
+> 1. **Search** — use this skill (`alibabacloud-find-skills`) to find the relevant Skill(s).
+> 2. **Install** — install the selected Skill(s) only when the user asks to install or use them to complete the task.
+> 3. **Execute** — follow the installed Skill(s)' instructions to fulfill the request.
 
 # Alibaba Cloud Agent Skills Search & Discovery
 
@@ -23,10 +23,10 @@ This skill helps users search, discover, and install Alibaba Cloud official Agen
 
 This skill enables users to:
 
-1. **Search Skills** — Find Alibaba Cloud Agent Skills by keyword, category, or both
+1. **Search Skills** — Find Alibaba Cloud Agent Skills by intent phrase, keyword, category listing, or combined semantic search
 2. **Browse Categories** — Explore available skill categories and subcategories
 3. **View Skill Details** — Get detailed information about specific skills
-4. **Install Skills** — Guide users through skill installation process
+4. **Install Skills** — Guide users through skill installation when installation is requested
 
 **Architecture**: Alibaba Cloud CLI + agentexplorer Plugin → Skills Repository
 
@@ -53,8 +53,8 @@ This skill enables users to:
 > Local/management commands like `aliyun configure ...`, `aliyun configure list`, `aliyun configure ai-mode ...`,
 > `aliyun plugin ...`, and `aliyun version` do **not** support the `--user-agent` flag — do not pass it to them.
 
-**[MUST] Region** — Every `aliyun agentexplorer ...` invocation must include `--region cn-hangzhou` (or another supported region).
-Without `--region`, the call will fail.
+**[MUST] Endpoint** — Every `aliyun agentexplorer ...` invocation must include `--endpoint 'agentexplorer.aliyuncs.com'`.
+Use the explicit endpoint for AgentExplorer commands in this skill.
 
 ### Step 1: Authenticate
 
@@ -92,7 +92,10 @@ aliyun plugin update
 # Install the agentexplorer plugin
 aliyun plugin install --names agentexplorer
 
-# Verify installation (this is an API call — UA + region required)
+# Verify installation
+aliyun plugin list | grep agentexplorer
+
+# Optional: inspect command help
 aliyun agentexplorer --help
 ```
 
@@ -133,69 +136,111 @@ For detailed permission information, see [references/ram-policies.md](references
 
 ## Core Workflow
 
-### Step 1: Search Skills
+### Step 1: Understand What They Need
 
-Based on user intent, choose keyword search, category search, or both:
+Before searching, identify:
 
-- **Keyword search**: Extract keywords from the user's request and execute search directly
-- **Category search**: Call `list-categories` to get all available categories, select the best match, and search
-- **Combined search**: Use both keyword and category to narrow results
+1. **Domain** — The relevant area or Alibaba Cloud product family, e.g., ECS, RDS, OSS, SLS, PAI, testing, deployment, data analysis.
+2. **Specific task** — What the user wants to do, e.g., diagnose ECS issues, sync files to OSS, build a data analysis project, review permissions.
+3. **Skill likelihood** — Whether this is a common enough task that an existing Skill likely exists.
+4. **Category fit** — Whether the domain obviously maps to a known category. Do not call `list-categories` during initial understanding unless the user explicitly asks to browse categories.
+
+Use this understanding to form the search text. `--keyword` supports both short keywords and full intent phrases. Because `search-skills` uses semantic matching against Skill descriptions, prefer the user's intent when available, such as `建一个数据分析项目`, instead of reducing every request to a single product word.
+
+Before searching, convert this analysis into searchable intent units using [Intent Analysis for Search](#1-intent-analysis-for-search). For compound requests, each meaningful requirement or support need must become its own searchable intent unit and be searched independently.
+
+The `Search Phrase` must be capability-oriented. It should not simply copy the user's surface wording unless the surface wording already names the capability, product, or service clearly.
+
+If a search phrase is mostly domain-specific labels, document titles, organization-specific terms, policy names, or private/internal terminology, rewrite it toward the underlying capability before searching.
+
+### Step 2: Search Skills
+
+Default to semantic intent search for task-matching requests. Use category listing when the user asks to list or browse all Skills under a category.
+
+- **Intent search (default for task matching)**: Use the user's task or full intent phrase as `--keyword`, with `--search-mode semantic`.
+- **Keyword search**: Use concise product/task keywords with `--search-mode semantic` when the intent is broad, noisy, or already names a product/capability.
+- **Category browsing**: Call `list-categories` when the user asks for available categories or when a category code must be confirmed.
+- **List skills in a category**: When the user asks to list all Skills in a category, use `--category-code` only. Do not pass `--keyword` or `--search-mode semantic`; this mode supports pagination.
+- **Combined semantic search**: After category selection, use both `--keyword` and `--category-code` with `--search-mode semantic` only when the user asks for best matches inside that category.
+
+Choose one command shape based on the user request. Use `--search-mode semantic` for intent, keyword, and combined semantic search. Omit `--search-mode semantic` for category listing so pagination can be used. AgentExplorer calls must use `--endpoint 'agentexplorer.aliyuncs.com'`. If `--search-mode` is not shown in `aliyun agentexplorer search-skills --help`, install or update the `agentexplorer` plugin from the Installation section.
 
 ```bash
+# Intent search (default for task matching)
+aliyun agentexplorer search-skills \
+  --keyword "<user-intent>" \
+  --search-mode semantic \
+  --max-results 20 \
+  --endpoint 'agentexplorer.aliyuncs.com' \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
+
 # Keyword search
 aliyun agentexplorer search-skills \
-  --keyword "<keyword>" \
+  --keyword "<product-or-task-keyword>" \
+  --search-mode semantic \
   --max-results 20 \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
-# Get all categories
+# Get all categories before listing skills in a category
 aliyun agentexplorer list-categories \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
-# Category search
+# List skills in a category
 aliyun agentexplorer search-skills \
   --category-code "<category-code>" \
   --max-results 20 \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
-# Combined search (keyword + category)
+# Fetch the next category page if nextToken is returned
 aliyun agentexplorer search-skills \
-  --keyword "<keyword>" \
   --category-code "<category-code>" \
   --max-results 20 \
-  --region cn-hangzhou \
+  --next-token "<next-token-from-previous-response>" \
+  --endpoint 'agentexplorer.aliyuncs.com' \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
+
+# Combined semantic search after category selection
+aliyun agentexplorer search-skills \
+  --keyword "<user-intent-or-keyword>" \
+  --category-code "<category-code>" \
+  --search-mode semantic \
+  --max-results 20 \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
-### Step 2: Iterate Until Found
+### Step 3: Iterate Until Found
 
-If the target skill is not in the results, adjust search criteria and retry automatically:
+If a searchable intent unit has no clearly covering Skill, or the results are weak, overly generic, or only match surface/domain-specific wording, revise the search phrase and retry automatically before declaring a gap:
 
-1. Switch between Chinese and English keywords ("cloud server" → "ECS", "object storage" → "OSS")
-2. Broaden keywords (drop qualifiers: "RDS backup automation" → "RDS")
-3. Remove category filter, search by keyword only
-4. Try synonyms or related terms ("instance" → "ECS", "bucket" → "OSS")
-5. Browse the most relevant top-level category without keyword
+1. Start with the user's full intent phrase when available
+2. Extract direct product/task keywords from the request
+3. Switch between Chinese and English terms ("cloud server" → "ECS", "object storage" → "OSS")
+4. Broaden or simplify keywords (drop qualifiers: "RDS backup automation" → "RDS")
+5. Use `list-categories`, select the best category, then retry with combined search
+6. Try synonyms or related terms ("instance" → "ECS", "bucket" → "OSS")
 
-Repeat until the target skill is found or confirmed not to exist. If all attempts fail, inform the user what was tried.
+Do not conclude "no dedicated Skill exists" until you have tried at least one capability-oriented search phrase for that intent unit.
 
-### Step 3: View Skill Details (Optional)
+Repeat until every searchable intent unit has a clearly covering Skill, is covered by a complementary selected Skill, or is confirmed as a known gap. If all attempts fail for an intent unit, inform the user what was tried.
+
+### Step 4: View Skill Details (Optional)
 
 Optionally retrieve skill content to verify it matches user intent before installation. This step can be skipped if the search results already provide sufficient information.
 
 ```bash
 aliyun agentexplorer get-skill-content \
   --skill-name "<skill-name>" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
-### Step 4: Install Skill
+### Step 5: Install Selected Skill(s)
 
-Execute the installation command for the target skill.
+Skip this step when the user only asks to list, browse, compare, or inspect Skills without installation. When installation is requested, execute the installation command for each selected Skill.
 
 ```bash
 # Option A: Using npx skills add
@@ -211,36 +256,14 @@ npx skills add aliyun/alibabacloud-aiops-skills \
   -g -y
 
 # Option B: Using npx clawhub install (OpenClaw ecosystem)
-npx clawhub install <skill-name>
+npx clawhub install <selected-skill-name>
 ```
 
-Verify the skill appears in the available skills list after installation.
+Verify each selected Skill appears in the available skills list after installation.
 
 ## Command Reference
 
-### Parameters
-
-| Parameter Name  | Required/Optional                | Description                                                      | Default Value |
-| --------------- | -------------------------------- | ---------------------------------------------------------------- | ------------- |
-| `keyword`       | Optional                         | Search keyword (product name, feature name, or description)      | None          |
-| `category-code` | Optional                         | Category code for filtering (e.g., "computing", "computing.ecs") | None          |
-| `max-results`   | Optional                         | Maximum number of results per page (1-100)                       | 20            |
-| `next-token`    | Optional                         | Pagination token from previous response                          | None          |
-| `skip`          | Optional                         | Number of items to skip                                          | 0             |
-| `skill-name`    | Required (for get-skill-content) | Unique skill identifier                                          | None          |
-
-### Pagination
-
-When search results span multiple pages, use `next-token` from the previous response to fetch the next page:
-
-```bash
-aliyun agentexplorer search-skills \
-  --keyword "<keyword>" \
-  --max-results 20 \
-  --next-token "<next-token-from-previous-response>" \
-  --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
-```
+For complete parameter details and search parameter rules, see [references/related-commands.md](references/related-commands.md).
 
 ## Success Verification
 
@@ -249,51 +272,85 @@ After each operation, verify success by checking:
 1. **List Categories**: Response contains categoryCode and categoryName fields
 2. **Search Skills**: Response contains skills array with valid skill objects
 3. **Get Skill Content**: Response contains complete skill markdown content
-4. **Install Skill**: Skill appears in Claude Code skills list
+4. **Install Selected Skill(s)**: Each selected Skill appears in Claude Code skills list
 
 For detailed verification steps, see [references/verification-method.md](references/verification-method.md).
 
-## Search Strategies & Best Practices
+## Search Strategies
 
-### 1. Keyword Selection
+### 1. Intent Analysis for Search
 
-- **Use product codes**: `ecs`, `rds`, `oss`, `slb`, `vpc` (English abbreviations work best)
-- **Chinese names**: Also supported, e.g., "云服务器", "数据库", "对象存储"
-- **Feature terms**: "backup", "monitoring", "batch operation", "deployment"
-- **Generic terms**: When unsure, use broader terms like "compute", "storage", "network"
+Before choosing search text, analyze the user's request into searchable intent units. A searchable intent unit should describe what capability the Skill must provide, not only the user's surface wording.
 
-### 2. Category Filtering
+For each meaningful requirement, identify:
 
-- **Browse first**: Use `list-categories` to understand available categories
-- **Top-level categories**: `computing`, `database`, `storage`, `networking`, `security`, etc.
-- **Subcategories**: Use dot notation like `computing.ecs`, `database.rds`
-- **Multiple categories**: Separate with commas: `computing,database`
+- **Action**: What operation is needed, e.g., query, generate, diagnose, deploy, install, validate, transform
+- **Object**: What the operation applies to, e.g., document, knowledge base, video, script, database, CLI environment
+- **Context/source**: Where the information or resource comes from, e.g., internal docs, cloud service, local file, OSS, database, runtime environment
+- **Expected output**: What the user expects back, e.g., answer with citations, generated script, report, command guidance, installed dependency
+- **Support needs**: Whether the request also needs credentials, plugins, permissions, runtime dependencies, environment checks, or troubleshooting
 
-### 3. Result Optimization
+Treat explicit support, blocker, and fallback clauses as searchable intents, even when they are conditional. This includes requirements about setup, access, authorization, credentials, dependencies, runtime environment, plugins, connectivity, validation, troubleshooting, remediation, or handling errors that may occur during execution. Do not drop these clauses just because they are not the primary business goal; if they may require a separate Skill, search them independently.
 
-- **Start broad**: Begin with keyword-only search, then add category filters
-- **Adjust page size**: Use `--max-results` based on display needs (20-50 typical)
+Then form one or more searchable intent phrases using:
+
+`<action> + <object/capability> + <context/source> + <expected output>`
+
+For compound requests, create one searchable intent unit per meaningful requirement and search each unit independently. Do not assume one Skill covers the whole request unless the search result clearly states that it does.
+
+A single searchable intent unit may still require multiple complementary Skills. When one Skill covers the main action but another Skill is needed for supporting needs such as credentials, plugins, runtime setup, permissions, data access, or validation, select both and explain their roles separately.
+
+### 2. Search Text Selection
+
+- **Use intent phrases first**: Prefer the user's natural-language task or requirement, e.g., "建一个数据分析项目", "把本地文件同步到 OSS"
+- **Use product/task keywords when intent is broad or noisy**: Extract concise product and action terms, e.g., "ECS 诊断", "OSS 同步"
+- **Use product codes as fallback or refinement**: `ecs`, `rds`, `oss`, `slb`, `vpc`
+- **Use Chinese and English variants**: e.g., "云服务器" / "ECS", "对象存储" / "OSS"
+- **Use broader terms only after specific intent searches fail**: e.g., "compute", "storage", "network"
+
+### 3. Category Filtering
+
+- **Browse when needed**: Use `list-categories` when the user asks about categories or when the domain should narrow the search
+- **Select the best category**: Map the domain to the closest `categoryCode`, then use it in `--category-code`
+- **Combine with intent**: For clear tasks inside a clear domain, use the task phrase as `--keyword` and the selected category as `--category-code`
+
+### 4. Result Optimization
+
+- **Start with intent**: Begin with the user's task description, then add category filtering only when the domain is clear or initial results are too broad
+- **Keep complementary Skills together**: If one Skill handles the main task and another handles required setup, access, validation, or troubleshooting, include both instead of choosing only the top-ranked main Skill
 - **Check install counts**: Popular skills usually have higher install counts
 - **Read descriptions**: Match skill description to your specific use case
 
-### 4. When No Results Found
+### 5. When No Results Found
 
 ```bash
-# Strategy 1: Try alternative keywords
+# Strategy 1: Try the full user intent
+# Instead of just "OSS", try "把本地文件同步到 OSS"
+
+# Strategy 2: Extract product/task keywords
+# Instead of "云服务器故障排查", try "ECS 诊断"
+
+# Strategy 3: Try Chinese and English variants
 # Instead of "云服务器" try "ECS" or "instance"
-
-# Strategy 2: Remove filters
-# Drop category filter, search by keyword only
-
-# Strategy 3: Browse by category
-aliyun agentexplorer list-categories --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
-aliyun agentexplorer search-skills --region cn-hangzhou --category-code "computing" --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Strategy 4: Use broader terms
 # Instead of "RDS backup automation" try just "RDS" or "database"
+
+# Strategy 5: Browse or filter by category
+aliyun agentexplorer list-categories \
+  --endpoint 'agentexplorer.aliyuncs.com' \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
+
+aliyun agentexplorer search-skills \
+  --keyword "ECS 实例管理" \
+  --category-code "<selected-category-code>" \
+  --search-mode semantic \
+  --max-results 20 \
+  --endpoint 'agentexplorer.aliyuncs.com' \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
-### 5. Display Results to Users
+### 6. Display Results to Users
 
 When presenting search results, format as table:
 
@@ -320,88 +377,19 @@ This skill does not create any resources. No cleanup is required.
 
 ## Best Practices
 
-1. **Always verify credentials first** — Use `aliyun configure list` before any search operation
-2. **Iterate on search** — Automatically adjust keywords and retry until the target skill is found or confirmed absent
-3. **Start with broad searches** — Narrow down with filters if too many results
-4. **Show category structure** — Help users understand available categories before filtering
-5. **Display results clearly** — Use tables to make skill comparison easy
-6. **Provide skill names** — Always show `skillName` field for installation
-7. **Handle pagination** — Offer to load more results if `nextToken` is present
-8. **Check install counts** — Guide users toward popular, well-tested skills
-9. **Show full details** — Use `get-skill-content` before installation recommendation
-10. **Test after install** — Verify skill is available after installation
+1. **Verify credentials first** — Use `aliyun configure list` before AgentExplorer operations
+2. **Choose the right search mode** — Use semantic intent or keyword search for task matching; use category listing without `--search-mode semantic` when the user asks to list all Skills in a category
+3. **Search by intent units** — Split compound requests into meaningful capability and support needs, then search each unit independently
+4. **Refine weak results** — If results only match surface wording or miss an intent unit, rewrite the phrase toward the underlying capability and retry before declaring a gap
+5. **Keep complementary Skills together** — Select multiple Skills when one covers the main task and another covers required setup, access, validation, troubleshooting, or runtime support
+6. **Display results clearly** — Use tables with `skillName`, display name, category, description, and install count
+7. **Install only when requested** — Do not install for list-only, browse-only, or compare-only requests
+8. **Verify before installation** — Use `get-skill-content` when search results are not sufficient to confirm fit
+9. **Verify after installation** — Confirm every selected Skill is available after installation
 
 ## Common Use Cases & Examples
 
-### Example 1: Find ECS Management Skills
-
-```bash
-# User: "Find skills for managing ECS instances"
-
-# Step 1: Search by keyword
-aliyun agentexplorer search-skills \
-  --keyword "ECS" \
-  --max-results 20 \
-  --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
-
-# Step 2: Display results table and get details for the best match
-aliyun agentexplorer get-skill-content \
-  --skill-name "alibabacloud-ecs-batch-command" \
-  --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
-```
-
-### Example 2: Browse Database Skills
-
-```bash
-# User: "What database skills are available?"
-
-# Step 1: List categories to show database category
-aliyun agentexplorer list-categories \
-  --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
-
-# Step 2: Search database category
-aliyun agentexplorer search-skills \
-  --category-code "database" \
-  --max-results 20 \
-  --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
-
-# Step 3: Display results grouped by subcategory
-```
-
-### Example 3: Search with Chinese Keyword
-
-```bash
-# User: "搜索 OSS 相关的 skill"
-
-# Step 1: Search using Chinese or English keyword
-aliyun agentexplorer search-skills \
-  --keyword "OSS" \
-  --max-results 20 \
-  --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
-
-# Step 2: Display results in user's preferred language
-```
-
-### Example 4: Narrow Down Search
-
-```bash
-# User: "Find backup skills for RDS"
-
-# Step 1: Combined search
-aliyun agentexplorer search-skills \
-  --keyword "backup" \
-  --category-code "database.rds" \
-  --max-results 20 \
-  --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
-
-# Step 2: Display targeted results
-```
+For examples, see [references/search-examples.md](references/search-examples.md).
 
 ## Reference Documentation
 
@@ -413,6 +401,7 @@ aliyun agentexplorer search-skills \
 | [references/cli-installation-guide.md](references/cli-installation-guide.md) | Alibaba Cloud CLI installation guide         |
 | [references/acceptance-criteria.md](references/acceptance-criteria.md)       | Testing acceptance criteria and patterns     |
 | [references/category-examples.md](references/category-examples.md)           | Common category codes and examples           |
+| [references/search-examples.md](references/search-examples.md)               | Common search workflow examples              |
 | [references/npx-skills-agents.md](references/npx-skills-agents.md)           | Supported `--agent` values for `npx skills add` |
 
 ## Troubleshooting
@@ -427,29 +416,29 @@ aliyun agentexplorer search-skills \
 
 **Cause**: agentexplorer plugin not installed.
 
-**Solution**: Run `aliyun plugin install --names aliyun-cli-agentexplorer`
+**Solution**:
+
+```bash
+aliyun plugin install --names agentexplorer
+aliyun agentexplorer version
+```
 
 ### No Results Returned
 
-**Cause**: Search criteria too specific or incorrect category code.
+**Cause**: Search mode, search phrase, or category code does not match the user's request.
 
 **Solutions**:
 
-1. Try broader keywords
-2. Remove category filter
-3. Use `list-categories` to verify category codes
-4. Try English product codes instead of Chinese names
-
-### Pagination Issues
-
-**Cause**: Incorrect nextToken or skip value.
-
-**Solution**: Use exact `nextToken` value from previous response, don't modify it.
+1. For semantic intent search, rewrite the phrase toward the underlying capability instead of repeating private/internal wording
+2. Try Chinese and English variants, product codes, and concise product/task keywords
+3. For weak semantic results, retry with a selected `--category-code` and `--search-mode semantic`
+4. For category listing, verify the `categoryCode` with `list-categories`, omit `--keyword` and `--search-mode semantic`, and use `--next-token` when pagination is returned
+5. Declare a gap only after each searchable intent unit has been retried with at least one capability-oriented phrase
 
 ## Notes
 
 - **Read-only operations**: This skill only performs queries, no resources are created
-- **No credentials required for browsing**: Some operations may work without full credentials
+- **Credential check first**: Follow the Authentication section before AgentExplorer operations
 - **Multi-language support**: Keywords support both English and Chinese
 - **Regular updates**: Skills catalog is regularly updated with new skills
 - **Community skills**: Some skills may be community-contributed, check descriptions carefully

@@ -6,69 +6,18 @@ Complete reference for all Aliyun CLI commands used in the `alibabacloud-find-sk
 
 | Command | Purpose | Required Parameters |
 |---------|---------|---------------------|
-| `aliyun agentexplorer list-categories` | List all skill categories | None |
-| `aliyun agentexplorer search-skills` | Search for skills | None (keyword or category-code recommended) |
-| `aliyun agentexplorer get-skill-content` | Get skill details | `--skill-name` (required) |
+| `aliyun agentexplorer search-skills` | Search for skills | `--search-mode semantic`, `--endpoint`, `--user-agent` |
+| `aliyun agentexplorer list-categories` | List all skill categories | `--endpoint`, `--user-agent` |
+| `aliyun agentexplorer get-skill-content` | Get skill details | `--skill-name`, `--endpoint`, `--user-agent` |
 | `aliyun plugin install` | Install CLI plugins | `--names` (required) |
 | `aliyun configure list` | Check credential configuration | None |
 | `aliyun version` | Check CLI version | None |
 
 ---
 
-## 1. aliyun agentexplorer list-categories
+## 1. aliyun agentexplorer search-skills
 
-**Description**: List all available skill categories and subcategories.
-
-**Syntax**:
-```bash
-aliyun agentexplorer list-categories [flags]
-```
-
-**Parameters**: None required.
-
-**Common Flags**:
-- `--region <region>` — **Required**: API region (e.g., `cn-hangzhou`)
-- `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills` — **Required**: Identify requests from this skill
-- `--cli-query <jmespath>` — Filter output using JMESPath expression
-- `-q, --quiet` — Suppress output
-
-**Example Usage**:
-```bash
-# List all categories
-aliyun agentexplorer list-categories \
-  --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
-
-# List categories with JMESPath filtering
-aliyun agentexplorer list-categories \
-  --cli-query "categories[].categoryName" \
-  --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
-```
-
-**Output Structure**:
-```json
-{
-  "categories": [
-    {
-      "categoryCode": "computing",
-      "categoryName": "计算",
-      "subCategories": [
-        {
-          "categoryCode": "ecs",
-          "categoryName": "云服务器 ECS"
-        }
-      ]
-    }
-  ]
-}
-```
-
----
-
-## 2. aliyun agentexplorer search-skills
-
-**Description**: Search for Alibaba Cloud Agent Skills by keyword, category, or both.
+**Description**: Search for Alibaba Cloud Agent Skills by keyword, category, or both. The upgraded workflow uses semantic search against Skill descriptions, so `--keyword` can be a full intent phrase such as "建一个数据分析项目"; `--category-code` should be filled with the best matching category when the domain is clear.
 
 **Syntax**:
 ```bash
@@ -79,75 +28,102 @@ aliyun agentexplorer search-skills [flags]
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `--keyword` | string | No | Search keyword (product name, feature, description) |
-| `--category-code` | string | No | Category code filter (comma-separated for multiple) |
+| `--keyword` | string | No | Search keyword or full intent phrase |
+| `--category-code` | string | No | Category code selected from `list-categories`; omit this parameter when no category is selected. Use a top-level `categoryCode` directly. For a child category returned in `subCategories`, pass `<parent-categoryCode>.<child-categoryCode>` (for example, `computing.ecs`). For multiple categories, comma-separate each valid code (for example, `computing.ecs,computing.rds`). Never pass a bare child code like `ecs`; use it as `--keyword` instead. |
+| `--search-mode` | string | Conditional | Use `semantic` for intent/keyword/combined search; omit for category listing |
 | `--max-results` | int | No | Maximum results per page (1-100, default: 20) |
 | `--next-token` | string | No | Pagination token from previous response |
 | `--skip` | int | No | Number of items to skip |
 
 **Common Flags**:
-- `--region <region>` — **Required**: API region (e.g., `cn-hangzhou`)
+- `--endpoint 'agentexplorer.aliyuncs.com'` — **Required**: API endpoint
 - `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills` — **Required**: Identify requests from this skill
-- `--cli-query <jmespath>` — Filter output using JMESPath expression
-- `--pager` — Auto-merge all pages
-- `-q, --quiet` — Suppress output
+
+### Search Parameter Rule
+
+Choose one command shape based on the user request.
+
+#### Semantic Intent Or Keyword Search
+
+Use when the user asks for the best Skill for a task, capability, or natural-language intent. Do not use pagination with semantic search.
+
+```bash
+aliyun agentexplorer search-skills \
+  --keyword "<keyword-or-intent>" \
+  --search-mode semantic \
+  --max-results 20 \
+  --endpoint 'agentexplorer.aliyuncs.com' \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
+```
+
+#### List Skills In A Category
+
+Use when the user asks to list or browse all Skills under a category. Do not pass `--keyword` or `--search-mode semantic`. Use `next-token` to fetch additional pages.
+
+```bash
+aliyun agentexplorer search-skills \
+  --category-code "<category-code>" \
+  --max-results 20 \
+  --endpoint 'agentexplorer.aliyuncs.com' \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
+
+aliyun agentexplorer search-skills \
+  --category-code "<category-code>" \
+  --max-results 20 \
+  --next-token "<next-token-from-previous-response>" \
+  --endpoint 'agentexplorer.aliyuncs.com' \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
+```
+
+#### Combined Semantic Search
+
+Use only after category selection when the user asks for best matches inside a category.
+
+```bash
+aliyun agentexplorer search-skills \
+  --keyword "<keyword-or-intent>" \
+  --category-code "<category-code>" \
+  --search-mode semantic \
+  --max-results 20 \
+  --endpoint 'agentexplorer.aliyuncs.com' \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
+```
 
 **Example Usage**:
 
 ```bash
-# Search by keyword only
+# Semantic search by keyword
 aliyun agentexplorer search-skills \
   --keyword "ECS" \
-  --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
-
-# Search by category only
-aliyun agentexplorer search-skills \
-  --category-code "computing" \
-  --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
-
-# Search by subcategory (dot notation)
-aliyun agentexplorer search-skills \
-  --category-code "computing.ecs" \
-  --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
-
-# Combined keyword and category
-aliyun agentexplorer search-skills \
-  --keyword "backup" \
-  --category-code "database.rds" \
-  --max-results 10 \
-  --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
-
-# Multiple categories
-aliyun agentexplorer search-skills \
-  --category-code "computing,database" \
-  --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
-
-# Paginated search (page 2)
-aliyun agentexplorer search-skills \
-  --keyword "monitoring" \
+  --search-mode semantic \
   --max-results 20 \
-  --next-token "<token-from-previous-response>" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
-# Skip first N results
+# Semantic search by category
 aliyun agentexplorer search-skills \
-  --keyword "OSS" \
-  --skip 10 \
+  --keyword "database" \
+  --category-code "<category-code>" \
+  --search-mode semantic \
   --max-results 20 \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
-# Filter results with JMESPath
+# Semantic search by intent
 aliyun agentexplorer search-skills \
-  --keyword "ECS" \
-  --cli-query "skills[].skillName" \
-  --region cn-hangzhou \
+  --keyword "建一个数据分析项目" \
+  --search-mode semantic \
+  --max-results 20 \
+  --endpoint 'agentexplorer.aliyuncs.com' \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
+
+# Combined semantic search
+aliyun agentexplorer search-skills \
+  --keyword "RDS backup automation" \
+  --category-code "<category-code>" \
+  --search-mode semantic \
+  --max-results 20 \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
@@ -174,6 +150,57 @@ aliyun agentexplorer search-skills \
 
 ---
 
+## 2. aliyun agentexplorer list-categories
+
+**Description**: List all available skill categories and subcategories.
+
+**Syntax**:
+```bash
+aliyun agentexplorer list-categories [flags]
+```
+
+**Parameters**: None required.
+
+**Common Flags**:
+- `--endpoint 'agentexplorer.aliyuncs.com'` — **Required**: API endpoint
+- `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills` — **Required**: Identify requests from this skill
+- `--cli-query <jmespath>` — Filter output using JMESPath expression
+- `-q, --quiet` — Suppress output
+
+**Example Usage**:
+```bash
+# List all categories
+aliyun agentexplorer list-categories \
+  --endpoint 'agentexplorer.aliyuncs.com' \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
+
+# List categories with JMESPath filtering
+aliyun agentexplorer list-categories \
+  --cli-query "categories[].categoryName" \
+  --endpoint 'agentexplorer.aliyuncs.com' \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
+```
+
+**Output Structure**:
+```json
+{
+  "categories": [
+    {
+      "categoryCode": "computing",
+      "categoryName": "计算",
+      "subCategories": [
+        {
+          "categoryCode": "ecs",
+          "categoryName": "云服务器 ECS"
+        }
+      ]
+    }
+  ]
+}
+```
+
+---
+
 ## 3. aliyun agentexplorer get-skill-content
 
 **Description**: Retrieve the complete markdown content of a specific skill.
@@ -190,7 +217,7 @@ aliyun agentexplorer get-skill-content --skill-name <name> [flags]
 | `--skill-name` | string | **Yes** | Unique skill identifier (from search results) |
 
 **Common Flags**:
-- `--region <region>` — **Required**: API region (e.g., `cn-hangzhou`)
+- `--endpoint 'agentexplorer.aliyuncs.com'` — **Required**: API endpoint
 - `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills` — **Required**: Identify requests from this skill
 - `--cli-query <jmespath>` — Filter output using JMESPath expression
 - `-q, --quiet` — Suppress output
@@ -201,14 +228,14 @@ aliyun agentexplorer get-skill-content --skill-name <name> [flags]
 # Get skill content
 aliyun agentexplorer get-skill-content \
   --skill-name "alibabacloud-ecs-batch-command" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Get only the description field
 aliyun agentexplorer get-skill-content \
   --skill-name "alibabacloud-ecs-batch-command" \
   --cli-query "description" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
@@ -250,11 +277,11 @@ aliyun plugin install --names <plugin-name> [flags]
 **Example Usage**:
 
 ```bash
-# Install agentexplorer plugin
-aliyun plugin install --names aliyun-cli-agentexplorer
+# Install the agentexplorer plugin
+aliyun plugin install --names agentexplorer
 
-# Install multiple plugins (comma-separated)
-aliyun plugin install --names aliyun-cli-agentexplorer,aliyun-cli-another-plugin
+# Verify the plugin version
+aliyun agentexplorer version
 ```
 
 ---
@@ -270,7 +297,7 @@ aliyun configure list [flags]
 
 **Parameters**: None required.
 
-> **Note**: `aliyun configure list` is a local management command. It does **not** support `--user-agent` or `--region` — do not pass them.
+> **Note**: `aliyun configure list` is a local management command. It does **not** support `--user-agent` or `--endpoint` — do not pass them.
 
 **Example Usage**:
 
@@ -315,7 +342,7 @@ aliyun version
 
 ## 7. aliyun configure set
 
-**Description**: Configure CLI settings (used for enabling auto plugin install). **Run this only after authentication is complete** (verify with `aliyun configure list`).
+**Description**: Configure CLI settings. **Run this only after authentication is complete** (verify with `aliyun configure list`).
 
 **Syntax**:
 ```bash
@@ -330,72 +357,49 @@ aliyun configure set [flags]
 **Example Usage**:
 
 ```bash
-# Enable automatic plugin installation (requires an authenticated profile)
+# Enable automatic plugin installation
 aliyun configure set --auto-plugin-install true
 ```
 
 ---
 
-## Advanced Usage Patterns
+## Search Usage Patterns
 
-### Pattern 1: Search with Auto-pagination
-
-```bash
-# Automatically fetch all pages
-aliyun agentexplorer search-skills \
-  --keyword "monitoring" \
-  --pager \
-  --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
-```
-
-### Pattern 2: Filter Output with JMESPath
+Use the same semantic-search command shape for both keywords and full intent phrases:
 
 ```bash
-# Get only skill names from search results
+# Keyword search
 aliyun agentexplorer search-skills \
   --keyword "ECS" \
-  --cli-query "skills[].skillName" \
-  --region cn-hangzhou \
+  --search-mode semantic \
+  --max-results 20 \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
-# Get skills with install count > 100
+# Category search
 aliyun agentexplorer search-skills \
-  --keyword "ECS" \
-  --cli-query "skills[?installCount > \`100\`]" \
-  --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
-```
-
-### Pattern 3: Hierarchical Category Search
-
-```bash
-# Search all computing skills
-aliyun agentexplorer search-skills \
-  --category-code "computing" \
-  --region cn-hangzhou \
+  --keyword "database" \
+  --category-code "<category-code>" \
+  --search-mode semantic \
+  --max-results 20 \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
-# Search only ECS skills (computing.ecs)
+# Intent search
 aliyun agentexplorer search-skills \
-  --category-code "computing.ecs" \
-  --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
-```
-
-### Pattern 4: Multi-category Search
-
-```bash
-# Search across multiple top-level categories
-aliyun agentexplorer search-skills \
-  --category-code "computing,database,storage" \
-  --region cn-hangzhou \
+  --keyword "把本地文件同步到 OSS" \
+  --search-mode semantic \
+  --max-results 20 \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
-# Search across multiple subcategories
+# Combined search
 aliyun agentexplorer search-skills \
-  --category-code "computing.ecs,database.rds,storage.oss" \
-  --region cn-hangzhou \
+  --keyword "把本地文件同步到 OSS" \
+  --category-code "<category-code>" \
+  --search-mode semantic \
+  --max-results 20 \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
@@ -416,34 +420,12 @@ aliyun plugin list | grep agentexplorer
 ### Verify Credentials
 
 ```bash
-# Check if credentials are configured (no --user-agent / --region — local command)
+# Check if credentials are configured (no --user-agent / --endpoint — local command)
 aliyun configure list
 
 # Test API access
 aliyun agentexplorer list-categories \
-  --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
-```
-
-### Debug Mode
-
-```bash
-# Enable debug logging
-aliyun agentexplorer search-skills \
-  --keyword "ECS" \
-  --log-level DEBUG \
-  --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
-```
-
-### Dry Run Mode
-
-```bash
-# Preview request without sending
-aliyun agentexplorer search-skills \
-  --keyword "ECS" \
-  --cli-dry-run \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
@@ -453,12 +435,12 @@ aliyun agentexplorer search-skills \
 
 | Task | Command | Key Parameters |
 |------|---------|----------------|
-| Browse all categories | `list-categories` | None |
-| Search by keyword | `search-skills` | `--keyword` |
-| Search by category | `search-skills` | `--category-code` |
-| Combined search | `search-skills` | `--keyword`, `--category-code` |
-| Get skill details | `get-skill-content` | `--skill-name` |
-| Paginate results | `search-skills` | `--max-results`, `--next-token` |
+| Browse all categories | `list-categories` | `--endpoint`, `--user-agent` |
+| Search by keyword | `search-skills` | `--keyword`, `--search-mode semantic`, `--max-results`, `--endpoint`, `--user-agent` |
+| Search by category | `search-skills` | `--keyword`, `--category-code`, `--search-mode semantic`, `--max-results`, `--endpoint`, `--user-agent` |
+| Search by intent | `search-skills` | `--keyword`, `--search-mode semantic`, `--max-results`, `--endpoint`, `--user-agent` |
+| Combined search | `search-skills` | `--keyword`, `--category-code`, `--search-mode semantic`, `--max-results`, `--endpoint`, `--user-agent` |
+| Get skill details | `get-skill-content` | `--skill-name`, `--endpoint`, `--user-agent` |
 | Install plugin | `plugin install` | `--names` |
 | Check credentials | `configure list` | None |
 
@@ -466,10 +448,8 @@ aliyun agentexplorer search-skills \
 
 ## Notes
 
-- **Region Required**: Every `aliyun agentexplorer` command MUST include `--region <region>` (e.g., `--region cn-hangzhou`). Without it the call fails.
+- **Endpoint Required**: Every `aliyun agentexplorer` command MUST include `--endpoint 'agentexplorer.aliyuncs.com'`.
 - **User-Agent Required (API only)**: Every `aliyun agentexplorer` command MUST include `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills`. Local management commands (`aliyun configure ...`, `aliyun plugin ...`, `aliyun version`) do **not** support `--user-agent`.
 - **Plugin Mode**: Commands use plugin mode format (lowercase with hyphens)
-- **Pagination**: Use `--next-token` from response for subsequent pages
-- **Category Codes**: Use dot notation for subcategories (e.g., `computing.ecs`)
-- **Multiple Values**: Comma-separate for multiple category codes
-- **JMESPath**: Use `--cli-query` for client-side filtering
+- **Semantic Search**: `search-skills` must include `--search-mode semantic`. If `--search-mode` is not shown in command help, install or update the `agentexplorer` plugin.
+- **Search Parameters**: Show `--max-results` explicitly when limiting page size.

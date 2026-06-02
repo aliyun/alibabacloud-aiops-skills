@@ -98,13 +98,13 @@ To verify that your account has the required permissions:
 
 ```bash
 # Test ListCategories permission
-aliyun agentexplorer list-categories --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
+aliyun agentexplorer list-categories --endpoint 'agentexplorer.aliyuncs.com' --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Test SearchSkills permission
-aliyun agentexplorer search-skills --keyword "test" --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
+aliyun agentexplorer search-skills --keyword "test" --endpoint 'agentexplorer.aliyuncs.com' --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Test GetSkillContent permission
-aliyun agentexplorer get-skill-content --skill-name "example-skill" --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
+aliyun agentexplorer get-skill-content --skill-name "example-skill" --endpoint 'agentexplorer.aliyuncs.com' --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
 If any command returns a permission error (e.g., `403 Forbidden`, `NoPermission`), you need to apply the RAM policy above.
@@ -119,9 +119,9 @@ If any command returns a permission error (e.g., `403 Forbidden`, `NoPermission`
 
 ### Error: "The specified action is not found"
 
-**Cause**: AgentExplorer service may not be available in your region or account type.
+**Cause**: AgentExplorer service may not be available for your account type or configured endpoint.
 
-**Solution**: Verify that you're using a supported account type and region.
+**Solution**: Verify that you're using a supported account type and `--endpoint 'agentexplorer.aliyuncs.com'`.
 
 ## Security Best Practices
 

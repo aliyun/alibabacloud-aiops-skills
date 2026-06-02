@@ -18,7 +18,7 @@ This reference provides common category codes and examples to help users navigat
 
 This is a reference guide. For the complete, up-to-date list, always run:
 ```bash
-aliyun agentexplorer list-categories --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
+aliyun agentexplorer list-categories --endpoint 'agentexplorer.aliyuncs.com' --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
 ---
@@ -45,20 +45,20 @@ aliyun agentexplorer list-categories --region cn-hangzhou --user-agent AlibabaCl
 # All computing skills
 aliyun agentexplorer search-skills \
   --category-code "computing" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Only ECS skills
 aliyun agentexplorer search-skills \
   --category-code "computing.ecs" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # ECS batch operations
 aliyun agentexplorer search-skills \
   --keyword "batch" \
   --category-code "computing.ecs" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
@@ -87,20 +87,20 @@ aliyun agentexplorer search-skills \
 # All database skills
 aliyun agentexplorer search-skills \
   --category-code "database" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # RDS backup skills
 aliyun agentexplorer search-skills \
   --keyword "backup" \
   --category-code "database.rds" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Database and cache combined
 aliyun agentexplorer search-skills \
   --category-code "database.rds,database.redis" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
@@ -128,21 +128,21 @@ aliyun agentexplorer search-skills \
 # All storage skills
 aliyun agentexplorer search-skills \
   --category-code "storage" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # OSS bucket management
 aliyun agentexplorer search-skills \
   --keyword "bucket" \
   --category-code "storage.oss" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Backup solutions
 aliyun agentexplorer search-skills \
   --keyword "backup" \
   --category-code "storage" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
@@ -171,20 +171,20 @@ aliyun agentexplorer search-skills \
 # All networking skills
 aliyun agentexplorer search-skills \
   --category-code "networking" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # VPC setup
 aliyun agentexplorer search-skills \
   --keyword "setup" \
   --category-code "networking.vpc" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Load balancer configuration
 aliyun agentexplorer search-skills \
   --category-code "networking.slb" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
@@ -213,20 +213,20 @@ aliyun agentexplorer search-skills \
 # All security skills
 aliyun agentexplorer search-skills \
   --category-code "security" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # RAM policy management
 aliyun agentexplorer search-skills \
   --keyword "policy" \
   --category-code "security.ram" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Encryption and key management
 aliyun agentexplorer search-skills \
   --category-code "security.kms" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
@@ -253,20 +253,20 @@ aliyun agentexplorer search-skills \
 # All container skills
 aliyun agentexplorer search-skills \
   --category-code "container" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Kubernetes deployment
 aliyun agentexplorer search-skills \
   --keyword "deployment" \
   --category-code "container.ack" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Container image management
 aliyun agentexplorer search-skills \
   --category-code "container.acr" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
@@ -293,20 +293,20 @@ aliyun agentexplorer search-skills \
 # All AI skills
 aliyun agentexplorer search-skills \
   --category-code "ai" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Machine learning workflows
 aliyun agentexplorer search-skills \
   --keyword "training" \
   --category-code "ai.pai" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # NLP services
 aliyun agentexplorer search-skills \
   --category-code "ai.nlp" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
@@ -334,19 +334,19 @@ aliyun agentexplorer search-skills \
 # All big data skills
 aliyun agentexplorer search-skills \
   --category-code "bigdata" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Data warehouse operations
 aliyun agentexplorer search-skills \
   --category-code "bigdata.maxcompute" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Data visualization
 aliyun agentexplorer search-skills \
   --category-code "bigdata.datav" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
@@ -373,20 +373,20 @@ aliyun agentexplorer search-skills \
 # All monitoring skills
 aliyun agentexplorer search-skills \
   --category-code "monitoring" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Alert configuration
 aliyun agentexplorer search-skills \
   --keyword "alert" \
   --category-code "monitoring.cms" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Log analysis
 aliyun agentexplorer search-skills \
   --category-code "monitoring.sls" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
@@ -412,14 +412,14 @@ aliyun agentexplorer search-skills \
 # All developer tools
 aliyun agentexplorer search-skills \
   --category-code "devtools" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # CI/CD pipeline
 aliyun agentexplorer search-skills \
   --keyword "pipeline" \
   --category-code "devtools.rdc" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
@@ -433,20 +433,20 @@ aliyun agentexplorer search-skills \
 # I need skills for RDS database management
 aliyun agentexplorer search-skills \
   --keyword "RDS" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Or search within database category
 aliyun agentexplorer search-skills \
   --keyword "RDS" \
   --category-code "database" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Or directly search RDS subcategory
 aliyun agentexplorer search-skills \
   --category-code "database.rds" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
@@ -457,14 +457,14 @@ aliyun agentexplorer search-skills \
 aliyun agentexplorer search-skills \
   --keyword "VPC ECS" \
   --category-code "computing,networking" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Or search separately and combine results
 aliyun agentexplorer search-skills \
   --keyword "network setup" \
   --category-code "computing.ecs" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
@@ -474,14 +474,14 @@ aliyun agentexplorer search-skills \
 # I need backup-related skills across all services
 aliyun agentexplorer search-skills \
   --keyword "backup" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Or narrow to database backups
 aliyun agentexplorer search-skills \
   --keyword "backup" \
   --category-code "database" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
@@ -492,13 +492,13 @@ aliyun agentexplorer search-skills \
 aliyun agentexplorer search-skills \
   --category-code "security" \
   --max-results 50 \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Narrow to specific security service
 aliyun agentexplorer search-skills \
   --category-code "security.ram,security.kms" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
@@ -512,20 +512,20 @@ aliyun agentexplorer search-skills \
 # Step 1: Browse top-level category
 aliyun agentexplorer search-skills \
   --category-code "computing" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Step 2: If too many results, narrow to subcategory
 aliyun agentexplorer search-skills \
   --category-code "computing.ecs" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Step 3: Add keyword for further filtering
 aliyun agentexplorer search-skills \
   --keyword "batch" \
   --category-code "computing.ecs" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
@@ -535,7 +535,7 @@ aliyun agentexplorer search-skills \
 # Find skills that work with both ECS and RDS
 aliyun agentexplorer search-skills \
   --category-code "computing.ecs,database.rds" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
@@ -546,7 +546,7 @@ aliyun agentexplorer search-skills \
 aliyun agentexplorer search-skills \
   --keyword "monitoring" \
   --category-code "computing.ecs" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
@@ -564,7 +564,7 @@ aliyun agentexplorer search-skills \
 **Solution**:
 ```bash
 # List all valid categories
-aliyun agentexplorer list-categories --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
+aliyun agentexplorer list-categories --endpoint 'agentexplorer.aliyuncs.com' --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Verify the correct category code
 ```
@@ -577,13 +577,13 @@ aliyun agentexplorer list-categories --region cn-hangzhou --user-agent AlibabaCl
 aliyun agentexplorer search-skills \
   --keyword "specific-feature" \
   --category-code "category" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Reduce to subcategory
 aliyun agentexplorer search-skills \
   --category-code "category.subcategory" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 ```
 
@@ -594,7 +594,7 @@ aliyun agentexplorer search-skills \
 # Search by product name only
 aliyun agentexplorer search-skills \
   --keyword "ECS" \
-  --region cn-hangzhou \
+  --endpoint 'agentexplorer.aliyuncs.com' \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
 
 # Check the categoryName and subCategoryName in results
@@ -613,7 +613,7 @@ aliyun agentexplorer search-skills \
 | Search across multiple categories | `--category-code "cat1,cat2,cat3"` |
 | Find cross-service solutions | `--keyword "feature" --category-code "cat1,cat2"` |
 | Narrow search results | Add both `--keyword` and `--category-code` |
-| See all available categories | `aliyun agentexplorer list-categories --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills` |
+| See all available categories | `aliyun agentexplorer list-categories --endpoint 'agentexplorer.aliyuncs.com' --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills` |
 
 ---
 
