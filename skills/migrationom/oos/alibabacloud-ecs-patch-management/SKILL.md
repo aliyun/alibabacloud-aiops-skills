@@ -69,7 +69,7 @@ Required permissions for this skill:
 |---------|---------|---------|
 | OOS | `StartExecution`, `ListExecutions`, `CancelExecution`, `ListTemplates`, `GetTemplate` | Manage patch executions |
 | OOS | `ListPatchBaselines`, `GetPatchBaseline`, `ListInstancePatches`, `ListInstancePatchStates` | Patch baseline and status queries |
-| ECS | `DescribeInstances`, `DescribeInvocations`, `DescribeInvocationResults`, `InvokeCommand`,  | Instance verification and Cloud Assistant |
+| ECS | `DescribeInstances`, `DescribeInvocations`, `DescribeInvocationResults`, `InvokeCommand` | Instance verification and Cloud Assistant |
 | ECS | `CreateSnapshot`, `DescribeSnapshots` | Snapshot management (optional) |
 
 Full details: [references/ram-policies.md](references/ram-policies.md)
@@ -88,16 +88,14 @@ Full details: [references/ram-policies.md](references/ram-policies.md)
 
 | Parameter | Required | Description | Default |
 |-----------|----------|-------------|---------|
-| `RegionId` | Yes | Alibaba Cloud region ID (e.g., `cn-hangzhou`, `cn-shanghai`) | None |
-| `InstanceIds` | Yes | Target ECS instance IDs (e.g., `["i-bp1example0000000001"]`) | None |
-| `Action` | Yes | Operation type: `scan` (scan only) or `install` (scan + install) | None |
+| `regionId` | Yes | Alibaba Cloud region ID (e.g., `cn-hangzhou`, `cn-shanghai`) | None |
+| `instanceIds` | Yes | Target ECS instance IDs (e.g., `["i-bp1example0000000001"]`) | None |
+| `action` | Yes | Operation type: `scan` (scan only) or `install` (scan + install) | None |
 | `rebootIfNeed` | No (install only) | Whether to reboot the instance if patches require it | `false` |
 | `whetherCreateSnapshot` | No (install only) | Whether to create a snapshot before installing patches | `false` |
-| `retentionDays` | No (install only) | Snapshot retention period in days (1-65536) | `7` |
-| `patchBaselineName` | No | Custom patch baseline name (uses default system baseline if not specified) | System default |
-| `rebootMethod` | No (install only) | Reboot method: `later` (reboot later), `immediately` (reboot immediately), `never` (never reboot) | `later` |
-| `loopMode` | No | Batch mode: `Automatic`, `FirstBatchPause`, `EveryBatchPause` | `Automatic` |
-| `safetyCheck` | No | Security check: `Skip`, `ConfirmEveryHighRiskAction` | `ConfirmEveryHighRiskAction` |
+| `retentionDays` | No (install only) | Snapshot retention in days. **Recommended: 7–30** (API range: 1–65536) | `7` |
+
+> Parameter names above match the JSON field names used in `--parameters` (top-level keys are camelCase). Note that the nested `targets` object uses PascalCase keys (`ResourceIds`, `RegionId`, `Type`) — see the examples in Step 3 below.
 
 ## Core Workflow
 
@@ -106,6 +104,11 @@ Full details: [references/ram-policies.md](references/ram-policies.md)
 ```bash
 aliyun configure ai-mode enable
 aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-patch-management"
+
+# [MUST] Register a shell trap so AI-mode is disabled on EVERY exit path
+# (success, error, signal, Ctrl-C, abnormal termination). This is the
+# fail-safe complement to the explicit `disable` call in Step 7.
+trap 'aliyun configure ai-mode disable' EXIT
 ```
 
 ### Step 1: Verify CLI and Credentials
@@ -130,7 +133,25 @@ aliyun ecs describe-instances \
 
 ### Step 3: Start Patch Execution
 
+> **[MUST] Honor the user's requested action.** If the user explicitly asks to **install** patches (e.g., "装补丁", "安装补丁", "install patches"), you **MUST** execute `action=install`. Do NOT skip the install call because a prior scan returned zero missing patches. The scan is advisory only — the install action has its own detection logic and the user's explicit intent always takes precedence.
+
 > **[MUST] StartExecution is asynchronous.** The response only confirms that the execution has been **submitted**, not that it has finished. The response returns an `ExecutionId` in the format `exec-xxx` (e.g., `exec-example0000000001`). You **MUST** capture this `ExecutionId` and poll `ListExecutions` (Step 4) until `Status` reaches a terminal value (`Success` or `Failed`) before considering the operation complete. Do NOT treat a successful StartExecution response as proof that the patch operation succeeded.
+
+> **[MUST] Idempotency via `ClientToken`.** `StartExecution` is a write operation. A network timeout, a transport-layer error, or an Agent retry loop can cause the same call to be issued more than once, which would otherwise create **duplicate executions** (and, for `install`, duplicate snapshots/reboots). You **MUST** pass a `--client-token` derived deterministically from the request inputs so that retries with the same inputs converge on the same execution.
+>
+> **Generation rule** — compute a stable hash over the canonical inputs (action, region, sorted instance IDs, and the install-only knobs that change behavior):
+>
+> ```bash
+> # Generate a deterministic ClientToken (≤ 64 chars) from the canonical inputs.
+> # Use the SAME formula across retries — the server deduplicates within ~24h.
+> CLIENT_TOKEN="patch-$(printf '%s|%s|%s|%s|%s|%s' \
+>   "<action>" "<RegionId>" "<sorted_comma_joined_InstanceIds>" \
+>   "<rebootIfNeed_or_empty>" "<whetherCreateSnapshot_or_empty>" "<retentionDays_or_empty>" \
+>   | shasum -a 256 | cut -c1-32)"
+> # Example output: patch-9f3c1a8b7e6d5c4f3a2b1d0e9c8b7a6f
+> ```
+>
+> Pass the resulting value as `--client-token "$CLIENT_TOKEN"` on every `start-execution` call. If you must retry after a transient failure, **reuse the same token**; do NOT regenerate it.
 
 #### Option A: Scan Only
 
@@ -139,36 +160,58 @@ aliyun oos start-execution \
   --region <RegionId> \
   --biz-region-id <RegionId> \
   --template-name ACS-ECS-BulkyApplyPatchBaseline \
+  --client-token "$CLIENT_TOKEN" \
   --parameters '{"regionId":"<RegionId>","action":"scan","targets":{"ResourceIds":<InstanceIds_JSON>,"RegionId":"<RegionId>","Type":"ResourceIds"}}'
 ```
 
 #### Option B: Install Patches
+
+> **🚨 DANGER — Destructive operation requiring explicit user confirmation.**
+> `action=install` will modify system packages on the target instance(s) and, if
+> `rebootIfNeed=true`, may **reboot** them, causing service downtime.
+>
+> Before executing the command below, you **MUST**:
+> 1. Display the full execution plan to the user — `regionId`, the exact list of
+>    target instance IDs (and **count**), `rebootIfNeed`, `whetherCreateSnapshot`,
+>    `retentionDays` — in a single confirmation message.
+> 2. State explicitly: *"About to install patches on N instance(s) in <region>.
+>    Reboot=<true/false>. Snapshot=<true/false>. Proceed?"*
+> 3. Wait for the user to reply with an affirmative (`yes` / `确认` / `proceed`).
+>    Do **NOT** infer consent from earlier turns or default to yes on silence.
+> 4. If the user changes any parameter, regenerate `CLIENT_TOKEN` and re-confirm.
 
 ```bash
 aliyun oos start-execution \
   --region <RegionId> \
   --biz-region-id <RegionId> \
   --template-name ACS-ECS-BulkyApplyPatchBaseline \
+  --client-token "$CLIENT_TOKEN" \
   --parameters '{"regionId":"<RegionId>","action":"install","rebootIfNeed":<true/false>,"whetherCreateSnapshot":<true/false>,"retentionDays":<number>,"targets":{"ResourceIds":<InstanceIds_JSON>,"RegionId":"<RegionId>","Type":"ResourceIds"}}'
 ```
 
 **Example — Scan for instance `i-bp1example0000000001` in `cn-hangzhou`:**
 
 ```bash
+CLIENT_TOKEN="patch-$(printf 'scan|cn-hangzhou|i-bp1example0000000001|||' | shasum -a 256 | cut -c1-32)"
+
 aliyun oos start-execution \
   --region cn-hangzhou \
   --biz-region-id cn-hangzhou \
   --template-name ACS-ECS-BulkyApplyPatchBaseline \
+  --client-token "$CLIENT_TOKEN" \
   --parameters '{"regionId":"cn-hangzhou","action":"scan","targets":{"ResourceIds":["i-bp1example0000000001"],"RegionId":"cn-hangzhou","Type":"ResourceIds"}}'
 ```
 
 **Example — Install patches with snapshot and auto-reboot:**
 
 ```bash
+CLIENT_TOKEN="patch-$(printf 'install|cn-hangzhou|i-bp1example0000000001|true|true|7' | shasum -a 256 | cut -c1-32)"
+
 aliyun oos start-execution \
   --region cn-hangzhou \
   --biz-region-id cn-hangzhou \
   --template-name ACS-ECS-BulkyApplyPatchBaseline \
+  --client-token "$CLIENT_TOKEN" \
   --parameters '{"regionId":"cn-hangzhou","action":"install","rebootIfNeed":true,"whetherCreateSnapshot":true,"retentionDays":7,"targets":{"ResourceIds":["i-bp1example0000000001"],"RegionId":"cn-hangzhou","Type":"ResourceIds"}}'
 ```
 
@@ -199,6 +242,7 @@ aliyun oos list-executions \
 ```bash
 aliyun oos list-execution-logs \
   --region <RegionId> \
+  --biz-region-id <RegionId> \
   --execution-id <ExecutionId>
 ```
 
@@ -265,28 +309,30 @@ aliyun oos cancel-execution \
   --execution-id <ExecutionId>
 ```
 
-### Delete Old Snapshots (if created)
+### Snapshot Lifecycle
+
+Snapshots created with `whetherCreateSnapshot=true` are **automatically deleted**
+when their `retentionDays` window expires. Do **not** delete them manually —
+relying on the retention window keeps the cleanup deterministic and avoids
+accidentally removing a snapshot that another rollback workflow still needs.
+
+To inspect existing snapshots (read-only):
 
 ```bash
 aliyun ecs describe-snapshots \
   --region <RegionId> \
   --instance-id <InstanceId>
-
-aliyun ecs delete-snapshot \
-  --region <RegionId> \
-  --snapshot-id <SnapshotId>
 ```
 
 ## Best Practices
 
-1. **Always scan before install** — Run `action: scan` first to understand what patches are available before committing to installation.
-2. **Enable snapshots for production** — Set `whetherCreateSnapshot: true` with an appropriate `retentionDays` for production instances to enable rollback.
-3. **Use `FirstBatchPause` for large fleets** — When patching many instances, set `loopMode: FirstBatchPause` to validate the first batch before proceeding.
-4. **Schedule during maintenance windows** — Patch installation may require reboots. Coordinate with business stakeholders.
-5. **Test on non-production first** — Always validate patches on a staging/dev instance before applying to production.
-6. **Monitor execution logs** — Use `list-execution-logs` to track real-time progress and troubleshoot failures.
-7. **Handle reboot carefully** — Set `rebootIfNeed: true` only when you can tolerate instance downtime. For critical services, use `rebootMethod: later` and reboot manually.
-8. **Keep retentionDays reasonable** — Set snapshot retention between 7-30 days. Longer retention increases storage costs.
+1. **Always scan before install** — Run `action: scan` first to understand what patches are available before committing to installation. **However, if the user explicitly requests patch installation, you MUST still execute `action=install` regardless of scan results.** A scan showing zero missing patches does NOT mean you can skip the install — the user's explicit intent takes priority. The `install` action performs its own internal scan and may detect patches the standalone scan did not. Never substitute a scan for an install when the user asked for installation.
+2. **Enable snapshots for production** — Set `whetherCreateSnapshot: true` with an appropriate `retentionDays` for production instances to enable rollback. Snapshots auto-expire — no manual cleanup needed.
+3. **Schedule during maintenance windows** — Patch installation may require reboots. Coordinate with business stakeholders.
+4. **Test on non-production first** — Always validate patches on a staging/dev instance before applying to production.
+5. **Monitor execution logs** — Use `list-execution-logs` to track real-time progress and troubleshoot failures.
+6. **Handle reboot carefully** — Set `rebootIfNeed: true` only when you can tolerate instance downtime. For critical services, use `rebootIfNeed: false` and reboot manually.
+7. **Keep retentionDays reasonable** — Recommended 7–30 days. Longer retention increases storage costs.
 
 ## Reference Links
 

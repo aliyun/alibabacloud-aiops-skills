@@ -26,15 +26,16 @@ This document lists all RAM permissions required for scanning and installing OS 
 | `ecs:DescribeInstances` | Query ECS instance information | Verifying target instances exist |
 | `ecs:DescribeInvocations` | Query Cloud Assistant invocations | Checking Cloud Assistant command execution |
 | `ecs:DescribeInvocationResults` | Query Cloud Assistant invocation results | Checking patch installation results |
-| `ecs:SendCommand` | Send Cloud Assistant commands | Executing patch commands on instances |
+| `ecs:InvokeCommand` | Invoke Cloud Assistant commands | Executing patch commands on instances |
 
 ### 3. Snapshot Permissions (Optional - when `whetherCreateSnapshot=true`)
 
 | Action | Description | Required For |
 |--------|-------------|--------------|
 | `ecs:CreateSnapshot` | Create a disk snapshot | Creating pre-patch snapshots |
-| `ecs:DeleteSnapshot` | Delete a disk snapshot | Cleaning up old snapshots |
 | `ecs:DescribeSnapshots` | Query snapshot information | Verifying snapshot status |
+
+> Snapshots are auto-deleted on `retentionDays` expiry — no `ecs:DeleteSnapshot` permission is required by this skill.
 
 ### 4. Patch Baseline Permissions
 
@@ -88,7 +89,7 @@ For production environments, it is recommended to create a custom policy with th
         "ecs:DescribeInstances",
         "ecs:DescribeInvocations",
         "ecs:DescribeInvocationResults",
-        "ecs:SendCommand"
+        "ecs:InvokeCommand"
       ],
       "Resource": ["*"]
     },
@@ -96,7 +97,6 @@ For production environments, it is recommended to create a custom policy with th
       "Effect": "Allow",
       "Action": [
         "ecs:CreateSnapshot",
-        "ecs:DeleteSnapshot",
         "ecs:DescribeSnapshots"
       ],
       "Resource": ["*"]
@@ -104,6 +104,13 @@ For production environments, it is recommended to create a custom policy with th
   ]
 }
 ```
+
+> **Production hardening — narrow the Resource scope.** The `"Resource": ["*"]` above is shown for clarity in development/trial use. For production policies, **narrow each statement to the specific ARN pattern that the skill actually touches**, for example:
+> - ECS instance actions → `acs:ecs:<region>:<account-id>:instance/*` (or a specific instance ID)
+> - Snapshot actions → `acs:ecs:<region>:<account-id>:snapshot/*`
+> - OOS actions → `acs:oos:<region>:<account-id>:execution/*` and `template/ACS-ECS-BulkyApplyPatchBaseline`
+>
+> Apply the principle of least privilege: grant only the regions, accounts, and resource IDs the skill is authorized to operate on.
 
 ---
 

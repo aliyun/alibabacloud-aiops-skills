@@ -18,13 +18,28 @@ brew upgrade aliyun-cli
 aliyun version
 ```
 
-**Using Binary**
+**Using Binary (Intel — x86_64)**
 ```bash
 # Download
 wget https://aliyuncli.alicdn.com/aliyun-cli-macosx-latest-amd64.tgz
 
 # Extract
 tar -xzf aliyun-cli-macosx-latest-amd64.tgz
+
+# Move to PATH
+sudo mv aliyun /usr/local/bin/
+
+# Verify
+aliyun version
+```
+
+**Using Binary (Apple Silicon — M1/M2/M3, arm64)**
+```bash
+# Detect your arch first: `uname -m` should report `arm64`
+wget https://aliyuncli.alicdn.com/aliyun-cli-macosx-latest-arm64.tgz
+
+# Extract
+tar -xzf aliyun-cli-macosx-latest-arm64.tgz
 
 # Move to PATH
 sudo mv aliyun /usr/local/bin/

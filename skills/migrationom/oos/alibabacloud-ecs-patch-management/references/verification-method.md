@@ -93,15 +93,17 @@ aliyun oos list-executions \
   --cli-query 'Executions.Execution[?TemplateName==`ACS-ECS-BulkyApplyPatchBaseline`].{ExecutionId:ExecutionId, Status:Status, StartDate:StartDate, EndDate:EndDate}'
 ```
 
-**Status Values and Meanings:**
+**Status Values and Meanings** (canonical list — kept in sync with `SKILL.md` Step 4):
 
-| Status | Meaning | Action |
-|--------|---------|--------|
-| `Running` | Execution is in progress | Continue monitoring |
-| `Success` | Execution completed successfully | Proceed to Step 6 |
-| `Failed` | Execution failed | Check logs in Step 7 |
-| `Cancelled` | Execution was cancelled | Restart if needed |
-| `Waiting` | Execution is waiting for confirmation | Confirm or cancel |
+| Status | Terminal? | Meaning | Action |
+|--------|-----------|---------|--------|
+| `Success` | ✅ Terminal | Execution completed successfully | Proceed to Step 6 |
+| `Failed` | ✅ Terminal | Execution failed | Check logs in Step 7 |
+| `Cancelled` | ✅ Terminal | Execution was cancelled | Restart if needed |
+| `Started` | ⏳ Non-terminal | Execution has been kicked off | Continue polling |
+| `Running` | ⏳ Non-terminal | Execution is in progress | Continue polling |
+| `Queued` | ⏳ Non-terminal | Execution is queued | Continue polling |
+| `Waiting` | ⏳ Non-terminal | Execution is waiting for confirmation | Confirm or cancel |
 
 ---
 

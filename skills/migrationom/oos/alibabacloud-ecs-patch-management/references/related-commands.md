@@ -72,7 +72,11 @@ aliyun oos list-executions \
   --status <status>
 ```
 
-**Status values:** `Running`, `Started`, `Success`, `Failed`, `Waiting`, `Cancelled`, `Pending`, `Skipped`
+**Status values:**
+- **Terminal** (stop polling): `Success`, `Failed`, `Cancelled`
+- **Non-terminal** (keep polling): `Started`, `Running`, `Queued`, `Waiting`
+
+See `SKILL.md` Step 4 for the canonical status taxonomy used by this skill.
 
 ### List Execution Logs
 
