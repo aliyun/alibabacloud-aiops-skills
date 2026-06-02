@@ -111,7 +111,7 @@ By default, network access is disabled in MaxCompute UDF containers. If your UDF
 def request_external(row):
     import requests
     url = "https://example.com/api"
-    response = requests.get(url)
+    response = requests.get(url, timeout=10)
     return response.text
 ```
 

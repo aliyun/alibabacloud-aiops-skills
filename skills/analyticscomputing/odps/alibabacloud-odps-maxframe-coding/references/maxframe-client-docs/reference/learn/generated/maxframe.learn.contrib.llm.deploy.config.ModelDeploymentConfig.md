@@ -39,7 +39,7 @@ for ensuring the runtime environment state and compatibility.
     Each FsMountOptions contains:
     - `path`: OSS source path, e.g., `"oss://bucket/models/qwen/"`
     - `mount_path`: Local mount path, e.g., `"/mnt/qwen"`
-    - `storage_options`: Authentication config (role_arn or AK/SK)
+    - `storage_options`: Authentication config such as role_arn or temporary credentials
 
     This is consistent with the `with_fs_mount` decorator pattern.
     The `model_file` should reference the `mount_path` from one of the mounts.

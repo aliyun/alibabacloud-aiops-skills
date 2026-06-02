@@ -60,17 +60,16 @@ def _process(batch_df):
     return batch_df * 2
 ```
 
-### Not Recommended: Using AccessKey (Testing Only)
+### Credential Handling
 
 ```python
-# For testing purposes only - NOT recommended for production
+# Preferred: rely on RAM role or the platform default credential chain.
 storage_options={
-    "access_key_id": "LTAI5t...",
-    "access_key_secret": "Wp9H..."
+    "role_arn": "acs:ram::1234567890123456:role/your-role"
 }
 ```
 
-**Important:** Avoid hardcoding AccessKey. Using `role_arn` allows the system to automatically request temporary STS tokens, preventing AK/SK leakage.
+**Important:** Do not hardcode long-lived cloud credentials in code, examples, notebooks, or config files. Use `role_arn` or the default credential chain so the system can request temporary STS credentials.
 
 ## Resource Configuration
 
@@ -200,7 +199,7 @@ The default `maxframe_service_dpe_runtime` image includes OSSFS. For custom imag
 
 ## Key Points
 
-1. **Security First:** Always use `role_arn` instead of hardcoded AccessKey
+1. **Security First:** Always use `role_arn` or the default credential chain instead of long-lived credentials
 2. **Engine Requirement:** FS Mount only works with DPE engine (`engine="dpe"`)
 3. **Resource Planning:** Allocate sufficient memory for large file operations
 4. **Mount Verification:** Always check mount status before processing

@@ -241,32 +241,40 @@ class APIDocParser:
 
         lines = content.split("\n")
 
-        # Special case: signature (first #### line after title)
+        # Special case: signature (first function-like header after title)
         if section == "signature":
             for line in lines:
-                if line.startswith("#### ") and "(" in line:
-                    return line[5:].strip()  # Remove "#### " prefix
+                if (line.startswith("### ") or line.startswith("#### ")) and "(" in line:
+                    return line.lstrip("#").strip()
             return ""
 
-        # Special case: description (text between title and signature)
+        # Special case: description around the function signature.
         if section == "description":
-            desc_lines = []
+            before_signature = []
+            after_signature = []
             after_title = False
+            seen_signature = False
             for line in lines:
                 # Skip title
                 if line.startswith("# "):
                     after_title = True
                     continue
-                # Stop at signature
-                if line.startswith("#### ") and "(" in line:
-                    break
+                if not after_title:
+                    continue
+
+                # Signature may appear before or after the description depending on doc output.
+                if (line.startswith("### ") or line.startswith("#### ")) and "(" in line:
+                    seen_signature = True
+                    continue
                 # Stop at section markers
                 if line.startswith("* **") or line.startswith("### "):
                     break
-                # Collect description after title
-                if after_title and line.strip():
-                    desc_lines.append(line)
-            return "\n".join(desc_lines).strip()
+                if line.strip():
+                    if seen_signature:
+                        after_signature.append(line)
+                    else:
+                        before_signature.append(line)
+            return "\n".join(before_signature or after_signature).strip()
 
         # Parameters section (special format: * **Parameters:** followed by list)
         if section == "parameters":
