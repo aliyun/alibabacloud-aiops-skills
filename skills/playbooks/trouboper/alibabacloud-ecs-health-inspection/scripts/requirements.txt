@@ -1,0 +1,21 @@
+# ECS Health Inspection — Script Dependencies
+# ------------------------------------------------------------
+# This file declares the Python dependencies of scripts/ in this skill.
+# Format: pip-compatible requirements.txt; comment lines are informational.
+#
+# scripts/render_report.py
+#   - Runtime:        Python >= 3.8
+#   - Third-party:    (none)
+#   - Standard lib:   argparse, html, json, sys, typing, __future__
+#
+# Because the renderer is intentionally stdlib-only, this file has no
+# `pip install`-able entries. It is kept as the canonical declaration
+# location so that any future third-party dependency MUST be added here
+# (and mirrored in the inline dependency block at the top of
+# scripts/render_report.py).
+#
+# Install (no-op today, kept for future-proofing CI / containers):
+#   python3 -m pip install -r scripts/requirements.txt
+#
+# Upgrade policy: do NOT add a third-party dependency without an
+# explicit decision recorded in SKILL.md.
