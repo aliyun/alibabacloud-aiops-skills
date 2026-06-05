@@ -1,4 +1,4 @@
-# SMS Qualification (短信资质) Query Reference
+# SMS Qualification Query Reference
 
 This document describes the two `dysmsapi` qualification query APIs supported by this
 Skill. Both commands MUST honor the global compliance rules declared in
@@ -218,7 +218,8 @@ aliyun dysmsapi query-single-sms-qualification \
    `--page-size` (max 50). Iterate pages until `Data.PageNo * Data.PageSize >=
    Data.Total` to walk the full list.
 5. **RAM permissions** — both APIs require the calling RAM identity to hold
-   read permission on `dysmsapi`. See `references/ram-policies.md`.
+   read permission on `dysmsapi`. See `SKILL.md` for the full RAM action list
+   and policy reference.
 
 ## References
 

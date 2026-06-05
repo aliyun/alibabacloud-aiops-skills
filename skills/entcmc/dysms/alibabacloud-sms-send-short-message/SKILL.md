@@ -6,9 +6,9 @@ description: >
   Use this Skill whenever the user wants to send SMS verification codes, system notifications,
   order reminders, or marketing campaigns. Supports single send (SendSms, up to 1000 phone
   numbers sharing the same signature and template parameters) and batch send (SendBatchSms,
-  up to 100 phone numbers, each with its own signature and template parameters). Supports
-  domestic SMS as well as international/HK-Macao-Taiwan SMS. The signature and template
-  approval status can be verified before sending to maximize delivery success rate.
+  up to 100 phone numbers, each with its own signature and template parameters). The
+  signature and template approval status can be verified before sending to maximize
+  delivery success rate.
 license: Apache-2.0
 compatibility: >
   aliyun-cli >= 3.3.3
@@ -95,10 +95,9 @@ agent **must not guess or fabricate them**. Instead it should:
 1. **Ask the user proactively**: "Which signature/template should I use? If unsure, I can
    list approved ones from your account for you to pick from."
 2. **After the user agrees, call list APIs**:
-   - `aliyun dysmsapi query-sms-sign-list ...`
+   - `aliyun dysmsapi query-sms-sign-list ...` then `aliyun dysmsapi get-sms-sign --sign-name <name>` per candidate.
    - `aliyun dysmsapi query-sms-template-list ...`
-   - Filter by `SignStatus = 1` / `TemplateStatus = 1` (approved) and present a table
-     (index / code / name / content / status) for the user to choose.
+   - **Hard filter**: keep only signs with `SignStatus = 1` (approved) and templates with `TemplateStatus = 1`. **Do NOT drop signs based on carrier registration alone** — unregistered carriers may still deliver. Instead, surface `SignIspRegisterDetailList[*].RegisterResult` (per-carrier registration status) as an extra column in the candidate table and let the user decide. Columns: index / code / name / content / `SignStatus` / per-carrier registration.
 3. **Resolve template variables**: If the picked template contains `${xxx}` placeholders,
    ask for each variable's value one by one and assemble them into `--template-param` JSON.
 4. **Phone numbers**: Always require explicit phone numbers from the user; never reuse
@@ -360,6 +359,8 @@ and `--read-timeout`:
 | SignatureNotFound                | Signature not found                  | Create the signature in the console           |
 | TemplateNotFound                 | Template not found                   | Create the template in the console            |
 
+> `query-send-details` `ErrCode` = Alibaba `isv.*`/`isp.*` (above) + carrier receipts (`DELIVERED`, `MOBILE_NOT_ON_SERVICE`, `MOBILE_SEND_LIMIT`, …). Full table + triage: [`references/sms-error-codes.md`](references/sms-error-codes.md).
+
 ### CLI configuration errors
 
 | Error message                | Cause                | Resolution                                     |
@@ -375,11 +376,11 @@ and `--read-timeout`:
 2. **Validate required parameters** (`phone-numbers`, `sign-name`, `template-code`).
    If signature or template is missing, ask the user; after consent call
    `query-sms-sign-list` / `query-sms-template-list` and present approved candidates.
-3. **[Optional, --verify]** Verify signature status via `get-sms-sign` (`SignStatus=1`).
+3. **[Optional, --verify]** Verify sign via `get-sms-sign`: require `SignStatus=1`; also surface `SignIspRegisterDetailList[*].RegisterResult` to the user as info (unregistered carriers may still deliver — do not block).
 4. **[Optional, --verify]** Verify template status via `get-sms-template` (`TemplateStatus=1`).
 5. **Send** via `aliyun dysmsapi send-sms` (or `send-batch-sms` for per-recipient
    personalization).
-6. **Return result**: `Code=OK` → success, return `BizId`; otherwise return error info.
+6. **Return result**: `Code=OK` only confirms gateway acceptance — return `BizId`. To report final delivery to the user, always call `query-send-details` (Scenario 4); never use the send response as proof of delivery.
 7. **[MUST]** Disable AI-Mode at every exit (success / failure / cancellation).
 
 ## Examples
@@ -487,11 +488,12 @@ aliyun dysmsapi send-sms --profile prod \
 10. **Parameter confirmation**: Never guess signature/template — always ask the user, and
     after consent fetch `query-sms-sign-list` / `query-sms-template-list` (see
     "Interactive Parameter Confirmation").
+11. **Send-result reporting**: `send-sms` / `send-batch-sms` responses only confirm gateway acceptance (`Code=OK` + `BizId`); they are NOT proof of delivery. Whenever the user asks "did it arrive?" / "was it delivered?", always call `query-send-details` (use `BizId` for precise lookup) and surface `SendStatus` (1=in-flight, 2=failed, 3=delivered) and `ErrCode` — never reply based on the send-API response alone.
 
 ## References
 
 - [Alibaba Cloud CLI documentation](https://help.aliyun.com/zh/cli/)
 - [SMS Service console](https://dysms.console.aliyun.com/)
 - [SendSms API documentation](https://help.aliyun.com/document_detail/419273.html)
-- [Error code reference](https://help.aliyun.com/document_detail/101346.html)
+- [Send-status error codes (local)](references/sms-error-codes.md) — `query-send-details` `ErrCode` (Alibaba `isv.*`/`isp.*` + carrier receipts); upstream: [101347](https://help.aliyun.com/document_detail/101347.html) / [101346](https://help.aliyun.com/document_detail/101346.html)
 - [SMS qualification query (local)](references/sms-qualification.md) — `QuerySmsQualificationRecord` / `QuerySingleSmsQualification`
