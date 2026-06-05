@@ -1,11 +1,11 @@
 ---
 name: alibabacloud-wxz-website-builder
-description: Use when building or modifying websites with AI Staff (零号员工/万小智) via Alibaba Cloud OpenAPI. Supports conversation creation, async chat with requirement collection, PRD generation, code generation, and incremental SSE event polling.
+description: Use when building or modifying websites with AI Staff via Alibaba Cloud OpenAPI. Supports conversation creation, async chat with requirement collection, PRD generation, code generation, and incremental SSE event polling.
 ---
 
 Category: service
 
-# AI Staff Website Builder (零号员工建站)
+# AI Staff Website Builder
 
 ## Validation
 
@@ -27,9 +27,10 @@ Pass criteria: command exits 0 and `output/alibabacloud-wxz-website-builder/vali
 ## Prerequisites
 
 ```bash
-pip install alibabacloud_tea_openapi>=0.4.4 alibabacloud_tea_util>=0.3.14
+pip install -r requirements.txt
 ```
 
+- All dependencies are pinned to exact versions in `requirements.txt`.
 - Credentials are resolved via the default credential chain (no explicit AK/SK needed).
 
 ## Authentication
@@ -53,6 +54,7 @@ If the user has no AccessKey yet, guide them through these steps (see `reference
    - `zero2staff:CreateAIStaffChat`
    - `zero2staff:ListAIStaffChatEvents`
    - `zero2staff:ListAIStaffChatMessages`
+   - `zero2staff:GetAIStaffPreviewUrl`
 4. **Configure**: Write to `~/.alibabacloud/credentials` or set environment variables
 
 **CRITICAL**: When guiding the user, remind them:
@@ -75,7 +77,7 @@ Phase 1: Create Conversation
         ↓
 Phase 2: Fire requirement chat → poll → HITL → Fire resume → poll → ... → PRD ready
         ↓
-Phase 3: Fire code generation → Show link → poll loop with progress → Site ready
+Phase 3: Fire code generation → Show link → poll loop with progress → Get preview URL → Done
 ```
 
 ## Phase 0: Auth Setup
@@ -87,7 +89,7 @@ Ensure Alibaba Cloud credentials are configured via the default credential chain
 **MUST** create a conversation before any chat operation:
 
 ```bash
-CONV=$(python scripts/aistaff_api.py create-conversation --text "做个popmart首页")
+CONV=$(python scripts/aistaff_api.py create-conversation --text "build a popmart homepage")
 CONV_ID=$(echo $CONV | jq -r '.ConversationId')
 CHAT_ID=$(echo $CONV | jq -r '.ChatId')
 SITE_ID=$(echo $CONV | jq -r '.SiteId')
@@ -106,12 +108,12 @@ This phase collects requirements and generates a PRD. The platform may ask multi
 
 ```bash
 python scripts/aistaff_api.py chat \
-  --text "做个popmart首页" \
+  --text "build a popmart homepage" \
   --conversation-id $CONV_ID \
   --biz-id $SITE_ID
 ```
 
-Tell user: **"正在分析您的需求，请稍候..."**
+Tell user: **"Analyzing your requirements, please wait..."**
 
 ### Step 2: Poll until first HITL form arrives
 
@@ -125,8 +127,8 @@ python scripts/aistaff_api.py poll \
 ```
 
 Between each poll, show the user a progress message based on `phase`:
-- `processing` → "需求分析进行中..."
-- `fetching_reference` → "正在获取参考网站信息..."
+- `processing` → "Analyzing requirements..."
+- `fetching_reference` → "Fetching reference site info..."
 - `waiting_for_input` → First HITL form arrived, proceed to Step 3.
 
 ### Step 3: First HITL — collect answers from user
@@ -139,7 +141,7 @@ Extract `questions` from the `metaData.arguments` of the `message.tool` event wh
 
 ```bash
 python scripts/aistaff_api.py chat \
-  --text '{"应用名称": "POP MART 官网", "主营服务": "潮流玩具", "目标用户": "Z世代潮流青年", "参考网站": "无"}' \
+  --text '{"App Name": "POP MART Official", "Main Service": "Trendy Toys", "Target Users": "Gen Z trendsetters", "Reference Site": "None"}' \
   --conversation-id $CONV_ID \
   --biz-id $SITE_ID \
   --chat-id $CHAT_ID \
@@ -151,35 +153,29 @@ python scripts/aistaff_api.py chat \
 
 The `--text` JSON keys **MUST match the `header` values** from the form.
 
-Tell user: **"已收到您的需求，正在生成产品方案..."**
+Tell user: **"Requirements received, generating product plan..."**
 
 ### Step 5: Poll loop — auto-fill subsequent HITL rounds until PRD is ready
 
 Poll every 5 seconds. Based on `phase` / `summary`, take action:
 
-- `phase == "waiting_for_input"` (another HITL question) → **Auto-fill immediately** using the `answers` field from the `AskUserQuestion` event, then fire resume again. Tell user: **"正在完善需求细节..."**
-- `phase == "generating_prd"` → Tell user: **"PRD 方案生成中，请稍候..."**
-- `phase == "fetching_reference"` → Tell user: **"正在获取参考资料..."**
+- `phase == "waiting_for_input"` (another HITL question) → **Auto-fill immediately** using the `answers` field from the `AskUserQuestion` event, then fire resume again. Tell user: **"Refining requirement details..."**
+- `phase == "generating_prd"` → Tell user: **"Generating PRD, please wait..."**
+- `phase == "fetching_reference"` → Tell user: **"Fetching reference materials..."**
 - `summary.chatStatus == "success"` + `summary.hasPrd == true` → PRD ready, proceed to Phase 3.
 - `summary.chatStatus == "fail"` → Ask user whether to retry.
 
 ```bash
-# Poll example:
+# Poll:
 python scripts/aistaff_api.py poll \
-  --conversation-id $CONV_ID \
-  --biz-id $SITE_ID \
-  --last-event-id $LAST_EVENT_ID
+  --conversation-id $CONV_ID --biz-id $SITE_ID --last-event-id $LAST_EVENT_ID
 
-# Auto-fill example (use the "answers" field from the AskUserQuestion event):
+# Auto-fill (use the "answers" field from the AskUserQuestion event):
 python scripts/aistaff_api.py chat \
-  --text '{"核心功能": ["商品展示", "品牌故事", "新闻资讯"]}' \
-  --conversation-id $CONV_ID \
-  --biz-id $SITE_ID \
-  --chat-id $CHAT_ID \
-  --chat-status interrupt \
-  --phase generate_prd \
-  --user-navigation generate_prd \
-  --hidden --without-refer
+  --text '{"Core Features": ["Product Showcase", "Brand Story", "News"]}' \
+  --conversation-id $CONV_ID --biz-id $SITE_ID --chat-id $CHAT_ID \
+  --chat-status interrupt --phase generate_prd \
+  --user-navigation generate_prd --hidden --without-refer
 ```
 
 **Key rule**: The platform's `AskUserQuestion` event always includes an `answers` field with sensible defaults. For rounds after the first, always use these defaults directly instead of prompting the user.
@@ -192,7 +188,7 @@ When PRD is ready:
 
 ```bash
 python scripts/aistaff_api.py chat \
-  --text "确认生成应用" \
+  --text "Confirm app generation" \
   --conversation-id $CONV_ID \
   --biz-id $SITE_ID \
   --phase generate_code \
@@ -207,7 +203,7 @@ python scripts/aistaff_api.py chat \
 https://wanwang.aliyun.com/webdesign/home#/ai/manage/prd?conversationId=<CONV_ID>
 ```
 
-Tell user: **"代码生成已启动，通常需要 2-5 分钟。您可以先通过上面的链接查看项目，我会持续跟踪进度..."**
+Tell user: **"Code generation started. This typically takes 2-5 minutes. You can check the project via the link above while I track the progress..."**
 
 ### Step 3: Poll loop with progress updates
 
@@ -215,28 +211,42 @@ Poll every 10 seconds. Show the user progress between each poll:
 
 ```bash
 python scripts/aistaff_api.py poll \
-  --conversation-id $CONV_ID \
-  --biz-id $SITE_ID \
-  --last-event-id $LAST_EVENT_ID
+  --conversation-id $CONV_ID --biz-id $SITE_ID --last-event-id $LAST_EVENT_ID
 ```
 
-Progress messages to show (use `progressDetail` for rich messages):
-- `phase == "processing"` + `progressDetail.latestFile` exists → "代码生成中...正在写入: {latestFile.semantic}（已生成 {filesWrittenCount} 个文件）"
-- `phase == "processing"` + no `latestFile` → "代码生成中...已处理 N 个事件"
-- `phase == "processing"` + `progressDetail.lastMessage` exists → Also show the assistant's latest message as context
-- `phase == "success"` → Site is ready! Show link again.
+Progress messages (use `progressDetail` for rich messages):
+- `phase == "processing"` + `latestFile` exists → "Generating code... Writing: {latestFile.semantic} ({filesWrittenCount} files generated)"
+- `phase == "processing"` + no `latestFile` → "Generating code... N events processed"
+- `phase == "processing"` + `lastMessage` exists → Also show the assistant's latest message as context
+- `phase == "success"` → Site is ready! Proceed to Step 4.
 - `phase == "fail"` → Ask user whether to retry.
 
-### Step 4: Handle completion
+### Step 4: Get preview URL
 
-- `summary.chatStatus == "success"` → Site is ready. Show site link again.
+**MUST** call this after code generation completes (`summary.chatStatus == "success"`). Starts the preview sandbox and returns the live preview URL.
+
+```bash
+PREVIEW=$(python scripts/aistaff_api.py get-preview-url --conversation-id $CONV_ID)
+PREVIEW_URL=$(echo $PREVIEW | jq -r '.urlMap.https // .urlMap.http // empty')
+```
+
+Tell user: **"Site built! Getting preview URL..."**
+
+The first call may take a few seconds as the sandbox starts up. If the preview URL is not yet available, retry after 10 seconds (up to 3 retries). Show the preview URL: **"Preview URL: {PREVIEW_URL}"**
+
+**`--restart`**: Pass `--restart` to restart the app in the sandbox (e.g., after a modification). Not needed for the initial build.
+
+### Step 5: Handle completion
+
+- `summary.chatStatus == "success"` → Site is ready. Show site link + preview URL.
 - `summary.chatStatus == "fail"` or `summary.hasError == true` → **Ask user** whether to retry. Do NOT auto-retry.
 
 ## After Initial Generation
 
 * Use `chat` with `--conversation-id` to modify the site.
 * Each modification uses the same chat + poll pattern.
-* Show the site link again after each modification.
+* After each modification completes, call `get-preview-url --restart` to refresh the preview.
+* Show the site link + preview URL again after each modification.
 
 ---
 
@@ -247,7 +257,7 @@ Progress messages to show (use `progressDetail` for rich messages):
 | `interrupt` | — | 2 (first round) | Parse AskUserQuestion, collect answers **from user**, resume with `--phase generate_prd` |
 | `interrupt` | — | 2 (subsequent) | **Auto-fill** with default `answers` from the AskUserQuestion event, resume immediately — do NOT ask user |
 | `success` | `true` | 2 | PRD ready → proceed to Phase 3 |
-| `success` | `false` | 3 | Site is ready → show link |
+| `success` | `false` | 3 | Site is ready → call `get-preview-url` → show link + preview URL |
 | `fail` | — | any | Ask user whether to retry |
 | `unknown` | — | any | Poll timed out → use `list-messages` fallback |
 
@@ -258,10 +268,10 @@ Progress messages to show (use `progressDetail` for rich messages):
 ## create-conversation
 
 ```bash
-python scripts/aistaff_api.py create-conversation --text "用户问题"
+python scripts/aistaff_api.py create-conversation --text "user question"
 ```
 
-Returns flat JSON: `{ConversationId, SiteId, ChatId, SectionId, BotId, Title}`.
+Returns: `{ConversationId, SiteId, ChatId, SectionId, BotId, Title}`.
 
 ## chat
 
@@ -280,86 +290,46 @@ python scripts/aistaff_api.py chat --text "description" --conversation-id <ID> -
 - `--hidden` / `--without-refer`: Hide message / skip reference context
 - `--verbose`: Show debug info
 
-**Returns JSON:**
-```json
-{
-  "conversationId": "conv-xxx",
-  "chatId": "chat-xxx",
-  "status": "fired",
-  "error": null
-}
-```
+Returns: `{conversationId, chatId, status: "fired", error}`.
 
 ## poll
 
-**Single-shot status check** — fetches new events once + checks message status, then returns immediately. Designed for agent-driven polling loops where the agent controls the pace and shows progress to the user between calls.
+**Single-shot status check** — fetches new events once + checks message status, then returns immediately. Designed for agent-driven polling loops.
 
 ```bash
 python scripts/aistaff_api.py poll --conversation-id <ID> --biz-id <ID> [--last-event-id N]
 ```
 
 **Key parameters:**
-- `--last-event-id N`: Cursor from previous poll (default: 0). Pass the `lastEventId` from the previous `poll` result to get only new events.
+- `--last-event-id N`: Cursor from previous poll (default: 0). Pass the `lastEventId` from the previous `poll` result.
 - `--max-output-events N`: Limit events in output (default: 10, 0=unlimited)
 
-**Returns JSON:**
-```json
-{
-  "conversationId": "conv-xxx",
-  "lastEventId": 45,
-  "newEvents": 3,
-  "phase": "generating_prd",
-  "summary": {
-    "chatStatus": "processing",
-    "hasError": false,
-    "errorMsg": "",
-    "hasPrd": false,
-    "toolsCalled": ["FetchWebsiteInfo"]
-  },
-  "progressDetail": {
-    "filesWrittenCount": 5,
-    "activeTools": ["Write"],
-    "latestFile": {
-      "path": "/home/wuying/workspace/src/components/Hero.tsx",
-      "semantic": "首页 Hero 轮播组件",
-      "status": "wait"
-    },
-    "allFiles": [
-      {"path": "/home/wuying/workspace/src/types/order.ts", "semantic": "订单类型定义"},
-      {"path": "/home/wuying/workspace/src/components/Hero.tsx", "semantic": "首页 Hero 轮播组件"}
-    ],
-    "lastMessage": "好的，正在为您生成首页组件...",
-    "toolProgress": [
-      {"name": "Write", "status": "done", "semantic": "订单类型定义"},
-      {"name": "Write", "status": "wait", "semantic": "首页 Hero 轮播组件"}
-    ]
-  },
-  "events": ["(last 10 events)"]
-}
-```
+**Returns:** `{conversationId, lastEventId, newEvents, phase, summary, progressDetail, events}`
+
+**`summary` fields:** `chatStatus`, `hasError`, `errorMsg`, `hasPrd`, `toolsCalled`
 
 **`progressDetail` fields** — use these to build informative progress messages:
-- `filesWrittenCount`: Total number of files generated so far.
-- `activeTools`: Tools currently in progress (status=`wait`). Empty when all tools have completed.
-- `latestFile`: The most recent file being written — show `semantic` to the user (e.g. "正在生成: 首页 Hero 轮播组件").
-- `allFiles`: Complete list of files written, each with `path` and `semantic`.
-- `lastMessage`: Latest assistant text message (truncated to 200 chars).
-- `toolProgress`: Per-tool status list with `name`, `status` (`wait`/`done`), and `semantic`.
+- `filesWrittenCount`: Total files generated so far
+- `activeTools`: Tools currently in progress (status=`wait`). Empty when all completed
+- `latestFile`: `{path, semantic, status}` — most recent file being written (show `semantic` to user)
+- `allFiles`: Complete list of files written, each with `path` and `semantic`
+- `lastMessage`: Latest assistant text message (truncated to 200 chars)
+- `toolProgress`: Per-tool status list with `name`, `status` (`wait`/`done`), `semantic`
 
-**Suggested progress messages based on `progressDetail`:**
-- If `latestFile` has `status == "wait"`: "正在生成: {latestFile.semantic}..."
-- If `latestFile` has `status == "done"` and `activeTools` is empty: "已完成 {filesWrittenCount} 个文件，等待下一步..."
-- If `filesWrittenCount > 0` and `activeTools` is not empty: "代码生成中...已生成 {filesWrittenCount} 个文件，正在写入: {latestFile.semantic}"
-- If `lastMessage` is not empty: Show it as additional context.
+**Suggested progress messages:**
+- `latestFile.status == "wait"`: "Generating: {latestFile.semantic}..."
+- `latestFile.status == "done"` + `activeTools` empty: "{filesWrittenCount} files completed, waiting for next step..."
+- `filesWrittenCount > 0` + `activeTools` not empty: "Generating code... {filesWrittenCount} files done, writing: {latestFile.semantic}"
+- `lastMessage` not empty: Show it as additional context
 
 **`phase` values:**
 | Phase | Meaning | Suggested user message |
 |-------|---------|----------------------|
-| `processing` | General processing | "处理中..." |
-| `fetching_reference` | Fetching reference site | "正在获取参考网站信息..." |
+| `processing` | General processing | "Processing..." |
+| `fetching_reference` | Fetching reference site | "Fetching reference site info..." |
 | `waiting_for_input` | HITL form ready | (parse form and handle) |
-| `generating_prd` | PRD generation in progress | "PRD 方案生成中..." |
-| `success` | Completed successfully | "完成!" |
+| `generating_prd` | PRD generation in progress | "Generating PRD..." |
+| `success` | Completed successfully | "Done!" |
 | `fail` | Failed | (ask user whether to retry) |
 
 ## list-messages
@@ -371,6 +341,20 @@ python scripts/aistaff_api.py list-messages --conversation-id <ID> [--tail 10]
 ```
 
 **Key usage**: Use this to check `ChatStatus` of the last message when poll shows no progress.
+
+## get-preview-url
+
+Get the live preview URL after code generation. Starts the sandbox if needed.
+
+```bash
+python scripts/aistaff_api.py get-preview-url --conversation-id <ID> [--restart]
+```
+
+**Parameters:** `--conversation-id ID` (required), `--restart` (restart app in sandbox, useful after modifications)
+
+**Returns:** `{urlMap: {https: "...", http: "...", sessionId: "..."}}`
+
+**MUST** call after `chatStatus == "success"` in Phase 3. First call may take a few seconds (sandbox startup). If URL is empty, retry after 10s (up to 3 retries).
 
 ---
 
@@ -389,79 +373,3 @@ python scripts/aistaff_api.py list-messages --conversation-id <ID> [--tail 10]
 | Auth error | Ensure credentials are configured via default credential chain (env vars, config file, or RAM role) |
 | `summary.chatStatus == "fail"` | **Ask user** whether to retry. Do NOT auto-retry |
 | Poll shows no progress for 5+ minutes | Use `list-messages` to check actual status |
-
----
-
-# Complete Workflow Example
-
-```bash
-cd skills/ai/service/alibabacloud-wxz-website-builder
-
-# Phase 1: Create conversation
-CONV=$(python scripts/aistaff_api.py create-conversation --text "做个popmart首页")
-CONV_ID=$(echo $CONV | jq -r '.ConversationId')
-CHAT_ID=$(echo $CONV | jq -r '.ChatId')
-SITE_ID=$(echo $CONV | jq -r '.SiteId')
-
-# Phase 2 Step 1: Fire requirement collection
-python scripts/aistaff_api.py chat \
-  --text "做个popmart首页" \
-  --conversation-id $CONV_ID \
-  --biz-id $SITE_ID
-# → Tell user: "正在分析您的需求，请稍候..."
-
-# Phase 2 Step 2: Poll until first HITL form arrives
-# (agent calls this every ~5s, shows progress between calls)
-python scripts/aistaff_api.py poll \
-  --conversation-id $CONV_ID \
-  --biz-id $SITE_ID \
-  --last-event-id 0
-# → Check phase: "waiting_for_input" means form is ready
-
-# Phase 2 Step 3: Parse AskUserQuestion → collect from user (FIRST round only)
-
-# Phase 2 Step 4: Fire resume with user answers
-python scripts/aistaff_api.py chat \
-  --text '{"应用名称": "POP MART 官网", "主营服务": "潮流玩具", "目标用户": "Z世代潮流青年", "参考网站": "无"}' \
-  --conversation-id $CONV_ID \
-  --biz-id $SITE_ID \
-  --chat-id $CHAT_ID \
-  --chat-status interrupt \
-  --phase generate_prd \
-  --user-navigation generate_prd \
-  --hidden --without-refer
-# → Tell user: "已收到您的需求，正在生成产品方案..."
-
-# Phase 2 Step 5: Poll loop (agent-driven, ~5s interval)
-# - phase="waiting_for_input" → auto-fill with defaults, fire resume
-#   → Tell user: "正在完善需求细节..."
-# - phase="generating_prd" → Tell user: "PRD 方案生成中..."
-# - summary.chatStatus="success" + summary.hasPrd=true → PRD ready, proceed
-
-# Phase 3 Step 1: Fire code generation
-python scripts/aistaff_api.py chat \
-  --text "确认生成应用" \
-  --conversation-id $CONV_ID \
-  --biz-id $SITE_ID \
-  --phase generate_code \
-  --without-refer
-
-# Phase 3 Step 2: Show link immediately
-echo "Link: https://wanwang.aliyun.com/webdesign/home#/ai/manage/prd?conversationId=$CONV_ID"
-# → Tell user: "代码生成已启动，通常需要 2-5 分钟..."
-
-# Phase 3 Step 3: Poll loop with progress (~10s interval)
-python scripts/aistaff_api.py poll \
-  --conversation-id $CONV_ID \
-  --biz-id $SITE_ID \
-  --last-event-id $LAST_EVENT_ID
-# → Use progressDetail.latestFile.semantic for rich messages
-# → phase="success" → show link again, done!
-
-# Modify site (optional, same chat+poll pattern)
-python scripts/aistaff_api.py chat \
-  --text "首页title改下" \
-  --conversation-id $CONV_ID \
-  --biz-id $SITE_ID
-# → poll loop...
-```

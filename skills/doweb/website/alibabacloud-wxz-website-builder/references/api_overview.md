@@ -1,4 +1,4 @@
-# AI Staff (零号员工) OpenAPI Overview
+# AI Staff OpenAPI Overview
 
 Product code: `websitebuild`
 API version: `2025-04-29`
@@ -42,7 +42,7 @@ Standard Alibaba Cloud response with `RequestId`, `AllowRetry`, and `Module` wra
   "AllowRetry": false,
   "Module": {
     "ConversationId": "18ECF2D9F5C939C7F42C66370D5396DD",
-    "Title": "做个popmart首页",
+    "Title": "build a popmart homepage",
     "SiteId": "WS20260427195646000001",
     "BotId": "Zero2",
     "SectionId": "A1B5EAE8442FAF3F4A4951BF6BC35BCA",
@@ -201,6 +201,44 @@ Each message object contains `Content`, `Role`, `ChatId`, `ChatStatus`, `CreateT
 
 **Key usage:** When `ListAIStaffChatEvents` (SSE) times out or returns no new events, use this API to check the actual `ChatStatus` of the latest message.
 
+### Preview URL
+
+| Action | Description | Key Parameters |
+|--------|-------------|----------------|
+| `GetAIStaffPreviewUrl` | Get site preview URL (starts sandbox if needed) | `ConversationId`, `Restart` |
+
+**GetAIStaffPreviewUrl Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `ConversationId` | String | Yes | Conversation ID |
+| `Restart` | Boolean | No | Whether to restart the app in the sandbox (default: false) |
+
+**GetAIStaffPreviewUrl Response:**
+
+Response is wrapped in `Module` field:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `UrlMap` | Map<String, String> | Preview URL information (keys include `https`, `http`, `sessionId`) |
+
+**Example Response:**
+
+```json
+{
+  "RequestId": "817605ED-A552-13C0-AA42-09F9808BD41C",
+  "Module": {
+    "UrlMap": {
+      "https": "https://xxx.aliyuncs.com/...",
+      "http": "http://xxx.aliyuncs.com/...",
+      "sessionId": "session-xxx"
+    }
+  }
+}
+```
+
+**Key usage:** Call this after code generation completes (`chatStatus == "success"`). The first call starts the sandbox and may take a few seconds. Use `Restart=true` to restart the app after site modifications.
+
 ## RAM Actions
 
 | Action | RAM Permission |
@@ -210,6 +248,7 @@ Each message object contains `Content`, `Role`, `ChatId`, `ChatStatus`, `CreateT
 | `RetryAIStaffChat` | `zero2staff:RetryAIStaffChat` |
 | `ListAIStaffChatEvents` | `zero2staff:ListAIStaffChatEvents` |
 | `ListAIStaffChatMessages` | `zero2staff:ListAIStaffChatMessages` |
+| `GetAIStaffPreviewUrl` | `zero2staff:GetAIStaffPreviewUrl` |
 
 ## Error Codes
 
@@ -218,6 +257,7 @@ Each message object contains `Content`, `Role`, `ChatId`, `ChatStatus`, `CreateT
 | `CHAT_NOT_FOUND` | No active chat in conversation |
 | `ILLEGAL_ACCESS` | ToB chat not enabled |
 | `SYSTEM_ERROR` | Internal server error |
+| `GET_PREVIEW_URL_FAILED` | Failed to get preview URL (sandbox start failure) |
 
 ## Pagination
 

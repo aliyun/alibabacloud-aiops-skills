@@ -16,18 +16,18 @@ Open https://www.aliyun.com and log in with your Alibaba Cloud account.
 2. Click **"Create User"**
 3. Fill in:
    - Login Name: e.g. `aistaff-builder`
-   - Display Name: e.g. `AI建站专用`
+   - Display Name: e.g. `aistaff-builder`
    - Access Mode: check **"OpenAPI Access"** (this generates AccessKey)
 4. Click **"OK"**
 5. **IMPORTANT**: On the success page, immediately save the **AccessKey ID** and **AccessKey Secret** — the Secret is only shown once!
 
 ## Step 3: Grant Permissions
 
-For the AI Staff Website Builder, the RAM user needs a custom policy with these specific Actions (least-privilege):
+For the AI Staff Website Builder, the RAM user needs a custom policy with these specific Actions (least-privilege). See `references/ram-policies.md` for the full permission list and policy JSON.
 
 1. In RAM Console → Users → click the user → **"Permissions"** tab
 2. Click **"Grant Permission"**
-3. Create a custom policy and attach it:
+3. Create a custom policy and attach it (see `references/ram-policies.md` for the complete policy JSON):
 
 ```json
 {
@@ -38,8 +38,10 @@ For the AI Staff Website Builder, the RAM user needs a custom policy with these 
       "Action": [
         "zero2staff:CreateAIStaffConversation",
         "zero2staff:CreateAIStaffChat",
+        "zero2staff:RetryAIStaffChat",
         "zero2staff:ListAIStaffChatEvents",
-        "zero2staff:ListAIStaffChatMessages"
+        "zero2staff:ListAIStaffChatMessages",
+        "zero2staff:GetAIStaffPreviewUrl"
       ],
       "Resource": "*"
     }
@@ -74,7 +76,7 @@ access_key_secret = your-access-key-secret
 
 ```bash
 cd skills/ai/service/alibabacloud-wxz-website-builder
-python scripts/aistaff_api.py create-conversation --text "测试连通性"
+python scripts/aistaff_api.py create-conversation --text "test connectivity"
 ```
 
 If you see a JSON response with `ConversationId`, the setup is successful.

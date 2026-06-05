@@ -19,6 +19,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 
 from alibabacloud_tea_openapi.client import Client as OpenApiClient
@@ -30,6 +31,50 @@ VERSION = "1.0.0"
 DEFAULT_REGION = "cn-hangzhou"
 PRODUCT = "websitebuild"
 API_VERSION = "2025-04-29"
+
+# Input validation constants
+_MAX_TEXT_LEN = 10000
+_ID_PATTERN = re.compile(r"^[A-Za-z0-9_\-]{1,128}$")
+_SAFE_OUTPUT_DIR = os.environ.get(
+    "AISTAFF_OUTPUT_DIR", os.path.join(os.getcwd(), "output")
+)
+
+
+class InputValidationError(Exception):
+    """Raised when CLI input fails validation."""
+
+
+def validate_id(value: str, name: str) -> str:
+    """Validate an ID parameter (conversation-id, biz-id, chat-id, section-id)."""
+    if not value:
+        raise InputValidationError(f"{name} must not be empty")
+    if len(value) > 128:
+        raise InputValidationError(f"{name} exceeds max length (128)")
+    if not _ID_PATTERN.match(value):
+        raise InputValidationError(
+            f"{name} contains invalid characters (allowed: alphanumeric, hyphen, underscore)"
+        )
+    return value
+
+
+def validate_text(value: str) -> str:
+    """Validate text input (--text)."""
+    if not value:
+        raise InputValidationError("--text must not be empty")
+    if len(value) > _MAX_TEXT_LEN:
+        raise InputValidationError(f"--text exceeds max length ({_MAX_TEXT_LEN})")
+    return value
+
+
+def validate_output_path(path: str) -> str:
+    """Validate --output path to prevent path traversal."""
+    resolved = os.path.realpath(path)
+    safe_dir = os.path.realpath(_SAFE_OUTPUT_DIR)
+    if not resolved.startswith(safe_dir + os.sep) and resolved != safe_dir:
+        raise InputValidationError(
+            f"--output path must be under {_SAFE_OUTPUT_DIR}, got: {path}"
+        )
+    return path
 
 
 # ---------------------------------------------------------------------------
@@ -135,6 +180,20 @@ def fetch_chat_events(client: OpenApiClient, conversation_id: str,
         "lastEventId": data.get("LastEventId", last_event_id),
         "hasMore": data.get("HasMore", False),
         "events": data.get("Events", []),
+    }
+
+
+def get_preview_url(client: OpenApiClient, conversation_id: str,
+                    restart: bool = False) -> dict:
+    """GetAIStaffPreviewUrl — get site preview URL after code generation."""
+    params: dict = {
+        "ConversationId": conversation_id,
+        "Restart": restart,
+    }
+    body = call_api(client, "GetAIStaffPreviewUrl", params)
+    module = body.get("Module", {})
+    return {
+        "urlMap": module.get("UrlMap", {}),
     }
 
 
@@ -402,6 +461,12 @@ def build_parser() -> argparse.ArgumentParser:
                    help="Max events in output (default: 10, 0=unlimited)")
     p.add_argument("--output", help="Write output to file")
 
+    # get-preview-url
+    p = sub.add_parser("get-preview-url", help="Get site preview URL after code generation completes")
+    p.add_argument("--conversation-id", required=True, help="Conversation ID")
+    p.add_argument("--restart", action="store_true", help="Restart the app before getting preview URL")
+    p.add_argument("--output", help="Write output to file")
+
     # list-messages
     p = sub.add_parser("list-messages", help="Query chat messages (cursor-based pagination)")
     p.add_argument("--conversation-id", required=True)
@@ -415,6 +480,7 @@ def build_parser() -> argparse.ArgumentParser:
 def write_output(data: str, output_path: str | None):
     """Print output and optionally write to file."""
     if output_path:
+        validate_output_path(output_path)
         os.makedirs(os.path.dirname(output_path) if os.path.dirname(output_path) else ".", exist_ok=True)
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(data + "\n")
@@ -426,6 +492,20 @@ def write_output(data: str, output_path: str | None):
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
+
+    # Validate inputs BEFORE any network calls
+    try:
+        if hasattr(args, "text") and args.text is not None:
+            validate_text(args.text)
+        if hasattr(args, "conversation_id") and args.conversation_id:
+            validate_id(args.conversation_id, "--conversation-id")
+        if hasattr(args, "biz_id") and args.biz_id:
+            validate_id(args.biz_id, "--biz-id")
+        if hasattr(args, "chat_id") and args.chat_id:
+            validate_id(args.chat_id, "--chat-id")
+    except InputValidationError as e:
+        print(f"Validation error: {e}", file=sys.stderr)
+        return 2
 
     try:
         client = create_client(args.region)
@@ -622,6 +702,12 @@ def main() -> int:
             result = json.dumps(poll_output, ensure_ascii=False)
             write_output(result, output_path)
 
+        elif args.command == "get-preview-url":
+            preview = get_preview_url(client, args.conversation_id,
+                                      restart=args.restart)
+            result = json.dumps(preview, indent=2, ensure_ascii=False, default=str)
+            write_output(result, output_path)
+
         elif args.command == "list-messages":
             messages = list_chat_messages(client, args.conversation_id)
             if args.tail and isinstance(messages, list):
@@ -631,6 +717,9 @@ def main() -> int:
 
     except KeyboardInterrupt:
         return 0
+    except InputValidationError as e:
+        print(f"Validation error: {e}", file=sys.stderr)
+        return 2
     except Exception as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1

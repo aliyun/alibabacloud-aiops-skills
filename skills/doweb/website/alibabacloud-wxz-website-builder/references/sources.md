@@ -2,7 +2,7 @@
 
 ## Product Documentation
 
-- Product: AI Staff (零号员工/万小智) Website Builder
+- Product: AI Staff Website Builder
 - Product code: `webbuild`
 - API version: `2025-04-29`
 - Legacy product code: `zero2staff` (RAM actions still use this prefix)
