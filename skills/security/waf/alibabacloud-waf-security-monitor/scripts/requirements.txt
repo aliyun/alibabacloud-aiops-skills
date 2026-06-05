@@ -1,0 +1,5 @@
+# Python dependencies for alibabacloud-waf-security-monitor scripts
+# All scripts (verify_output.py, extract_bot_template.py) use Python 3 standard library only.
+# No third-party packages required.
+#
+# Standard library modules used: json, re, time, sys
