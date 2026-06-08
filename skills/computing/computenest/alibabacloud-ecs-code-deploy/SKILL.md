@@ -65,12 +65,13 @@ Quick recap (read the reference for details):
 
 **Primary action**: Run `python3 "$SKILL_DIR/scripts/deploy_toolkit.py" check` — it checks CLI version + appmanager-cli version + credentials in one run. Only if the script file is missing, use the fallback in [references/init-and-credentials.md](references/init-and-credentials.md).
 
-> **MUST — Handling unmet environment prerequisites**: When `check` exits 1 because the aliyun CLI is missing or older than 3.3.14 (or appmanager-cli is missing/outdated), the Agent **MUST NOT stop the workflow silently**. The required flow is:
-> 1. **ASK the user first** — show the detected version + the required version + the install/upgrade command, and ask for explicit consent (e.g. "current aliyun CLI 3.3.4 is below the required >= 3.3.14 for appmanager; approve upgrade (overwrite-install into /usr/local/bin, requires sudo)?"). Never assume yes; never paste credentials.
-> 2. **On approval** — execute the install/upgrade command (see snippet below or [references/init-and-credentials.md](references/init-and-credentials.md) for the right arch), then re-run `deploy_toolkit.py check` to confirm.
-> 3. **On refusal** — stop with the refusal as the reason. Do NOT continue with the older version (deployment will fail anyway).
+> **MUST — Handling unmet environment prerequisites**: When `check` exits 1 because the aliyun CLI is missing or older than 3.3.19 (or appmanager-cli is missing/outdated), the Agent **MUST NOT stop the workflow silently**. The required flow is:
+> 1. **CLI NOT installed** → **Auto-install directly without asking user** — execute the install command (see snippet below or [references/init-and-credentials.md](references/init-and-credentials.md) for the right arch), then re-run `deploy_toolkit.py check` to confirm.
+> 2. **CLI already installed** → **ASK the user first** — show the detected version + the required version + the upgrade command, and ask for explicit consent (e.g. "aliyun CLI 3.3.4 is already installed but below the required >= 3.3.19 for appmanager; approve upgrade (overwrite-install into /usr/local/bin, requires sudo)?"). Never assume yes; never paste credentials.
+>    - **On approval** — execute the install/upgrade command, then re-run `deploy_toolkit.py check` to confirm.
+>    - **On refusal** — stop with the refusal as the reason. Do NOT continue with the older version (deployment will fail anyway).
 >
-> The toolkit's `check` output already includes an `→ AGENT: DO NOT stop. ASK user ...` line for each fixable issue — follow it verbatim.
+> The toolkit's `check` output already includes an `→ AGENT: DO NOT stop. ASK user ...` line for each fixable issue — follow it verbatim (except for the "not installed" case, which is auto-handled).
 >
 > **MUST — Upgrade method priority** (avoid the "repeated upgrade" pitfall: `/usr/local/bin/` is often shadowed by earlier PATH entries like `/opt/homebrew/bin`):
 > 1. brew-managed (`check` prints "managed by Homebrew") -> `brew upgrade aliyun-cli`; do NOT overwrite `/usr/local/bin/` again.
@@ -81,31 +82,15 @@ Quick recap (read the reference for details):
 
 ### AI-Mode Configuration (MANDATORY after CLI install)
 
-> **⛔ MUST configure AI-Mode**: Agent MUST ensure AI-Mode is properly configured before running any `aliyun appmanager` commands. All subsequent `aliyun` CLI calls automatically carry the configured User-Agent header — no per-command `--user-agent` flag needed.
+> **⛔ MUST configure AI-Mode**: Agent MUST ensure AI-Mode is properly configured before running any `aliyun appmanager` commands. `deploy_toolkit.py check` handles this internally; the commands below are for manual fallback only.
 
 ```bash
-# 1. Enable AI-Mode (MUST — enables User-Agent tracking in all API calls)
 aliyun configure ai-mode enable
-
-# 2. Set User-Agent for skill traceability (MUST — identifies this skill in API logs)
 aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-code-deploy"
-
-# 3. Update plugins to latest (ensures appmanager subcommand is available)
 aliyun plugin update
-
-# 4. Verify AI-Mode status
-aliyun configure ai-mode show
-# Expected: enabled=true, user-agent=AlibabaCloud-Agent-Skills/alibabacloud-ecs-code-deploy
+aliyun configure ai-mode show   # verify: enabled=true, user-agent set
+aliyun configure ai-mode disable # only when troubleshooting
 ```
-
-**Disable AI-Mode** (when troubleshooting or if explicitly required):
-
-```bash
-# Disable AI-Mode (stops sending User-Agent header; re-enable with 'enable' above)
-aliyun configure ai-mode disable
-```
-
-> `deploy_toolkit.py check` already handles AI-Mode enable + set-user-agent internally. The above is only needed for manual fallback scenarios.
 
 ---
 
@@ -113,7 +98,20 @@ aliyun configure ai-mode disable
 
 `deploy_toolkit.py check` already validates credentials. Only if credentials are missing/invalid, see [references/init-and-credentials.md](references/init-and-credentials.md) for the default-credential-chain remediation flow.
 
-> **⛔ SA-2.12 — DO NOT explicitly handle AK/SK**: This skill MUST rely on the aliyun CLI/SDK **default credential chain** (ECS RAM Role / env vars / pre-existing `~/.aliyun/config.json`). The Agent **NEVER** asks the user to paste AccessKey/Secret/STS-Token values into the chat, **NEVER** puts raw AK/SK in tool-call arguments or scripts, and **NEVER** echoes credential values. When credentials are missing, instruct the user to configure them out-of-band (their own terminal/shell profile/RAM role) and only re-verify via `aliyun sts get-caller-identity`. Full remediation flow → [references/init-and-credentials.md](references/init-and-credentials.md).
+> **⛔ PREFER OAuth OVER AK**: This skill SHOULD guide users to use **OAuth authentication** as the PRIMARY method for providing Alibaba Cloud permissions. OAuth is more secure and convenient than AccessKey (no long-term secret storage needed). The Agent MUST present OAuth as the first option before mentioning AK-based methods.
+>
+> **OAuth Login Guide**: Instruct the user to run the following command in their terminal:
+> ```bash
+> aliyun configure --mode OAuth --profile oauth
+> ```
+> This is an interactive command that will:
+> 1. Open a browser with an authorization link — user clicks to authorize
+> 2. Prompt for region (e.g. `cn-hangzhou`, `cn-beijing`) — user enters their preferred region
+> 3. Prompt for language (e.g. `zh`) — user enters their preferred language
+>
+> After OAuth setup completes, verify with: `aliyun sts get-caller-identity --profile oauth`
+>
+> **⛔ SA-2.12 — DO NOT explicitly handle AK/SK**: This skill MUST rely on the aliyun CLI/SDK **default credential chain** (OAuth / ECS RAM Role / env vars / pre-existing `~/.aliyun/config.json`). The Agent **NEVER** asks the user to paste AccessKey/Secret/STS-Token values into the chat, **NEVER** puts raw AK/SK in tool-call arguments or scripts, and **NEVER** echoes credential values. When credentials are missing, instruct the user to configure them out-of-band (their own terminal/shell profile/RAM role) and only re-verify via `aliyun sts get-caller-identity`. Full remediation flow → [references/init-and-credentials.md](references/init-and-credentials.md).
 >
 > **CRITICAL PROHIBITION**: NEVER run standalone `appmanager` or `aliyun appmanager login`.
 
@@ -267,30 +265,9 @@ python3 "$SKILL_DIR/scripts/deploy_toolkit.py" price --config .appmanager/config
 - Exit 0 + `=== AGENT_CONFIRM_REQUIRED ===`: present the **complete** price + risk warning to the user, confirm item by item.
 - Exit 1: price query failed; do NOT proceed to deploy.
 
-### Items the Agent MUST confirm with the user (one by one)
+The Agent MUST confirm up to 3 items (price + OSS fees / existing-ECS risk / group overwrite choice) — see [references/deploy-output-and-management.md](references/deploy-output-and-management.md) § "Pre-deploy Price Check: Confirmation Items" for detailed descriptions and example phrasing.
 
-1. **Price confirmation (including OSS extra fees, MUST)**
-   The price output has two parts:
-   - The estimate from `appmanager price` for "order-billed" resources (ECS / EIP / public bandwidth, etc.) in hourly/monthly form.
-   - A `OSS extra billing` notice that follows it — these items are **NOT covered** by `appmanager price` but always occur during deployment:
-     - OSS standard storage ~CNY 0.12 / GB / month (project archives are usually KB-MB scale, so the amount is tiny but non-zero)
-     - OSS public-network outbound traffic ~CNY 0.50 / GB (**when ECS and OSS are in the same region, intra-region pull is free of public traffic charges**; only cross-region transfer incurs the fee — therefore the deployment region SHOULD match the default OSS bucket region)
-     - OSS Put/Get requests are billed per 10k requests (negligible amount)
-   The Agent MUST relay both parts. Example phrasing: "Estimated cost: compute resources CNY X.XXX/hour (~CNY XXX.XX/month); public traffic billed by usage at CNY 0.80/GB; **the deployment also incurs minor OSS storage and request fees (intra-region pull is free of public outbound charges)**. Confirm to continue?"
-
-2. **Existing-ECS deployment impact (only when the script outputs the `[Existing-ECS deployment risk]` block)**
-   When `config.yaml` contains `common.deployment.instanceId`, the script lists the risk items. The Agent MUST ask, following the script's hint:
-   "About to deploy to the existing ECS instance `i-xxx`. The deployment runs stop -> upload -> start scripts and may stop or overwrite other applications already running on this instance. Confirm to continue?"
-   - User refuses -> STOP and recommend switching to "new ECS"
-   - User agrees -> proceed to item 3 (if applicable) or directly to deploy
-
-3. **Group overwrite vs new group (only when the script outputs the `[Group overwrite risk]` block)**
-   When the target `groupName` already exists and is associated with active ECS, the script asks for an A/B choice:
-   - **A) Overwrite the existing group**: `python3 "$SKILL_DIR/scripts/deploy_toolkit.py" deploy` (default; uses `--overwrite` to replace code / restart processes)
-   - **B) Create a new group**: `python3 "$SKILL_DIR/scripts/deploy_toolkit.py" deploy --force-new-group` (the script auto-appends a suffix to allocate a new group name and writes it back to config.yaml; the existing deployment is unaffected)
-   The Agent MUST clearly explain the impact of A vs B; **do NOT default to A on the user's behalf**.
-
-> Until ALL three confirmations are complete, the Agent MUST NOT invoke `deploy_toolkit.py deploy`.
+> Until ALL applicable confirmations are complete, the Agent MUST NOT invoke `deploy_toolkit.py deploy`.
 
 ---
 
@@ -365,23 +342,22 @@ python3 "$SKILL_DIR/scripts/deploy_toolkit.py" check
 # → If exit 0: all checks passed, proceed to step 2
 # → If exit 1, address the issue printed by the script:
 #    ⚠️ DO NOT stop silently. For every fixable ❌ line the script prints,
-#       Agent MUST first ASK the user for approval, then run the fix.
-#       The script outputs an explicit `→ AGENT: DO NOT stop. ASK user ...`
-#       hint for each issue — follow it verbatim.
-#    - aliyun CLI missing or < 3.3.14: ASK user to approve install/upgrade
-#      (covers to /usr/local/bin, needs sudo), then run the install command
-#      printed by the script (see Task 1).
-#    - appmanager-cli < 1.0.9 or BROKEN venv: ASK user to approve
-#      `rm -rf ~/.aliyun/appmanager-venv` (auto-recreates on next aliyun
-#      appmanager run).
-#      ⚠️ This path is fixed at ~/.aliyun/appmanager-venv (the venv is self-managed
-#         by the aliyun CLI). After deletion, the next `aliyun appmanager` run
-#         auto-recreates it. The Agent MUST use this exact literal path —
-#         NEVER replace it with a variable or build it via concatenation,
-#         to avoid accidentally wiping user data.
-#    - credentials missing/invalid: present default-credential-chain remediation
-#      to the user (RAM Role / env vars / `aliyun configure` interactive) — NEVER
-#      collect AK/SK in chat. See Task 2 + references/init-and-credentials.md.
+#       Agent MUST follow the flow below:
+#       - aliyun CLI NOT installed: AUTO-INSTALL directly (no need to ask user)
+#       - aliyun CLI already installed but outdated: ASK user to approve upgrade
+#         (covers to /usr/local/bin, needs sudo), then run the install command
+#         printed by the script (see Task 1).
+#       - appmanager-cli < 1.1.1 or BROKEN venv: ASK user to approve
+#         `rm -rf ~/.aliyun/appmanager-venv` (auto-recreates on next aliyun
+#         appmanager run).
+#         ⚠️ This path is fixed at ~/.aliyun/appmanager-venv (the venv is self-managed
+#            by the aliyun CLI). After deletion, the next `aliyun appmanager` run
+#            auto-recreates it. The Agent MUST use this exact literal path —
+#            NEVER replace it with a variable or build it via concatenation,
+#            to avoid accidentally wiping user data.
+#       - credentials missing/invalid: present OAuth-first remediation
+#         to the user (OAuth / RAM Role / env vars / `aliyun configure` interactive) — NEVER
+#         collect AK/SK in chat. See Task 2 + references/init-and-credentials.md.
 # → If user refuses any fix: stop with that refusal as the reason — DO NOT
 #   continue with a broken environment (deployment will fail anyway).
 # → If script file not found: ONLY THEN fall back to manual checks (Task 1 + Task 2)

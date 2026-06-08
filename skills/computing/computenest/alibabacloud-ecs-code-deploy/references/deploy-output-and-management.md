@@ -159,3 +159,37 @@ agent:
 8. **Pre-deploy group check**: Handled automatically by `deploy_toolkit.py deploy`.
 
 9. **Insufficient balance (`NotEnoughBalance`)**: account balance < CNY 100 cannot create pay-as-you-go ECS. Tell the user to top up at https://usercenter2.aliyun.com/finance/fund-management, or switch to deploying onto an existing ECS instance.
+
+---
+
+## Pre-deploy Price Check: Confirmation Items
+
+The Agent MUST confirm each applicable item with the user **one by one** before invoking `deploy_toolkit.py deploy`.
+
+### 1. Price confirmation (including OSS extra fees — ALWAYS required)
+
+The price output has two parts:
+- The estimate from `appmanager price` for "order-billed" resources (ECS / EIP / public bandwidth, etc.) in hourly/monthly form.
+- A `OSS extra billing` notice — these items are **NOT covered** by `appmanager price` but always occur during deployment:
+  - OSS standard storage ~CNY 0.12 / GB / month (project archives are usually KB-MB scale, so the amount is tiny but non-zero)
+  - OSS public-network outbound traffic ~CNY 0.50 / GB (**when ECS and OSS are in the same region, intra-region pull is free of public traffic charges**; only cross-region transfer incurs the fee — therefore the deployment region SHOULD match the default OSS bucket region)
+  - OSS Put/Get requests are billed per 10k requests (negligible amount)
+
+The Agent MUST relay both parts. Example phrasing: "Estimated cost: compute resources CNY X.XXX/hour (~CNY XXX.XX/month); public traffic billed by usage at CNY 0.80/GB; **the deployment also incurs minor OSS storage and request fees (intra-region pull is free of public outbound charges)**. Confirm to continue?"
+
+### 2. Existing-ECS deployment impact (only when script outputs `[Existing-ECS deployment risk]`)
+
+When `config.yaml` contains `common.deployment.instanceId`, the script lists the risk items. The Agent MUST ask:
+"About to deploy to the existing ECS instance `i-xxx`. The deployment runs stop -> upload -> start scripts and may stop or overwrite other applications already running on this instance. Confirm to continue?"
+- User refuses -> STOP and recommend switching to "new ECS"
+- User agrees -> proceed to item 3 (if applicable) or directly to deploy
+
+### 3. Group overwrite vs new group (only when script outputs `[Group overwrite risk]`)
+
+When the target `groupName` already exists and is associated with active ECS, the script asks for an A/B choice:
+- **A) Overwrite the existing group**: `python3 "$SKILL_DIR/scripts/deploy_toolkit.py" deploy` (default; uses `--overwrite` to replace code / restart processes)
+- **B) Create a new group**: `python3 "$SKILL_DIR/scripts/deploy_toolkit.py" deploy --force-new-group` (the script auto-appends a suffix to allocate a new group name and writes it back to config.yaml; the existing deployment is unaffected)
+
+The Agent MUST clearly explain the impact of A vs B; **do NOT default to A on the user's behalf**.
+
+> Until ALL applicable confirmations are complete, the Agent MUST NOT invoke `deploy_toolkit.py deploy`.

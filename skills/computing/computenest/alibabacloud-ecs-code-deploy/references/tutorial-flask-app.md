@@ -33,8 +33,8 @@ Expected output (success path):
 ```
 OK
 === Environment Check ===
-✅ aliyun CLI: 3.3.14 (>=3.3.14) [active: /usr/local/bin/aliyun]
-✅ appmanager-cli: 1.0.9 (>=1.0.9)
+✅ aliyun CLI: 3.3.19 (>=3.3.19) [active: /usr/local/bin/aliyun]
+✅ appmanager-cli: 1.1.1 (>=1.1.1)
 ✅ credentials: profile=default region=cn-beijing ak=LTAI***abcd
 === Environment Check Done ===
 

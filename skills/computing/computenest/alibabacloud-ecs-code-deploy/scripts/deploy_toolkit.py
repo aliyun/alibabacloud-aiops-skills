@@ -247,8 +247,8 @@ def cmd_check(_args):
         # user/Agent can review and run it manually.
         _print_install_guidance("install")
         errors += 1
-    elif version_gte(cli_ver, "3.3.14"):
-        print(f"✅ aliyun CLI: {cli_ver} (≥3.3.14) [active: {active_path or 'unknown'}]")
+    elif version_gte(cli_ver, "3.3.19"):
+        print(f"✅ aliyun CLI: {cli_ver} (≥3.3.19) [active: {active_path or 'unknown'}]")
         # Even when version is OK, warn on multi-binary PATH conflicts so users
         # can avoid future "upgrade reverts in next session" surprises.
         if len(aliyun_paths) > 1:
@@ -256,13 +256,13 @@ def cmd_check(_args):
             for p in aliyun_paths:
                 print(f"        - {p}")
     else:
-        print(f"❌ aliyun CLI: {cli_ver} (requires ≥3.3.14) [active: {active_path or 'unknown'}]")
+        print(f"❌ aliyun CLI: {cli_ver} (requires ≥3.3.19) [active: {active_path or 'unknown'}]")
         _print_install_guidance("upgrade", current_ver=cli_ver)
         errors += 1
 
     # 2. Check appmanager-cli
     venv_dir = os.path.expanduser("~/.aliyun/appmanager-venv")
-    required_app = "1.0.9"
+    required_app = "1.1.1"
     if os.path.isdir(venv_dir):
         venv_python = os.path.join(venv_dir, "bin", "python")
         code, stdout, _ = run_cmd([venv_python, "-c",
@@ -388,8 +388,19 @@ def cmd_price(args):
         f"Deploy Target : {result['deploy_target']}",
         f"Service ID    : {result['service_id']}",
         f"Template Name : {result['template_name']}",
-        "-" * 50,
     ]
+    # Display real instance type spec (CPU/Memory) to avoid Agent guessing from the name
+    instance_spec = result.get('instance_type_spec') or {}
+    instance_type = result.get('instance_type') or ''
+    if instance_type:
+        if instance_spec and instance_spec.get('cpu_core_count'):
+            cpu = instance_spec['cpu_core_count']
+            mem = instance_spec.get('memory_size', 0)
+            mem_str = f"{int(mem)}GiB" if float(mem) == int(mem) else f"{mem}GiB"
+            lines.append(f"Instance Type : {instance_type}  ({cpu}vCPU {mem_str})")
+        else:
+            lines.append(f"Instance Type : {instance_type}")
+    lines.append("-" * 50)
     total_hourly = 0.0
     for res in result["resources"]:
         lines.append(f"\n📦 Resource: {res['name']}")

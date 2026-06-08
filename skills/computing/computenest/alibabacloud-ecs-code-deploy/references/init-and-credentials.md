@@ -1,8 +1,38 @@
 # Init & Credentials Reference
 
+## AI-Mode Configuration (MANDATORY after CLI install)
+
+> **⛔ MUST configure AI-Mode**: Agent MUST ensure AI-Mode is properly configured before running any `aliyun appmanager` commands. All subsequent `aliyun` CLI calls automatically carry the configured User-Agent header — no per-command `--user-agent` flag needed.
+
+```bash
+# 1. Enable AI-Mode (MUST — enables User-Agent tracking in all API calls)
+aliyun configure ai-mode enable
+
+# 2. Set User-Agent for skill traceability (MUST — identifies this skill in API logs)
+aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-code-deploy"
+
+# 3. Update plugins to latest (ensures appmanager subcommand is available)
+aliyun plugin update
+
+# 4. Verify AI-Mode status
+aliyun configure ai-mode show
+# Expected: enabled=true, user-agent=AlibabaCloud-Agent-Skills/alibabacloud-ecs-code-deploy
+```
+
+**Disable AI-Mode** (when troubleshooting or if explicitly required):
+
+```bash
+# Disable AI-Mode (stops sending User-Agent header; re-enable with 'enable' above)
+aliyun configure ai-mode disable
+```
+
+> `deploy_toolkit.py check` already handles AI-Mode enable + set-user-agent internally. The above is only needed for manual fallback scenarios.
+
+---
+
 ## Fallback: Manual CLI Verification & Install (only when deploy_toolkit.py unavailable)
 
-**Version requirements**: aliyun CLI >= 3.3.14, appmanager-cli >= 1.0.9
+**Version requirements**: aliyun CLI >= 3.3.19, appmanager-cli >= 1.1.1
 
 > **⚠️ Privilege requirement**: The install commands below extract to `/usr/local/bin/`, which requires elevated privileges (`sudo` on Linux/macOS for non-root users). If running as a non-root user, prepend `sudo` to the `tar` step. Alternatively, extract to a user-writable directory in `$PATH` (e.g., `~/.local/bin`).
 > **⚠️ Supply chain note**: The downloads come from Alibaba Cloud's official OSS bucket over HTTPS. For higher assurance, verify the binary's SHA256 checksum against the version listed at https://help.aliyun.com/document_detail/121541.html before adding to `$PATH`.
@@ -16,11 +46,11 @@ aliyun version 2>&1     # the version actually in effect right now
 
 # 1. Check aliyun CLI version
 aliyun version 2>&1
-# → Not found or < 3.3.14: install below. >= 3.3.14: skip to step 2.
+# → Not found or < 3.3.19: install below. >= 3.3.19: skip to step 2.
 
 # 2. Check appmanager-cli version (only if ~/.aliyun/appmanager-venv exists)
 ~/.aliyun/appmanager-venv/bin/python -c "from importlib.metadata import version; print(version('appmanager-cli'))" 2>/dev/null
-# → < 1.0.9 or fails: rm -rf ~/.aliyun/appmanager-venv (auto-recreates on next run)
+# → < 1.1.1 or fails: rm -rf ~/.aliyun/appmanager-venv (auto-recreates on next run)
 
 # 3. Install aliyun CLI — choose ONE path below by priority
 #    Priority A: macOS already manages aliyun-cli via Homebrew -> upgrade with brew
@@ -49,7 +79,7 @@ export PATH="$HOME/bin:$PATH"
 
 # 4. Mandatory post-install/upgrade re-verification (skipping this causes the "repeated upgrade" loop)
 which -a aliyun                     # the first entry MUST be the dir you just installed into (/usr/local/bin or ~/bin)
-aliyun version                       # MUST be >= 3.3.14
+aliyun version                       # MUST be >= 3.3.19
 # If the first entry of `which -a` is still the old version (e.g. /opt/homebrew/bin/aliyun), the PATH conflict
 # is unresolved:
 #   - if the old version is from brew, switch to Priority A: brew upgrade aliyun-cli
@@ -60,6 +90,8 @@ aliyun version                       # MUST be >= 3.3.14
 
 ## Configure Credentials
 
+> **⛔ PREFER OAuth OVER AK**: This skill SHOULD guide users to use **OAuth authentication** as the PRIMARY method for providing Alibaba Cloud permissions. OAuth is more secure and convenient than AccessKey (no long-term secret storage needed). The Agent MUST present OAuth as the first option before mentioning AK-based methods.
+>
 > **⛔ SA-2.12 — DO NOT explicitly handle AK/SK**: This skill MUST rely on the **default credential chain** of the aliyun CLI/SDK. The Agent:
 > - **MUST NOT** ask the user to paste AccessKey ID / Secret / STS Token values into the chat
 > - **MUST NOT** put raw AK/SK/Token in tool-call arguments, command lines, scripts, or any persisted file (logs, ran_scripts, outputs)
@@ -74,9 +106,17 @@ aliyun version                       # MUST be >= 3.3.14
 
 The Agent only needs ONE of the sources below to be in place:
 
-1. **ECS RAM Role** (recommended on Alibaba Cloud ECS) — instance metadata service auto-provides rotating STS credentials. The user configures it once with `aliyun configure --mode EcsRamRole --ram-role-name <role>` (`<role>` is an identifier, **not a secret**). No AK/SK ever leaves the instance.
-2. **Environment variables** — `ALIBABA_CLOUD_ACCESS_KEY_ID`, `ALIBABA_CLOUD_ACCESS_KEY_SECRET`, optionally `ALIBABA_CLOUD_SECURITY_TOKEN`. Set by the **user** in their shell profile, secrets manager, or CI vault — outside the Agent session. The Agent MUST NOT read or echo these values.
-3. **Pre-existing profile** in `~/.aliyun/config.json` — created in advance by the user with interactive `aliyun configure` (NOT by the Agent passing flags). The skill reads only the profile name and a masked AK preview for diagnostics.
+1. **OAuth** (RECOMMENDED — most secure and convenient) — user runs interactive OAuth setup in their own terminal:
+   ```bash
+   aliyun configure --mode OAuth --profile oauth
+   ```
+   This opens a browser authorization link, then prompts for region (e.g. `cn-hangzhou`) and language (e.g. `zh`). After setup, verify with:
+   ```bash
+   aliyun sts get-caller-identity --profile oauth
+   ```
+2. **ECS RAM Role** (recommended on Alibaba Cloud ECS) — instance metadata service auto-provides rotating STS credentials. The user configures it once with `aliyun configure --mode EcsRamRole --ram-role-name <role>` (`<role>` is an identifier, **not a secret**). No AK/SK ever leaves the instance.
+3. **Environment variables** — `ALIBABA_CLOUD_ACCESS_KEY_ID`, `ALIBABA_CLOUD_ACCESS_KEY_SECRET`, optionally `ALIBABA_CLOUD_SECURITY_TOKEN`. Set by the **user** in their shell profile, secrets manager, or CI vault — outside the Agent session. The Agent MUST NOT read or echo these values.
+4. **Pre-existing profile** in `~/.aliyun/config.json` — created in advance by the user with interactive `aliyun configure` (NOT by the Agent passing flags). The skill reads only the profile name and a masked AK preview for diagnostics.
 
 ### Verification (the ONLY Agent action — never reads raw credential values)
 
@@ -96,13 +136,16 @@ The Agent MUST present these self-service options to the user **verbatim** and w
 
 > No usable credentials were detected. Please configure them yourself in your own terminal **using one of the methods below** (do NOT paste the AccessKey into this chat or any file):
 >
-> - **Method A · ECS RAM Role** (recommended on Alibaba Cloud ECS; no AK/SK):
+> - **Method A · OAuth** (RECOMMENDED — most secure and convenient, no long-term secret storage):
+>   `aliyun configure --mode OAuth --profile oauth`
+>   (This opens a browser authorization link, then prompts for region like `cn-hangzhou` and language like `zh`)
+> - **Method B · ECS RAM Role** (recommended on Alibaba Cloud ECS; no AK/SK):
 >   `aliyun configure --mode EcsRamRole --ram-role-name <your-role-name>`
-> - **Method B · Environment variables** (write into your `~/.zshrc` / `~/.bashrc` / CI Secret; effective after re-login):
+> - **Method C · Environment variables** (write into your `~/.zshrc` / `~/.bashrc` / CI Secret; effective after re-login):
 >   `export ALIBABA_CLOUD_ACCESS_KEY_ID=...`
 >   `export ALIBABA_CLOUD_ACCESS_KEY_SECRET=...`
 >   (For temporary credentials also set `export ALIBABA_CLOUD_SECURITY_TOKEN=...`)
-> - **Method C · Interactive `aliyun configure`** (credentials only land in local `~/.aliyun/config.json`):
+> - **Method D · Interactive `aliyun configure`** (credentials only land in local `~/.aliyun/config.json`):
 >   `aliyun configure --profile <name> --mode AK` (enter values **at the terminal prompt**, not in this chat)
 >
 > When done, reply "ready" and I will rerun `aliyun sts get-caller-identity` to verify. **You will never need to paste any AK/SK value into this conversation.**
