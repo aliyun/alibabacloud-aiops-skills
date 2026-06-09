@@ -1,749 +1,270 @@
 # Acceptance Criteria: alibabacloud-find-skills
 
 **Skill Name**: `alibabacloud-find-skills`
-**Purpose**: Validate correct CLI command patterns and ensure skill implementation follows best practices
+**Purpose**: Validate correct AgentExplorer HTTP API usage and skill-discovery behavior.
 
----
+## Discovery Prerequisites
 
-## Prerequisites Validation
+### Correct
 
-### 1. Aliyun CLI Version
-
-#### ✅ CORRECT
+The discovery workflow uses `curl` directly:
 
 ```bash
-# CLI version check returns >= 3.3.1
-aliyun version
-# Output: 3.3.2 (or higher)
+curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
+  --data-urlencode 'keyword=ECS' \
+  --data-urlencode 'searchMode=semantic' \
+  --data-urlencode 'maxResults=20' \
+  -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
+  -H 'x-acs-version: 2026-03-17' \
+  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 ```
 
-#### ❌ INCORRECT
+### Incorrect
 
 ```bash
-# Version too old (< 3.3.1)
 aliyun version
-# Output: 3.0.0
-```
-
-**Why**: This skill requires CLI version >= 3.3.1 for plugin support and modern command features.
-
----
-
-### 2. Plugin Installation
-
-#### ✅ CORRECT
-
-```bash
-# Install agentexplorer plugin
+aliyun plugin search agentexplorer
 aliyun plugin install --names aliyun-cli-agentexplorer
-
-# Verify installation
-aliyun plugin list | grep agentexplorer
-```
-
-#### ❌ INCORRECT
-
-```bash
-# Incorrect plugin name
-aliyun plugin install --names agentexplorer
-
-# Wrong command
-aliyun install plugin agentexplorer
-```
-
-**Why**: The plugin name must be exact: `aliyun-cli-agentexplorer`. CLI uses `plugin install --names` subcommand.
-
----
-
-## CLI Command Patterns
-
-### 1. Product Name Verification
-
-#### ✅ CORRECT
-
-```bash
-# Correct product name
-aliyun agentexplorer list-categories --endpoint 'agentexplorer.aliyuncs.com' --user-agent AlibabaCloud-Agent-Skills
-aliyun agentexplorer search-skills --search-mode semantic --endpoint 'agentexplorer.aliyuncs.com' --user-agent AlibabaCloud-Agent-Skills
-aliyun agentexplorer get-skill-content --endpoint 'agentexplorer.aliyuncs.com' --user-agent AlibabaCloud-Agent-Skills
-```
-
-#### ❌ INCORRECT
-
-```bash
-# Wrong product name
-aliyun agent-explorer list-categories
-aliyun skillexplorer search-skills
-aliyun explorerAgent get-skill-content
-```
-
-**Why**: The product name is `agentexplorer` (no hyphens, no capitalization).
-
----
-
-### 2. Command/Action Names
-
-#### ✅ CORRECT
-
-```bash
-# Correct command names (lowercase with hyphens)
-aliyun agentexplorer list-categories
-aliyun agentexplorer search-skills
-aliyun agentexplorer get-skill-content
-```
-
-#### ❌ INCORRECT
-
-```bash
-# Wrong command format (camelCase or incorrect names)
-aliyun agentexplorer listCategories
-aliyun agentexplorer SearchSkills
-aliyun agentexplorer getSkillContent
-aliyun agentexplorer list_categories
-```
-
-**Why**: Plugin mode uses lowercase with hyphens, NOT camelCase or underscores.
-
----
-
-### 3. Parameter Names
-
-#### ✅ CORRECT
-
-```bash
-# Correct parameter names
-aliyun agentexplorer search-skills \
-  --keyword "ECS" \
-  --category-code "computing" \
-  --search-mode semantic \
-  --max-results 20 \
-  --next-token "abc123" \
-  --skip 10 \
-  --endpoint 'agentexplorer.aliyuncs.com' \
-  --user-agent AlibabaCloud-Agent-Skills
-
-aliyun agentexplorer get-skill-content \
-  --skill-name "alibabacloud-ecs-batch" \
-  --endpoint 'agentexplorer.aliyuncs.com' \
-  --user-agent AlibabaCloud-Agent-Skills
-```
-
-#### ❌ INCORRECT
-
-```bash
-# Wrong parameter names
-aliyun agentexplorer search-skills --keywords "ECS"  # plural
-aliyun agentexplorer search-skills --category "computing"  # missing -code
-aliyun agentexplorer search-skills --max-result 20  # singular
-aliyun agentexplorer search-skills --nextToken "abc"  # camelCase
-aliyun agentexplorer get-skill-content --skillName "name"  # camelCase
-aliyun agentexplorer get-skill-content --name "name"  # wrong parameter
-```
-
-**Why**: Parameter names must match exactly as defined in `--help` output.
-
----
-
-### 4. User-Agent and Endpoint Flags (CRITICAL — API calls only)
-
-#### ✅ CORRECT
-
-```bash
-# Every agentexplorer API command MUST include both --endpoint and --user-agent
-aliyun agentexplorer list-categories \
-  --endpoint 'agentexplorer.aliyuncs.com' \
-  --user-agent AlibabaCloud-Agent-Skills
-
-aliyun agentexplorer search-skills \
-  --keyword "ECS" \
-  --search-mode semantic \
-  --endpoint 'agentexplorer.aliyuncs.com' \
-  --user-agent AlibabaCloud-Agent-Skills
-
-aliyun agentexplorer get-skill-content \
-  --skill-name "example" \
-  --endpoint 'agentexplorer.aliyuncs.com' \
-  --user-agent AlibabaCloud-Agent-Skills
-```
-
-#### ❌ INCORRECT
-
-```bash
-# Missing user-agent flag
-aliyun agentexplorer list-categories --endpoint 'agentexplorer.aliyuncs.com'
-
-# Missing --endpoint (the call will fail)
-aliyun agentexplorer search-skills --keyword "ECS" --user-agent AlibabaCloud-Agent-Skills
-
-# Wrong user-agent value
-aliyun agentexplorer list-categories --endpoint 'agentexplorer.aliyuncs.com' --user-agent "MyAgent"
-
-# Passing --user-agent to a local management command (NOT supported)
+aliyun plugin update --name aliyun-cli-agentexplorer
+aliyun agentexplorer search-skills --keyword "ECS"
 aliyun configure list
-aliyun configure set --auto-plugin-install true --user-agent AlibabaCloud-Agent-Skills
-aliyun plugin install --names agentexplorer --user-agent AlibabaCloud-Agent-Skills
-aliyun version --user-agent AlibabaCloud-Agent-Skills
 ```
 
-**Why**:
-- Every `aliyun agentexplorer` API call MUST include `--endpoint 'agentexplorer.aliyuncs.com'` — without it, the call fails.
-- Every `aliyun agentexplorer` API call MUST include `--user-agent AlibabaCloud-Agent-Skills` for tracking and compliance.
-- Local management commands (`aliyun configure ...`, `aliyun configure list`, `aliyun configure set`, `aliyun configure ai-mode ...`, `aliyun plugin ...`, `aliyun version`) do **not** support `--user-agent` and do not need `--endpoint`. Do not pass them.
+**Why**: Finding, browsing, and inspecting Skills uses direct HTTP requests and no longer requires Aliyun CLI or the AgentExplorer CLI plugin.
 
----
+## HTTP API Patterns
 
-### 5. Required Parameters
+### 1. Search Skills
 
-#### ✅ CORRECT
+#### Correct
 
 ```bash
-# get-skill-content requires --skill-name
-aliyun agentexplorer get-skill-content \
-  --skill-name "alibabacloud-ecs-batch" \
-  --endpoint 'agentexplorer.aliyuncs.com' \
-  --user-agent AlibabaCloud-Agent-Skills
-
-# search-skills requires semantic mode; keyword or category is recommended
-aliyun agentexplorer search-skills \
-  --search-mode semantic \
-  --endpoint 'agentexplorer.aliyuncs.com' \
-  --user-agent AlibabaCloud-Agent-Skills
-
-# list-categories has no required parameters
-aliyun agentexplorer list-categories \
-  --endpoint 'agentexplorer.aliyuncs.com' \
-  --user-agent AlibabaCloud-Agent-Skills
+curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
+  --data-urlencode 'keyword=RDS backup automation' \
+  --data-urlencode 'searchMode=semantic' \
+  --data-urlencode 'maxResults=20' \
+  -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
+  -H 'x-acs-version: 2026-03-17' \
+  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 ```
 
-#### ❌ INCORRECT
+#### Incorrect
 
 ```bash
-# Missing required parameter
-aliyun agentexplorer get-skill-content \
-  --endpoint 'agentexplorer.aliyuncs.com' \
-  --user-agent AlibabaCloud-Agent-Skills
-# ERROR: --skill-name is required
+# Missing -G: query params are not appended as intended
+curl -sS 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
+  --data-urlencode 'keyword=RDS backup automation'
+
+# Wrong parameter names from CLI mode
+curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
+  --data-urlencode 'search-mode=semantic' \
+  --data-urlencode 'max-results=20'
+
+# Wrong endpoint path
+curl -sS -G 'https://agentexplorer.aliyuncs.com/search-skills'
 ```
 
-**Why**: `--skill-name` is mandatory for `get-skill-content`. `search-skills` must include `--search-mode semantic`. Other commands have no required params beyond user-agent.
+**Why**: HTTP query parameters use API names such as `searchMode`, `maxResults`, `categoryCode`, and `nextToken`.
 
----
+### 2. List Categories
 
-## Parameter Value Patterns
-
-### 1. Category Code Format
-
-#### ✅ CORRECT
+#### Correct
 
 ```bash
-# Top-level category
-aliyun agentexplorer search-skills \
-  --category-code "computing" \
-  --search-mode semantic \
-  --endpoint 'agentexplorer.aliyuncs.com' \
-  --user-agent AlibabaCloud-Agent-Skills
-
-# Subcategory (dot notation)
-aliyun agentexplorer search-skills \
-  --category-code "computing.ecs" \
-  --search-mode semantic \
-  --endpoint 'agentexplorer.aliyuncs.com' \
-  --user-agent AlibabaCloud-Agent-Skills
-
-# Multiple categories (comma-separated)
-aliyun agentexplorer search-skills \
-  --category-code "computing,database,storage" \
-  --search-mode semantic \
-  --endpoint 'agentexplorer.aliyuncs.com' \
-  --user-agent AlibabaCloud-Agent-Skills
-
-# Mixed levels
-aliyun agentexplorer search-skills \
-  --category-code "computing.ecs,database" \
-  --search-mode semantic \
-  --endpoint 'agentexplorer.aliyuncs.com' \
-  --user-agent AlibabaCloud-Agent-Skills
+curl -sS 'https://agentexplorer.aliyuncs.com/openapi/for-agent/categories' \
+  -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
+  -H 'x-acs-version: 2026-03-17' \
+  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 ```
 
-#### ❌ INCORRECT
+#### Incorrect
 
 ```bash
-# Wrong separator for multiple categories
-aliyun agentexplorer search-skills --category-code "computing database"
-aliyun agentexplorer search-skills --category-code "computing;database"
-
-# Wrong subcategory format
-aliyun agentexplorer search-skills --category-code "computing/ecs"
-aliyun agentexplorer search-skills --category-code "computing:ecs"
-
-# Invalid category codes
-aliyun agentexplorer search-skills --category-code "invalid-category"
+curl -sS 'https://agentexplorer.aliyuncs.com/openapi/for-agent/category'
+curl -sS 'https://agentexplorer.aliyuncs.com/openapi/for-agent/list-categories'
 ```
 
-**Why**: Use dot notation for subcategories (e.g., `category.subcategory`), comma-separated for multiple.
+### 3. Get Skill Content
 
----
-
-### 2. Max Results Range
-
-#### ✅ CORRECT
+#### Correct
 
 ```bash
-# Valid range: 1-100
-aliyun agentexplorer search-skills \
-  --search-mode semantic \
-  --max-results 1 \
-  --endpoint 'agentexplorer.aliyuncs.com' \
-  --user-agent AlibabaCloud-Agent-Skills
-
-aliyun agentexplorer search-skills \
-  --search-mode semantic \
-  --max-results 50 \
-  --endpoint 'agentexplorer.aliyuncs.com' \
-  --user-agent AlibabaCloud-Agent-Skills
-
-aliyun agentexplorer search-skills \
-  --search-mode semantic \
-  --max-results 100 \
-  --endpoint 'agentexplorer.aliyuncs.com' \
-  --user-agent AlibabaCloud-Agent-Skills
-
-# Default (omit parameter)
-aliyun agentexplorer search-skills \
-  --search-mode semantic \
-  --endpoint 'agentexplorer.aliyuncs.com' \
-  --user-agent AlibabaCloud-Agent-Skills
-# Uses default: 20
+curl -sS 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills/alibabacloud-cli-guidance' \
+  -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
+  -H 'x-acs-version: 2026-03-17' \
+  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 ```
 
-#### ❌ INCORRECT
+#### Incorrect
 
 ```bash
-# Out of range
-aliyun agentexplorer search-skills --max-results 0
-aliyun agentexplorer search-skills --max-results 101
-aliyun agentexplorer search-skills --max-results 1000
+curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
+  --data-urlencode 'skillName=alibabacloud-cli-guidance'
 
-# Invalid type
-aliyun agentexplorer search-skills --max-results "twenty"
+curl -sS 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skill/alibabacloud-cli-guidance'
 ```
 
-**Why**: `--max-results` must be an integer between 1 and 100 (inclusive).
+**Why**: Skill content uses a path parameter: `/openapi/for-agent/skills/{skillName}`.
 
----
+## Header Requirements
 
-### 3. Keyword Format
+### Correct
 
-#### ✅ CORRECT
+Every discovery API call includes all three headers:
 
 ```bash
-# Single word
-aliyun agentexplorer search-skills \
-  --keyword "ECS" \
-  --search-mode semantic \
-  --endpoint 'agentexplorer.aliyuncs.com' \
-  --user-agent AlibabaCloud-Agent-Skills
-
-# Multiple words (quoted)
-aliyun agentexplorer search-skills \
-  --keyword "batch command" \
-  --search-mode semantic \
-  --endpoint 'agentexplorer.aliyuncs.com' \
-  --user-agent AlibabaCloud-Agent-Skills
-
-# Chinese characters
-aliyun agentexplorer search-skills \
-  --keyword "云服务器" \
-  --search-mode semantic \
-  --endpoint 'agentexplorer.aliyuncs.com' \
-  --user-agent AlibabaCloud-Agent-Skills
-
-# Mixed English and Chinese
-aliyun agentexplorer search-skills \
-  --keyword "ECS实例管理" \
-  --search-mode semantic \
-  --endpoint 'agentexplorer.aliyuncs.com' \
-  --user-agent AlibabaCloud-Agent-Skills
+-H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
+-H 'x-acs-version: 2026-03-17' \
+-H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 ```
 
-#### ❌ INCORRECT
+### Incorrect
 
 ```bash
-# Unquoted multi-word (may cause parsing errors)
-aliyun agentexplorer search-skills --keyword batch command
+# Missing date header
+curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
+  --data-urlencode 'keyword=ECS' \
+  -H 'x-acs-version: 2026-03-17'
 
-# Special characters without quotes
-aliyun agentexplorer search-skills --keyword ECS&RDS
+# Wrong user agent
+curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
+  --data-urlencode 'keyword=ECS' \
+  -H 'User-Agent: MyAgent'
+
+# Wrong header shape for this workflow
+curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
+  -H 'x-acs-api-version: 2026-03-17'
 ```
 
-**Why**: Multi-word keywords must be quoted. Special characters may need quoting or escaping.
+**Why**: `x-acs-date` is mandatory. The skill user-agent is required for attribution. The API version header must be `x-acs-version`.
 
----
+## Search Parameter Rules
 
-### 4. Next Token Usage
-
-#### ✅ CORRECT
+### Correct
 
 ```bash
-# First page (no token)
-RESULT=$(aliyun agentexplorer search-skills \
-  --keyword "ECS" \
-  --search-mode semantic \
-  --max-results 20 \
-  --endpoint 'agentexplorer.aliyuncs.com' \
-  --user-agent AlibabaCloud-Agent-Skills)
+# Intent search
+curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
+  --data-urlencode 'keyword=把本地文件同步到 OSS' \
+  --data-urlencode 'searchMode=semantic' \
+  --data-urlencode 'maxResults=20' \
+  -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
+  -H 'x-acs-version: 2026-03-17' \
+  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
-# Extract nextToken from response
-NEXT_TOKEN=$(echo "$RESULT" | jq -r '.nextToken')
+# Category listing
+curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
+  --data-urlencode 'categoryCode=database' \
+  --data-urlencode 'maxResults=20' \
+  -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
+  -H 'x-acs-version: 2026-03-17' \
+  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
-# Second page (with token)
-aliyun agentexplorer search-skills \
-  --keyword "ECS" \
-  --search-mode semantic \
-  --max-results 20 \
-  --next-token "$NEXT_TOKEN" \
-  --endpoint 'agentexplorer.aliyuncs.com' \
-  --user-agent AlibabaCloud-Agent-Skills
+# Combined semantic search
+curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
+  --data-urlencode 'keyword=backup' \
+  --data-urlencode 'categoryCode=database' \
+  --data-urlencode 'searchMode=semantic' \
+  --data-urlencode 'maxResults=20' \
+  -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
+  -H 'x-acs-version: 2026-03-17' \
+  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 ```
 
-#### ❌ INCORRECT
+### Incorrect
 
 ```bash
-# Manually crafted token
-aliyun agentexplorer search-skills \
-  --next-token "page2" \
-  --endpoint 'agentexplorer.aliyuncs.com' \
-  --user-agent AlibabaCloud-Agent-Skills
+# Category listing should not use semantic mode
+curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
+  --data-urlencode 'categoryCode=database' \
+  --data-urlencode 'searchMode=semantic'
 
-# Modified token
-aliyun agentexplorer search-skills \
-  --next-token "${NEXT_TOKEN}_modified" \
-  --endpoint 'agentexplorer.aliyuncs.com' \
-  --user-agent AlibabaCloud-Agent-Skills
-
-# Using skip instead of next-token for pagination
-aliyun agentexplorer search-skills \
-  --skip 20 \
-  --endpoint 'agentexplorer.aliyuncs.com' \
-  --user-agent AlibabaCloud-Agent-Skills
-# Note: --skip is valid but --next-token is preferred for pagination
+# Multi-word values are not URL-encoded
+curl -sS 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills?keyword=RDS backup automation'
 ```
 
-**Why**: `nextToken` must be used exactly as returned by the API, without modification.
+## Pagination Rules
 
----
-
-## Authentication Patterns
-
-### 1. Credential Verification
-
-#### ✅ CORRECT
+### Correct
 
 ```bash
-# Check credentials before operations
-aliyun configure list
-
-# Never read/print credentials
-# NEVER do: echo $ALIBABA_CLOUD_ACCESS_KEY_ID
-# NEVER do: aliyun configure get --key access_key_id
+curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
+  --data-urlencode 'categoryCode=database' \
+  --data-urlencode 'maxResults=20' \
+  --data-urlencode 'nextToken=<next-token-from-previous-response>' \
+  -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
+  -H 'x-acs-version: 2026-03-17' \
+  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 ```
 
-#### ❌ INCORRECT
+### Incorrect
 
 ```bash
-# Reading credentials
-echo $ALIBABA_CLOUD_ACCESS_KEY_ID
-echo $ALIBABA_CLOUD_ACCESS_KEY_SECRET
+curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
+  --data-urlencode 'next-token=abc'
 
-# Printing credentials
-aliyun configure get --key access_key_id
-
-# Asking user to input credentials in conversation
-# "Please provide your Access Key ID"
+curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
+  --data-urlencode 'nextToken=page2'
 ```
 
-**Why**: Credentials must NEVER be read, printed, or requested directly for security reasons.
+**Why**: Use the API field name `nextToken`, and pass the returned token exactly.
 
----
+## Result Handling
 
-### 2. Configuration Check
+### Correct
 
-#### ✅ CORRECT
-
-```bash
-# Use configure list to check status
-aliyun configure list
-
-# Check if output shows valid profile
-# Example valid output:
-# Profile   | Credential         | Valid   | Region
-# --------- | ------------------ | ------- | --------
-# default * | AK:***abc          | Valid   | cn-hangzhou
-```
-
-#### ❌ INCORRECT
-
-```bash
-# Don't test credentials by making API calls
-aliyun agentexplorer list-categories --endpoint 'agentexplorer.aliyuncs.com' --user-agent AlibabaCloud-Agent-Skills
-# (Use this for functionality, not credential verification)
-```
-
-**Why**: Use `configure list` specifically for credential validation before operations.
-
----
-
-## Output Handling Patterns
-
-### 1. JMESPath Filtering
-
-#### ✅ CORRECT
-
-```bash
-# Filter for specific fields
-aliyun agentexplorer search-skills \
-  --keyword "ECS" \
-  --cli-query "skills[].skillName" \
-  --endpoint 'agentexplorer.aliyuncs.com' \
-  --user-agent AlibabaCloud-Agent-Skills
-
-# Filter with conditions
-aliyun agentexplorer search-skills \
-  --keyword "ECS" \
-  --cli-query "skills[?installCount > \`100\`]" \
-  --endpoint 'agentexplorer.aliyuncs.com' \
-  --user-agent AlibabaCloud-Agent-Skills
-
-# Select first item
-aliyun agentexplorer search-skills \
-  --keyword "ECS" \
-  --cli-query "skills[0]" \
-  --endpoint 'agentexplorer.aliyuncs.com' \
-  --user-agent AlibabaCloud-Agent-Skills
-```
-
-#### ❌ INCORRECT
-
-```bash
-# Invalid JMESPath syntax
-aliyun agentexplorer search-skills --cli-query "skills.skillName"  # Missing []
-aliyun agentexplorer search-skills --cli-query "skills[skillName]"  # Wrong syntax
-```
-
-**Why**: JMESPath syntax must be valid. Arrays require `[]`, conditions use `?`, literals use backticks.
-
----
-
-### 2. Result Display
-
-#### ✅ CORRECT
+Present users a concise table:
 
 ```markdown
-# Display results in table format
-
-| Skill Name             | Display Name  | Category  | Install Count |
-| ---------------------- | ------------- | --------- | ------------- |
-| alibabacloud-ecs-batch | ECS Batch Ops | Computing | 245           |
-
-# Show key fields
-
-- **Skill Name**: alibabacloud-ecs-batch
-- **Description**: Batch manage ECS instances
-- **Category**: Computing > ECS
+| Skill Name | Display Name | Category | Install Count | Why it fits |
+| --- | --- | --- | ---: | --- |
+| alibabacloud-ecs-batch | ECS Batch Ops | 计算 > ECS | 245 | Handles batch ECS operations |
 ```
 
-#### ❌ INCORRECT
+### Incorrect
 
 ```bash
-# Dumping raw JSON
+# Dumping raw JSON without summarizing
 echo "$RESULT"
-
-# No formatting
-echo "$RESULT" | jq
 ```
 
-**Why**: Users need human-readable, formatted output with relevant fields highlighted.
+## Installation Rules
 
----
+### Correct
 
-## Error Handling Patterns
-
-### 1. Missing Plugin
-
-#### ✅ CORRECT
+Only install when the user asks to install or use a selected Skill:
 
 ```bash
-# Check plugin before use
-if ! aliyun plugin list | grep -q "agentexplorer"; then
-  echo "Installing agentexplorer plugin..."
-  aliyun plugin install --names aliyun-cli-agentexplorer
-fi
+npx skills add aliyun/alibabacloud-aiops-skills \
+  --skill <skill-name> \
+  --full-depth \
+  --agent qwen-code \
+  -g -y
 ```
 
-#### ❌ INCORRECT
+### Incorrect
 
 ```bash
-# Assume plugin is installed
-aliyun agentexplorer list-categories --endpoint 'agentexplorer.aliyuncs.com' --user-agent AlibabaCloud-Agent-Skills
-# May fail if plugin not installed
+# Installing during browse-only/search-only requests
+npx skills add aliyun/alibabacloud-aiops-skills --skill <skill-name>
 ```
 
-**Why**: Verify prerequisites before execution to provide helpful error messages.
+## Failure Handling
 
----
+- On `MissingDate`, add `x-acs-date`.
+- On network failure, retry once and report endpoint/network context.
+- On weak or empty results, rewrite the search phrase toward the underlying capability.
+- Do not tell the user to install or configure Aliyun CLI for this discovery workflow.
 
-### 2. No Results Handling
+## Final Checklist
 
-#### ✅ CORRECT
-
-```bash
-RESULT=$(aliyun agentexplorer search-skills \
-  --keyword "nonexistent" \
-  --endpoint 'agentexplorer.aliyuncs.com' \
-  --user-agent AlibabaCloud-Agent-Skills)
-
-# Check if skills array is empty
-if echo "$RESULT" | jq -e '.skills | length == 0' > /dev/null; then
-  echo "No skills found for keyword 'nonexistent'"
-  echo "Try: broader keywords, different category, or list all categories"
-fi
-```
-
-#### ❌ INCORRECT
-
-```bash
-# Don't treat empty results as error
-RESULT=$(aliyun agentexplorer search-skills --keyword "nonexistent" --search-mode semantic --max-results 20 --endpoint 'agentexplorer.aliyuncs.com' --user-agent AlibabaCloud-Agent-Skills)
-if [ $? -ne 0 ]; then
-  echo "Search failed"  # Wrong: empty results return exit code 0
-fi
-```
-
-**Why**: Empty results are valid responses (exit code 0), not errors.
-
----
-
-## Workflow Patterns
-
-### 1. Search-Detail-Install Flow
-
-#### ✅ CORRECT
-
-```bash
-# Step 1: Search
-SEARCH_RESULT=$(aliyun agentexplorer search-skills \
-  --keyword "ECS" \
-  --endpoint 'agentexplorer.aliyuncs.com' \
-  --user-agent AlibabaCloud-Agent-Skills)
-
-# Step 2: Display results to user, get confirmation
-echo "Found skills: ..."
-# [User selects: alibabacloud-ecs-batch]
-
-# Step 3: Get details
-aliyun agentexplorer get-skill-content \
-  --skill-name "alibabacloud-ecs-batch" \
-  --endpoint 'agentexplorer.aliyuncs.com' \
-  --user-agent AlibabaCloud-Agent-Skills
-
-# Step 4: User confirms installation
-npx skills add https://github.com/aliyun/alibabacloud-aiops-skills --skill alibabacloud-ecs-batch --full-depth
-```
-
-#### ❌ INCORRECT
-
-```bash
-# Skip presenting results to user
-SKILL=$(aliyun agentexplorer search-skills --keyword "ECS" --search-mode semantic --max-results 20 --cli-query "skills[0].skillName" --endpoint 'agentexplorer.aliyuncs.com' --user-agent AlibabaCloud-Agent-Skills)
-npx skills add https://github.com/aliyun/alibabacloud-aiops-skills --skill "$SKILL" --full-depth
-# Wrong: Should present search results and skill details to user before installing
-```
-
-**Why**: Always present search results and skill details to the user before executing installation.
-
----
-
-## Common Anti-Patterns
-
-### ❌ ANTI-PATTERN 1: Arbitrary Hardcoded Values
-
-```bash
-# DON'T use keywords unrelated to the user's request
-# e.g., User asks about databases but Agent searches for "ECS"
-aliyun agentexplorer search-skills \
-  --keyword "ECS" \
-  --category-code "computing" \
-  --endpoint 'agentexplorer.aliyuncs.com' \
-  --user-agent AlibabaCloud-Agent-Skills
-```
-
-**✅ CORRECT**: Derive keyword and category from the user's intent.
-
----
-
-### ❌ ANTI-PATTERN 2: Missing Error Handling
-
-```bash
-# DON'T ignore errors
-aliyun agentexplorer search-skills --keyword "test" --search-mode semantic --max-results 20 --endpoint 'agentexplorer.aliyuncs.com' --user-agent AlibabaCloud-Agent-Skills
-# Continue regardless of result
-```
-
-**✅ CORRECT**: Check exit codes and handle errors.
-
----
-
-### ❌ ANTI-PATTERN 3: Credential Exposure
-
-```bash
-# DON'T print or request credentials
-echo "Your AK: $ALIBABA_CLOUD_ACCESS_KEY_ID"
-```
-
-**✅ CORRECT**: Use `configure list` to check status only.
-
----
-
-## Testing Checklist
-
-Before completing the skill, verify:
-
-- [ ] All commands use correct product name: `agentexplorer`
-- [ ] All commands use lowercase-with-hyphens format
-- [ ] All parameters match `--help` output exactly
-- [ ] Every `aliyun agentexplorer` command includes `--endpoint 'agentexplorer.aliyuncs.com'`
-- [ ] Every `aliyun agentexplorer` command includes `--user-agent AlibabaCloud-Agent-Skills`
-- [ ] Local management commands (`aliyun configure ...`, `aliyun plugin ...`, `aliyun version`) do **not** carry `--user-agent` or `--endpoint`
-- [ ] Required parameters are always provided
-- [ ] Category codes use dot notation for subcategories
-- [ ] Pagination uses exact `nextToken` from response
-- [ ] Credentials are never read/printed
-- [ ] User confirmation required before actions
-- [ ] Empty results handled gracefully
-- [ ] Errors provide actionable guidance
-- [ ] Output formatted for readability
-
----
-
-## Verification Commands
-
-Run these commands to validate the skill:
-
-```bash
-# Test 1: List categories
-aliyun agentexplorer list-categories --endpoint 'agentexplorer.aliyuncs.com' --user-agent AlibabaCloud-Agent-Skills
-
-# Test 2: Search by keyword
-aliyun agentexplorer search-skills --keyword "ECS" --search-mode semantic --max-results 20 --endpoint 'agentexplorer.aliyuncs.com' --user-agent AlibabaCloud-Agent-Skills
-
-# Test 3: Search by category
-aliyun agentexplorer search-skills --category-code "computing" --search-mode semantic --max-results 20 --endpoint 'agentexplorer.aliyuncs.com' --user-agent AlibabaCloud-Agent-Skills
-
-# Test 4: Get skill content
-aliyun agentexplorer get-skill-content --skill-name "example-skill" --endpoint 'agentexplorer.aliyuncs.com' --user-agent AlibabaCloud-Agent-Skills
-
-# Test 5: Check credentials
-aliyun configure list
-```
-
-All commands should execute without syntax errors (though some may return "no results" or "skill not found", which is acceptable).
+- [ ] Uses `curl`, not `aliyun`, for discovery
+- [ ] Uses `https://agentexplorer.aliyuncs.com/openapi/for-agent/skills` for search/listing
+- [ ] Uses `https://agentexplorer.aliyuncs.com/openapi/for-agent/categories` for categories
+- [ ] Uses `/openapi/for-agent/skills/{skillName}` for details
+- [ ] Includes `User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills`
+- [ ] Includes `x-acs-version: 2026-03-17`
+- [ ] Includes `x-acs-date`
+- [ ] Uses `--data-urlencode` for query parameters
+- [ ] Splits compound requests into searchable intent units
+- [ ] Installs selected Skills only when requested

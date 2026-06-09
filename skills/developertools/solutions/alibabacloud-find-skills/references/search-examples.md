@@ -2,6 +2,8 @@
 
 Examples moved from `SKILL.md` to keep the main skill instructions focused.
 
+All examples use AgentExplorer HTTP API directly through `curl`.
+
 ## Common Use Cases & Examples
 
 ### Example 1: Simple Single-Capability Request
@@ -13,18 +15,19 @@ User: "Find skills for diagnosing ECS instance connectivity and performance issu
 | Diagnose ECS instance connectivity and performance | ECS instance diagnosis connectivity CPU disk |
 
 ```bash
-aliyun agentexplorer search-skills \
-  --keyword "ECS instance diagnosis connectivity CPU disk" \
-  --search-mode semantic \
-  --max-results 20 \
-  --endpoint 'agentexplorer.aliyuncs.com' \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
+curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
+  --data-urlencode 'keyword=ECS instance diagnosis connectivity CPU disk' \
+  --data-urlencode 'searchMode=semantic' \
+  --data-urlencode 'maxResults=20' \
+  -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
+  -H 'x-acs-version: 2026-03-17' \
+  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
 # Display results table, then get details for the best candidate if needed
-aliyun agentexplorer get-skill-content \
-  --skill-name "<selected-skill-name>" \
-  --endpoint 'agentexplorer.aliyuncs.com' \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
+curl -sS 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills/<selected-skill-name>' \
+  -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
+  -H 'x-acs-version: 2026-03-17' \
+  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 ```
 
 ### Example 2: Category Listing Request
@@ -34,23 +37,26 @@ Use category listing when the user asks to list all Skills under a category. Aft
 User: "List all database Skills and point out which ones may fit RDS daily operations."
 
 ```bash
-aliyun agentexplorer list-categories \
-  --endpoint 'agentexplorer.aliyuncs.com' \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
+curl -sS 'https://agentexplorer.aliyuncs.com/openapi/for-agent/categories' \
+  -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
+  -H 'x-acs-version: 2026-03-17' \
+  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
-aliyun agentexplorer search-skills \
-  --category-code "database" \
-  --max-results 20 \
-  --endpoint 'agentexplorer.aliyuncs.com' \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
+curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
+  --data-urlencode 'categoryCode=database' \
+  --data-urlencode 'maxResults=20' \
+  -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
+  -H 'x-acs-version: 2026-03-17' \
+  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
 # If nextToken is returned, fetch the next page
-aliyun agentexplorer search-skills \
-  --category-code "database" \
-  --max-results 20 \
-  --next-token "<next-token-from-previous-response>" \
-  --endpoint 'agentexplorer.aliyuncs.com' \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
+curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
+  --data-urlencode 'categoryCode=database' \
+  --data-urlencode 'maxResults=20' \
+  --data-urlencode 'nextToken=<next-token-from-previous-response>' \
+  -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
+  -H 'x-acs-version: 2026-03-17' \
+  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 ```
 
 ### Example 3: Natural-Language Intent Search
@@ -62,12 +68,13 @@ User: "把本地文件同步到 OSS"
 | Sync local files to OSS | 把本地文件同步到 OSS |
 
 ```bash
-aliyun agentexplorer search-skills \
-  --keyword "把本地文件同步到 OSS" \
-  --search-mode semantic \
-  --max-results 20 \
-  --endpoint 'agentexplorer.aliyuncs.com' \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
+curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
+  --data-urlencode 'keyword=把本地文件同步到 OSS' \
+  --data-urlencode 'searchMode=semantic' \
+  --data-urlencode 'maxResults=20' \
+  -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
+  -H 'x-acs-version: 2026-03-17' \
+  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 ```
 
 ### Example 4: Refine Weak Results
@@ -79,12 +86,13 @@ If the first search only matches surface wording, rewrite the search phrase towa
 | Query internal standards before generating content | internal standards policy names | knowledge base retrieval document Q&A content citation |
 
 ```bash
-aliyun agentexplorer search-skills \
-  --keyword "knowledge base retrieval document Q&A content citation" \
-  --search-mode semantic \
-  --max-results 20 \
-  --endpoint 'agentexplorer.aliyuncs.com' \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
+curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
+  --data-urlencode 'keyword=knowledge base retrieval document Q&A content citation' \
+  --data-urlencode 'searchMode=semantic' \
+  --data-urlencode 'maxResults=20' \
+  -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
+  -H 'x-acs-version: 2026-03-17' \
+  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 ```
 
 ### Example 5: Compound Request With Support Needs
@@ -97,29 +105,32 @@ User: "Generate an output from a source document, consult internal standards fir
 | ----------- | ------------- |
 | Generate structured output from source material | document parsing content generation structured output |
 | Query internal standards before generation | knowledge base retrieval document Q&A content citation |
-| Handle setup or runtime blockers | CLI guidance credentials plugins runtime troubleshooting |
+| Handle setup or runtime blockers | runtime dependency installation environment troubleshooting |
 
 ```bash
-aliyun agentexplorer search-skills \
-  --keyword "document parsing content generation structured output" \
-  --search-mode semantic \
-  --max-results 20 \
-  --endpoint 'agentexplorer.aliyuncs.com' \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
+curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
+  --data-urlencode 'keyword=document parsing content generation structured output' \
+  --data-urlencode 'searchMode=semantic' \
+  --data-urlencode 'maxResults=20' \
+  -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
+  -H 'x-acs-version: 2026-03-17' \
+  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
-aliyun agentexplorer search-skills \
-  --keyword "knowledge base retrieval document Q&A content citation" \
-  --search-mode semantic \
-  --max-results 20 \
-  --endpoint 'agentexplorer.aliyuncs.com' \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
+curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
+  --data-urlencode 'keyword=knowledge base retrieval document Q&A content citation' \
+  --data-urlencode 'searchMode=semantic' \
+  --data-urlencode 'maxResults=20' \
+  -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
+  -H 'x-acs-version: 2026-03-17' \
+  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
-aliyun agentexplorer search-skills \
-  --keyword "CLI guidance credentials plugins runtime troubleshooting" \
-  --search-mode semantic \
-  --max-results 20 \
-  --endpoint 'agentexplorer.aliyuncs.com' \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-find-skills
+curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
+  --data-urlencode 'keyword=runtime dependency installation environment troubleshooting' \
+  --data-urlencode 'searchMode=semantic' \
+  --data-urlencode 'maxResults=20' \
+  -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
+  -H 'x-acs-version: 2026-03-17' \
+  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 ```
 
 Before installation, present the final de-duplicated install plan:
