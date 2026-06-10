@@ -25,7 +25,7 @@
 | `--event-mode` | String | No | Event mode, options: `separate` |
 | `--conversation-id` | String | No | Conversation ID for multi-turn dialogue |
 | `--endpoint` | String | Yes | API endpoint: `rdsai.aliyuncs.com` |
-| `--user-agent` | String | Yes | Custom User-Agent: `AlibabaCloud-Agent-Skills` |
+| `--user-agent` | String | Yes | Custom User-Agent: `AlibabaCloud-Agent-Skills/alibabacloud-rds-copilot/{session-id}` |
 
 **--inputs Supported Parameters**:
 
@@ -55,7 +55,7 @@ aliyun rdsai chat-messages \
   --inputs RegionId=cn-hangzhou Language=zh-CN Timezone=Asia/Shanghai \
   --event-mode separate \
   --endpoint rdsai.aliyuncs.com \
-  --user-agent 'AlibabaCloud-Agent-Skills'
+  --user-agent 'AlibabaCloud-Agent-Skills/alibabacloud-rds-copilot/{session-id}'
 ```
 
 ### Troubleshooting
@@ -66,7 +66,7 @@ aliyun rdsai chat-messages \
   --inputs RegionId=cn-hangzhou Language=zh-CN Timezone=Asia/Shanghai \
   --event-mode separate \
   --endpoint rdsai.aliyuncs.com \
-  --user-agent 'AlibabaCloud-Agent-Skills'
+  --user-agent 'AlibabaCloud-Agent-Skills/alibabacloud-rds-copilot/{session-id}'
 ```
 
 ### Query Specific Region
@@ -77,7 +77,7 @@ aliyun rdsai chat-messages \
   --inputs RegionId=cn-beijing Language=zh-CN Timezone=Asia/Shanghai \
   --event-mode separate \
   --endpoint rdsai.aliyuncs.com \
-  --user-agent 'AlibabaCloud-Agent-Skills'
+  --user-agent 'AlibabaCloud-Agent-Skills/alibabacloud-rds-copilot/{session-id}'
 ```
 
 ### Multi-turn Dialogue
@@ -89,7 +89,7 @@ aliyun rdsai chat-messages \
   --inputs RegionId=cn-hangzhou Language=zh-CN Timezone=Asia/Shanghai \
   --event-mode separate \
   --endpoint rdsai.aliyuncs.com \
-  --user-agent 'AlibabaCloud-Agent-Skills'
+  --user-agent 'AlibabaCloud-Agent-Skills/alibabacloud-rds-copilot/{session-id}'
 
 # Second turn (using ConversationId from previous response)
 aliyun rdsai chat-messages \
@@ -98,7 +98,7 @@ aliyun rdsai chat-messages \
   --inputs RegionId=cn-hangzhou Language=zh-CN Timezone=Asia/Shanghai \
   --event-mode separate \
   --endpoint rdsai.aliyuncs.com \
-  --user-agent 'AlibabaCloud-Agent-Skills'
+  --user-agent 'AlibabaCloud-Agent-Skills/alibabacloud-rds-copilot/{session-id}'
 ```
 
 ### Using Custom Agent
@@ -109,7 +109,7 @@ aliyun rdsai chat-messages \
   --inputs RegionId=cn-hangzhou Language=zh-CN Timezone=Asia/Shanghai CustomAgentId=your-custom-agent-id \
   --event-mode separate \
   --endpoint rdsai.aliyuncs.com \
-  --user-agent 'AlibabaCloud-Agent-Skills'
+  --user-agent 'AlibabaCloud-Agent-Skills/alibabacloud-rds-copilot/{session-id}'
 ```
 
 ### Using Specific Credential Profile
@@ -120,7 +120,7 @@ aliyun rdsai chat-messages \
   --inputs RegionId=cn-hangzhou Language=zh-CN Timezone=Asia/Shanghai \
   --event-mode separate \
   --endpoint rdsai.aliyuncs.com \
-  --user-agent 'AlibabaCloud-Agent-Skills' \
+  --user-agent 'AlibabaCloud-Agent-Skills/alibabacloud-rds-copilot/{session-id}' \
   --profile rdsai
 ```
 
@@ -137,7 +137,7 @@ aliyun rdsai chat-messages \
 | Option | Description |
 |--------|-------------|
 | `--endpoint` | Specify API endpoint, set to `rdsai.aliyuncs.com` |
-| `--user-agent` | Specify User-Agent, set to `AlibabaCloud-Agent-Skills` |
+| `--user-agent` | Specify User-Agent, set to `AlibabaCloud-Agent-Skills/alibabacloud-rds-copilot/{session-id}` |
 | `--profile` | Specify credential profile name |
 | `--region` | Specify region for API call |
 | `--quiet` | Suppress normal output |
