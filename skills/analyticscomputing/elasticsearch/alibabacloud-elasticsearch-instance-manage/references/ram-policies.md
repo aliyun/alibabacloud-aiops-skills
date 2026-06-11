@@ -1,16 +1,23 @@
-# RAM Policies - Elasticsearch Instance Management
+# RAM Policies - Elasticsearch Instance & Config Management
 
-This document lists the RAM (Resource Access Management) permissions required for Elasticsearch instance management operations.
+This document lists the RAM (Resource Access Management) permissions required for the two modules of this skill:
+
+- **Instance Lifecycle** (referenced by [instance-manage.md](instance-manage.md))
+- **Instance Config** — Snapshot + Dict (referenced by [config-manage.md](config-manage.md))
 
 ## Table of Contents
 
 - [Required Permissions Overview](#required-permissions-overview)
 - [Minimum Required Policy](#minimum-required-policy)
+- [Permissions by Module](#permissions-by-module)
+  - [Instance Lifecycle Module](#instance-lifecycle-module)
+  - [Snapshot Module](#snapshot-module)
+  - [Dict Module](#dict-module)
 - [Resource-Level Policy (Recommended)](#resource-level-policy-recommended)
 - [Region-Specific Policy](#region-specific-policy)
 - [Read-Only Policy](#read-only-policy)
-- [Full Management Policy](#full-management-policy)
 - [Additional Permissions for VPC Resources](#additional-permissions-for-vpc-resources)
+- [Additional Permissions for OSS (Dict / Snapshot)](#additional-permissions-for-oss-dict--snapshot)
 - [System Policies](#system-policies)
   - [Attach System Policy via CLI](#attach-system-policy-via-cli)
 - [Policy Best Practices](#policy-best-practices)
@@ -19,6 +26,8 @@ This document lists the RAM (Resource Access Management) permissions required fo
 ---
 
 ## Required Permissions Overview
+
+### Instance Lifecycle
 
 | API Action | Required Permission | Description |
 |------------|---------------------|-------------|
@@ -29,11 +38,67 @@ This document lists the RAM (Resource Access Management) permissions required fo
 | RestartInstance | `elasticsearch:RestartInstance` | Restart Instance |
 | UpdateInstance | `elasticsearch:UpdateInstance` | Upgrade/Downgrade Instance Configuration |
 
+### Snapshot Management
+
+| API Action | Required Permission | Description |
+|------------|---------------------|-------------|
+| UpdateSnapshotSetting | `elasticsearch:UpdateSnapshotSetting` | Configure auto-snapshot policy |
+| DescribeSnapshotSetting | `elasticsearch:DescribeSnapshotSetting` | Query auto-snapshot policy |
+| CreateSnapshot | `elasticsearch:CreateSnapshot` | Trigger one-shot snapshot |
+
+### Dict Management
+
+| API Action | Required Permission | Description |
+|------------|---------------------|-------------|
+| ListDicts | `elasticsearch:ListDicts` | List analyzer dicts |
+| UpdateDict | `elasticsearch:UpdateDict` | Cold-update IK analyzer dicts |
+| UpdateHotIkDicts | `elasticsearch:UpdateHotIkDicts` | Hot-update IK analyzer dicts |
+| UpdateSynonymsDicts | `elasticsearch:UpdateSynonymsDicts` | Update synonyms dict |
+| UpdateAliwsDict | `elasticsearch:UpdateAliwsDict` | Update AliNLP (AliWS) dict |
+
+> Snapshot module additionally requires OSS access on the snapshot repository bucket; Dict module additionally requires OSS read access on the dict-source bucket. See [Additional Permissions for OSS](#additional-permissions-for-oss-dict--snapshot).
+
 ---
 
 ## Minimum Required Policy
 
-The following policy grants the minimum permissions needed for Elasticsearch instance management:
+Grant the union of the actions for whichever modules will be used. Below is the **full union** for both modules:
+
+```json
+{
+  "Version": "1",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "elasticsearch:CreateInstance",
+        "elasticsearch:DescribeInstance",
+        "elasticsearch:ListInstance",
+        "elasticsearch:ListAllNode",
+        "elasticsearch:RestartInstance",
+        "elasticsearch:UpdateInstance",
+        "elasticsearch:UpdateSnapshotSetting",
+        "elasticsearch:DescribeSnapshotSetting",
+        "elasticsearch:CreateSnapshot",
+        "elasticsearch:ListDicts",
+        "elasticsearch:UpdateDict",
+        "elasticsearch:UpdateHotIkDicts",
+        "elasticsearch:UpdateSynonymsDicts",
+        "elasticsearch:UpdateAliwsDict"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+```
+
+---
+
+## Permissions by Module
+
+When the principal only uses one module, grant just that module's actions.
+
+### Instance Lifecycle Module
 
 ```json
 {
@@ -55,11 +120,55 @@ The following policy grants the minimum permissions needed for Elasticsearch ins
 }
 ```
 
+### Snapshot Module
+
+```json
+{
+  "Version": "1",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "elasticsearch:DescribeInstance",
+        "elasticsearch:UpdateSnapshotSetting",
+        "elasticsearch:DescribeSnapshotSetting",
+        "elasticsearch:CreateSnapshot"
+      ],
+      "Resource": "acs:elasticsearch:*:*:instances/*"
+    }
+  ]
+}
+```
+
+> `DescribeInstance` is included so the agent can run the mandatory pre-check (instance status must be `active`).
+
+### Dict Module
+
+```json
+{
+  "Version": "1",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "elasticsearch:DescribeInstance",
+        "elasticsearch:ListDicts",
+        "elasticsearch:UpdateDict",
+        "elasticsearch:UpdateHotIkDicts",
+        "elasticsearch:UpdateSynonymsDicts",
+        "elasticsearch:UpdateAliwsDict"
+      ],
+      "Resource": "acs:elasticsearch:*:*:instances/*"
+    }
+  ]
+}
+```
+
 ---
 
 ## Resource-Level Policy (Recommended)
 
-For better security, restrict permissions to specific resources:
+For better security, restrict permissions to specific resources. `CreateInstance` cannot bind to a specific instance ID and must use `Resource: *`.
 
 ```json
 {
@@ -77,8 +186,17 @@ For better security, restrict permissions to specific resources:
       "Action": [
         "elasticsearch:DescribeInstance",
         "elasticsearch:ListInstance",
+        "elasticsearch:ListAllNode",
         "elasticsearch:RestartInstance",
-        "elasticsearch:UpdateInstance"
+        "elasticsearch:UpdateInstance",
+        "elasticsearch:UpdateSnapshotSetting",
+        "elasticsearch:DescribeSnapshotSetting",
+        "elasticsearch:CreateSnapshot",
+        "elasticsearch:ListDicts",
+        "elasticsearch:UpdateDict",
+        "elasticsearch:UpdateHotIkDicts",
+        "elasticsearch:UpdateSynonymsDicts",
+        "elasticsearch:UpdateAliwsDict"
       ],
       "Resource": "acs:elasticsearch:*:*:instances/*"
     }
@@ -90,7 +208,7 @@ For better security, restrict permissions to specific resources:
 
 ## Region-Specific Policy
 
-Restrict operations to specific regions:
+Restrict operations to specific regions (example: `cn-hangzhou`):
 
 ```json
 {
@@ -102,8 +220,17 @@ Restrict operations to specific regions:
         "elasticsearch:CreateInstance",
         "elasticsearch:DescribeInstance",
         "elasticsearch:ListInstance",
+        "elasticsearch:ListAllNode",
         "elasticsearch:RestartInstance",
-        "elasticsearch:UpdateInstance"
+        "elasticsearch:UpdateInstance",
+        "elasticsearch:UpdateSnapshotSetting",
+        "elasticsearch:DescribeSnapshotSetting",
+        "elasticsearch:CreateSnapshot",
+        "elasticsearch:ListDicts",
+        "elasticsearch:UpdateDict",
+        "elasticsearch:UpdateHotIkDicts",
+        "elasticsearch:UpdateSynonymsDicts",
+        "elasticsearch:UpdateAliwsDict"
       ],
       "Resource": "acs:elasticsearch:cn-hangzhou:*:instances/*"
     }
@@ -115,7 +242,7 @@ Restrict operations to specific regions:
 
 ## Read-Only Policy
 
-For users who only need to view instance information:
+For users who only need to view instance information, snapshot settings, and dict listings:
 
 ```json
 {
@@ -125,7 +252,10 @@ For users who only need to view instance information:
       "Effect": "Allow",
       "Action": [
         "elasticsearch:DescribeInstance",
-        "elasticsearch:ListInstance"
+        "elasticsearch:ListInstance",
+        "elasticsearch:ListAllNode",
+        "elasticsearch:DescribeSnapshotSetting",
+        "elasticsearch:ListDicts"
       ],
       "Resource": "*"
     }
@@ -137,23 +267,12 @@ For users who only need to view instance information:
 
 ## Additional Permissions for VPC Resources
 
-When creating Elasticsearch instances, you may also need VPC-related permissions:
+When **creating** Elasticsearch instances, you may also need VPC-related permissions to look up VPC / VSwitch information:
 
 ```json
 {
   "Version": "1",
   "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "elasticsearch:CreateInstance",
-        "elasticsearch:DescribeInstance",
-        "elasticsearch:ListInstance",
-        "elasticsearch:RestartInstance",
-        "elasticsearch:UpdateInstance"
-      ],
-      "Resource": "*"
-    },
     {
       "Effect": "Allow",
       "Action": [
@@ -168,16 +287,53 @@ When creating Elasticsearch instances, you may also need VPC-related permissions
 
 ---
 
+## Additional Permissions for OSS (Dict / Snapshot)
+
+Dict and Snapshot modules rely on OSS:
+
+- **Dict module**: when `sourceType=OSS`, the ES service reads dict files from your OSS bucket. The bucket MUST be in the same region as the ES instance and publicly readable, or you must grant the ES service role read access.
+- **Snapshot module**: snapshots are stored in an OSS repository configured for the instance.
+
+Minimum OSS permissions for the principal that operates these APIs (so it can verify and stage files before calling the ES API):
+
+```json
+{
+  "Version": "1",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "oss:GetObject",
+        "oss:GetBucketInfo",
+        "oss:ListObjects"
+      ],
+      "Resource": [
+        "acs:oss:*:*:<your-dict-bucket>",
+        "acs:oss:*:*:<your-dict-bucket>/*",
+        "acs:oss:*:*:<your-snapshot-bucket>",
+        "acs:oss:*:*:<your-snapshot-bucket>/*"
+      ]
+    }
+  ]
+}
+```
+
+> Replace `<your-dict-bucket>` / `<your-snapshot-bucket>` with the actual bucket names. If you also need to upload dict files via OSS APIs, additionally grant `oss:PutObject` on the dict bucket.
+
+---
+
 ## System Policies
 
 Alibaba Cloud provides built-in system policies for Elasticsearch:
 
 | Policy Name | Description |
 |-------------|-------------|
-| `AliyunElasticsearchFullAccess` | Full Management Permissions |
+| `AliyunElasticsearchFullAccess` | Full Management Permissions (covers all instance / snapshot / dict APIs) |
 | `AliyunElasticsearchReadOnlyAccess` | Read-Only Permissions |
 
 ### Attach System Policy via CLI
+
+> **`--user-agent` applies ONLY to business API commands** (e.g. `aliyun elasticsearch ...`); such commands MUST pass `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage/${SESSION_ID}` (see `SKILL.md#observability` for `SESSION_ID` generation rule). **System / tool commands** (`aliyun configure`, `aliyun version`, `aliyun plugin update`, `aliyun help`, `aliyun ram ...`, etc.) **MUST NOT** carry `--user-agent` — they do not support the flag.
 
 ```bash
 # Attach full access policy to RAM user
@@ -185,25 +341,26 @@ aliyun ram attach-policy-to-user \
   --policy-type System \
   --policy-name AliyunElasticsearchFullAccess \
   --user-name <UserName> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage/${SESSION_ID}
 
 # Attach read-only policy to RAM user
 aliyun ram attach-policy-to-user \
   --policy-type System \
   --policy-name AliyunElasticsearchReadOnlyAccess \
   --user-name <UserName> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage/${SESSION_ID}
 ```
 
 ---
 
 ## Policy Best Practices
 
-1. **Principle of Least Privilege**: Grant only the minimum permissions required
-2. **Use Resource-Level Restrictions**: Restrict to specific instances when possible
-3. **Separate Read and Write**: Use different policies for different operation types
-4. **Regular Auditing**: Review and audit permissions periodically
-5. **Use RAM Roles**: For applications, use RAM roles instead of hardcoded credentials
+1. **Principle of Least Privilege**: Grant only the minimum permissions required for the modules in use.
+2. **Use Resource-Level Restrictions**: Restrict to specific instances / buckets when possible.
+3. **Separate Read and Write**: Use different policies for different operation types (e.g. Read-Only Policy for monitoring agents).
+4. **Module Isolation**: For multi-tenant use, grant only the relevant module's actions (instance vs snapshot vs dict).
+5. **Regular Auditing**: Review and audit permissions periodically.
+6. **Use RAM Roles**: For applications, use RAM roles / STS rather than hardcoded credentials.
 
 ---
 
@@ -212,3 +369,4 @@ aliyun ram attach-policy-to-user \
 - [Elasticsearch RAM Policies](https://help.aliyun.com/document_detail/187755.html)
 - [RAM Policy Structure](https://help.aliyun.com/document_detail/93739.html)
 - [RAM Console](https://ram.console.aliyun.com/)
+- [OSS Permission Reference](https://help.aliyun.com/document_detail/100680.html)

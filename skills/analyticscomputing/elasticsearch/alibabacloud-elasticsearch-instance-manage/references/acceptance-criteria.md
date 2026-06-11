@@ -66,7 +66,7 @@ aliyun elasticsearch create-instance \
   --es-version "7.10_with_X-Pack" \
   --node-amount 2 \
   --network-config 'vpcId=vpc-xxx vswitchId=vsw-xxx vsArea=cn-hangzhou-i type=vpc' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage/${SESSION_ID}
 ```
 
 #### ❌ INCORRECT - create-instance
@@ -83,7 +83,7 @@ aliyun elasticsearch create-instance \
 aliyun elasticsearch describe-instance \
   --region cn-hangzhou \
   --instance-id es-cn-xxx**** \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage/${SESSION_ID}
 ```
 
 #### ❌ INCORRECT - describe-instance
@@ -99,7 +99,7 @@ aliyun elasticsearch list-instance \
   --region cn-hangzhou \
   --page 1 \
   --size 10 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage/${SESSION_ID}
 ```
 
 #### ❌ INCORRECT - list-instance
@@ -115,7 +115,7 @@ aliyun elasticsearch restart-instance \
   --region cn-hangzhou \
   --instance-id es-cn-xxx**** \
   --force true \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage/${SESSION_ID}
 ```
 
 #### ❌ INCORRECT - restart-instance
@@ -130,14 +130,14 @@ aliyun elasticsearch restart-instance \
 aliyun elasticsearch list-all-node \
   --region cn-hangzhou \
   --instance-id es-cn-xxx**** \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage/${SESSION_ID}
 
 # With extended parameter
 aliyun elasticsearch list-all-node \
   --region cn-hangzhou \
   --instance-id es-cn-xxx**** \
   --extended false \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage/${SESSION_ID}
 ```
 
 #### ❌ INCORRECT - list-all-node
@@ -157,7 +157,7 @@ aliyun elasticsearch update-instance \
   --instance-id es-cn-xxx**** \
   --client-token $(uuidgen) \
   --body '{"nodeSpec":{"spec":"elasticsearch.sn2ne.xlarge.new"}}' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage/${SESSION_ID}
 
 # Downgrade with orderActionType
 aliyun elasticsearch update-instance \
@@ -166,7 +166,7 @@ aliyun elasticsearch update-instance \
   --client-token $(uuidgen) \
   --order-action-type downgrade \
   --body '{"nodeSpec":{"spec":"elasticsearch.sn2ne.large.new"}}' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage/${SESSION_ID}
 ```
 
 #### ❌ INCORRECT - update-instance
@@ -190,14 +190,14 @@ aliyun elasticsearch update-instance \
 ```bash
 aliyun elasticsearch list-instance \
   --region cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage/${SESSION_ID}
 ```
 
 #### ❌ INCORRECT
 ```bash
 aliyun elasticsearch list-instance \
   --region cn-hangzhou
-  # Missing: --user-agent AlibabaCloud-Agent-Skills
+  # Missing: --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage/${SESSION_ID}
 ```
 
 ---
