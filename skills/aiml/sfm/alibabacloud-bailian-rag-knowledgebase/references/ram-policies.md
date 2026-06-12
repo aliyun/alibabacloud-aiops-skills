@@ -1,45 +1,45 @@
-# RAM 权限声明
+# RAM Policies for Bailian RAG Knowledge Base
 
-本 Skill 需要以下阿里云 RAM 权限才能正常运行。
+This skill requires the following Alibaba Cloud RAM permissions to function properly.
 
-## 所需权限清单
+## Required Permissions
 
-| 产品 | Action | 说明 |
-|------|--------|------|
-| sfm | `sfm:ListIndices` | 查询知识库列表 |
-| sfm | `sfm:Retrieve` | 检索知识库内容 |
-| maas | `maas:ListWorkspaces` | 查询工作空间列表 |
+| Service | Action | Description |
+|---------|--------|-------------|
+| modelstudio | `modelstudio:ListWorkspaces` | List workspaces (to obtain workspace ID) |
+| modelstudio | `modelstudio:CreateApiKey` | Create a DashScope API Key |
+| modelstudio | `modelstudio:DeleteApiKey` | Delete a DashScope API Key |
 
-## 权限详情
+## Minimum Required Policy
 
-### sfm:ListIndices
+```json
+{
+  "Version": "1",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "modelstudio:ListWorkspaces",
+        "modelstudio:CreateApiKey",
+        "modelstudio:DeleteApiKey"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+```
 
-用于查询指定工作空间下的知识库列表。
+## How to Apply
 
-### sfm:Retrieve
+1. Go to [Alibaba Cloud RAM Console](https://ram.console.aliyun.com/users)
+2. Select the target RAM user
+3. Click "Add Permissions"
+4. Choose one of the following:
+   - **System Policy**: Search and select `AliyunBailianFullAccess`
+   - **Custom Policy**: Create a custom policy using the JSON above and attach it
 
-用于在指定知识库中检索与查询内容相关的文档片段。
+## Notes
 
-### maas:ListWorkspaces
-
-用于查询可用的 MaaS 工作空间列表。
-
-## 授权方式
-
-### 方式一：使用系统策略（推荐）
-
-1. 访问 [阿里云 RAM 访问控制](https://ram.console.aliyun.com/users)
-2. 选择对应的 RAM 用户
-3. 点击「新增授权」按钮
-4. 在权限策略中搜索并选择以下系统策略：
-   - `AliyunBailianFullAccess`（包含 bailian 相关权限）
-   - `AliyunModelStudioReadOnlyAccess`（包含 modelstudio 相关权限）
-5. 确认新增授权
-
-
-## 注意事项
-
-- 授权后权限生效可能存在 30 秒左右的延迟
-- 如遇到 `403` 或 `Index.NoWorkspacePermissions` 错误，请检查：
-  1. RAM 用户是否已授予上述权限
-  2. 百炼控制台中是否已为该用户授予工作空间权限
+- Permission changes may take up to 30 seconds to take effect
+- If you encounter `403 Forbidden` errors, verify that the RAM user has been granted the permissions above
+- If you only need knowledge base retrieval (not API Key management), no RAM permissions are required -- only a valid DASHSCOPE_API_KEY

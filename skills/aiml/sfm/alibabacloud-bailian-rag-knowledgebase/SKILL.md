@@ -1,43 +1,75 @@
 ---
 name: alibabacloud-bailian-rag-knowledgebase
-description: "Alibaba Cloud Bailian Knowledge Base Retrieval Tool. Use Alibaba Cloud Bailian SDK to query and retrieve knowledge base content. Use when: User needs to query knowledge base, retrieve document content, or answer questions based on knowledge base. Prerequisites: (1) Install npm packages (2) Configure Alibaba Cloud credentials (via Alibaba Cloud CLI or environment variables). (3) Need to activate Bailian service."
+description: "Alibaba Cloud Bailian Knowledge Base Retrieval Tool. Use HTTPS API to query and retrieve knowledge base content. Use when: User needs to query knowledge base, retrieve document content, or answer questions based on knowledge base. Prerequisites: (1) Configure DashScope API Key (2) Activate Bailian Knowledge Base service."
 ---
 
 # Bailian Knowledge Base Retrieval
 
-This Skill provides query and retrieval capabilities for Alibaba Cloud Bailian Knowledge Base, supporting intelligent selection across multiple knowledge bases.
+This Skill provides query and retrieval capabilities for Alibaba Cloud Bailian Knowledge Base via HTTPS API.
+
+## API Key Security Management
+
+Scripts automatically handle key retrieval via `api_key.py`. The Agent does not need to and should not manually extract, set, or pass API Key values.
+
+- **Key retrieval is automated**: Scripts internally call `api_key.py` to automatically obtain keys from config files/environment variables. The Agent only needs to run the script command.
+- **Never hardcode any form of key**: Including `api_key = "sk-..."`, `export DASHSCOPE_API_KEY="sk-..."`, and assigning keys in shell scripts.
+- **Never extract keys from CLI output**: The Agent must not write key values into any script, variable, or file.
+- **Never expose keys in any output**: Including generated scripts, shell commands, log files, and terminal output containing strings starting with `sk-`.
+- **Never read or print keys from config files**: Do not use `cat`, `jq`, `python -c`, or other commands to read and output API Key values.
+- **Mandatory self-check before task completion**: Run `grep -rn "sk-" <output_directory>/` to check all output files; if any strings starting with `sk-` are found (excluding `sk-xxx` placeholders), delete the affected files and regenerate.
 
 ## 🚀 Initial Setup (Required for First-time Use)
 
-### 1. Install Dependencies
+### 1. Configure API Key
 
-```bash
-npm install
+API Keys are managed by the unified `scripts/api_key.py` module, with the following retrieval priority:
+1. Alibaba Cloud CLI config `~/.aliyun/config.json` current profile's `dashscope.api_key`
+2. Environment variable `DASHSCOPE_API_KEY`
+3. Auto-create and save when Alibaba Cloud CLI is available (`generate_api_key()`)
+
+```python
+# All scripts use this unified approach
+from api_key import get_api_key
+api_key = get_api_key()  # Returns str, raises ValueError if not found
 ```
 
-This will install all dependencies defined in package.json:
-- `@alicloud/bailian20231229` - Bailian Knowledge Base SDK
-- `@alicloud/modelstudio20260210` - Modelstudio Workspace SDK
-- `@alicloud/openapi-client` - OpenAPI Client
-
-### 2. Configure Alibaba Cloud Credentials
-
-This tool uses the Alibaba Cloud default credential chain, supporting multiple credential configuration methods (in order of priority):
-
-**Method 1: Alibaba Cloud CLI (Recommended)**
+Manual environment variable configuration:
 ```bash
-# Configure credentials using Alibaba Cloud CLI
-aliyun configure
+export DASHSCOPE_API_KEY=sk-xxx
 ```
 
-**Method 2: Configuration File**
-Alibaba Cloud SDK will automatically read credential configuration from `~/.aliyun/config.json` or `~/.acs/credentials`.
+| Item | Description |
+|------|-------------|
+| **Key Format** | `sk-xxx` (standard DashScope API Key) |
+| **Not Supported** | `sk-sp-xxx` (Coding Plan Key, does not support knowledge base services) |
+| **Get Key** | https://bailian.console.aliyun.com/cn-beijing/?tab=app#/api-key |
 
-**Note:** 
-- For first-time use, if credentials are not detected, guide users to configure using `aliyun configure`
-- Do not explicitly handle user's AK/SK credentials, rely on Alibaba Cloud default credential chain
+### Alibaba Cloud CLI Configuration (API Key Auto-Create/Delete)
 
-### 3. Important Prerequisite: Activate Bailian and Knowledge Base Service
+The `scripts/api_key.py` module creates and deletes API Keys via `aliyun modelstudio` commands. Complete the following setup before use:
+
+**1. Update Plugins**
+
+```bash
+# Update plugins to latest version
+aliyun plugin update
+```
+
+**2. Install ModelStudio Plugin** (if not already installed)
+
+```bash
+aliyun plugin install --names aliyun-cli-modelstudio --enable-pre
+```
+
+**CLI Commands Used**:
+
+| Command | Purpose | Called From |
+|---------|---------|-------------|
+| `aliyun modelstudio list-workspaces` | Get Bailian Workspace ID | `api_key.py: _get_workspace_id()` |
+| `aliyun modelstudio create-api-key` | Create DashScope API Key | `api_key.py: generate_api_key()` |
+| `aliyun modelstudio delete-api-key` | Delete cloud API Key | `api_key.py: _delete_cloud_api_key()` |
+
+### 2. Important Prerequisite: Activate Bailian Knowledge Base Service
 
 **Before using this skill, you must first activate the knowledge base service in the Alibaba Cloud Bailian console!**
 
@@ -45,18 +77,49 @@ Alibaba Cloud SDK will automatically read credential configuration from `~/.aliy
 2. Click the **"Activate Now"** button
 3. Confirm activation and wait for the service to take effect (usually 1-2 minutes)
 
-### 4. Important Prerequisite: Guide Users to Grant Permissions in Alibaba Cloud Access Control and Bailian
+## Observability (MUST follow for every aliyun command)
 
-**Before using this skill, you must grant the following permissions to the previously configured AK, otherwise calls will fail and may cause 403 errors**
+Upon loading this skill, generate a random session ID (32-char lowercase hex string) and export it as `SKILL_SESSION_ID`. This value must remain constant for the entire skill session.
 
-#### 1) RAM Permission Grant
-1. Visit [Alibaba Cloud RAM Access Control](https://ram.console.aliyun.com/users)
-2. Select the RAM user corresponding to the AK, click the "Add Permission" button, select **AliyunBailianFullAccess** and **AliyunModelStudioReadOnlyAccess** permission in the permission policy, and confirm to add the permission.
-#### 2) Bailian Workspace Permission Grant
-1. Visit [Alibaba Cloud Bailian Permission Management](https://bailian.console.aliyun.com/cn-beijing?tab=app#/authority)
-2. If the RAM user corresponding to the AK does not exist, click **"Add User"** in the upper right corner of the page, select the corresponding RAM user and click confirm to add.
-3. Click **"Permission Management"** on the right side of the RAM user corresponding to the AK, click edit, and grant knowledge base related permissions.
-4. There is a 30s effective time after configuration, please wait patiently for a while.
+Every `aliyun` CLI command and HTTPS API call must include a `User-Agent` identifier for traceability.
+
+### User-Agent Format
+
+```
+AlibabaCloud-Agent-Skills/alibabacloud-bailian-rag-knowledgebase/{session-id}
+```
+
+- `{session-id}` = value of `SKILL_SESSION_ID` environment variable (32-char lowercase hex string)
+- Scripts read it via `os.environ.get("SKILL_SESSION_ID", "")`; if empty, generate one with `secrets.token_hex(16)`
+
+### Per-Command --user-agent (CLI)
+
+Every `aliyun modelstudio` business command MUST carry `--user-agent` on the command line:
+
+```bash
+aliyun modelstudio list-workspaces --region cn-beijing \
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-bailian-rag-knowledgebase/{session-id}"
+```
+
+> **Prohibited**: Do NOT set User-Agent via global configuration commands. Only per-command `--user-agent` is allowed.
+
+### HTTPS User-Agent Header
+
+All HTTPS API requests set the `User-Agent` HTTP header:
+
+```python
+"User-Agent": f"AlibabaCloud-Agent-Skills/alibabacloud-bailian-rag-knowledgebase/{session_id}"
+```
+
+### Applied Locations
+
+| Location | Mechanism |
+|----------|----------|
+| `scripts/list_indices.py` | HTTPS `User-Agent` header via `_get_user_agent()` |
+| `scripts/retrieve.py` | HTTPS `User-Agent` header via `_get_user_agent()` |
+| `scripts/api_key.py` → `_get_workspace_id()` | `aliyun modelstudio list-workspaces --user-agent ...` |
+| `scripts/api_key.py` → `generate_api_key()` | `aliyun modelstudio create-api-key --user-agent ...` |
+| `scripts/api_key.py` → `_delete_cloud_api_key()` | `aliyun modelstudio delete-api-key --user-agent ...` |
 
 ## Available Scripts
 
@@ -64,91 +127,42 @@ All scripts are located in the `scripts/` directory:
 
 | Script | Purpose | Parameters |
 |--------|---------|------------|
-| `check_env.js` | Check environment configuration | None |
-| `list_workspace.js` | Query workspace list | `[maxResults]` |
-| `list_indices.js` | Query knowledge base list | `workspaceId pageNumber pageSize` |
-| `retrieve.js` | Retrieve from specified knowledge base | `workspaceId indexId query` |
+| `api_key.py` | API Key management (get, create, delete) | - |
+| `list_indices.py` | Query knowledge base list | `[page_number] [page_size]` |
+| `retrieve.py` | Retrieve from specified knowledge base | `index_id query [top_n]` |
 
 ## Workflow
 
-### Step 1: Environment Check
+### Step 1: Query Knowledge Base List
 
-Run `scripts/check_env.js` to check:
-- Whether npm packages are installed
-- Whether environment variables are configured
-
-If not ready, prompt the user:
-- Packages not installed → Run `npm install` to install all dependencies in package.json
-- Missing environment variables → Guide user to configure
-
-### Step 2: Get Workspace ID
-
-**Do not directly ask the user for workspaceId**, instead automatically get the workspace list through the script.
-
-Run `scripts/list_workspace.js` to get all available workspaces:
+Run `scripts/list_indices.py` to get all available knowledge bases:
 
 ```bash
-node scripts/list_workspace.js
-```
-
-Return format:
-```json
-{
-  "workspaces": [
-    {
-      "workspaceId": "llm-bpp1p29i34jvoybx",
-      "name": "Main Account Space"
-    },
-    {
-      "workspaceId": "llm-hcghrtsbma82bwks",
-      "name": "Podcast"
-    }
-  ]
-}
-```
-
-**Processing Logic:**
-1. Get the workspace list
-2. If there is only one workspace, use it automatically and inform the user
-3. If there are multiple workspaces, display the list for user to select
-4. Record user selection to avoid repeated inquiries (until user wants to switch)
-
-### Step 3: Query Knowledge Base List
-
-For each workspace, run `scripts/list_indices.js workspaceId pageNumber pageSize` to get the knowledge base list.
-
-**Batch Retrieval Strategy:**
-1. Get all workspace lists from Step 2
-2. Iterate through each workspace, call `list_indices.js` to retrieve its knowledge bases
-3. Merge all knowledge base results, annotate the workspace they belong to
-4. pageNumber starts from 1, pageSize defaults to 100, if current page is not fully retrieved then continue to retrieve next page
-
-**Examples:**
-```bash
-# Get knowledge bases from the first workspace
-node scripts/list_indices.js llm-bpp1p29i34jvoybx 1 100
-
-# Get knowledge bases from the second workspace
-node scripts/list_indices.js llm-hcghrtsbma82bwks 1 100
+python3 scripts/list_indices.py
 ```
 
 Return format:
 ```json
 [
   {
-    "indexId": "qf91w6402d",
+    "id": "qf91w6402d",
     "name": "Product Documentation",
     "description": "Contains product user manuals, API documentation, etc."
   },
   {
-    "indexId": "ip93d2pyvz",
+    "id": "ip93d2pyvz",
     "name": "Customer Service Q&A",
     "description": "FAQ, customer service scripts"
   }
 ]
 ```
 
-### Step 4: Intelligent Knowledge Base Selection
+**Pagination:** page_number starts from 1 (default), page_size defaults to 10. If current page is not fully retrieved, continue to retrieve next page:
+```bash
+python3 scripts/list_indices.py 2 10
+```
+
+### Step 2: Intelligent Knowledge Base Selection
 
 Based on the user's question and knowledge base descriptions, select **1-3 most relevant knowledge bases** for retrieval.
 
@@ -157,32 +171,41 @@ Selection Strategy:
 - Prioritize knowledge bases that explicitly contain relevant fields in their descriptions
 - If uncertain, select all or let user manually select
 
-### Step 5: Execute Retrieval
+### Step 3: Execute Retrieval
 
-For each selected knowledge base, run `scripts/retrieve.js workspaceId indexId query`.
+For each selected knowledge base, run `scripts/retrieve.py index_id query [top_n]`:
+
+```bash
+python3 scripts/retrieve.py lj3hgbq60t "java" 5
+```
+
+Parameters:
+- `index_id` (required): Knowledge base ID
+- `query` (required): Search query text
+- `top_n` (optional): Number of top results to return, default 5, max 20
+
+The retrieve API uses the following configuration:
+- `dense_similarity_top_k`: 100
+- `sparse_similarity_top_k`: 100
+- `enable_reranking`: true
+- `rerank`: qwen3-rerank-hybrid with similar mode
 
 Return format, content inside each chunk represents chunk content, doc_name represents source document, score represents match score, title represents chunk section title:
 ```json
 {
-  "indexId": "6fd13emwyj",
+  "indexId": "lj3hgbq60t",
   "chunks": [
     {
-      "content": "C. A small ball collides with a wall at 10 m/s, and bounces back with the same speed of 10 m/s. The magnitude of the ball's velocity change is 20 m/s. D. When an object's acceleration is positive, its velocity must increase. Example 1√ Problem Situation: As shown in the figure, Figure 2. Question 1. In the previous class, we drew the velocity-time relationship graph using a dot timer. Can you find the acceleration from it? 3. The ______________ from the v-t graph determines the magnitude of acceleration. Slope. 2. The slope value of the v-t graph represents: Acceleration value. 1. Calculate the magnitude of acceleration from the v-t graph. 4. If the v-t graph line is a sloping straight line, then the object's velocity changes uniformly, its acceleration is constant, and it moves with uniformly accelerated motion. Example 2. The three lines a, b, c in Figure 1.4-6 describe the motion of three objects A, B, C. First make a preliminary judgment about which object has the greatest acceleration, then calculate their accelerations based on the data in the graph, and explain the direction of acceleration. Analysis: Slope represents acceleration, acceleration tilts to the upper right, acceleration is positive, tilts to the lower right, acceleration is negative; so a and b are accelerating, c is decelerating, the object with the greatest acceleration, i.e., the steepest slope, is a. Description of velocity change - Acceleration. 1. Physical meaning: Describes how fast an object's velocity changes. 2. Definition: The ratio of the change in velocity to the time taken for that change. 3. Definition formula: 4. Vector nature: 5. Acceleration and velocity. Acceleration and velocity change. 6. Viewing acceleration from v-t graph: The slope value of the graph represents the acceleration value. Direction of a, accelerating motion. Direction of a, decelerating motion. Same as v0 direction.",
+      "content": "Document chunk content...",
       "score": 0.6040189862251282,
-      "doc_name": "Description of velocity change acceleration pptx-18 pages",
-      "title": ""
-    },
-    {
-      "content": "Section 4: Description of velocity change rate - Acceleration. High school physics, compulsory course 1, chapter 1. Learning objectives: Task 1: Understand the physical meaning of acceleration, be able to state the definition formula and unit of acceleration. Task 2: Be able to describe the relationship between the direction of acceleration and the direction of velocity. Task 3: Be able to distinguish between velocity, velocity change, and velocity change rate (acceleration). Understand variable speed motion. Task 4: Be able to determine acceleration from v-t graphs. 1. What is the reason for the distance between each car's final speed of 100 km/h? 2. What is the difference in their acceleration process motion? 3. Can you accurately compare the performance of these cars? Different rates of velocity change || Initial velocity (km/h) | Final velocity (km/h) | Time taken (s) | | A car start | 0 | 100 | 8.02 | | B car start | 0 | 100 | 9.53 | | C car start | 0 | 100 | 5.43 | | D car start | 0 | 100 | 4.47 | Table 1: Racing car 0~100 km/h sprint record. 4. With precise data, how to accurately compare the acceleration rate of cars? 5. Which car has the fastest velocity change? 6. Can you use other ways to compare the rate of velocity change? Observe the self-study draft Table 1, which object's velocity changes faster, A or B? | Time/s | 0 | 5 | 10 | 15 | | A v/(m·s-1) | 20 | 25 | 30 | 35 | | B v/(m·s-1) | 10 | 30 | 50 | 70 | | C v/(m·s-1) | 35 | 30 | 25 | 20 | | D v/(m·s-1) | 50 | 35 | 20 | 5 | Self-study draft Table 1: | Change | | 10 | | 40 |",
-      "score": 0.6966111660003662,
-      "doc_name": "Description of velocity change acceleration pptx-18 pages",
-      "title": ""
+      "doc_name": "example-doc.pdf",
+      "title": "Section Title"
     }
   ]
 }
 ```
 
-### Step 6: Integrate Answer
+### Step 4: Integrate Answer
 
 Based on retrieval results:
 1. Sort by relevance (score descending)
@@ -190,32 +213,38 @@ Based on retrieval results:
 3. Organize answer in natural language
 4. Please annotate the information source at the end of the generated answer (knowledge base name; document name; section name), can reference multiple documents and sections.
 
-## Common Permission Errors:
+## Common Errors
+
+### 401 Unauthorized
+```json
+{"code": "InvalidApiKey", "message": "Invalid API-KEY"}
 ```
-{
-  "code": "Index.NoWorkspacePermissions",
-  "message": "No workspace permissions can be used, workspace: ssss",
-  "requestId": "05072729-7958-5FE7-8F97-B54032231CCD",
-  "status": "403"
-}
+API Key is incorrect or not configured. Guide user to check their API Key configuration.
+
+### 403 Forbidden
+```json
+{"code": "Forbidden", "message": "Service not activated"}
 ```
-If you see the above message, there may be 2 reasons: 1. The workspace does not exist. 2. The user has not completed the 2-step authorization above, please guide to check permissions and workspace existence.
+User has not activated the Bailian Knowledge Base service. Guide user to activate it.
 
 ## Usage Example
 
 **User:** "What authentication methods does our product support?"
 
 **Flow:**
-1. Check environment → Ready
-2. Get workspaceId → `ws-123456`
-3. Query knowledge base → Returns 3 knowledge bases
-4. Select knowledge base → "Product Documentation" (most relevant)
-5. Retrieve → Get authentication-related document chunks
-6. Answer → "According to product documentation, OAuth2.0, SAML, and API Key authentication methods are supported..."
+1. Query knowledge base → Returns 3 knowledge bases
+2. Select knowledge base → "Product Documentation" (most relevant)
+3. Retrieve → Get authentication-related document chunks
+4. Answer → "According to product documentation, OAuth2.0, SAML, and API Key authentication methods are supported..."
 
 ## Notes
 
-- Confirm workspaceId is correct before each retrieval
+- API Key is automatically retrieved by scripts, Agent should never handle key values directly
 - When retrieving from multiple knowledge bases, merge results and deduplicate
 - Sort retrieval results by score, prioritize high-relevance content
-- Credential configuration relies on Alibaba Cloud default credential chain, do not explicitly handle AK/SK
+
+**API Key Auto-Retrieval Flow**:
+1. Read `~/.aliyun/config.json` current profile's `dashscope.api_key` → Return if found
+2. Read environment variable `DASHSCOPE_API_KEY` → Return if found
+3. Alibaba Cloud CLI available → Auto-create via `generate_api_key()` and save to config
+4. All above fail → Error with setup instructions
