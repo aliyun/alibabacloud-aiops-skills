@@ -1,184 +1,184 @@
-# 备份与恢复场景
+# Backup and Restore Scenarios
 
-## 触发条件
+## Trigger Conditions
 
-- "如何备份 Lindorm 数据？"
-- "怎么恢复到昨天的数据状态？"
-- "能帮我查看备份列表吗？"
-- "误删数据后怎么找回？"
-- "自动备份的周期是多久？"
-
----
-
-## Agent 行为原则
-
-**安全边界：查询备份信息 + 引导手动操作，恢复操作需用户确认**
-
-1. Agent 暂无直接查询备份列表的 API
-2. 提供控制台路径配置自动备份策略
-3. 给出恢复步骤，但不直接执行恢复操作
-4. 恢复操作会覆盖当前数据，需用户明确确认
+- "How do I back up Lindorm data?"
+- "How can I restore data to yesterday's state?"
+- "Can you help me view the backup list?"
+- "How can I recover data after accidental deletion?"
+- "What is the automatic backup cycle?"
 
 ---
 
-## 官方文档
+## Agent Behavior Principles
 
-| 场景 | 文档链接 |
+**Safety boundary: Query backup information + guide manual operations. Restore operations require user confirmation.**
+
+1. The Agent currently has no API for directly querying the backup list.
+2. Provide the console path for configuring automatic backup policies.
+3. Provide restore steps, but do not directly execute restore operations.
+4. Restore operations overwrite current data and require explicit user confirmation.
+
+---
+
+## Official Documentation
+
+| Scenario | Documentation Link |
 |------|---------|
-| 开通备份恢复 | https://help.aliyun.com/zh/lindorm/user-guide/backup-and-restoration |
-| 自动备份配置 | https://help.aliyun.com/zh/lindorm/user-guide/automatic-backup-of-data-of-lindorm-wide-tables |
-| 恢复到当前实例 | https://help.aliyun.com/zh/lindorm/user-guide/restore-backup-data-to-the-instance-that-corresponds-to-the-original-data |
-| 增值服务费用 | https://help.aliyun.com/zh/lindorm/product-overview/value-added-services-pricing |
+| Enable backup and restore | https://help.aliyun.com/zh/lindorm/user-guide/backup-and-restoration |
+| Automatic backup configuration | https://help.aliyun.com/zh/lindorm/user-guide/automatic-backup-of-data-of-lindorm-wide-tables |
+| Restore to the current instance | https://help.aliyun.com/zh/lindorm/user-guide/restore-backup-data-to-the-instance-that-corresponds-to-the-original-data |
+| Value-added service fees | https://help.aliyun.com/zh/lindorm/product-overview/value-added-services-pricing |
 
 ---
 
-## 各引擎备份能力
+## Backup Capabilities by Engine
 
-| 引擎 | 备份恢复能力 | 说明 |
+| Engine | Backup and Restore Capability | Description |
 |------|------------|------|
-| **宽表引擎** | ✅ 支持 | 本文档描述的完整备份恢复功能 |
-| **搜索引擎** | ❌ 无独立备份 | 搜索索引数据源头在宽表，宽表备份恢复后需重建搜索索引 |
-| **时序引擎** | ❌ 无独立备份 | 暂无官方备份恢复文档 |
-| **计算引擎** | ❌ 无需备份 | 无状态Spark计算服务，作业结果落回存储引擎，存储引擎备份已覆盖 |
+| **Wide table engine** | ✅ Supported | Complete backup and restore capabilities described in this document |
+| **Search engine** | ❌ No independent backup | The source data of search indexes is in wide tables. After wide table backup restoration, search indexes must be rebuilt. |
+| **Time series engine** | ❌ No independent backup | No official backup and restore documentation is available yet. |
+| **Compute engine** | ❌ No backup required | Stateless Spark compute service. Job results are written back to storage engines, and storage engine backup already covers them. |
 
-> 官方仅提供宽表引擎的备份恢复功能，其他引擎暂无独立备份方案。
+> Official backup and restore capabilities are provided only for the wide table engine. Other engines currently have no independent backup solution.
 
-| 类型 | 说明 | 配置方式 |
+| Type | Description | Configuration Method |
 |------|------|---------|
-| **全量备份** | 备份完整的表数据和结构 | 控制台配置周期和范围 |
-| **增量备份** | 自动备份变更数据 | 开通后自动运行，无需配置 |
+| **Full backup** | Backs up complete table data and schemas | Configure the cycle and scope in the console |
+| **Incremental backup** | Automatically backs up changed data | Runs automatically after enablement, with no configuration required |
 
-### 全量备份可配置参数
+### Configurable Parameters for Full Backup
 
-| 参数 | 说明 | 可选范围 | 推荐值 |
+| Parameter | Description | Optional Range | Recommended Value |
 |------|------|---------|--------|
-| 备份表 | 指定备份范围 | `*` 全库，或 `namespace:table` 格式（如 `default:test` 表示default命名空间下以test开头的表） | `*`（全库） |
-| 全量备份周期 | 触发间隔 | 3-10 天 | 7 天 |
-| 下次全量备份时间 | 开始时间点 | 建议业务低峰期 | 02:00 |
-| 全量备份保留个数 | 保留的备份数量 | 3-12 个 | 7 个 |
+| Backup tables | Specifies the backup scope | `*` for the entire database, or `namespace:table` format. For example, `default:test` indicates tables whose names start with test in the default namespace. | `*`, entire database |
+| Full backup cycle | Trigger interval | 3 to 10 days | 7 days |
+| Next full backup time | Start time | Off-peak hours are recommended | 02:00 |
+| Number of retained full backups | Number of retained backups | 3 to 12 | 7 |
 
-### 备份恢复性能参考（不可配置）
+### Backup and Restore Performance Reference (Not Configurable)
 
-| 指标 | 说明 | 参考值 |
+| Metric | Description | Reference Value |
 |------|------|--------|
-| RPO | 故障时可接受的最大数据丢失量 | < 30 秒（实时增量同步） |
-| 全量恢复速度 | OSS 最大带宽 / LTS 单机 | 1 GB/s / 100 MB/s |
-| 增量恢复速度 | Lindorm 目的集群单机 / LTS 单机 | 30-40 MB/s / 100 MB/s |
+| RPO | Maximum acceptable data loss during a failure | < 30 seconds, real-time incremental synchronization |
+| Full restore speed | Maximum OSS bandwidth / single LTS node | 1 GB/s / 100 MB/s |
+| Incremental restore speed | Single Lindorm destination cluster node / single LTS node | 30 to 40 MB/s / 100 MB/s |
 
 ---
 
-## 场景A：配置自动备份
+## Scenario A: Configure Automatic Backup
 
-### 步骤1：开通备份恢复功能
+### Step 1: Enable Backup and Restore
 
-1. 登录 [Lindorm 控制台](https://lindorm.console.aliyun.com/)
-2. 在实例列表页，单击**目标实例ID**
-3. 在左侧导航栏，单击**宽表引擎** → **备份恢复**
-4. 点击"立即开通"
-   - 若未开通搜索索引或数据订阅：跳转变配页面，需选择 **LTS Core 规格** 和 **节点数量**（规格选择见增值服务文档），完成后点击"立即购买"
-   - 若已开通搜索索引或数据订阅：直接开通，无需变配
+1. Log on to the [Lindorm console](https://lindorm.console.aliyun.com/).
+2. On the instance list page, click the **target instance ID**.
+3. In the left-side navigation pane, click **Wide Table Engine** → **Backup and Restore**.
+4. Click "Enable Now".
+   - If search indexes or data subscription are not enabled: You are redirected to the specification change page. Select the **LTS Core specification** and **number of nodes**. For specification selection, see the value-added service documentation. Then click "Buy Now".
+   - If search indexes or data subscription are already enabled: Enable directly without specification change.
 
-⚠️ **不支持实例类型**：Lindorm新版实例、单节点实例暂不支持备份恢复功能
+⚠️ **Unsupported instance types**: Lindorm new-version instances and single-node instances do not currently support backup and restore.
 
-### 步骤2：配置全量备份策略
+### Step 2: Configure a Full Backup Policy
 
-1. 在左侧导航栏，单击**宽表引擎** → **备份恢复** → **全量备份**
-2. 点击"创建"
-3. 配置参数（推荐值见上方参数表）：
-   - **备份表**：`*`（全库）或指定表如 `default:user_table`
-   - **全量备份周期**：7 天（周期太短可能无法完成备份，太长影响恢复时间）
-   - **下次全量备份时间**：02:00（业务低峰期）
-   - **全量备份保留个数**：7 个
-4. 点击"确认"
+1. In the left-side navigation pane, click **Wide Table Engine** → **Backup and Restore** → **Full Backup**.
+2. Click "Create".
+3. Configure parameters. For recommended values, see the parameter table above:
+   - **Backup tables**: `*`, entire database, or a specified table such as `default:user_table`.
+   - **Full backup cycle**: 7 days. A cycle that is too short may prevent backup completion, and a cycle that is too long affects restore time.
+   - **Next full backup time**: 02:00, during off-peak hours.
+   - **Number of retained full backups**: 7.
+4. Click "Confirm".
 
-⚠️ **空间评估**：备份空间不足会导致备份中断。全量备份空间 ≈ (保留个数+1) × 单个全备大小；增量空间 ≈ 日志保留天数 × 每天增量LOG大小。可在 **宽表引擎** → **备份恢复** → **全量备份** 区域查看单个全备大小，增量LOG大小可通过监控获取写入速度估算
+⚠️ **Space evaluation**: Insufficient backup space causes backup interruption. Full backup space ≈ (number of retained backups + 1) × size of a single full backup. Incremental space ≈ log retention days × daily incremental LOG size. You can view the size of a single full backup in **Wide Table Engine** → **Backup and Restore** → **Full Backup**. The incremental LOG size can be estimated from the write speed obtained through monitoring.
 
-### 验证备份
+### Verify Backup
 
-配置后系统会在设定时间自动执行。查看路径：**宽表引擎** → **备份恢复** → **全量备份列表**
+After configuration, the system automatically executes backup at the configured time. View path: **Wide Table Engine** → **Backup and Restore** → **Full Backup List**.
 
-### 注意事项
+### Notes
 
-- 首次备份会扫描全表，耗时较长
-- 备份过程不影响业务读写
-- 增量备份自动运行，无需配置
-- 备份存储按量计费，具体价格见[增值服务计费说明](https://help.aliyun.com/zh/lindorm/product-overview/value-added-services-pricing)
+- The first backup scans the entire table and takes a long time.
+- The backup process does not affect business reads and writes.
+- Incremental backup runs automatically and requires no configuration.
+- Backup storage is billed on a pay-as-you-go basis. For detailed prices, see [Value-added service billing](https://help.aliyun.com/zh/lindorm/product-overview/value-added-services-pricing).
 
 ---
 
-## 场景B：恢复历史数据
+## Scenario B: Restore Historical Data
 
-### 前提条件
+### Prerequisites
 
-1. 实例已开通备份恢复功能（⚠️ Lindorm新版实例、单节点实例暂不支持）
-2. 存在误删前的备份（查看路径：**宽表引擎** → **备份恢复** → **全量备份列表**）
-3. 备份时间点在保留期内
+1. Backup and restore has been enabled for the instance. ⚠️ Lindorm new-version instances and single-node instances are not currently supported.
+2. A backup before the accidental deletion exists. View path: **Wide Table Engine** → **Backup and Restore** → **Full Backup List**.
+3. The backup time point is within the retention period.
 
-### 方式1：恢复到当前实例
+### Method 1: Restore to the Current Instance
 
-**⚠️ 风险警告：会覆盖当前实例的指定表数据，恢复期间表不可用。建议恢复前先清空原表数据，或在测试实例验证**
+**⚠️ Risk warning: This operation overwrites the specified table data in the current instance, and the table is unavailable during restoration. It is recommended to clear the original table data before restoration or verify the operation in a test instance.**
 
-1. 登录 [Lindorm 控制台](https://lindorm.console.aliyun.com/)
-2. 在实例列表页，单击**目标实例ID**
-3. 在左侧导航栏，单击**宽表引擎** → **备份恢复**
-4. 在全量备份列表中，点击"发起数据恢复"
-5. 配置参数：
-   - **恢复集群**：当前实例（⚠️ 版本升级后原版本备份数据不能用于恢复新版本）
-   - **时间点**：选择备份时间点
-   - **全库恢复**：否（推荐指定表）
-   - **恢复表**：一行写一个，格式为 `namespace:table`（如 `default:testTable`）；恢复到其他表名格式为 `namespace:table/namespace:table2`（如 `default:testTable/default:testTable2`）
-6. 点击"确定"
+1. Log on to the [Lindorm console](https://lindorm.console.aliyun.com/).
+2. On the instance list page, click the **target instance ID**.
+3. In the left-side navigation pane, click **Wide Table Engine** → **Backup and Restore**.
+4. In the full backup list, click "Start Data Restoration".
+5. Configure parameters:
+   - **Restore cluster**: Current instance. ⚠️ After a version upgrade, backup data of the original version cannot be used to restore the new version.
+   - **Time point**: Select the backup time point.
+   - **Full database restore**: No. Specifying tables is recommended.
+   - **Restore tables**: Write one table per line in `namespace:table` format, such as `default:testTable`. To restore to another table name, use `namespace:table/namespace:table2`, such as `default:testTable/default:testTable2`.
+6. Click "OK".
 
-### 方式2：恢复到其他实例
+### Method 2: Restore to Another Instance
 
-适用场景：数据迁移、环境复制
+Applicable scenarios: data migration and environment replication.
 
-注意事项：
-- 目标实例需有足够存储空间
-- 目标实例版本需与源实例一致
-- 不支持跨版本恢复
+Notes:
+- The destination instance must have sufficient storage space.
+- The destination instance version must be the same as the source instance version.
+- Cross-version restoration is not supported.
 
-### 恢复进度查询
+### Query Restore Progress
 
-控制台路径：**宽表引擎** → **备份恢复** → **恢复列表**
+Console path: **Wide Table Engine** → **Backup and Restore** → **Restore List**.
 
-### 恢复后验证
+### Post-restore Verification
 
 ```sql
--- 验证数据量
+-- Verify the data volume.
 SELECT COUNT(*) FROM user_table;
 
--- 查看部分数据
+-- View sample data.
 SELECT * FROM user_table LIMIT 10;
 ```
 
 ---
 
-## 常见问题
+## FAQ
 
-| 问题 | 原因 | 解决方法 |
+| Question | Cause | Solution |
 |------|------|---------|
-| 恢复失败：存储空间不足 | 目标实例空间不够 | 扩容存储空间后重试，或清理无用数据 |
-| 恢复失败：版本不兼容 | 源和目标实例版本不一致 | 确保版本一致；版本升级后原版本备份数据不能用于恢复新版本 |
-| 最近可恢复到哪个时间点？ | WAL备份至OSS周期 | 正常情况下最多丢失30秒数据 |
-| 恢复需要多长时间？ | 取决于数据量 | 全量恢复约100MB/s（LTS单机），增量恢复约30-40MB/s |
-| 能恢复到其他表名吗？ | 支持 | 格式 `namespace:table/namespace:table2`，可恢复同名表到另一个表 |
+| Restore failed: insufficient storage space | The destination instance does not have enough space | Scale out storage space and retry, or clean up useless data |
+| Restore failed: version incompatible | The source and destination instance versions are inconsistent | Make sure the versions are consistent. After a version upgrade, backup data of the original version cannot be used to restore the new version. |
+| What is the latest restorable time point? | WAL backup cycle to OSS | Normally, at most 30 seconds of data is lost |
+| How long does restoration take? | Depends on the data volume | Full restore is about 100 MB/s on a single LTS node, and incremental restore is about 30 to 40 MB/s |
+| Can data be restored to another table name? | Supported | Use the format `namespace:table/namespace:table2` to restore a table to another table with the same data |
 
 ---
 
-## 缺参追问
+## Missing Parameter Follow-up Questions
 
-| 缺失参数 | 追问话术 | 默认策略 |
+| Missing Parameter | Follow-up Question | Default Strategy |
 |---------|---------|----------|
-| 实例ID | "请问是哪个 Lindorm 实例需要配置备份？" | 引导用户在控制台操作 |
-| 备份周期 | "您希望多久备份一次？（推荐7天）" | 默认 7 天 |
-| 保留个数 | "备份数据需要保留几个？（推荐7个）" | 默认 7 个 |
-| 恢复时间点 | "请问需要恢复到哪个时间点的数据？" | 列出最近的备份列表供选择 |
-| 恢复范围 | "需要恢复所有表还是指定的表？" | 默认提示指定表更安全 |
+| Instance ID | "Which Lindorm instance needs backup configuration?" | Guide the user to operate in the console |
+| Backup cycle | "How often do you want to back up data? The recommended value is 7 days." | Default to 7 days |
+| Retention count | "How many backups do you need to retain? The recommended value is 7." | Default to 7 |
+| Restore time point | "Which time point do you want to restore data to?" | List recent backups for selection |
+| Restore scope | "Do you need to restore all tables or specified tables?" | By default, remind the user that specifying tables is safer |
 
 ---
 
-## 关联场景
+## Related Scenarios
 
-- 备份后数据迁移 → `data-migration.md`
-- 恢复后性能验证 → `monitoring-guide.md`
+- Data migration after backup → `data-migration.md`
+- Performance verification after restoration → `monitoring-guide.md`

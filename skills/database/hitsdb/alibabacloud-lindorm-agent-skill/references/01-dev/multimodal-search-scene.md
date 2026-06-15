@@ -1,42 +1,42 @@
 # Multimodal Image-Text Search Scene
 
-本指南说明如何组合 Lindorm 搜索引擎、向量引擎和 AI 引擎构建多模态图文检索。参考工程思路是：CSV 商品数据入库时，对图片 URL 做 VL 描述和多模态 embedding，将 CSV 字段、图片描述、向量一起写入 Lindorm；查询时支持以图搜图、以文搜图和可选过滤。
+This guide describes how to combine the Lindorm search engine, vector engine, and AI engine to build multimodal image-text retrieval. The reference workflow is: when CSV product data is imported, generate a VL description and a multimodal embedding for each image URL, write the CSV fields, image description, and vector into Lindorm, and then support image-to-image search, text-to-image search, and optional filters at query time.
 
-## 场景目标
+## Scenario Goals
 
-| 能力 | 默认实现 |
-|------|----------|
-| 实例注册 | 记录实例 ID、region、账号引用、访问入口、网络类型 |
-| 存量数据检索 | 先 schema discovery，再按实际字段执行 KNN / RRF |
-| 新业务接入 | 从 CSV 推导 schema，默认索引名 `test_index_$date` |
-| 以图搜图 | 图片 URL -> 多模态 embedding -> KNN |
-| 以文搜图 | 文本 -> 多模态 embedding + 描述全文检索 -> RRF |
-| 过滤条件 | 分类、品牌、价格、时间、租户等字段进入 `filter` |
+| Capability | Default implementation |
+|------------|------------------------|
+| Instance registration | Record instance ID, region, account reference, access endpoint, and network type |
+| Existing data retrieval | Perform schema discovery first, then run KNN / RRF according to the actual fields |
+| New business onboarding | Infer the schema from CSV and use `test_index_$date` as the default index name |
+| Image-to-image search | Image URL -> multimodal embedding -> KNN |
+| Text-to-image search | Text -> multimodal embedding plus description full-text retrieval -> RRF |
+| Filters | Put category, brand, price, time, tenant, and other fields into `filter` |
 
-## 实例注册
+## Instance Registration
 
-多模态检索不要假设只有一个实例或一个连接。执行前必须明确以下字段：
+Do not assume that multimodal retrieval has only one instance or one connection. Before execution, clearly identify the following fields:
 
-| 字段 | 说明 |
-|------|------|
-| `instance_id` | Lindorm 实例 ID |
-| `region` | 实例所在地域 |
-| `network` | `public` 或 `vpc` |
-| `search_endpoint` | 搜索引擎入口，端口 `30070` |
-| `wide_table_endpoint` | 可选，宽表 SQL 入口 |
-| `ai_endpoint` | AI 引擎入口，端口 `9002` |
-| `username` / `password` | 凭证引用，不在文档或日志中明文展示 |
-| `dataset_name` | 业务数据集名称 |
-| `index_name` | 搜索索引名称；新建默认 `test_index_$date` |
-| `vector_field` | 推荐 `embedding`，存量数据必须从 schema 发现 |
-| `text_field` | 推荐 `vl_description` 或存量描述字段 |
-| `model_config` | VL、embedding、rerank 模型及向量维度 |
+| Field | Description |
+|-------|-------------|
+| `instance_id` | Lindorm instance ID |
+| `region` | Region where the instance resides |
+| `network` | `public` or `vpc` |
+| `search_endpoint` | Search engine endpoint, port `30070` |
+| `wide_table_endpoint` | Optional wide table SQL endpoint |
+| `ai_endpoint` | AI engine endpoint, port `9002` |
+| `username` / `password` | Credential reference. Do not display plaintext values in documents or logs |
+| `dataset_name` | Business dataset name |
+| `index_name` | Search index name. The default for a new index is `test_index_$date` |
+| `vector_field` | Recommended value is `embedding`. For existing data, derive it from schema discovery |
+| `text_field` | Recommended value is `vl_description`, or use the existing description field |
+| `model_config` | VL model, embedding model, rerank model, and vector dimension |
 
-## 存量数据检索
+## Existing Data Retrieval
 
 ### 1. Schema Discovery
 
-如果用户提供数据集名称但没有提供 schema，必须先调用搜索引擎查看索引结构：
+If the user provides a dataset name but no schema, first call the search engine to inspect the index structure:
 
 ```bash
 curl --connect-timeout 10 -m 60 \
@@ -45,20 +45,20 @@ curl --connect-timeout 10 -m 60 \
   -XGET "http://<search_endpoint>:30070/<index_name>?pretty"
 ```
 
-需要识别：
+Identify the following roles:
 
-| 角色 | 推荐字段 | 识别规则 |
-|------|----------|----------|
-| 图片 URL | `url` / `image_url` / `pic_url` | keyword 或 text 字段，值可访问图片 |
-| 图片描述 | `vl_description` / `img_desc` / `description` | text 字段，参与全文/RRF |
-| 多模态向量 | `embedding` / `vector` / 自定义字段 | `type=knn_vector`，记录 dimension |
-| 过滤字段 | `category` / `brand` / `price` / `create_time` | keyword、numeric、date 等标量字段 |
+| Role | Recommended fields | Identification rule |
+|------|--------------------|---------------------|
+| Image URL | `url` / `image_url` / `pic_url` | A keyword or text field whose value is an accessible image URL |
+| Image description | `vl_description` / `img_desc` / `description` | A text field used for full-text retrieval or RRF |
+| Multimodal vector | `embedding` / `vector` / custom field | `type=knn_vector`; record its dimension |
+| Filter fields | `category` / `brand` / `price` / `create_time` | Scalar fields such as keyword, numeric, or date |
 
-若存在多个向量字段且无法判断统一多模态向量字段，停止并让用户选择，不能猜测。
+If multiple vector fields exist and the unified multimodal vector field cannot be determined, stop and ask the user to choose. Do not guess.
 
-### 2. 以图搜图
+### 2. Image-to-image Search
 
-流程：
+Flow:
 
 ```text
 query_image_url
@@ -68,7 +68,7 @@ query_image_url
 -> return image_url + metadata + score
 ```
 
-检索请求：
+Retrieval request:
 
 ```bash
 curl --connect-timeout 10 -m 60 \
@@ -94,7 +94,7 @@ curl --connect-timeout 10 -m 60 \
   }'
 ```
 
-带过滤：
+With filters:
 
 ```json
 "filter": {
@@ -107,9 +107,9 @@ curl --connect-timeout 10 -m 60 \
 }
 ```
 
-### 3. 以文搜图
+### 3. Text-to-image Search
 
-默认使用 RRF 融合检索：文本 embedding 负责语义召回，图片描述字段负责全文召回。
+Use RRF hybrid retrieval by default: text embedding handles semantic recall, and the image description field handles full-text recall.
 
 ```bash
 curl --connect-timeout 10 -m 60 \
@@ -125,7 +125,7 @@ curl --connect-timeout 10 -m 60 \
           "vector": [0.01, 0.02, 0.03],
           "filter": {
             "match": {
-              "<text_field>": "适合夏天通勤的白色衬衫"
+              "<text_field>": "white shirt suitable for summer commuting"
             }
           },
           "k": 10
@@ -142,47 +142,47 @@ curl --connect-timeout 10 -m 60 \
   }'
 ```
 
-可选 rerank：对召回结果中的 `<text_field>` 列表调用 `ai-guide.md` 的 rerank 接口，按 `relevance_score` 重新排序。
+Optional rerank: call the rerank API in `ai-guide.md` for the `<text_field>` list in the recalled results, and sort again by `relevance_score`.
 
-## 新业务接入
+## New Business Onboarding
 
-### 1. CSV 输入约定
+### 1. CSV Input Convention
 
-CSV 至少需要一列图片 URL。推荐字段：
+The CSV must contain at least one image URL column. Recommended fields:
 
-| 字段 | 说明 |
-|------|------|
-| `id` | 文档 ID；没有则生成稳定 ID |
-| `url` / `pic_url` / `image_url` | 图片 URL |
-| `title` | 商品标题 |
-| `category` | 分类 |
-| `brand` | 品牌 |
-| `price` | 价格 |
-| `create_time` | 创建时间 |
-| 其他字段 | 作为 metadata 或普通可过滤字段写入 |
+| Field | Description |
+|-------|-------------|
+| `id` | Document ID. Generate a stable ID if this field is absent |
+| `url` / `pic_url` / `image_url` | Image URL |
+| `title` | Product title |
+| `category` | Category |
+| `brand` | Brand |
+| `price` | Price |
+| `create_time` | Creation time |
+| Other fields | Write as metadata or normal filterable fields |
 
-若未指定数据集名称，使用 `test_index_$date`。实现时 `$date` 使用当天日期，例如 `test_index_20260512`。
+If no dataset name is specified, use `test_index_$date`. In implementation, `$date` should use the current date, for example `test_index_20260512`.
 
-### 2. 建索引
+### 2. Index Creation
 
-默认 HNSW 适合快速接入。字段名推荐：
+HNSW is suitable for quick onboarding by default. Recommended field names:
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `id` | keyword | 文档 ID |
-| `url` | keyword | 图片 URL |
-| `title` | text | 商品标题 |
-| `vl_description` | text | VL 生成描述 |
-| `embedding` | knn_vector | 多模态向量 |
-| `category` / `brand` | keyword | 过滤字段 |
-| `price` | double | 过滤字段 |
-| `create_time` | date | 过滤字段 |
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | keyword | Document ID |
+| `url` | keyword | Image URL |
+| `title` | text | Product title |
+| `vl_description` | text | Description generated by VL |
+| `embedding` | knn_vector | Multimodal vector |
+| `category` / `brand` | keyword | Filter fields |
+| `price` | double | Filter field |
+| `create_time` | date | Filter field |
 
-索引创建参见 `vector-guide.md` 的 HNSW 模板。若数据量超过百万并选择 IVFPQ / IVFBQ，必须在写入后执行索引构建并等待完成。
+For index creation, see the HNSW template in `vector-guide.md`. If the data volume exceeds one million records and IVFPQ / IVFBQ is selected, build the index after writing data and wait until the build is complete.
 
-### 3. 入库处理
+### 3. Data Ingestion
 
-每行 CSV 的处理流程：
+Processing flow for each CSV row:
 
 ```text
 read csv row
@@ -194,29 +194,29 @@ read csv row
 -> refresh/count validation
 ```
 
-要求：
+Requirements:
 
-| 检查 | 说明 |
-|------|------|
-| 图片 URL 可访问 | VL 和 embedding 都依赖服务端访问图片 |
-| embedding 维度 | 必须等于索引 `embedding.dimension` |
-| 失败处理 | 单行失败要记录行号、ID、错误类型；不能伪造向量 |
-| 批量写入 | 推荐 `_bulk`，每批记录数按 payload 大小控制 |
-| 完成验证 | `COUNT == CSV 有效行数` 或报告失败行列表 |
+| Check | Description |
+|-------|-------------|
+| Image URL accessibility | Both VL and embedding depend on server-side access to the image |
+| Embedding dimension | Must equal the index `embedding.dimension` |
+| Failure handling | Record row number, ID, and error type for failed rows. Do not fabricate vectors |
+| Bulk write | Use `_bulk`; control the batch size according to payload size |
+| Completion validation | `COUNT == valid CSV rows`, or report the failed row list |
 
-### 4. 检索验证
+### 4. Retrieval Validation
 
-新数据集接入完成后至少验证：
+After a new dataset is onboarded, validate at least the following items:
 
-| 验证项 | 成功证据 |
-|--------|----------|
-| 索引存在 | `GET /<index_name>` 返回 mapping |
-| 数据写入 | `_count` 返回有效行数 |
-| 以图搜图 | KNN 返回命中，结果包含图片 URL |
-| 以文搜图 | RRF 返回命中，结果包含描述字段 |
-| 过滤条件 | 带 `category` 或 `brand` 过滤仍可返回或解释为空原因 |
+| Validation item | Success evidence |
+|-----------------|------------------|
+| Index exists | `GET /<index_name>` returns the mapping |
+| Data written | `_count` returns the number of valid rows |
+| Image-to-image search | KNN returns hits, and the result contains image URLs |
+| Text-to-image search | RRF returns hits, and the result contains the description field |
+| Filters | Queries with `category` or `brand` filters still return results, or clearly explain why the result is empty |
 
-## 输出格式
+## Output Format
 
 ```text
 [Target] instance=<instance_id> region=<region> network=<public|vpc>

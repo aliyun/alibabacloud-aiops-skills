@@ -1,32 +1,32 @@
 # Lindorm Vector Engine Guide
 
-本指南说明 Lindorm 向量检索的两条接入路径：`es-vector` 和 `sql-vector`。向量引擎是 Lindorm 内置引擎，不直接提供独立访问地址；所有向量服务接口都通过搜索引擎或宽表引擎入口完成。
+This guide describes the two access paths for Lindorm vector search: `es-vector` and `sql-vector`. The vector engine is a built-in Lindorm engine and does not directly provide an independent access endpoint. All vector service interfaces are accessed through the search engine or wide table engine entry point.
 
-## 核心原则
+## Core Principles
 
-| 原则 | 说明 |
+| Principle | Description |
 |------|------|
-| 向量引擎不直接访问 | 不存在单独的向量端口；ES 兼容查询走搜索引擎 `30070` |
-| `es-vector` | 需要搜索引擎 + 向量引擎；建索引、写入、构建、查询都通过搜索引擎 REST API |
-| `sql-vector` | 需要宽表引擎 + 搜索引擎 + 向量引擎；表和搜索索引用 SQL 创建，pipeline 和查询通过搜索引擎 REST API |
-| 维度必须一致 | embedding 模型输出维度必须等于 `knn_vector.dimension` |
-| 离线索引需要构建 | IVFPQ / IVFBQ 写入足够数据后必须触发构建并检查状态 |
+| The vector engine is not accessed directly | There is no separate vector port. ES-compatible queries use search engine port `30070`. |
+| `es-vector` | Requires the search engine and vector engine. Index creation, writes, build operations, and queries are all performed through the search engine REST API. |
+| `sql-vector` | Requires the wide table engine, search engine, and vector engine. Tables and search indexes are created by SQL, and pipelines and queries are managed through the search engine REST API. |
+| Dimensions must match | The output dimension of the embedding model must be equal to `knn_vector.dimension`. |
+| Offline indexes require building | After enough data is written to IVFPQ / IVFBQ, index building must be triggered and the status must be checked. Before building, the data volume must be `> 256` and `> nlist * 30`. |
 
-## 索引算法选择
+## Index Algorithm Selection
 
-| 算法 | 推荐数据量 | 构建方式 | 典型用途 |
+| Algorithm | Recommended Data Volume | Build Method | Typical Use |
 |------|------------|----------|----------|
-| HNSW | 测试、小中规模、实时写入 | 在线索引，无需手动构建 | 默认示例、快速接入 |
-| IVFPQ | 百万级以上 | 离线构建 | 大规模、低成本磁盘索引 |
-| IVFBQ | 百万级以上，512-1024 维常见 | 离线构建 | 大规模、高压缩比场景 |
+| HNSW | Testing, small to medium scale, real-time writes | Online index, no manual build required | Default examples and quick access |
+| IVFPQ | Millions of records or more | Offline build | Large-scale, low-cost disk index |
+| IVFBQ | Millions of records or more, commonly 512 to 1024 dimensions | Offline build | Large-scale scenarios with high compression ratio |
 
-## 路径一：es-vector
+## Path 1: es-vector
 
-`es-vector` 直接使用搜索引擎 Elasticsearch 兼容 API。连接地址为 `http://<search_endpoint>:30070`，认证为 HTTP Basic Auth。
+`es-vector` directly uses the Elasticsearch-compatible API of the search engine. The connection endpoint is `http://<search_endpoint>:30070`, and authentication uses HTTP Basic Auth.
 
-### 创建 HNSW 索引
+### Create an HNSW Index
 
-HNSW 适合快速验证和小中规模实时检索。
+HNSW is suitable for quick verification and small to medium-scale real-time search.
 
 ```bash
 curl --connect-timeout 10 -m 60 \
@@ -66,14 +66,14 @@ curl --connect-timeout 10 -m 60 \
   }'
 ```
 
-### 创建 IVFPQ 索引
+### Create an IVFPQ Index
 
-IVFPQ 必须设置离线构建开关，且写入数据量需满足训练要求后才能构建。
+IVFPQ must set the offline build switch. The written data volume must meet the training requirements before the index can be built. Before initiating index build, the number of written records must be greater than `256` and greater than `nlist * 30`.
 
-> **关键约束（实测自 lindorm_v2 引擎）**：
-> - `nlist`：聚类中心数。**写入行数必须 > nlist**，否则触发构建会返回 `500: table rows(N) too small, need > nlist(M)`。服务端最小 effective nlist=256，因此 IVFPQ **不适合数据量 < 256 的场景**。
-> - `m`：PQ 子量化器数量，每个子量化器负责 `dimension/m` 个分量。**`m` 必须能整除 `dimension`**；常见取值 8/16/32/64。`m = dimension` 是退化用法（每子量化器仅 1 维），可工作但失去 PQ 压缩意义，不推荐生产使用。
-> - `centroids_hnsw_*`：建索引时的整数参数，与查询时的 `ext.lvector.ef_search`（必须字符串）不同，不要混淆。
+> **Key constraints, verified on the lindorm_v2 engine**:
+> - `nlist`: Number of cluster centers. **The number of written rows must be > 256 and > nlist * 30**. If the data is insufficient, triggering build may return `500: table rows(N) too small...`. The minimum effective nlist on the server side is 256, so IVFPQ is **not suitable for scenarios with fewer than 256 records**.
+> - `m`: Number of PQ sub-quantizers. Each sub-quantizer processes `dimension/m` components. **`m` must divide `dimension` exactly**. Common values are 8, 16, 32, and 64. `m = dimension` is a degraded usage, where each sub-quantizer has only 1 dimension. It can work but loses the compression meaning of PQ and is not recommended for production.
+> - `centroids_hnsw_*`: Integer parameters used during index creation. They are different from `ext.lvector.ef_search`, which must be a string during queries. Do not confuse them.
 
 ```bash
 curl --connect-timeout 10 -m 60 \
@@ -116,7 +116,7 @@ curl --connect-timeout 10 -m 60 \
   }'
 ```
 
-### 创建 IVFBQ 索引
+### Create an IVFBQ Index
 
 ```bash
 curl --connect-timeout 10 -m 60 \
@@ -159,9 +159,9 @@ curl --connect-timeout 10 -m 60 \
   }'
 ```
 
-### 数据写入
+### Data Write
 
-单条写入：
+Single-document write:
 
 ```bash
 curl --connect-timeout 10 -m 60 \
@@ -169,13 +169,13 @@ curl --connect-timeout 10 -m 60 \
   -H 'Content-Type: application/json' \
   -XPOST "http://<search_endpoint>:30070/<index_name>/_doc/<doc_id>" \
   -d '{
-    "text_field": "示例文本",
+    "text_field": "sample text",
     "category": "guide",
     "embedding": [0.01, 0.02, 0.03]
   }'
 ```
 
-批量写入：
+Bulk write:
 
 ```bash
 curl --connect-timeout 10 -m 60 \
@@ -184,13 +184,13 @@ curl --connect-timeout 10 -m 60 \
   -XPOST "http://<search_endpoint>:30070/_bulk" \
   -d '
 {"index":{"_index":"<index_name>","_id":"1"}}
-{"text_field":"第一条文本","category":"guide","embedding":[0.01,0.02,0.03]}
+{"text_field":"first text","category":"guide","embedding":[0.01,0.02,0.03]}
 {"index":{"_index":"<index_name>","_id":"2"}}
-{"text_field":"第二条文本","category":"guide","embedding":[0.04,0.05,0.06]}
+{"text_field":"second text","category":"guide","embedding":[0.04,0.05,0.06]}
 '
 ```
 
-写入后可刷新：
+You can refresh after writing:
 
 ```bash
 curl --connect-timeout 10 -m 60 \
@@ -198,9 +198,9 @@ curl --connect-timeout 10 -m 60 \
   -XPOST "http://<search_endpoint>:30070/<index_name>/_refresh"
 ```
 
-### IVFPQ / IVFBQ 索引构建
+### IVFPQ / IVFBQ Index Build
 
-HNSW 不需要手动构建。IVFPQ / IVFBQ 写入足量数据后触发构建：
+HNSW does not require manual build. After enough data is written to IVFPQ / IVFBQ, trigger index build. Before initiating `_plugins/_vector/index/build`, you must confirm that the written data volume is sufficient: the data volume must be greater than `256` records and greater than `nlist * 30`. It is recommended to trigger index build after offline data import is complete. After index build is complete, you can perform KNN queries and write operations normally.
 
 ```bash
 curl --connect-timeout 10 -m 60 \
@@ -214,7 +214,7 @@ curl --connect-timeout 10 -m 60 \
   }'
 ```
 
-查看构建状态：
+View build status:
 
 ```bash
 curl --connect-timeout 10 -m 60 \
@@ -228,9 +228,9 @@ curl --connect-timeout 10 -m 60 \
   }'
 ```
 
-成功证据应包含 `FINISH` 或等价完成状态。失败或超时不能当作空结果处理，应报告 `BLOCKED_INDEX_BUILD` 或 `FAILED_INDEX_BUILD`。
+Successful evidence should contain `FINISH` or an equivalent completed status. Failure or timeout must not be treated as an empty result. Report `BLOCKED_INDEX_BUILD` or `FAILED_INDEX_BUILD`.
 
-### KNN 检索
+### KNN Search
 
 ```bash
 curl --connect-timeout 10 -m 60 \
@@ -256,7 +256,7 @@ curl --connect-timeout 10 -m 60 \
   }'
 ```
 
-### KNN + Filter 检索
+### KNN + Filter Search
 
 ```bash
 curl --connect-timeout 10 -m 60 \
@@ -291,7 +291,7 @@ curl --connect-timeout 10 -m 60 \
   }'
 ```
 
-### RRF 全文 + 向量融合检索
+### RRF Full-text + Vector Fusion Search
 
 ```bash
 curl --connect-timeout 10 -m 60 \
@@ -307,7 +307,7 @@ curl --connect-timeout 10 -m 60 \
           "vector": [0.01, 0.02, 0.03],
           "filter": {
             "match": {
-              "text_field": "向量检索"
+              "text_field": "vector search"
             }
           },
           "k": 10
@@ -324,7 +324,7 @@ curl --connect-timeout 10 -m 60 \
   }'
 ```
 
-### RRF + Filter 检索
+### RRF + Filter Search
 
 ```bash
 curl --connect-timeout 10 -m 60 \
@@ -341,7 +341,7 @@ curl --connect-timeout 10 -m 60 \
           "filter": {
             "bool": {
               "must": [
-                { "match": { "text_field": { "query": "向量检索" } } }
+                { "match": { "text_field": { "query": "vector search" } } }
               ],
               "filter": [
                 { "term": { "tenant_id": "tenant_a" } },
@@ -364,11 +364,11 @@ curl --connect-timeout 10 -m 60 \
   }'
 ```
 
-## 路径二：sql-vector
+## Path 2: sql-vector
 
-`sql-vector` 适合已有宽表业务接入向量能力。数据主表由宽表引擎管理，搜索索引由宽表 SQL 创建，pipeline 与检索查询通过搜索引擎 REST API 管理。
+`sql-vector` is suitable for adding vector capabilities to existing wide table businesses. The primary data table is managed by the wide table engine. The search index is created by wide table SQL. Pipelines and search queries are managed through the search engine REST API.
 
-### 建表
+### Create a Table
 
 ```sql
 CREATE TABLE IF NOT EXISTS test_text_vector (
@@ -383,7 +383,7 @@ CREATE TABLE IF NOT EXISTS test_text_vector (
 );
 ```
 
-### 创建搜索索引
+### Create a Search Index
 
 ```sql
 CREATE INDEX IF NOT EXISTS sidx USING SEARCH ON test_text_vector (
@@ -421,11 +421,11 @@ CREATE INDEX IF NOT EXISTS sidx USING SEARCH ON test_text_vector (
 );
 ```
 
-若使用 IVFBQ，把 `method.name` 改为 `ivfbq`，并在向量 mapping 中设置离线构建相关参数。IVFBQ 写入后必须触发构建。
+If IVFBQ is used, change `method.name` to `ivfbq` and set offline build-related parameters in the vector mapping. After IVFBQ data is written, index build must be triggered.
 
-### 配置 Pipeline
+### Configure Pipeline
 
-宽表创建搜索索引后，会生成同名 pipeline，例如 `default.test_text_vector.sidx`。需要创建自定义 embedding pipeline，并把它加入同名 pipeline。
+After a search index is created for the wide table, a pipeline with the same name is generated, for example `default.test_text_vector.sidx`. You need to create a custom embedding pipeline and add it to the pipeline with the same name.
 
 ```bash
 curl --connect-timeout 10 -m 60 \
@@ -462,7 +462,7 @@ curl --connect-timeout 10 -m 60 \
   }'
 ```
 
-查询时自动 embedding：
+Automatic embedding during queries:
 
 ```bash
 curl --connect-timeout 10 -m 60 \
@@ -489,7 +489,7 @@ curl --connect-timeout 10 -m 60 \
   }'
 ```
 
-绑定查询 pipeline：
+Bind the query pipeline:
 
 ```bash
 curl --connect-timeout 10 -m 60 \
@@ -503,20 +503,20 @@ curl --connect-timeout 10 -m 60 \
   }'
 ```
 
-### 写入数据
+### Write Data
 
 ```sql
 UPSERT INTO test_text_vector
   (document_id, chunking_position, title, text, metadata, chunking_number)
 VALUES
-  ('doc_001', 0, '示例文档', '这是文档内容...', '{}', 1);
+  ('doc_001', 0, 'sample document', 'This is the document content...', '{}', 1);
 ```
 
-写入 `text` 后，pipeline 自动生成 `vector_field`。如果 embedding 没有生成，检查 pipeline 是否挂到同名 pipeline、AI 地址是否为可访问的内网地址、模型维度是否与索引一致。
+After `text` is written, the pipeline automatically generates `vector_field`. If the embedding is not generated, check whether the pipeline is attached to the pipeline with the same name, whether the AI endpoint is an accessible internal network endpoint, and whether the model dimension is consistent with the index.
 
-### 构建索引
+### Build Index
 
-如果 `sql-vector` 的搜索索引使用 IVFPQ / IVFBQ，构建接口仍通过搜索引擎：
+If the search index of `sql-vector` uses IVFPQ / IVFBQ, the build interface is still called through the search engine. Before initiating `_plugins/_vector/index/build`, you must confirm that the written data volume is sufficient: the data volume must be greater than `256` records and greater than `nlist * 30`. It is recommended to trigger index build after offline data import is complete. After index build is complete, you can perform KNN queries and write operations normally.
 
 ```bash
 curl --connect-timeout 10 -m 60 \
@@ -530,9 +530,9 @@ curl --connect-timeout 10 -m 60 \
   }'
 ```
 
-### sql-vector 查询
+### sql-vector Query
 
-纯 KNN：
+Pure KNN:
 
 ```bash
 curl --connect-timeout 10 -m 60 \
@@ -545,7 +545,7 @@ curl --connect-timeout 10 -m 60 \
     "query": {
       "knn": {
         "vector_field": {
-          "query_text": "人与自然",
+          "query_text": "human and nature",
           "k": 10
         }
       }
@@ -558,7 +558,7 @@ curl --connect-timeout 10 -m 60 \
   }'
 ```
 
-KNN + Filter：
+KNN + Filter:
 
 ```bash
 curl --connect-timeout 10 -m 60 \
@@ -571,7 +571,7 @@ curl --connect-timeout 10 -m 60 \
     "query": {
       "knn": {
         "vector_field": {
-          "query_text": "人与自然",
+          "query_text": "human and nature",
           "k": 10,
           "filter": {
             "term": {
@@ -590,7 +590,7 @@ curl --connect-timeout 10 -m 60 \
   }'
 ```
 
-RRF + Filter：
+RRF + Filter:
 
 ```bash
 curl --connect-timeout 10 -m 60 \
@@ -603,11 +603,11 @@ curl --connect-timeout 10 -m 60 \
     "query": {
       "knn": {
         "vector_field": {
-          "query_text": "人与自然",
+          "query_text": "human and nature",
           "filter": {
             "bool": {
               "must": [
-                { "match": { "text": "人与自然" } }
+                { "match": { "text": "human and nature" } }
               ],
               "filter": [
                 { "term": { "document_id": "doc_001" } }
@@ -630,63 +630,63 @@ curl --connect-timeout 10 -m 60 \
   }'
 ```
 
-## `ext` 参数逻辑（重要）
+## `ext` Parameter Logic (Important)
 
-`ext.lvector` 是 Lindorm 向量检索请求中的扩展参数块，不同检索场景下 `ext` 的内容有固定规则，**不可混用**。
+`ext.lvector` is the extension parameter block in Lindorm vector search requests. The content of `ext` follows fixed rules for different search scenarios and **must not be mixed incorrectly**.
 
-### 规则速查表
+### Quick Rule Table
 
-| 检索场景 | `ext.lvector` 中的字段 | 说明 |
+| Search Scenario | Fields in `ext.lvector` | Description |
 |----------|------------------------|------|
-| **纯 KNN** | `ef_search` | 只做向量近邻搜索，无过滤、无全文 |
-| **KNN + 标量过滤** | `filter_type` + `ef_search` | 有 `term`/`range` 等标量 filter 条件时必须加 `filter_type` |
-| **RRF 全文+向量融合** | `hybrid_search_type` + `rrf_rank_constant` + `rrf_knn_weight_factor` | filter 中包含 `match`（全文检索）时才用 RRF |
-| **RRF + 标量过滤** | `filter_type` + `hybrid_search_type` + `rrf_rank_constant` + `rrf_knn_weight_factor` + `ef_search` | 同时有全文 `match` 和标量 `term`/`range` 过滤 |
+| **Pure KNN** | `ef_search` | Performs only vector nearest-neighbor search, without filtering or full-text search |
+| **KNN + scalar filtering** | `filter_type` + `ef_search` | `filter_type` must be added when scalar filter conditions such as `term` or `range` exist |
+| **RRF full-text + vector fusion** | `hybrid_search_type` + `rrf_rank_constant` + `rrf_knn_weight_factor` | RRF is used only when the filter contains `match`, which means full-text search |
+| **RRF + scalar filtering** | `filter_type` + `hybrid_search_type` + `rrf_rank_constant` + `rrf_knn_weight_factor` + `ef_search` | Used when both full-text `match` and scalar `term` or `range` filtering exist |
 
-### 各字段含义
+### Field Meanings
 
-| 字段 | 值 | 何时出现 |
+| Field | Value | When It Appears |
 |------|----|----------|
-| `"ef_search"` | `"200"` (字符串) | 几乎所有场景都建议设置；HNSW 搜索精度参数 |
-| `"filter_type"` | `"efficient_filter"` | **有标量过滤条件**（`term` / `range` / `bool.filter`）时必须设置 |
-| `"hybrid_search_type"` | `"filter_rrf"` | **全文+向量 RRF 融合检索**时必须设置 |
-| `"rrf_rank_constant"` | `"60"` (字符串) | 仅在 RRF 融合时设置；RRF 公式中的常数 k |
-| `"rrf_knn_weight_factor"` | `"0.5"` (字符串) | 仅在 RRF 融合时设置；向量得分在融合中的权重 |
-| `"nprobe"` | `"80"` (字符串) | **仅 IVFPQ / IVFBQ**：查询时探查的聚类中心数；越大召回越高、延迟越大 |
-| `"reorder_factor"` | `"2"` (字符串) | **仅 IVFPQ / IVFBQ**：精排候选倍数，先用量化检索取 `k * reorder_factor`，再用原始向量精排回 k 个 |
-| `"client_refactor"` | `"true"` (字符串) | **仅 IVFPQ / IVFBQ**：开启客户端精排，与 `reorder_factor` 配合使用 |
+| `"ef_search"` | `"200"` (string) | Recommended in almost all scenarios. It is the HNSW search accuracy parameter. |
+| `"filter_type"` | `"efficient_filter"` | Must be set when **scalar filter conditions** exist, such as `term`, `range`, or `bool.filter`. |
+| `"hybrid_search_type"` | `"filter_rrf"` | Must be set for **full-text + vector RRF fusion search**. |
+| `"rrf_rank_constant"` | `"60"` (string) | Set only during RRF fusion. It is the constant k in the RRF formula. |
+| `"rrf_knn_weight_factor"` | `"0.5"` (string) | Set only during RRF fusion. It is the weight of the vector score in fusion. |
+| `"nprobe"` | `"80"` (string) | **IVFPQ / IVFBQ only**: Number of cluster centers probed during query. A larger value improves recall but increases latency. |
+| `"reorder_factor"` | `"2"` (string) | **IVFPQ / IVFBQ only**: Candidate multiplier for reranking. Quantized search first retrieves `k * reorder_factor` candidates, then original vectors are used to rerank back to k results. |
+| `"client_refactor"` | `"true"` (string) | **IVFPQ / IVFBQ only**: Enables client-side reranking and is used together with `reorder_factor`. |
 
-> **HNSW vs IVFPQ/IVFBQ ext 字段差异**：
-> - HNSW 索引检索时只用 `ef_search`，**不要**传 `nprobe` / `reorder_factor` / `client_refactor`（这些参数对 HNSW 无意义）。
-> - IVFPQ / IVFBQ 索引检索时**用 `nprobe` 替代 `ef_search`**，并按需追加 `reorder_factor` + `client_refactor` 控制精排。
-> - 上面"规则速查表"和下面"判断逻辑"以 HNSW 为基准；如果索引是 IVFPQ/IVFBQ，把其中的 `ef_search` 替换为 `nprobe` 即可。
+> **Differences between HNSW and IVFPQ/IVFBQ ext fields**:
+> - HNSW index search uses only `ef_search`. **Do not** pass `nprobe`, `reorder_factor`, or `client_refactor`, because these parameters are meaningless for HNSW.
+> - IVFPQ / IVFBQ index search **uses `nprobe` instead of `ef_search`**, and can optionally add `reorder_factor` + `client_refactor` to control reranking.
+> - The preceding "Quick Rule Table" and following "Decision Logic" use HNSW as the baseline. If the index is IVFPQ/IVFBQ, replace `ef_search` with `nprobe`.
 
-### 判断逻辑
+### Decision Logic
 
 ```text
-query.knn.<field>.filter 中：
-├── 无 filter  → ext = { "ef_search": "200" }
-├── 仅有 term/range/bool.filter（标量过滤）
+In query.knn.<field>.filter:
+├── No filter  → ext = { "ef_search": "200" }
+├── Only term/range/bool.filter exists, which means scalar filtering
 │   → ext = { "filter_type": "efficient_filter", "ef_search": "200" }
-├── 仅有 match（全文检索，触发 RRF）
+├── Only match exists, which means full-text search and triggers RRF
 │   → ext = { "hybrid_search_type": "filter_rrf", "rrf_rank_constant": "60", "rrf_knn_weight_factor": "0.5" }
-└── 同时有 match + term/range（全文 + 标量）
+└── Both match and term/range exist, which means full-text + scalar filtering
     → ext = { "filter_type": "efficient_filter", "hybrid_search_type": "filter_rrf", "rrf_rank_constant": "60", "rrf_knn_weight_factor": "0.5", "ef_search": "200" }
 ```
 
-### 常见错误
+### Common Mistakes
 
-| 错误 | 后果 | 正确做法 |
+| Mistake | Consequence | Correct Practice |
 |------|------|----------|
-| 纯 KNN 时加了 `filter_type` | 不影响但冗余 | 去掉 `filter_type` |
-| 有标量 filter 但没加 `filter_type` | 过滤可能不生效或性能差 | 加 `"filter_type": "efficient_filter"` |
-| 纯全文匹配却加了 RRF 三件套 | 语义错误 | 纯全文直接用 `match` query 不需要 knn |
-| RRF 场景漏了 `hybrid_search_type` | 向量和全文不会融合，只返回向量结果 | 必须加完整 RRF 三件套 |
-| 把 `rrf_rank_constant` 写成数字 `60` | 类型错误 | 必须是字符串 `"60"` |
+| Adding `filter_type` for pure KNN | Does not affect results but is redundant | Remove `filter_type` |
+| Having a scalar filter but not adding `filter_type` | Filtering may not take effect or performance may be poor | Add `"filter_type": "efficient_filter"` |
+| Adding the three RRF fields for pure full-text matching | Semantic error | Use a pure `match` query directly; knn is not needed |
+| Missing `hybrid_search_type` in an RRF scenario | Vector and full-text results are not fused, and only vector results are returned | Add the complete set of RRF fields |
+| Writing `rrf_rank_constant` as number `60` | Type error | It must be the string `"60"` |
 
-## 验收证据
+## Acceptance Evidence
 
-向量检索流程完成后，至少报告：
+After the vector search workflow is complete, report at least:
 
 ```text
 [Target] instance=<instance_id> network=<public|vpc>

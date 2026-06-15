@@ -1,53 +1,55 @@
-# Lindorm SQL 建表语句指南
+# Lindorm SQL Table Creation Statement Guide
 
-本文档提供 Lindorm 宽表建表语句的完整指南，包括语法、最佳实践和高级特性。
+This document provides a complete guide to Lindorm wide table creation statements, including syntax, best practices, and advanced features.
 
-## 数据类型
+## Data Types
 
-### 数据类型查找规则
-当使用 Lindorm 宽表引擎建表时，需要了解其支持的数据类型。Lindorm 宽表引擎支持基础数据类型、JSON 数据类型和空间数据类型。
-1. 当用户提到的数据类型不在 Lindorm 宽表引擎支持的数据类型范围内时，需要提示用户 Lindorm 宽表引擎支持的数据类型，并提供相关文档链接。
-2. 数据类型优先从下文的表格中选择。
-3. 当数据类型不在下文表格中时，需要查找官方文档：
-   - **基础数据类型**: https://help.aliyun.com/zh/lindorm/developer-reference/basic-data-types
-   - **JSON 数据类型**: https://help.aliyun.com/zh/lindorm/developer-reference/json-data-type
-   - **空间数据类型**: https://help.aliyun.com/zh/lindorm/developer-reference/spatial-data-type-1
-4. 如果数据类型仍然不在支持范围内，需要提示用户不支持该数据类型或联系技术支持。
+### Data Type Lookup Rules
 
-### 基本数据类型
+When creating tables with the Lindorm wide table engine, you need to understand the supported data types. The Lindorm wide table engine supports basic data types, JSON data types, and spatial data types.
 
-| 类型 | 字节长度 | 说明 | Java 映射 | 取值范围/精度 |
+1. If the data type mentioned by the user is not within the supported data types of the Lindorm wide table engine, tell the user which data types are supported and provide relevant documentation links.
+2. Prefer selecting data types from the table below.
+3. If the data type is not in the table below, look up the official documentation:
+   - **Basic data types**: https://help.aliyun.com/zh/lindorm/developer-reference/basic-data-types
+   - **JSON data type**: https://help.aliyun.com/zh/lindorm/developer-reference/json-data-type
+   - **Spatial data type**: https://help.aliyun.com/zh/lindorm/developer-reference/spatial-data-type-1
+4. If the data type is still not supported, tell the user that the data type is not supported or ask them to contact technical support.
+
+### Basic Data Types
+
+| Type | Byte Length | Description | Java Mapping | Value Range / Precision |
 |------|----------|------|-----------|----------------|
-| BOOLEAN | 1 字节 | 布尔型 | java.lang.Boolean | true / false |
-| TINYINT | 1 字节 | 8 位精确数值 | java.lang.Byte | -128 ~ 127 (有符号) |
-| SMALLINT | 2 字节 | 16 位精确数值 | java.lang.Short | -32768 ~ 32767 |
-| INTEGER | 4 字节 | 32 位精确数值 | java.lang.Integer | -2^31 ~ 2^31-1 |
-| BIGINT | 8 字节 | 64 位精确数值 | java.lang.Long | -2^63 ~ 2^63-1 |
-| FLOAT | 4 字节 | 单精度浮点数 | java.lang.Float | 约 7 位有效数字 |
-| DOUBLE | 8 字节 | 双精度浮点数 | java.lang.Double | 约 15-17 位有效数字，科学计数法表示 |
-| DECIMAL(precision, scale) | 变长 | 高精度十进制 | java.math.BigDecimal | precision: [1,38], scale: [0,precision] |
-| VARCHAR | 变长 | 变长字符串 | java.lang.String | 最大 2MB，支持中文 |
-| CHAR(n) | n 字节 | 定长字符串 | java.lang.String | 固定长度 n，不足自动补空格 |
-| BINARY(n) | n 字节 | 定长二进制 | byte[] | 固定 n 字节，不足补 0，超出截断 |
-| VARBINARY | 变长 | 变长二进制 | byte[] | 作为主键时只能是最后一列 |
-| DATE | 4 字节 | 日期（仅日期无时间） | java.sql.Date | YYYY-MM-DD，**不推荐**（时区转换易出错） |
-| TIME | 4 字节 | 时间 | java.sql.Time | HH:mm:ss，受时区影响 |
-| TIMESTAMP | 8 字节 | 时间戳 | java.sql.Timestamp | 0001-01-01 00:00:00 ~ 9999-12-31 23:59:59 |
+| BOOLEAN | 1 byte | Boolean type | java.lang.Boolean | true / false |
+| TINYINT | 1 byte | 8-bit exact numeric value | java.lang.Byte | -128 ~ 127 (signed) |
+| SMALLINT | 2 bytes | 16-bit exact numeric value | java.lang.Short | -32768 ~ 32767 |
+| INTEGER | 4 bytes | 32-bit exact numeric value | java.lang.Integer | -2^31 ~ 2^31-1 |
+| BIGINT | 8 bytes | 64-bit exact numeric value | java.lang.Long | -2^63 ~ 2^63-1 |
+| FLOAT | 4 bytes | Single-precision floating-point number | java.lang.Float | About 7 significant digits |
+| DOUBLE | 8 bytes | Double-precision floating-point number | java.lang.Double | About 15 to 17 significant digits, represented in scientific notation |
+| DECIMAL(precision, scale) | Variable | High-precision decimal | java.math.BigDecimal | precision: [1,38], scale: [0,precision] |
+| VARCHAR | Variable | Variable-length string | java.lang.String | Up to 2 MB, supports Chinese characters |
+| CHAR(n) | n bytes | Fixed-length string | java.lang.String | Fixed length n. Missing characters are automatically padded with spaces. |
+| BINARY(n) | n bytes | Fixed-length binary | byte[] | Fixed n bytes. Missing bytes are padded with 0, and extra bytes are truncated. |
+| VARBINARY | Variable | Variable-length binary | byte[] | Can only be the last column when used as a primary key |
+| DATE | 4 bytes | Date only, without time | java.sql.Date | YYYY-MM-DD, **not recommended** because time zone conversion is error-prone |
+| TIME | 4 bytes | Time | java.sql.Time | HH:mm:ss, affected by time zone |
+| TIMESTAMP | 8 bytes | Timestamp | java.sql.Timestamp | 0001-01-01 00:00:00 ~ 9999-12-31 23:59:59 |
 
-**重要说明**:
-- **TIMESTAMP**: Lindorm 支持的最大值为 `9999-12-31 23:59:59`，而 MySQL 仅支持到 `2038-01-19 03:14:07`
-- **DECIMAL**: 适用于金额等高精度场景，监控等精度要求不高的场景推荐使用 FLOAT/DOUBLE
-- **DATE/TIME**: 在时区转换过程中易出现日期错误，建议避免使用
+**Important notes**:
+- **TIMESTAMP**: The maximum value supported by Lindorm is `9999-12-31 23:59:59`, while MySQL supports only up to `2038-01-19 03:14:07`.
+- **DECIMAL**: Suitable for high-precision scenarios such as amounts. For monitoring scenarios where precision requirements are not high, FLOAT or DOUBLE is recommended.
+- **DATE/TIME**: Date errors can easily occur during time zone conversion. Avoid using them.
 
-### JSON 数据类型
+### JSON Data Type
 
-**适用引擎**: 仅宽表引擎支持（要求版本 2.6.2+）
+**Applicable engine**: Supported only by the wide table engine. Version 2.6.2 or later is required.
 
-**限制**: 主键列不支持 JSON 类型
+**Limit**: Primary key columns do not support the JSON type.
 
-**建表语法**:
+**Table creation syntax**:
 ```sql
--- 创建表时指定 JSON 列
+-- Specify a JSON column when creating a table.
 CREATE TABLE tb (
     p1 INT,
     c1 VARCHAR,
@@ -55,28 +57,28 @@ CREATE TABLE tb (
     PRIMARY KEY(p1)
 );
 
--- 修改表添加 JSON 列
+-- Add a JSON column to an existing table.
 ALTER TABLE tb ADD c3 JSON;
 ```
 
-### 类型使用建议
+### Type Usage Recommendations
 
-- **主键列**: 推荐使用 VARCHAR 或 BIGINT，VARBINARY 只能作为最后一列主键
-- **时间戳**: 优先使用 TIMESTAMP（范围更大），或使用 BIGINT (毫秒)
-- **大文本**: 使用 VARCHAR，最大 2MB
-- **二进制**: 使用 BINARY(n) 或 VARBINARY
-- **高精度数值**: 使用 DECIMAL(如金额)
-- **一般数值**: 使用 INTEGER/BIGINT/FLOAT/DOUBLE
-- **避免使用**: DATE、TIME（时区问题）
+- **Primary key columns**: VARCHAR or BIGINT is recommended. VARBINARY can only be the last primary key column.
+- **Timestamp**: Prefer TIMESTAMP, which has a larger range, or use BIGINT in milliseconds.
+- **Large text**: Use VARCHAR, up to 2 MB.
+- **Binary data**: Use BINARY(n) or VARBINARY.
+- **High-precision numeric values**: Use DECIMAL, such as for amounts.
+- **General numeric values**: Use INTEGER, BIGINT, FLOAT, or DOUBLE.
+- **Avoid**: DATE and TIME because of time zone issues.
 
-## 基础语法
+## Basic Syntax
 
-**注意事项**:
-- 只能基于本 Skill 文档中明确记载的内容回答用户问题，严禁推测、联想或生成文档中不存在的 SQL 语法、参数、功能或配置。
-- 如果文档中没有相关信息，必须明确告知用户“当前文档未收录此内容”，并引导用户查阅官方文档。
-- 生成的代码示例必须基于文档中的模板，参数和语法必须与文档一致。
+**Notes**:
+- Answer user questions only based on content explicitly documented in this Skill. Do not infer, associate, or generate SQL syntax, parameters, features, or configurations that are not present in the documentation.
+- If the documentation does not contain relevant information, clearly tell the user "This content is not included in the current documentation" and guide the user to official documentation.
+- Generated code examples must be based on templates in the documentation. Parameters and syntax must be consistent with the documentation.
 
-### CREATE TABLE 语法
+### CREATE TABLE Syntax
 
 ```sql
 CREATE TABLE [ IF NOT EXISTS ] table_identifier
@@ -93,9 +95,9 @@ CREATE TABLE [ IF NOT EXISTS ] table_identifier
 [ WITH table_options ]
 ```
 
-**语法要素说明：**
+**Syntax element descriptions:**
 
-| 语法要素 | 说明                                                                    |
+| Syntax Element | Description                                                                    |
 |---------|-----------------------------------------------------------------------|
 | column_definition | `column_identifier data_type [ NOT NULL ] [ DEFAULT default_value ] ` |
 | primary_key | `column_identifier [ ',' column_identifier (ASC\|DESC)]`              |
@@ -104,15 +106,15 @@ CREATE TABLE [ IF NOT EXISTS ] table_identifier
 | table_options | `'(' option_definition (',' option_definition )* ')'`                 |
 | option_definition | `option_identifier '=' string_literal`                                |
 
-### DEFAULT 子句
+### DEFAULT Clause
 
-列定义支持通过 DEFAULT 子句设置默认值。
+Column definitions support setting default values through the DEFAULT clause.
 
-**限制：**
-- 默认值只能是列类型的常量表达式或无参函数 `NOW()`
-- 不可以设置为 NULL
+**Limits:**
+- The default value can only be a constant expression of the column type or the no-argument function `NOW()`.
+- It cannot be set to NULL.
 
-**示例：**
+**Example:**
 ```sql
 CREATE TABLE orders (
   id VARCHAR NOT NULL,
@@ -123,22 +125,22 @@ CREATE TABLE orders (
 );
 ```
 
-### 命名规范
+### Naming Rules
 
-**表名（table_identifier）：**
-- 可包含数字、大小写英文字符、半角句号（.）、中划线（-）和下划线（_）
-- 不能以半角句号（.）或中划线（-）开头
-- 长度为 1~255 字符
+**Table name (table_identifier):**
+- Can contain digits, uppercase and lowercase English letters, half-width periods (.), hyphens (-), and underscores (_).
+- Cannot start with a half-width period (.) or hyphen (-).
+- Length is 1 to 255 characters.
 
-**列名（column_identifier）：**
-- 可包含数字、大小写英文字符、半角句号（.）、中划线（-）和下划线（_）
-- 不允许使用系统保留关键字
-- 长度不能超过 255 字节
+**Column name (column_identifier):**
+- Can contain digits, uppercase and lowercase English letters, half-width periods (.), hyphens (-), and underscores (_).
+- System reserved keywords are not allowed.
+- Length cannot exceed 255 bytes.
 
-### 基础建表示例
+### Basic Table Creation Examples
 
 ```sql
--- 基础表
+-- Basic table.
 CREATE TABLE orders (
   channel VARCHAR NOT NULL,
   id VARCHAR NOT NULL,
@@ -148,7 +150,7 @@ CREATE TABLE orders (
   PRIMARY KEY(channel, id, ts)
 );
 
--- 带表属性的表
+-- Table with table properties.
 CREATE TABLE orders (
   channel VARCHAR NOT NULL,
   id VARCHAR NOT NULL,
@@ -161,33 +163,33 @@ CREATE TABLE orders (
 );
 ```
 
-## 主键设计
+## Primary Key Design
 
-### 主键特性
+### Primary Key Characteristics
 
-- **不可修改**：主键在建表时确定，建表后不可增加、删除、更换顺序或修改数据类型
-- **唯一性**：所有主键列共同组成 RowKey，在一张表里是唯一的
-- **聚簇索引**：数据按照主键顺序存储，遵循最左匹配原则
+- **Immutable**: The primary key is determined when the table is created. After table creation, primary key columns cannot be added, deleted, reordered, or changed to another data type.
+- **Uniqueness**: All primary key columns together form the RowKey, which is unique within a table.
+- **Clustered index**: Data is stored in primary key order and follows the leftmost prefix principle.
 
-### 主键限制
+### Primary Key Limits
 
-- 单个主键列的最大长度为 2 KB
-- 所有主键列的长度之和不能超过 30 KB
-- 单个非主键列的最大长度不能超过 2 MB
+- The maximum length of a single primary key column is 2 KB.
+- The total length of all primary key columns cannot exceed 30 KB.
+- The maximum length of a single non-primary-key column cannot exceed 2 MB.
 
-### 主键设计最佳实践
+### Primary Key Design Best Practices
 
-#### 避免热点问题
+#### Avoid Hotspot Issues
 
 ```sql
--- 错误示例：递增主键导致写入热点
+-- Incorrect example: an incremental primary key causes write hotspots.
 CREATE TABLE logs (
   timestamp BIGINT NOT NULL,
   message VARCHAR,
   PRIMARY KEY(timestamp)
 );
 
--- 正确示例：使用 HASH 打散
+-- Correct example: use HASH sharding.
 CREATE TABLE logs (
   timestamp BIGINT NOT NULL,
   hostname VARCHAR NOT NULL,
@@ -196,19 +198,19 @@ CREATE TABLE logs (
 );
 ```
 
-#### 主键设计原则
+#### Primary Key Design Principles
 
-1. **主键第一列尽量分散**：不建议使用相同前缀
-2. **避免自增数据**：如时间戳列作为第一列
-3. **避免枚举值**：如 order_type 作为第一列
-4. **主键列数量**：建议控制在 1~3 个
-5. **主键值长度**：建议尽量短小，使用固定长度类型
+1. **Make the first primary key column as scattered as possible**: Using the same prefix is not recommended.
+2. **Avoid auto-increment data**: For example, do not use a timestamp column as the first column.
+3. **Avoid enum values**: For example, do not use order_type as the first column.
+4. **Number of primary key columns**: It is recommended to use 1 to 3 columns.
+5. **Primary key value length**: Keep values short whenever possible and use fixed-length types.
 
-#### 常见场景设计
+#### Common Scenario Designs
 
-**日志/时序数据：**
+**Log and time series data:**
 ```sql
--- 查询某机器某指标某段时间数据
+-- Query data of a specific metric on a specific machine within a time range.
 CREATE TABLE logs (
   hostname VARCHAR NOT NULL,
   log_event VARCHAR NOT NULL,
@@ -217,7 +219,7 @@ CREATE TABLE logs (
   PRIMARY KEY(hostname, log_event, timestamp)
 );
 
--- 查询最新数据（倒序）
+-- Query latest data in descending order.
 CREATE TABLE logs (
   hostname VARCHAR NOT NULL,
   log_event VARCHAR NOT NULL,
@@ -226,7 +228,7 @@ CREATE TABLE logs (
   PRIMARY KEY(hostname, log_event, timestamp DESC)
 );
 
--- 时间维度数据量大，使用分桶打散
+-- When the time dimension has a large data volume, use buckets for sharding.
 CREATE TABLE logs (
   bucket BIGINT NOT NULL,
   timestamp BIGINT NOT NULL,
@@ -235,12 +237,12 @@ CREATE TABLE logs (
   content VARCHAR,
   PRIMARY KEY(bucket, timestamp, hostname, log_event)
 );
--- 写入时：bucket = timestamp % numBuckets
+-- During writes: bucket = timestamp % numBuckets
 ```
 
-**交易数据：**
+**Transaction data:**
 ```sql
--- 按卖家查询
+-- Query by seller.
 CREATE TABLE seller_orders (
   seller_id VARCHAR NOT NULL,
   timestamp BIGINT NOT NULL,
@@ -249,7 +251,7 @@ CREATE TABLE seller_orders (
   PRIMARY KEY(seller_id, timestamp, order_number)
 );
 
--- 按买家查询
+-- Query by buyer.
 CREATE TABLE buyer_orders (
   buyer_id VARCHAR NOT NULL,
   timestamp BIGINT NOT NULL,
@@ -258,7 +260,7 @@ CREATE TABLE buyer_orders (
   PRIMARY KEY(buyer_id, timestamp, order_number)
 );
 
--- 按订单号查询
+-- Query by order number.
 CREATE TABLE order_index (
   order_number VARCHAR NOT NULL,
   seller_id VARCHAR,
@@ -267,22 +269,22 @@ CREATE TABLE order_index (
 );
 ```
 
-## HASH 主键打散
+## HASH Primary Key Sharding
 
-使用 HASH 函数将数据分散到不同分片，避免数据倾斜和热点问题。
+Use HASH functions to distribute data across different shards, avoiding data skew and hotspot issues.
 
-### 支持的 HASH 算法
+### Supported HASH Algorithms
 
-| 算法 | 说明 |
+| Algorithm | Description |
 |------|------|
-| hash8 | 8 位 HASH，存储消耗最小 |
-| hash32 | 32 位 HASH，每对 keyValue 额外消耗 4 Bytes |
-| hash64 | 64 位 HASH，存储消耗最大 |
+| hash8 | 8-bit HASH with the lowest storage overhead |
+| hash32 | 32-bit HASH, consuming an additional 4 bytes for each keyValue pair |
+| hash64 | 64-bit HASH with the highest storage overhead |
 
-### 使用示例
+### Usage Examples
 
 ```sql
--- 对单个主键列使用 HASH
+-- Use HASH on a single primary key column.
 CREATE TABLE t1 (
   p1 BIGINT,
   p2 INTEGER,
@@ -291,7 +293,7 @@ CREATE TABLE t1 (
   PRIMARY KEY(hash32(p1), p1, p2)
 );
 
--- 对多个主键列使用 HASH
+-- Use HASH on multiple primary key columns.
 CREATE TABLE t2 (
   p1 BIGINT,
   p2 INTEGER,
@@ -301,43 +303,43 @@ CREATE TABLE t2 (
 );
 ```
 
-### 注意事项
+### Notes
 
-- HASH 函数表达式必须放在主键最前面
-- 已使用 HASH 算法的主键列不支持修改
-- 查询时必须指定所有已使用 HASH 算法的主键列的值
-- HASH 列只支持等值查询，不支持范围查询
-- 使用主键 HASH 打散后，不支持 bulkload 方式导入数据
+- The HASH function expression must be placed at the beginning of the primary key.
+- Primary key columns that already use a HASH algorithm cannot be modified.
+- Values of all primary key columns that use the HASH algorithm must be specified during queries.
+- HASH columns support only equality queries and do not support range queries.
+- After primary key HASH sharding is used, data import through bulkload is not supported.
 
-## 表属性（WITH 子句）
+## Table Properties (WITH Clause)
 
-### 常用表属性
+### Common Table Properties
 
-| 属性 | 类型 | 说明 |
+| Property | Type | Description |
 |------|------|------|
-| COMPRESSION | STRING | 压缩算法：SNAPPY、ZSTD、LZ4。默认 ZSTD |
-| TTL | INT | 数据有效期，单位秒。默认为空（不过期） |
-| NUMREGIONS | INT | 预分区 Region 数 |
-| STARTKEY / ENDKEY | 与主键第一列类型相同 | 预分区起止 Key |
-| SPLITKEYS | 与主键第一列类型相同 | 预分区分裂点 |
-| DYNAMIC_COLUMNS | STRING | 是否开启动态列，'true' 或 'false' |
-| MUTABILITY | STRING | 索引写入模式：IMMUTABLE、MUTABLE_LATEST 等 |
-| CONSISTENCY | STRING | 一致性级别：eventual（默认）、strong |
+| COMPRESSION | STRING | Compression algorithm: SNAPPY, ZSTD, or LZ4. The default value is ZSTD. |
+| TTL | INT | Data validity period in seconds. The default value is empty, which means no expiration. |
+| NUMREGIONS | INT | Number of pre-split regions |
+| STARTKEY / ENDKEY | Same as the first primary key column type | Start and end keys for pre-splitting |
+| SPLITKEYS | Same as the first primary key column type | Split points for pre-splitting |
+| DYNAMIC_COLUMNS | STRING | Whether to enable dynamic columns: 'true' or 'false' |
+| MUTABILITY | STRING | Index write mode, such as IMMUTABLE or MUTABLE_LATEST |
+| CONSISTENCY | STRING | Consistency level: eventual (default) or strong |
 
-### 示例
+### Examples
 
 ```sql
--- 设置压缩和 TTL
+-- Set compression and TTL.
 CREATE TABLE logs (
   id VARCHAR NOT NULL,
   content VARCHAR,
   PRIMARY KEY(id)
 ) WITH (
   COMPRESSION = 'ZSTD',
-  TTL = '2592000'  -- 30 天
+  TTL = '2592000'  -- 30 days
 );
 
--- 设置预分区
+-- Set pre-splitting.
 CREATE TABLE orders (
   id VARCHAR NOT NULL,
   amount BIGINT,
@@ -349,14 +351,14 @@ CREATE TABLE orders (
 );
 ```
 
-## 动态列
+## Dynamic Columns
 
-动态列允许在建表时未显式定义的列在运行时动态写入。
+Dynamic columns allow columns that are not explicitly defined during table creation to be dynamically written at runtime.
 
-### 开启动态列
+### Enable Dynamic Columns
 
 ```sql
--- 建表时开启
+-- Enable during table creation.
 CREATE TABLE t_dynamic (
   p1 INT,
   c1 INT,
@@ -364,47 +366,47 @@ CREATE TABLE t_dynamic (
   PRIMARY KEY(p1)
 ) WITH (DYNAMIC_COLUMNS = 'true');
 
--- 已有表开启
+-- Enable for an existing table.
 ALTER TABLE t_dynamic SET 'DYNAMIC_COLUMNS' = 'true';
 ```
 
-### 写入动态列
+### Write Dynamic Columns
 
-动态列的数据类型均为 VARBINARY（字节数组）。
+The data type of dynamic columns is VARBINARY, which is a byte array.
 
 ```sql
--- SQL 文本写入（值为 HexString）
+-- SQL text write. The value is a HexString.
 UPSERT INTO t_dynamic (p1, c2, c3) VALUES (1, '1', '41');
 
--- 使用 x'' 语法指定 HexString（SQL 引擎 2.6.8+）
+-- Use x'' syntax to specify a HexString. Requires SQL engine 2.6.8 or later.
 UPSERT INTO t_dynamic (p1, c4) VALUES (3, x'ef0011');
 ```
 
-### 查询动态列
+### Query Dynamic Columns
 
 ```sql
--- 显式指定动态列
+-- Explicitly specify dynamic columns.
 SELECT p1, c2, c3, c4 FROM t_dynamic WHERE p1 = 1;
 
--- 使用 SELECT *（必须添加 LIMIT）
+-- Use SELECT *. LIMIT must be added.
 SELECT * FROM t_dynamic LIMIT 10;
 ```
 
-## 通配符列
+## Wildcard Columns
 
-通配符列实现多数据类型动态列写入，解决动态列仅支持 VARBINARY 的限制。
+Wildcard columns implement dynamic column writes for multiple data types and resolve the limitation that dynamic columns support only VARBINARY.
 
-### 支持的通配符
+### Supported Wildcards
 
-| 通配符 | 说明 |
+| Wildcard | Description |
 |--------|------|
-| * | 匹配任意字符序列，包括空序列 |
-| ? | 匹配任意单个字符 |
+| * | Matches any character sequence, including an empty sequence |
+| ? | Matches any single character |
 
-### 使用示例
+### Usage Example
 
 ```sql
--- 创建带通配符列的表
+-- Create a table with wildcard columns.
 CREATE TABLE tb (
   pk INTEGER,
   c1 VARCHAR,
@@ -413,22 +415,22 @@ CREATE TABLE tb (
   PRIMARY KEY(pk)
 ) WITH (wildcard_column = 'c2*,c3*');
 
--- 写入数据
+-- Write data.
 UPSERT INTO tb(pk, c1, c2, c21, c22, c31) VALUES (1, 'a1', 2, 21, 22, 'c3');
 ```
 
-### 限制
+### Limits
 
-- 通配符列不能作为主键
-- SELECT * 查询必须添加 LIMIT
-- 仅支持为通配符列创建搜索索引，不支持二级索引
-- 不支持使用通配符列名进行数据查询，必须使用实际列名
+- Wildcard columns cannot be used as primary keys.
+- SELECT * queries must add LIMIT.
+- Only search indexes can be created for wildcard columns. Secondary indexes are not supported.
+- Querying data by wildcard column names is not supported. Actual column names must be used.
 
-## 索引（建表时创建）
+## Indexes Created During Table Creation
 
-在 CREATE TABLE 语句中通过 KEY 或 INDEX 子句创建索引。
+Create indexes in CREATE TABLE statements by using KEY or INDEX clauses.
 
-### 语法
+### Syntax
 
 ```sql
 CREATE TABLE table_name (
@@ -441,19 +443,19 @@ CREATE TABLE table_name (
 );
 ```
 
-### 索引类型
+### Index Types
 
-| 类型 | 关键字 | 说明 |
+| Type | Keyword | Description |
 |------|--------|------|
-| 二级索引 | KV（默认） | 适用于非主键匹配场景 |
-| 搜索索引 | SEARCH | 适用于多维查询、分词、模糊查询场景 |
+| Secondary index | KV (default) | Suitable for non-primary-key matching scenarios |
+| Search index | SEARCH | Suitable for multidimensional queries, analyzer queries, and fuzzy queries |
 
-### 冗余列设置
+### Redundant Column Settings
 
-在建表时创建索引，可通过 INCLUDE 或 WITH (INDEX_COVERED_TYPE) 设置冗余列：
+When creating indexes during table creation, you can set redundant columns through INCLUDE or WITH (INDEX_COVERED_TYPE):
 
 ```sql
--- 显式指定冗余列
+-- Explicitly specify redundant columns.
 CREATE TABLE sensor (
     device_id VARCHAR NOT NULL,
     region VARCHAR NOT NULL,
@@ -464,7 +466,7 @@ CREATE TABLE sensor (
     KEY (temperature, time) INCLUDE (humidity)
 );
 
--- 冗余所有已定义列
+-- Redundantly store all defined columns.
 CREATE TABLE sensor (
     device_id VARCHAR NOT NULL,
     region VARCHAR NOT NULL,
@@ -476,10 +478,10 @@ CREATE TABLE sensor (
 );
 ```
 
-### 示例
+### Examples
 
 ```sql
--- 创建表同时创建二级索引
+-- Create a table and a secondary index at the same time.
 CREATE TABLE orders (
   order_id VARCHAR NOT NULL,
   user_id VARCHAR NOT NULL,
@@ -488,7 +490,7 @@ CREATE TABLE orders (
   INDEX idx_user USING KV (user_id) INCLUDE (amount)
 );
 
--- 创建表同时创建搜索索引
+-- Create a table and a search index at the same time.
 CREATE TABLE products (
   id VARCHAR NOT NULL,
   name VARCHAR,
@@ -498,9 +500,9 @@ CREATE TABLE products (
 );
 ```
 
-## CREATE INDEX 语法
+## CREATE INDEX Syntax
 
-单独创建索引的语法。
+Syntax for creating an index separately.
 
 ```sql
 CREATE INDEX [IF NOT EXISTS] [index_name]
@@ -511,55 +513,55 @@ CREATE INDEX [IF NOT EXISTS] [index_name]
   [ WITH (index_options) ];
 ```
 
-### 索引类型
+### Index Types
 
-| 参数 | 索引类型 | 说明 |
+| Parameter | Index Type | Description |
 |------|----------|------|
-| KV | 二级索引 | 默认类型，每表最多 3 个 |
-| SEARCH | 搜索索引 | 全文搜索，每表最多 1 个 |
-| COLUMNAR | 列存索引 | 分析计算，每表最多 1 个 |
+| KV | Secondary index | Default type. Each table supports up to 3 secondary indexes. |
+| SEARCH | Search index | Full-text search. Each table supports up to 1 search index. |
+| COLUMNAR | Columnar index | Analytical computing. Each table supports up to 1 columnar index. |
 
-### 列存索引开通条件
+### Columnar Index Enablement Conditions
 
-**旧版列存索引**（默认，已正式发布）：
+**Legacy columnar index** (default, officially released):
 
-| 引擎 | 作用 |
+| Engine | Purpose |
 |------|------|
-| 宽表引擎 | 源数据存储 |
-| LindormDFS | 文件存储（版本 >= 4.0.0） |
-| 计算引擎 | 执行分析查询 |
+| Wide table engine | Source data storage |
+| LindormDFS | File storage, version >= 4.0.0 |
+| Compute engine | Executes analytical queries |
 
-**开通说明**：
+**Enablement instructions**:
 
-1. **开通 Lindorm 计算引擎**
-2. **购买计算资源**（为宽表引擎到计算引擎的数据同步购买计算资源）
+1. **Enable the Lindorm compute engine**.
+2. **Purchase compute resources** for data synchronization from the wide table engine to the compute engine.
 
-**控制台开通路径**：
+**Console enablement path**:
 
-1. 登录 [Lindorm 控制台](https://lindorm.console.aliyun.com/)
-2. 在实例列表页，单击**目标实例ID**
-3. 在左侧导航栏，选择**宽表引擎**
-4. 单击**列存索引**页签，并单击**立即开通**
-5. 在弹出的对话框中单击**确定**
+1. Log on to the [Lindorm console](https://lindorm.console.aliyun.com/).
+2. On the instance list page, click the **target instance ID**.
+3. In the left-side navigation pane, choose **Wide Table Engine**.
+4. Click the **Columnar Index** tab and click **Enable Now**.
+5. In the dialog box, click **OK**.
 
-**创建列存索引示例**（旧版，已正式发布）：
+**Columnar index creation example** (legacy version, officially released):
 
 ```sql
--- 创建列存索引（旧版，同步延迟约15分钟）
+-- Create a columnar index. Legacy version, with synchronization latency of about 15 minutes.
 CREATE INDEX idx_columnar USING COLUMNAR ON my_table(
   pk0, pk1, pt_d, col0, col1
 )
 PARTITION BY ENUMERABLE (pt_d, bucket(16, pk0))
 WITH (
-  `lindorm_columnar.user.index.database` = 'my_index_db',  -- 列存索引所在库名
-  `lindorm_columnar.user.index.table` = 'my_index_tbl'     -- 列存索引表名
+  `lindorm_columnar.user.index.database` = 'my_index_db',  -- Database name of the columnar index.
+  `lindorm_columnar.user.index.table` = 'my_index_tbl'     -- Table name of the columnar index.
 );
 ```
 
-**查询列存索引**：
+**Query a columnar index**:
 
 ```sql
--- 使用 HINT 指定走列存索引查询
+-- Use HINT to specify that the query uses the columnar index.
 SELECT /*+ _use_ldps_(cg_name), _columnar_index_ */
   pk1, SUM(col0)
 FROM my_db.my_table
@@ -567,238 +569,238 @@ WHERE pt_d = '2024-01-01'
 GROUP BY pk1;
 ```
 
-> **注意**：`cg_name` 为计算引擎 OLAP 资源组的名称。
+> **Note**: `cg_name` is the name of the compute engine OLAP resource group.
 
 ---
 
-### 新版列存索引（实时同步）
+### New Columnar Index Version (Real-time Synchronization)
 
-> ⚠️ **如需秒级同步延迟**，可使用新版列存索引，目前处于**邀测阶段**。
+> ⚠️ **If second-level synchronization latency is required**, you can use the new columnar index version, which is currently in **invited preview**.
 
-**新旧版对比**：
+**Comparison between the legacy and new versions**:
 
-| 特性 | 旧版列存索引 | 新版列存索引 |
+| Feature | Legacy Columnar Index | New Columnar Index |
 |------|-------------|-------------|
-| **同步延迟** | 15 分钟 | **实时（秒级）** |
-| **数据新鲜度** | 延迟较高 | 近实时 |
-| **适用场景** | 离线分析 | 实时分析 |
-| **版本状态** | 已正式发布 | 邀测阶段 |
+| **Synchronization latency** | 15 minutes | **Real-time, second-level** |
+| **Data freshness** | High latency | Near real-time |
+| **Scenario** | Offline analytics | Real-time analytics |
+| **Version status** | Officially released | Invited preview |
 
-**申请方式**：
-- 联系 Lindorm 技术支持申请使用（可在阿里云官网提交工单或联系您的客户经理）
+**Application method**:
+- Contact Lindorm technical support to apply for use. You can submit a ticket on the Alibaba Cloud official website or contact your account manager.
 
-**新版引擎版本要求**：
+**Engine version requirements for the new version**:
 
-| 引擎 | 版本要求 | 作用 |
+| Engine | Version Requirement | Purpose |
 |------|---------|------|
-| 宽表引擎 | >= 2.8.6 | 源数据存储 |
-| LTS | >= 3.9.1 | 日志实时订阅 |
-| 列存引擎 | >= 3.10.15 | 索引数据存储 |
-| 计算引擎 | - | 执行分析查询 |
+| Wide table engine | >= 2.8.6 | Source data storage |
+| LTS | >= 3.9.1 | Real-time log subscription |
+| Columnar engine | >= 3.10.15 | Index data storage |
+| Compute engine | - | Executes analytical queries |
 
-> **重要区别**：新版列存索引依赖**列存引擎**存储索引数据，支持秒级同步；旧版不依赖列存引擎，同步延迟约15分钟。
+> **Key difference**: The new columnar index version depends on the **columnar engine** to store index data and supports second-level synchronization. The legacy version does not depend on the columnar engine and has synchronization latency of about 15 minutes.
 
-**新版创建语法**：
+**New version creation syntax**:
 
-新增 `lindorm_columnar.user.index.type = 'LCE'` 属性：
+Add the `lindorm_columnar.user.index.type = 'LCE'` property:
 
 ```sql
--- 创建列存索引（新版，秒级同步）
+-- Create a columnar index. New version with second-level synchronization.
 CREATE INDEX idx_columnar USING COLUMNAR ON my_table(
   pk0, pk1, pt_d, col0, col1
 )
 PARTITION BY ENUMERABLE (pt_d, bucket(16, pk0))
 WITH (
-  `lindorm_columnar.user.index.database` = 'my_index_db',  -- 列存索引所在库名
-  `lindorm_columnar.user.index.table` = 'my_index_tbl',     -- 列存索引表名
-  `lindorm_columnar.user.index.type` = 'LCE'               -- 新版必填，指定走新版链路
+  `lindorm_columnar.user.index.database` = 'my_index_db',  -- Database name of the columnar index.
+  `lindorm_columnar.user.index.table` = 'my_index_tbl',     -- Table name of the columnar index.
+  `lindorm_columnar.user.index.type` = 'LCE'               -- Required for the new version. Specifies the new link.
 );
 ```
 
-> **重要**：`lindorm_columnar.user.index.type = 'LCE'` 为新版必填项，缺失则走旧版链路（15分钟延迟）。
+> **Important**: `lindorm_columnar.user.index.type = 'LCE'` is required for the new version. If it is missing, the legacy link is used, with 15-minute latency.
 
-**官方文档**：[列存索引新版](https://help.aliyun.com/zh/lindorm/user-guide/column-store-index-new-version)
+**Official documentation**: [New columnar index version](https://help.aliyun.com/zh/lindorm/user-guide/column-store-index-new-version)
 
-### 搜索索引（Search Index）— 底层依赖 LindormSearch 引擎
+### Search Index — Depends on the LindormSearch Engine at the Underlying Layer
 
-> **引擎说明**：搜索索引的底层引擎为 LindormSearch（API 代码 V1=`solr`，V2=`lsearch`），**对外兼容 Elasticsearch 7.10 API**（端口 30070），不提供 Solr API 接口。宽表 SQL 中的搜索索引通过 LTS 将数据自动同步至 LindormSearch，用户无需直接操作搜索引擎。
+> **Engine description**: The underlying engine of search indexes is LindormSearch. API code V1 is `solr`, and V2 is `lsearch`. It is externally compatible with Elasticsearch 7.10 APIs on port 30070 and does not provide Solr APIs. Search indexes in wide table SQL automatically synchronize data to LindormSearch through LTS. Users do not need to operate the search engine directly.
 >
 
-> ⚠️ **重要**：搜索索引需要先在控制台开通后才能使用，否则创建索引会报 `SERVER INTERNAL ERROR`。
+> ⚠️ **Important**: Search indexes must be enabled in the console before use. Otherwise, index creation reports `SERVER INTERNAL ERROR`.
 
-**开通步骤**：
+**Enablement steps**:
 
-1. 登录 [Lindorm 控制台](https://lindorm.console.aliyun.com/)
-2. 在实例列表页，单击**目标实例ID**
-3. 在左侧导航栏，单击**宽表引擎** → **搜索索引**
-4. 点击「立即开通」
-4. 配置以下参数：
+1. Log on to the [Lindorm console](https://lindorm.console.aliyun.com/).
+2. On the instance list page, click the **target instance ID**.
+3. In the left-side navigation pane, click **Wide Table Engine** → **Search Index**.
+4. Click **Enable Now**.
+5. Configure the following parameters:
 
-| 参数 | 说明 | 建议 |
+| Parameter | Description | Recommendation |
 |------|------|------|
-| 搜索节点规格 | 搜索引擎处理能力 | 16核64GB（QPS 500+，写入 TPS 50000+） |
-| 搜索节点数量 | 搜索节点个数 | 至少 2 个（避免单点故障） |
-| LTS 数据同步规格 | 数据同步服务 | 4核16GB |
-| LTS 节点数量 | 同步节点个数 | 建议 2 个 |
-| 存储空间 | 搜索引擎存储大小 | 按数据量评估 |
+| Search node specification | Processing capability of the search engine | 16 cores and 64 GB, for QPS 500+ and write TPS 50000+ |
+| Number of search nodes | Number of search nodes | At least 2, to avoid a single point of failure |
+| LTS data synchronization specification | Data synchronization service | 4 cores and 16 GB |
+| Number of LTS nodes | Number of synchronization nodes | 2 nodes are recommended |
+| Storage space | Search engine storage size | Estimate based on data volume |
 
-> **依赖说明**：搜索索引依赖 LTS 数据同步服务，开通时会同时开通 LTS。如已开通备份恢复或数据订阅功能，则无需重复开通 LTS。
+> **Dependency description**: Search indexes depend on the LTS data synchronization service. LTS is enabled at the same time when this feature is enabled. If backup and restore or data subscription has already been enabled, LTS does not need to be enabled again.
 
-**官方文档**：https://help.aliyun.com/zh/lindorm/user-guide/enable-the-search-index-feature
+**Official documentation**: https://help.aliyun.com/zh/lindorm/user-guide/enable-the-search-index-feature
 
-#### 搜索索引适用场景
+#### Search Index Applicable Scenarios
 
-| 场景 | 说明 | 示例 |
+| Scenario | Description | Example |
 |------|------|------|
-| 多维组合查询 | 任意索引列随机组合查询 | `WHERE c1=? AND c2=?` 或 `WHERE c3=?` |
-| 分词查询 | 文本分词匹配 | `MATCH(content) AGAINST('关键词')` |
-| 模糊查询 | LIKE 后缀/包含 | `WHERE name LIKE '%关键词%'` |
-| 聚合分析 | COUNT/SUM/MIN/MAX/AVG | `SELECT COUNT(*) GROUP BY` |
-| 排序分页 | 任意索引列排序 | `ORDER BY create_time DESC LIMIT 10` |
+| Multidimensional combined query | Random combinations of any index columns | `WHERE c1=? AND c2=?` or `WHERE c3=?` |
+| Analyzer query | Text tokenization matching | `MATCH(content) AGAINST('keyword')` |
+| Fuzzy query | LIKE suffix or contains query | `WHERE name LIKE '%keyword%'` |
+| Aggregate analysis | COUNT/SUM/MIN/MAX/AVG | `SELECT COUNT(*) GROUP BY` |
+| Sorting and pagination | Sort by any index column | `ORDER BY create_time DESC LIMIT 10` |
 
-#### 分词查询语法（MATCH AGAINST）
+#### Analyzer Query Syntax (MATCH AGAINST)
 
-搜索索引支持分词查询，使用 `MATCH ... AGAINST` 语法：
+Search indexes support analyzer queries by using the `MATCH ... AGAINST` syntax:
 
 ```sql
--- 创建带分词器的搜索索引
+-- Create a search index with analyzers.
 CREATE INDEX idx_text USING SEARCH ON articles (
   title(type=text, analyzer=ik),
   content(type=text, analyzer=ik)
 );
 
--- 分词查询：查询 content 列包含"功能介绍"的记录
-SELECT * FROM articles WHERE MATCH(content) AGAINST('功能介绍');
+-- Analyzer query: query records whose content column contains "feature introduction".
+SELECT * FROM articles WHERE MATCH(content) AGAINST('feature introduction');
 
--- 会匹配包含"功能"、"介绍"或"功能介绍"的记录
+-- Matches records that contain "feature", "introduction", or "feature introduction".
 ```
 
-**支持的分词器**：
+**Supported analyzers**:
 
-| 分词器 | 说明 |
+| Analyzer | Description |
 |--------|------|
-| standard | 标准分词器（默认） |
-| ik | 中文智能分词（推荐） |
-| english | 英文分词 |
-| whitespace | 按空格分词 |
-| comma | 按逗号分词 |
+| standard | Standard analyzer, used by default |
+| ik | Chinese intelligent analyzer, recommended for Chinese text |
+| english | English analyzer |
+| whitespace | Tokenizes by spaces |
+| comma | Tokenizes by commas |
 
-#### 数据类型限制
+#### Data Type Limits
 
-> ⚠️ 搜索索引**不支持以下数据类型**：DECIMAL、DATE、TIME。如需使用，请用 DOUBLE 替代 DECIMAL，用 TIMESTAMP 替代 DATE/TIME。
+> ⚠️ Search indexes **do not support the following data types**: DECIMAL, DATE, and TIME. If needed, use DOUBLE instead of DECIMAL, and use TIMESTAMP instead of DATE or TIME.
 
-**错误示例**：搜索索引列使用 DECIMAL 会报错 `Incompatible data type casting`
+**Incorrect example**: Using DECIMAL in a search index column reports `Incompatible data type casting`.
 
-#### 索引构建时间
+#### Index Build Time
 
-| 索引类型 | 构建时间（实测参考） |
+| Index Type | Build Time, Based on Actual Test Reference |
 |---------|-------------------|
-| 二级索引(KV) | 约 10 秒 |
-| 搜索索引(SEARCH) | **约 30 秒** |
+| Secondary index (KV) | About 10 seconds |
+| Search index (SEARCH) | **About 30 seconds** |
 
-> 在索引构建完成前执行查询仍会报"低效查询拦截"错误。实际构建时间因数据量而异，建议创建索引后等待足够时间再查询。
+> Queries executed before index construction is complete still report a "low-efficiency query interception" error. Actual build time varies by data volume. It is recommended to wait long enough after creating an index before querying.
 
-#### 冷热分离场景注意事项
+#### Notes for Hot and Cold Data Separation Scenarios
 
-> ⚠️ 如果实例已开启冷热分离功能，搜索索引构建过程会回查数据，冷存储（容量型云存储）的限流会直接影响索引构建效率，可能导致写入操作出现反压现象。
+> ⚠️ If hot and cold data separation is enabled for an instance, the search index construction process reads back data. Cold storage throttling of capacity-based cloud storage directly affects index construction efficiency and may cause backpressure on write operations.
 
-**开通冷存储前提**：
-- 需先在控制台开通**容量型云存储**作为冷存储介质
-- 开通路径：登录 Lindorm 控制台 → 选择地域 → 实例列表 → 目标实例ID → 左侧导航栏**冷存储** → 单击**开通**
-- ⚠️ **警告**：开通过程需要**滚动重启实例**，可能导致读写请求**延迟波动或连接中断**，建议在业务低峰期操作
-- 实例存储类型为**本地 HDD 盘**时，不支持开通容量型云存储
+**Prerequisites for enabling cold storage**:
+- Capacity-based cloud storage must be enabled in the console as the cold storage medium first.
+- Enablement path: log on to the Lindorm console → select a region → instance list → target instance ID → **Cold Storage** in the left-side navigation pane → click **Enable**.
+- ⚠️ **Warning**: The enablement process requires a **rolling restart of the instance**, which may cause **latency fluctuation or connection interruption** for read and write requests. It is recommended to perform this operation during off-peak hours.
+- Instances that use **local HDD disks** as the storage type do not support capacity-based cloud storage.
 
-**建议**：
-- 在数据写入热存储期间完成索引构建
-- 或临时提升冷存储读取限流
+**Recommendations**:
+- Complete index construction while data is written to hot storage.
+- Or temporarily increase the cold storage read throttling limit.
 
-### 二级索引冗余列（INCLUDE）
+### Secondary Index Redundant Columns (INCLUDE)
 
-冗余列用于将其他列的数据复制到索引表中，避免查询时回表主表，提升查询性能。
+Redundant columns are used to copy data from other columns to the index table, avoiding lookups against the primary table during queries and improving query performance.
 
-**默认行为**：
-- Lindorm SQL 2.9.3.10 及以上版本：未指定 INCLUDE 时，默认**不冗余**任何列
-- Lindorm SQL 2.9.3.10 之前版本：未指定 INCLUDE 时，默认**冗余所有列**
+**Default behavior**:
+- Lindorm SQL 2.9.3.10 and later: If INCLUDE is not specified, **no columns are redundantly stored** by default.
+- Versions earlier than Lindorm SQL 2.9.3.10: If INCLUDE is not specified, **all columns are redundantly stored** by default.
 
-**冗余所有列（INDEX_COVERED_TYPE）**：
+**Redundantly store all columns (INDEX_COVERED_TYPE)**:
 
-如果需要冗余所有列，可通过索引属性 `INDEX_COVERED_TYPE` 设置：
+If all columns need to be redundantly stored, you can set the index property `INDEX_COVERED_TYPE`:
 
-| 取值 | 说明 |
+| Value | Description |
 |------|------|
-| COVERED_ALL_COLUMNS_IN_SCHEMA | 冗余主表中所有已定义的列 |
-| COVERED_DYNAMIC_COLUMNS | 冗余所有列，包括动态列（适用于动态表） |
+| COVERED_ALL_COLUMNS_IN_SCHEMA | Redundantly stores all defined columns in the primary table |
+| COVERED_DYNAMIC_COLUMNS | Redundantly stores all columns, including dynamic columns. Applicable to dynamic tables. |
 
 ```sql
--- 冗余所有已定义列
+-- Redundantly store all defined columns.
 CREATE INDEX idx_user ON orders (user_id) 
   WITH (INDEX_COVERED_TYPE = 'COVERED_ALL_COLUMNS_IN_SCHEMA');
 
--- 动态表冗余所有列（包括动态列）
+-- Redundantly store all columns for a dynamic table, including dynamic columns.
 CREATE INDEX idx_user ON orders (user_id) 
   WITH (INDEX_COVERED_TYPE = 'COVERED_DYNAMIC_COLUMNS');
 ```
 
-**使用建议**：
-- 建议显式指定需要冗余的列，避免依赖默认行为
-- 冗余列会增加存储空间，建议只冗余查询中常用的列
-- 仅二级索引支持冗余列，搜索索引和列存索引不支持
+**Usage recommendations**:
+- Explicitly specify the columns that need to be redundantly stored. Avoid relying on default behavior.
+- Redundant columns increase storage space usage. It is recommended to redundantly store only columns commonly used in queries.
+- Only secondary indexes support redundant columns. Search indexes and columnar indexes do not support them.
 
-**注意事项**：
-- 显式指定的冗余列不可以包含主键列和索引列
+**Notes**:
+- Explicitly specified redundant columns cannot include primary key columns or index columns.
 
-**显式指定冗余列示例**：
+**Example of explicitly specifying redundant columns**:
 ```sql
--- 显式指定冗余列
+-- Explicitly specify redundant columns.
 CREATE INDEX idx_user ON orders (user_id) INCLUDE (amount, status);
 
--- 查询时可直接从索引获取 amount 和 status，无需回表
+-- During queries, amount and status can be obtained directly from the index without looking up the primary table.
 SELECT user_id, amount, status FROM orders WHERE user_id = 'u001';
 ```
 
-### 示例
+### Examples
 
 ```sql
--- 创建二级索引
+-- Create a secondary index.
 CREATE INDEX idx_user ON orders (user_id);
 
--- 创建带冗余列的二级索引
+-- Create a secondary index with redundant columns.
 CREATE INDEX idx_user ON orders (user_id) INCLUDE (amount, status);
 
--- 创建搜索索引
+-- Create a search index.
 CREATE INDEX idx_search USING SEARCH ON products (name, description);
 
--- 使用通配符创建搜索索引
+-- Create a search index by using a wildcard.
 CREATE INDEX idx_all USING SEARCH ON products (*);
 
--- 使用函数表达式创建索引
+-- Create an index by using a function expression.
 CREATE INDEX idx_hash ON orders (hash64(user_id, order_date), user_id, order_date);
 ```
 
-### 搜索索引键属性
+### Search Index Key Properties
 
 ```sql
--- 使用分词器
+-- Use analyzers.
 CREATE INDEX idx_text USING SEARCH ON articles (
   title(type=text, analyzer=ik),
   content(type=text, analyzer=ik)
 );
 ```
 
-| 属性 | 说明 |
+| Property | Description |
 |------|------|
-| indexed | 是否创建索引，默认 true |
-| rowStored | 是否存储原始数据，默认 false |
-| columnStored | 是否列存储，默认 true |
-| type | 分词字段设为 text |
-| analyzer | 分词器：standard、english、ik、whitespace、comma |
+| indexed | Whether to create an index. The default value is true. |
+| rowStored | Whether to store raw data. The default value is false. |
+| columnStored | Whether to use columnar storage. The default value is true. |
+| type | Sets the analyzed field to text |
+| analyzer | Analyzer: standard, english, ik, whitespace, or comma |
 
-## 冷热分离
+## Hot and Cold Data Separation
 
-### 基于时间戳的冷热分离
+### Timestamp-based Hot and Cold Data Separation
 
 ```sql
--- 建表时设置
+-- Set during table creation.
 CREATE TABLE dt (
   p1 INTEGER,
   p2 INTEGER,
@@ -807,18 +809,18 @@ CREATE TABLE dt (
   PRIMARY KEY(p1 DESC)
 ) WITH (
   COMPRESSION = 'ZSTD',
-  CHS = '86400',           -- 冷热分界线，单位秒
+  CHS = '86400',           -- Hot and cold boundary, in seconds.
   CHS_L2 = 'storagetype=COLD'
 );
 
--- 已有表开启
+-- Enable for an existing table.
 ALTER TABLE dt SET 'CHS' = '86400', 'CHS_L2' = 'storagetype=COLD';
 ```
 
-### 基于自定义时间列的冷热分离
+### Custom Time Column-based Hot and Cold Data Separation
 
 ```sql
--- 建表时设置
+-- Set during table creation.
 CREATE TABLE dt (
   p1 INTEGER,
   p2 BIGINT,
@@ -829,10 +831,10 @@ CREATE TABLE dt (
   COMPRESSION = 'ZSTD',
   CHS = '86400',
   CHS_L2 = 'storagetype=COLD',
-  CHS_COLUMN = 'COLUMN=p2'  -- 指定时间列
+  CHS_COLUMN = 'COLUMN=p2'  -- Specify the time column.
 );
 
--- 指定时间单位
+-- Specify the time unit.
 CREATE TABLE dt (
   p1 INTEGER,
   p2 BIGINT,
@@ -847,65 +849,65 @@ CREATE TABLE dt (
 );
 ```
 
-**CHS_COLUMN 注意事项：**
-- 自定义时间列必须为主键
-- 自定义时间列不能作为主键第一列
-- 仅支持 BIGINT 和 TIMESTAMP 类型
+**CHS_COLUMN notes:**
+- The custom time column must be a primary key column.
+- The custom time column cannot be the first primary key column.
+- Only BIGINT and TIMESTAMP types are supported.
 
-### 修改和取消冷热分离
+### Modify and Disable Hot and Cold Data Separation
 
 ```sql
--- 修改冷热分界线
+-- Modify the hot and cold boundary.
 ALTER TABLE dt SET 'CHS' = '1000';
 
--- 取消冷热分离
+-- Disable hot and cold data separation.
 ALTER TABLE dt SET 'CHS' = '', 'CHS_L2' = '', 'CHS_COLUMN' = '';
 ```
 
-## 纠删码（EC）
+## Erasure Coding (EC)
 
-纠删码是一种数据冗余存储机制，可在保证相同可靠性的同时节约存储空间。
+Erasure coding is a data redundancy storage mechanism that saves storage space while maintaining the same reliability.
 
-### 前提条件
+### Prerequisites
 
-- 宽表引擎 2.5.4+，底层存储 4.3.4+
-- 至少 7 个节点
-- 本地 HDD 盘
+- Wide table engine 2.5.4 or later, and underlying storage 4.3.4 or later.
+- At least 7 nodes.
+- Local HDD disks.
 
-### 使用方法
+### Usage
 
 ```sql
--- 建表时开启
+-- Enable during table creation.
 CREATE TABLE dt (
   p1 INTEGER,
   p2 INTEGER,
   PRIMARY KEY(p1)
 ) WITH (EC_POLICY = 'RS-4-2');
 
--- 修改纠删码算法
+-- Modify the erasure coding algorithm.
 ALTER TABLE dt SET 'EC_POLICY' = 'RS-4-2';
 
--- 删除纠删码算法
+-- Delete the erasure coding algorithm.
 ALTER TABLE dt SET 'EC_POLICY' = '';
 ```
 
-**说明：** RS-4-2 算法在存储效率上等价于 1.5 副本。
+**Description:** The RS-4-2 algorithm is equivalent to 1.5 replicas in storage efficiency.
 
-## 预分区
+## Pre-splitting
 
-建议在数据量大或使用 Bulkload 导入数据时设置预分区。
+It is recommended to configure pre-splitting when the data volume is large or when using Bulkload to import data.
 
-### 预分区数量建议
+### Recommended Number of Pre-split Regions
 
-| 场景 | 建议分区数 |
+| Scenario | Recommended Number of Regions |
 |------|-----------|
-| SQL/HBase API 写入 | 节点数 × 4 |
-| Bulkload 批量导入 | 数据量(GB) ÷ 8 |
+| SQL/HBase API writes | Number of nodes × 4 |
+| Bulkload batch import | Data volume (GB) ÷ 8 |
 
-### 示例
+### Examples
 
 ```sql
--- 指定分区数和起止 Key
+-- Specify the number of regions and the start and end keys.
 CREATE TABLE orders (
   id VARCHAR NOT NULL,
   amount BIGINT,
@@ -916,7 +918,7 @@ CREATE TABLE orders (
   ENDKEY = 'z'
 );
 
--- 指定分裂点
+-- Specify split points.
 CREATE TABLE orders (
   id INTEGER NOT NULL,
   amount BIGINT,
@@ -926,9 +928,9 @@ CREATE TABLE orders (
 );
 ```
 
-## 完整建表示例
+## Complete Table Creation Examples
 
-### 物联网设备数据表
+### IoT Device Data Table
 
 ```sql
 CREATE TABLE iot_device_data (
@@ -940,19 +942,19 @@ CREATE TABLE iot_device_data (
   PRIMARY KEY(hash32(device_id), device_id, timestamp DESC, metric_name)
 ) WITH (
   COMPRESSION = 'ZSTD',
-  TTL = '7776000',              -- 90 天
+  TTL = '7776000',              -- 90 days
   DYNAMIC_COLUMNS = 'true',
   wildcard_column = 'extra_*',
-  CHS = '2592000',              -- 30 天后归档到冷存储
+  CHS = '2592000',              -- Archive to cold storage after 30 days.
   CHS_L2 = 'storagetype=COLD',
   CHS_COLUMN = 'COLUMN=timestamp|TIMEUNIT=SECONDS'
 );
 
--- 创建按设备类型查询的二级索引
+-- Create a secondary index for queries by device type.
 CREATE INDEX idx_metric ON iot_device_data (metric_name) INCLUDE (metric_value);
 ```
 
-### 电商订单表
+### E-commerce Order Table
 
 ```sql
 CREATE TABLE orders (
@@ -971,11 +973,11 @@ CREATE TABLE orders (
   NUMREGIONS = '32'
 );
 
--- 创建搜索索引支持商品搜索
+-- Create a search index to support product search.
 CREATE INDEX idx_search USING SEARCH ON orders (items(type=text, analyzer=ik));
 ```
 
-### 日志分析表
+### Log Analysis Table
 
 ```sql
 CREATE TABLE app_logs (
@@ -988,10 +990,10 @@ CREATE TABLE app_logs (
   PRIMARY KEY(bucket, timestamp, app_id, level)
 ) WITH (
   COMPRESSION = 'ZSTD',
-  TTL = '604800',                -- 7 天
+  TTL = '604800',                -- 7 days
   EC_POLICY = 'RS-4-2',
-  CHS = '86400',                 -- 1 天后归档
+  CHS = '86400',                 -- Archive after 1 day.
   CHS_L2 = 'storagetype=COLD'
 );
--- 写入时：bucket = timestamp % 16
+-- During writes: bucket = timestamp % 16
 ```

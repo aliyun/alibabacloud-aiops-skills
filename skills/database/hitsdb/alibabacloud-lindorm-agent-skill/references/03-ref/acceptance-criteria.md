@@ -1,70 +1,70 @@
 # Acceptance Criteria: alibabacloud-lindorm-agent-skill
 
-**Scenario**: Lindorm 全场景运维管理
-**Purpose**: Skill 验收标准
+**Scenario**: Full-scenario Lindorm O&M management
+**Purpose**: Skill acceptance criteria
 
 ---
 
-## Correct CLI 命令模式
+## Correct CLI Command Patterns
 
-### 1. Lindorm API 调用（aliyun hitsdb）
+### 1. Lindorm API Calls, aliyun hitsdb
 
 #### ✅ CORRECT
 
 ```bash
-# 查询实例列表（默认上海地域）
+# Query instance list, default Shanghai region.
 aliyun hitsdb get-lindorm-instance-list --region cn-shanghai
 
-# 查询实例详情
+# Query instance details.
 aliyun hitsdb get-lindorm-instance --instance-id ld-uf6l5kr48wqm6rf1h
 
-# 查询存储详情
+# Query storage details.
 aliyun hitsdb get-lindorm-fs-used-detail --instance-id ld-uf6l5kr48wqm6rf1h
 
-# 查询 V2 实例存储详情
+# Query V2 instance storage details.
 aliyun hitsdb get-lindorm-v2-storage-usage --instance-id ld-uf64f07n285tlbaz2
 
-# 查询引擎列表
+# Query engine list.
 aliyun hitsdb get-lindorm-instance-engine-list --instance-id ld-uf6l5kr48wqm6rf1h
 
-# 查询 IP 白名单
+# Query IP whitelist.
 aliyun hitsdb get-instance-ip-white-list --instance-id ld-uf6l5kr48wqm6rf1h
 
-# 查询地域列表
+# Query region list.
 aliyun hitsdb describe-regions
 
-# 查询实例概览（所有地域）
+# Query instance overview, all regions.
 aliyun hitsdb get-instance-summary
 ```
 
 #### ❌ INCORRECT
 
 ```bash
-# 错误：实例 ID 格式错误
-aliyun hitsdb get-lindorm-instance --instance-id lindorm-xxx --region cn-shanghai  # ❌ 应使用 ld-xxx 格式
+# Error: incorrect instance ID format.
+aliyun hitsdb get-lindorm-instance --instance-id lindorm-xxx --region cn-shanghai  # ❌ Use ld-xxx format.
 
-# 错误：缺少必需参数
-aliyun hitsdb get-lindorm-instance --region cn-shanghai  # ❌ 缺少 --instance-id
+# Error: missing required parameter.
+aliyun hitsdb get-lindorm-instance --region cn-shanghai  # ❌ Missing --instance-id.
 
-# 错误：使用错误的地域格式
-aliyun hitsdb get-lindorm-instance-list --region Shanghai  # ❌ 应使用 cn-shanghai
+# Error: incorrect region format.
+aliyun hitsdb get-lindorm-instance-list --region Shanghai  # ❌ Use cn-shanghai.
 ```
 
-### 2. 云监控 API 调用（aliyun cms）
+### 2. CloudMonitor API Calls, aliyun cms
 
 #### ✅ CORRECT
 
 ```bash
-# 查询 Lindorm 监控指标列表
+# Query Lindorm monitoring metric list.
 aliyun cms describe-metric-meta-list --namespace acs_lindorm
 
-# 查询 CPU 空闲率最新数据
+# Query latest CPU idle rate data.
 aliyun cms describe-metric-last \
     --namespace acs_lindorm \
     --metric-name cpu_idle \
     --dimensions '[{"instanceId":"ld-uf6l5kr48wqm6rf1h"}]'
 
-# 查询历史监控数据（指定时间范围）
+# Query historical monitoring data, specified time range.
 aliyun cms describe-metric-data \
     --namespace acs_lindorm \
     --metric-name cpu_idle \
@@ -77,82 +77,82 @@ aliyun cms describe-metric-data \
 #### ❌ INCORRECT
 
 ```bash
-# 错误：错误的 namespace
-aliyun cms describe-metric-meta-list --namespace acs_hbase --region cn-shanghai  # ❌ 应使用 acs_lindorm
+# Error: incorrect namespace.
+aliyun cms describe-metric-meta-list --namespace acs_hbase --region cn-shanghai  # ❌ Use acs_lindorm.
 
-# 错误：错误的指标名称
-aliyun cms describe-metric-last --metric-name cpu_usage  # ❌ 应使用 cpu_idle
+# Error: incorrect metric name.
+aliyun cms describe-metric-last --metric-name cpu_usage  # ❌ Use cpu_idle.
 
-# 错误：dimensions 格式错误
-aliyun cms describe-metric-last --dimensions "instanceId=ld-xxx"  # ❌ 应使用 JSON 数组格式
+# Error: incorrect dimensions format.
+aliyun cms describe-metric-last --dimensions "instanceId=ld-xxx"  # ❌ Use JSON array format.
 ```
 
 ---
 
-## 参数验证模式
+## Parameter Validation Patterns
 
-### 1. 实例 ID 格式
+### 1. Instance ID Format
 
 #### ✅ CORRECT
 
-```
-ld-uf6l5kr48wqm6rf1h  # ✅ 以 ld- 开头，后接字母数字
-ld-bp1234567890abcdef  # ✅ 正确格式
+```text
+ld-uf6l5kr48wqm6rf1h  # ✅ Starts with ld-, followed by letters and digits.
+ld-bp1234567890abcdef  # ✅ Correct format.
 ```
 
 #### ❌ INCORRECT
 
-```
-lindorm-xxx  # ❌ 不以 ld- 开头
-ld_xxx  # ❌ 使用下划线而非连字符
-LD-XXX  # ❌ 使用大写（建议使用小写）
+```text
+lindorm-xxx  # ❌ Does not start with ld-.
+ld_xxx  # ❌ Uses underscore instead of hyphen.
+LD-XXX  # ❌ Uses uppercase. Lowercase is recommended.
 ```
 
-### 2. 地域格式
+### 2. Region Format
 
 #### ✅ CORRECT
 
-```
-cn-shanghai  # ✅ 正确格式
-cn-beijing  # ✅ 正确格式
-cn-hangzhou  # ✅ 正确格式
+```text
+cn-shanghai  # ✅ Correct format.
+cn-beijing  # ✅ Correct format.
+cn-hangzhou  # ✅ Correct format.
 ```
 
 #### ❌ INCORRECT
 
-```
-shanghai  # ❌ 缺少 cn- 前缀
-CN-SHANGHAI  # ❌ 使用大写
-cn_shanghai  # ❌ 使用下划线
+```text
+shanghai  # ❌ Missing cn- prefix.
+CN-SHANGHAI  # ❌ Uses uppercase.
+cn_shanghai  # ❌ Uses underscore.
 ```
 
-### 3. 时间格式
+### 3. Time Format
 
-时间格式规则见 SKILL.md →「时间格式」，验收正误对比：
+For time format rules, see SKILL.md → "Time format". Acceptance examples:
 
 #### ✅ CORRECT
 
 ```bash
---start-time "2026-04-14 08:00:00"  # ✅ 本地时间格式（推荐），解析为 CST
---start-time "1773897600000"        # ✅ Unix 毫秒时间戳
---start-time "2026-04-14T08:00:00Z" # ✅ ISO 8601 UTC，解析为 UTC（注意时区换算：UTC+8=CST）
+--start-time "2026-04-14 08:00:00"  # ✅ Local time format, recommended, parsed as CST.
+--start-time "1773897600000"        # ✅ Unix millisecond timestamp.
+--start-time "2026-04-14T08:00:00Z" # ✅ ISO 8601 UTC, parsed as UTC. Note timezone conversion: UTC+8=CST.
 ```
 
 #### ❌ INCORRECT
 
 ```bash
---start-time "2026-04-14T08:00Z"     # ❌ ISO 8601 短格式（无秒）不支持，报 parse param time error
---start-time "2026/04/14 08:00:00"  # ❌ 使用斜杠分隔
---start-time "08:00:00"             # ❌ 仅提供时间，缺少日期
+--start-time "2026-04-14T08:00Z"     # ❌ ISO 8601 short format without seconds is unsupported and reports parse param time error.
+--start-time "2026/04/14 08:00:00"  # ❌ Uses slashes as separators.
+--start-time "08:00:00"             # ❌ Provides only time and lacks date.
 ```
 
 ---
 
-## 输出格式验证
+## Output Format Validation
 
-### 1. 监控数据输出
+### 1. Monitoring Data Output
 
-#### ✅ CORRECT 输出结构
+#### ✅ CORRECT Output Structure
 
 ```json
 {
@@ -168,22 +168,22 @@ cn_shanghai  # ❌ 使用下划线
 }
 ```
 
-#### 验证要点
+#### Validation Points
 
-- `Datapoints` 数组存在且非空
-- 每个数据点包含 `instanceId`, `timestamp`, `Average`（部分指标含 `Maximum`/`Minimum`）
-- `Average` 在合理范围（如 CPU 空闲率 0-100）
+- `Datapoints` array exists and is not empty.
+- Each data point contains `instanceId`, `timestamp`, and `Average`. Some metrics contain `Maximum`/`Minimum`.
+- `Average` is within a reasonable range, such as 0 to 100 for CPU idle rate.
 
-### 2. 实例列表输出
+### 2. Instance List Output
 
-#### ✅ CORRECT 输出结构
+#### ✅ CORRECT Output Structure
 
 ```json
 {
   "InstanceList": [
     {
       "InstanceId": "ld-uf6l5kr48wqm6rf1h",
-      "InstanceAlias": "生产环境",
+      "InstanceAlias": "production-environment",
       "InstanceStatus": "ACTIVATION",
       "RegionId": "cn-shanghai"
     }
@@ -192,19 +192,19 @@ cn_shanghai  # ❌ 使用下划线
 }
 ```
 
-#### 验证要点
+#### Validation Points
 
-- `InstanceList` 数组存在
-- 每个实例包含 `InstanceId`, `InstanceStatus`
-- `InstanceStatus` 为有效状态值（ACTIVATION, CREATING, STOPPED）
+- `InstanceList` array exists.
+- Each instance contains `InstanceId` and `InstanceStatus`.
+- `InstanceStatus` is a valid status value: ACTIVATION, CREATING, or STOPPED.
 
 ---
 
-## 错误处理模式
+## Error Handling Patterns
 
-### 1. API 错误响应
+### 1. API Error Response
 
-#### ✅ CORRECT 错误处理
+#### ✅ CORRECT Error Handling
 
 ```json
 {
@@ -214,47 +214,47 @@ cn_shanghai  # ❌ 使用下划线
 }
 ```
 
-**处理流程**：
-1. 读取 `Code` 字段识别错误类型
-2. 参考 `references/02-ops/error-troubleshoot.md` 查找解决方案
-3. 引导用户检查参数或权限
+**Handling flow**:
+1. Read the `Code` field to identify the error type.
+2. Refer to `references/02-ops/error-troubleshoot.md` to find a solution.
+3. Guide the user to check parameters or permissions.
 
-#### ❌ INCORRECT 错误处理
+#### ❌ INCORRECT Error Handling
 
-- 忽略错误码，直接返回原始错误信息
-- 凭训练知识猜测错误原因（应查官方文档）
+- Ignore the error code and directly return the raw error message.
+- Guess the error cause based on training knowledge. Official documentation should be checked.
 
 ---
 
-## 场景触发验证
+## Scenario Trigger Validation
 
-### 正确触发场景
+### Correct Trigger Scenarios
 
-| 用户输入 | 触发场景 | 执行文档 |
+| User Input | Triggered Scenario | Execution Document |
 |---------|---------|---------|
-| "我有哪些 Lindorm 实例" | 实例查询 | `02-ops/instance-management.md` |
-| "CPU 使用率是多少" | 监控查询 | `02-ops/monitoring-guide.md` |
-| "报错 InvalidParameter" | 错误排查 | `02-ops/error-troubleshoot.md` |
-| "怎么连接 Lindorm" | 连接指南 | `01-dev/connection-guide.md` |
-| "怎么建表" | 建表指南 | `01-dev/table-design.md` |
+| "Which Lindorm instances do I have?" | Instance query | `02-ops/instance-management.md` |
+| "What is the CPU utilization?" | Monitoring query | `02-ops/monitoring-guide.md` |
+| "Error InvalidParameter" | Error troubleshooting | `02-ops/error-troubleshoot.md` |
+| "How do I connect to Lindorm?" | Connection guide | `01-dev/connection-guide.md` |
+| "How do I create a table?" | Table creation guide | `01-dev/table-design.md` |
 
-### 错误触发场景
+### Incorrect Trigger Scenarios
 
-| 用户输入 | 错误处理 |
+| User Input | Error Handling |
 |---------|---------|
-| "RDS 实例有哪些" | ❌ 不应触发 Lindorm skill，应提示使用 RDS skill |
-| "MySQL 怎么用" | ❌ 不应触发，除非明确提到 Lindorm SQL |
+| "Which RDS instances do I have?" | ❌ Should not trigger Lindorm skill. Prompt the user to use RDS skill. |
+| "How do I use MySQL?" | ❌ Should not trigger unless Lindorm SQL is explicitly mentioned. |
 
 ---
 
-## 安全规范验证
+## Security Specification Validation
 
-安全规则见 SKILL.md →「前置条件 → 凭证已配置」。
+For security rules, see SKILL.md → "Prerequisites → Credentials configured".
 
 #### ❌ FORBIDDEN
 
 ```bash
-echo $ALIBABA_CLOUD_ACCESS_KEY_ID           # ❌ 禁止读取/打印 AK/SK
-"请输入您的 AccessKey ID"                    # ❌ 禁止在对话中要求用户输入
-aliyun configure set --access-key-id LTAI5t  # ❌ 禁止硬编码凭证
+echo $ALIBABA_CLOUD_ACCESS_KEY_ID           # ❌ Reading or printing AK/SK is forbidden.
+"Please enter your AccessKey ID"            # ❌ Asking the user to enter it in the conversation is forbidden.
+aliyun configure set --access-key-id LTAI5t  # ❌ Hardcoding credentials is forbidden.
 ```

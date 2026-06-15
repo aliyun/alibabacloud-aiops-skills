@@ -1,375 +1,375 @@
-# 存储分析场景
+# Storage Analysis Scenarios
 
-当用户关心 Lindorm 实例的存储使用情况、冷热数据分布、存储增长趋势时，按本指南执行。
+Follow this guide when users care about Lindorm instance storage usage, hot/cold data distribution, or storage growth trends.
 
-## 触发条件
+## Trigger Conditions
 
-用户的典型表达：
-- "磁盘还剩多少？"
-- "存储快满了吗？"
-- "冷热存储分别用了多少？"
-- "存储增长趋势如何？"
-- "ld-xxx 使用了多少存储？"
-- "热存储使用率是多少？"
+Typical user expressions:
+- "How much disk space is left?"
+- "Is storage almost full?"
+- "How much hot storage and cold storage are used respectively?"
+- "What is the storage growth trend?"
+- "How much storage does ld-xxx use?"
+- "What is the hot storage usage percentage?"
 
-## 核心能力
+## Core Capabilities
 
-- **存储详情查询**：总容量、已用容量、冷热分布
-- **存储使用率监控**：热存储/冷存储使用率趋势
-- **存储增长分析**：历史趋势、增长速率
-- **冷热分层建议**：何时启用冷存储、冷热数据迁移策略
+- **Storage detail query**: total capacity, used capacity, and hot/cold distribution
+- **Storage usage monitoring**: hot storage and cold storage usage trends
+- **Storage growth analysis**: historical trend and growth rate
+- **Hot/cold tiering suggestions**: when to enable cold storage and hot/cold data migration strategy
 
-## 执行流程
+## Execution Flow
 
-### 流程 1：获取存储详情（快照数据）
+### Flow 1: Obtain Storage Details, Snapshot Data
 
-**适用场景**：用户想快速了解当前存储使用情况。
+**Applicable scenario**: The user wants to quickly understand current storage usage.
 
-**执行命令**：
+**Execution commands**:
 
 ```bash
-# V1 实例
+# V1 instance.
 aliyun hitsdb get-lindorm-fs-used-detail \
     --instance-id <instance-id>
 
-# V2 实例（instanceType=lindorm_v2）
+# V2 instance, instanceType=lindorm_v2.
 aliyun hitsdb get-lindorm-v2-storage-usage \
     --instance-id <instance-id>
 ```
 
-**输出呈现**：
+**Output presentation**:
 
-先给结论性摘要：
-- 总容量（热+冷）
-- 已用容量（热+冷）
-- 使用率（%）
-- 冷热分布占比
-- 告警状态（是否接近阈值）
+Give a conclusion summary first:
+- Total capacity, hot + cold
+- Used capacity, hot + cold
+- Usage percentage
+- Hot/cold distribution ratio
+- Alert status, whether close to threshold
 
-再按需展开详细字段。
+Then expand detailed fields as needed.
 
-**关键字段说明**：
+**Key field descriptions**:
 
-**V1 实例**（`get-lindorm-fs-used-detail`）：
+**V1 instance** (`get-lindorm-fs-used-detail`):
 
-| 字段 | 含义 | 单位 |
+| Field | Meaning | Unit |
 |------|------|------|
-| `FsCapacity` | 文件引擎总容量 | bytes |
-| `FsCapacityHot` | 热存储容量 | bytes |
-| `FsCapacityCold` | 冷存储容量 | bytes |
-| `FsUsedHot` | 热存储已使用 | bytes |
-| `FsUsedCold` | 冷存储已使用 | bytes |
-| `FsUsedOnLindormTable` | Lindorm 宽表已使用 | bytes |
-| `FsUsedOnLindormTableData` | 宽表数据量 | bytes |
-| `FsUsedOnLindormTableWAL` | WAL 日志量 | bytes |
+| `FsCapacity` | Total file engine capacity | bytes |
+| `FsCapacityHot` | Hot storage capacity | bytes |
+| `FsCapacityCold` | Cold storage capacity | bytes |
+| `FsUsedHot` | Used hot storage | bytes |
+| `FsUsedCold` | Used cold storage | bytes |
+| `FsUsedOnLindormTable` | Used by Lindorm wide table | bytes |
+| `FsUsedOnLindormTableData` | Wide table data size | bytes |
+| `FsUsedOnLindormTableWAL` | WAL log size | bytes |
 
-**V1 计算公式**：
+**V1 formulas**:
 
-- **总容量** = `FsCapacityHot` + `FsCapacityCold`
-- **已用容量** = `FsUsedHot` + `FsUsedCold`
-- **存储使用率** = (已用容量 / 总容量) × 100%
-- **热存储使用率** = (`FsUsedHot` / `FsCapacityHot`) × 100%
-- **冷存储使用率** = (`FsUsedCold` / `FsCapacityCold`) × 100%
+- **Total capacity** = `FsCapacityHot` + `FsCapacityCold`
+- **Used capacity** = `FsUsedHot` + `FsUsedCold`
+- **Storage usage percentage** = used capacity / total capacity × 100%
+- **Hot storage usage percentage** = `FsUsedHot` / `FsCapacityHot` × 100%
+- **Cold storage usage percentage** = `FsUsedCold` / `FsCapacityCold` × 100%
 
-**V2 实例**（`get-lindorm-v2-storage-usage`）：
+**V2 instance** (`get-lindorm-v2-storage-usage`):
 
-| 字段 | 含义 | 单位 |
+| Field | Meaning | Unit |
 |------|------|------|
-| `UsageByDiskCategory[]` | 按磁盘类型的使用详情数组 | — |
-| └ `diskType` | 磁盘类型 | `PerformanceCloudStorage`（热）/ `CapacityCloudStorage`（冷） |
-| └ `capacity` | 磁盘容量 | bytes |
-| └ `used` | 已使用量 | bytes |
-| └ `usedLindormTable` | 宽表已使用 | bytes |
-| └ `usedLindormTsdb` | 时序已使用 | bytes |
-| `CapacityByDiskCategory[]` | 按磁盘类别的容量信息 | — |
-| └ `category` | 类别 | `PERF_CLOUD_ESSD_PL1` / `REMOTE_CAP_OSS` 等 |
-| └ `capacity` | 容量 | GB |
+| `UsageByDiskCategory[]` | Usage details array by disk type | — |
+| └ `diskType` | Disk type | `PerformanceCloudStorage`, hot / `CapacityCloudStorage`, cold |
+| └ `capacity` | Disk capacity | bytes |
+| └ `used` | Used capacity | bytes |
+| └ `usedLindormTable` | Used by wide table | bytes |
+| └ `usedLindormTsdb` | Used by time series | bytes |
+| `CapacityByDiskCategory[]` | Capacity information by disk category | — |
+| └ `category` | Category | `PERF_CLOUD_ESSD_PL1` / `REMOTE_CAP_OSS`, etc. |
+| └ `capacity` | Capacity | GB |
 
-**V2 计算公式**：
+**V2 formulas**:
 
-- **热存储使用率** = `PerformanceCloudStorage.used` / `PerformanceCloudStorage.capacity` × 100%
-- **冷存储使用率** = `CapacityCloudStorage.used` / `CapacityCloudStorage.capacity` × 100%
-- **总使用量** = Σ 各 diskType 的 `used`
+- **Hot storage usage percentage** = `PerformanceCloudStorage.used` / `PerformanceCloudStorage.capacity` × 100%
+- **Cold storage usage percentage** = `CapacityCloudStorage.used` / `CapacityCloudStorage.capacity` × 100%
+- **Total used capacity** = sum of `used` for each diskType
 
-**示例输出**：
+**Example output**:
 
-```
-【存储使用情况】实例 ld-uf6l5kr48wqm6rf1h
+```text
+[Storage Usage] Instance ld-uf6l5kr48wqm6rf1h
 
-【总容量】800GB（热存储 500GB + 冷存储 300GB）
-【已用容量】520GB（65%）
-  - 热存储已用：320GB（64%）
-  - 冷存储已用：200GB（67%）
-【状态】⚠️ 热存储接近阈值（推荐 < 80%）
+[Total Capacity] 800GB, hot storage 500GB + cold storage 300GB
+[Used Capacity] 520GB, 65%
+  - Hot storage used: 320GB, 64%
+  - Cold storage used: 200GB, 67%
+[Status] ⚠️ Hot storage is close to the threshold, recommended < 80%
 
-【存储分布】
-- Lindorm 宽表：480GB（数据 450GB + WAL 30GB）
-- 其他：40GB
+[Storage Distribution]
+- Lindorm wide table: 480GB, data 450GB + WAL 30GB
+- Others: 40GB
 
-【建议】热存储使用率较高，建议：
-1. 检查是否可将历史数据迁移到冷存储
-2. 考虑扩容热存储或启用自动冷热分层
+[Suggestions] Hot storage usage is high. Recommended actions:
+1. Check whether historical data can be migrated to cold storage.
+2. Consider expanding hot storage or enabling automatic hot/cold tiering.
 
-📍 在控制台查看存储详情：
-1. 控制台：https://lindorm.console.aliyun.com/
-2. 点击实例 ID "ld-xxx"
-3. 左侧菜单：存储信息
-4. 查看：
-   - 总存储容量
-   - 热存储使用量/使用率
-   - 冷存储使用量/使用率
-   - 存储增长趋势（最近 7 天/30 天）
+View storage details in the console:
+1. Console: https://lindorm.console.aliyun.com/
+2. Click instance ID "ld-xxx".
+3. Left-side menu: Storage Information.
+4. View:
+   - Total storage capacity
+   - Hot storage usage / usage percentage
+   - Cold storage usage / usage percentage
+   - Storage growth trend, last 7 days / 30 days
 
-📍 在 ClusterManager 查看详细存储分析：
-1. 控制台 → ld-xxx → 数据库连接 → "通过 ClusterManager 访问"
-2. 存储分析 → 查看：
-   - 表级存储占用 Top 10
-   - 列族存储分布
-   - 数据膨胀分析
+View detailed storage analysis in ClusterManager:
+1. Console → ld-xxx → Database Connection → "Access through ClusterManager".
+2. Storage Analysis → View:
+   - Top 10 tables by storage usage
+   - Column family storage distribution
+   - Data bloat analysis
 
-需要查看存储增长趋势吗？
+Do you need to view the storage growth trend?
 ```
 
 ---
 
-### 流程 2：查询存储使用率（实时监控）
+### Flow 2: Query Storage Usage Percentage, Real-time Monitoring
 
-**适用场景**：用户想查看最新的存储使用率（通过云监控）。
+**Applicable scenario**: The user wants to view the latest storage usage percentage through CloudMonitor.
 
-**执行命令**：
+**Execution commands**:
 
 ```bash
-# 热存储使用率
+# Hot storage usage percentage.
 aliyun cms describe-metric-last \
     --namespace acs_lindorm \
     --metric-name hot_storage_used_percent \
     --dimensions '[{"instanceId":"<instance-id>"}]'
 
-# 冷存储使用率
+# Cold storage usage percentage.
 aliyun cms describe-metric-last \
     --namespace acs_lindorm \
     --metric-name cold_storage_used_percent \
     --dimensions '[{"instanceId":"<instance-id>"}]'
 ```
 
-**输出呈现**：
-- 当前热存储使用率
-- 当前冷存储使用率
-- 是否接近告警阈值（80%）
+**Output presentation**:
+- Current hot storage usage percentage
+- Current cold storage usage percentage
+- Whether it is close to the alert threshold, 80%
 
 ---
 
-### 流程 3：查询存储历史趋势
+### Flow 3: Query Historical Storage Trend
 
-**适用场景**：用户想分析存储增长趋势、预测何时需要扩容。
+**Applicable scenario**: The user wants to analyze storage growth trends and predict when scaling is needed.
 
-**执行命令**：
+**Execution commands**:
 
 ```bash
-# 热存储已使用量（过去 7 天，每小时 1 个点）
+# Hot storage used bytes, one data point per hour for the past 7 days.
 aliyun cms describe-metric-data \
     --namespace acs_lindorm \
     --metric-name hot_storage_used_bytes \
     --dimensions '[{"instanceId":"<instance-id>"}]' \
-    --start-time "<7天前 格式: YYYY-MM-DD HH:MM:SS>" \
-    --end-time "<当前时间 格式: YYYY-MM-DD HH:MM:SS>" \
+    --start-time "<7 days ago format: YYYY-MM-DD HH:MM:SS>" \
+    --end-time "<current time format: YYYY-MM-DD HH:MM:SS>" \
     --period 3600
 
-# 冷存储已使用量（过去 7 天，每小时 1 个点）
+# Cold storage used bytes, one data point per hour for the past 7 days.
 aliyun cms describe-metric-data \
     --namespace acs_lindorm \
     --metric-name cold_storage_used_bytes \
     --dimensions '[{"instanceId":"<instance-id>"}]' \
-    --start-time "<7天前 格式: YYYY-MM-DD HH:MM:SS>" \
-    --end-time "<当前时间 格式: YYYY-MM-DD HH:MM:SS>" \
+    --start-time "<7 days ago format: YYYY-MM-DD HH:MM:SS>" \
+    --end-time "<current time format: YYYY-MM-DD HH:MM:SS>" \
     --period 3600
 ```
 
-**分析要点**：
-- 计算日均增长量（GB/天）
-- 预测存储耗尽时间（按当前增长速率）
-- 判断增长趋势（线性/指数/平稳）
+**Analysis points**:
+- Calculate average daily growth, GB/day
+- Predict storage exhaustion time based on current growth rate
+- Determine growth trend, such as linear, exponential, or stable
 
-**示例输出**：
+**Example output**:
 
-```
-【存储增长趋势】实例 ld-uf6l5kr48wqm6rf1h（过去 7 天）
+```text
+[Storage Growth Trend] Instance ld-uf6l5kr48wqm6rf1h, past 7 days
 
-【热存储】
-- 7 天前：280GB
-- 当前：320GB
-- 增长量：40GB（日均 5.7GB）
-- 趋势：线性增长
-- 预测：按当前速率，热存储将在 32 天后达到 80% 阈值
+[Hot Storage]
+- 7 days ago: 280GB
+- Current: 320GB
+- Growth: 40GB, daily average 5.7GB
+- Trend: linear growth
+- Prediction: At the current rate, hot storage will reach the 80% threshold in 32 days.
 
-【冷存储】
-- 7 天前：195GB
-- 当前：200GB
-- 增长量：5GB（日均 0.7GB）
-- 趋势：平稳
+[Cold Storage]
+- 7 days ago: 195GB
+- Current: 200GB
+- Growth: 5GB, daily average 0.7GB
+- Trend: stable
 
-【建议】
-- 短期：热存储增长较快，建议 1 个月内扩容或启用自动冷热分层
-- 长期：冷存储增长平稳，暂无压力
+[Suggestions]
+- Short term: Hot storage is growing quickly. It is recommended to scale out or enable automatic hot/cold tiering within 1 month.
+- Long term: Cold storage growth is stable and has no current pressure.
 
-如需更多细节，可参考官方存储管理指南：
+For more details, see the official storage management guide:
 https://help.aliyun.com/zh/lindorm/user-guide/storage-management
 
-📚 冷热分层配置指南：
+Hot/cold tiering configuration guide:
 https://help.aliyun.com/zh/lindorm/user-guide/hot-and-cold-separation/
 
-需要帮您配置冷热分层策略吗？
+Do you need help configuring a hot/cold tiering policy?
 ```
 
 ---
 
-## 存储相关监控指标
+## Storage-related Monitoring Metrics
 
-### 热存储指标
+### Hot Storage Metrics
 
-| 指标名称 | 描述 | 单位 | 告警阈值 |
+| Metric Name | Description | Unit | Alert Threshold |
 |----------|------|------|----------|
-| `hot_storage_total_bytes` | 热存储总容量 | bytes | - |
-| `hot_storage_used_bytes` | 热存储已使用 | bytes | - |
-| `hot_storage_used_percent` | 热存储使用率 | % | > 80% |
+| `hot_storage_total_bytes` | Total hot storage capacity | bytes | - |
+| `hot_storage_used_bytes` | Used hot storage | bytes | - |
+| `hot_storage_used_percent` | Hot storage usage percentage | % | > 80% |
 
-### 冷存储指标
+### Cold Storage Metrics
 
-| 指标名称 | 描述 | 单位 | 告警阈值 |
+| Metric Name | Description | Unit | Alert Threshold |
 |----------|------|------|----------|
-| `cold_storage_total_bytes` | 冷存储总容量 | bytes | - |
-| `cold_storage_used_bytes` | 冷存储已使用 | bytes | - |
-| `cold_storage_used_percent` | 冷存储使用率 | % | > 80% |
+| `cold_storage_total_bytes` | Total cold storage capacity | bytes | - |
+| `cold_storage_used_bytes` | Used cold storage | bytes | - |
+| `cold_storage_used_percent` | Cold storage usage percentage | % | > 80% |
 
-### 其他存储指标
+### Other Storage Metrics
 
-| 指标名称 | 描述 | 单位 |
+| Metric Name | Description | Unit |
 |----------|------|------|
-| `storage_total_bytes` | 存储空间总量 | bytes |
-| `storage_used_bytes` | 存储空间使用量 | bytes |
-| `storage_used_percent` | 存储空间使用比例 | % |
-| `table_hot_storage_used_bytes` | 宽表热存储使用量 | bytes |
-| `table_cold_storage_used_bytes` | 宽表冷存储使用量 | bytes |
-| `tsdb_hot_storage_used_bytes` | 时序热存储使用量 | bytes |
-| `tsdb_cold_storage_used_bytes` | 时序冷存储使用量 | bytes |
+| `storage_total_bytes` | Total storage space | bytes |
+| `storage_used_bytes` | Used storage space | bytes |
+| `storage_used_percent` | Storage usage percentage | % |
+| `table_hot_storage_used_bytes` | Wide table hot storage usage | bytes |
+| `table_cold_storage_used_bytes` | Wide table cold storage usage | bytes |
+| `tsdb_hot_storage_used_bytes` | Time series hot storage usage | bytes |
+| `tsdb_cold_storage_used_bytes` | Time series cold storage usage | bytes |
 
 ---
 
-## 存储使用率阈值与告警
+## Storage Usage Thresholds and Alerts
 
-Lindorm 默认磁盘使用率阈值为 **80%**。
+The default Lindorm disk usage threshold is **80%**.
 
-| 存储使用率 | 状态 | 影响 | 建议 |
+| Storage Usage | Status | Impact | Suggestion |
 |-----------|------|------|------|
-| < 60% | ✅ 正常 | 无影响 | 持续监控 |
-| 60% - 80% | ⚠️ 关注 | 无影响 | 考虑扩容计划 |
-| 80% - 90% | ⚠️ 告警 | 写入性能下降 | 尽快扩容或清理数据 |
-| 90% - 95% | 🚨 严重告警 | 写入性能严重下降 | 立即扩容或清理数据 |
-| ≥ 95% | 🔴 系统禁止写入 | 系统自动禁止数据写入（硬限制） | 必须扩容后才能恢复写入 |
+| < 60% | ✅ Normal | No impact | Continue monitoring |
+| 60% - 80% | ⚠️ Attention | No impact | Consider a scaling plan |
+| 80% - 90% | ⚠️ Alert | Write performance decreases | Scale out or clean up data as soon as possible |
+| 90% - 95% | 🚨 Critical alert | Write performance decreases severely | Scale out or clean up data immediately |
+| ≥ 95% | 🔴 System prohibits writes | The system automatically prohibits data writes, hard limit | Scaling is required before writes can resume |
 
 ---
 
-## 冷热分层优化建议
+## Hot/cold Tiering Optimization Suggestions
 
-### 何时启用冷存储？
+### When to Enable Cold Storage?
 
-| 场景 | 建议 |
+| Scenario | Suggestion |
 |------|------|
-| 历史数据访问频率低（< 1 次/天） | 启用冷存储，设置自动冷热分层策略 |
-| 热存储使用率 > 60% | 考虑将历史数据迁移到冷存储 |
-| 成本优化 | 冷存储成本仅为标准型云存储的 20%（约1/5），适合长期归档 |
+| Historical data access frequency is low, less than once per day | Enable cold storage and configure an automatic hot/cold tiering policy |
+| Hot storage usage > 60% | Consider migrating historical data to cold storage |
+| Cost optimization | Cold storage costs only 20% of standard cloud storage, about one fifth, and is suitable for long-term archiving |
 
-### 开通冷存储（容量型云存储）
+### Enable Cold Storage, Capacity Cloud Storage
 
-> ⚠️ **警告**：开通过程中需要**滚动重启实例**，可能会导致部分业务的读写请求出现**延迟波动或连接中断**，建议在**业务低峰期**操作。
+> ⚠️ **Warning**: Enabling cold storage requires a **rolling restart of the instance**, which may cause **latency fluctuation or connection interruptions** for some business read/write requests. Operate during off-peak hours.
 
-**前提条件：**
-- 实例存储类型为**本地 HDD 盘**时，**不支持**开通容量型云存储
-- 云存储类型（性能型/标准型）实例支持开通
+**Prerequisites:**
+- If the instance storage type is **local HDD disk**, **capacity cloud storage is not supported**.
+- Cloud storage type instances, performance or standard, support enabling capacity cloud storage.
 
-**控制台开通路径：**
+**Console enablement path:**
 
-1. 登录 [Lindorm 控制台](https://lindorm.console.aliyun.com/)
-2. 在页面左上角，选择实例所属的**地域**
-3. 在实例列表页，单击**目标实例ID**或者目标实例所在行操作列的**管理**
-4. 在左侧导航栏，选择**冷存储**
-5. 单击**开通**
-6. 设置**容量型云存储容量**
-7. 阅读并勾选服务协议，单击**立即购买**
+1. Log on to the [Lindorm console](https://lindorm.console.aliyun.com/).
+2. In the upper-left corner of the page, select the **region** where the instance resides.
+3. On the instance list page, click the **target instance ID** or **Manage** in the Actions column of the target instance row.
+4. In the left-side navigation pane, select **Cold Storage**.
+5. Click **Enable**.
+6. Set the **capacity cloud storage capacity**.
+7. Read and select the service agreement, and click **Buy Now**.
 
-**存储类型说明：**
+**Storage type description:**
 
-| 存储类型 | 用途 | 是否支持冷热分层 |
+| Storage Type | Purpose | Supports Hot/cold Tiering |
 |---------|------|-----------------|
-| 性能型云存储 | 热存储，低延迟（< 10ms） | ✅ 支持（需开通容量型作为冷存储） |
-| 标准型云存储 | 热存储，中等延迟 | ✅ 支持（需开通容量型作为冷存储） |
-| 容量型云存储 | 冷存储，低成本（标准型云存储的 20%） | ✅ 作为冷存储介质 |
-| 本地 HDD 盘 | 本地存储 | ❌ 不支持冷热分层 |
+| Performance cloud storage | Hot storage, low latency < 10ms | ✅ Supported, capacity storage must be enabled as cold storage |
+| Standard cloud storage | Hot storage, medium latency | ✅ Supported, capacity storage must be enabled as cold storage |
+| Capacity cloud storage | Cold storage, low cost, 20% of standard cloud storage | ✅ Used as cold storage medium |
+| Local HDD disk | Local storage | ❌ Hot/cold tiering is not supported |
 
-> **注意**：容量型云存储与性能型/标准型云存储可以**并存**，无需变更现有存储类型。
+> **Note**: Capacity cloud storage and performance/standard cloud storage can **coexist**. You do not need to change the existing storage type.
 
-### 冷热分层策略
+### Hot/cold Tiering Policy
 
-- **自动分层**：设置时间策略（如数据写入 30 天后自动转冷）
-- **手动分层**：通过 Lindorm 表属性配置冷热分层规则
-- **查询优化**：冷数据查询延迟较高（通常 > 100ms），热数据查询延迟低（< 10ms）
+- **Automatic tiering**: Set a time policy, such as automatically moving data to cold storage 30 days after writing.
+- **Manual tiering**: Configure hot/cold tiering rules through Lindorm table properties.
+- **Query optimization**: Cold data query latency is high, usually > 100ms. Hot data query latency is low, < 10ms.
 
-📍 配置冷热分层：
-1. 通过 Lindorm SQL：
+Configuration path for hot/cold tiering:
+1. Through Lindorm SQL:
    ```sql
-   ALTER TABLE metrics SET COLD_DATA_AGE = 2592000;  -- 30 天后转冷
+   ALTER TABLE metrics SET COLD_DATA_AGE = 2592000;  -- Move to cold storage after 30 days.
    ```
 
-2. 通过 HBase Shell：
+2. Through HBase Shell:
    ```bash
    alter 'metrics', {NAME => 'cf', COLD_DATA_AGE => 2592000}
    ```
 
-### 冷存储性能说明
+### Cold Storage Performance Description
 
-| 指标 | 热存储（性能型） | 冷存储（容量型） |
+| Metric | Hot Storage, Performance Type | Cold Storage, Capacity Type |
 |------|----------------|-----------------|
-| 查询延迟 | < 10ms | > 100ms |
-| 存储成本 | 基准 | 仅为标准型云存储的 20% |
-| 适用场景 | 高频访问 | 低频访问（< 1次/天） |
-| 读取 IOPS | 高 | 限流（每 25GiB 容量 1 IOPS） |
+| Query latency | < 10ms | > 100ms |
+| Storage cost | Baseline | Only 20% of standard cloud storage |
+| Applicable scenario | High-frequency access | Low-frequency access, less than once per day |
+| Read IOPS | High | Throttled, 1 IOPS per 25 GiB capacity |
 
-如需更多细节，可参考官方配置指南：
+For more details, see the official configuration guide:
 https://help.aliyun.com/zh/lindorm/user-guide/hot-and-cold-separation/
 
-📚 冷热分离最佳实践：
+Hot/cold separation best practices:
 https://help.aliyun.com/zh/lindorm/user-guide/enable-cold-storage
 
 ---
 
-## 缺参处理
+## Missing Parameter Handling
 
-### 缺 instance-id
+### Missing instance-id
 
-**追问策略**：先用 `aliyun hitsdb get-instance-summary` 确认地域，再用 `aliyun hitsdb get-lindorm-instance-list --region <region>` 让用户选择实例。
+**Follow-up strategy**: First use `aliyun hitsdb get-instance-summary` to confirm the region, and then use `aliyun hitsdb get-lindorm-instance-list --region <region>` to let the user select an instance.
 
-### 缺 时间范围（存储趋势分析）
+### Missing Time Range, Storage Trend Analysis
 
-**默认策略**：使用过去 7 天，并告知用户。
+**Default strategy**: Use the past 7 days and tell the user.
 
 ---
 
-## 错误处理
+## Error Handling
 
-| 错误 | 原因 | 引导用户 |
+| Error | Cause | Guide User |
 |------|------|----------|
-| **无存储详情** | 实例未开通文件引擎或实例状态异常 | 检查实例状态和引擎配置 |
-| **指标无数据** | 时间范围内无数据或指标名错误 | 调整时间范围或确认指标名 |
-| **权限不足** | Access Key 无 Lindorm 权限 | 提示需要 `AliyunLindormReadOnlyAccess` 权限 |
+| **No storage details** | File engine is not enabled for the instance or instance status is abnormal | Check instance status and engine configuration |
+| **No metric data** | No data in the time range or incorrect metric name | Adjust the time range or confirm the metric name |
+| **Insufficient permissions** | AccessKey has no Lindorm permission | Indicate that `AliyunLindormReadOnlyAccess` permission is required |
 
 ---
 
-## 常见场景速查
+## Common Scenario Quick Reference
 
-| 用户描述 | 执行流程 |
+| User Description | Execution Flow |
 |----------|----------|
-| "磁盘还剩多少？" | 流程 1：获取存储详情 |
-| "存储快满了吗？" | 流程 2：查询存储使用率 |
-| "存储增长趋势如何？" | 流程 3：查询存储历史趋势 |
-| "冷热存储分别用了多少？" | 流程 1：获取存储详情（区分冷热） |
-| "什么时候需要扩容？" | 流程 3：分析增长趋势并预测 |
+| "How much disk space is left?" | Flow 1: Obtain storage details |
+| "Is storage almost full?" | Flow 2: Query storage usage percentage |
+| "What is the storage growth trend?" | Flow 3: Query historical storage trend |
+| "How much hot and cold storage is used respectively?" | Flow 1: Obtain storage details, distinguish hot and cold |
+| "When do I need to scale out?" | Flow 3: Analyze growth trend and predict |

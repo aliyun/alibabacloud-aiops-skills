@@ -1,29 +1,29 @@
-# Lindorm SQL 语法参考
+# Lindorm SQL Syntax Reference
 
-以下收录了常用的 DDL 和 DML 语句。
+The following section includes commonly used DDL and DML statements.
 
-## 重要约束
-> **此约束具有最高优先级，必须严格遵守。**
-1. **禁止推测和联想**：只能基于本 Skill 文档中明确记载的内容回答用户问题，严禁推测、联想或生成文档中不存在的 SQL 语法、参数、功能或配置。
-2. **不确定时必须声明**：如果文档中没有相关信息，必须明确告知用户“当前文档未收录此内容”，并引导用户查阅官方文档。
-3. **禁止混淆来源**：不得将其他数据库（如 MySQL、HBase、PostgreSQL）的语法或特性当作 Lindorm 的功能来回答。
-4. **代码示例需要出处**：生成的代码示例必须基于文档中的模板，参数和语法必须与文档一致。
+## Important Constraints
+> **This constraint has the highest priority and must be strictly followed.**
+1. **Do not infer or associate**: answer user questions only based on content explicitly documented in this Skill. Do not infer, associate, or generate SQL syntax, parameters, features, or configurations that are not present in the documentation.
+2. **State uncertainty explicitly**: if the documentation does not contain relevant information, clearly tell the user "This content is not included in the current documentation" and guide the user to official documentation.
+3. **Do not mix sources**: do not present syntax or features from other databases, such as MySQL, HBase, or PostgreSQL, as Lindorm features.
+4. **Code examples require sources**: generated code examples must be based on templates in the documentation. Parameters and syntax must be consistent with the documentation.
 
-## 执行步骤
-1. 当用户提到的 SQL 语句已收录在下方文档中时，优先使用收录的信息回复用户。
-2. 如果用户提到的 SQL 语句未收录在下方文档中时，查询官方文档回复用户。
+## Execution Steps
+1. If the SQL statement mentioned by the user is included in the documentation below, reply with the documented information first.
+2. If the SQL statement mentioned by the user is not included below, query official documentation before replying.
    - **DDL**: https://help.aliyun.com/zh/lindorm/developer-reference/wide-table-ddl/
    - **DML**: https://help.aliyun.com/zh/lindorm/developer-reference/wide-table-dml/
-   - **DCL**：https://help.aliyun.com/zh/lindorm/developer-reference/wide-table-dcl/
-3. 如果用户提到的 SQL 语句既未收录在下方文档中，也未找到官方文档中的相关信息时，必须明确告知用户“当前文档未收录此内容”。
+   - **DCL**: https://help.aliyun.com/zh/lindorm/developer-reference/wide-table-dcl/
+3. If the SQL statement mentioned by the user is neither included below nor found in official documentation, clearly tell the user "This content is not included in the current documentation".
 
-## DDL 语句
+## DDL Statements
 
-> 详细建表语法、数据类型、表属性请参考 table-design.md
+> For detailed table creation syntax, data types, and table properties, see table-design.md.
 
-### CREATE TABLE - 创建表
+### CREATE TABLE - Create Table
 
-**基本语法**:
+**Basic syntax**:
 ```sql
 CREATE TABLE [IF NOT EXISTS] table_name (
     column_name data_type [NOT NULL],
@@ -33,7 +33,7 @@ CREATE TABLE [IF NOT EXISTS] table_name (
 [WITH (option = value, ...)]
 ```
 
-**示例 - 基础建表**:
+**Example - Basic table creation**:
 ```sql
 CREATE TABLE IF NOT EXISTS user_profile (
     user_id VARCHAR NOT NULL,
@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS user_profile (
 );
 ```
 
-**示例 - 复合主键**:
+**Example - Composite primary key**:
 ```sql
 CREATE TABLE IF NOT EXISTS order_detail (
     order_id VARCHAR NOT NULL,
@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS order_detail (
 );
 ```
 
-**示例 - 带表属性**:
+**Example - With table properties**:
 ```sql
 CREATE TABLE IF NOT EXISTS logs (
     log_id VARCHAR NOT NULL,
@@ -66,13 +66,13 @@ CREATE TABLE IF NOT EXISTS logs (
     created_at TIMESTAMP,
     PRIMARY KEY (log_id)
 ) WITH (
-    TTL = '604800',           -- 7天过期
-    COMPRESSION = 'ZSTD',     -- ZSTD压缩
-    NUMREGIONS = 10           -- 预分10个Region
+    TTL = '604800',           -- Expire after 7 days
+    COMPRESSION = 'ZSTD',     -- ZSTD compression
+    NUMREGIONS = 10           -- Pre-split into 10 regions
 );
 ```
 
-**示例 - 预分区建表**:
+**Example - Pre-split table creation**:
 ```sql
 CREATE TABLE IF NOT EXISTS metrics (
     metric_id VARCHAR NOT NULL,
@@ -86,7 +86,7 @@ CREATE TABLE IF NOT EXISTS metrics (
 );
 ```
 
-**示例 - 指定分区键**:
+**Example - Specify split keys**:
 ```sql
 CREATE TABLE IF NOT EXISTS events (
     event_id VARCHAR NOT NULL,
@@ -98,50 +98,50 @@ CREATE TABLE IF NOT EXISTS events (
 );
 ```
 
-### 常用表属性
+### Common Table Properties
 
-| 属性 | 类型 | 说明 | 示例 |
+| Property | Type | Description | Example |
 |------|------|------|------|
-| TTL | INT | 数据有效期(秒) | TTL = '86400' (1天) |
-| COMPRESSION | STRING | 压缩算法: SNAPPY/ZSTD/LZ4 | COMPRESSION = 'ZSTD' |
-| NUMREGIONS | INT | 预分区数量 | NUMREGIONS = 16 |
-| STARTKEY | STRING | 分区起始Key | STARTKEY = '0' |
-| ENDKEY | STRING | 分区结束Key | ENDKEY = 'z' |
-| SPLITKEYS | STRING | 自定义分区点 | SPLITKEYS = 'a,m,z' |
-| MUTABILITY | STRING | 索引写入模式 | MUTABILITY = 'MUTABLE_LATEST' |
-| CONSISTENCY | STRING | 一致性级别 | CONSISTENCY = 'strong' |
+| TTL | INT | Data validity period in seconds | TTL = '86400' (1 day) |
+| COMPRESSION | STRING | Compression algorithm: SNAPPY/ZSTD/LZ4 | COMPRESSION = 'ZSTD' |
+| NUMREGIONS | INT | Number of pre-split regions | NUMREGIONS = 16 |
+| STARTKEY | STRING | Partition start key | STARTKEY = '0' |
+| ENDKEY | STRING | Partition end key | ENDKEY = 'z' |
+| SPLITKEYS | STRING | Custom split points | SPLITKEYS = 'a,m,z' |
+| MUTABILITY | STRING | Index write mode | MUTABILITY = 'MUTABLE_LATEST' |
+| CONSISTENCY | STRING | Consistency level | CONSISTENCY = 'strong' |
 
-### ALTER TABLE - 修改表
+### ALTER TABLE - Modify Table
 
-**添加列**:
+**Add columns**:
 ```sql
 ALTER TABLE user_profile ADD COLUMN email VARCHAR;
 ALTER TABLE user_profile ADD COLUMN phone VARCHAR, address VARCHAR;
 ```
 
-**修改 TTL**:
+**Modify TTL**:
 ```sql
-ALTER TABLE logs SET TTL = '2592000';  -- 改为30天
-ALTER TABLE logs SET TTL = '';          -- 取消TTL，数据不过期
+ALTER TABLE logs SET TTL = '2592000';  -- Change to 30 days
+ALTER TABLE logs SET TTL = '';          -- Cancel TTL; data never expires
 ```
 
-### DROP TABLE - 删除表
+### DROP TABLE - Drop Table
 
 ```sql
 DROP TABLE IF EXISTS table_name;
 ```
 
-### TRUNCATE TABLE - 清空表
+### TRUNCATE TABLE - Truncate Table
 
 ```sql
 TRUNCATE TABLE table_name;
 ```
 
-### CREATE INDEX - 创建索引
+### CREATE INDEX - Create Index
 
-**二级索引**:
+**Secondary index**:
 ```sql
--- 在建表时创建
+-- Create during table creation
 CREATE TABLE orders (
     order_id VARCHAR NOT NULL,
     user_id VARCHAR,
@@ -152,66 +152,82 @@ CREATE TABLE orders (
     INDEX idx_status USING KV (status) INCLUDE (amount)
 );
 
--- 单独创建二级索引
+-- Create a secondary index separately
 CREATE INDEX idx_user USING KV ON orders (user_id);
 ```
 
-**搜索索引**:
+**Search index**:
 
-> ⚠️ **重要**：搜索索引需先在控制台开通（宽表引擎 → 搜索索引 → 立即开通），否则创建会报 `SERVER INTERNAL ERROR`。详见 [table-design.md](table-design.md#搜索索引开通条件)。
+> ⚠️ **Important**: Search indexes must be enabled in the console first: Wide Table Engine -> Search Index -> Enable Now. Otherwise, creation may return `SERVER INTERNAL ERROR`. See [table-design.md](table-design.md#search-index-enablement-conditions).
 
 ```sql
--- 基础搜索索引
+-- Basic search index
 CREATE INDEX idx_search USING SEARCH ON orders (status);
 
--- 带分词器的搜索索引
+-- Search index with analyzer
 CREATE INDEX idx_text USING SEARCH ON articles (
   title(type=text, analyzer=ik),
   content(type=text, analyzer=ik)
 );
 
--- 分词查询
-SELECT * FROM articles WHERE MATCH(content) AGAINST('关键词');
+-- Analyzer query
+SELECT * FROM articles WHERE MATCH(content) AGAINST('keyword');
 ```
 
-### SHOW / DESCRIBE - 查看信息
+### SHOW / DESCRIBE - View Information
 
 ```sql
--- 查看所有表
+-- View all databases
+SHOW DATABASES;
+
+-- View all tables
 SHOW TABLES;
 
--- 查看表结构
+-- View table schema
 DESCRIBE table_name;
 
--- 查看建表语句
+-- View table creation statement
 SHOW CREATE TABLE table_name;
 
--- 查看索引
+-- View indexes
 SHOW INDEX FROM table_name;
+
+-- View SQL engine version. It returns VERSION, BUILD_TIME, and GIT_COMMIT.
+SELECT @@VERSION;
 ```
+
+### USE - Switch Database
+
+```sql
+USE database_name;
+```
+
+After switching, all subsequent SQL operations are executed in this database by default. When using a JDBC connection, you can also specify the default database in the URL, such as `jdbc:lindorm:table:url=http://<host>:33060;database=mydb`.
 
 ---
 
-## DML 语句
+## DML Statements
 
-### UPSERT - 插入/更新数据
+### UPSERT - Insert or Update Data
 
-UPSERT 是 Lindorm 推荐的写入方式，如果主键存在则更新，不存在则插入。
+UPSERT is the recommended write method in Lindorm. If the primary key exists, the row is updated; otherwise, the row is inserted.
 
-**单条写入**:
+> **INSERT semantics**: In Lindorm, INSERT and UPSERT have the same semantics. When a primary key conflict occurs, the row is overwritten instead of returning an error. When connecting through the MySQL protocol, INSERT has client-side batch optimization, so INSERT is recommended.
+
+**Single-row write**:
 ```sql
 UPSERT INTO user_profile (user_id, nickname, age) 
-VALUES ('u001', '张三', 25);
+VALUES ('u001', 'Alice', 25);
 ```
 
-**带时间戳写入** (使用 HINT):
+**Write with timestamp** (using HINT):
 ```sql
--- 指定写入数据的时间戳（毫秒）
+-- Specify the timestamp of the written data in milliseconds.
 UPSERT /*+ _l_ts_(1704067200000) */ INTO user_profile (user_id, nickname, age) 
-VALUES ('u001', '张三', 25);
+VALUES ('u001', 'Alice', 25);
 ```
 
-**批量写入** (PreparedStatement):
+**Batch write** (PreparedStatement):
 ```java
 String sql = "UPSERT INTO user_profile (user_id, nickname, age) VALUES (?, ?, ?)";
 PreparedStatement ps = conn.prepareStatement(sql);
@@ -225,118 +241,118 @@ for (int i = 0; i < 100; i++) {
 ps.executeBatch();
 ```
 
-### SELECT - 查询数据
+### SELECT - Query Data
 
-**基本查询**:
+**Basic query**:
 ```sql
 SELECT * FROM user_profile WHERE user_id = 'u001';
 ```
 
-**指定列查询** (推荐):
+**Query specific columns** (recommended):
 ```sql
 SELECT user_id, nickname, age FROM user_profile WHERE user_id = 'u001';
 ```
 
-**范围查询**:
+**Range query**:
 ```sql
 SELECT * FROM user_profile 
 WHERE user_id >= 'u001' AND user_id < 'u100';
 ```
 
-**排序与分页**:
+**Sorting and pagination**:
 ```sql
 SELECT * FROM user_profile 
 ORDER BY user_id 
 LIMIT 100 OFFSET 0;
 ```
 
-**条件查询**:
+**Conditional query**:
 ```sql
 SELECT * FROM user_profile 
 WHERE age > 25 AND age < 35;
 
 SELECT * FROM user_profile 
-WHERE nickname LIKE '张%';
+WHERE nickname LIKE 'A%';
 
 SELECT * FROM user_profile 
 WHERE user_id IN ('u001', 'u002', 'u003');
 ```
 
-**聚合查询**:
+**Aggregate query**:
 ```sql
 SELECT COUNT(*) FROM user_profile;
 SELECT MAX(age), MIN(age), AVG(age) FROM user_profile;
 ```
 
-**HINT 使用**:
+**HINT usage**:
 ```sql
--- 强制允许低效查询（全表扫描）
+-- Force low-efficiency queries, such as full table scans.
 SELECT /*+ _l_allow_filtering_ */ * FROM user_profile;
 
--- 指定操作超时时间（毫秒）
+-- Specify the operation timeout in milliseconds.
 SELECT /*+ _l_operation_timeout_(30000) */ * FROM user_profile WHERE age > 25;
 
--- 强制使用索引
+-- Force using an index.
 SELECT /*+ _l_force_index_('idx_name') */ * FROM user_profile WHERE name = 'test';
 
--- 忽略索引
+-- Ignore indexes.
 SELECT /*+ _l_ignore_index_ */ * FROM user_profile WHERE name = 'test';
 ```
 
-### UPDATE - 更新数据
+### UPDATE - Update Data
 
-**重要**: UPDATE 必须指定完整的主键条件。
+**Important**: UPDATE must specify the complete primary key condition.
 
 ```sql
--- 正确: 指定完整主键
+-- Correct: specify the complete primary key.
 UPDATE user_profile SET age = 26 WHERE user_id = 'u001';
 
--- 错误: 不支持批量更新
-UPDATE user_profile SET age = 26 WHERE age > 25;  -- 会报错
+-- Incorrect: batch update is not supported.
+UPDATE user_profile SET age = 26 WHERE age > 25;  -- Returns an error.
 ```
 
-### DELETE - 删除数据
+### DELETE - Delete Data
 
-**单行删除**:
+**Single-row delete**:
 ```sql
 DELETE FROM user_profile WHERE user_id = 'u001';
 ```
 
-**复合主键删除**:
+**Composite primary key delete**:
 ```sql
 DELETE FROM order_detail WHERE order_id = 'o001' AND item_seq = 1;
 ```
 
-### JSON 数据写入与查询
+### JSON Data Write and Query
 
-> 数据类型定义请参考 [table-design.md](table-design.md)
+> For data type definitions, see [table-design.md](table-design.md).
 
-**写入方式**:
+**Write methods**:
 ```sql
--- 方式 1: 直接写入 JSON 字符串
+-- Method 1: directly write a JSON string.
 UPSERT INTO tb(p1, c2) VALUES(1, '{"k1": 4, "k2": {"k3": {"k4": 4}}}');
 
--- 方式 2: 使用 json_object 函数
+-- Method 2: use the json_object function.
 UPSERT INTO tb(p1, c2) VALUES(2, json_object('k1', 2, 'k2', '2'));
--- 等价于：UPSERT INTO tb(p1,c2) VALUES(2,'{"k1":2,"k2":"2"}');
+-- Equivalent to: UPSERT INTO tb(p1,c2) VALUES(2,'{"k1":2,"k2":"2"}');
 
--- 方式 3: 使用 json_array 函数
+-- Method 3: use the json_array function.
 UPSERT INTO tb(p1, c2) VALUES(3, json_array(1, 2, json_object('k1', 3, 'k2', '3')));
--- 等价于：UPSERT INTO tb(p1,c2) VALUES(3,'[1,2,{"k1":3,"k2":"3"}]');
+-- Equivalent to: UPSERT INTO tb(p1,c2) VALUES(3,'[1,2,{"k1":3,"k2":"3"}]');
 ```
 
-**查询 JSON 字段**:
+**Query JSON fields**:
 ```sql
--- 获取 JSON 对象中的值 (SELECT 子句)
+-- Get a value from a JSON object in the SELECT clause.
 SELECT p1, json_extract(c2, '$.k1') AS k1_value FROM tb WHERE p1 = 1;
 
--- 嵌套路径查询
+-- Nested path query.
 SELECT json_extract(c2, '$.k2.k3.k4') FROM tb WHERE p1 = 4;
 
--- 数组索引访问
+-- Array index access.
 SELECT json_extract(c2, '$[2].k2') FROM tb WHERE p1 = 3;
 
--- WHERE 条件过滤
+-- WHERE condition filtering.
 SELECT * FROM tb 
 WHERE p1 >= 1 AND p1 < 4 
 AND json_extract(c2, '$.k2') > '0';
@@ -344,442 +360,578 @@ AND json_extract(c2, '$.k2') > '0';
 
 ---
 
-## 常用函数
+## Common Functions
 
-### 字符串函数
+### String Functions
 
-> 要求宽表引擎 2.5.1.1+
+> Requires Wide Table Engine 2.5.1.1 or later.
 
-| 函数 | 说明 | 示例 |
+| Function | Description | Example |
 |------|------|------|
-| `CONCAT(s1, s2, ...)` | 拼接多个字符串 | `SELECT CONCAT('a','b','c')` → `abc` |
-| `LENGTH(s)` | 计算字符串长度 | `SELECT LENGTH('hello')` → `5` |
-| `LOWER(s)` | 转为小写 | `SELECT LOWER('ABC')` → `abc` |
-| `UPPER(s)` | 转为大写 | `SELECT UPPER('abc')` → `ABC` |
-| `TRIM(s)` | 删除前后空格 | `SELECT TRIM('  ab  ')` → `ab` |
-| `SUBSTR(s, pos[, len])` | 截取子串 | `SELECT SUBSTR('hello', 2, 3)` → `ell` |
-| `REPLACE(s, from, to)` | 替换子串 | `SELECT REPLACE('abc', 'b', 'x')` → `axc` |
-| `REVERSE(s)` | 返回逆序字符串 | `SELECT REVERSE('abc')` → `cba` |
-| `MD5(s)` | 计算 MD5 哈希 | `SELECT MD5('abc')` → `900150983cd24fb0...` |
-| `SHA256(s)` | 计算 SHA256 哈希 | `SELECT SHA256('abc')` → `ba7816bf8f01cfea...` |
-| `START_WITH(s, prefix)` | 判断前缀 | `SELECT START_WITH('hello', 'he')` → `true` |
+| `CONCAT(s1, s2, ...)` | Concatenates multiple strings | `SELECT CONCAT('a','b','c')` → `abc` |
+| `LENGTH(s)` | Calculates string length | `SELECT LENGTH('hello')` → `5` |
+| `LOWER(s)` | Converts to lowercase | `SELECT LOWER('ABC')` → `abc` |
+| `UPPER(s)` | Converts to uppercase | `SELECT UPPER('abc')` → `ABC` |
+| `TRIM(s)` | Removes leading and trailing spaces | `SELECT TRIM('  ab  ')` → `ab` |
+| `SUBSTR(s, pos[, len])` | Extracts a substring | `SELECT SUBSTR('hello', 2, 3)` → `ell` |
+| `REPLACE(s, from, to)` | Replaces a substring | `SELECT REPLACE('abc', 'b', 'x')` → `axc` |
+| `REVERSE(s)` | Returns the reversed string | `SELECT REVERSE('abc')` → `cba` |
+| `MD5(s)` | Calculates an MD5 hash | `SELECT MD5('abc')` → `900150983cd24fb0...` |
+| `SHA256(s)` | Calculates a SHA256 hash | `SELECT SHA256('abc')` → `ba7816bf8f01cfea...` |
+| `START_WITH(s, prefix)` | Checks whether the string starts with the specified prefix | `SELECT START_WITH('hello', 'he')` → `true` |
 
-**正则表达式函数**:
+**Regular expression functions**:
 ```sql
--- REGEXP_REPLACE: 正则替换，支持指定开始位置
+-- REGEXP_REPLACE: regular expression replacement. Supports specifying the start position.
 SELECT REGEXP_REPLACE('abcbc', 'b', 'x', 2);  -- axcxc
 
--- REGEXP_SUBSTR: 正则提取子串
+-- REGEXP_SUBSTR: extracts a substring by regular expression.
 SELECT REGEXP_SUBSTR('abc123def', '[0-9]+');  -- 123
 
--- MATCH: 判断是否匹配正则
+-- MATCH: checks whether a value matches a regular expression.
 SELECT * FROM table WHERE MATCH(column, 'pattern');
 ```
 
-### 聚合函数
+### Aggregate Functions
 
-| 函数 | 说明 | 示例 |
+| Function | Description | Example |
 |------|------|------|
-| `COUNT(*)` | 统计行数 | `SELECT COUNT(*) FROM table` |
-| `COUNT(column)` | 统计非 NULL 值个数 | `SELECT COUNT(name) FROM table` |
-| `SUM(column)` | 求和（仅数值类型） | `SELECT SUM(amount) FROM orders` |
-| `AVG(column)` | 平均值（仅数值类型） | `SELECT AVG(price) FROM products` |
-| `MAX(column)` | 最大值 | `SELECT MAX(score) FROM results` |
-| `MIN(column)` | 最小值 | `SELECT MIN(score) FROM results` |
+| `COUNT(*)` | Counts rows | `SELECT COUNT(*) FROM table` |
+| `COUNT(column)` | Counts non-NULL values | `SELECT COUNT(name) FROM table` |
+| `SUM(column)` | Calculates a sum. Numeric types only. | `SELECT SUM(amount) FROM orders` |
+| `AVG(column)` | Calculates an average. Numeric types only. | `SELECT AVG(price) FROM products` |
+| `MAX(column)` | Calculates the maximum value | `SELECT MAX(score) FROM results` |
+| `MIN(column)` | Calculates the minimum value | `SELECT MIN(score) FROM results` |
 
-**高级聚合函数** (宽表引擎 2.7.9+):
+**Advanced aggregate functions** (Wide Table Engine 2.7.9 or later):
 ```sql
--- HEAD: 返回第一个非 NULL 值，支持排序
-SELECT HEAD(temperature ORDER BY time) FROM sensor;  -- 最早的温度
-SELECT HEAD(temperature ORDER BY time DESC) FROM sensor;  -- 最新的温度
+-- HEAD: returns the first non-NULL value and supports sorting.
+SELECT HEAD(temperature ORDER BY time) FROM sensor;  -- Earliest temperature.
+SELECT HEAD(temperature ORDER BY time DESC) FROM sensor;  -- Latest temperature.
 
--- GROUP_CONCAT: 分组拼接字符串
+-- GROUP_CONCAT: concatenates strings in each group.
 SELECT region, GROUP_CONCAT(device_id) FROM sensor GROUP BY region;
--- 结果: north-cn | dev1,dev2,dev3
+-- Result: north-cn | dev1,dev2,dev3
 
--- GROUP_CONCAT 带排序和分隔符
+-- GROUP_CONCAT with sorting and separator.
 SELECT region, GROUP_CONCAT(device_id ORDER BY time SEPARATOR '|') 
 FROM sensor GROUP BY region;
--- 结果: north-cn | dev1|dev2|dev3
+-- Result: north-cn | dev1|dev2|dev3
 
--- GROUP_CONCAT 去重
+-- GROUP_CONCAT with DISTINCT.
 SELECT region, GROUP_CONCAT(DISTINCT device_id) FROM sensor GROUP BY region;
 ```
 
-### 时间函数
+### Time Functions
 
-> 要求宽表引擎 2.7.8+，Lindorm SQL 2.8.7.0+
+> Requires Wide Table Engine 2.7.8 or later and Lindorm SQL 2.8.7.0 or later.
 
-| 函数 | 说明 | 示例 |
+| Function | Description | Example |
 |------|------|------|
-| `DATE_FORMAT(ts, format)` | 格式化时间戳 | 见下方示例 |
-| `FROM_UNIXTIME(seconds)` | Unix 时间戳转 TIMESTAMP | `SELECT FROM_UNIXTIME(1704067200)` |
-| `UNIX_TIMESTAMP(ts)` | TIMESTAMP 转 Unix 时间戳 | `SELECT UNIX_TIMESTAMP('2024-01-01 00:00:00')` |
-| `DATEDIFF(ts1, ts2)` | 计算日期差(天) | `SELECT DATEDIFF('2024-01-05', '2024-01-01')` → `4` |
+| `NOW()` | Returns the current timestamp | `SELECT NOW()` → `2024-01-15 17:30:45` |
+| `DATE_FORMAT(ts, format)` | Formats a timestamp | See the examples below |
+| `FROM_UNIXTIME(seconds)` | Converts a Unix timestamp to TIMESTAMP | `SELECT FROM_UNIXTIME(1704067200)` |
+| `UNIX_TIMESTAMP(ts)` | Converts TIMESTAMP to a Unix timestamp | `SELECT UNIX_TIMESTAMP('2024-01-01 00:00:00')` |
+| `DATEDIFF(ts1, ts2)` | Calculates the date difference in days | `SELECT DATEDIFF('2024-01-05', '2024-01-01')` → `4` |
 
-**DATE_FORMAT 格式说明符**:
+**DATE_FORMAT format specifiers**:
 ```sql
 SELECT DATE_FORMAT('2024-01-15 17:30:45', '%Y-%m-%d %H:%i:%s');
 -- 2024-01-15 17:30:45
 
-SELECT DATE_FORMAT('2024-01-15 17:30:45', '%Y年%m月%d日 %H:%i');
--- 2024年01月15日 17:30
+SELECT DATE_FORMAT('2024-01-15 17:30:45', '%Y-%m-%d %H:%i');
+-- 2024-01-15 17:30
 
 SELECT DATE_FORMAT('2024-01-15 17:30:45', 'at %T on %b %D, %Y');
 -- at 17:30:45 on JAN 15th, 2024
 ```
 
-| 格式符 | 说明 | 示例 |
+| Specifier | Description | Example |
 |--------|------|------|
-| `%Y` | 四位年份 | 2024 |
-| `%y` | 两位年份 | 24 |
-| `%m` | 两位月份 | 01-12 |
-| `%d` | 两位日期 | 01-31 |
-| `%H` | 24小时制小时 | 00-23 |
-| `%h` | 12小时制小时 | 01-12 |
-| `%i` | 分钟 | 00-59 |
-| `%s` / `%S` | 秒 | 00-59 |
-| `%T` | 时间 (HH:mm:ss) | 17:30:45 |
-| `%D` | 带序数的日期 | 1st, 2nd, 15th |
-| `%b` | 月份缩写 | Jan, Feb |
-| `%M` | 月份全称 | January |
-| `%W` | 星期全称 | Monday |
-| `%a` | 星期缩写 | Mon |
+| `%Y` | Four-digit year | 2024 |
+| `%y` | Two-digit year | 24 |
+| `%m` | Two-digit month | 01-12 |
+| `%d` | Two-digit day | 01-31 |
+| `%H` | Hour in 24-hour format | 00-23 |
+| `%h` | Hour in 12-hour format | 01-12 |
+| `%i` | Minute | 00-59 |
+| `%s` / `%S` | Second | 00-59 |
+| `%T` | Time (HH:mm:ss) | 17:30:45 |
+| `%D` | Day with ordinal suffix | 1st, 2nd, 15th |
+| `%b` | Abbreviated month name | Jan, Feb |
+| `%M` | Full month name | January |
+| `%W` | Full weekday name | Monday |
+| `%a` | Abbreviated weekday name | Mon |
 | `%p` | AM/PM | AM |
 
-**FROM_UNIXTIME 示例**:
+**NOW() and INTERVAL time arithmetic**:
 ```sql
--- Unix 时间戳转 TIMESTAMP
-SELECT FROM_UNIXTIME(1704067200);  -- 2024-01-01 08:00:00 (+08:00时区)
+-- NOW(): returns the current timestamp.
+SELECT NOW();  -- 2024-01-15 17:30:45
 
--- 支持毫秒精度（使用小数）
+-- INTERVAL time arithmetic: adds or subtracts time periods.
+SELECT NOW() - INTERVAL 24 HOUR;       -- 24 hours ago.
+SELECT NOW() + INTERVAL 30 MINUTE;    -- 30 minutes later.
+SELECT NOW() - INTERVAL 7 DAY;        -- 7 days ago.
+
+-- Common INTERVAL units.
+-- YEAR, MONTH, DAY, HOUR, MINUTE, SECOND
+-- Combined usage.
+SELECT NOW() - INTERVAL 1 DAY - INTERVAL 12 HOUR;  -- 1 day and 12 hours ago.
+
+-- Used in WHERE conditions.
+SELECT * FROM sensor WHERE ts > NOW() - INTERVAL 24 HOUR;  -- Data from the last 24 hours.
+```
+
+**FROM_UNIXTIME examples**:
+```sql
+-- Converts a Unix timestamp to TIMESTAMP.
+SELECT FROM_UNIXTIME(1704067200);  -- 2024-01-01 08:00:00 (+08:00 time zone)
+
+-- Supports millisecond precision by using decimals.
 SELECT FROM_UNIXTIME(1704067200.123);  -- 2024-01-01 08:00:00.123
 
--- 同时格式化输出
+-- Formats output at the same time.
 SELECT FROM_UNIXTIME(1704067200, '%Y-%m-%d');  -- 2024-01-01
 ```
 
 
-**常用 JSON 函数**:
+**Common JSON functions**:
 
-**构造函数**:
-- `json_object(key1, value1, ...)`: 构建 JSON 对象
+**Constructor functions**:
+- `json_object(key1, value1, ...)`: builds a JSON object.
   ```sql
   SELECT json_object('name', 'Alice', 'age', 25);
   -- {"name": "Alice", "age": 25}
   ```
-- `json_array(value1, value2, ...)`: 构建 JSON 数组
+- `json_array(value1, value2, ...)`: builds a JSON array.
   ```sql
   SELECT json_array('Java', 'Python', 'Go');
   -- ["Java", "Python", "Go"]
   ```
 
-**提取函数**:
-- `json_extract(json_doc, path)`: 提取 JSON 值（返回 JSON 类型）
+**Extraction functions**:
+- `json_extract(json_doc, path)`: extracts a JSON value and returns the JSON type.
   ```sql
   SELECT json_extract('{"name": "Alice"}', '$.name');
   -- "Alice"
   ```
-- `json_extract_string(json_doc, path)`: 提取并转换为 VARCHAR 类型
+- `json_extract_string(json_doc, path)`: extracts and converts to VARCHAR.
   ```sql
   SELECT json_extract_string('{"name": "Alice"}', '$.name');
   -- Alice (VARCHAR)
   ```
-- `json_extract_long(json_doc, path)`: 提取并转换为 BIGINT 类型
+- `json_extract_long(json_doc, path)`: extracts and converts to BIGINT.
   ```sql
   SELECT json_extract_long('{"id": 123456}', '$.id');
   -- 123456 (BIGINT)
   ```
-- `json_extract_double(json_doc, path)`: 提取并转换为 DOUBLE 类型
+- `json_extract_double(json_doc, path)`: extracts and converts to DOUBLE.
   ```sql
   SELECT json_extract_double('{"score": 95.5}', '$.score');
   -- 95.5 (DOUBLE)
   ```
 
-**路径语法**:
-- `$.key`: 访问对象的 key
-- `$[index]`: 访问数组的索引（从 0 开始）
-- `$.key1.key2`: 嵌套访问
-- `$[*]`: 通配符匹配所有数组元素
+**Path syntax**:
+- `$.key`: accesses the key of an object.
+- `$[index]`: accesses an array index, starting from 0.
+- `$.key1.key2`: accesses nested fields.
+- `$[*]`: wildcard that matches all array elements.
 
-**包含检查函数**:
-- `json_contains(target, candidate[, path])`: 检查是否包含指定值
+**Containment check functions**:
+- `json_contains(target, candidate[, path])`: checks whether the specified value is contained.
   ```sql
-  -- 检查数组是否包含某个元素
+  -- Checks whether an array contains an element.
   SELECT json_contains('["Java", "Python"]', '"Java"');
   -- 1 (true)
   
-  -- 检查对象是否包含某个属性
+  -- Checks whether an object contains a property.
   SELECT json_contains('{"a": 1, "b": 2}', '{"a": 1}');
   -- 1 (true)
   
-  -- 检查指定路径
+  -- Checks the specified path.
   SELECT json_contains('{"skills": ["Java", "Python"]}', '"Java"', '$.skills');
   -- 1 (true)
   
-  -- WHERE 条件中使用
+  -- Used in WHERE conditions.
   SELECT * FROM table WHERE json_contains(data, '"active"', '$.status');
   ```
 
-**更新函数**:
-- `json_set(json_doc, path, value[, path, value]...)`: 插入或更新值
+**Update functions**:
+- `json_set(json_doc, path, value[, path, value]...)`: inserts or updates values.
   ```sql
   SELECT json_set('{"a": 1}', '$.b', 2);
   -- {"a": 1, "b": 2}
   ```
-- `json_insert(json_doc, path, value)`: 仅在路径不存在时插入
+- `json_insert(json_doc, path, value)`: inserts only when the path does not exist.
   ```sql
   SELECT json_insert('{"a": 1}', '$.b', 2);
   -- {"a": 1, "b": 2}
   ```
-- `json_replace(json_doc, path, value)`: 仅在路径存在时更新
+- `json_replace(json_doc, path, value)`: updates only when the path exists.
   ```sql
   SELECT json_replace('{"a": 1}', '$.a', 10);
   -- {"a": 10}
   ```
-- `json_remove(json_doc, path[, path]...)`: 删除指定路径的值
+- `json_remove(json_doc, path[, path]...)`: deletes values at specified paths.
   ```sql
   SELECT json_remove('{"a": 1, "b": 2}', '$.b');
   -- {"a": 1}
   ```
 
-**注意事项**:
-- 如果在 JSON 列中写入非 JSON 对象或字符串，会报错
-- 不同数据类型比较规则与 MySQL 相同
+**Notes**:
+- Writing a non-JSON object or non-JSON string into a JSON column returns an error.
+- Comparison rules for different data types are the same as MySQL.
 
 ---
 
-## 特殊语法
+## Special Syntax
 
-### HINT 语法详解
+### HINT Syntax Details
 
-HINT 是 SQL 的补充语法，可以改变 SQL 的执行方式。HINT 必须紧跟在 `INSERT`、`UPSERT`、`DELETE`、`SELECT` 关键字之后。
+HINT is supplementary SQL syntax that can change how SQL statements are executed. HINT must immediately follow the `INSERT`, `UPSERT`, `DELETE`, or `SELECT` keyword.
 
-> 要求宽表引擎 2.3.1+
+> Requires Wide Table Engine 2.3.1 or later.
 
-**基本语法**:
+**Basic syntax**:
 ```sql
 /*+ hint1, hint2, ... */
 ```
 
-#### HINT 参数列表
+#### HINT Parameter List
 
-| HINT | 类型 | 说明 | 支持语句 |
+| HINT | Type | Description | Supported Statements |
 |------|------|------|----------|
-| `_l_operation_timeout_(N)` | INT | DML 操作超时时间，单位毫秒，默认 120000 | UPSERT, DELETE, UPDATE, SELECT |
-| `_l_allow_filtering_` | - | 允许低效全表扫描查询 | SELECT |
-| `_l_force_index_('idx')` | STRING | 强制使用指定索引 | SELECT |
-| `_l_ignore_index_` | - | 忽略索引，直接查表 | SELECT |
-| `_l_ts_(N)` | BIGINT | 指定写入/查询的时间戳（毫秒） | UPSERT, SELECT |
-| `_l_versions_(N)` | INT | 返回最新 N 个版本的数据 | SELECT |
-| `_l_ts_min_(N)` | BIGINT | 过滤结果，返回时间戳 >= N 的数据 | SELECT |
-| `_l_ts_max_(N)` | BIGINT | 过滤结果，返回时间戳 < N 的数据 | SELECT |
-| `_l_hot_only_` / `_l_hot_only_(true)` | BOOLEAN | 仅查询热存储数据 | SELECT |
+| `_l_operation_timeout_(N)` | INT | DML operation timeout in milliseconds. The default value is 120000. | UPSERT, DELETE, UPDATE, SELECT |
+| `_l_allow_filtering_` | - | Allows low-efficiency full table scan queries. | SELECT |
+| `_l_force_index_('idx')` | STRING | Forces the specified index to be used. | SELECT |
+| `_l_ignore_index_` | - | Ignores indexes and queries the primary table directly. | SELECT |
+| `_l_ts_(N)` | BIGINT | Specifies the timestamp for writes or queries in milliseconds. | UPSERT, SELECT |
+| `_l_versions_(N)` | INT | Returns the latest N versions of data. | SELECT |
+| `_l_ts_min_(N)` | BIGINT | Filters results and returns data with timestamp >= N. | SELECT |
+| `_l_ts_max_(N)` | BIGINT | Filters results and returns data with timestamp < N. | SELECT |
+| `_l_hot_only_` / `_l_hot_only_(true)` | BOOLEAN | Queries hot storage data only. | SELECT |
 
-#### 超时与性能控制
+#### Timeout and Performance Control
 
 ```sql
--- 设置操作超时时间 30 秒
+-- Set the operation timeout to 30 seconds.
 SELECT /*+ _l_operation_timeout_(30000) */ COUNT(*) FROM big_table;
 
--- 允许全表扫描（当 WHERE 条件不包含主键时）
+-- Allows full table scans when the WHERE condition does not contain the primary key.
 SELECT /*+ _l_allow_filtering_ */ * FROM users WHERE age > 30;
 
--- 组合使用
+-- Combined usage.
 SELECT /*+ _l_operation_timeout_(30000), _l_allow_filtering_ */ * 
 FROM users WHERE age > 30;
 ```
 
-#### 索引控制
+#### Index Control
 
 ```sql
--- 强制使用指定索引
+-- Force using the specified index.
 SELECT /*+ _l_force_index_('idx_user_name') */ * FROM users WHERE name = 'test';
 
--- 忽略索引，直接查主表（用于性能对比）
+-- Ignore indexes and query the primary table directly for performance comparison.
 SELECT /*+ _l_ignore_index_ */ * FROM users WHERE name = 'test';
 ```
 
-**注意**: `_l_force_index_` 和 `_l_ignore_index_` 不能同时使用
+**Note**: `_l_force_index_` and `_l_ignore_index_` cannot be used together.
 
-#### 多版本数据管理
+#### Multi-version Data Management
 
-Lindorm 支持每列存储多个版本的数据，通过时间戳标识版本（时间戳越大版本越新）。
+Lindorm supports storing multiple versions of data for each column. Versions are identified by timestamps. A larger timestamp indicates a newer version.
 
-**创建多版本表**:
+**Create a multi-version table**:
 ```sql
--- VERSIONS='5' 表示每列最多保留 5 个版本
+-- VERSIONS='5' means that each column can retain up to five versions.
 CREATE TABLE sensor_data (
     device_id VARCHAR,
     temperature DOUBLE,
     PRIMARY KEY(device_id)
 ) WITH (VERSIONS='5');
 
--- 修改已有表的版本数
+-- Modify the number of versions for an existing table.
 ALTER TABLE sensor_data SET 'VERSIONS' = '10';
 ```
 
-**写入指定时间戳**:
+**Write with a specified timestamp**:
 ```sql
--- 指定时间戳写入（毫秒）
+-- Write with a specified timestamp in milliseconds.
 UPSERT /*+ _l_ts_(1704067200000) */ INTO sensor_data(device_id, temperature) 
 VALUES ('dev001', 25.5);
 
 UPSERT /*+ _l_ts_(1704067260000) */ INTO sensor_data(device_id, temperature) 
-VALUES ('dev001', 26.0);  -- 同一设备，新版本
+VALUES ('dev001', 26.0);  -- Same device, new version.
 ```
 
-**查询多版本数据**:
+**Query multi-version data**:
 ```sql
--- 查询指定时间戳的数据
+-- Query data at a specified timestamp.
 SELECT /*+ _l_ts_(1704067200000) */ device_id, temperature 
 FROM sensor_data WHERE device_id = 'dev001';
 
--- 查询最新 N 个版本
+-- Query the latest N versions.
 SELECT /*+ _l_versions_(3) */ device_id, temperature, temperature_l_ts 
 FROM sensor_data WHERE device_id = 'dev001';
 
--- 查询时间戳范围 [min, max)
+-- Query a timestamp range [min, max).
 SELECT /*+ _l_ts_min_(1704067200000), _l_ts_max_(1704153600000) */ 
     device_id, temperature, temperature_l_ts 
 FROM sensor_data WHERE device_id = 'dev001';
 ```
 
-**查看列的时间戳**: 在列名后加 `_l_ts` 后缀
+**View column timestamps**: add the `_l_ts` suffix after the column name.
 ```sql
--- temperature_l_ts 返回 temperature 列的时间戳
+-- temperature_l_ts returns the timestamp of the temperature column.
 SELECT /*+ _l_versions_(2) */ device_id, temperature, temperature_l_ts 
 FROM sensor_data;
 ```
 
-#### 热数据查询
+#### Hot Data Query
 
-当开通冷存储功能后，可使用 HINT 仅查询热存储中的数据：
+After cold storage is enabled, you can use HINT to query only data in hot storage:
 
 ```sql
--- 仅查询热数据
+-- Query hot data only.
 SELECT /*+ _l_hot_only_ */ * FROM sensor_data WHERE device_id = 'dev001';
 SELECT /*+ _l_hot_only_(true) */ * FROM sensor_data WHERE device_id = 'dev001';
 
--- 查询所有数据（包括冷数据），与不使用 HINT 等价
+-- Query all data, including cold data. This is equivalent to not using the HINT.
 SELECT /*+ _l_hot_only_(false) */ * FROM sensor_data WHERE device_id = 'dev001';
 ```
 
-**注意**: 不支持单独查询冷数据
+**Note**: Querying cold data only is not supported.
 
-### 动态列
+### Dynamic Columns
 
-Lindorm 支持动态列，无需预定义即可写入新列。
+Lindorm supports dynamic columns. You can write new columns without predefining them.
 
 ```sql
--- 写入动态列
+-- Write a dynamic column.
 UPSERT INTO user_profile (user_id, _dyn_col_name1) VALUES ('u001', 'value1');
 
--- 查询动态列
+-- Query a dynamic column.
 SELECT user_id, _dyn_col_name1 FROM user_profile WHERE user_id = 'u001';
 ```
 
-### TTL 相关
+### TTL
 
 ```sql
--- 查看表的 TTL 设置
+-- View the TTL setting of a table.
 SHOW CREATE TABLE table_name;
 
--- 修改 TTL
+-- Modify TTL.
 ALTER TABLE table_name SET TTL = '86400';
 
--- 取消 TTL（数据永不过期）
+-- Cancel TTL. Data never expires.
 ALTER TABLE table_name SET TTL = '';
 ```
 
-**注意**: Lindorm 不支持行级 TTL，TTL 是表级别的属性。
+**Note**: Lindorm does not support row-level TTL. TTL is a table-level property.
 
 ---
 
-## SQL 注意事项
+## TSDB Time Series Engine SQL Operations
 
-### 与 MySQL 的差异
+> **Connection method**: The time series engine uses the Avatica protocol and the fixed port 8242. The connection URL format is `jdbc:lindorm:tsdb:url=http://<tsdb_host>:8242`. For details, see [sql-client-guide.md](sql-client-guide.md).
 
-| 特性 | MySQL | Lindorm SQL |
-|------|-------|-------------|
-| 写入语句 | INSERT/UPDATE | UPSERT (推荐) |
-| UPDATE 范围 | 支持批量 | 仅单行 |
-| 自增主键 | 支持 | 不支持 |
-| 外键 | 支持 | 不支持 |
-| 事务 | ACID | 单行原子性 |
-| JOIN | 支持 | 不支持 |
-
-### 性能建议
-
-1. **主键查询最快**: 尽量使用主键作为查询条件
-2. **避免全表扫描**: 无索引列 WHERE 会被低效查询拦截，需创建索引或用 `/*+ _l_allow_filtering_ */`
-3. **限制返回行数**: 使用 LIMIT 避免大量数据返回
-4. **使用 PreparedStatement**: 批量操作必用
-5. **选择性 SELECT**: 只查询需要的列
-6. **子查询用派生表**: WHERE IN/EXISTS 子查询需确保子查询中的过滤列有索引
-7. **后缀模糊用搜索索引**: LIKE 前缀 `xxx%` 用二级索引即可，后缀模糊 `%xxx` 需搜索索引（SEARCH）
-
-### 窗口函数
-
-⚠️ **有限支持**：官方兼容性文档标注窗口函数为"暂不支持"，语法不报错但可能存在**正确性或稳定性风险**（服务端计算开销较大）。实测 ROW_NUMBER/RANK/DENSE_RANK/LEAD/SUM OVER/AVG OVER 在当前版本可正常执行，LAG 在低版本存在解析器 bug。生产环境**谨慎使用**，建议优先用计算引擎（OLAP）处理窗口计算。
+### Create a Time Series Table
 
 ```sql
--- ROW_NUMBER: 按分组编号
+CREATE TABLE ts_test (
+  p VARCHAR NOT NULL,
+  t TIMESTAMP NOT NULL,
+  v DOUBLE,
+  PRIMARY KEY(p, t)
+);
+```
+
+### Write Time Series Data
+
+```sql
+UPSERT INTO ts_test (p, t, v) VALUES ('cpu', '2024-01-01 10:00:00', 85.5);
+```
+
+### Time Range Query
+
+```sql
+SELECT * FROM ts_test WHERE p='cpu' AND t >= '2024-01-01 00:00:00';
+```
+
+### Specify Time Precision
+
+Use the `-precision` parameter, which is available only for the Avatica protocol, to specify timestamp display precision. Valid values are `ms` for milliseconds, `us` for microseconds, `ns` for nanoseconds, and `rfc3339`, which is the default value.
+
+---
+
+## SQL Notes
+
+### Differences from MySQL
+
+| Feature | MySQL | Lindorm SQL |
+|------|-------|-------------|
+| Write statement | INSERT/UPDATE | UPSERT (recommended) |
+| UPDATE scope | Batch updates supported | Single-row only |
+| Auto-increment primary key | Supported | Not supported |
+| Foreign key | Supported | Not supported |
+| Transaction | ACID | Single-row atomicity |
+| JOIN | Supported | Not supported |
+
+### Transaction Limits
+
+Lindorm does not support multi-row transactions, which means transactional reads and writes across multiple rows are not supported. When using ORM frameworks, transactions must be disabled. UPDATE supports only single-row updates, and the WHERE clause must specify the complete primary key.
+
+### Connection Idle Timeout
+
+The server actively disconnects connections that have been idle for 10 minutes. After a long period without operations, probe the connection status again.
+
+### Low-efficiency Queries (Full Table Scan)
+
+#### What Is a Low-efficiency Query?
+
+If a query statement has filter conditions but those conditions cannot effectively use an existing primary key or index, the query must scan the full table. Such a query is considered a **low-efficiency query**. Lindorm detects and blocks low-efficiency queries by default.
+
+**Error symptom**: after executing the query, the wide table engine returns the following error:
+
+```
+This query may be a full table scan and thus may have unpredictable performance
+```
+
+> Another error form: `DoNotRetryIOException: Detect inefficient query`
+
+#### Typical Low-efficiency Query Scenarios
+
+Assume that table `test` has a composite primary key `(p1, p2, p3)`, where `p1` is the first primary key column:
+
+```sql
+-- ❌ Low-efficiency query: the WHERE clause does not contain the first primary key column p1.
+SELECT * FROM test WHERE p2 = 10;
+SELECT * FROM test WHERE p3 = 'abc';
+SELECT * FROM test WHERE p2 < 30 AND p3 = 'abc';
+
+-- ✅ Efficient query: the WHERE clause contains the first primary key column p1.
+SELECT * FROM test WHERE p1 = 'a' AND p2 = 10;
+SELECT * FROM test WHERE p1 = 'a';
+```
+
+> **Leftmost prefix principle**: Primary keys and secondary indexes of the wide table engine follow matching rules similar to MySQL composite indexes. The system matches columns one by one starting from the first, leftmost column of the primary key or index key. If the query condition does not contain the first column, the primary key or index cannot be hit.
+
+#### Solutions for Low-efficiency Queries
+
+Recommended priority order:
+
+| Priority | Solution | Description | Risk |
+|--------|------|------|------|
+| 1 | Optimize WHERE conditions | Include the first primary key column or satisfy the leftmost prefix principle | None |
+| 2 | Modify primary key design | Redesign the primary key to match query patterns | Table rebuild required |
+| 3 | Create a secondary index | Create a secondary index for query columns | Slight write performance decrease |
+| 4 | Create a search index | Suitable for multi-column and multidimensional search scenarios | Additional index overhead |
+| 5 | `/*+ _l_allow_filtering_ */` Hint | Force execution of a low-efficiency query | **⚠ Stability risk** |
+
+> **Index availability time**: After an index is created, wait until index building is complete before it takes effect. Secondary indexes (KV) take about 10 seconds, and search indexes (SEARCH) take about 30 seconds. Queries executed immediately may still return low-efficiency query errors.
+
+**Example for solution 5**:
+
+```sql
+-- Original query that returns an error.
+SELECT * FROM test WHERE p2 = 10;
+
+-- Add Hint to force execution.
+SELECT /*+ _l_allow_filtering_ */ * FROM test WHERE p2 = 10;
+```
+
+> **⚠ Risk reminder**:
+> - Forcing a low-efficiency query means a full table scan. When the data volume is large, the query takes a long time and consumes significant I/O and CPU resources.
+> - It may affect response times of other queries on the same instance.
+> - Always use it with `LIMIT` to restrict the scan range.
+> - For long-term solutions, prefer creating indexes or optimizing query conditions.
+
+Reference documentation: https://help.aliyun.com/zh/lindorm/developer-reference/sql-faq
+
+### Performance Recommendations
+
+1. **Primary key queries are the fastest**: Use the primary key as the query condition whenever possible.
+2. **Avoid full table scans**: WHERE conditions on non-indexed columns are blocked as low-efficiency queries. See the preceding "Low-efficiency Queries (Full Table Scan)" section.
+3. **Limit returned rows**: Use LIMIT to avoid returning a large amount of data.
+4. **Use PreparedStatement**: It is required for batch operations.
+5. **Selective SELECT**: Query only the columns you need.
+6. **Use derived tables for subqueries**: For WHERE IN or EXISTS subqueries, make sure the filter columns in the subquery have indexes.
+7. **Use search indexes for suffix fuzzy matching**: LIKE prefix matching such as `xxx%` can use secondary indexes, while suffix fuzzy matching such as `%xxx` requires a search index (SEARCH).
+
+### Window Functions
+
+⚠️ **Limited support**: Official compatibility documentation marks window functions as "not supported yet". The syntax does not return an error, but there may be **correctness or stability risks** because server-side computation is expensive. Tests show that ROW_NUMBER, RANK, DENSE_RANK, LEAD, SUM OVER, and AVG OVER can run correctly in the current version. LAG has a parser bug in earlier versions. Use window functions **with caution** in production. Prefer using the compute engine (OLAP) for window calculations.
+
+```sql
+-- ROW_NUMBER: assigns row numbers within each partition.
 SELECT id, user_name, amount,
        ROW_NUMBER() OVER (PARTITION BY user_name ORDER BY amount DESC) AS rn
 FROM orders;
 
--- RANK: 排名
+-- RANK: ranking.
 SELECT id, user_name, amount,
        RANK() OVER (ORDER BY amount DESC) AS rnk
 FROM orders;
 
--- SUM OVER: 分组累计求和
+-- SUM OVER: grouped cumulative sum.
 SELECT id, user_name, amount,
        SUM(amount) OVER (PARTITION BY user_name) AS user_total
 FROM orders;
 
--- LEAD/LAG: 前后行引用
+-- LEAD/LAG: references preceding or following rows.
 SELECT id, amount,
        LAG(amount) OVER (ORDER BY id) AS prev_amt,
        LEAD(amount) OVER (ORDER BY id) AS next_amt
 FROM orders;
 ```
 
-### 子查询
+### Subqueries
 
-Lindorm SQL 支持派生表（FROM 子句中的子查询），WHERE IN/EXISTS 子查询需索引支持：
+Lindorm SQL supports derived tables, which are subqueries in the FROM clause. WHERE IN and EXISTS subqueries require index support:
 
 ```sql
--- 派生表（推荐，无索引也可用）
+-- Derived table. Recommended and can be used even without indexes.
 SELECT * FROM (
     SELECT user_name, SUM(amount) AS total FROM orders GROUP BY user_name
 ) AS t WHERE total > 4000;
 
--- WHERE IN 子查询（需子查询中过滤列有索引）
+-- WHERE IN subquery. The filter columns in the subquery must have indexes.
 SELECT * FROM orders
-WHERE user_name IN (SELECT name FROM users WHERE city = '杭州');
+WHERE user_name IN (SELECT name FROM users WHERE city = 'Hangzhou');
 
--- 标量子查询（需索引支持）
+-- Scalar subquery. Index support is required.
 SELECT id, user_name,
        (SELECT COUNT(*) FROM orders o2 WHERE o2.user_name = orders.user_name) AS order_cnt
 FROM orders;
 ```
 
-> 详见 [sql-usage-notes.md](sql-usage-notes.md) 中的子查询支持章节。
+> For details, see the subquery support section in [sql-usage-notes.md](sql-usage-notes.md).
 
-### 保留关键字
+### Reserved Keywords
 
-以下关键字不能作为表名或列名使用：
+**Query the complete keyword list**: Use the `information_schema.KEYWORDS` system view to query all keywords in the SQL engine and whether they are **reserved keywords** or **non-reserved keywords**:
+
+```sql
+-- Query all keywords, including reserved and non-reserved markers.
+SELECT * FROM information_schema.KEYWORDS;
+
+-- Query reserved keywords only. They cannot be used as table names or column names.
+SELECT * FROM information_schema.KEYWORDS WHERE RESERVED = 1;
+```
+
+The following are common reserved keywords, which cannot be used as table names or column names:
 
 ```
-SELECT, FROM, WHERE, AND, OR, NOT, IN, LIKE, BETWEEN, 
-IS, NULL, TRUE, FALSE, CREATE, ALTER, DROP, TABLE, 
+SELECT, FROM, WHERE, AND, OR, NOT, IN, LIKE, BETWEEN,
+IS, NULL, TRUE, FALSE, CREATE, ALTER, DROP, TABLE,
 INDEX, PRIMARY, KEY, VALUES, UPSERT, UPDATE, DELETE,
 INSERT, INTO, SET, ORDER, BY, ASC, DESC, LIMIT, OFFSET
 ```
 
-如需使用保留字，请用双引号括起：
+> **Note**: The preceding list contains only common reserved keywords. Query `information_schema.KEYWORDS` for the complete list. Non-reserved keywords can be used as identifiers, but avoid using them to prevent compatibility conflicts with future versions.
+
+If you need to use reserved words, enclose them in double quotation marks:
 ```sql
 CREATE TABLE "order" ("select" VARCHAR, PRIMARY KEY("select"));
 ```

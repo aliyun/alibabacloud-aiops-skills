@@ -1,19 +1,19 @@
 # Lindorm AI Engine Guide
 
-本指南说明 Lindorm AI 引擎的独立用法。AI 引擎提供 DashScope 兼容接口，用于 embedding、视觉理解、rerank 和问答生成。业务代码和 Agent 应通过 Lindorm 实例内置 AI 引擎调用模型，认证使用实例用户名和密码对应的 `x-ld-ak` / `x-ld-sk` 请求头，不使用外部平台密钥。
+This guide describes how to use the Lindorm AI engine independently. The AI engine provides DashScope-compatible APIs for embeddings, visual understanding, reranking, and chat-based answer generation. Application code and agents should call models through the AI engine built into the Lindorm instance. Authentication uses the instance username and password through the `x-ld-ak` and `x-ld-sk` request headers. Do not use external platform API keys.
 
-## 连接与连通性
+## Connection and Connectivity
 
-AI 引擎固定端口为 `9002`。公网地址通常包含 `-proxy-ai-pub`，私网地址通常包含 `-proxy-ai-vpc`。
+The AI engine always uses port `9002`. Public endpoints usually contain `-proxy-ai-pub`; VPC endpoints usually contain `-proxy-ai-vpc`.
 
-| 网络类型 | 地址示例 | 适用环境 |
-|----------|----------|----------|
-| VPC 私网 | `<instance_id>-proxy-ai-vpc.lindorm.aliyuncs.com:9002` | 搜索 pipeline、ECS、VPC 内服务 |
-| Public 公网 | `<instance_id>-proxy-ai-pub.lindorm.aliyuncs.com:9002` | 本地电脑或公网客户端 |
+| Network type | Endpoint example | Applicable environment |
+|--------------|------------------|-------------------------|
+| VPC private network | `<instance_id>-proxy-ai-vpc.lindorm.aliyuncs.com:9002` | Search pipelines, ECS, and services inside the VPC |
+| Public network | `<instance_id>-proxy-ai-pub.lindorm.aliyuncs.com:9002` | Local computers or public-network clients |
 
-公网调用前必须确认 AI 引擎公网已开通，并完成白名单检查。搜索引擎公网和 AI 引擎公网是不同入口，不能只开通搜索引擎公网就直接调用 AI。
+Before making public-network calls, confirm that the public endpoint of the AI engine is enabled and that the IP whitelist is configured. The public endpoint of the search engine and the public endpoint of the AI engine are different entries. Do not assume that the AI engine can be called just because the search engine public endpoint is enabled.
 
-### 9002 连通性探测
+### Connectivity check for port 9002
 
 ```bash
 curl --connect-timeout 10 -m 60 \
@@ -27,23 +27,23 @@ curl --connect-timeout 10 -m 60 \
   }'
 ```
 
-成功时应返回 embedding 数据。若返回 `401` / `403`，优先检查 `x-ld-ak` 和 `x-ld-sk` 是否来自同一个 Lindorm 实例。
+A successful response should include embedding data. If the response returns `401` or `403`, first check whether `x-ld-ak` and `x-ld-sk` come from the same Lindorm instance.
 
-## 模型配置
+## Model Configuration
 
-| 模型类型 | 典型模型 | 用途 | 关键检查 |
-|----------|----------|------|----------|
-| Text embedding | `text-embedding-v4` | 知识库文本切分后的向量化 | 输出维度必须等于向量索引 dimension |
-| Multimodal embedding | `qwen2.5-vl-embedding` / `qwen3-vl-embedding` | 图文统一向量空间，支持以图搜图和以文搜图 | 图片和文本查询必须写入同一个向量字段 |
-| VL | `qwen3-vl-plus` / `qwen3-vl-flash` | 图片 URL 识别、生成图片描述 | 图片 URL 必须可被 AI 引擎访问 |
-| Rerank | `qwen3-rerank` / `gte-rerank-v2` | 对召回候选按查询相关性重排 | 保留原始候选数组，用 `results[*].index` 回映射 |
-| Chat | `qwen-plus` / `qwen3.5-plus` | 知识库问答生成 | 提示词必须约束只基于召回上下文回答 |
+| Model type | Typical model | Purpose | Key check |
+|------------|---------------|---------|-----------|
+| Text embedding | `text-embedding-v4` | Vectorize text chunks in a knowledge base | The output dimension must equal the vector index dimension |
+| Multimodal embedding | `qwen2.5-vl-embedding` / `qwen3-vl-embedding` | Build a unified image-text vector space for image-to-image and text-to-image search | Image and text queries must be written to the same vector field |
+| VL | `qwen3-vl-plus` / `qwen3-vl-flash` | Recognize image URLs and generate image descriptions | The image URL must be accessible by the AI engine |
+| Rerank | `qwen3-rerank` / `gte-rerank-v2` | Rerank recalled candidates by query relevance | Preserve the original candidate array and map results back through `results[*].index` |
+| Chat | `qwen-plus` / `qwen3.5-plus` | Generate knowledge-base answers | The prompt must restrict the model to answer only from the recalled context |
 
-Embedding 模型和向量索引的维度不一致会导致写入或查询失败。每个数据集注册时都应记录 `embedding_model`、`vector_dimension`、`vector_field` 和 `index_algorithm`。
+If the embedding model dimension and the vector index dimension are inconsistent, writes or queries will fail. Record `embedding_model`, `vector_dimension`, `vector_field`, and `index_algorithm` whenever a dataset is registered.
 
-## Embedding 调用
+## Embedding Calls
 
-### 文本 embedding
+### Text embeddings
 
 ```bash
 curl --connect-timeout 10 -m 60 \
@@ -53,11 +53,11 @@ curl --connect-timeout 10 -m 60 \
   -XPOST "http://<ai_endpoint>:9002/dashscope/compatible-mode/v1/embeddings" \
   -d '{
     "model": "text-embedding-v4",
-    "input": "Lindorm 向量检索支持全文和向量融合"
+    "input": "Lindorm vector search supports hybrid full-text and vector retrieval"
   }'
 ```
 
-返回包格式样例：
+Example response format:
 
 ```json
 {
@@ -77,11 +77,11 @@ curl --connect-timeout 10 -m 60 \
 }
 ```
 
-向量读取路径：`data[0].embedding`。
+Vector read path: `data[0].embedding`.
 
-### 多模态 embedding
+### Multimodal embeddings
 
-多模态 embedding 用于图文统一向量空间。输入文本时使用 `text`，输入图片 URL 时使用 `image`。
+Multimodal embeddings are used for a unified image-text vector space. Use `text` for text input and `image` for image URL input.
 
 ```bash
 curl --connect-timeout 10 -m 60 \
@@ -99,7 +99,7 @@ curl --connect-timeout 10 -m 60 \
   }'
 ```
 
-返回包格式样例：
+Example response format:
 
 ```json
 {
@@ -122,11 +122,11 @@ curl --connect-timeout 10 -m 60 \
 }
 ```
 
-向量读取路径：`output.embeddings[0].embedding`。写入前必须验证维度与目标 `knn_vector.dimension` 一致。
+Vector read path: `output.embeddings[0].embedding`. Before writing the vector, verify that its dimension is consistent with the target `knn_vector.dimension`.
 
-## VL 图片理解调用
+## VL Image Understanding Calls
 
-VL 模型用于把图片 URL 转成结构化或自然语言描述，常用于多模态检索入库阶段。
+VL models convert image URLs into structured or natural-language descriptions. They are commonly used during multimodal retrieval ingestion.
 
 ```bash
 curl --connect-timeout 10 -m 60 \
@@ -141,14 +141,14 @@ curl --connect-timeout 10 -m 60 \
         "role": "user",
         "content": [
           { "type": "image_url", "image_url": { "url": "https://example.com/product.jpg" } },
-          { "type": "text", "text": "请描述图片中的商品、颜色、材质、风格和适用场景，输出中文。" }
+          { "type": "text", "text": "Describe the product, color, material, style, and applicable scenarios in this image. Output in English." }
         ]
       }
     ]
   }'
 ```
 
-返回包格式样例：
+Example response format:
 
 ```json
 {
@@ -162,7 +162,7 @@ curl --connect-timeout 10 -m 60 \
       "finish_reason": "stop",
       "message": {
         "role": "assistant",
-        "content": "这是一张商品图片，主体为..."
+        "content": "This is a product image. The main item is..."
       }
     }
   ],
@@ -174,11 +174,11 @@ curl --connect-timeout 10 -m 60 \
 }
 ```
 
-描述读取路径：`choices[0].message.content`。
+Description read path: `choices[0].message.content`.
 
-## Rerank 调用
+## Rerank Calls
 
-Rerank 是召回后的重排步骤，不负责检索。调用方必须保留候选文档数组，并用返回的 `index` 映射回原候选。
+Reranking is a post-recall step and does not perform retrieval. The caller must keep the candidate document array and use the returned `index` to map each result back to the original candidate.
 
 ```bash
 curl --connect-timeout 10 -m 60 \
@@ -188,16 +188,16 @@ curl --connect-timeout 10 -m 60 \
   -XPOST "http://<ai_endpoint>:9002/dashscope/compatible-api/v1/reranks" \
   -d '{
     "model": "qwen3-rerank",
-    "query": "适合夏天通勤的白色衬衫",
+    "query": "white shirt suitable for summer commuting",
     "documents": [
-      "白色短袖衬衫，棉质，适合通勤",
-      "黑色厚外套，适合冬季"
+      "White short-sleeve cotton shirt suitable for commuting",
+      "Black thick coat suitable for winter"
     ],
     "top_n": 2
   }'
 ```
 
-返回包格式样例：
+Example response format:
 
 ```json
 {
@@ -220,11 +220,11 @@ curl --connect-timeout 10 -m 60 \
 }
 ```
 
-重排规则：按 `results[*].relevance_score` 降序排列，再用 `results[*].index` 取回原候选文档。
+Reranking rule: sort by `results[*].relevance_score` in descending order, then retrieve the original candidate document through `results[*].index`.
 
-## Chat 问答调用
+## Chat-based Q&A Calls
 
-知识库问答使用召回文本拼接上下文后调用 Chat 模型。提示词必须约束模型只基于已知上下文回答。
+Knowledge-base Q&A concatenates recalled text into context and then calls the Chat model. The prompt must restrict the model to answer only based on the provided context.
 
 ```bash
 curl --connect-timeout 10 -m 60 \
@@ -237,30 +237,30 @@ curl --connect-timeout 10 -m 60 \
     "messages": [
       {
         "role": "system",
-        "content": "你是私域知识库问答助手，只能根据给定上下文回答。"
+        "content": "You are a private-domain knowledge-base Q&A assistant. Answer only according to the provided context."
       },
       {
         "role": "user",
-        "content": "已知信息：<retrieved_context>\n问题：<question>"
+        "content": "Known information: <retrieved_context>\nQuestion: <question>"
       }
     ]
   }'
 ```
 
-回答读取路径：`choices[0].message.content`。
+Answer read path: `choices[0].message.content`.
 
-## 错误处理
+## Error Handling
 
-| 现象 | 可能原因 | 处理 |
-|------|----------|------|
-| 连接超时 | 公网未开通、白名单未放行、使用了 VPC 地址 | 检查网络类型和白名单 |
-| `401` / `403` | 请求头缺失或密码错误 | 检查 `x-ld-ak` / `x-ld-sk` |
-| `404` | 访问了错误端口或路径 | 确认端口为 `9002`，路径以 `/dashscope/` 开头 |
-| embedding 维度不匹配 | 模型与索引配置不一致 | 重新确认模型维度和 `knn_vector.dimension` |
-| VL 内容为空 | 图片 URL 不可访问或图片过大 | 先验证图片 URL 可被服务端访问 |
-| rerank 结果为空 | `documents` 为空或 `top_n` 为 0 | 检查召回候选 |
+| Symptom | Possible cause | Handling |
+|---------|----------------|----------|
+| Connection timeout | Public endpoint is not enabled, whitelist is not configured, or a VPC endpoint is used from outside the VPC | Check the network type and whitelist |
+| `401` / `403` | Missing request headers or incorrect password | Check `x-ld-ak` and `x-ld-sk` |
+| `404` | Wrong port or path | Confirm that the port is `9002` and that the path starts with `/dashscope/` |
+| Embedding dimension mismatch | Model and index configuration are inconsistent | Reconfirm the model dimension and `knn_vector.dimension` |
+| Empty VL content | Image URL is inaccessible or the image is too large | Verify that the image URL can be accessed by the server first |
+| Empty rerank result | `documents` is empty or `top_n` is `0` | Check recalled candidates |
 
-## 输出证据格式
+## Evidence Output Format
 
 ```text
 [Connection] engine=AI endpoint=<masked_ai_endpoint>:9002 network=<public|vpc>
@@ -269,4 +269,4 @@ curl --connect-timeout 10 -m 60 \
 [Blocked] status=<BLOCKED_NETWORK|BLOCKED_AUTH|BLOCKED_MODEL|BLOCKED_INPUT> reason=<reason>
 ```
 
-永远不要在报告中输出 `x-ld-sk`、密码或完整密钥值。
+Never include `x-ld-sk`, passwords, or complete secret values in reports.

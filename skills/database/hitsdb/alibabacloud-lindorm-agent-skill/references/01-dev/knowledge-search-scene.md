@@ -1,51 +1,51 @@
 # Knowledge Base Search Scene
 
-本指南说明如何利用 Lindorm 搜索引擎、向量引擎和 AI 引擎构建私域知识库问答。默认路径是：上传 txt 或 CMRC 类 JSON 文档，切分为 chunk，对 chunk 文本做 embedding，写入 Lindorm，构建向量索引，通过 KNN/RRF 召回上下文，可选 rerank，再调用 Chat 模型生成答案。
+This guide describes how to build private-domain knowledge-base Q&A with the Lindorm search engine, vector engine, and AI engine. The default path is: upload txt or CMRC-style JSON documents, split them into chunks, generate embeddings for chunk text, write the chunks to Lindorm, build a vector index, recall context through KNN or RRF, optionally rerank the candidates, and then call the Chat model to generate an answer.
 
-## 场景目标
+## Scenario Goals
 
-| 阶段 | 能力 |
-|------|------|
-| 数据导入 | 支持 txt 文档和 CMRC 类 JSON 数据 |
-| 数据建模 | 父文档保存原文，chunk 索引保存切分文本和向量 |
-| 向量化 | 通过 Lindorm AI embedding 模型生成向量 |
-| 入库 | 搜索引擎 `_bulk` 或宽表 `UPSERT` |
-| 索引构建 | IVFPQ / IVFBQ 显式构建并检查状态 |
-| 问答检索 | KNN/RRF 召回，rerank 重排，Chat 基于上下文回答 |
+| Phase | Capability |
+|-------|------------|
+| Data import | Support txt documents and CMRC-style JSON data |
+| Data modeling | Store the original text in parent documents and store split text plus vectors in the chunk index |
+| Vectorization | Generate vectors through the Lindorm AI embedding model |
+| Data ingestion | Use search engine `_bulk` or wide table `UPSERT` |
+| Index building | Explicitly build IVFPQ / IVFBQ indexes and check the status |
+| Q&A retrieval | Recall by KNN/RRF, rerank candidates, and answer with Chat based on context |
 
-## 推荐数据模型
+## Recommended Data Model
 
-### 搜索引擎直连模式
+### Direct Search Engine Mode
 
-父文档索引 `<dataset_name>_parent`：
+Parent document index `<dataset_name>_parent`:
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `document_id` | keyword | 文档 ID |
-| `title` | text | 标题 |
-| `context` | text | 原始全文，可不参与索引 |
-| `metadata` | object | 来源、文件名、业务标签 |
+| Field | Type | Description |
+|-------|------|-------------|
+| `document_id` | keyword | Document ID |
+| `title` | text | Title |
+| `context` | text | Original full text. It may be excluded from indexing |
+| `metadata` | object | Source, file name, and business tags |
 
-chunk 索引 `<dataset_name>_chunking`：
+Chunk index `<dataset_name>_chunking`:
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `document_id` | keyword | 父文档 ID |
-| `chunking_position` | integer | 切分位置 |
-| `chunking_number` | integer | 总 chunk 编号或序号 |
-| `text_field` | text | chunk 文本 |
-| `vector_field` | knn_vector | chunk embedding |
-| `metadata` | object | 来源信息 |
+| Field | Type | Description |
+|-------|------|-------------|
+| `document_id` | keyword | Parent document ID |
+| `chunking_position` | integer | Chunk position |
+| `chunking_number` | integer | Total chunk number or sequence number |
+| `text_field` | text | Chunk text |
+| `vector_field` | knn_vector | Chunk embedding |
+| `metadata` | object | Source information |
 
-### 宽表入口模式
+### Wide Table Entry Mode
 
-宽表模式先创建表，再用 `CREATE INDEX ... USING SEARCH` 建搜索索引，pipeline 自动把 `text` 写入 `vector_field`。具体 DDL 和 pipeline 模板见 `vector-guide.md` 的 `sql-vector` 部分。
+In wide table mode, create a table first and then create a search index with `CREATE INDEX ... USING SEARCH`. The pipeline automatically writes `text` into `vector_field`. For the specific DDL and pipeline template, see the `sql-vector` section in `vector-guide.md`.
 
-## 文档切分
+## Document Chunking
 
-### txt 文档
+### txt documents
 
-处理流程：
+Processing flow:
 
 ```text
 read txt
@@ -56,24 +56,24 @@ read txt
 -> assign document_id + chunking_position
 ```
 
-推荐默认值：
+Recommended defaults:
 
-| 参数 | 默认值 |
-|------|--------|
-| `chunk_size` | 500-800 中文字符 |
-| `chunk_overlap` | 50-100 中文字符 |
-| `min_chunk_size` | 50 中文字符 |
-| `document_id` | 文件名 hash 或用户指定 ID |
+| Parameter | Default value |
+|-----------|---------------|
+| `chunk_size` | 500-800 Chinese characters |
+| `chunk_overlap` | 50-100 Chinese characters |
+| `min_chunk_size` | 50 Chinese characters |
+| `document_id` | File-name hash or user-specified ID |
 
-### CMRC 类 JSON
+### CMRC-style JSON
 
-CMRC 数据通常包含篇章、问题和答案。用于知识库构建时，优先把篇章 `context` 作为父文档，把切分后的上下文写入 chunk 索引；问题答案可作为 metadata 或验证集，不直接替代原文。
+CMRC data usually contains passages, questions, and answers. When building a knowledge base, prefer using the passage `context` as the parent document, and write the split context into the chunk index. Questions and answers can be used as metadata or a validation set, but should not directly replace the original text.
 
-## 建索引
+## Index Creation
 
-知识库可以用 HNSW 快速验证，也可以用 IVFPQ / IVFBQ 做大规模低成本检索。参考工程使用离线索引时，写入后需要显式构建。
+A knowledge base can use HNSW for quick validation, or IVFPQ / IVFBQ for large-scale low-cost retrieval. When an offline index is used, as in the reference project, explicitly build the index after data is written.
 
-IVFBQ chunk 索引示例：
+Example IVFBQ chunk index:
 
 ```bash
 curl --connect-timeout 10 -m 60 \
@@ -115,7 +115,7 @@ curl --connect-timeout 10 -m 60 \
   }'
 ```
 
-父文档索引可以不包含向量字段：
+The parent document index may omit vector fields:
 
 ```bash
 curl --connect-timeout 10 -m 60 \
@@ -137,9 +137,9 @@ curl --connect-timeout 10 -m 60 \
   }'
 ```
 
-## 向量化与入库
+## Vectorization and Data Ingestion
 
-每个 chunk 调用 AI embedding：
+Call AI embedding for each chunk:
 
 ```bash
 curl --connect-timeout 10 -m 60 \
@@ -153,7 +153,7 @@ curl --connect-timeout 10 -m 60 \
   }'
 ```
 
-写入 chunk：
+Write chunks:
 
 ```bash
 curl --connect-timeout 10 -m 60 \
@@ -166,7 +166,7 @@ curl --connect-timeout 10 -m 60 \
 '
 ```
 
-入库后验证：
+Verify after ingestion:
 
 ```bash
 curl --connect-timeout 10 -m 60 \
@@ -178,7 +178,7 @@ curl --connect-timeout 10 -m 60 \
   }'
 ```
 
-## 构建 IVFPQ / IVFBQ 索引
+## Build IVFPQ / IVFBQ Indexes
 
 ```bash
 curl --connect-timeout 10 -m 60 \
@@ -204,11 +204,11 @@ curl --connect-timeout 10 -m 60 \
   }'
 ```
 
-只有状态完成后才能把大规模离线索引流程标记为成功。
+Only mark the large-scale offline indexing process as successful after the task status is complete.
 
-## 知识库检索
+## Knowledge Base Retrieval
 
-### KNN 召回
+### KNN recall
 
 ```bash
 curl --connect-timeout 10 -m 60 \
@@ -236,7 +236,7 @@ curl --connect-timeout 10 -m 60 \
   }'
 ```
 
-### RRF 召回
+### RRF recall
 
 ```bash
 curl --connect-timeout 10 -m 60 \
@@ -252,7 +252,7 @@ curl --connect-timeout 10 -m 60 \
           "vector": [0.01, 0.02, 0.03],
           "filter": {
             "match": {
-              "text_field": "问题文本"
+              "text_field": "question text"
             }
           },
           "k": 10
@@ -269,32 +269,32 @@ curl --connect-timeout 10 -m 60 \
   }'
 ```
 
-### Rerank 与上下文组装
+### Reranking and context assembly
 
-对召回到的 `text_field` 列表调用 `ai-guide.md` 的 rerank 接口。随后按分数选择 top chunks，拼接上下文：
+Call the rerank API in `ai-guide.md` for the recalled `text_field` list. Then select the top chunks by score and concatenate the context:
 
 ```text
-已知信息：
+Known information:
 1. <chunk_1_text>
 2. <chunk_2_text>
 3. <chunk_3_text>
 
-请根据上述已知信息回答用户问题。如果无法从中得到答案，请回答“根据已知信息无法回答该问题”，不要编造。
-问题：<question>
+Answer the user question based only on the known information above. If the answer cannot be derived from the known information, answer "The question cannot be answered based on the known information." Do not fabricate.
+Question: <question>
 ```
 
-### 问答生成
+### Q&A generation
 
-使用 `ai-guide.md` 的 Chat 接口。回答必须附带召回证据：
+Use the Chat API in `ai-guide.md`. The answer must include retrieval evidence:
 
-| 输出项 | 说明 |
-|--------|------|
-| `answer` | 基于召回上下文的答案 |
-| `citations` | `document_id`、`chunking_position`、score |
+| Output item | Description |
+|-------------|-------------|
+| `answer` | Answer based on recalled context |
+| `citations` | `document_id`, `chunking_position`, and score |
 | `retrieval_mode` | `knn` / `rrf` / `rrf+rerank` |
-| `blocked_status` | 网络、鉴权、schema、索引构建阻塞 |
+| `blocked_status` | Network, authentication, schema, or index-building blocker |
 
-## 验收证据
+## Acceptance Evidence
 
 ```text
 [Target] instance=<instance_id> region=<region> network=<public|vpc>

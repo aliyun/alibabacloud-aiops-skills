@@ -1,90 +1,90 @@
-# CLI 命令列表
+# Aliyun CLI Command List
 
-本 Skill 涉及的所有 aliyun CLI 命令。
+All Aliyun CLI commands involved in this Skill, such as `aliyun hitsdb ...`, are used for cloud resource operations including instance management, connection address query, whitelist management, and monitoring. Use `lindorm-cli` to execute SQL. See `lindorm-cli-guide.md`.
 
-## Lindorm 实例管理 CLI
+## Lindorm Instance Management CLI
 
-**产品名**: `hitsdb`（Lindorm 产品别名）
+**Product name**: `hitsdb`, Lindorm product alias
 **API Version**: `2020-06-15`
 
-### 插件安装
+### Plugin Installation
 
 ```bash
-# 安装 Lindorm 插件
+# Install the Lindorm plugin.
 aliyun plugin install --names hitsdb
 
-# 启用自动插件安装（推荐）
+# Enable automatic plugin installation, recommended.
 aliyun configure set --auto-plugin-install true
 ```
 
-### 查询命令
+### Query Commands
 
-| CLI 命令 | 说明 | 必需参数 | 返回关键字段 |
+| CLI Command | Description | Required Parameters | Key Returned Fields |
 |----------|------|---------|-------------|
-| `aliyun hitsdb describe-regions` | 查询支持的地域列表 | 无 | `Regions[]`: RegionId, LocalName, RegionEndpoint |
-| `aliyun hitsdb get-instance-summary` | 查询全地域实例概览（无需 `--region`） | 无 | `RegionalSummary[]`: RegionId, RunningCount, LockingCount, Total |
-| `aliyun hitsdb get-lindorm-instance-list` | 查实例列表（ID、状态、引擎开关，支持按地域/类型筛选） | `--region` | `InstanceList[]`: InstanceId, InstanceAlias, InstanceStatus, ServiceType, Enable* 引擎开关 |
-| `aliyun hitsdb get-lindorm-instance` | 查配置/版本/状态（ServiceType、引擎节点数、规格，**不含连接地址**） | `--instance-id` | InstanceStatus, ServiceType, VpcId, `EngineList[]`: Engine, CoreCount, CpuCount, MemorySize, Specification, Version |
-| `aliyun hitsdb get-lindorm-instance-engine-list` | 查连接地址（各引擎 host:port、公网/内网） | `--instance-id` | `EngineList[]`: EngineType, `NetInfoList[]`: ConnectionString, Port, NetType(`"2"`=内网/`"0"`=公网) |
-| `aliyun hitsdb get-lindorm-fs-used-detail` | 查询存储详情（V1） | `--instance-id` | FsCapacity, FsUsedHot/Cold, FsUsedOnLindormTable/TSDB/Search, `LStorageUsageList[]` |
-| `aliyun hitsdb get-lindorm-v2-storage-usage` | 查询存储详情（V2） | `--instance-id` | `UsageByDiskCategory[]`: capacity, used, usedLindormTable/Tsdb/Search3/Column3/Vector3/Message3 |
-| `aliyun hitsdb get-instance-ip-white-list` | 查询 IP 白名单 | `--instance-id` | `GroupList[]`: GroupName, SecurityIpList |
-| `aliyun hitsdb get-lindorm-v2-instance-details` | 查询 V2 实例详情 | `--instance-id` | V2 实例的详细配置信息 |
+| `aliyun hitsdb describe-regions` | Query supported region list | None | `Regions[]`: RegionId, LocalName, RegionEndpoint |
+| `aliyun hitsdb get-instance-summary` | Query all-region instance overview, no `--region` required | None | `RegionalSummary[]`: RegionId, RunningCount, LockingCount, Total |
+| `aliyun hitsdb get-lindorm-instance-list` | Query instance list, including ID, status, engine switches, and support for filtering by region/type | `--region` | `InstanceList[]`: InstanceId, InstanceAlias, InstanceStatus, ServiceType, Enable* engine switches |
+| `aliyun hitsdb get-lindorm-instance` | Query configuration/version/status, including ServiceType, engine node count, and specifications. **Connection address is not included** | `--instance-id` | InstanceStatus, ServiceType, VpcId, `EngineList[]`: Engine, CoreCount, CpuCount, MemorySize, Specification, Version |
+| `aliyun hitsdb get-lindorm-instance-engine-list` | Query connection addresses, including host:port and public/internal networks for each engine | `--instance-id` | `EngineList[]`: EngineType, `NetInfoList[]`: ConnectionString, Port, NetType, `"2"`=internal / `"0"`=public |
+| `aliyun hitsdb get-lindorm-fs-used-detail` | Query storage details, V1 | `--instance-id` | FsCapacity, FsUsedHot/Cold, FsUsedOnLindormTable/TSDB/Search, `LStorageUsageList[]` |
+| `aliyun hitsdb get-lindorm-v2-storage-usage` | Query storage details, V2 | `--instance-id` | `UsageByDiskCategory[]`: capacity, used, usedLindormTable/Tsdb/Search3/Column3/Vector3/Message3 |
+| `aliyun hitsdb get-instance-ip-white-list` | Query IP whitelist | `--instance-id` | `GroupList[]`: GroupName, SecurityIpList |
+| `aliyun hitsdb get-lindorm-v2-instance-details` | Query V2 instance details | `--instance-id` | Detailed configuration information of a V2 instance |
 
-### 管理命令
+### Management Commands
 
-| CLI 命令 | 说明 | 必需参数 |
+| CLI Command | Description | Required Parameters |
 |----------|------|---------|
-| `aliyun hitsdb create-lindorm-instance` | 创建实例 | 多个参数，见 --help |
-| `aliyun hitsdb create-lindorm-v2-instance` | 创建 V2 实例 | 多个参数，见 --help |
-| `aliyun hitsdb release-lindorm-instance` | 释放实例 | `--instance-id`, `--region` |
-| `aliyun hitsdb upgrade-lindorm-instance` | 变配实例 | `--instance-id`, `--region` |
-| `aliyun hitsdb update-instance-ip-white-list` | 更新 IP 白名单 | `--instance-id`, `--region`, `--group-name`, `--security-ip-list` |
-| `aliyun hitsdb update-lindorm-instance-attribute` | 更新实例属性 | `--instance-id`, `--region` |
+| `aliyun hitsdb create-lindorm-instance` | Create instance | Multiple parameters. See --help. |
+| `aliyun hitsdb create-lindorm-v2-instance` | Create V2 instance | Multiple parameters. See --help. |
+| `aliyun hitsdb release-lindorm-instance` | Release instance | `--instance-id`, `--region` |
+| `aliyun hitsdb upgrade-lindorm-instance` | Change instance specification | `--instance-id`, `--region` |
+| `aliyun hitsdb update-instance-ip-white-list` | Update IP whitelist | `--instance-id`, `--region`, `--group-name`, `--security-ip-list` |
+| `aliyun hitsdb update-lindorm-instance-attribute` | Update instance attributes | `--instance-id`, `--region` |
 
-### 执行示例
+### Execution Examples
 
 ```bash
-# 查询地域
+# Query regions.
 aliyun hitsdb describe-regions
 
-# 查询实例概览（无需 region，自动返回所有地域）
+# Query instance overview, no region required, automatically returns all regions.
 aliyun hitsdb get-instance-summary
 
-# 查询实例列表（需要指定地域）
+# Query instance list, region required.
 aliyun hitsdb get-lindorm-instance-list --region cn-shanghai
 
-# 查询实例详情（无需 region）
+# Query instance details, no region required.
 aliyun hitsdb get-lindorm-instance --instance-id ld-uf6nbdlx5n34q6l6t
 
-# 查询引擎列表（无需 region）
+# Query engine list, no region required.
 aliyun hitsdb get-lindorm-instance-engine-list --instance-id ld-uf6nbdlx5n34q6l6t
 
-# 查询存储详情 V1（无需 region）
+# Query V1 storage details, no region required.
 aliyun hitsdb get-lindorm-fs-used-detail --instance-id ld-uf6cx7381qw2u5u8w
 
-# 查询存储详情 V2（无需 region）
+# Query V2 storage details, no region required.
 aliyun hitsdb get-lindorm-v2-storage-usage --instance-id ld-uf6nbdlx5n34q6l6t
 
-# 查询 IP 白名单（无需 region）
+# Query IP whitelist, no region required.
 aliyun hitsdb get-instance-ip-white-list --instance-id ld-uf6nbdlx5n34q6l6t
 
-# 带过滤条件的实例列表查询
+# Query instance list with filters.
 aliyun hitsdb get-lindorm-instance-list --region cn-shanghai --service-type lindorm_v2 --support-engine 4
 ```
 
-### 返回值结构
+### Return Value Structure
 
-#### get-lindorm-instance-list → 查实例列表
+#### get-lindorm-instance-list -> Query Instance List
 
-返回实例基本信息，不含连接地址、不含引擎节点数/规格。
+Returns basic instance information. It does not include connection addresses or engine node counts/specifications.
 
 ```json
 {
   "InstanceList": [
     {
       "InstanceId": "ld-xxx",
-      "InstanceAlias": "实例名称",
+      "InstanceAlias": "instance-name",
       "InstanceStatus": "ACTIVATION",
       "ServiceType": "lindorm_v2",
       "InstanceStorage": "320",
@@ -100,9 +100,9 @@ aliyun hitsdb get-lindorm-instance-list --region cn-shanghai --service-type lind
 }
 ```
 
-#### get-lindorm-instance → 查配置/版本/状态
+#### get-lindorm-instance -> Query Configuration / Version / Status
 
-返回单个实例的详细配置，含引擎节点数/规格/版本，**不含连接地址**。
+Returns the detailed configuration of a single instance, including engine node counts, specifications, and versions. **Connection addresses are not included**.
 
 ```json
 {
@@ -134,9 +134,9 @@ aliyun hitsdb get-lindorm-instance-list --region cn-shanghai --service-type lind
 }
 ```
 
-#### get-lindorm-instance-engine-list → 查连接地址
+#### get-lindorm-instance-engine-list -> Query Connection Addresses
 
-返回各引擎的连接地址和网络类型，**不含配置/节点数信息**。
+Returns connection addresses and network types of each engine. **Configuration/node count information is not included**.
 
 ```json
 {
@@ -173,9 +173,9 @@ aliyun hitsdb get-lindorm-instance-list --region cn-shanghai --service-type lind
 }
 ```
 
-**NetType 说明**：`"2"` = 内网，`"0"` = 公网
+**NetType description**: `"2"` = internal network, `"0"` = public network
 
-#### get-instance-ip-white-list → 查 IP 白名单
+#### get-instance-ip-white-list -> Query IP Whitelist
 
 ```json
 {
@@ -193,7 +193,7 @@ aliyun hitsdb get-lindorm-instance-list --region cn-shanghai --service-type lind
 }
 ```
 
-#### get-lindorm-fs-used-detail → V1 存储详情
+#### get-lindorm-fs-used-detail -> V1 Storage Details
 
 ```json
 {
@@ -221,9 +221,9 @@ aliyun hitsdb get-lindorm-instance-list --region cn-shanghai --service-type lind
 }
 ```
 
-> 单位均为 bytes。
+> All units are bytes.
 
-#### get-lindorm-v2-storage-usage → V2 存储详情
+#### get-lindorm-v2-storage-usage -> V2 Storage Details
 
 ```json
 {
@@ -250,100 +250,100 @@ aliyun hitsdb get-lindorm-instance-list --region cn-shanghai --service-type lind
 }
 ```
 
-> `CapacityByDiskCategory` 单位为 GB，`UsageByDiskCategory` 单位为 bytes。
+> `CapacityByDiskCategory` is in GB, and `UsageByDiskCategory` is in bytes.
 
 ---
 
-### 参数说明
+### Parameter Descriptions
 
-#### `--region` 地域参数
+#### `--region` Region Parameter
 
-| 地域 ID | 地域名称 |
+| Region ID | Region Name |
 |---------|---------|
-| `cn-shanghai` | 华东2（上海）- 默认 |
-| `cn-beijing` | 华北2（北京） |
-| `cn-hangzhou` | 华东1（杭州） |
-| `cn-shenzhen` | 华南1（深圳） |
-| `cn-zhangjiakou` | 华北3（张家口） |
-| `cn-qingdao` | 华北1（青岛） |
-| `cn-wulanchabu` | 华北6（乌兰察布） |
-| `cn-guangzhou` | 华南3（广州） |
-| `cn-chengdu` | 西南1（成都） |
+| `cn-shanghai` | East China 2, Shanghai, default |
+| `cn-beijing` | North China 2, Beijing |
+| `cn-hangzhou` | East China 1, Hangzhou |
+| `cn-shenzhen` | South China 1, Shenzhen |
+| `cn-zhangjiakou` | North China 3, Zhangjiakou |
+| `cn-qingdao` | North China 1, Qingdao |
+| `cn-wulanchabu` | North China 6, Ulanqab |
+| `cn-guangzhou` | South China 3, Guangzhou |
+| `cn-chengdu` | Southwest China 1, Chengdu |
 
-#### `--instance-id` 实例 ID
+#### `--instance-id` Instance ID
 
-格式：`ld-xxx`（以 ld- 开头，后接字母数字）
+Format: `ld-xxx`, starts with `ld-` followed by letters and digits.
 
-#### `--service-type` 实例类型
+#### `--service-type` Instance Type
 
-完整列表见 SKILL.md →「版本判断」
+For the complete list, see SKILL.md -> "Version identification".
 
-| 值 | 说明 |
+| Value | Description |
 |----|------|
-| `lindorm` | Lindorm V1 单可用区实例 |
-| `lindorm_multizone` | Lindorm V1 多可用区实例 |
-| `lindorm_multizone_basic` | Lindorm V1 多可用区（基础版） |
-| `lindorm_v2` | Lindorm V2 单可用区实例 |
-| `lindorm_v2_multizone` | Lindorm V2 多可用区（基础版） |
-| `lindorm_v2_multizone_ha` | Lindorm V2 多可用区（高可用版） |
-| `serverless_lindorm` | Lindorm Serverless 实例 |
-| `lindorm_standalone` | Lindorm 单节点（开发测试） |
+| `lindorm` | Lindorm V1 single-zone instance |
+| `lindorm_multizone` | Lindorm V1 multi-zone instance |
+| `lindorm_multizone_basic` | Lindorm V1 multi-zone instance, basic edition |
+| `lindorm_v2` | Lindorm V2 single-zone instance |
+| `lindorm_v2_multizone` | Lindorm V2 multi-zone instance, basic edition |
+| `lindorm_v2_multizone_ha` | Lindorm V2 multi-zone instance, high-availability edition |
+| `serverless_lindorm` | Lindorm Serverless instance |
+| `lindorm_standalone` | Lindorm single-node instance for development and testing |
 
-#### `--support-engine` 引擎类型（位掩码）
+#### `--support-engine` Engine Type, Bitmask
 
-| 值 | 引擎代码 | 说明 |
+| Value | Engine Code | Description |
 |----|---------|------|
-| `1` | 搜索引擎 | `solr` / `lsearch` |
-| `2` | 时序引擎 | `tsdb` |
-| `4` | 宽表引擎 | `lindorm` / `lcolumn` |
-| `8` | 文件引擎 | `file` |
-| `15` = 1+2+4+8 | 全部引擎 | 宽表 + 时序 + 搜索 + 文件 |
+| `1` | Search engine | `solr` / `lsearch` |
+| `2` | Time series engine | `tsdb` |
+| `4` | Wide table engine | `lindorm` / `lcolumn` |
+| `8` | File engine | `file` |
+| `15` = 1+2+4+8 | All engines | Wide table + time series + search + file |
 
-#### 引擎类型详情
+#### Engine Type Details
 
-引擎类型详情见 SKILL.md →「引擎类型详情」
+For engine type details, see SKILL.md -> "Engine type details".
 
 ---
 
-## 云监控 CLI
+## CloudMonitor CLI
 
-**产品名**: `cms`
+**Product name**: `cms`
 **Namespace**: `acs_lindorm`
 
-### 插件安装
+### Plugin Installation
 
 ```bash
-# 安装云监控插件
+# Install the CloudMonitor plugin.
 aliyun plugin install --names cms
 ```
 
-### 查询命令
+### Query Commands
 
-| CLI 命令 | 说明 | 必需参数 |
+| CLI Command | Description | Required Parameters |
 |----------|------|---------|
-| `aliyun cms describe-metric-meta-list` | 查询指标列表 | `--namespace`, `--region` | `--region` 可选 |
-| `aliyun cms describe-metric-last` | 查询最新数据 | `--namespace`, `--metric-name`, `--dimensions` | `--region` 可选，通过 instanceId 自动定位 |
-| `aliyun cms describe-metric-data` | 查询历史数据 | `--namespace`, `--metric-name`, `--dimensions`, `--start-time`, `--end-time` | `--region` 可选，通过 instanceId 自动定位 |
+| `aliyun cms describe-metric-meta-list` | Query metric list | `--namespace`, `--region`; `--region` is optional |
+| `aliyun cms describe-metric-last` | Query latest data | `--namespace`, `--metric-name`, `--dimensions`; `--region` is optional and automatically located by instanceId |
+| `aliyun cms describe-metric-data` | Query historical data | `--namespace`, `--metric-name`, `--dimensions`, `--start-time`, `--end-time`; `--region` is optional and automatically located by instanceId |
 
-### 执行示例
+### Execution Examples
 
 ```bash
-# 查询 Lindorm 监控指标列表
+# Query Lindorm monitoring metric list.
 aliyun cms describe-metric-meta-list --namespace acs_lindorm
 
-# 查询 CPU 空闲率最新数据
+# Query latest CPU idle rate data.
 aliyun cms describe-metric-last \
     --namespace acs_lindorm \
     --metric-name cpu_idle \
     --dimensions '[{"instanceId":"ld-uf6nbdlx5n34q6l6t"}]'
 
-# 查询内存使用率最新数据
+# Query latest memory usage rate data.
 aliyun cms describe-metric-last \
     --namespace acs_lindorm \
     --metric-name mem_used_percent \
     --dimensions '[{"instanceId":"ld-uf6nbdlx5n34q6l6t"}]'
 
-# 查询历史监控数据（指定时间范围）
+# Query historical monitoring data, specified time range.
 aliyun cms describe-metric-data \
     --namespace acs_lindorm \
     --metric-name cpu_idle \
@@ -353,9 +353,9 @@ aliyun cms describe-metric-data \
     --period 60
 ```
 
-### 返回值结构
+### Return Value Structure
 
-#### describe-metric-meta-list → 查指标列表
+#### describe-metric-meta-list -> Query Metric List
 
 ```json
 {
@@ -365,7 +365,7 @@ aliyun cms describe-metric-data \
       {
         "MetricName": "cpu_idle",
         "Namespace": "acs_lindorm",
-        "Description": "CPU空闲率",
+        "Description": "CPU idle rate",
         "Unit": "%",
         "Periods": "60,300",
         "Dimensions": "userId,instanceId,host",
@@ -376,7 +376,7 @@ aliyun cms describe-metric-data \
 }
 ```
 
-#### describe-metric-last → 查最新数据
+#### describe-metric-last -> Query Latest Data
 
 ```json
 {
@@ -386,67 +386,67 @@ aliyun cms describe-metric-data \
 }
 ```
 
-> 注意：`Datapoints` 是 JSON **字符串**，需要二次解析。每个数据点含 `host`（节点名）和 `userId`。
+> Note: `Datapoints` is a JSON **string** and requires secondary parsing. Each data point contains `host`, the node name, and `userId`.
 
-#### describe-metric-data → 查历史数据
+#### describe-metric-data -> Query Historical Data
 
-返回结构与 `describe-metric-last` 相同，`Datapoints` 含多个时间点的数据。
+The returned structure is the same as `describe-metric-last`, and `Datapoints` contains data at multiple time points.
 
 ---
 
-### 参数说明
+### Parameter Descriptions
 
-#### `--dimensions` 维度参数（JSON 数组）
+#### `--dimensions` Dimension Parameter, JSON Array
 
-**格式说明**：Linux/macOS 用单引号包裹（无需转义），Windows CMD 用双引号+转义。
+**Format description**: On Linux/macOS, wrap it with single quotes and no escaping is required. On Windows CMD, use double quotes plus escaping.
 
 ```bash
-# ✅ Linux/macOS 推荐格式（单引号，无需转义）
+# ✅ Recommended Linux/macOS format, single quotes, no escaping required.
 --dimensions '[{"instanceId":"ld-xxx"}]'
 
-# ✅ Windows CMD 格式（双引号+转义）
+# ✅ Windows CMD format, double quotes plus escaping.
 --dimensions "[{\"instanceId\":\"ld-xxx\"}]"
 ```
 
-多维度示例：
+Multi-dimension example:
 ```bash
 --dimensions "[{\"instanceId\":\"ld-xxx\"},{\"instanceId\":\"ld-yyy\"}]"
 ```
 
-#### `--start-time` / `--end-time` 时间参数
+#### `--start-time` / `--end-time` Time Parameters
 
-时间格式说明见 SKILL.md →「时间格式」
+For time format descriptions, see SKILL.md -> "Time format".
 
-#### `--period` 采集周期（秒）
+#### `--period` Collection Period, Seconds
 
-| 值 | 说明 |
+| Value | Description |
 |----|------|
-| `60` | 1 分钟（默认） |
-| `300` | 5 分钟 |
-| `900` | 15 分钟 |
-| `3600` | 1 小时 |
+| `60` | 1 minute, default |
+| `300` | 5 minutes |
+| `900` | 15 minutes |
+| `3600` | 1 hour |
 
 ---
 
-常用监控指标见 `references/02-ops/monitoring-guide.md`
+Common monitoring metrics are described in `references/02-ops/monitoring-guide.md`.
 
 ---
 
-## JMESPath 查询过滤
+## JMESPath Query Filtering
 
-使用 `--cli-query` 过滤输出：
+Use `--cli-query` to filter output:
 
 ```bash
-# 仅返回实例 ID 和名称
+# Return only instance ID and name.
 aliyun hitsdb get-lindorm-instance-list --region cn-shanghai \
     --cli-query 'InstanceList[].[InstanceId,InstanceAlias,InstanceStatus]'
 
-# 仅返回特定实例的引擎类型（无需 --region）
+# Return only the engine type of a specific instance, no --region required.
 aliyun hitsdb get-lindorm-instance-engine-list \
     --instance-id ld-uf6nbdlx5n34q6l6t \
     --cli-query 'EngineList[].[EngineType,NetInfoList[0].ConnectionString]'
 
-# 仅返回监控数据平均值
+# Return only the average monitoring data value.
 aliyun cms describe-metric-last \
     --namespace acs_lindorm --metric-name cpu_idle \
     --dimensions '[{"instanceId":"ld-xxx"}]' \
@@ -455,32 +455,33 @@ aliyun cms describe-metric-last \
 
 ---
 
-## 分页查询
+## Paginated Query
 
-使用 `--pager` 合并多页结果：
+Use `--pager` to merge multi-page results:
 
 ```bash
-# 自动合并所有分页的实例列表
+# Automatically merge all paginated instance list results.
 aliyun hitsdb get-lindorm-instance-list --region cn-shanghai --pager
 ```
 
 ---
 
-## 错误处理
+## Error Handling
 
-| 错误信息 | 原因 | 解决方法 |
+| Error Message | Cause | Solution |
 |---------|------|---------|
-| `Instance.IsNotValid` | 实例 ID 无效或不存在 | 使用 `get-lindorm-instance-list --region <region>` 确认实例 ID |
-| `InvalidParameter.InstanceId` | 实例 ID 格式错误 | 使用 `ld-xxx` 格式 |
-| `InstanceNotFound` | 实例不存在 | 检查地域和实例 ID |
-| `Forbidden.RAM` | 权限不足 | 添加 `AliyunLindormReadOnlyAccess` 权限 |
-| `Throttling.User` | API 限流 | 降低调用频率或稍后重试 |
+| `Instance.IsNotValid` | Instance ID is invalid or does not exist | Use `get-lindorm-instance-list --region <region>` to confirm the instance ID |
+| `InvalidParameter.InstanceId` | Instance ID format is incorrect | Use the `ld-xxx` format |
+| `InstanceNotFound` | Instance does not exist | Check the region and instance ID |
+| `Forbidden.RAM` | Insufficient permissions | Add the `AliyunLindormReadOnlyAccess` permission |
+| `Throttling.User` | API throttling | Reduce the call frequency or retry later |
 
 ---
 
-## 相关文档
+## Related Documents
 
-- Lindorm API 文档：https://help.aliyun.com/zh/lindorm/developer-reference/api-reference
-- 云监控 API 文档：https://help.aliyun.com/zh/cms/developer-reference/api-reference
-- Aliyun CLI 安装指南：`./cli-installation-guide.md`
-- Lindorm CLI / HBase Shell 指南：`./lindorm-cli-guide.md`
+- Lindorm API documentation: https://help.aliyun.com/zh/lindorm/developer-reference/api-reference
+- CloudMonitor API documentation: https://help.aliyun.com/zh/cms/developer-reference/api-reference
+- Aliyun CLI installation guide: `./cli-installation-guide.md`
+- Lindorm CLI guide: `./lindorm-cli-guide.md`
+- HBase Shell guide: `./hbase-shell-guide.md`

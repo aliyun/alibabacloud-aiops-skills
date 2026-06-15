@@ -1,114 +1,115 @@
-# Lindorm SQL 客户端开发指南
+# Lindorm SQL Client Development Guide
 
-本文档提供多语言连接 Lindorm SQL 的开发参考，包括 Java、Python、Go、C/C++、C#、Rust、PHP、Node.js 等语言的连接示例、连接池配置和框架集成方案。
+This document provides development references for connecting to Lindorm SQL in multiple languages, including Java, Python, Go, C/C++, C#, Rust, PHP, Node.js, connection pool configuration, and framework integration.
 
-> **推荐**: MySQL 协议更加稳定可靠，性能更优，推荐新用户使用 MySQL 协议连接宽表引擎。
+> **Recommendation**: The MySQL protocol is more stable, reliable, and performant. New users are advised to connect to the wide table engine through the MySQL protocol.
 
-## 通用前提条件
+## Common Prerequisites
 
-- 已开通 MySQL 协议兼容功能（控制台 > 数据库连接 > 宽表引擎）
-- 已将客户端 IP 添加至白名单
-- MySQL 协议端口请以 `SKILL.md` →「代码生成规范 / 端口号速查表」为准
+- The MySQL protocol compatibility feature is enabled. Console path: Database Connection > Wide Table Engine.
+- The client IP has been added to the whitelist.
+- For the MySQL protocol port, follow `SKILL.md` -> "Code generation specifications / port quick reference".
 
-### 连接域名格式（Agent 根据实例类型自动选择）
+### Connection Domain Format
 
-Lindorm 实例分为 V1 和 V2 两种架构，域名格式不同。Agent 执行时应：
+Lindorm instances have two architecture versions, V1 and V2, and their domain formats are different. During execution, the agent should:
 
-1. **查询实例详情**获取 `ServiceType`
-2. **判断架构类型**：
-   - `lindorm_v2*` → 使用 V2 域名格式
-   - `lindorm` → 使用 V1 域名格式
-3. **自动填充**正确的连接地址
+1. **Query instance details** to obtain `ServiceType`.
+2. **Identify the architecture type**:
+   - `lindorm_v2*` -> use the V2 domain format.
+   - `lindorm` -> use the V1 domain format.
+3. **Automatically fill in** the correct connection endpoint.
 
-| 架构 | ServiceType | 域名格式 | 内网示例 | 公网示例 |
-|------|-------------|----------|----------|----------|
+| Architecture | ServiceType | Domain format | Private endpoint example | Public endpoint example |
+|--------------|-------------|---------------|--------------------------|-------------------------|
 | **V2** | `lindorm_v2*` | `*.lindorm.aliyuncs.com` | `ld-xxx-proxy-lindorm-vpc.lindorm.aliyuncs.com:33060` | `ld-xxx-proxy-lindorm-pub.lindorm.aliyuncs.com:33060` |
 | **V1** | `lindorm` | `*.lindorm.rds.aliyuncs.com` | `ld-xxx-proxy-lindorm.lindorm.rds.aliyuncs.com:33060` | `ld-xxx-proxy-lindorm-public.lindorm.rds.aliyuncs.com:33060` |
 
-> **V1 宽表引擎有两个 MySQL 地址**：`proxy-lindorm` 和 `proxy-sql-lindorm`，功能相同，任选其一即可。
-> 
-> **V1 公网地址需开通公网访问后才可用**，默认仅提供内网地址。公网地址后缀为 `-public`。
-> 
-> **获取方式**：控制台 → 实例详情 → 数据库连接，或执行 `aliyun hitsdb get-lindorm-instance-engine-list --instance-id <id>`
+> **A V1 wide table engine has two MySQL endpoints**: `proxy-lindorm` and `proxy-sql-lindorm`. They provide the same functionality. Either one can be used.
+>
+> **A V1 public endpoint is available only after public access is enabled**. By default, only the private endpoint is provided. The public endpoint suffix is `-public`.
+>
+> **How to obtain it**: console -> instance details -> Database Connection, or run `aliyun hitsdb get-lindorm-instance-engine-list --instance-id <id>`.
 
 ---
 
-## 注意事项
-- 只能基于本 Skill 文档中明确记载的内容回答用户问题，严禁推测、联想或凭训练知识生成文档中不存在的 SQL 语法、参数、功能或配置。
-- 如果文档中没有相关信息，必须明确告知用户"当前文档未收录此内容"，并引导用户查阅阿里云官方文档（help.aliyun.com）确认。
-- 生成的代码示例必须基于文档中的模板，参数和语法必须与文档一致。
+## Notes
+
+- Answer user questions only based on content explicitly documented in this Skill. Do not infer, associate, or generate SQL syntax, parameters, features, or configurations that are not present in the documentation from training knowledge.
+- If the documentation does not contain relevant information, clearly tell the user "This content is not included in the current documentation" and guide the user to Alibaba Cloud official documentation at `help.aliyun.com` for confirmation.
+- Generated code examples must be based on templates in the documentation. Parameters and syntax must be consistent with the documentation.
 
 ---
 
-## 执行步骤
+## Execution Steps
 
-### 步骤1：识别用户程序开发语言
+### Step 1: Identify the user's development language
 
 ---
 
-### 步骤2：根据用户开发语言选择连接方式
+### Step 2: Select the connection method based on the development language
 
-#### 官方使用文档地址
+#### Official documentation links
 
-**基于 SQL 的应用开发：**
+**SQL-based application development:**
 https://help.aliyun.com/zh/lindorm/user-guide/add-connect-wide-table-engines-through-lindorm-query-language/
 
-**使用 MySQL 协议的应用开发(推荐)**
+**Application development with the MySQL protocol, recommended**
 
 1. **Java**
-   - JDBC接口：https://help.aliyun.com/zh/lindorm/user-guide/application-development-based-on-java-jdbc-interface
-   - 连接池Druid：https://help.aliyun.com/zh/lindorm/user-guide/application-development-based-on-java-connection-pool-druid
-   - LindormDataSource：https://help.aliyun.com/zh/lindorm/user-guide/application-development-based-on-lindormdatasource
-   - ORM框架MyBatis：https://help.aliyun.com/zh/lindorm/user-guide/application-development-based-on-java-orm-framework-mybatis
+   - JDBC interface: https://help.aliyun.com/zh/lindorm/user-guide/application-development-based-on-java-jdbc-interface
+   - Druid connection pool: https://help.aliyun.com/zh/lindorm/user-guide/application-development-based-on-java-connection-pool-druid
+   - LindormDataSource: https://help.aliyun.com/zh/lindorm/user-guide/application-development-based-on-lindormdatasource
+   - ORM framework MyBatis: https://help.aliyun.com/zh/lindorm/user-guide/application-development-based-on-java-orm-framework-mybatis
 2. **Python**
-   - 原生Python：https://help.aliyun.com/zh/lindorm/user-guide/python-based-application-development-1
-   - ORM框架：https://help.aliyun.com/zh/lindorm/user-guide/application-development-based-on-python-orm-framework
+   - Native Python: https://help.aliyun.com/zh/lindorm/user-guide/python-based-application-development-1
+   - ORM framework: https://help.aliyun.com/zh/lindorm/user-guide/application-development-based-on-python-orm-framework
 3. **Go**
-   - 原生Go：https://help.aliyun.com/zh/lindorm/user-guide/application-development-based-on-go
-   - ORM框架：https://help.aliyun.com/zh/lindorm/user-guide/application-development-based-on-go-orm-framework
+   - Native Go: https://help.aliyun.com/zh/lindorm/user-guide/application-development-based-on-go
+   - ORM framework: https://help.aliyun.com/zh/lindorm/user-guide/application-development-based-on-go-orm-framework
 4. **C**
-   - C API：https://help.aliyun.com/zh/lindorm/user-guide/application-development-based-on-c-api
+   - C API: https://help.aliyun.com/zh/lindorm/user-guide/application-development-based-on-c-api
 5. **C#**
-   - 原生C#：https://help.aliyun.com/zh/lindorm/user-guide/application-development-based-on-c
+   - Native C#: https://help.aliyun.com/zh/lindorm/user-guide/application-development-based-on-c
 6. **Rust**
-   - 原生Rust：https://help.aliyun.com/zh/lindorm/user-guide/rust-based-application-development
+   - Native Rust: https://help.aliyun.com/zh/lindorm/user-guide/rust-based-application-development
 7. **PHP**
-   - 原生PHP：https://help.aliyun.com/zh/lindorm/user-guide/php-based-application-development
+   - Native PHP: https://help.aliyun.com/zh/lindorm/user-guide/php-based-application-development
 8. **Node.js**
-   - 原生Node.js：https://help.aliyun.com/zh/lindorm/user-guide/application-development-based-on-node-js
+   - Native Node.js: https://help.aliyun.com/zh/lindorm/user-guide/application-development-based-on-node-js
 9. **ODBC**
-   - ODBC接口：https://help.aliyun.com/zh/lindorm/user-guide/application-development-based-on-odbc
-   
-**Avatica协议**（仅存量维护）
+   - ODBC interface: https://help.aliyun.com/zh/lindorm/user-guide/application-development-based-on-odbc
+
+**Avatica protocol, existing-workload maintenance only**
 
 1. **Java**
-- JDBC接口：https://help.aliyun.com/zh/lindorm/user-guide/call-java-api-operations-in-sql-based-connection-to-and-usage-of-lindormtable
-- 连接池Druid：https://help.aliyun.com/zh/lindorm/user-guide/through-the-connection-pool-druid-connection-wide-table-engine
+- JDBC interface: https://help.aliyun.com/zh/lindorm/user-guide/call-java-api-operations-in-sql-based-connection-to-and-usage-of-lindormtable
+- Druid connection pool: https://help.aliyun.com/zh/lindorm/user-guide/through-the-connection-pool-druid-connection-wide-table-engine
 
 2. **Python**
-- DB-API：https://help.aliyun.com/zh/lindorm/user-guide/use-the-lindorm-sql-api-for-a-non-java-language-to-connect-to-and-use-the-wide-table-engine-lindormtable
-- 连接池DBUtils：https://help.aliyun.com/zh/lindorm/user-guide/use-dbutils-to-connect-to-lindormtable
+- DB-API: https://help.aliyun.com/zh/lindorm/user-guide/use-the-lindorm-sql-api-for-a-non-java-language-to-connect-to-and-use-the-wide-table-engine-lindormtable
+- DBUtils connection pool: https://help.aliyun.com/zh/lindorm/user-guide/use-dbutils-to-connect-to-lindormtable
 
 3. **Go**
-- database/sql接口：https://help.aliyun.com/zh/lindorm/user-guide/use-the-apis-provided-by-the-database-or-sql-library-of-go-to-develop-applications
+- database/sql interface: https://help.aliyun.com/zh/lindorm/user-guide/use-the-apis-provided-by-the-database-or-sql-library-of-go-to-develop-applications
 
 ---
 
-### 步骤3：提供连接示例
+### Step 3: Provide connection examples
 
 ---
 
-## 常见连接示例
+## Common Connection Examples
 
-### MySQL 协议（推荐）
+### MySQL Protocol, Recommended
 
-所有示例使用 `<您的连接地址>` 占位符，Agent 根据实例 ServiceType 自动填充正确的 V1/V2 域名。
+All examples use the `<connection-endpoint>` placeholder. The agent automatically fills in the correct V1/V2 domain according to the instance `ServiceType`.
 
 #### Java
 
-##### 1. JDBC 接口
+##### 1. JDBC Interface
 
-**依赖**:
+**Dependency**:
 ```xml
 <dependency>
     <groupId>com.mysql</groupId>
@@ -117,14 +118,14 @@ https://help.aliyun.com/zh/lindorm/user-guide/add-connect-wide-table-engines-thr
 </dependency>
 ```
 
-**连接代码**:
+**Connection code**:
 ```java
 Class.forName("com.mysql.cj.jdbc.Driver");
 
 String username = "root";
 String password = "your_password";
 String database = "default";
-String url = "jdbc:mysql://<您的连接地址>:33060/" + database 
+String url = "jdbc:mysql://<connection-endpoint>:33060/" + database 
     + "?sslMode=disabled&allowPublicKeyRetrieval=true&useServerPrepStmts=true"
     + "&useLocalSessionState=true&rewriteBatchedStatements=true&cachePrepStmts=true"
     + "&prepStmtCacheSize=100&prepStmtCacheSqlLimit=50000000";
@@ -135,14 +136,14 @@ properties.put("password", password);
 Connection connection = DriverManager.getConnection(url, properties);
 ```
 
-**CRUD 示例**:
+**CRUD example**:
 ```java
-// 创建表
+// Create table
 try (Statement stmt = connection.createStatement()) {
     stmt.executeUpdate("CREATE TABLE IF NOT EXISTS user_test(id VARCHAR, name VARCHAR, PRIMARY KEY(id))");
 }
 
-// 批量插入 (推荐使用 INSERT，语义与 UPSERT 相同)
+// Batch insert. INSERT is recommended and has the same semantics as UPSERT.
 String sql = "INSERT INTO user_test(id, name) VALUES(?, ?)";
 try (PreparedStatement ps = connection.prepareStatement(sql)) {
     for (int i = 0; i < 100; i++) {
@@ -150,10 +151,10 @@ try (PreparedStatement ps = connection.prepareStatement(sql)) {
         ps.setString(2, "name" + i);
         ps.addBatch();
     }
-    ps.executeBatch();  // batchSize 建议 50-100
+    ps.executeBatch();  // Recommended batchSize: 50-100
 }
 
-// 查询
+// Query
 try (PreparedStatement ps = connection.prepareStatement("SELECT * FROM user_test WHERE id = ?")) {
     ps.setString(1, "id1");
     ResultSet rs = ps.executeQuery();
@@ -162,13 +163,13 @@ try (PreparedStatement ps = connection.prepareStatement("SELECT * FROM user_test
     }
 }
 
-// 关闭连接
+// Close the connection
 connection.close();
 ```
 
-##### 2. Druid 连接池
+##### 2. Druid Connection Pool
 
-**依赖**:
+**Dependency**:
 ```xml
 <dependency>
     <groupId>com.alibaba</groupId>
@@ -182,10 +183,10 @@ connection.close();
 </dependency>
 ```
 
-**配置文件** (`druid.properties`):
+**Configuration file** (`druid.properties`):
 ```properties
 driverClassName=com.mysql.cj.jdbc.Driver
-url=jdbc:mysql://<您的连接地址>:33060/default?sslMode=disabled&allowPublicKeyRetrieval=true&useServerPrepStmts=true&useLocalSessionState=true&rewriteBatchedStatements=true&cachePrepStmts=true&prepStmtCacheSize=100&prepStmtCacheSqlLimit=50000000&socketTimeout=120000
+url=jdbc:mysql://<connection-endpoint>:33060/default?sslMode=disabled&allowPublicKeyRetrieval=true&useServerPrepStmts=true&useLocalSessionState=true&rewriteBatchedStatements=true&cachePrepStmts=true&prepStmtCacheSize=100&prepStmtCacheSqlLimit=50000000&socketTimeout=120000
 username=root
 password=your_password
 
@@ -195,11 +196,11 @@ maxActive=40
 minIdle=40
 maxWait=30000
 
-# 避免连接负载不均衡
+# Avoid uneven connection load distribution
 druid.phyMaxUseCount=10000
 phyTimeoutMillis=1800000
 
-# 连接保活
+# Connection keepalive
 druid.keepAlive=true
 druid.keepAliveBetweenTimeMillis=120000
 timeBetweenEvictionRunsMillis=60000
@@ -211,24 +212,24 @@ testOnBorrow=false
 testOnReturn=false
 ```
 
-**初始化连接池**:
+**Initialize the connection pool**:
 ```java
 Properties properties = new Properties();
 InputStream inputStream = getClass().getClassLoader().getResourceAsStream("druid.properties");
 properties.load(inputStream);
 DataSource dataSource = DruidDataSourceFactory.createDataSource(properties);
 
-// 使用连接
+// Use the connection
 try (Connection conn = dataSource.getConnection()) {
-    // 执行 SQL...
+    // Execute SQL...
 }
 ```
 
-##### 3. LindormDataSource（官方推荐）
+##### 3. LindormDataSource, Officially Recommended
 
-封装了开箱即用的最佳配置，支持多可用区就近访问。
+It encapsulates out-of-the-box best-practice configurations and supports zone-aware access in multi-zone deployments.
 
-**依赖**:
+**Dependency**:
 ```xml
 <dependency>
     <groupId>com.mysql</groupId>
@@ -242,21 +243,21 @@ try (Connection conn = dataSource.getConnection()) {
 </dependency>
 ```
 
-**使用方式**:
+**Usage**:
 ```java
 LindormDataSourceConfig config = new LindormDataSourceConfig();
-config.setJdbcUrl("jdbc:mysql://<您的连接地址>:33060/default");
+config.setJdbcUrl("jdbc:mysql://<connection-endpoint>:33060/default");
 config.setUsername("root");
 config.setPassword("your_password");
 config.setMaximumPoolSize(30);
 LindormDataSource dataSource = new LindormDataSource(config);
 
 try (Connection conn = dataSource.getConnection()) {
-    // 执行 SQL...
+    // Execute SQL...
 }
 ```
 
-**Spring Boot 2.x 集成**:
+**Spring Boot 2.x integration**:
 ```xml
 <dependency>
     <groupId>com.aliyun.lindorm</groupId>
@@ -270,15 +271,15 @@ try (Connection conn = dataSource.getConnection()) {
 spring:
   datasource:
     lindorm:
-      jdbc-url: jdbc:mysql://<您的连接地址>:33060/default
+      jdbc-url: jdbc:mysql://<connection-endpoint>:33060/default
       username: root
       password: your_password
       maximum-pool-size: 30
 ```
 
-##### 4. MyBatis 框架
+##### 4. MyBatis Framework
 
-**依赖**:
+**Dependency**:
 ```xml
 <dependency>
     <groupId>org.mybatis</groupId>
@@ -292,7 +293,7 @@ spring:
 </dependency>
 ```
 
-**配置文件** (`mybatis-config.xml`):
+**Configuration file** (`mybatis-config.xml`):
 ```xml
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE configuration PUBLIC "-//mybatis.org//DTD Config 3.0//EN" "https://mybatis.org/dtd/mybatis-3-config.dtd">
@@ -302,7 +303,7 @@ spring:
             <transactionManager type="JDBC"/>
             <dataSource type="POOLED">
                 <property name="driver" value="com.mysql.cj.jdbc.Driver"/>
-                <property name="url" value="jdbc:mysql://<您的连接地址>:33060/default?sslMode=disabled&amp;allowPublicKeyRetrieval=true"/>
+                <property name="url" value="jdbc:mysql://<connection-endpoint>:33060/default?sslMode=disabled&amp;allowPublicKeyRetrieval=true"/>
                 <property name="username" value="root"/>
                 <property name="password" value="your_password"/>
             </dataSource>
@@ -314,7 +315,7 @@ spring:
 </configuration>
 ```
 
-**Mapper 示例**:
+**Mapper example**:
 ```java
 public interface UserMapper {
     @Update("CREATE TABLE IF NOT EXISTS demo_user(id INT, name VARCHAR, PRIMARY KEY(id))")
@@ -337,14 +338,14 @@ public interface UserMapper {
 
 ##### 1. mysql-connector-python
 
-**安装**: `pip install mysql-connector-python==8.0.15`
+**Installation**: `pip install mysql-connector-python==8.0.15`
 
-**直连模式**:
+**Direct connection mode**:
 ```python
 import mysql.connector
 
 connection = mysql.connector.connect(
-    host='<您的连接地址>',
+    host='<connection-endpoint>',
     port=33060,
     user='root',
     passwd='your_password',
@@ -352,13 +353,13 @@ connection = mysql.connector.connect(
 )
 cursor = connection.cursor(prepared=True)
 
-# 创建表
+# Create table
 cursor.execute("CREATE TABLE IF NOT EXISTS test_python(c1 INTEGER, c2 INTEGER, c3 VARCHAR, PRIMARY KEY(c1))")
 
-# 插入数据 (参数化防止 SQL 注入)
+# Insert data. Use parameterization to prevent SQL injection.
 cursor.execute("UPSERT INTO test_python(c1, c2, c3) VALUES(?, ?, ?)", (1, 1, 'value1'))
 
-# 查询
+# Query
 cursor.execute("SELECT * FROM test_python WHERE c1 = ?", (1,))
 print(cursor.fetchall())
 
@@ -366,14 +367,14 @@ cursor.close()
 connection.close()
 ```
 
-**连接池模式**:
+**Connection pool mode**:
 ```python
 from mysql.connector import pooling
 
 connection_pool = pooling.MySQLConnectionPool(
     pool_name="mypool",
     pool_size=20,
-    host='<您的连接地址>',
+    host='<connection-endpoint>',
     port=33060,
     user='root',
     password='your_password',
@@ -382,20 +383,20 @@ connection_pool = pooling.MySQLConnectionPool(
 
 connection = connection_pool.get_connection()
 cursor = connection.cursor(prepared=True)
-# ... 执行 SQL
+# ... Execute SQL
 cursor.close()
-connection.close()  # 返回到连接池
+connection.close()  # Return to the connection pool
 ```
 
 ##### 2. SQLAlchemy ORM
 
-**安装**:
+**Installation**:
 ```bash
 pip install PyMySQL
 pip install SQLAlchemy
 ```
 
-**示例**:
+**Example**:
 ```python
 from sqlalchemy import create_engine, Column, String, Integer, Float
 from sqlalchemy.orm import declarative_base, sessionmaker
@@ -408,18 +409,18 @@ class Player(Base):
     player_name = Column(String(255))
     player_height = Column(Float)
 
-engine = create_engine('mysql+pymysql://root:your_password@<您的连接地址>:33060/default')
+engine = create_engine('mysql+pymysql://root:your_password@<connection-endpoint>:33060/default')
 Session = sessionmaker(bind=engine)
 
-# 建表
+# Create table
 Base.metadata.create_all(engine)
 
-# 写入数据
+# Write data
 session = Session()
 session.add(Player(player_id=1001, player_name="john", player_height=2.08))
 session.commit()
 
-# 查询
+# Query
 rows = session.query(Player).filter(Player.player_id == 1001).all()
 print([str(row) for row in rows])
 ```
@@ -430,12 +431,12 @@ print([str(row) for row in rows])
 
 ##### 1. database/sql + MySQL Driver
 
-**依赖** (`go.mod`):
+**Dependency** (`go.mod`):
 ```go
 require github.com/go-sql-driver/mysql v1.7.1
 ```
 
-**示例**:
+**Example**:
 ```go
 package main
 
@@ -447,27 +448,27 @@ import (
 )
 
 func main() {
-    url := "root:your_password@tcp(<您的连接地址>:33060)/default?timeout=10s"
+    url := "root:your_password@tcp(<connection-endpoint>:33060)/default?timeout=10s"
     db, err := sql.Open("mysql", url)
     if err != nil {
         panic(err)
     }
     defer db.Close()
 
-    // 连接池配置
+    // Connection pool configuration
     db.SetMaxOpenConns(20)
     db.SetMaxIdleConns(20)
     db.SetConnMaxIdleTime(8 * time.Minute)
     db.SetConnMaxLifetime(30 * time.Minute)
 
-    // 创建表
+    // Create table
     db.Exec("CREATE TABLE IF NOT EXISTS user_test(id INT, name VARCHAR, age INT, PRIMARY KEY(id))")
 
-    // 插入 (参数绑定方式)
+    // Insert with parameter binding
     stmt, _ := db.Prepare("UPSERT INTO user_test(id, name, age) VALUES(?, ?, ?)")
     stmt.Exec(1, "zhangsan", 17)
 
-    // 查询
+    // Query
     rows, _ := db.Query("SELECT * FROM user_test")
     defer rows.Close()
     for rows.Next() {
@@ -479,9 +480,9 @@ func main() {
 }
 ```
 
-##### 2. GORM 框架
+##### 2. GORM Framework
 
-**依赖**:
+**Dependency**:
 ```go
 require (
     gorm.io/driver/mysql v1.5.1
@@ -489,7 +490,7 @@ require (
 )
 ```
 
-**示例**:
+**Example**:
 ```go
 package main
 
@@ -505,19 +506,19 @@ type Product struct {
 }
 
 func main() {
-    dsn := "root:your_password@tcp(<您的连接地址>:33060)/default"
+    dsn := "root:your_password@tcp(<connection-endpoint>:33060)/default"
     db, _ := gorm.Open(mysql.Open(dsn), &gorm.Config{})
     
-    // 重要: Lindorm 不支持事务，必须关闭
+    // Important: Lindorm does not support transactions. Disable them.
     session := db.Session(&gorm.Session{SkipDefaultTransaction: true})
 
-    // 建表
+    // Create table
     session.Migrator().CreateTable(&Product{})
 
-    // 写入
+    // Write
     session.Create(&Product{ID: 1, Code: "D42", Price: 100.1})
 
-    // 查询
+    // Query
     var product Product
     session.First(&product, 1)
 }
@@ -527,9 +528,9 @@ func main() {
 
 #### C/C++
 
-**安装** (CentOS): `yum install mysql-devel`
+**Installation** (CentOS): `yum install mysql-devel`
 
-**示例**:
+**Example**:
 ```c
 #include <stdio.h>
 #include "mysql/mysql.h"
@@ -539,19 +540,19 @@ int main() {
     mysql_init(&conn);
 
     if (!mysql_real_connect(&conn,
-        "<您的连接地址>",
+        "<connection-endpoint>",
         "root", "your_password", "default", 33060, NULL, 0)) {
-        printf("连接失败: %s\n", mysql_error(&conn));
+        printf("Connection failed: %s\n", mysql_error(&conn));
         return 1;
     }
 
-    // 创建表
+    // Create table
     mysql_query(&conn, "CREATE TABLE IF NOT EXISTS user_test(id INT, name VARCHAR, PRIMARY KEY(id))");
 
-    // 插入数据
+    // Insert data
     mysql_query(&conn, "UPSERT INTO user_test(id, name) VALUES(1, 'test')");
 
-    // 查询数据
+    // Query data
     mysql_query(&conn, "SELECT * FROM user_test");
     MYSQL_RES *result = mysql_store_result(&conn);
     MYSQL_ROW row;
@@ -564,19 +565,19 @@ int main() {
 }
 ```
 
-**编译**: `gcc -o demo demo.c $(mysql_config --cflags) $(mysql_config --libs)`
+**Compile**: `gcc -o demo demo.c $(mysql_config --cflags) $(mysql_config --libs)`
 
 ---
 
 #### C#
 
-**安装**: `dotnet add package MySql.Data -v 8.0.11`
+**Installation**: `dotnet add package MySql.Data -v 8.0.11`
 
-**示例**:
+**Example**:
 ```csharp
 using MySql.Data.MySqlClient;
 
-string connStr = "server=<您的连接地址>;UID=root;database=default;port=33060;password=your_password";
+string connStr = "server=<connection-endpoint>;UID=root;database=default;port=33060;password=your_password";
 MySqlConnection conn = new MySqlConnection(connStr);
 
 conn.Open();
@@ -592,20 +593,20 @@ conn.Close();
 
 #### Rust
 
-**依赖** (`Cargo.toml`):
+**Dependency** (`Cargo.toml`):
 ```toml
 [dependencies]
 mysql = "*"
 ```
 
-**示例**:
+**Example**:
 ```rust
 use mysql::*;
 use mysql::prelude::*;
 
 fn main() {
     let opts = OptsBuilder::new()
-        .ip_or_hostname(Some("<您的连接地址>"))
+        .ip_or_hostname(Some("<connection-endpoint>"))
         .user(Some("root"))
         .pass(Some("your_password"))
         .db_name(Some("default"))
@@ -614,13 +615,13 @@ fn main() {
     let pool = Pool::new(opts).unwrap();
     let mut conn = pool.get_conn().unwrap();
 
-    // 创建表
+    // Create table
     conn.query_drop("CREATE TABLE IF NOT EXISTS user_test(id INT, name VARCHAR, PRIMARY KEY(id))").unwrap();
 
-    // 插入
+    // Insert
     conn.exec_drop("UPSERT INTO user_test(id, name) VALUES(?, ?)", (1, "test")).unwrap();
 
-    // 查询
+    // Query
     let result: Vec<(i32, String)> = conn.query("SELECT * FROM user_test").unwrap();
     for (id, name) in result {
         println!("id={}, name={}", id, name);
@@ -632,12 +633,12 @@ fn main() {
 
 #### PHP
 
-**要求**: PHP 8.0+，安装 php-mysql 模块
+**Requirement**: PHP 8.0+ with the php-mysql module installed
 
-**示例**:
+**Example**:
 ```php
 <?php
-$lindorm_addr = "<您的连接地址>";
+$lindorm_addr = "<connection-endpoint>";
 $lindorm_username = "root";
 $lindorm_password = "your_password";
 $lindorm_database = "default";
@@ -645,13 +646,13 @@ $lindorm_port = 33060;
 
 $conn = mysqli_connect($lindorm_addr, $lindorm_username, $lindorm_password, $lindorm_database, $lindorm_port);
 
-// 创建表
+// Create table
 mysqli_query($conn, "CREATE TABLE IF NOT EXISTS user_test(id INT, name VARCHAR, PRIMARY KEY(id))");
 
-// 插入数据
+// Insert data
 mysqli_query($conn, "UPSERT INTO user_test(id, name) VALUES(1, 'test')");
 
-// 查询数据
+// Query data
 $result = mysqli_query($conn, "SELECT * FROM user_test");
 while ($row = mysqli_fetch_array($result)) {
     printf("id=%d, name=%s\n", $row["id"], $row["name"]);
@@ -665,14 +666,14 @@ mysqli_close($conn);
 
 #### Node.js
 
-**安装**: `npm install mysql2`
+**Installation**: `npm install mysql2`
 
-**示例**:
+**Example**:
 ```javascript
 var mysql = require('mysql2');
 
 var connection = mysql.createConnection({
-    host: '<您的连接地址>',
+    host: '<connection-endpoint>',
     port: 33060,
     user: 'root',
     password: 'your_password',
@@ -684,7 +685,7 @@ connection.connect(function(err) {
     if (err) throw err;
     console.log("Connected!");
 
-    // 查询
+    // Query
     connection.query('SHOW DATABASES', function(err, results) {
         if (err) throw err;
         console.log(results);
@@ -698,13 +699,13 @@ connection.connect(function(err) {
 
 #### ODBC
 
-**安装** (Linux):
+**Installation** (Linux):
 ```bash
-# 下载 MySQL ODBC 驱动: https://dev.mysql.com/downloads/connector/odbc/
+# Download the MySQL ODBC driver: https://dev.mysql.com/downloads/connector/odbc/
 yum install unixODBC-devel
 ```
 
-**配置** (`/etc/odbcinst.ini`):
+**Configuration** (`/etc/odbcinst.ini`):
 ```ini
 [MySQL]
 Description = ODBC for MySQL
@@ -713,7 +714,7 @@ Setup64 = /usr/lib64/libmyodbc8w.so
 FileUsage = 1
 ```
 
-**C 代码示例**:
+**C code example**:
 ```c
 #include <sql.h>
 #include <sqlext.h>
@@ -728,12 +729,12 @@ int main() {
     SQLAllocHandle(SQL_HANDLE_DBC, env, &dbc);
 
     ret = SQLDriverConnect(dbc, NULL,
-        (SQLCHAR*)"DRIVER={MySQL};SERVER=<您的连接地址>;PORT=33060;DATABASE=default;USER=root;PASSWORD=your_password",
+        (SQLCHAR*)"DRIVER={MySQL};SERVER=<connection-endpoint>;PORT=33060;DATABASE=default;USER=root;PASSWORD=your_password",
         SQL_NTS, NULL, 0, NULL, SQL_DRIVER_COMPLETE);
 
     if (ret == SQL_SUCCESS) {
-        printf("连接成功\n");
-        // ... 执行 SQL
+        printf("Connection succeeded\n");
+        // ... Execute SQL
     }
 
     SQLFreeHandle(SQL_HANDLE_DBC, dbc);
@@ -744,17 +745,17 @@ int main() {
 
 ---
 
-### Avatica 协议（仅存量维护）
+### Avatica Protocol, Existing-Workload Maintenance Only
 
-> **注意**: Avatica 协议目前处于存量维护状态，**不推荐新用户使用**。
+> **Note**: The Avatica protocol is currently in existing-workload maintenance mode and is **not recommended for new users**.
 > 
-> Avatica 域名格式略有不同：
+> The Avatica domain format is slightly different:
 > - V2: `ld-xxx-proxy-lindorm-vpc.lindorm.aliyuncs.com:30060`
 > - V1: `ld-xxx-proxy-lindorm.lindorm.rds.aliyuncs.com:30060`
 
 #### Java (Avatica)
 
-**依赖**:
+**Dependency**:
 ```xml
 <dependency>
     <groupId>com.aliyun.lindorm</groupId>
@@ -763,9 +764,9 @@ int main() {
 </dependency>
 ```
 
-**连接代码**:
+**Connection code**:
 ```java
-String url = "jdbc:lindorm:table:url=http://<您的连接地址>:30060";
+String url = "jdbc:lindorm:table:url=http://<connection-endpoint>:30060";
 Properties properties = new Properties();
 properties.put("user", "root");
 properties.put("password", "your_password");
@@ -775,7 +776,7 @@ Connection connection = DriverManager.getConnection(url, properties);
 
 #### Python (Avatica - phoenixdb)
 
-**安装**: `pip install phoenixdb==1.2.0`
+**Installation**: `pip install phoenixdb==1.2.0`
 
 ```python
 import phoenixdb
@@ -785,7 +786,7 @@ connect_kw_args = {
     'lindorm_password': 'your_password',
     'database': 'default'
 }
-database_url = 'http://<您的连接地址>:30060'
+database_url = 'http://<connection-endpoint>:30060'
 connection = phoenixdb.connect(database_url, autocommit=True, **connect_kw_args)
 
 with connection.cursor() as cursor:
@@ -797,7 +798,7 @@ connection.close()
 
 #### Go (Avatica)
 
-**依赖** (`go.mod`):
+**Dependency** (`go.mod`):
 ```go
 require github.com/apache/calcite-avatica-go/v5 v5.0.0
 replace github.com/apache/calcite-avatica-go/v5 => github.com/aliyun/alibabacloud-lindorm-go-sql-driver/v5 v5.0.6
@@ -805,32 +806,32 @@ replace github.com/apache/calcite-avatica-go/v5 => github.com/aliyun/alibabaclou
 
 ---
 
-### 最佳实践
+### Best Practices
 
-#### 连接参数建议
+#### Recommended Connection Parameters
 
-| 参数 | 建议值 | 说明 |
+| Parameter | Recommended value | Description |
 |------|--------|------|
-| sslMode | disabled | 不使用 SSL，提升性能 |
-| useServerPrepStmts | true | 启用服务端预处理 |
-| rewriteBatchedStatements | true | 优化批量写入性能 |
-| cachePrepStmts | true | 缓存预处理语句 |
-| prepStmtCacheSize | 100 | 缓存数量 |
+| sslMode | disabled | Do not use SSL to improve performance |
+| useServerPrepStmts | true | Enable server-side prepared statements |
+| rewriteBatchedStatements | true | Optimize batch write performance |
+| cachePrepStmts | true | Cache prepared statements |
+| prepStmtCacheSize | 100 | Number of cached statements |
 
-#### 写入性能优化
+#### Write Performance Optimization
 
-1. **使用 Batch 写入**: batchSize 建议 50-100
-2. **使用 INSERT 而非 UPSERT**: MySQL 协议下 INSERT 语义与 UPSERT 相同，但有客户端优化
-3. **增加并发**: 通过多线程/协程增加写入吞吐
+1. **Use batch writes**: recommended batchSize is 50-100.
+2. **Use INSERT instead of UPSERT**: under the MySQL protocol, INSERT has the same semantics as UPSERT but benefits from client-side optimization.
+3. **Increase concurrency**: improve write throughput with multiple threads or goroutines.
 
-#### 连接池配置
+#### Connection Pool Configuration
 
-1. 连接保持时间不宜过长，建议配置 `phyMaxUseCount` 和 `phyTimeoutMillis`
-2. 执行完查询后及时调用 `close()` 归还连接
-3. 建议启用连接保活检测
+1. Do not keep connections alive for too long. Configure `phyMaxUseCount` and `phyTimeoutMillis`.
+2. Call `close()` promptly after queries are complete to return connections to the pool.
+3. Enable connection keepalive checks.
 
-#### 注意事项
+#### Notes
 
-- **Lindorm 不支持事务**: 使用 GORM 等 ORM 框架时需关闭事务
-- **UPDATE 仅支持单行**: WHERE 条件必须指定全部主键
-- **连接空闲超时**: 服务端会主动断开空闲 10 分钟的连接
+- **Lindorm does not support transactions**: disable transactions when using ORM frameworks such as GORM.
+- **UPDATE supports only single-row updates**: the WHERE condition must specify the full primary key.
+- **Idle connection timeout**: the server proactively closes connections that have been idle for 10 minutes.

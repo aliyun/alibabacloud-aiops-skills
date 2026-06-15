@@ -1,9 +1,8 @@
 ---
 name: alibabacloud-lindorm-agent-skill
-version: "1.0.0"
 description: |
   Alibaba Cloud Lindorm cloud native multi-model database Skill. Covers instance management, monitoring, performance, storage, connections, backup, migration, permissions, slow query, SQL development, search engine usage, vector retrieval, AI engine calls, multimodal image-text search, and knowledge base search. Lindorm is domain-specific knowledge — answers MUST reference Skill documents or official Alibaba Cloud documentation; direct responses from training knowledge are prohibited.
-  Triggers: "Lindorm", "LindormTable", "LindormTSDB", "LindormSearch", "Lindorm AI", "HBase", "lindormcli", "宽表引擎", "时序引擎", "搜索引擎", "向量引擎", "向量检索", "多模态检索", "图文检索", "以图搜图", "以文搜图", "知识库检索", "RRF", "rerank", "embedding", "Lindorm instance", "Lindorm monitoring", "Lindorm connection", "Lindorm slow query", "Lindorm SQL", "Lindorm backup", "Lindorm storage".
+  Triggers: "Lindorm", "LindormTable", "LindormTSDB", "LindormSearch", "Lindorm AI", "HBase", "lindormcli", "lindorm-cli", "Lindorm CLI", "alihbase", "AliHBase", "HBase Shell", "宽表引擎", "时序引擎", "搜索引擎", "向量引擎", "向量检索", "多模态检索", "图文检索", "以图搜图", "以文搜图", "知识库检索", "RRF", "rerank", "embedding", "Lindorm instance", "Lindorm monitoring", "Lindorm connection", "Lindorm slow query", "Lindorm SQL", "Lindorm 查询", "Lindorm 执行SQL", "Lindorm 测试连接", "Lindorm backup", "Lindorm storage".
 metadata:
   openclaw:
     requires:
@@ -21,7 +20,7 @@ Alibaba Cloud Lindorm cloud native multi-model database Skill. Covers three doma
 |---------|--------------|----------------|
 | **01-Dev Guidance** | Connection setup, quick start, SQL guide, table design, search engine usage, vector retrieval, AI engine calls, multimodal search, knowledge search | `references/01-dev/` |
 | **02-Ops Management** | Instance mgmt, monitoring, error troubleshooting, storage analysis, connection diagnostics, backup & restore, migration, permissions, slow query | `references/02-ops/` |
-| **03-Reference** | CLI command list, RAM permission list | `references/03-ref/` |
+| **03-Reference** | Lindorm CLI usage guide, HBase Shell guide, Aliyun CLI commands, RAM permissions, acceptance criteria | `references/03-ref/` |
 
 ## Decision Tree
 
@@ -30,7 +29,7 @@ User Request
 ├── Connection / DDL / SQL / Code examples → 01-dev
 │   ├── Connection address / code → references/01-dev/connection-guide.md
 │   ├── DDL / write / query examples → references/01-dev/quick-start-guide.md
-│   ├── SQL connection & development → references/01-dev/sql-client-guide.md
+│   ├── SQL connection & SQL-based application development → references/01-dev/sql-client-guide.md
 │   ├── SQL syntax reference → references/01-dev/sql-operations.md
 │   ├── MySQL compatibility → references/01-dev/sql-usage-notes.md
 │   ├── Table design guide → references/01-dev/table-design.md
@@ -52,11 +51,12 @@ User Request
 │   ├── Account & permissions → references/02-ops/user-permission.md
 │   └── Slow query analysis → references/02-ops/slow-query-analysis.md
 │
-└── Command list / Permission reference / Specs → 03-ref
-    ├── CLI command list → references/03-ref/related-commands.md
+└── Command list / Permission reference / CLI tools / SQL execution → 03-ref
+    ├── Lindorm CLI (install / execute SQL / preview data / test connection) → references/03-ref/lindorm-cli-guide.md
+    ├── HBase Shell (alihbase) → references/03-ref/hbase-shell-guide.md
+    ├── Aliyun CLI command list (`aliyun hitsdb ...`) → references/03-ref/related-commands.md
     ├── RAM permission list → references/03-ref/ram-policies.md
     ├── Aliyun CLI setup → references/03-ref/cli-installation-guide.md
-    ├── Lindorm CLI / HBase Shell → references/03-ref/lindorm-cli-guide.md
     ├── Acceptance criteria → references/03-ref/acceptance-criteria.md
     └── Verification methods → references/03-ref/verification-method.md
 ```
@@ -68,14 +68,16 @@ User Request
 | "how to connect / connection address" | Connection setup | `references/01-dev/connection-guide.md` |
 | "create table / insert / query examples" | Quick start | `references/01-dev/quick-start-guide.md` |
 | "how to create a table" | Table design | `references/01-dev/table-design.md` |
+| "DBA / ops debugging via SQL" | SQL ops via CLI → SQL syntax | `references/03-ref/lindorm-cli-guide.md` → `references/01-dev/sql-operations.md` |
+| "develop SQL app / code connection" | SQL client dev → SQL syntax | `references/01-dev/sql-client-guide.md` → `references/01-dev/sql-operations.md` |
 | "SQL syntax" | SQL reference | `references/01-dev/sql-operations.md` |
 | "how to use SQL" | SQL guide | `references/01-dev/sql-client-guide.md` |
 | "MySQL compatibility" | SQL notes | `references/01-dev/sql-usage-notes.md` |
-| "搜索引擎怎么用 / ES 接口 / 30070" | Search engine standalone usage | `references/01-dev/search-guide.md` |
-| "向量引擎怎么用 / KNN / RRF / IVFPQ / IVFBQ" | Vector retrieval through Search or Wide Table | `references/01-dev/vector-guide.md` |
-| "AI 引擎 / embedding / VL / rerank / 9002" | Lindorm AI engine model calls | `references/01-dev/ai-guide.md` |
-| "多模态检索 / 图文检索 / 以图搜图 / 以文搜图" | Multimodal image-text search scene | `references/01-dev/multimodal-search-scene.md` |
-| "知识库检索 / 私域知识库问答 / 文档切分向量化" | Knowledge base retrieval and QA scene | `references/01-dev/knowledge-search-scene.md` |
+| "search engine usage / ES API / 30070" | Search engine standalone usage | `references/01-dev/search-guide.md` |
+| "vector engine / KNN / RRF / IVFPQ / IVFBQ" | Vector retrieval through Search or Wide Table | `references/01-dev/vector-guide.md` |
+| "AI engine / embedding / VL / rerank / 9002" | Lindorm AI engine model calls | `references/01-dev/ai-guide.md` |
+| "multimodal retrieval / image-text search / image-to-image / text-to-image" | Multimodal image-text search scene | `references/01-dev/multimodal-search-scene.md` |
+| "knowledge base retrieval / private QA / document chunking" | Knowledge base retrieval and QA scene | `references/01-dev/knowledge-search-scene.md` |
 | "list instances / what instances exist" | Instance management | `references/02-ops/instance-management.md` |
 | "CPU / memory / QPS / latency" | Monitoring query | `references/02-ops/monitoring-guide.md` |
 | "configure alerts / alert notifications" | Monitoring alerts | `references/02-ops/monitoring-guide.md` |
@@ -90,7 +92,11 @@ User Request
 | "data migration / sync" | Data migration | `references/02-ops/data-migration.md` |
 | "create account / permissions" | Permission management | `references/02-ops/user-permission.md` |
 | "lindorm-cli / lindormcli" | Lindorm CLI | `references/03-ref/lindorm-cli-guide.md` |
-| "HBase Shell / hbase shell" | HBase Shell | `references/03-ref/lindorm-cli-guide.md` |
+| "execute SQL / run query" | SQL execution via CLI | `references/03-ref/lindorm-cli-guide.md` → `references/01-dev/sql-operations.md` |
+| "SHOW TABLES / DESCRIBE / view table schema / list tables" | Schema exploration via CLI | `references/03-ref/lindorm-cli-guide.md` |
+| "preview data / check data / query data" | Data preview via CLI | `references/03-ref/lindorm-cli-guide.md` |
+| "test connection / verify connection" | Connection probe via CLI | `references/03-ref/lindorm-cli-guide.md` |
+| "HBase Shell / hbase shell " | HBase Shell | `references/03-ref/hbase-shell-guide.md` |
 
 ## Aliyun CLI
 
@@ -99,43 +105,42 @@ User Request
 When CLI invocation is required, the Agent must verify:
 
 1. **CLI installed**: `aliyun version` >= 3.3.3; if not installed, see `references/03-ref/cli-installation-guide.md`
-2. **Credentials configured**:
+2. **Plugins up-to-date**:
+   ```bash
+   aliyun configure set --auto-plugin-install true
+   aliyun plugin update
+   ```
+3. **Credentials configured**:
    > **Security Rules:**
    > - **NEVER** read, echo, or print AK/SK values
    > - **NEVER** ask the user to input AK/SK directly in the conversation or command line
    > - **ONLY** use `aliyun configure list` to check credential status
    >
    > If no valid profile exists, STOP. Configure credentials **outside of this session**.
-3. **Permissions granted**: Minimum `AliyunLindormReadOnlyAccess` + `AliyunCloudMonitorReadOnlyAccess`
+4. **Permissions granted**: Minimum `AliyunLindormReadOnlyAccess` + `AliyunCloudMonitorReadOnlyAccess`
    > **[MUST] Permission Failure Handling:** When any command or API call fails due to permission errors at any point during execution, follow this process:
    > 1. Read `references/03-ref/ram-policies.md` to get the full list of permissions required by this SKILL
    > 2. If `ram-permission-diagnose` skill is available, use it to guide the user through requesting permissions. Otherwise, directly output the required RAM policy/action list, the error code, and step-by-step instructions for the user to request permissions from their administrator via [RAM Console](https://ram.console.aliyun.com/)
    > 3. Pause and wait until the user confirms that the required permissions have been granted
 
-### AI-Mode Lifecycle [Internal Agent Rule — Do NOT Show to User]
+## Observability (MUST follow for every aliyun command)
 
-> **[MUST] AI-Mode Full Lifecycle** — AI-mode is required only when executing `aliyun` CLI/API commands for this Skill. Pure knowledge answers, code examples, and document-based guidance must not enable AI-mode just because the Skill was triggered.
+> Upon loading this skill, generate a random session ID (32-char lowercase hex string) once for the entire session. Use it as `{session-id}` below.
 >
-> **Step 1: Enable AI-Mode** — At the **start** of the Core Workflow (before any CLI invocation):
-> ```bash
-> aliyun configure ai-mode enable
+> **Rule: Every `aliyun` CLI command that calls a cloud API MUST include the `--user-agent` flag.**
+> Local utility commands (e.g. `configure`, `plugin`, `version`) do not support this flag and should be excluded.
+>
+> ```
+> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-lindorm-agent-skill/{session-id}
 > ```
 >
-> **Step 2: Set User-Agent** — Immediately after enabling AI-Mode:
+> Example (assuming session-id is `a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6`):
 > ```bash
-> aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-lindorm-agent-skill"
+> aliyun hitsdb get-lindorm-instance --instance-id ld-xxx \
+>   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-lindorm-agent-skill/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6
 > ```
 >
-> **Step 3: Update Plugins** — Ensure CLI plugins are up-to-date:
-> ```bash
-> aliyun configure set --auto-plugin-install true
-> aliyun plugin update
-> ```
->
-> **Step 4: Disable AI-Mode at EVERY exit point** — Before delivering the final response for ANY reason (success, failure, error, cancellation), always disable AI-mode first:
-> ```bash
-> aliyun configure ai-mode disable
-> ```
+> Do not skip, alter the format, or omit `--user-agent` on any `aliyun` API command invocation.
 
 ### Parameter Confirmation
 
@@ -202,8 +207,8 @@ Cloud Monitor time parameter timezone notes:
 | Compute Engine | `compute` | `compute` | Flink streaming engine, no external connection |
 | Stream Engine | `stream` | `lstream` | Port 33060 (MySQL protocol) |
 | Message Engine | — | `lmessage` | Kafka-compatible, supports topic management and message production/consumption |
-| Vector Engine | `lvector` | `lvector` | Built-in vector retrieval engine; accessed through Search `30070` or Wide Table + Search |
-| AI Engine | `lai` | `lai` | AI retrieval engine; domain `proxy-ai-vpc` / `proxy-ai-pub`, port 9002 |
+| Vector Engine | — | `lvector` | V2 only; built-in vector retrieval engine accessed through Search `30070` or Wide Table + Search |
+| AI Engine | — | `lai` | V2 only; AI inference engine (embedding / VL / rerank / chat); port 9002 |
 | LindormDFS | `file` | `file` | OSS-compatible storage (HDFS protocol, port 9000) |
 
 
@@ -218,8 +223,8 @@ Cloud Monitor time parameter timezone notes:
 | Stream Engine | MySQL protocol | 33060 | Stream SQL via MySQL protocol |
 | LindormTSDB | HTTP SQL | 8242 | HTTP SQL API |
 | LindormSearch | ES-compatible | 30070 | Elasticsearch-compatible port, fixed. Solr API (port 10020) is deprecated/offline |
-| Vector Engine | Built-in service | — | No direct endpoint; use Search `30070` or Wide Table + Search |
-| AI Engine | DashScope-compatible HTTP | 9002 | Uses `x-ld-ak` / `x-ld-sk` headers |
+| Vector Engine | Built-in service | — | V2 only; no direct endpoint; use Search `30070` or Wide Table + Search |
+| AI Engine | DashScope-compatible HTTP | 9002 | V2 only; uses `x-ld-ak` / `x-ld-sk` headers |
 | LindormDFS | HDFS | 9000 | NameNode port |
 
 

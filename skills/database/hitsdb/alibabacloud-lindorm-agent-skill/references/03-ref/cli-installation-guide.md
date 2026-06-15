@@ -316,11 +316,7 @@ aliyun ecs describe-regions
 {
   "Regions": {
     "Region": [
-      {
-        "RegionId": "cn-hangzhou",
-        "RegionEndpoint": "ecs.cn-hangzhou.aliyuncs.com",
-        "LocalName": "华东 1（杭州）"
-      },
+          "LocalName": "East China 1, Hangzhou"
       ...
     ]
   },
@@ -516,7 +512,7 @@ After installation and configuration:
    ```
 
 3. **Read documentation**:
-   - 参考阿里云官方文档：https://help.aliyun.com/zh/cli/
+   - Alibaba Cloud official documentation: https://help.aliyun.com/zh/cli/
 
 ## References
 

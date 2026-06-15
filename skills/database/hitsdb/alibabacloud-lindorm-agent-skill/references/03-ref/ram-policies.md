@@ -1,35 +1,35 @@
-# RAM 权限策略列表
+# RAM Permission Policy List
 
-本 Skill 涉及的所有 API 及对应的 RAM 权限要求。
+All APIs involved in this Skill and their corresponding RAM permission requirements.
 
-> **策略名称说明**：Lindorm 官方系统策略为 `AliyunLindormReadOnlyAccess`（只读）、`AliyunLindormFullAccess`（完全）、`AliyunLindormDevelopAccess`（开发者）。
+> **Policy name description**: The official Lindorm system policies are `AliyunLindormReadOnlyAccess` for read-only access, `AliyunLindormFullAccess` for full access, and `AliyunLindormDevelopAccess` for developer access.
 
-## Lindorm API 权限
+## Lindorm API Permissions
 
-| API Action | 权限策略 | 说明 |
+| API Action | Permission Policy | Description |
 |------------|---------|------|
-| `DescribeRegions` | `AliyunLindormReadOnlyAccess` | 查询地域列表 |
-| `GetLindormInstanceList` | `AliyunLindormReadOnlyAccess` | 查询实例列表 |
-| `GetLindormInstance` | `AliyunLindormReadOnlyAccess` | 查询实例详情 |
-| `GetLindormV2InstanceDetails` | `AliyunLindormReadOnlyAccess` | 查询 V2 实例详情 |
-| `GetLindormInstanceEngineList` | `AliyunLindormReadOnlyAccess` | 查询实例引擎列表 |
-| `GetLindormFsUsedDetail` | `AliyunLindormReadOnlyAccess` | 查询存储详情（V1） |
-| `GetLindormV2StorageUsage` | `AliyunLindormReadOnlyAccess` | 查询存储详情（V2） |
-| `GetInstanceIpWhiteList` | `AliyunLindormReadOnlyAccess` | 查询 IP 白名单 |
+| `DescribeRegions` | `AliyunLindormReadOnlyAccess` | Query region list |
+| `GetLindormInstanceList` | `AliyunLindormReadOnlyAccess` | Query instance list |
+| `GetLindormInstance` | `AliyunLindormReadOnlyAccess` | Query instance details |
+| `GetLindormV2InstanceDetails` | `AliyunLindormReadOnlyAccess` | Query V2 instance details |
+| `GetLindormInstanceEngineList` | `AliyunLindormReadOnlyAccess` | Query instance engine list |
+| `GetLindormFsUsedDetail` | `AliyunLindormReadOnlyAccess` | Query storage details, V1 |
+| `GetLindormV2StorageUsage` | `AliyunLindormReadOnlyAccess` | Query storage details, V2 |
+| `GetInstanceIpWhiteList` | `AliyunLindormReadOnlyAccess` | Query IP whitelist |
 
-## 云监控 API 权限
+## CloudMonitor API Permissions
 
-| API Action | 权限策略 | 说明 |
+| API Action | Permission Policy | Description |
 |------------|---------|------|
-| `DescribeMetricMetaList` | `AliyunCloudMonitorReadOnlyAccess` | 查询监控指标列表 |
-| `DescribeMetricLast` | `AliyunCloudMonitorReadOnlyAccess` | 查询最新监控数据 |
-| `DescribeMetricData` | `AliyunCloudMonitorReadOnlyAccess` | 查询历史监控数据 |
+| `DescribeMetricMetaList` | `AliyunCloudMonitorReadOnlyAccess` | Query monitoring metric list |
+| `DescribeMetricLast` | `AliyunCloudMonitorReadOnlyAccess` | Query latest monitoring data |
+| `DescribeMetricData` | `AliyunCloudMonitorReadOnlyAccess` | Query historical monitoring data |
 
-## 系统权限策略
+## System Permission Policies
 
-### 只读权限（推荐）
+### Read-Only Permissions, Recommended
 
-> 本 Skill 为只读操作场景，仅需以下权限。
+> This Skill is used for read-only operation scenarios and requires only the following permissions.
 
 ```json
 {
@@ -62,27 +62,27 @@
 }
 ```
 
-> ℹ️ **关于写操作权限**：本 Skill 不执行任何写操作。如用户确实需要创建/修改/删除实例等写操作，请直接授予官方系统策略 `AliyunLindormFullAccess`。
+> ℹ️ **About write operation permissions**: This Skill does not execute any write operations. If the user truly needs write operations such as creating, modifying, or deleting instances, grant the official system policy `AliyunLindormFullAccess` directly.
 
-## 权限配置步骤
+## Permission Configuration Steps
 
-### 通过 RAM 控制台配置
+### Configure Through the RAM Console
 
-1. 登录 [RAM 控制台](https://ram.console.aliyun.com/)
-2. 创建 RAM 用户或使用现有用户
-3. 在用户详情页，点击"添加权限"
-4. 选择权限策略：
-   - 只读：`AliyunLindormReadOnlyAccess` + `AliyunCloudMonitorReadOnlyAccess`
-   - 完全：`AliyunLindormFullAccess`
-5. 确认授权
+1. Log on to the [RAM Console](https://ram.console.aliyun.com/).
+2. Create a RAM user or use an existing user.
+3. On the user details page, click "Add Permissions".
+4. Select permission policies:
+   - Read-only: `AliyunLindormReadOnlyAccess` + `AliyunCloudMonitorReadOnlyAccess`
+   - Full access: `AliyunLindormFullAccess`
+5. Confirm authorization.
 
-### 通过 CLI 配置
+### Configure Through CLI
 
 ```bash
-# 创建 RAM 用户
+# Create a RAM user.
 aliyun ram create-user --user-name lindorm-operator
 
-# 添加只读权限
+# Add read-only permissions.
 aliyun ram attach-policy-to-user \
   --user-name lindorm-operator \
   --policy-name AliyunLindormReadOnlyAccess \
@@ -94,23 +94,23 @@ aliyun ram attach-policy-to-user \
   --policy-type System
 ```
 
-## 权限验证
+## Permission Verification
 
-执行以下命令验证权限是否配置正确：
+Run the following commands to verify whether permissions are configured correctly:
 
 ```bash
-# 测试 Lindorm 权限
+# Test Lindorm permissions.
 aliyun hitsdb get-lindorm-instance-list --region cn-shanghai
 
-# 测试云监控权限
+# Test CloudMonitor permissions.
 aliyun cms describe-metric-meta-list --namespace acs_lindorm
 ```
 
-如果返回 `Forbidden.RAM` 错误，说明权限不足，需按上述步骤添加权限。
+If the `Forbidden.RAM` error is returned, permissions are insufficient and must be added by following the preceding steps.
 
-## 权限不足时的处理流程
+## Handling Flow for Insufficient Permissions
 
-1. 检查当前用户权限：在 RAM 控制台查看用户授权策略
-2. 确认需要的权限：参考上述 API 权限列表
-3. 申请权限：联系主账号管理员添加对应权限策略
-4. 验证权限：重新执行测试命令确认权限生效
+1. Check current user permissions: View the user authorization policies in the RAM Console.
+2. Confirm required permissions: Refer to the API permission list above.
+3. Apply for permissions: Contact the primary account administrator to add the corresponding permission policies.
+4. Verify permissions: Run the test commands again to confirm that the permissions have taken effect.

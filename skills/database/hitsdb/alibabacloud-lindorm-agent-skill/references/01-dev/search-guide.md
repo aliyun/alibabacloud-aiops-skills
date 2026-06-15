@@ -1,30 +1,30 @@
 # Lindorm Search Engine Guide
 
-本指南说明 Lindorm 搜索引擎的独立用法。搜索引擎通过 Elasticsearch 兼容协议提供访问入口，固定端口为 `30070`，用于全文检索、过滤检索、索引信息查看、计数统计，也作为向量检索的主要入口。
+This guide describes how to use the Lindorm search engine independently. The search engine exposes an Elasticsearch-compatible access endpoint on the fixed port `30070`. It is used for full-text search, filtered search, index inspection, count statistics, and also serves as the main entry point for vector retrieval.
 
-## 适用场景
+## Applicable Scenarios
 
-| 用户意图 | 处理方式 |
-|----------|----------|
-| 检查搜索引擎是否可访问 | 先确认实例已开通 LindormSearch，再探测 `30070` |
-| 查看已有索引结构 | 调用 `GET /<index_name>`，读取 `mappings.properties` |
-| 统计索引数据量 | 调用 `POST /<index_name>/_count` |
-| 全文检索 | 使用 `match` / `multi_match` 查询文本字段 |
-| 过滤检索 | 使用 `term` / `range` / `bool.filter` 查询结构化字段 |
-| 向量检索 | 路由到 `vector-guide.md`，仍通过搜索引擎 `30070` 调用 |
+| User intent | Handling method |
+|-------------|-----------------|
+| Check whether the search engine is reachable | Confirm that LindormSearch is enabled for the instance, then probe port `30070` |
+| View an existing index schema | Call `GET /<index_name>` and read `mappings.properties` |
+| Count documents in an index | Call `POST /<index_name>/_count` |
+| Full-text search | Use `match` / `multi_match` to query text fields |
+| Filtered search | Use `term` / `range` / `bool.filter` to query structured fields |
+| Vector retrieval | Route to `vector-guide.md`; calls still go through the search engine on port `30070` |
 
-## 连接与连通性
+## Connection and Connectivity
 
-搜索引擎连接地址来自实例的引擎列表或控制台数据库连接页面。公网地址通常包含 `-proxy-search-pub`，私网地址通常包含 `-proxy-search-vpc`。
+The search engine endpoint comes from the instance engine list or the Database Connection page in the console. Public endpoints usually contain `-proxy-search-pub`; private endpoints usually contain `-proxy-search-vpc`.
 
-| 网络类型 | 地址示例 | 适用环境 |
-|----------|----------|----------|
-| VPC 私网 | `<instance_id>-proxy-search-vpc.lindorm.aliyuncs.com:30070` | ECS、容器、VPC 内服务 |
-| Public 公网 | `<instance_id>-proxy-search-pub.lindorm.aliyuncs.com:30070` | 本地电脑或公网客户端 |
+| Network type | Endpoint example | Applicable environment |
+|--------------|------------------|-------------------------|
+| VPC private network | `<instance_id>-proxy-search-vpc.lindorm.aliyuncs.com:30070` | ECS, containers, and services inside the VPC |
+| Public network | `<instance_id>-proxy-search-pub.lindorm.aliyuncs.com:30070` | Local computers or public-network clients |
 
-公网访问前必须完成白名单检查：获取客户端公网 IP，查询实例白名单，如不在白名单中则追加到 `default` 分组，不能覆盖已有白名单。CLI 命令和控制台路径见 `references/01-dev/connection-guide.md` 与 `references/02-ops/connection-troubleshoot.md`。
+Before public-network access, complete the whitelist check: obtain the client public IP, query the instance whitelist, and append the IP to the `default` group if it is not already included. Do not overwrite existing whitelist entries. For CLI commands and console paths, see `references/01-dev/connection-guide.md` and `references/02-ops/connection-troubleshoot.md`.
 
-### 30070 端口探测
+### Port 30070 probe
 
 ```bash
 curl --connect-timeout 10 -m 60 \
@@ -32,20 +32,20 @@ curl --connect-timeout 10 -m 60 \
   -XGET "http://<search_endpoint>:30070/"
 ```
 
-成功时通常返回集群或服务元信息。若超时，先区分：
+A successful response usually returns cluster or service metadata. If the request times out, distinguish the following cases first:
 
-| 现象 | 可能原因 | 处理 |
-|------|----------|------|
-| DNS 解析失败 | endpoint 填错或公网未开通 | 重新获取搜索引擎连接地址 |
-| connect timeout | 公网白名单未放行或使用了 VPC 地址 | 检查白名单和网络类型 |
-| `401` / `403` | 用户名或密码错误 | 使用当前实例的 Lindorm 账号密码 |
-| `404` | 访问路径错误 | 先访问 `/` 或 `/<index_name>` |
+| Symptom | Possible cause | Handling |
+|---------|----------------|----------|
+| DNS resolution failure | Incorrect endpoint or public endpoint not enabled | Retrieve the search engine endpoint again |
+| connect timeout | Public whitelist does not allow the client, or a VPC endpoint is used from outside the VPC | Check the whitelist and network type |
+| `401` / `403` | Incorrect username or password | Use the Lindorm account and password of the current instance |
+| `404` | Incorrect access path | Access `/` or `/<index_name>` first |
 
-## 基本 ES 用法
+## Basic ES Usage
 
-以下示例均使用搜索引擎入口 `http://<search_endpoint>:30070`，认证方式为 HTTP Basic Auth。不要把真实密码写入文档、日志或 eval 输出。
+The following examples all use the search engine entry point `http://<search_endpoint>:30070` and HTTP Basic Auth. Do not write real passwords to documents, logs, or eval output.
 
-### 查看索引结构
+### View index schema
 
 ```bash
 curl --connect-timeout 10 -m 60 \
@@ -54,16 +54,16 @@ curl --connect-timeout 10 -m 60 \
   -XGET "http://<search_endpoint>:30070/<index_name>?pretty"
 ```
 
-需要提取的关键信息：
+Key information to extract:
 
-| 字段 | 用途 |
-|------|------|
-| `settings.index.number_of_shards` | 判断分片与资源配置 |
-| `mappings.properties` | 判断字段类型、全文字段、keyword 字段、向量字段 |
-| `knn_vector.dimension` | 向量检索前验证模型维度 |
-| `method.name` / `method.engine` | 判断 HNSW、IVFPQ、IVFBQ 等索引算法 |
+| Field | Purpose |
+|-------|---------|
+| `settings.index.number_of_shards` | Determine shard and resource configuration |
+| `mappings.properties` | Determine field types, full-text fields, keyword fields, and vector fields |
+| `knn_vector.dimension` | Verify model dimension before vector retrieval |
+| `method.name` / `method.engine` | Identify index algorithms such as HNSW, IVFPQ, and IVFBQ |
 
-### 统计文档数量
+### Count documents
 
 ```bash
 curl --connect-timeout 10 -m 60 \
@@ -75,7 +75,7 @@ curl --connect-timeout 10 -m 60 \
   }'
 ```
 
-带过滤条件统计：
+Count with filters:
 
 ```bash
 curl --connect-timeout 10 -m 60 \
@@ -94,7 +94,7 @@ curl --connect-timeout 10 -m 60 \
   }'
 ```
 
-### 全文检索
+### Full-text search
 
 ```bash
 curl --connect-timeout 10 -m 60 \
@@ -106,13 +106,13 @@ curl --connect-timeout 10 -m 60 \
     "_source": ["id", "title", "content", "category"],
     "query": {
       "match": {
-        "content": "向量检索"
+        "content": "vector retrieval"
       }
     }
   }'
 ```
 
-多个字段检索：
+Search multiple fields:
 
 ```bash
 curl --connect-timeout 10 -m 60 \
@@ -124,16 +124,16 @@ curl --connect-timeout 10 -m 60 \
     "_source": true,
     "query": {
       "multi_match": {
-        "query": "无线耳机 降噪",
+        "query": "wireless earphones noise cancellation",
         "fields": ["title^2", "description"]
       }
     }
   }'
 ```
 
-### 过滤检索
+### Filtered search
 
-结构化过滤推荐放在 `bool.filter`，过滤条件不参与相关性评分，适合分类、租户、时间、价格等字段。
+Put structured filters in `bool.filter`. Filter conditions do not affect relevance scoring and are suitable for fields such as category, tenant, time, and price.
 
 ```bash
 curl --connect-timeout 10 -m 60 \
@@ -146,7 +146,7 @@ curl --connect-timeout 10 -m 60 \
     "query": {
       "bool": {
         "must": [
-          { "match": { "description": "轻薄 笔记本" } }
+          { "match": { "description": "lightweight laptop" } }
         ],
         "filter": [
           { "term": { "category": "computer" } },
@@ -158,9 +158,9 @@ curl --connect-timeout 10 -m 60 \
   }'
 ```
 
-## 写入和刷新
+## Write and Refresh
 
-单条写入：
+Write a single document:
 
 ```bash
 curl --connect-timeout 10 -m 60 \
@@ -169,12 +169,12 @@ curl --connect-timeout 10 -m 60 \
   -XPOST "http://<search_endpoint>:30070/<index_name>/_doc/<doc_id>" \
   -d '{
     "title": "Lindorm Search",
-    "content": "搜索引擎支持全文检索和过滤检索",
+    "content": "The search engine supports full-text search and filtered search",
     "category": "guide"
   }'
 ```
 
-刷新索引使写入立即可见：
+Refresh the index to make writes immediately visible:
 
 ```bash
 curl --connect-timeout 10 -m 60 \
@@ -182,9 +182,9 @@ curl --connect-timeout 10 -m 60 \
   -XPOST "http://<search_endpoint>:30070/<index_name>/_refresh"
 ```
 
-## 输出证据格式
+## Evidence Output Format
 
-Agent 回答搜索引擎操作结果时，应给出可审计证据：
+When the agent reports search engine operation results, provide auditable evidence:
 
 ```text
 [Target] instance=<instance_id> region=<region> network=<public|vpc>
@@ -195,4 +195,4 @@ Agent 回答搜索引擎操作结果时，应给出可审计证据：
 [Blocked] status=<BLOCKED_NETWORK|BLOCKED_AUTH|BLOCKED_SCHEMA> reason=<reason>
 ```
 
-不要把密码、访问密钥或完整敏感连接串输出到最终答案。
+Do not output passwords, access keys, or complete sensitive connection strings in the final answer.

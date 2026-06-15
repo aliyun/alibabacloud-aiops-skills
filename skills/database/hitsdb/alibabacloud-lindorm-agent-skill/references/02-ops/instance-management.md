@@ -1,197 +1,197 @@
-# 实例管理场景
+# Instance Management Scenarios
 
-覆盖实例查询（列表、详情、引擎、存储）与扩缩容知识告知。
+Covers instance queries, including lists, details, engines, and storage, and provides scaling knowledge guidance.
 
-## 触发条件
+## Trigger Conditions
 
-- "我有哪些 Lindorm 实例？"
-- "列出 cn-shanghai 的所有实例"
-- "ld-xxx 这个实例是什么配置？"
-- "这个实例开了哪些引擎？"
-- "磁盘还剩多少空间？"
-- "实例存储快满了，怎么扩容？"
-- "需要加配置，怎么操作？"
+- "Which Lindorm instances do I have?"
+- "List all instances in cn-shanghai."
+- "What configuration does instance ld-xxx use?"
+- "Which engines are enabled for this instance?"
+- "How much disk space is left?"
+- "Instance storage is almost full. How do I scale it out?"
+- "I need more configuration. How do I operate it?"
 
 ---
 
-## 查询流程
+## Query Flows
 
-### 流程 1：列出所有实例
+### Flow 1: List All Instances
 
-**适用场景**：用户想查看某个地域下的所有实例，或不知道具体实例 ID。
+**Applicable scenario**: The user wants to view all instances in a region, or does not know the specific instance ID.
 
-**地域策略**：
+**Region strategy**:
 
-- **默认行为**：用户未指定地域时，默认查询 `cn-shanghai`（华东2-上海），并**必须明确告知**"本次查询的是上海地域"
-- **扩展查询**：用户说"所有地域/不确定/可能在其他地域"时，先执行 `get-instance-summary` 获取全地域概览，再按需逐地域查询
+- **Default behavior**: If the user does not specify a region, query `cn-shanghai`, East China 2 Shanghai, by default, and **must explicitly state** that "this query is for the Shanghai region".
+- **Extended query**: If the user says "all regions", "not sure", or "maybe in another region", first run `get-instance-summary` to obtain a cross-region overview, and then query regions as needed.
 
-**执行命令**：
+**Execution commands**:
 
 ```bash
-# 查询指定地域的实例列表（--region 必需）
+# Query the instance list in a specified region. --region is required.
 aliyun hitsdb get-lindorm-instance-list --region cn-shanghai
 
-# 查询全地域实例概览（无需 --region）
+# Query a cross-region instance overview. --region is not required.
 aliyun hitsdb get-instance-summary
 
-# 查询所有地域
+# Query all regions.
 aliyun hitsdb describe-regions
 ```
 
-**关键字段说明**：
+**Key field descriptions**:
 
-| 字段 | 含义 | 常见值 |
+| Field | Meaning | Common Values |
 |------|------|--------|
-| InstanceId | 实例 ID | `ld-xxx` |
-| InstanceAlias | 实例别名 | 用户自定义名称 |
-| InstanceStatus | 实例状态 | `ACTIVATION`（运行中）<br>`CREATING`（创建中）<br>`STOPPED`（已停止） |
-| PayType | 付费类型 | `POSTPAY`（按量）<br>`PREPAY`（包年包月） |
-| RegionId | 地域 ID | `cn-shanghai` |
-| ZoneId | 可用区 ID | `cn-shanghai-e` |
-| NetworkType | 网络类型 | `vpc` |
+| InstanceId | Instance ID | `ld-xxx` |
+| InstanceAlias | Instance alias | User-defined name |
+| InstanceStatus | Instance status | `ACTIVATION`, running<br>`CREATING`, creating<br>`STOPPED`, stopped |
+| PayType | Billing type | `POSTPAY`, pay-as-you-go<br>`PREPAY`, subscription |
+| RegionId | Region ID | `cn-shanghai` |
+| ZoneId | Zone ID | `cn-shanghai-e` |
+| NetworkType | Network type | `vpc` |
 
 ---
 
-### 流程 2：查询实例详情
+### Flow 2: Query Instance Details
 
-**适用场景**：用户想了解某个实例的完整配置信息。
+**Applicable scenario**: The user wants to understand the complete configuration information of an instance.
 
-**执行命令**：
+**Execution command**:
 
 ```bash
 aliyun hitsdb get-lindorm-instance --instance-id <instance-id>
 ```
 
-**参数说明**：
-- `--instance-id`：实例 ID（必填）
-- `--region`：地域 ID（可选，根据 instance-id 自动定位）
+**Parameter descriptions**:
+- `--instance-id`: Instance ID, required.
+- `--region`: Region ID, optional. It is automatically located based on instance-id.
 
-**关键字段说明**：
+**Key field descriptions**:
 
-| 分类 | 字段 | 含义 |
+| Category | Field | Meaning |
 |------|------|------|
-| **基本** | InstanceId / InstanceAlias / InstanceStatus / CreateTime / ExpireTime | 实例 ID、别名、状态、创建时间、到期时间 |
-| **网络** | VpcId / VswitchId / NetworkType | VPC、交换机、网络类型 |
-| **存储** | InstanceStorage / DiskCategory / DiskUsage / ColdStorage | 存储容量(GB)、磁盘类型、使用率(%)、冷存储容量 |
-| **引擎** | EngineList / EnableLTS / EnableSearch | 引擎列表、时序/搜索开关 |
+| **Basic** | InstanceId / InstanceAlias / InstanceStatus / CreateTime / ExpireTime | Instance ID, alias, status, creation time, expiration time |
+| **Network** | VpcId / VswitchId / NetworkType | VPC, vSwitch, network type |
+| **Storage** | InstanceStorage / DiskCategory / DiskUsage / ColdStorage | Storage capacity in GB, disk type, usage percentage, cold storage capacity |
+| **Engines** | EngineList / EnableLTS / EnableSearch | Engine list, time series and search switches |
 
 ---
 
-### 流程 3：查询实例引擎列表
+### Flow 3: Query Instance Engine List
 
-**适用场景**：用户想知道实例开了哪些引擎、每个引擎的规格和版本。
+**Applicable scenario**: The user wants to know which engines are enabled for the instance, and the specification and version of each engine.
 
-**执行命令**：
+**Execution command**:
 
 ```bash
 aliyun hitsdb get-lindorm-instance-engine-list --instance-id <instance-id>
 ```
 
-**关键字段说明**：
+**Key field descriptions**:
 
-| 字段 | 含义 |
+| Field | Meaning |
 |------|------|
-| EngineType | 引擎类型，详见 SKILL.md →「引擎类型」 |
-| Version | 当前版本 |
-| LatestVersion | 最新可升级版本 |
-| CpuCount | CPU 核心数 |
-| MemorySize | 内存大小（GB） |
-| CoreCount | 节点数量 |
+| EngineType | Engine type. For details, see SKILL.md → "Engine types". |
+| Version | Current version |
+| LatestVersion | Latest upgradable version |
+| CpuCount | Number of CPU cores |
+| MemorySize | Memory size in GB |
+| CoreCount | Number of nodes |
 
 ---
 
-### 流程 4：查询存储详情
+### Flow 4: Query Storage Details
 
-**适用场景**：用户想了解存储使用情况、冷热分层。
+**Applicable scenario**: The user wants to understand storage usage and hot/cold tiering.
 
-**执行命令**（根据版本选择）：
+**Execution commands, selected by version**:
 
 ```bash
-# V1 实例
+# V1 instance.
 aliyun hitsdb get-lindorm-fs-used-detail --instance-id <instance-id>
 
-# V2 实例
+# V2 instance.
 aliyun hitsdb get-lindorm-v2-storage-usage --instance-id <instance-id>
 ```
 
-**关键字段说明**：
+**Key field descriptions**:
 
-**V1 实例**（`get-lindorm-fs-used-detail`）：
+**V1 instance** (`get-lindorm-fs-used-detail`):
 
-| 字段 | 含义 |
+| Field | Meaning |
 |------|------|
-| FsCapacity | 文件引擎总容量（bytes） |
-| FsCapacityHot / FsCapacityCold | 热/冷存储容量（bytes） |
-| FsUsedHot / FsUsedCold | 热/冷存储已使用（bytes） |
-| FsUsedOnLindormTable | Lindorm 宽表已使用量 |
-| FsUsedOnLindormTableData | 宽表数据量 |
-| FsUsedOnLindormTableWAL | WAL 日志量 |
+| FsCapacity | Total file engine capacity, in bytes |
+| FsCapacityHot / FsCapacityCold | Hot/cold storage capacity, in bytes |
+| FsUsedHot / FsUsedCold | Used hot/cold storage, in bytes |
+| FsUsedOnLindormTable | Used by Lindorm wide table |
+| FsUsedOnLindormTableData | Wide table data size |
+| FsUsedOnLindormTableWAL | WAL log size |
 
-**V2 实例**（`get-lindorm-v2-storage-usage`）：
+**V2 instance** (`get-lindorm-v2-storage-usage`):
 
-| 字段 | 含义 |
+| Field | Meaning |
 |------|------|
-| UsageByDiskCategory[] | 按磁盘类型的使用详情数组 |
-| └ diskType | 磁盘类型（`PerformanceCloudStorage` / `CapacityCloudStorage`） |
-| └ capacity | 容量（bytes） |
-| └ used | 已使用（bytes） |
-| └ usedLindormTable | 宽表已使用 |
-| └ usedLindormTsdb | 时序已使用 |
-| CapacityByDiskCategory[] | 按磁盘类别的容量信息数组 |
-| └ category | 类别（`PERF_CLOUD_ESSD_PL1` / `REMOTE_CAP_OSS` 等） |
-| └ capacity | 容量（GB） |
+| UsageByDiskCategory[] | Usage detail array by disk type |
+| └ diskType | Disk type, such as `PerformanceCloudStorage` or `CapacityCloudStorage` |
+| └ capacity | Capacity, in bytes |
+| └ used | Used capacity, in bytes |
+| └ usedLindormTable | Used by wide table |
+| └ usedLindormTsdb | Used by time series |
+| CapacityByDiskCategory[] | Capacity information array by disk category |
+| └ category | Category, such as `PERF_CLOUD_ESSD_PL1` or `REMOTE_CAP_OSS` |
+| └ capacity | Capacity, in GB |
 
 ---
 
-## 扩缩容知识
+## Scaling Knowledge
 
-**⚠️ 只读 Skill 不执行扩缩容变更命令**，以下为知识告知，引导用户在控制台操作。
+**⚠️ This read-only Skill does not execute scaling change commands.** The following is knowledge guidance and directs users to operate in the console.
 
-### 扩容方式对比
+### Scaling Method Comparison
 
-| 瓶颈类型 | 方案 | 生效时间 | 业务影响 |
+| Bottleneck Type | Solution | Effective Time | Business Impact |
 |---------|------|---------|---------|
-| 存储不足 | 存储扩容（在线） | 5-10 分钟 | 无影响 |
-| QPS 不足 | 增加节点数（水平扩展） | 10-20 分钟 | 无影响 |
-| 单查询延迟高 | 升级节点规格（垂直扩展） | ~30 分钟（滚动重启） | 建议低峰操作 |
+| Insufficient storage | Storage scale-out, online | 5 to 10 minutes | No impact |
+| Insufficient QPS | Increase node count, horizontal scaling | 10 to 20 minutes | No impact |
+| High single-query latency | Upgrade node specification, vertical scaling | About 30 minutes, rolling restart | Recommended during off-peak hours |
 
-操作路径：Lindorm 控制台 → 实例详情 → 变配
+Operation path: Lindorm console → Instance details → Change Configuration
 
-### 扩缩容约束
+### Scaling Constraints
 
-- 缩容需满足：已使用空间 < 目标容量
-- 24 小时内最多变配 3 次，两次间隔至少 1 小时
-- 扩容失败（库存不足）时可换可用区或换规格
+- Scale-in requires used space to be less than the target capacity.
+- Configuration can be changed at most 3 times within 24 hours, with at least 1 hour between two changes.
+- If scale-out fails because of insufficient inventory, change the zone or specification.
 
-### 官方文档
+### Official Documentation
 
-- 管理存储空间：https://help.aliyun.com/zh/lindorm/user-guide/manage-storage-space/
-- 变更容量型云存储容量：https://help.aliyun.com/zh/lindorm/user-guide/expand-cold-storage
-- 计费模式说明：https://help.aliyun.com/zh/lindorm/product-overview/billing
+- Manage storage space: https://help.aliyun.com/zh/lindorm/user-guide/manage-storage-space/
+- Change capacity cloud storage capacity: https://help.aliyun.com/zh/lindorm/user-guide/expand-cold-storage
+- Billing mode description: https://help.aliyun.com/zh/lindorm/product-overview/billing
 
 ---
 
-## 缺参处理
+## Missing Parameter Handling
 
-| 缺参 | 策略 |
+| Missing Parameter | Strategy |
 |------|------|
-| 缺 region | 默认查询 `cn-shanghai`，主动告知本次查询地域；用户说"所有地域"时先用 `get-instance-summary` |
-| 缺 instance-id | 先列出实例列表，让用户选择 |
+| Missing region | Query `cn-shanghai` by default and proactively state the query region. If the user says "all regions", first use `get-instance-summary`. |
+| Missing instance-id | List instances first and let the user select one. |
 
 ---
 
-## 错误处理
+## Error Handling
 
-| 错误 | 原因 | 引导 |
+| Error | Cause | Guidance |
 |------|------|------|
-| 实例不存在 | 实例 ID 错误或已释放 | 用 `get-lindorm-instance-list` 确认实例 ID |
-| 地域不匹配 | 实例在其他地域 | 提示用户指定正确地域 |
-| 权限不足 | AK 无 Lindorm 权限 | 需要 `AliyunLindormReadOnlyAccess` 权限 |
+| Instance does not exist | Instance ID is incorrect or the instance has been released | Use `get-lindorm-instance-list` to confirm the instance ID |
+| Region mismatch | Instance is in another region | Prompt the user to specify the correct region |
+| Insufficient permissions | AK has no Lindorm permission | `AliyunLindormReadOnlyAccess` permission is required |
 
 ---
 
-## 关联场景
+## Related Scenarios
 
-- 扩容前性能分析 → `monitoring-guide.md`
-- 存储使用详情 → `storage-analysis.md`
-- 扩容后监控设置 → `monitoring-guide.md`
+- Performance analysis before scale-out → `monitoring-guide.md`
+- Storage usage details → `storage-analysis.md`
+- Monitoring settings after scale-out → `monitoring-guide.md`

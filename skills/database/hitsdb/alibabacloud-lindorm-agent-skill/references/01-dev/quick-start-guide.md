@@ -1,90 +1,89 @@
-# 快速开始场景
+# Quick Start Scenarios
 
-当用户询问"怎么建表"、"怎么写入数据"、"怎么查询数据"等开发入门问题时，按本指南执行。
+When the user asks beginner development questions such as "how do I create a table", "how do I write data", or "how do I query data", follow this guide.
 
-## 触发条件
+## Trigger Conditions
 
-用户的典型表达：
-- "怎么建表？"
-- "怎么写入数据？"
-- "给我一个完整的示例"
-- "宽表引擎怎么用？"
-- "时序数据怎么存储？"
+Typical user expressions:
+- "How do I create a table?"
+- "How do I write data?"
+- "Give me a complete example."
+- "How do I use the wide table engine?"
+- "How should I store time series data?"
 
-## 核心原则
+## Core Principles
 
-**Agent 主动做重活**，而不是让用户自己探索：
-1. **Agent 提取完整代码示例**，直接给用户可执行的代码
-2. 只在必要时附上文档链接作为"了解更多"的补充
-3. **目标**：用户拿到代码后可以直接运行，无需再自己查文档
-
----
-
-## 执行流程
-
-### 步骤 1：确认引擎类型
-
-先询问用户使用哪个引擎（如果未明确）：
-
-```
-您想使用哪个引擎？
-
-1. 宽表引擎（适合半结构化数据，兼容 HBase）
-2. 时序引擎（适合 IoT、监控等时序数据）
-3. 搜索引擎（适合全文检索）
-
-或者告诉我您的使用场景，我来推荐引擎。
-```
+**The agent should do the heavy lifting instead of asking the user to explore by themselves**:
+1. **Extract complete code examples** and provide executable code directly.
+2. Attach documentation links only when they are needed as supplementary "learn more" references.
+3. **Goal**: the user can run the code directly after receiving it, without searching documentation again.
 
 ---
 
-### 步骤 2：Agent 查询官方文档并生成完整示例
+## Execution Flow
 
-**⚠️ 强制要求**：在提供任何代码示例之前，**必须**从 Skill references 文档获取信息，Skill 未覆盖时查询官方文档确认。
+### Step 1: Confirm the engine type
 
-**Agent 需要做的**：根据引擎类型，访问阿里云 Lindorm 官方文档获取最新示例
+Ask which engine the user wants to use if it is not clear:
 
-**查询目标**：
-- 官方文档：https://help.aliyun.com/zh/lindorm/
-- 关键信息：建表、写入、查询的完整代码示例
+```text
+Which engine do you want to use?
 
-**必须从官方文档中提取并验证**：
-- ✅ 最新的 Maven 依赖版本（不是训练数据中的旧版本）
-- ✅ 正确的 API 调用方式（如 Connection vs HConnection）
-- ✅ 当前推荐的建表语句格式
-- ✅ 官方验证过的写入/查询代码
-- ✅ 最佳实践和性能优化建议
+1. Wide table engine, suitable for semi-structured data and compatible with HBase
+2. Time series engine, suitable for IoT and monitoring time series data
+3. Search engine, suitable for full-text search
 
-**验证清单**：
+Or tell me your use case, and I will recommend an engine.
 ```
-在提供代码之前，Agent 必须确认：
-□ 已访问官方文档获取最新示例
-□ SDK 版本号是最新的（如 alilindorm-table-sdk 2.x）
-□ API 调用方式是当前推荐的（不是已废弃的 API）
-□ 建表/写入/查询代码经过官方验证
-□ 已附上官方文档链接供用户深入学习
-```
-
-**然后整理成完整可执行的代码，直接给用户**。
 
 ---
 
-## 按引擎类型生成完整示例
+### Step 2: Use reference documentation and generate a complete example
 
-### 场景 A：宽表引擎快速开始
+**Mandatory requirement**: before providing any code example, **obtain information from the Skill references first**. If the Skill references do not cover the case, query the official documentation for confirmation.
 
-**Agent 执行查询后，直接给用户完整答案**：
+**What the agent must do**: based on the engine type, access the Alibaba Cloud Lindorm official documentation and obtain the latest examples.
 
+**Query target**:
+- Official documentation: `https://help.aliyun.com/zh/lindorm/`
+- Key information: complete code examples for table creation, data writes, and queries
+
+**Must extract and verify from official documentation**:
+- Latest Maven dependency versions, not old versions from training data
+- Correct API usage, such as `Connection` instead of deprecated `HConnection`
+- Currently recommended table creation statement format
+- Officially verified write and query code
+- Best practices and performance optimization suggestions
+
+**Verification checklist**:
+
+```text
+Before providing code, the agent must confirm:
+- Official documentation has been accessed for the latest example.
+- The SDK version is up to date, such as alilindorm-table-sdk 2.x.
+- The API usage is currently recommended and not deprecated.
+- The table creation, write, and query code has been verified by official documentation.
+- Official documentation links are attached for further learning.
 ```
-【宽表引擎完整示例】
 
-我已为您准备好从连接到查询的完整代码（基于官方文档最新版本）：
+Then organize the result into complete executable code and provide it directly to the user.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-【步骤 1：添加 Maven 依赖】
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+---
 
-<!-- MySQL 协议 JDBC（推荐） -->
+## Complete Examples by Engine Type
+
+### Scenario A: Wide Table Engine Quick Start
+
+After checking the required references, provide a complete answer directly:
+
+```text
+[Wide table engine complete example]
+
+I have prepared complete code from connection to query, based on the latest official documentation.
+
+[Step 1: Add Maven dependency]
+
+<!-- MySQL protocol JDBC, recommended -->
 <dependencies>
     <dependency>
         <groupId>com.mysql</groupId>
@@ -93,57 +92,53 @@
     </dependency>
 </dependencies>
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-【步骤 2：连接实例】
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Step 2: Connect to the instance]
 
 import java.sql.*;
 import java.util.Properties;
 
 public class LindormQuickStart {
     public static void main(String[] args) throws Exception {
-        // 1. 配置连接（MySQL 协议，推荐）
-        // Agent 根据实例 ServiceType 选择正确的域名格式，参见 sql-client-guide.md
+        // 1. Configure the connection. MySQL protocol is recommended.
+        // The agent selects the correct domain format according to instance ServiceType. See sql-client-guide.md.
         Class.forName("com.mysql.cj.jdbc.Driver");
-        String url = "jdbc:mysql://<您的连接地址>:33060/default?sslMode=disabled";
+        String url = "jdbc:mysql://<connection-endpoint>:33060/default?sslMode=disabled";
         Properties props = new Properties();
         props.setProperty("user", "your-username");
         props.setProperty("password", "your-password");
         Connection conn = DriverManager.getConnection(url, props);
         Statement stmt = conn.createStatement();
 
-        // 2. 建表
+        // 2. Create a table.
         stmt.execute("CREATE TABLE IF NOT EXISTS users (" +
             "id VARCHAR PRIMARY KEY," +
             "name VARCHAR," +
             "age INT," +
             "city VARCHAR)");
-        System.out.println("表创建成功");
+        System.out.println("Table created successfully");
 
-        // 3. 写入数据
+        // 3. Write data.
         stmt.execute("INSERT INTO users (id, name, age, city) VALUES " +
             "('1', 'Alice', 25, 'Shanghai'), " +
             "('2', 'Bob', 30, 'Beijing')");
-        System.out.println("数据写入成功");
+        System.out.println("Data written successfully");
 
-        // 4. 查询数据
+        // 4. Query data.
         ResultSet rs = stmt.executeQuery("SELECT * FROM users WHERE age > 20");
         while (rs.next()) {
             System.out.println("name=" + rs.getString("name") + ", age=" + rs.getInt("age"));
         }
 
-        // 5. 关闭连接
+        // 5. Close the connection.
         rs.close();
         stmt.close();
         conn.close();
     }
 }
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-【批量写入优化】（生产环境推荐）
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Batch write optimization, recommended for production]
 
-// 批量写入（使用 PreparedStatement）
+// Batch write with PreparedStatement.
 String sql = "INSERT INTO users (id, name, age, city) VALUES (?, ?, ?, ?)";
 PreparedStatement pstmt = conn.prepareStatement(sql);
 for (int i = 0; i < 10000; i++) {
@@ -153,51 +148,49 @@ for (int i = 0; i < 10000; i++) {
     pstmt.setString(4, "city_" + i % 10);
     pstmt.addBatch();
     if (i % 1000 == 0) {
-        pstmt.executeBatch();  // 每 1000 行提交一次
+        pstmt.executeBatch();
     }
 }
-pstmt.executeBatch();  // 提交剩余数据
+pstmt.executeBatch();
 
-【完整文档】如需了解更多（二级索引、全局索引、性能优化）：
+[Complete documentation]
+For more information, such as secondary indexes, global indexes, and performance optimization:
 https://help.aliyun.com/zh/lindorm/user-guide/lindorm-wide-table-engine
 ```
 
 ---
 
-### 场景 B：时序引擎快速开始
+### Scenario B: Time Series Engine Quick Start
 
-**Agent 从官方文档提取最新示例**：
+Extract the latest example from official documentation first.
 
-> **推荐连接方式**：官方推荐使用 [JDBC Driver](https://help.aliyun.com/zh/lindorm/user-guide/use-the-jdbc-driver-for-lindorm-to-connect-to-and-use-lindormtsdb)（支持 Java）。以下示例采用 HTTP SQL API（轻量级，适合 Python 等非 Java 语言快速验证）。
+> **Recommended connection method**: official documentation recommends the [JDBC Driver](https://help.aliyun.com/zh/lindorm/user-guide/use-the-jdbc-driver-for-lindorm-to-connect-to-and-use-lindormtsdb), which supports Java. The following example uses the HTTP SQL API because it is lightweight and suitable for quick validation in Python and other non-Java languages.
 
-参考文档：https://help.aliyun.com/zh/lindorm/user-guide/http-sql-api-user-guide
+Reference documentation: `https://help.aliyun.com/zh/lindorm/user-guide/http-sql-api-user-guide`
 
-**然后直接给用户完整代码**：
+Then provide complete code directly:
 
-```
-【时序引擎完整示例】（Python HTTP SQL API）
+```text
+[Time series engine complete example, Python HTTP SQL API]
 
-我已为您准备好时序数据写入和查询的完整代码：
+I have prepared complete code for writing and querying time series data.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-【步骤 1：安装依赖】
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Step 1: Install dependency]
 
 pip install requests
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-【步骤 2：完整示例代码】
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Step 2: Complete example code]
 
 import requests
 import time
+import datetime
 
-# 1. 连接配置
-host = "您的时序引擎连接地址"  # 从控制台"数据库连接"页面获取
+# 1. Connection configuration.
+host = "your-time-series-engine-endpoint"
 port = 8242
 url = f"http://{host}:{port}/api/v2/sql"
 
-# 2. 建表
+# 2. Create a table.
 create_sql = """CREATE TABLE IF NOT EXISTS sensor (
   device_id VARCHAR NOT NULL,
   region VARCHAR NOT NULL,
@@ -207,17 +200,16 @@ create_sql = """CREATE TABLE IF NOT EXISTS sensor (
   PRIMARY KEY(device_id, region, time)
 )"""
 response = requests.post(url, data=create_sql)
-print(f"建表结果: {response.status_code}")
+print(f"Create table result: {response.status_code}")
 
-# 3. 写入数据（单条）
+# 3. Write one row.
 insert_sql = f"""INSERT INTO sensor (device_id, region, time, temperature, humidity) VALUES
 ('F07A1260', 'north-cn', '{time.strftime('%Y-%m-%d %H:%M:%S')}', 75.3, 45)"""
 response = requests.post(url, data=insert_sql)
-print(f"写入结果: {response.status_code}")
+print(f"Write result: {response.status_code}")
 
-# 4. 批量写入（推荐）
-# 注意：主键为 (device_id, region, time)，同一设备同一时间戳会 UPSERT 覆盖
-import datetime
+# 4. Batch write, recommended.
+# Note: the primary key is (device_id, region, time). The same device with the same timestamp performs UPSERT overwrite.
 now = datetime.datetime.now()
 times = [(now + datetime.timedelta(seconds=i)).strftime('%Y-%m-%d %H:%M:%S') for i in range(4)]
 batch_sql = f"""INSERT INTO sensor (device_id, region, time, temperature, humidity) VALUES
@@ -226,51 +218,46 @@ batch_sql = f"""INSERT INTO sensor (device_id, region, time, temperature, humidi
 ('F07A1261', 'south-cn', '{times[2]}', 18.1, 44),
 ('F07A1261', 'south-cn', '{times[3]}', 19.7, 44)"""
 response = requests.post(url, data=batch_sql)
-print(f"批量写入结果: {response.status_code}")
+print(f"Batch write result: {response.status_code}")
 
-# 5. 查询数据
+# 5. Query data.
 query_sql = "SELECT device_id, region, time, temperature FROM sensor LIMIT 100"
 response = requests.post(url, data=query_sql)
 result = response.json()
 for row in result.get('rows', []):
-    print(f"设备: {row[0]}, 区域: {row[1]}, 时间: {row[2]}, 温度: {row[3]}")
+    print(f"device: {row[0]}, region: {row[1]}, time: {row[2]}, temperature: {row[3]}")
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-【生产环境建议】
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Production recommendations]
 
-1. 批量写入：每次写入 100-1000 个数据点
-2. 数据压缩：时序引擎自动压缩，无需手动配置
-3. TTL 设置：建议设置数据过期时间（如 90 天）
-4. 异常处理：添加重试机制和错误日志
+1. Batch writes: write 100 to 1000 data points each time.
+2. Data compression: the time series engine compresses data automatically; no manual configuration is required.
+3. TTL: configure data expiration, such as 90 days.
+4. Error handling: add retry logic and error logs.
 
-【完整文档】如需了解更多（HTTP API 详细参数、降采样、预聚合、TTL）：
+[Complete documentation]
+For more information, such as HTTP API parameters, downsampling, pre-aggregation, and TTL:
 https://help.aliyun.com/zh/lindorm/user-guide/http-sql-api-user-guide
 ```
 
 ---
 
-### 场景 C：搜索引擎快速开始
+### Scenario C: Search Engine Quick Start
 
-**Agent 执行查询后，直接给用户完整答案**：
+After checking the required references, provide a complete answer directly:
 
-```
-【搜索引擎完整示例】（兼容 Elasticsearch 7.10 API）
+```text
+[Search engine complete example, compatible with Elasticsearch 7.10 API]
 
-我已为您准备好搜索引擎的完整代码（Java Low Level REST Client）：
+I have prepared complete search engine code with Java Low Level REST Client.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-【步骤 1：获取连接信息】
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Step 1: Obtain connection information]
 
-控制台 → 数据库连接 → 搜索引擎页签
-- Elasticsearch 兼容地址（专有网络或公网）
-- 默认用户名和密码
-- 端口固定为 30070
+Console -> Database Connection -> Search Engine tab
+- Elasticsearch-compatible endpoint, either VPC or public network
+- Default username and password
+- Fixed port: 30070
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-【步骤 2：添加 Maven 依赖】
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Step 2: Add Maven dependencies]
 
 <dependency>
     <groupId>org.elasticsearch.client</groupId>
@@ -283,16 +270,13 @@ https://help.aliyun.com/zh/lindorm/user-guide/http-sql-api-user-guide
     <version>2.8.2</version>
 </dependency>
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-【步骤 3：连接并操作】
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Step 3: Connect and operate]
 
 import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CredentialsProvider;
 import org.apache.http.impl.client.BasicCredentialsProvider;
-import org.apache.http.impl.nio.client.HttpAsyncClientBuilder;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestClientBuilder;
 import org.elasticsearch.client.Request;
@@ -301,12 +285,12 @@ import org.apache.http.util.EntityUtils;
 
 public class LindormSearchQuickStart {
     public static void main(String[] args) throws Exception {
-        // 1. 配置连接（Elasticsearch 兼容，端口 30070）
-        // Agent 根据实例 ServiceType 选择域名格式：V1=.lindorm.rds.aliyuncs.com，V2=.lindorm.aliyuncs.com
+        // 1. Configure the connection. Elasticsearch-compatible API uses port 30070.
+        // Select the domain format according to ServiceType: V1=.lindorm.rds.aliyuncs.com, V2=.lindorm.aliyuncs.com.
         String searchUrl = "ld-xxxx-proxy-search-pub.lindorm.rds.aliyuncs.com";
         int searchPort = 30070;
-        String username = "user";    // 从控制台获取
-        String password = "test";    // 从控制台获取
+        String username = "user";
+        String password = "test";
 
         final CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
         credentialsProvider.setCredentials(AuthScope.ANY,
@@ -319,7 +303,7 @@ public class LindormSearchQuickStart {
         try (RestClient client = builder.build()) {
             String indexName = "products";
 
-            // 2. 创建索引
+            // 2. Create an index.
             Request createReq = new Request("PUT", "/" + indexName);
             createReq.setJsonEntity("{" +
                 "  \"settings\":{\"index.number_of_shards\": 1}," +
@@ -332,25 +316,25 @@ public class LindormSearchQuickStart {
                 "  }" +
                 "}");
             Response resp = client.performRequest(createReq);
-            System.out.println("创建索引: " + EntityUtils.toString(resp.getEntity()));
+            System.out.println("Create index: " + EntityUtils.toString(resp.getEntity()));
 
-            // 3. 批量写入文档
+            // 3. Bulk write documents.
             Request bulkReq = new Request("POST", "/_bulk");
             StringBuilder bulk = new StringBuilder();
             bulk.append("{\"index\":{\"_index\":\"products\",\"_id\":\"1\"}}\n");
-            bulk.append("{\"name\":\"iPhone 15\",\"price\":7999.0,\"category\":\"手机\"}\n");
+            bulk.append("{\"name\":\"iPhone 15\",\"price\":7999.0,\"category\":\"phone\"}\n");
             bulk.append("{\"index\":{\"_index\":\"products\",\"_id\":\"2\"}}\n");
-            bulk.append("{\"name\":\"MacBook Pro\",\"price\":14999.0,\"category\":\"电脑\"}\n");
+            bulk.append("{\"name\":\"MacBook Pro\",\"price\":14999.0,\"category\":\"computer\"}\n");
             bulk.append("{\"index\":{\"_index\":\"products\",\"_id\":\"3\"}}\n");
-            bulk.append("{\"name\":\"AirPods Pro\",\"price\":1899.0,\"category\":\"耳机\"}\n");
+            bulk.append("{\"name\":\"AirPods Pro\",\"price\":1899.0,\"category\":\"earphones\"}\n");
             bulkReq.setJsonEntity(bulk.toString());
             client.performRequest(bulkReq);
-            System.out.println("批量写入完成");
+            System.out.println("Bulk write completed");
 
-            // 4. 刷新索引（强制写入数据可见）
+            // 4. Refresh the index to make written data visible.
             client.performRequest(new Request("POST", "/" + indexName + "/_refresh"));
 
-            // 5. 全文检索
+            // 5. Full-text search.
             Request searchReq = new Request("GET", "/" + indexName + "/_search");
             searchReq.setJsonEntity("{" +
                 "  \"query\":{" +
@@ -358,80 +342,69 @@ public class LindormSearchQuickStart {
                 "  }" +
                 "}");
             resp = client.performRequest(searchReq);
-            System.out.println("搜索结果: " + EntityUtils.toString(resp.getEntity()));
+            System.out.println("Search result: " + EntityUtils.toString(resp.getEntity()));
 
-            // 6. 查询单个文档
+            // 6. Query a single document.
             resp = client.performRequest(new Request("GET", "/" + indexName + "/_doc/1"));
-            System.out.println("文档1: " + EntityUtils.toString(resp.getEntity()));
+            System.out.println("Document 1: " + EntityUtils.toString(resp.getEntity()));
 
-            // 7. 删除索引
+            // 7. Delete the index.
             client.performRequest(new Request("DELETE", "/" + indexName));
-            System.out.println("索引已删除");
+            System.out.println("Index deleted");
         }
     }
 }
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-【curl 快速验证】
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[curl quick validation]
 
-# 创建索引
-curl -u user:password -X PUT "http://ld-xxxx-proxy-search-pub.lindorm.rds.aliyuncs.com:30070/products" \
-  -H 'Content-Type: application/json' -d '
+# Create index.
+curl --connect-timeout 10 -m 60 -u user:password -X PUT "http://ld-xxxx-proxy-search-pub.lindorm.rds.aliyuncs.com:30070/products"   -H 'Content-Type: application/json' -d '
   {"settings":{"index.number_of_shards":1},
    "mappings":{"properties":{"name":{"type":"text"},"price":{"type":"double"}}}}'
 
-# 写入文档
-curl -u user:password -X POST "http://ld-xxxx-proxy-search-pub.lindorm.rds.aliyuncs.com:30070/products/_doc/1" \
-  -H 'Content-Type: application/json' -d '{"name":"iPhone 15","price":7999}'
+# Write document.
+curl --connect-timeout 10 -m 60 -u user:password -X POST "http://ld-xxxx-proxy-search-pub.lindorm.rds.aliyuncs.com:30070/products/_doc/1"   -H 'Content-Type: application/json' -d '{"name":"iPhone 15","price":7999}'
 
-# 全文检索
-curl -u user:password -X GET "http://ld-xxxx-proxy-search-pub.lindorm.rds.aliyuncs.com:30070/products/_search" \
-  -H 'Content-Type: application/json' -d '{"query":{"match":{"name":"iPhone"}}}'
+# Full-text search.
+curl --connect-timeout 10 -m 60 -u user:password -X GET "http://ld-xxxx-proxy-search-pub.lindorm.rds.aliyuncs.com:30070/products/_search"   -H 'Content-Type: application/json' -d '{"query":{"match":{"name":"iPhone"}}}'
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-【搜索引擎关键参数】
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Search engine key parameters]
 
-| 参数 | 值 | 说明 |
-|------|-----|------|
-| 端口 | **30070** | Elasticsearch 兼容端口，固定不变 |
-| 协议 | HTTP | 不支持 HTTPS |
-| 认证 | Basic Auth | 用户名密码从控制台获取 |
-| 兼容版本 | ES 7.10 | 兼容 Elasticsearch 7.10 及更早版本 API |
-| 写入后可见 | 需手动 _refresh | 或等待自动 refresh（默认1秒） |
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| Port | 30070 | Fixed Elasticsearch-compatible port |
+| Protocol | HTTP | HTTPS is not supported |
+| Authentication | Basic Auth | Obtain username and password from the console |
+| Compatibility | ES 7.10 | Compatible with Elasticsearch 7.10 and earlier APIs |
+| Visibility after writes | Manual `_refresh` required | Or wait for automatic refresh, which defaults to 1 second |
 
-【完整文档】搜索引擎开发指南：
+[Complete documentation]
+Search engine development guide:
 https://help.aliyun.com/zh/lindorm/user-guide/lindormsearch/
 https://help.aliyun.com/zh/lindorm/user-guide/java-low-level-rest-client
 ```
 
 ---
 
-### 场景 D：向量引擎快速开始
+### Scenario D: Vector Engine Quick Start
 
-**Agent 执行查询后，直接给用户完整答案**：
+After checking the required references, provide a complete answer directly:
 
-```
-【向量引擎完整示例】（通过搜索引擎 ES API 访问）
+```text
+[Vector engine complete example, accessed through the search engine ES API]
 
-Lindorm 向量引擎无独立连接地址，通过搜索引擎的 Elasticsearch 兼容 API 访问（端口 30070）。
+The Lindorm vector engine has no independent connection endpoint. Access it through the Elasticsearch-compatible API of the search engine on port 30070.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-【步骤 1：获取连接信息】
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Step 1: Obtain connection information]
 
-与搜索引擎相同：
-- 连接地址：搜索引擎的 Elasticsearch 兼容地址（公网或 VPC）
-- 端口：30070
-- 认证：Basic Auth（用户名/密码）
+Same as the search engine:
+- Endpoint: Elasticsearch-compatible search engine endpoint, public or VPC
+- Port: 30070
+- Authentication: Basic Auth with username and password
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-【步骤 2：创建向量索引（hnsw）】
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Step 2: Create a vector index with HNSW]
 
-curl -u user:password -X PUT "http://ld-xxxx-proxy-search-pub.lindorm.rds.aliyuncs.com:30070/vector_test" \
-  -H 'Content-Type: application/json' -d '{
+curl --connect-timeout 10 -m 60 -u user:password -X PUT "http://ld-xxxx-proxy-search-pub.lindorm.rds.aliyuncs.com:30070/vector_test"   -H 'Content-Type: application/json' -d '{
     "settings": {
       "number_of_shards": 1,
       "knn": true
@@ -458,31 +431,25 @@ curl -u user:password -X PUT "http://ld-xxxx-proxy-search-pub.lindorm.rds.aliyun
     }
   }'
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-【步骤 3：写入向量数据】
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Step 3: Write vector data]
 
-curl -u user:password -X POST "http://ld-xxxx-proxy-search-pub.lindorm.rds.aliyuncs.com:30070/_bulk" \
-  -H 'Content-Type: application/x-ndjson' -d '
+curl --connect-timeout 10 -m 60 -u user:password -X POST "http://ld-xxxx-proxy-search-pub.lindorm.rds.aliyuncs.com:30070/_bulk"   -H 'Content-Type: application/x-ndjson' -d '
 {"index":{"_index":"vector_test","_id":"1"}}
-{"field1":1,"name":"苹果","vector1":[1.2,1.3,1.4]}
+{"field1":1,"name":"apple","vector1":[1.2,1.3,1.4]}
 {"index":{"_index":"vector_test","_id":"2"}}
-{"field1":2,"name":"香蕉","vector1":[2.2,2.3,2.4]}
+{"field1":2,"name":"banana","vector1":[2.2,2.3,2.4]}
 {"index":{"_index":"vector_test","_id":"3"}}
-{"field1":3,"name":"橙子","vector1":[3.2,3.3,3.4]}
+{"field1":3,"name":"orange","vector1":[3.2,3.3,3.4]}
 '
 
-# 刷新索引使数据可见
-curl -u user:password -X POST "http://ld-xxxx-proxy-search-pub.lindorm.rds.aliyuncs.com:30070/vector_test/_refresh"
+# Refresh the index to make data visible.
+curl --connect-timeout 10 -m 60 -u user:password -X POST "http://ld-xxxx-proxy-search-pub.lindorm.rds.aliyuncs.com:30070/vector_test/_refresh"
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-【步骤 4：KNN 近似搜索】
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Step 4: KNN approximate search]
 
-# 查找与 [1.3,1.4,1.5] 最相似的 3 个向量
-# 注意：KNN 搜索默认不返回 _source，必须显式指定需要返回的字段
-curl -u user:password -X GET "http://ld-xxxx-proxy-search-pub.lindorm.rds.aliyuncs.com:30070/vector_test/_search" \
-  -H 'Content-Type: application/json' -d '{
+# Find the three vectors most similar to [1.3,1.4,1.5].
+# Note: KNN search does not return _source by default. Explicitly specify returned fields.
+curl --connect-timeout 10 -m 60 -u user:password -X GET "http://ld-xxxx-proxy-search-pub.lindorm.rds.aliyuncs.com:30070/vector_test/_search"   -H 'Content-Type: application/json' -d '{
     "size": 3,
     "_source": ["field1", "name"],
     "query": {
@@ -495,12 +462,9 @@ curl -u user:password -X GET "http://ld-xxxx-proxy-search-pub.lindorm.rds.aliyun
     }
   }'
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-【步骤 5：向量+标量混合检索】
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Step 5: Hybrid vector and scalar retrieval]
 
-curl -u user:password -X GET "http://ld-xxxx-proxy-search-pub.lindorm.rds.aliyuncs.com:30070/vector_test/_search" \
-  -H 'Content-Type: application/json' -d '{
+curl --connect-timeout 10 -m 60 -u user:password -X GET "http://ld-xxxx-proxy-search-pub.lindorm.rds.aliyuncs.com:30070/vector_test/_search"   -H 'Content-Type: application/json' -d '{
     "size": 3,
     "_source": ["field1", "name"],
     "query": {
@@ -522,63 +486,56 @@ curl -u user:password -X GET "http://ld-xxxx-proxy-search-pub.lindorm.rds.aliyun
     }
   }'
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-【向量引擎关键参数】
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Vector engine key parameters]
 
-| 参数 | 值 | 说明 |
-|------|-----|------|
-| 接入方式 | 搜索引擎 ES API | 无独立连接地址，复用搜索引擎端口 30070 |
-| 向量类型 | knn_vector | 需指定 dimension（维度） |
-| 索引算法 | hnsw | 支持 l2、cosinesimil（实测均可用） |
-| 写入后可见 | 需 _refresh | 或等待自动刷新 |
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| Access method | Search engine ES API | No independent endpoint. Reuse search engine port 30070 |
+| Vector type | knn_vector | `dimension` must be specified |
+| Index algorithm | hnsw | Supports `l2` and `cosinesimil`, both verified as usable |
+| Visibility after writes | `_refresh` required | Or wait for automatic refresh |
 
-【完整文档】向量引擎开发指南：
+[Complete documentation]
+Vector engine development guide:
 https://help.aliyun.com/zh/lindorm/user-guide/foundation
 ```
 
 ---
 
-### 场景 E：流引擎快速开始
+### Scenario E: Streaming Engine Quick Start
 
-**Agent 执行查询后，直接给用户完整答案**：
+After checking the required references, provide a complete answer directly:
 
-```
-【流引擎完整示例】（ETL SQL 实时同步与预计算）
+```text
+[Streaming engine complete example, ETL SQL real-time synchronization and precomputation]
 
-Lindorm 流引擎通过 MySQL 协议访问（端口 33060），使用 ETL SQL 实现实时数据同步和预计算。
+The Lindorm streaming engine is accessed through the MySQL protocol on port 33060. It uses ETL SQL for real-time data synchronization and precomputation.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-【步骤 1：在宽表引擎创建源表和结果表】
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Step 1: Create source and result tables in the wide table engine]
 
--- 连接宽表引擎（MySQL 协议）
-mysql -h <宽表引擎地址> -P 33060 -u root -p
+-- Connect to the wide table engine through the MySQL protocol.
+mysql -h <wide-table-engine-endpoint> -P 33060 -u root -p
 
--- 创建源表
+-- Create a source table.
 CREATE TABLE source_tbl(id INT, val DOUBLE, PRIMARY KEY(id));
 
--- 创建镜像表（实时同步目标）
+-- Create a mirror table as the real-time synchronization target.
 CREATE TABLE sink_tbl(id INT, val DOUBLE, PRIMARY KEY(id));
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-【步骤 2：在流引擎创建 ETL（实时镜像）】
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Step 2: Create ETL in the streaming engine for real-time mirroring]
 
--- 连接流引擎（MySQL 协议，端口相同）
-mysql -h <流引擎地址> -P 33060 -u root -p
+-- Connect to the streaming engine through the MySQL protocol on the same port.
+mysql -h <streaming-engine-endpoint> -P 33060 -u root -p
 
--- 创建实时同步 ETL
+-- Create real-time synchronization ETL.
 CREATE ETL sync_etl AS INSERT INTO sink_tbl SELECT * FROM source_tbl;
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-【步骤 3：验证实时同步】
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Step 3: Verify real-time synchronization]
 
--- 在宽表引擎插入数据
+-- Insert data in the wide table engine.
 INSERT INTO source_tbl(id, val) VALUES (1, 1.1), (2, 2.2);
 
--- 查询镜像表（数据已实时同步）
+-- Query the mirror table. Data has been synchronized in real time.
 SELECT * FROM sink_tbl;
 +------+------+
 | id   | val  |
@@ -587,11 +544,9 @@ SELECT * FROM sink_tbl;
 |    2 |  2.2 |
 +------+------+
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-【步骤 4：多表 JOIN 预计算】
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Step 4: Multi-table JOIN precomputation]
 
--- 在宽表引擎创建用户表和订单表
+-- Create user and order tables in the wide table engine.
 CREATE TABLE user_tbl(user_id VARCHAR NOT NULL, user_name VARCHAR, PRIMARY KEY(user_id));
 
 CREATE TABLE order_tbl(
@@ -601,10 +556,10 @@ CREATE TABLE order_tbl(
   PRIMARY KEY(order_id)
 );
 
--- 为 JOIN 字段创建索引（必须）
+-- Create an index for the JOIN field. This is required.
 CREATE INDEX idx_user_id ON order_tbl(user_id);
 
--- 创建结果表（预打宽，需可更新）
+-- Create a denormalized result table that supports updates.
 CREATE TABLE user_order_tbl(
   order_id VARCHAR NOT NULL,
   user_id VARCHAR,
@@ -613,86 +568,81 @@ CREATE TABLE user_order_tbl(
   PRIMARY KEY(order_id)
 ) WITH (MUTABILITY='MUTABLE_UDT');
 
--- 在流引擎创建 JOIN ETL（需使用完整表名）
+-- Create JOIN ETL in the streaming engine. Use full table names.
 CREATE ETL join_etl AS
 INSERT INTO `lindorm_table`.`default`.`user_order_tbl`(order_id, user_id, user_name, amount)
 SELECT o.order_id, o.user_id, u.user_name, o.amount
 FROM `lindorm_table`.`default`.`order_tbl` o
 JOIN `lindorm_table`.`default`.`user_tbl` u ON o.user_id = u.user_id;
 
--- 插入测试数据
-INSERT INTO user_tbl VALUES ('U001', '张三'), ('U002', '李四');
+-- Insert test data.
+INSERT INTO user_tbl VALUES ('U001', 'Alice'), ('U002', 'Bob');
 INSERT INTO order_tbl VALUES ('O001', 'U001', 100.0), ('O002', 'U001', 200.0);
 
--- 查询结果表（已实时 JOIN）
+-- Query the result table. JOIN results have been generated in real time.
 SELECT * FROM user_order_tbl;
 +----------+---------+-----------+--------+
 | order_id | user_id | user_name | amount |
 +----------+---------+-----------+--------+
-| O001     | U001    | 张三      |  100.0 |
-| O002     | U001    | 张三      |  200.0 |
+| O001     | U001    | Alice     |  100.0 |
+| O002     | U001    | Alice     |  200.0 |
 +----------+---------+-----------+--------+
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-【流引擎关键参数】
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Streaming engine key parameters]
 
-| 参数 | 值 | 说明 |
-|------|-----|------|
-| 连接方式 | MySQL 协议 | 与宽表引擎相同，端口 33060 |
-| 核心语法 | CREATE ETL | `CREATE ETL name AS INSERT INTO ... SELECT ...` |
-| 表名格式 | 完整路径 | 跨库查询需用 `lindorm_table.default.tablename` |
-| JOIN 要求 | 必须有索引 | JOIN key 需有二级索引，否则报错 |
-| 结果表 | MUTABLE_UDT | 预计算结果表需支持更新 |
-| 实时性 | 近实时 | 数据变更后秒级同步 |
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| Connection method | MySQL protocol | Same as the wide table engine, port 33060 |
+| Core syntax | CREATE ETL | `CREATE ETL name AS INSERT INTO ... SELECT ...` |
+| Table name format | Full path | Use `lindorm_table.default.tablename` for cross-database queries |
+| JOIN requirement | Index required | JOIN keys must have secondary indexes, otherwise an error is returned |
+| Result table | MUTABLE_UDT | Precomputed result tables must support updates |
+| Real-time behavior | Near real time | Data changes are synchronized within seconds |
 
-【管理 ETL】
--- 查看所有 ETL
+[Manage ETL]
+-- Show all ETLs.
 SHOW ETLS;
 
--- 删除 ETL
+-- Drop an ETL.
 DROP ETL IF EXISTS etl_name;
 
-【完整文档】流引擎开发指南：
+[Complete documentation]
+Streaming engine development guide:
 https://help.aliyun.com/zh/lindorm/user-guide/real-time-etl
 ```
 
 ---
 
-### 场景 F：宽表引擎 HBase API 快速开始
+### Scenario F: Wide Table Engine HBase API Quick Start
 
-**适用场景**：已有 HBase 应用迁移、需要 KV 级操作的场景。新用户推荐优先使用场景 A（MySQL 协议 SQL）。
+**Applicable scenarios**: migration of existing HBase applications and KV-level operations. For new users, prefer Scenario A, which uses MySQL protocol SQL.
 
-参考文档：https://help.aliyun.com/zh/lindorm/user-guide/use-the-hbase-api-for-java-to-connect-to-and-use-the-wide-table-engine
+Reference documentation: `https://help.aliyun.com/zh/lindorm/user-guide/use-the-hbase-api-for-java-to-connect-to-and-use-the-wide-table-engine`
 
-HBase SDK 安装：https://help.aliyun.com/zh/lindorm/user-guide/install-and-upgrade-hbase-sdk-for-java
+HBase SDK installation: `https://help.aliyun.com/zh/lindorm/user-guide/install-and-upgrade-hbase-sdk-for-java`
 
-**Agent 从官方文档提取最新示例**：
+Extract the latest example from official documentation first:
 
-```
-【宽表引擎 HBase API 完整示例】（Java）
+```text
+[Wide table engine HBase API complete example, Java]
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-【步骤 1：添加 Maven 依赖】
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Step 1: Add Maven dependency]
 
-<!-- 根据开源 HBase 客户端版本选择对应的阿里云发行版 -->
-<!-- HBase 1.x 用户 -->
+<!-- Select the corresponding Alibaba Cloud distribution according to the open-source HBase client version. -->
+<!-- HBase 1.x users -->
 <dependency>
     <groupId>com.aliyun.hbase</groupId>
     <artifactId>alihbase-client</artifactId>
     <version>1.8.8</version>
 </dependency>
-<!-- HBase 2.x 用户 -->
+<!-- HBase 2.x users -->
 <dependency>
     <groupId>com.aliyun.hbase</groupId>
     <artifactId>alihbase-client</artifactId>
     <version>2.8.7</version>
 </dependency>
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-【步骤 2：配置连接】
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Step 2: Configure the connection]
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
@@ -701,63 +651,59 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 public class LindormHBaseQuickStart {
     public static void main(String[] args) throws Exception {
-        // 1. 配置连接（端口 30020）
-        // 连接地址从控制台"数据库连接"页面获取 HBase API 地址
+        // 1. Configure the connection on port 30020.
+        // Obtain the HBase API endpoint from the Database Connection page in the console.
         Configuration conf = HBaseConfiguration.create();
-        conf.set("hbase.zookeeper.quorum", "<您的连接地址>:30020");
-        conf.set("hbase.client.username", "用户名");
-        conf.set("hbase.client.password", "密码");
+        conf.set("hbase.zookeeper.quorum", "<connection-endpoint>:30020");
+        conf.set("hbase.client.username", "username");
+        conf.set("hbase.client.password", "password");
 
-        // 2. 创建连接（线程安全，全局复用，程序结束时关闭）
+        // 2. Create a connection. It is thread-safe, should be reused globally, and closed when the program exits.
         Connection connection = ConnectionFactory.createConnection(conf);
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-【步骤 3：DDL 操作（建表/删表）】
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Step 3: DDL operations, such as create and delete tables]
 
         try (Admin admin = connection.getAdmin()) {
-            // 建表
+            // Create a table.
             HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("tablename"));
             htd.addFamily(new HColumnDescriptor(Bytes.toBytes("family")));
-            // 创建单分区表（生产环境建议预分区，避免热点）
+            // Create a table with one region. Use pre-splitting in production to avoid hotspots.
             admin.createTable(htd);
 
-            // 预分区建表示例（推荐）
+            // Pre-split table creation example, recommended.
             // byte[][] splitKeys = new byte[][] {
             //     Bytes.toBytes("10"), Bytes.toBytes("20"), Bytes.toBytes("30")
             // };
             // admin.createTable(htd, splitKeys);
 
-            // disable 表（truncate/删除前必须先 disable）
+            // Disable the table before truncate or delete.
             // admin.disableTable(TableName.valueOf("tablename"));
             // admin.truncateTable(TableName.valueOf("tablename"), true);
             // admin.deleteTable(TableName.valueOf("tablename"));
         }
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-【步骤 4：DML 操作（读写删查）】
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Step 4: DML operations, such as read, write, delete, and scan]
 
-        // Table 为非线程安全对象，每个线程必须从 Connection 中获取自己的 Table
+        // Table is not thread-safe. Each thread must obtain its own Table object from Connection.
         try (Table table = connection.getTable(TableName.valueOf("tablename"))) {
-            // 插入数据
+            // Insert data.
             Put put = new Put(Bytes.toBytes("row"));
             put.addColumn(Bytes.toBytes("family"), Bytes.toBytes("qualifier"), Bytes.toBytes("value"));
             table.put(put);
 
-            // 单行读取
+            // Read a single row.
             Get get = new Get(Bytes.toBytes("row"));
             Result res = table.get(get);
 
-            // 删除一行数据
+            // Delete one row.
             Delete delete = new Delete(Bytes.toBytes("row"));
             table.delete(delete);
 
-            // Scan 范围查询
+            // Range scan.
             Scan scan = new Scan(Bytes.toBytes("startRow"), Bytes.toBytes("endRow"));
             ResultScanner scanner = table.getScanner(scan);
             for (Result result : scanner) {
-                // 处理查询结果
+                // Process query results.
             }
             scanner.close();
         }
@@ -766,19 +712,17 @@ public class LindormHBaseQuickStart {
     }
 }
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-【HBase API 关键参数】
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[HBase API key parameters]
 
-| 参数 | 值 | 说明 |
-|------|-----|------|
-| 端口 | **30020** | HBase API 专用端口，固定不变 |
-| Connection | 线程安全 | 全局创建一次，程序结束时关闭 |
-| Table | 非线程安全 | 每个线程必须获取自己的 Table 对象 |
-| 建表 | 建议预分区 | 单 Region 会导致热点，生产环境必须预分区 |
-| 认证 | 用户名/密码 | 从控制台获取 |
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| Port | 30020 | Fixed port dedicated to the HBase API |
+| Connection | Thread-safe | Create once globally and close when the program exits |
+| Table | Not thread-safe | Each thread must obtain its own Table object |
+| Table creation | Pre-splitting recommended | A single region causes hotspots. Pre-splitting is required in production |
+| Authentication | Username and password | Obtain them from the console |
 
-【完整文档】
-- Java：https://help.aliyun.com/zh/lindorm/user-guide/use-the-hbase-api-for-java-to-connect-to-and-use-the-wide-table-engine
-- 非 Java（Thrift2）：https://help.aliyun.com/zh/lindorm/user-guide/use-the-hbase-api-for-a-non-java-language-to-connect-to-and-use-the-wide-table-engine
+[Complete documentation]
+- Java: https://help.aliyun.com/zh/lindorm/user-guide/use-the-hbase-api-for-java-to-connect-to-and-use-the-wide-table-engine
+- Non-Java, Thrift2: https://help.aliyun.com/zh/lindorm/user-guide/use-the-hbase-api-for-a-non-java-language-to-connect-to-and-use-the-wide-table-engine
 ```
