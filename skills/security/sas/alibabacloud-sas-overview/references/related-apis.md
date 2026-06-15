@@ -17,7 +17,9 @@
 | `aliyun sas get-cloud-asset-summary` | GetCloudAssetSummary | Query cloud asset summary | Asset Risk Trend |
 | `aliyun sas describe-chart-data` | DescribeChartData | Query chart data for security reports | Asset Risk Trend |
 
-## WAF (Web Application Firewall) — Product: waf-openapi, Version: 2021-10-01
+## WAF (Web Application Firewall) — Product: waf-openapi, Version: 2021-10-01 (WAF 3.0 only)
+
+> **Note**: This skill only supports WAF 3.0 (Version `2021-10-01`). WAF 2.0 (Version `2019-09-10`) is NOT compatible.
 
 | CLI Command | API Action | Description | Module |
 |-------------|------------|-------------|--------|
