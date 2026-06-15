@@ -65,8 +65,20 @@ Follow the best practices to determine parameter values. Use default values when
 
 **2. Engine Selection (`--engineType`)**
 
-- `LiteAdvanced`: Semantic search, 1-50 results, general use
-- `Generic`: Fast, 10 results, news/realtime
+The four engines differ significantly in latency, recall depth, content length, and cost. Pick the cheapest engine that meets the task — do NOT default to `Deep`; it is ~10× slower and 50× more expensive than the standard engine.
+
+| Engine         | Avg RT | Result count | snippet     | mainText     | Advanced filters | Multilingual | Cost ratio (vs Standard) | Use case                                                                                  |
+|----------------|--------|--------------|-------------|--------------|------------------|--------------|--------------------------|-------------------------------------------------------------------------------------------|
+| `Generic`      | ~950ms | ~10          | ~150 chars  | ≤3000 chars  | ✗                | Medium       | 1×                       | General search, news/realtime, scene queries like weather (supports `city`/`ip`)          |
+| `LiteAdvanced` | ~500ms | 1-50         | ~500 chars  | ≤3000 chars  | ✓                | Good         | Lite-tier 1×             | **Default recommendation**: low-latency semantic search; snippets are already rich enough |
+| `Deep`         | ~6s    | 1-50         | ≤500 chars  | ≤50000 chars | ✓                | Good (CN/EN) | **Vertical 50×**         | Complex multi-step reasoning, research reports, offline/Agent tasks needing deep browsing |
+
+Decision rules:
+
+- **Default → `LiteAdvanced`**: low latency + semantic search + snippet covers most Agent needs without needing extra mainText fetches.
+- **Choose `Generic`** when: the query is short and clearly informational (news, weather, simple facts), or when minimizing cost matters; also the only engine honoring `city` / `ip` for scene results (weather etc.).
+- **Choose `Deep`** ONLY when: the question is multi-hop / complex reasoning (FRAMES/BrowseComp-style), OR you need very long mainText (≤50000 characters, ~16× longer than other engines) for downstream LLM reasoning.
+  - ⚠️ **Avoid `Deep` for**: real-time chat, simple lookups, high-QPS scenarios — latency (~6s) and cost (50×) are prohibitive.
 
 **3. Time Range Selection (`--timeRange`)**
 
@@ -149,6 +161,13 @@ node scripts/search.mjs --query "AI 法案" --engineType LiteAdvanced --contents
 
 ```bash
 node scripts/search.mjs --query "人工智能行业年度报告" --engineType LiteAdvanced --contents summary
+```
+
+#### Deep Research Search (complex multi-hop / long mainText)
+
+```bash
+# Returns up to 50000-char mainText per result; latency ~6s. Default timeout auto-bumps to 60s for Deep.
+node scripts/search.mjs --query "对比 GPT-5 与 Claude Opus 4.7 的代码能力差异" --engineType Deep --numResults 5 --contents mainText
 ```
 
 ### ReadPage Examples
