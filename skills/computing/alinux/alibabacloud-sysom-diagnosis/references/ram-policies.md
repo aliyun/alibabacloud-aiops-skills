@@ -1,18 +1,16 @@
-# RAM Policies for SysOM Diagnosis Skill
+# RAM Policies: alibabacloud-sysom-diagnosis
 
-This file lists RAM permissions required by `alibabacloud-sysom-diagnosis` for remote deep-diagnosis OpenAPI calls.
+This Skill uses the sysom-osops CLI. Remote diagnosis is routed through SysOM
+OpenAPI gateway actions.
 
-## Permission List
+## Required Permissions
 
-### SysOM Diagnosis Invocation Permissions
+| API | RAM Action | Used by | Description |
+|-----|------------|---------|-------------|
+| InitialSysom | `sysom:InitialSysom` | Credential validation inside remote commands | Verify credential validity and SysOM role authorization |
+| InvokeAgentCli | `sysom:InvokeAgentCli` | All remote diagnosis commands | Gateway action for catalog queries, diagnosis execution, and task polling |
 
-| API Name | RAM Action | Description |
-|----------|-------------|------|
-| `InitialSysom` | `sysom:InitialSysom` | precheck and activation/permission validation |
-| `InvokeDiagnosis` | `sysom:InvokeDiagnosis` | start diagnosis task |
-| `GetDiagnosisResult` | `sysom:GetDiagnosisResult` | query diagnosis task result |
-
-## Minimum Policy Template
+## Minimum Permission Policy
 
 ```json
 {
@@ -22,8 +20,7 @@ This file lists RAM permissions required by `alibabacloud-sysom-diagnosis` for r
       "Effect": "Allow",
       "Action": [
         "sysom:InitialSysom",
-        "sysom:InvokeDiagnosis",
-        "sysom:GetDiagnosisResult"
+        "sysom:InvokeAgentCli"
       ],
       "Resource": "*"
     }
@@ -31,8 +28,13 @@ This file lists RAM permissions required by `alibabacloud-sysom-diagnosis` for r
 }
 ```
 
-## Recommended System Policy
+## Notes
 
-| Policy Name | Description |
-|----------|------|
-| `AliyunSysomFullAccess` | Full access to SysOM |
+- `sysom-osops memory classify` runs locally and does not require cloud
+  permissions.
+- Remote commands across memory, IO, network, load, and Java memory require the
+  permissions above.
+- Avoid broader wildcard permissions when a custom least-privilege policy can be
+  attached to the RAM user or ECS RAM Role.
+- Do not paste AK/SK values into the conversation. Configure credentials outside
+  the Agent session.
