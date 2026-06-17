@@ -1,17 +1,18 @@
 # RAM Policies (sysom-inspection)
 
-本文档说明 `alibabacloud-alinux-sysom-inspection` 在调用 SysOM OpenAPI 时所需的最小 RAM 权限。
+This document describes the minimum RAM permissions required by `alibabacloud-alinux-sysom-inspection` when calling SysOM OpenAPI.
 
 ## Required SysOM Actions
 
 | API | RAM Action | Purpose |
 |---|---|---|
-| `InitialSysom` | `sysom:InitialSysom` | 校验开通状态与权限，必要时执行开通流程 |
-| `InstallAgentWithType` | `sysom:InstallAgentWithType` | 为目标 ECS 安装 SysOM Agent |
-| `CreateInstanceInspection` | `sysom:CreateInstanceInspection` | 发起实例巡检任务 |
-| `GetInspectionReport` | `sysom:GetInspectionReport` | 查询巡检报告 |
-| `InvokeDiagnosis` | `sysom:InvokeDiagnosis` | 发起内存专项诊断（memgraph） |
-| `GetDiagnosisResult` | `sysom:GetDiagnosisResult` | 轮询诊断结果 |
+| `ListAllInstances` | `sysom:ListAllInstances` | List instances by region and management status (paginated) for inspection target selection |
+| `InitialSysom` | `sysom:InitialSysom` | Validate activation status and permissions; optionally perform activation |
+| `InstallAgentWithType` | `sysom:InstallAgentWithType` | Install SysOM Agent on the target ECS instance |
+| `CreateInstanceInspection` | `sysom:CreateInstanceInspection` | Start an instance inspection task |
+| `GetInspectionReport` | `sysom:GetInspectionReport` | Query inspection report details |
+| `InvokeDiagnosis` | `sysom:InvokeDiagnosis` | Start memory-focused diagnosis (`memgraph`) |
+| `GetDiagnosisResult` | `sysom:GetDiagnosisResult` | Poll diagnosis execution result |
 
 ## Example Policy Statement
 
@@ -22,6 +23,7 @@
     {
       "Effect": "Allow",
       "Action": [
+        "sysom:ListAllInstances",
         "sysom:InitialSysom",
         "sysom:InstallAgentWithType",
         "sysom:CreateInstanceInspection",
@@ -37,5 +39,5 @@
 
 ## Notes
 
-- 若使用子账号执行巡检/诊断，需确保该账号具备以上全部 Action。
-- 若提示服务未开通或角色未就绪，请先完成 SysOM 开通流程后重试。
+- If you use a RAM sub-account for inspection/diagnosis, ensure it has all actions listed above.
+- If the API indicates service is not activated or role readiness is missing, complete SysOM activation first and retry.

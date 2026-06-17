@@ -2,6 +2,9 @@
 from __future__ import annotations
 
 import json
+import os
+import re
+import uuid
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from alibabacloud_tea_openapi import models as open_api_models
@@ -26,6 +29,10 @@ except ImportError:
 
 SYSOM_ENDPOINT = "sysom.cn-hangzhou.aliyuncs.com"
 SYSOM_API_VERSION = "2023-12-30"
+SKILL_NAME = "alibabacloud-alinux-sysom-inspection"
+SKILL_SESSION_ID_ENV = "SKILL_SESSION_ID"
+SKILL_SESSION_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$")
+USER_AGENT_TEMPLATE = "AlibabaCloud-Agent-Skills/{SKILL_NAME}/{session-id}"
 
 
 def _build_query(data: Dict[str, Any]) -> Dict[str, Any]:
@@ -40,13 +47,32 @@ def _build_map(data: Dict[str, Any]) -> Dict[str, Any]:
     return dict(data)
 
 
+def _ensure_skill_session_id(explicit_session_id: Optional[str] = None) -> str:
+    candidate = str(explicit_session_id or os.environ.get(SKILL_SESSION_ID_ENV, "")).strip()
+    if candidate and SKILL_SESSION_ID_PATTERN.fullmatch(candidate):
+        os.environ[SKILL_SESSION_ID_ENV] = candidate
+        return candidate
+
+    # Generate a per-process fallback session id when caller does not inject one.
+    generated = f"sid-{uuid.uuid4().hex}"
+    os.environ[SKILL_SESSION_ID_ENV] = generated
+    return generated
+
+
+def _build_user_agent(skill_session_id: str) -> str:
+    return (
+        USER_AGENT_TEMPLATE.replace("{SKILL_NAME}", SKILL_NAME).replace("{session-id}", skill_session_id)
+    )
+
+
 class SysomOpenApiCaller:
     def __init__(self, credentials: Dict[str, str], endpoint: str = SYSOM_ENDPOINT) -> None:
+        skill_session_id = _ensure_skill_session_id()
         cfg = open_api_models.Config(
             access_key_id=credentials["ak_id"],
             access_key_secret=credentials["ak_secret"],
             endpoint=endpoint,
-            user_agent="AlibabaCloud-Agent-Skills/alibabacloud-alinux-sysom-inspection",
+            user_agent=_build_user_agent(skill_session_id),
         )
         if credentials.get("security_token"):
             cfg.security_token = credentials["security_token"]

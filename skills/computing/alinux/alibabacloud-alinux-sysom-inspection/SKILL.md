@@ -1,7 +1,7 @@
 ---
 name: alibabacloud-alinux-sysom-inspection
 version: 0.1.0
-description: 用于检查 ECS 实例的系统健康状况，识别内存、磁盘、CPU、负载与资源泄漏等异常，并在命中关键内存问题时自动补充深度诊断结果。适用于实例巡检、故障排查与风险预警场景。触发词：SysOM、巡检、实例诊断、memory_usage_rate、内存使用率。
+description: Inspect ECS instance health, detect anomalies in memory, disk, CPU, load, and resource leaks, and automatically trigger deep diagnosis when critical memory issues are detected. Suitable for routine inspections, troubleshooting, and risk warning scenarios. Trigger keywords: SysOM, inspection, instance diagnosis, memory_usage_rate, memory usage.
 layer: application
 category: os-ops
 lifecycle: operations
@@ -14,43 +14,58 @@ tags:
 status: beta
 ---
 
-# SysOM 巡检（sysom-inspection）
+# SysOM Inspection (`sysom-inspection`)
 
-在技能根目录执行 `./scripts/osops.sh`。
+Run `./scripts/osops.sh` from the skill root directory.
 
-当前实现命令：
+Currently implemented command:
 - `inspection`
 
-## 快速开始
+## Quick Start
 
 ```bash
 cd <alibabacloud-alinux-sysom-inspection>
 ./scripts/init.sh
 ./scripts/osops.sh inspection \
   --region-id cn-hangzhou \
-  --instance-id i-xxx
+  --managed-type all
 ```
 
-## 执行逻辑
+## Observability
 
-- 每次执行巡检前先调用 ROA 接口 `POST /api/v1/openapi/initial_sysom`（`source=skill_hub`），用于判断用户是否具备权限且 SysOM 已开通。
-- 若未开通或角色未就绪，命令会交互式询问是否继续“开通+安装 SysOM”。
-- 用户同意后先调用 `InitialSysom(check_only=false, source=skill_hub)` 执行开通，再调用 `InstallAgentWithType` 安装。
-- 安装后会再次调用 `InitialSysom(check_only=true, source=skill_hub)` 复检，复检通过才继续巡检与诊断。
-- 不再本地配置阈值/事件规则，异常判断由服务端巡检报告决定。
-- 固定调用 ROA 巡检接口：`POST /api/v1/inspection/createInstanceInspection`，并固定传 `source=skill_hub`。
-- 若需要巡检全部项目，可传 `items=[]`（CLI 中为显式传空 `--inspection-items`）。
-- 若标准巡检 API 返回 `InvalidAction.NotFound`，CLI 会标记“当前版本不可用”并停止后续流程，避免无效重试。
-- 报告查询调用 ROA 接口：`GET /api/v1/inspection/getInspectionReport`。
-- 当创建接口不可用时，CLI 会补发一次 `GetInspectionReport` 探测调用并记录结果，确保日志中可观测到该动作。
-- 巡检报告中若命中 `sysom:metric:memory_usage_rate` 异常，自动调用 `InvokeDiagnosis` 发起 `memgraph` 诊断。
-- `InvokeDiagnosis` 的 `params` 会注入 `__sysom_diagnosis_source=skill_hub`，并校验业务 `code=Success`。
-- 发起诊断后自动轮询 `GetDiagnosisResult`，直到 `success` / `fail` / 超时。
-- 可通过 `--disable-memgraph-diagnosis` 关闭自动诊断。
+- **UA template (required for all SDK requests):**
+  - `AlibabaCloud-Agent-Skills/{SKILL_NAME}/{session-id}`
+  - Runtime resolved form in this skill: `AlibabaCloud-Agent-Skills/alibabacloud-alinux-sysom-inspection/<SKILL_SESSION_ID>`
+- **Unified session-id rule:**
+  - A single `SKILL_SESSION_ID` must be reused across all API calls in one CLI execution.
+  - Injection priority is: external env `SKILL_SESSION_ID` (preferred) -> auto-generated fallback `sid-<uuid4>`.
+  - Accepted format is `[A-Za-z0-9][A-Za-z0-9._:-]{7,127}`; invalid injected values fall back to generated id.
+  - The resolved value is exported to process env `SKILL_SESSION_ID` to keep downstream calls consistent.
 
-## 可扩展性约定
+## Execution Flow
 
-- 巡检项可通过 `--inspection-items` 传入覆盖默认列表。
-- 若 InitialSysom 返回未开通，CLI 会在终端进行交互式确认后再执行开通尝试+重检。
-- 内存异常触发诊断的判定逻辑位于 `scripts/sysom_cli/inspection/command.py`。
-- 如需新增“巡检命中后触发的专项诊断”，可复用 `InvokeDiagnosis` 调用方式扩展。
+- Before each inspection, the CLI calls ROA API `POST /api/v1/openapi/initial_sysom` (`source=skill_hub`) to verify permissions and SysOM activation.
+- If SysOM is not activated or role readiness is missing, the CLI interactively asks whether to continue with activation + installation.
+- After user confirmation, it calls `InitialSysom(check_only=false, source=skill_hub)` for activation, then calls `InstallAgentWithType`.
+- After installation, it re-checks readiness using `InitialSysom(check_only=true, source=skill_hub)`. Inspection continues only when re-check succeeds.
+- Local threshold/event-rule configuration is not used; anomaly decisions come from the server-side inspection report.
+- If `--instance-id` is not provided, the CLI calls `ListAllInstances` (`region` / `instanceType=ecs` / `managedType` / `current` / `pageSize`) and lets the user pick an instance interactively.
+- It always calls ROA inspection API `POST /api/v1/inspection/createInstanceInspection` with `source=skill_hub`, and supports optional `metricSource` (`cms` / `sysom` / `auto`).
+- If `--metric-source` is not explicitly provided, the CLI maps automatically from management status: `managed -> sysom`, `unmanaged -> cms`, `unknown -> auto`.
+- To inspect all items, pass `items=[]` (in CLI, provide an explicit empty `--inspection-items`).
+- If the standard inspection API returns `InvalidAction.NotFound`, the CLI marks the API as unavailable and stops follow-up flow to avoid invalid retries.
+- Report lookup uses ROA API `GET /api/v1/inspection/getInspectionReport`.
+- If create API is unavailable, the CLI still sends one `GetInspectionReport` probe call and records the result for observability.
+- If report contains `sysom:metric:memory_usage_rate` anomaly, the CLI automatically triggers `InvokeDiagnosis` for `memgraph`.
+- `InvokeDiagnosis` injects `__sysom_diagnosis_source=skill_hub` into `params` and validates business `code=Success`.
+- After diagnosis is started, the CLI polls `GetDiagnosisResult` until `success` / `fail` / timeout.
+- Auto diagnosis can be disabled via `--disable-memgraph-diagnosis`.
+
+## Extensibility Notes
+
+- Inspection items can be overridden via `--inspection-items`.
+- Instance filtering can be controlled by `--managed-type` (`managed` / `unmanaged` / `all`) and pagination args `--current`, `--page-size`.
+- Metric source can be specified via `--metric-source` (`cms` / `sysom` / `auto`); if omitted, default behavior is preserved.
+- If `InitialSysom` indicates not activated, the CLI asks for terminal confirmation before activation attempt + recheck.
+- Memory anomaly trigger logic is implemented in `scripts/sysom_cli/inspection/command.py`.
+- To add more post-inspection specialized diagnosis actions, reuse the `InvokeDiagnosis` integration pattern.

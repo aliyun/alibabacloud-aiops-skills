@@ -29,6 +29,8 @@ DEFAULT_SYSOM_AGENT_ID = "74a86327-3170-412c-8e67-da3389ec56a9"
 DEFAULT_SYSOM_AGENT_VERSION = "latest"
 DEFAULT_SYSOM_INSTANCE_TYPE = "ecs"
 DEFAULT_SYSOM_CONFIG_ID = ""
+ALLOWED_METRIC_SOURCES = ("cms", "sysom", "auto")
+ALLOWED_MANAGED_TYPES = ("managed", "unmanaged", "all")
 _REGION_ID_RE = re.compile(r"^[a-z][a-z0-9-]{1,31}$")
 _INSTANCE_ID_RE = re.compile(r"^i-[a-z0-9]{8,64}$")
 DEFAULT_INSPECTION_ITEMS = [
@@ -76,6 +78,45 @@ def _validate_instance_id(raw: str) -> str:
     return value
 
 
+def _validate_metric_source(raw: str) -> str:
+    value = str(raw or "").strip().lower()
+    if not value:
+        raise argparse.ArgumentTypeError("metric-source 不能为空")
+    if value not in ALLOWED_METRIC_SOURCES:
+        raise argparse.ArgumentTypeError(
+            f"metric-source 必须是 {', '.join(ALLOWED_METRIC_SOURCES)} 之一"
+        )
+    return value
+
+
+def _validate_instance_type(raw: str) -> str:
+    value = str(raw or "").strip().lower()
+    if value != DEFAULT_SYSOM_INSTANCE_TYPE:
+        raise argparse.ArgumentTypeError("instance-type 当前仅支持 ecs")
+    return value
+
+
+def _validate_managed_type(raw: str) -> str:
+    value = str(raw or "").strip().lower()
+    if not value:
+        raise argparse.ArgumentTypeError("managed-type 不能为空")
+    if value not in ALLOWED_MANAGED_TYPES:
+        raise argparse.ArgumentTypeError(
+            f"managed-type 必须是 {', '.join(ALLOWED_MANAGED_TYPES)} 之一"
+        )
+    return value
+
+
+def _validate_positive_int(raw: str) -> int:
+    try:
+        value = int(str(raw).strip())
+    except (TypeError, ValueError):
+        raise argparse.ArgumentTypeError("必须是正整数")
+    if value <= 0:
+        raise argparse.ArgumentTypeError("必须是正整数")
+    return value
+
+
 def _build_client_token(prefix: str, payload: Dict[str, Any]) -> str:
     normalized = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
     digest = hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:48]
@@ -95,12 +136,31 @@ def _is_http_ok(status: Any) -> bool:
 def add_inspection_subparser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     p = subparsers.add_parser("inspection", help="实例巡检并按报告触发诊断")
     p.add_argument("--region-id", required=True, type=_validate_region_id, help="目标实例 RegionId")
-    p.add_argument("--instance-id", required=True, type=_validate_instance_id, help="目标实例 ID")
+    p.add_argument("--instance-id", type=_validate_instance_id, help="目标实例 ID；不传则先拉取实例列表并交互选择")
+    p.add_argument(
+        "--instance-type",
+        type=_validate_instance_type,
+        default=DEFAULT_SYSOM_INSTANCE_TYPE,
+        help="ListAllInstances 的 instanceType，当前仅支持 ecs",
+    )
+    p.add_argument(
+        "--managed-type",
+        type=_validate_managed_type,
+        default="all",
+        help="ListAllInstances 的 managedType：managed/unmanaged/all",
+    )
+    p.add_argument("--current", type=_validate_positive_int, default=1, help="ListAllInstances 起始页码（从 1 开始）")
+    p.add_argument("--page-size", type=_validate_positive_int, default=50, help="ListAllInstances 每页条数")
     p.add_argument(
         "--inspection-items",
         nargs="*",
         default=DEFAULT_INSPECTION_ITEMS,
         help="CreateInstanceInspection 的巡检项列表；显式传空表示巡检全部项目",
+    )
+    p.add_argument(
+        "--metric-source",
+        type=_validate_metric_source,
+        help="CreateInstanceInspection 的 metricSource，可选 cms/sysom/auto；不传保持服务端默认行为",
     )
     p.add_argument("--disable-memgraph-diagnosis", action="store_true", help="命中内存高时不触发 memgraph 诊断")
     p.add_argument(
@@ -125,27 +185,34 @@ async def _create_instance_inspection(
     instance_id: str,
     region_id: str,
     items: list[str],
+    metric_source: Optional[str] = None,
 ) -> Dict[str, Any]:
+    token_payload: Dict[str, Any] = {
+        "instance": instance_id,
+        "region": region_id,
+        "source": SKILL_HUB_SOURCE,
+        "items": items,
+    }
+    if metric_source:
+        token_payload["metricSource"] = metric_source
     client_token = _build_client_token(
         "insp",
-        {
-            "instance": instance_id,
-            "region": region_id,
-            "source": SKILL_HUB_SOURCE,
-            "items": items,
-        },
+        token_payload,
     )
+    request_body: Dict[str, Any] = {
+        "instance": instance_id,
+        "source": SKILL_HUB_SOURCE,
+        "region": region_id,
+        "items": items,
+        "clientToken": client_token,
+    }
+    if metric_source:
+        request_body["metricSource"] = metric_source
     raw = await caller.call_roa(
         action="CreateInstanceInspection",
         pathname="/api/v1/inspection/createInstanceInspection",
         method="POST",
-        body={
-            "instance": instance_id,
-            "source": SKILL_HUB_SOURCE,
-            "region": region_id,
-            "items": items,
-            "clientToken": client_token,
-        },
+        body=request_body,
     )
     status = raw.get("statusCode") or raw.get("status_code")
     body = normalize_sysom_body(raw)
@@ -157,6 +224,180 @@ async def _create_instance_inspection(
     if status != 200:
         raise RuntimeError(f"CreateInstanceInspection HTTP {status}: {body.get('message') or body}")
     return body
+
+
+async def _list_all_instances_page(
+    caller: SysomOpenApiCaller,
+    *,
+    region_id: str,
+    instance_type: str,
+    managed_type: str,
+    current: int,
+    page_size: int,
+) -> Dict[str, Any]:
+    raw = await caller.call_rpc(
+        "ListAllInstances",
+        {
+            "region": region_id,
+            "instanceType": instance_type,
+            "managedType": managed_type,
+            "current": current,
+            "pageSize": page_size,
+        },
+    )
+    status = raw.get("statusCode") or raw.get("status_code")
+    body = normalize_sysom_body(raw)
+    if status != 200:
+        raise RuntimeError(f"ListAllInstances HTTP {status}: {body.get('message') or body}")
+    code = str(body.get("code") or body.get("Code") or "").strip().lower()
+    if code and code != "success":
+        raise RuntimeError(f"ListAllInstances BizError: {body.get('message') or body}")
+    return body
+
+
+def _extract_pagination_data(list_body: Dict[str, Any]) -> tuple[list[Dict[str, Any]], Optional[int]]:
+    data = list_body.get("data") or list_body.get("Data") or {}
+    if not isinstance(data, dict):
+        return [], None
+
+    instances_obj: Any = None
+    for key in ("instances", "Instances", "list", "List", "items", "Items", "rows", "Rows"):
+        candidate = data.get(key)
+        if isinstance(candidate, list):
+            instances_obj = candidate
+            break
+    if instances_obj is None:
+        nested = data.get("data") if isinstance(data.get("data"), list) else data.get("Data")
+        if isinstance(nested, list):
+            instances_obj = nested
+    instances = [x for x in (instances_obj or []) if isinstance(x, dict)]
+
+    total: Optional[int] = None
+    for key in ("total", "Total", "totalCount", "TotalCount"):
+        val = data.get(key)
+        if val is None:
+            continue
+        try:
+            total = int(val)
+            break
+        except (TypeError, ValueError):
+            continue
+    return instances, total
+
+
+def _extract_instance_id(instance: Dict[str, Any]) -> str:
+    for key in ("instance", "instanceId", "InstanceId", "id", "Id"):
+        val = instance.get(key)
+        if val:
+            return str(val).strip()
+    return ""
+
+
+def _extract_instance_name(instance: Dict[str, Any]) -> str:
+    for key in ("instanceName", "InstanceName", "name", "Name"):
+        val = instance.get(key)
+        if val:
+            return str(val).strip()
+    return ""
+
+
+def _infer_instance_managed_type(instance: Dict[str, Any]) -> str:
+    for key in ("managedType", "ManagedType"):
+        val = instance.get(key)
+        if isinstance(val, str):
+            low = val.strip().lower()
+            if low in ("managed", "unmanaged"):
+                return low
+
+    for key in ("isManaged", "managed", "managedStatus"):
+        val = instance.get(key)
+        if isinstance(val, bool):
+            return "managed" if val else "unmanaged"
+        if isinstance(val, (int, float)):
+            return "managed" if int(val) != 0 else "unmanaged"
+        if isinstance(val, str):
+            low = val.strip().lower()
+            if low in ("true", "1", "managed", "yes"):
+                return "managed"
+            if low in ("false", "0", "unmanaged", "no"):
+                return "unmanaged"
+    return "unknown"
+
+
+async def _list_all_instances(
+    caller: SysomOpenApiCaller,
+    *,
+    region_id: str,
+    instance_type: str,
+    managed_type: str,
+    current: int,
+    page_size: int,
+) -> tuple[list[Dict[str, Any]], list[Dict[str, Any]]]:
+    instances: list[Dict[str, Any]] = []
+    pages: list[Dict[str, Any]] = []
+    page = max(1, int(current))
+    size = max(1, int(page_size))
+
+    while True:
+        page_body = await _list_all_instances_page(
+            caller,
+            region_id=region_id,
+            instance_type=instance_type,
+            managed_type=managed_type,
+            current=page,
+            page_size=size,
+        )
+        page_instances, total = _extract_pagination_data(page_body)
+        pages.append(
+            {
+                "current": page,
+                "page_size": size,
+                "count": len(page_instances),
+                "total": total,
+            }
+        )
+        instances.extend(page_instances)
+
+        if total is not None and len(instances) >= total:
+            break
+        if not page_instances:
+            break
+        if len(page_instances) < size:
+            break
+        page += 1
+
+    return instances, pages
+
+
+def _select_instance_interactive(instances: list[Dict[str, Any]]) -> Dict[str, Any]:
+    if not instances:
+        raise RuntimeError("ListAllInstances 未返回可选实例")
+    if not sys.stdin.isatty():
+        raise RuntimeError("未传 --instance-id 且当前为非交互环境，无法选择实例")
+
+    print("请选择要巡检的实例：")
+    for idx, item in enumerate(instances, start=1):
+        instance_id = _extract_instance_id(item) or "-"
+        instance_name = _extract_instance_name(item)
+        managed = _infer_instance_managed_type(item)
+        display_name = f" ({instance_name})" if instance_name else ""
+        print(f"  {idx}. {instance_id}{display_name} managedType={managed}")
+
+    while True:
+        try:
+            answer = input(f"请输入序号 [1-{len(instances)}]（回车取消）: ").strip()
+        except EOFError:
+            answer = ""
+        if not answer:
+            raise RuntimeError("用户取消实例选择")
+        try:
+            pos = int(answer)
+        except ValueError:
+            print("输入非法，请输入数字序号。")
+            continue
+        if 1 <= pos <= len(instances):
+            return instances[pos - 1]
+        print("序号超出范围，请重新输入。")
 
 
 def _extract_initial_sysom_role_exist(data: Any) -> Optional[bool]:
@@ -576,29 +817,65 @@ def _has_memory_usage_issue(report_body: Dict[str, Any]) -> bool:
 
 async def run_inspection(args: argparse.Namespace) -> Dict[str, Any]:
     caller = SysomOpenApiCaller(resolve_sysom_credentials())
-    readiness = await _ensure_sysom_ready(caller, instance_id=args.instance_id, region_id=args.region_id)
+    selected_instance_id = getattr(args, "instance_id", None)
+    selected_instance: Optional[Dict[str, Any]] = None
+    list_pages: list[Dict[str, Any]] = []
+    listed_instances: list[Dict[str, Any]] = []
+    if not selected_instance_id:
+        listed_instances, list_pages = await _list_all_instances(
+            caller,
+            region_id=args.region_id,
+            instance_type=getattr(args, "instance_type", DEFAULT_SYSOM_INSTANCE_TYPE),
+            managed_type=getattr(args, "managed_type", "all"),
+            current=getattr(args, "current", 1),
+            page_size=getattr(args, "page_size", 50),
+        )
+        selected_instance = _select_instance_interactive(listed_instances)
+        selected_instance_id = _extract_instance_id(selected_instance)
+        if not selected_instance_id:
+            raise RuntimeError("所选实例缺少 instanceId，无法发起巡检")
+
+    readiness = await _ensure_sysom_ready(caller, instance_id=selected_instance_id, region_id=args.region_id)
     if not readiness.get("ready"):
         return {
-            "instance_id": args.instance_id,
+            "instance_id": selected_instance_id,
             "region_id": args.region_id,
             "inspection_invoked": False,
             "memgraph_diagnosis_invoked": False,
             "initial_sysom_ready": False,
             "initial_sysom_check": readiness,
+            "instance_selection": {
+                "selected_by_user": bool(selected_instance),
+                "selected_instance": selected_instance,
+                "managed_type_filter": getattr(args, "managed_type", "all"),
+                "instance_type": getattr(args, "instance_type", DEFAULT_SYSOM_INSTANCE_TYPE),
+                "list_pages": list_pages,
+                "listed_count": len(listed_instances),
+            },
         }
 
     items = list(getattr(args, "inspection_items", DEFAULT_INSPECTION_ITEMS))
+    managed_type = _infer_instance_managed_type(selected_instance or {}) if selected_instance else "unknown"
+    metric_source = getattr(args, "metric_source", None)
+    if not metric_source:
+        if managed_type == "managed":
+            metric_source = "sysom"
+        elif managed_type == "unmanaged":
+            metric_source = "cms"
+        else:
+            metric_source = "auto"
     try:
         create_resp = await _create_instance_inspection(
             caller,
-            instance_id=args.instance_id,
+            instance_id=selected_instance_id,
             region_id=args.region_id,
             items=items,
+            metric_source=metric_source,
         )
     except InspectionApiUnavailableError as e:
         report_probe = await _probe_get_inspection_report(caller)
         return {
-            "instance_id": args.instance_id,
+            "instance_id": selected_instance_id,
             "region_id": args.region_id,
             "inspection_invoked": False,
             "memgraph_diagnosis_invoked": False,
@@ -607,12 +884,22 @@ async def run_inspection(args: argparse.Namespace) -> Dict[str, Any]:
             "inspection_api_available": False,
             "inspection_api_unavailable_reason": str(e),
             "inspection_report_probe": report_probe,
+            "instance_selection": {
+                "selected_by_user": bool(selected_instance),
+                "selected_instance": selected_instance,
+                "selected_instance_managed_type": managed_type,
+                "managed_type_filter": getattr(args, "managed_type", "all"),
+                "instance_type": getattr(args, "instance_type", DEFAULT_SYSOM_INSTANCE_TYPE),
+                "list_pages": list_pages,
+                "listed_count": len(listed_instances),
+            },
         }
 
     result: Dict[str, Any] = {
-        "instance_id": args.instance_id,
+        "instance_id": selected_instance_id,
         "region_id": args.region_id,
         "inspection_source": SKILL_HUB_SOURCE,
+        "inspection_metric_source": metric_source,
         "inspection_items": items,
         "inspection_invoked": True,
         "inspection_api_available": True,
@@ -620,6 +907,15 @@ async def run_inspection(args: argparse.Namespace) -> Dict[str, Any]:
         "initial_sysom_check": readiness,
         "inspection_create_response": create_resp,
         "memgraph_diagnosis_invoked": False,
+        "instance_selection": {
+            "selected_by_user": bool(selected_instance),
+            "selected_instance": selected_instance,
+            "selected_instance_managed_type": managed_type,
+            "managed_type_filter": getattr(args, "managed_type", "all"),
+            "instance_type": getattr(args, "instance_type", DEFAULT_SYSOM_INSTANCE_TYPE),
+            "list_pages": list_pages,
+            "listed_count": len(listed_instances),
+        },
     }
 
     report_data = create_resp.get("data") or create_resp.get("Data") or {}
@@ -651,7 +947,7 @@ async def run_inspection(args: argparse.Namespace) -> Dict[str, Any]:
     invoke_resp = await _invoke_memgraph_diagnosis(
         caller,
         region_id=args.region_id,
-        instance_id=args.instance_id,
+        instance_id=selected_instance_id,
         report_id=str(report_id),
     )
     result["memgraph_diagnosis_response"] = invoke_resp

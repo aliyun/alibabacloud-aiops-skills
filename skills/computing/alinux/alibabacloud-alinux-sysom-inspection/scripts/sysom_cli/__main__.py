@@ -19,6 +19,8 @@ def build_parser() -> argparse.ArgumentParser:
 
 def _print_human(result: dict) -> None:
     print(f"[目标] instance={result['instance_id']} region={result['region_id']}")
+    if result.get("inspection_metric_source"):
+        print(f"[指标来源] metricSource={result['inspection_metric_source']}")
     print(f"[InitialSysom] {'通过' if result.get('initial_sysom_ready') else '未通过'}")
     initial_check = result.get("initial_sysom_check")
     if isinstance(initial_check, dict) and not result.get("initial_sysom_ready"):
