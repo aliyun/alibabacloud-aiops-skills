@@ -6,8 +6,7 @@
   "properties": {
     "RunMode": {
       "type": "string",
-      "enum": ["daily", "prepub", "product"],
-      "description": "Run mode: daily, prepub, or product"
+      "description": "Run mode (informational only, not validated)"
     },
     "Region": {
       "type": "string",
@@ -274,13 +273,15 @@
         "ItemNode": { "type": "string" },
         "Edge": { "type": "string" },
         "LindormTableName": { "type": "string" },
-        "LindormName": { "type": "string" }
+        "LindormName": { "type": "string" },
+        "RecallEngineName": { "type": "string" },
+        "RecallEngineTableName": { "type": "string" }
       },
       "additionalProperties": false
     },
     "RecallConfig": {
       "type": "object",
-      "required": ["Name", "RecallType", "RecallCount"],
+      "required": ["Name", "RecallType"],
       "properties": {
         "Name": { "type": "string" },
         "RecallType": {
@@ -958,6 +959,11 @@
           "type": "array",
           "items": { "type": "string" },
           "description": "Filter name list (optional)"
+        },
+        "UserFeatures": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "User feature names to pass to recall engine (optional)"
         }
       },
       "additionalProperties": false

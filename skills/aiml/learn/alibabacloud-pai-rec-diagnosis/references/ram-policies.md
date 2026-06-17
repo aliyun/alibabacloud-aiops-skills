@@ -20,9 +20,11 @@ This skill requires read-only permissions for:
 ### PAI-RecService Permissions
 
 | API Action | Permission | Purpose |
-|------------|-----------|---------|
+|------------|-----------|----------|
 | `ListEngineConfigs` | `pairecservice:ListEngineConfigs` | List engine configuration versions |
 | `GetEngineConfig` | `pairecservice:GetEngineConfig` | Retrieve specific engine configuration details |
+| `GetExperimentGroup` | `pairecservice:GetExperimentGroup` | Retrieve experiment group details and override config |
+| `GetExperiment` | `pairecservice:GetExperiment` | Retrieve experiment details and override config |
 
 ## Complete RAM Policy Document
 
@@ -44,7 +46,9 @@ This skill requires read-only permissions for:
       "Effect": "Allow",
       "Action": [
         "pairecservice:ListEngineConfigs",
-        "pairecservice:GetEngineConfig"
+        "pairecservice:GetEngineConfig",
+        "pairecservice:GetExperimentGroup",
+        "pairecservice:GetExperiment"
       ],
       "Resource": "*"
     }
@@ -75,7 +79,9 @@ For better security, restrict access to specific resources:
       "Effect": "Allow",
       "Action": [
         "pairecservice:ListEngineConfigs",
-        "pairecservice:GetEngineConfig"
+        "pairecservice:GetEngineConfig",
+        "pairecservice:GetExperimentGroup",
+        "pairecservice:GetExperiment"
       ],
       "Resource": [
         "acs:pairecservice:*:*:instance/<your-instance-id>"
@@ -125,7 +131,9 @@ aliyun ram create-policy \
           "eas:DescribeService",
           "eas:DescribeServiceLog",
           "pairecservice:ListEngineConfigs",
-          "pairecservice:GetEngineConfig"
+          "pairecservice:GetEngineConfig",
+          "pairecservice:GetExperimentGroup",
+          "pairecservice:GetExperiment"
         ],
         "Resource": "*"
       }

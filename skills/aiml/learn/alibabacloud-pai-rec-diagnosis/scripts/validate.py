@@ -4,9 +4,9 @@ PAI-Rec Engine JSON configuration validator.
 
 Usage:
     python validate.py <config_file_path>                    # Validate a config file
-    python validate.py '{"RunMode": "daily"}'                # Pass JSON string directly
+    python validate.py '{"RecallConfs":[]}'                 # Pass JSON string directly
     python validate.py --stdin                               # Read JSON from stdin
-    echo '{"RunMode": "daily"}' | python validate.py --stdin # Pipe input
+    echo '{"RecallConfs":[]}' | python validate.py --stdin   # Pipe input
 
 Exit codes:
     0: Validation passed
@@ -19,7 +19,7 @@ import sys
 import os
 from pathlib import Path
 
-# JSON Schema validation
+# JSON Schema validation (requires jsonschema>=4.0,<5.0)
 try:
     import jsonschema
     HAS_JSONSCHEMA = True
@@ -28,8 +28,6 @@ except ImportError:
 
 
 SCRIPT_DIR = Path(__file__).parent
-# schema.json lives under references/ (scripts/ is reserved for executable code
-# only per Agent Skill directory conventions).
 SCHEMA_PATH = SCRIPT_DIR.parent / "references" / "schema.json"
 
 # Supported recall types
@@ -57,6 +55,16 @@ VALID_RECALL_TYPES = {
 # RecallConfs definition. SceneConfs.RecallNames may reference these directly.
 BUILTIN_RECALL_NAMES = {
     "ContextItemRecall",
+}
+
+# Built-in filter names (no FilterConfs entry required)
+BUILTIN_FILTER_NAMES = {
+    "UniqueFilter",
+}
+
+# Built-in sort names (no SortConfs entry required)
+BUILTIN_SORT_NAMES = {
+    "ItemRankScore",
 }
 
 # Supported filter types
@@ -121,9 +129,6 @@ VALID_RESPONSE_FUNC_NAMES = {
     "torchrecMutClassificationResponseFuncDebug",
 }
 
-# Supported run modes
-VALID_RUN_MODES = {"daily", "prepub", "product"}
-
 # Data source adapter -> configuration key mapping
 DATASOURCE_ADAPTER_MAP = {
     "hologres": "HologresConfs",
@@ -169,7 +174,6 @@ class PairecConfigValidator:
         """Run all validations and return the collected error list."""
         self.errors = []
 
-        self._validate_run_mode()
         self._validate_recall_confs()
         self._validate_filter_confs()
         self._validate_sort_confs()
@@ -191,15 +195,6 @@ class PairecConfigValidator:
 
     def _add_error(self, path: str, message: str, severity: str = "error"):
         self.errors.append(ValidationError(path, message, severity))
-
-    def _validate_run_mode(self):
-        """Validate RunMode."""
-        run_mode = self.config.get("RunMode")
-        if run_mode is not None and run_mode not in VALID_RUN_MODES:
-            self._add_error(
-                "RunMode",
-                f"Invalid run mode '{run_mode}'. Valid values: {', '.join(sorted(VALID_RUN_MODES))}",
-            )
 
     def _validate_recall_confs(self):
         """Validate recall configurations."""
@@ -234,11 +229,14 @@ class PairecConfigValidator:
                     f"Invalid RecallType '{recall_type}'. Valid values: {', '.join(sorted(VALID_RECALL_TYPES))}",
                 )
 
-            recall_count = recall.get("RecallCount")
-            if recall_count is None:
-                self._add_error(path, "Missing required field 'RecallCount'")
-            elif not isinstance(recall_count, int) or recall_count <= 0:
-                self._add_error(path, "'RecallCount' must be a positive integer")
+            # RecallCount is required for all RecallTypes EXCEPT RecallEngineRecall,
+            # which defines Count inside RecallEngineParams instead.
+            if recall_type != "RecallEngineRecall":
+                recall_count = recall.get("RecallCount")
+                if recall_count is None:
+                    self._add_error(path, "Missing required field 'RecallCount'")
+                elif not isinstance(recall_count, int) or recall_count <= 0:
+                    self._add_error(path, "'RecallCount' must be a positive integer")
 
     def _validate_filter_confs(self):
         """Validate filter configurations."""
@@ -486,7 +484,7 @@ class PairecConfigValidator:
 
     def _get_defined_filter_names(self) -> set:
         """Collect all filter names defined in FilterConfs (plus built-ins)."""
-        names = {"UniqueFilter"}  # Built-in filter
+        names = set(BUILTIN_FILTER_NAMES)
         for filt in self.config.get("FilterConfs", []):
             if isinstance(filt, dict) and filt.get("Name"):
                 names.add(filt["Name"])
@@ -494,7 +492,7 @@ class PairecConfigValidator:
 
     def _get_defined_sort_names(self) -> set:
         """Collect all sort names defined in SortConfs (plus built-ins)."""
-        names = {"ItemRankScore"}  # Built-in sort
+        names = set(BUILTIN_SORT_NAMES)
         for sort in self.config.get("SortConfs", []):
             if isinstance(sort, dict) and sort.get("Name"):
                 names.add(sort["Name"])
@@ -809,6 +807,10 @@ class PairecConfigValidator:
             name = dao_conf.get("FeatureStoreName")
             if name:
                 self._check_datasource_name(path, "featurestore", name)
+        elif adapter_type == "recallengine":
+            name = dao_conf.get("RecallEngineName")
+            if name:
+                self._check_datasource_name(path, "recallengine", name)
 
     def _check_datasource_ref_in_recall(self):
         """Check data-source references inside RecallConfs."""
@@ -854,6 +856,228 @@ class PairecConfigValidator:
                             f"{conf_key}.{scene_name}.FeatureLoadConfs[{i}].FeatureDaoConf",
                             dao,
                         )
+
+
+# ---------------------------------------------------------------------------
+# Experiment Config Validator
+# ---------------------------------------------------------------------------
+
+import re
+
+# Patterns for recognized experiment parameter keys that the PAI-Rec framework
+# interprets automatically.  Keys not matching any pattern are user-defined
+# custom parameters and are skipped without error.
+_EXP_KEY_PATTERNS = [
+    # {category}.RecallNames  e.g. "default.RecallNames"
+    (re.compile(r"^(.+)\.RecallNames$"), "recall_names"),
+    # filterNames
+    (re.compile(r"^filterNames$"), "filter_names"),
+    # {category}.SortNames  e.g. "default.SortNames"
+    (re.compile(r"^(.+)\.SortNames$"), "sort_names"),
+    # rankconf
+    (re.compile(r"^rankconf$"), "rankconf"),
+    # rankscore
+    (re.compile(r"^rankscore$"), "rankscore"),
+    # sort.{SortName}  e.g. "sort.BoostScoreSort"
+    (re.compile(r"^sort\.(.+)$"), "sort_override"),
+    # recall.{RecallName}  e.g. "recall.MyRecall"
+    (re.compile(r"^recall\.(.+)$"), "recall_override"),
+    # generalRankConf
+    (re.compile(r"^generalRankConf$"), "general_rank_conf"),
+    # features.scene.name / user_features.scene.name
+    (re.compile(r"^(features|user_features)\.scene\.name$"), "feature_scene"),
+    # pid_task_params / pid_target_params
+    (re.compile(r"^pid_(task|target)_params$"), "pid_params"),
+]
+
+
+class ExperimentConfigValidator:
+    """Validate experiment Config parameters against the base engine config."""
+
+    def __init__(self, experiment_config: dict, base_config: dict, source: str = "experiment"):
+        self.exp_config = experiment_config
+        self.base_config = base_config
+        self.source = source  # label for error paths (e.g. "ExperimentGroup#21")
+        self.errors: list[ValidationError] = []
+
+    def validate(self) -> list[ValidationError]:
+        """Validate all keys in the experiment config."""
+        self.errors = []
+
+        if not isinstance(self.exp_config, dict):
+            self._add_error("(root)", "Experiment Config must be a JSON object")
+            return self.errors
+
+        for key, value in self.exp_config.items():
+            self._validate_key(key, value)
+
+        return self.errors
+
+    def _add_error(self, path: str, message: str, severity: str = "error"):
+        self.errors.append(ValidationError(f"{self.source}.{path}", message, severity))
+
+    def _validate_key(self, key: str, value):
+        """Dispatch validation based on key pattern."""
+        for pattern, key_type in _EXP_KEY_PATTERNS:
+            m = pattern.match(key)
+            if m:
+                if key_type == "recall_names":
+                    self._validate_recall_names(key, value)
+                elif key_type == "filter_names":
+                    self._validate_filter_names(key, value)
+                elif key_type == "sort_names":
+                    self._validate_sort_names(key, value)
+                elif key_type == "rankconf":
+                    self._validate_rankconf(key, value)
+                elif key_type == "rankscore":
+                    self._validate_rankscore(key, value)
+                elif key_type == "sort_override":
+                    self._validate_sort_override(key, m.group(1))
+                elif key_type == "recall_override":
+                    self._validate_recall_override(key, m.group(1))
+                elif key_type == "general_rank_conf":
+                    self._validate_general_rank_conf(key, value)
+                # feature_scene and pid_params: no cross-reference validation needed
+                return
+        # Key not recognized — user-defined custom parameter, skip silently
+
+    def _get_defined_recall_names(self) -> set:
+        names = set(BUILTIN_RECALL_NAMES)
+        for r in self.base_config.get("RecallConfs", []):
+            if isinstance(r, dict) and r.get("Name"):
+                names.add(r["Name"])
+        return names
+
+    def _get_defined_filter_names(self) -> set:
+        names = set(BUILTIN_FILTER_NAMES)
+        for f in self.base_config.get("FilterConfs", []):
+            if isinstance(f, dict) and f.get("Name"):
+                names.add(f["Name"])
+        return names
+
+    def _get_defined_sort_names(self) -> set:
+        names = set(BUILTIN_SORT_NAMES)
+        for s in self.base_config.get("SortConfs", []):
+            if isinstance(s, dict) and s.get("Name"):
+                names.add(s["Name"])
+        return names
+
+    def _get_defined_algo_names(self) -> set:
+        names = set()
+        for a in self.base_config.get("AlgoConfs", []):
+            if isinstance(a, dict) and a.get("Name"):
+                names.add(a["Name"])
+        return names
+
+    def _validate_recall_names(self, key: str, value):
+        if not isinstance(value, list):
+            self._add_error(key, f"'{key}' must be an array of strings, got {type(value).__name__}")
+            return
+        defined = self._get_defined_recall_names()
+        for name in value:
+            if not isinstance(name, str):
+                self._add_error(key, f"'{key}' array elements must be strings, got {type(name).__name__}")
+            elif name not in defined:
+                self._add_error(
+                    key,
+                    f"References undefined recall '{name}'. Define it in RecallConfs or use a built-in.",
+                )
+
+    def _validate_filter_names(self, key: str, value):
+        if not isinstance(value, list):
+            self._add_error(key, f"'{key}' must be an array of strings, got {type(value).__name__}")
+            return
+        defined = self._get_defined_filter_names()
+        for name in value:
+            if not isinstance(name, str):
+                self._add_error(key, f"'{key}' array elements must be strings, got {type(name).__name__}")
+            elif name not in defined:
+                self._add_error(
+                    key,
+                    f"References undefined filter '{name}'. Define it in FilterConfs or use a built-in.",
+                )
+
+    def _validate_sort_names(self, key: str, value):
+        if not isinstance(value, list):
+            self._add_error(key, f"'{key}' must be an array of strings, got {type(value).__name__}")
+            return
+        defined = self._get_defined_sort_names()
+        for name in value:
+            if not isinstance(name, str):
+                self._add_error(key, f"'{key}' array elements must be strings, got {type(name).__name__}")
+            elif name not in defined:
+                self._add_error(
+                    key,
+                    f"References undefined sort '{name}'. Define it in SortConfs or use a built-in.",
+                )
+
+    def _validate_rankconf(self, key: str, value):
+        if not isinstance(value, dict):
+            self._add_error(key, f"'{key}' must be an object, got {type(value).__name__}")
+            return
+        algo_list = value.get("RankAlgoList")
+        if isinstance(algo_list, list):
+            defined = self._get_defined_algo_names()
+            for name in algo_list:
+                if isinstance(name, str) and name not in defined:
+                    self._add_error(
+                        f"{key}.RankAlgoList",
+                        f"References undefined algo '{name}'. Define it in AlgoConfs.",
+                    )
+
+    def _validate_rankscore(self, key: str, value):
+        if not isinstance(value, str):
+            self._add_error(key, f"'{key}' must be a string, got {type(value).__name__}")
+
+    def _validate_sort_override(self, key: str, sort_name: str):
+        defined = self._get_defined_sort_names()
+        if sort_name not in defined:
+            self._add_error(
+                key,
+                f"References undefined sort '{sort_name}'. Define it in SortConfs before overriding.",
+            )
+
+    def _validate_recall_override(self, key: str, recall_name: str):
+        defined = self._get_defined_recall_names()
+        if recall_name not in defined:
+            self._add_error(
+                key,
+                f"References undefined recall '{recall_name}'. Define it in RecallConfs before overriding.",
+            )
+
+    def _validate_general_rank_conf(self, key: str, value):
+        if not isinstance(value, dict):
+            self._add_error(key, f"'{key}' must be an object, got {type(value).__name__}")
+
+
+def validate_experiment_config(
+    experiment_config: dict, base_config: dict, source: str = "experiment"
+) -> list[ValidationError]:
+    """Validate an experiment Config dict against the base engine config."""
+    validator = ExperimentConfigValidator(experiment_config, base_config, source)
+    return validator.validate()
+
+
+def _extract_config_value(data: dict) -> dict:
+    """If data contains a 'ConfigValue' string field (API response wrapper),
+    parse and return it. Otherwise return data as-is."""
+    cv = data.get("ConfigValue")
+    if isinstance(cv, str):
+        return json.loads(cv)
+    return data
+
+
+def _extract_experiment_config(data: dict) -> dict:
+    """Extract and parse the 'Config' field from an experiment API response.
+    Returns an empty dict if Config is empty/missing."""
+    cfg = data.get("Config", "")
+    if not cfg or cfg == "{}":
+        return {}
+    if isinstance(cfg, str):
+        return json.loads(cfg)
+    if isinstance(cfg, dict):
+        return cfg
+    return {}
 
 
 def validate_with_schema(config: dict) -> list[ValidationError]:
@@ -915,37 +1139,83 @@ def load_config(file_path: str) -> dict:
         return json.load(f)
 
 
+def _parse_input(arg: str) -> dict:
+    """Parse a CLI argument into a dict (file path, stdin, or inline JSON)."""
+    if arg == "--stdin":
+        return json.load(sys.stdin)
+    elif os.path.exists(arg):
+        return load_config(arg)
+    else:
+        try:
+            return json.loads(arg)
+        except json.JSONDecodeError:
+            print(f"Error: argument is neither a valid file path nor a valid JSON string")
+            print(f"Argument: {arg}")
+            sys.exit(2)
+
+
 def main():
     """CLI entry point."""
     if len(sys.argv) < 2:
         print("Usage: python validate.py <config_file_path>")
         print("       python validate.py --stdin")
-        print("       python validate.py '{\"RunMode\": \"daily\"}' (inline JSON string)")
+        print("       python validate.py '{\"RecallConfs\":[]}' (inline JSON string)")
         print("       echo '{...}' | python validate.py --stdin")
+        print("")
+        print("Experiment config validation:")
+        print("       python validate.py <base_config> --experiment-config <exp_file> [--experiment-config <exp_file2> ...]")
         sys.exit(2)
 
-    arg = sys.argv[1]
+    # Separate base config arg from --experiment-config args
+    args = sys.argv[1:]
+    exp_files = []
+    base_arg = None
+    i = 0
+    while i < len(args):
+        if args[i] == "--experiment-config":
+            if i + 1 < len(args):
+                exp_files.append(args[i + 1])
+                i += 2
+            else:
+                print("Error: --experiment-config requires a file argument")
+                sys.exit(2)
+        elif base_arg is None:
+            base_arg = args[i]
+            i += 1
+        else:
+            print(f"Error: unexpected argument '{args[i]}'")
+            sys.exit(2)
+
+    if base_arg is None:
+        print("Error: base config argument is required")
+        sys.exit(2)
 
     try:
-        if arg == "--stdin":
-            # Read JSON from standard input
-            config = json.load(sys.stdin)
-        elif os.path.exists(arg):
-            # Treat as a file path
-            config = load_config(arg)
-        else:
-            # Try to parse as an inline JSON string
-            try:
-                config = json.loads(arg)
-            except json.JSONDecodeError:
-                print("Error: argument is neither a valid file path nor a valid JSON string")
-                print(f"Argument: {arg}")
-                sys.exit(2)
+        raw_config = _parse_input(base_arg)
     except json.JSONDecodeError as e:
         print(f"Error: JSON decode failed - {e}")
         sys.exit(2)
 
+    # Auto-detect API response wrapper (ConfigValue field)
+    config = _extract_config_value(raw_config)
+
     errors = validate_config(config)
+
+    # Validate experiment configs if provided
+    for exp_file in exp_files:
+        try:
+            exp_raw = load_config(exp_file)
+        except (json.JSONDecodeError, FileNotFoundError) as e:
+            print(f"Error: failed to load experiment config '{exp_file}' - {e}")
+            sys.exit(2)
+
+        exp_config = _extract_experiment_config(exp_raw)
+        if not exp_config:
+            continue  # Empty config, nothing to validate
+
+        # Derive source label from file name
+        source = Path(exp_file).stem
+        errors.extend(validate_experiment_config(exp_config, config, source))
 
     if not errors:
         print("Validation passed: configuration is well-formed")

@@ -244,49 +244,20 @@ Lists all configured profiles with their authentication method (AK, STS, OAuth).
 
 ---
 
-### aliyun configure ai-mode enable
+### Per-command --user-agent (Observability)
 
-Enables AI-mode for agent skill execution.
-
-**Usage:**
-```bash
-aliyun configure ai-mode enable
-```
-
-**Common Use Cases:**
-- Required before executing skill commands
-- Must be enabled at skill start
-
----
-
-### aliyun configure ai-mode set-user-agent
-
-Sets the user-agent for AI-mode.
+Every `aliyun` CLI command that calls a cloud API MUST include `--user-agent` for request tracing.
+Local utility commands (e.g. `configure`, `plugin`, `version`) do not support this flag and should be excluded.
 
 **Usage:**
 ```bash
-aliyun configure ai-mode set-user-agent \
-  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-pai-rec-diagnosis"
+aliyun <service> <command> [options] \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-rec-diagnosis/{session-id}
 ```
 
 **Common Use Cases:**
-- Track skill invocations
-- Required after enabling AI-mode
-
----
-
-### aliyun configure ai-mode disable
-
-Disables AI-mode after skill execution completes.
-
-**Usage:**
-```bash
-aliyun configure ai-mode disable
-```
-
-**Common Use Cases:**
-- Must be called at ALL exit points
-- Cleanup after skill execution
+- Track skill invocations end-to-end via a unique session-id (32-char lowercase hex)
+- Correlate multiple CLI calls within a single skill session
 
 ---
 
@@ -310,58 +281,56 @@ aliyun plugin update
 ### Full Diagnosis Flow
 
 ```bash
-# 1. Enable AI-mode
-aliyun configure ai-mode enable
-aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-pai-rec-diagnosis"
+# 1. Session-id is a 32-char lowercase hex string generated once per session
+# Example: a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6
 
 # 2. Get service info
 aliyun eas describe-service \
   --cluster-id cn-hangzhou \
-  --service-name embedding_recall
+  --service-name embedding_recall \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-rec-diagnosis/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6
 
 # 3. Query logs by request_id (keyword-only pattern — do NOT add --start-time / --end-time)
 aliyun eas describe-service-log \
   --cluster-id cn-hangzhou \
   --service-name embedding_recall \
   --keyword "941b4e14-d1c5-489f-a184-b2b17f8b4fdb" \
-  --page-size 500
+  --page-size 500 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-rec-diagnosis/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6
 
 # 4. List engine configs (always pass --name when the config name is known)
 aliyun pairecservice list-engine-configs \
   --instance-id pairec-cn-xxxxx \
   --environment Prod \
   --status Released \
-  --name embedding_config
+  --name embedding_config \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-rec-diagnosis/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6
 
 # 5. Get specific config
 aliyun pairecservice get-engine-config \
   --instance-id pairec-cn-xxxxx \
-  --engine-config-id config-12345
-
-# 6. Disable AI-mode
-aliyun configure ai-mode disable
+  --engine-config-id config-12345 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-rec-diagnosis/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6
 ```
 
 ### Configuration Validation Flow
 
 ```bash
-# 1. Enable AI-mode
-aliyun configure ai-mode enable
-aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-pai-rec-diagnosis"
+# 1. Session-id is a 32-char lowercase hex string generated once per session
+# Example: a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6
 
 # 2. List available versions
 aliyun pairecservice list-engine-configs \
   --instance-id pairec-cn-xxxxx \
   --environment Prod \
-  --name my_config
+  --name my_config \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-rec-diagnosis/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6
 
 # 3. Get specific version for validation
 aliyun pairecservice get-engine-config \
   --instance-id pairec-cn-xxxxx \
-  --engine-config-id config-67890
-
-# 4. Disable AI-mode
-aliyun configure ai-mode disable
+  --engine-config-id config-67890 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-rec-diagnosis/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6
 ```
 
 ## Error Handling

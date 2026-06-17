@@ -96,37 +96,45 @@ For detailed RAM policies required by this skill, see [references/ram-policies.m
 
 ---
 
+## Observability (MUST follow for every aliyun command)
+
+Upon loading this skill, generate a random session ID (32-char lowercase hex string) once for the entire session. Use it as `{session-id}` below.
+
+**Rule: Every `aliyun` CLI command that calls a cloud API MUST include the `--user-agent` flag.**
+Local utility commands (e.g. `configure`, `plugin`, `version`) do not support this flag and should be excluded.
+
+```
+--user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-rec-diagnosis/{session-id}
+```
+
+Example (assuming session-id is `a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6`):
+```bash
+aliyun eas describe-service --cluster-id cn-hangzhou --service-name my_service --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-rec-diagnosis/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6
+```
+
+Do not skip, alter the format, or omit `--user-agent` on any `aliyun` API command invocation.
+
+---
+
 ## Core Workflow
-
-> At the **start** of the Core Workflow (before any CLI invocation):
-> **[MUST] Enable AI-Mode** — AI-mode is required for Agent Skill execution.
-> Run the following commands before any CLI invocation:
-> ```bash
-> aliyun configure ai-mode enable
-> aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-pai-rec-diagnosis"
-> ```
-
-> **[MUST] Disable AI-Mode at EVERY exit point** — Before delivering the final response for ANY reason, always disable AI-mode first. This applies to ALL exit paths: workflow success, workflow failure, error/exception, user cancellation, session end, or any other scenario where no further CLI commands will be executed.
-> AI-mode is only used for Agent Skill invocation scenarios and MUST NOT remain enabled after the skill stops running.
-> ```bash
-> aliyun configure ai-mode disable
-> ```
 
 > **[MUST] Allocate a per-session work directory** — All transient artifacts
 > (raw config dumps, log dumps, sanitized output) MUST be written under a unique
 > per-session directory to avoid concurrent overwrite between parallel skill
 > invocations. Run the following at the start of the workflow, before any
-> artifact-producing CLI invocation, and reuse `$WORKDIR` for the whole session:
+> artifact-producing CLI invocation, and reuse `$WORKDIR` for the whole session.
+> Pass the full template as a positional arg (works on both BSD/macOS and
+> GNU/Linux `mktemp`); do NOT use `-t prefix`, which falls back to `$TMPDIR`
+> (e.g. `/var/folders` on macOS) and may even fail under sandboxed shells.
 > ```bash
-> # Create an isolated working directory for this session, pinned under /tmp.
-> # Pass the full template as a positional arg (works on both BSD/macOS and
-> # GNU/Linux mktemp); do NOT use `-t prefix`, which falls back to $TMPDIR
-> # (e.g. /var/folders on macOS) and may even fail under sandboxed shells.
 > export WORKDIR=$(mktemp -d /tmp/pairec-diag-XXXXXX)
 > ```
-> All file paths shown in the steps below (`$WORKDIR/engine_configs_list.json`,
-> `$WORKDIR/raw_engine_config.json`, etc.) live inside this directory and MUST NOT
-> be replaced with hard-coded `/tmp/...` paths.
+> All file paths shown below (`$WORKDIR/engine_configs_list.json`, etc.) live
+> inside this directory and MUST NOT be replaced with hard-coded `/tmp/...` paths.
+
+> **[MUST] Use ONLY the workflows defined below.** Do NOT invent additional
+> steps (e.g. instance resource checks, network probes) or substitute manual
+> analysis for a defined workflow step.
 
 ### Workflow 1: PAI-Rec Engine Interface Diagnosis
 
@@ -181,15 +189,15 @@ aliyun eas describe-service-log \
 ```
 
 **[CRITICAL] `--keyword <request-id>` is MANDATORY — local post-processing is FORBIDDEN:**
-- You MUST pass `--keyword <request-id>` to the CLI command. This is a server-side filter; the API only returns log lines matching the keyword.
-- You MUST NOT omit `--keyword` and then filter locally (e.g., piping through `head`, `grep`, `python3`, `jq`, or any script to search for the request_id in the output).
+- You MUST pass `--keyword <request-id>` (server-side filter, exact case-sensitive match on the full `request_id`). The API returns only log lines matching the keyword.
+- You MUST NOT omit `--keyword` and then filter locally (e.g., piping through `head`, `grep`, `python3`, `jq`, or any script).
 - You MUST NOT make multiple `describe-service-log` calls without `--keyword` hoping to find relevant lines by scanning the full log stream.
 - If a call with `--keyword` returns empty results, report that no matching logs were found — do NOT fall back to fetching unfiltered logs.
+- `--page-size` 500 captures the entire trace in a single page; matched entries for one request are usually < 30.
 
 > **❌ WRONG** (fetches ALL logs, filters locally — FORBIDDEN):
 > ```bash
 > aliyun eas describe-service-log --cluster-id cn-beijing --service-name embedding_recall | head -300
-> aliyun eas describe-service-log --cluster-id cn-beijing --service-name embedding_recall | python3 filter.py
 > aliyun eas describe-service-log --cluster-id cn-beijing --service-name embedding_recall | grep "request_id"
 > ```
 >
@@ -198,15 +206,10 @@ aliyun eas describe-service-log \
 > aliyun eas describe-service-log --cluster-id cn-beijing --service-name embedding_recall --keyword 0c6cbd91-5618-4705-8e08-9126bf4600f7 --page-size 500
 > ```
 
-**[CRITICAL] Known CLI pitfall — keyword-only lookup is required for business logs:**
-- When only `--keyword` is supplied (no time range), the CLI returns the full PAI-Rec application trace (`controller.go` / `feed.go` / `recall.go` / `rank_service.go` etc.) matching the request_id.
-- As soon as `--start-time` / `--end-time` are added — even if the window covers the real log timestamp — the CLI silently drops business logs and only returns infrastructure noise (`/bin/sh` wrapper heartbeats, `502 Bad Gateway` retries, `postgres.go dbstat`).
-- Therefore: for request-level diagnosis, always omit the time range and rely on `--keyword <request-id>` alone.
-
-**Notes:**
-- `--keyword`: Use the full `request_id` extracted from the API response (case-sensitive exact match).
-- `--page-size`: Raise to 500 to capture the entire trace in a single page; total matched entries for one request is usually < 30.
-- `--start-time` / `--end-time`: Only use these for broad time-window scans **without** `--keyword` (e.g., when investigating non-request-specific issues). Required format is `yyyy-MM-dd HH:mm:ss` in UTC (space separator, no `T` / no `Z`). ISO-8601 forms like `2025-04-28T00:00:00Z` will be rejected with `InvalidParameter`.
+**[CRITICAL] Time range silently drops business logs:**
+- With `--keyword` only (no time range), the CLI returns the full PAI-Rec application trace (`controller.go` / `feed.go` / `recall.go` / `rank_service.go` etc.) matching the request_id.
+- Adding `--start-time` / `--end-time` — even when the window covers the real timestamp — silently drops business logs and returns only infrastructure noise (`/bin/sh` heartbeats, `502 Bad Gateway` retries, `postgres.go dbstat`).
+- Use time ranges only for broad scans WITHOUT `--keyword`, in `yyyy-MM-dd HH:mm:ss` UTC format (no `T` / no `Z`); ISO-8601 forms like `2025-04-28T00:00:00Z` are rejected with `InvalidParameter`.
 
 #### Step 4: List Engine Configurations
 
@@ -225,10 +228,7 @@ aliyun pairecservice list-engine-configs \
 ```
 
 **[MUST] Always pass `--name <config-name>` for server-side filtering:**
-- `<config-name>` is already known from Step 1 (`ServiceConfig.envs.CONFIG_NAME`); it MUST be forwarded to this call as `--name`.
-- Omitting `--name` returns the entire instance's config inventory (often hundreds of unrelated entries), forces client-side filtering, wastes tokens, and risks hitting CLI default pagination so the target row is silently dropped.
-- `--name` is an exact-match filter on the server; do NOT substitute with `grep` / `jq select` post-processing.
-- The same rule applies to every `list-engine-configs` invocation in this skill (Workflow 2 Step 1 included).
+`<config-name>` is already known from Step 1 (`ServiceConfig.envs.CONFIG_NAME`); forward it as `--name`. Omitting it returns the entire instance's config inventory (often hundreds of unrelated entries), forces client-side filtering, wastes tokens, and risks hitting CLI default pagination so the target row is silently dropped. `--name` is an exact-match filter on the server; do NOT substitute with `grep` / `jq select` post-processing. The same rule applies to every `list-engine-configs` invocation in this skill (Workflow 2 Step 1 included).
 
 **What to extract:**
 - Find the configuration with `Status: Released`
@@ -243,49 +243,60 @@ aliyun pairecservice get-engine-config \
 ```
 
 **[MUST] Sanitize before display** — Config may contain plaintext passwords or
-access keys. Always pipe through the sanitizer before printing to terminal:
+access keys. Always pipe through the sanitizer before printing to terminal;
+only sanitized output (with credentials replaced by `***REDACTED***`) should
+appear there. The raw file at `$WORKDIR/raw_engine_config.json` can be passed
+directly to `scripts/validate.py` (which does not print credential values).
 
 ```bash
 python3 scripts/sanitize_config.py "$WORKDIR/raw_engine_config.json"
 ```
-
-Only the sanitized output (with credentials replaced by `***REDACTED***`) should
-appear in the terminal. The raw file at `$WORKDIR/raw_engine_config.json` can be
-passed directly to `scripts/validate.py` for validation (validate.py does not
-print credential values).
 
 **What to extract:**
 - `ConfigValue`: The actual engine configuration (JSON/YAML)
 
 #### Step 5.5 (Optional): Static Config Sanity Check
 
-Optionally run `scripts/validate.py` against the retrieved `ConfigValue` to quickly
-rule out structural / reference / naming errors in the engine configuration
-before diving into the log trace. See Workflow 2 § Step 3 and
-[references/config-validation.md](references/config-validation.md) for usage,
-exit codes, and the full rule list.
+Run `scripts/validate.py` against the retrieved `ConfigValue` to rule out structural /
+reference errors. See [references/config-validation.md](references/config-validation.md).
 
 ```bash
 printf '%s' "$CONFIG_VALUE" | python3 scripts/validate.py --stdin
 ```
 
-**When to run:** when the log trace points at a specific configuration element
-(e.g. a `RecallConfs` / `FilterConfs` / `SceneConfs` entry), or when the
-configuration is being diagnosed for the first time in this skill session.
+**When to run:** when logs point at a config element or when diagnosing the config for the first time.
+**When to skip:** when logs show a non-config root cause (missing `scene_id`, upstream 5xx).
+**[MUST NOT]** Do not replace or duplicate `validate.py` (same restriction as Workflow 2 § Step 3).
+**[MUST] Scoping rule:** findings enter the final diagnosis ONLY when tied to log evidence for the current `request_id`.
 
-**When to skip:** when the log trace already shows a decisive non-config root
-cause (e.g. a `scene_id` not present in `SceneConfs`, a 5xx from an upstream
-EAS dependency, a missing feature table). `validate.py` is a static checker and
-cannot detect request-time mismatches between client input and configuration.
+#### Step 5a (Conditional): Retrieve Experiment Configuration
 
-**[MUST] Scoping rule for the final report:**
-- `validate.py` findings may enter the final diagnosis ONLY when they are
-  directly tied to the log evidence for the current `request_id`
-  (e.g. the log blames a `RecallConf` name that `validate.py` flags as
-  duplicated or dangling).
-- Findings unrelated to the current `request_id` trace MUST NOT be added to the
-  final conclusion. They remain an internal sanity-check signal only. This
-  preserves the evidence-only reporting rule in Step 6.
+**Condition:** `experiment_id` in the API response is non-empty (e.g., `"ER14_L21_L26#EG21_L38#EG38#E44_GL36_GL37"`).
+
+**Parse:** Extract `EG{id}` (experiment group) and `E{id}` (experiment) numeric IDs from the string. Ignore `ER`, `L`, `GL` prefixes — they carry no config.
+
+```bash
+# For each EG{id}:
+aliyun pairecservice get-experiment-group \
+  --instance-id <instance-id> \
+  --experiment-group-id <id> > "$WORKDIR/experiment_group_<id>.json" 2>&1
+# For each E{id}:
+aliyun pairecservice get-experiment \
+  --instance-id <instance-id> \
+  --experiment-id <id> > "$WORKDIR/experiment_<id>.json" 2>&1
+```
+
+**What to extract:** The `Config` field — contains override parameters (e.g., `default.RecallNames`, `rankconf`, `filterNames`, `default.SortNames`) that supersede the base engine config.
+
+**Override priority (low → high):** Base Engine Config < ExperimentGroup.Config < Experiment.Config. Apply in Step 6 to understand actual runtime behavior.
+
+**Validate experiment configs** against the base config (reference existence check):
+
+```bash
+python3 scripts/validate.py "$WORKDIR/raw_engine_config.json" \
+  --experiment-config "$WORKDIR/experiment_group_<id>.json" \
+  --experiment-config "$WORKDIR/experiment_<id>.json"
+```
 
 #### Step 6: Comprehensive Analysis
 
@@ -293,9 +304,11 @@ Analyze the following components together:
 1. **API Response**: Error code, message, and returned data
 2. **Service Logs**: Trace logs for the request_id showing processing flow
 3. **Engine Configuration**: Settings that may affect the behavior
+4. **Experiment Overrides** (if `experiment_id` non-empty): Effective config = base config with experiment parameters applied on top
 
 **Common Issues to Check:**
 - Configuration mismatches (e.g., recall settings, filtering rules)
+- Experiment overrides (e.g., experiment changed `RecallNames` / `rankconf` from base config)
 - Resource limitations (e.g., insufficient items, timeout settings)
 - Data source issues (e.g., table access, feature availability)
 - Environment inconsistencies (e.g., prod config in prepub environment)
@@ -363,26 +376,28 @@ enforces JSON Schema (`references/schema.json`) + reference-consistency rules an
 with status 0 on pass, 1 on failure.
 
 ```bash
-# From stdin (recommended when ConfigValue is already in memory)
-printf '%s' "$CONFIG_VALUE" | python3 scripts/validate.py --stdin
-
-# From a saved JSON file
+# From a saved JSON file (recommended)
 python3 scripts/validate.py "$WORKDIR/raw_engine_config.json"
-
-# From an inline JSON string
-python3 scripts/validate.py '{"RunMode":"product","RecallConfs":[...]}'
+# Or pipe ConfigValue directly via stdin
+printf '%s' "$CONFIG_VALUE" | python3 scripts/validate.py --stdin
 ```
 
 Requires `jsonschema` (`pip install jsonschema`); if missing the script falls back to
 rule-only validation without Schema checks.
 
+**[MUST NOT] Do not replace or duplicate `validate.py`:**
+- Do NOT skip it; do NOT hand-write equivalent checks in Python / jq / grep / any other tool — the script is the authoritative validator.
+- Do NOT re-implement, re-check, or "double-confirm" any rule after the script has run; trust its output verbatim, including a clean `0 error(s), 0 warning(s)` run.
+- If the script cannot run (missing Python, dependency issue, etc.), fix the environment and re-run — do NOT fall back to manual checking.
+- Inspections OUTSIDE the script's scope are still allowed (see Step 4).
+
 **What the script checks (summary):**
 
-1. **Structure** — JSON well-formedness, required fields, types (`RunMode`,
-   `RecallConfs`, `FilterConfs`, `SortConfs`, `AlgoConfs`, `SceneConfs`, `RankConf`,
+1. **Structure** — JSON well-formedness, required fields, types (`RecallConfs`,
+   `FilterConfs`, `SortConfs`, `AlgoConfs`, `SceneConfs`, `RankConf`,
    `FeatureConfs`, `UserFeatureConfs`, `DebugConfs`, `FeatureLogConfs`,
    `CallBackConfs`, `PipelineConfs`, etc.)
-2. **Enum values** — `RecallType` / `FilterType` / `SortType` / `RunMode` /
+2. **Enum values** — `RecallType` / `FilterType` / `SortType` /
    `DebugConfs.OutputType` / `GeneralRankConfs.ActionConfs[].ActionType`
 3. **Reference consistency** — `SceneConfs.RecallNames` → `RecallConfs`;
    `FilterNames` → `FilterConfs`; `SortNames` → `SortConfs`;
@@ -404,16 +419,25 @@ Detailed usage, exit codes, example outputs and the full rule list live in
 
 #### Step 4: Evidence-Grounded Report
 
-Report to the user based strictly on the script's output plus any additional
-inspection of `ConfigValue`:
+**[MUST] Required first line of the report:** Quote `validate.py`'s stdout
+verbatim — either `Validation passed: configuration is well-formed` or
+`Validation finished: N error(s), M warning(s)`. A report missing this
+exact line is INVALID; restart from Step 3.
 
-- ✅ Checks passed (Schema clean, references resolved, no rule violations)
-- ⚠️  Warnings reported by the script (severity=warning) or inconsistencies
-  observed in `ConfigValue` (e.g. naming collisions between `RankScore` variables
-  and model output fields, env/region mismatches)
-- ❌ Errors reported by the script (severity=error) or missing required fields
-- Missing-evidence notes — what extra data (other config versions, model
-  signatures, etc.) would be needed to turn a warning into a confirmed error
+**Manual inspection is allowed only** for concerns out of scope of
+`validate.py`: env / region / model-signature mismatches, cross-version diffs,
+naming collisions between `RankScore` variables and model output fields, and
+root-cause reading of any `[WARNING]` the script itself asks a human to judge.
+Do NOT add findings the script did not report unless you can tie them to one
+of these out-of-scope concerns.
+
+**Report structure:**
+
+- ✅ Checks passed — quote `validate.py`'s `0 error(s), 0 warning(s)` line
+- ⚠️  Warnings — copy each `[WARNING] <path>: <message>` from the script,
+  plus any out-of-scope inconsistency from manual inspection
+- ❌ Errors — copy each `[ERROR] <path>: <message>` from the script
+- Missing-evidence notes — ONLY when ≥1 ⚠️ warning is listed: state what extra data would upgrade that warning into a confirmed error. With 0 warnings, OMIT this section; do NOT fill it with generic out-of-scope disclaimers (cross-version diff, remote connectivity, region/endpoint consistency) — those are volunteered best-practice advice forbidden by the evidence-only rule.
 
 Do not add speculative fixes or best-practice tangents; suggestions are provided
 only when the user explicitly asks for them.
@@ -443,40 +467,21 @@ For detailed verification steps, see [references/verification-method.md](referen
 ## Cleanup
 
 This skill performs read-only Alibaba Cloud API calls (no remote resources are
-created). Transient artifacts are written to a per-session local working
-directory `$WORKDIR` under `/tmp` (see Core Workflow preamble). The skill does
-NOT delete `$WORKDIR` automatically — the OS-level temporary file policy is
-relied on for eventual reclamation (macOS reaps `/tmp` periodically; most Linux
-distros reap on reboot or via `systemd-tmpfiles`).
-
-If an operator wants to free disk space sooner, they may manually run
-`rm -rf /tmp/pairec-diag-*` outside the workflow.
+created). Transient artifacts go to a per-session local `$WORKDIR` under `/tmp`
+(see Core Workflow preamble). The skill does NOT delete `$WORKDIR` automatically
+— the OS-level temp policy reclaims it (macOS reaps `/tmp` periodically; most
+Linux distros reap on reboot or via `systemd-tmpfiles`). To free disk space
+sooner, manually run `rm -rf /tmp/pairec-diag-*` outside the workflow.
 
 ---
 
 ## Best Practices
 
-1. **Always capture request_id**: When reporting API issues, include the full response with request_id for accurate log correlation.
-
-2. **Log queries — keyword only, no time range, no local filtering**: For request-level diagnosis, pass `--keyword <request_id>` to `aliyun eas describe-service-log` and leave `--start-time` / `--end-time` unset. NEVER omit `--keyword` and post-process locally (e.g., `| head`, `| grep`, `| python3`) — this defeats server-side filtering, wastes tokens, and may miss logs beyond the first page. Combining keyword with a time range filters out business logs due to a CLI quirk (see Workflow 1, Step 3). Only use time ranges for broad non-request scans, and only with the `yyyy-MM-dd HH:mm:ss` UTC format (no `T` / no `Z`).
-
-3. **Environment awareness**: Always verify that configurations match the target environment (Prod vs Pre).
-
-4. **Version control**: When validating configurations, check multiple versions if issues persist across deployments.
-
-5. **Log retention**: EAS service logs are retained for limited periods; diagnose issues promptly after occurrence.
-
-6. **Configuration backup**: Before applying changes based on validation results, ensure current configurations are backed up.
-
-7. **Cross-reference**: Compare working configurations with problematic ones to identify differences.
-
-8. **Service status**: Check EAS service status before diagnosing; service-level issues may mask configuration problems.
-
-9. **Evidence-only conclusions**: Ground every statement in the diagnosis on a specific log line or config fragment. Do not speculate, do not propose fixes, and do not volunteer best-practice advice unless the user explicitly asks. If the evidence is insufficient, say what is missing rather than inferring.
-
-10. **Structured analysis**: Follow the systematic workflow rather than jumping to conclusions based on error messages alone.
-
-11. **Document findings**: Keep track of recurring issues and their resolutions for faster future diagnosis.
+1. **Log queries — keyword only, no time range, no local filtering**: For request-level diagnosis, pass `--keyword <request_id>` to `aliyun eas describe-service-log` and leave `--start-time` / `--end-time` unset. NEVER omit `--keyword` and post-process locally (e.g., `| head`, `| grep`, `| python3`) — this defeats server-side filtering, wastes tokens, and may miss logs beyond the first page. Combining keyword with a time range filters out business logs due to a CLI quirk (see Workflow 1, Step 3). Only use time ranges for broad non-request scans, and only with the `yyyy-MM-dd HH:mm:ss` UTC format (no `T` / no `Z`).
+2. **Trust `validate.py`**: For Workflow 2, treat `scripts/validate.py` as the single source of truth for the rules in its catalogue. Do NOT skip it and hand-write checks, and do NOT re-validate its rules manually after a clean run. Manual inspection is reserved for concerns out of its scope (env / region / model signature, cross-version diffs, `RankScore` vs model output naming).
+3. **Environment awareness**: Always verify that configurations match the target environment (Prod vs Pre); compare against a known-good version when issues persist.
+4. **Log retention**: EAS service logs are retained for limited periods; diagnose issues promptly after occurrence.
+5. **Evidence-only conclusions**: Ground every statement on a specific log line or config fragment. Follow the systematic workflow rather than jumping to conclusions from error messages alone. Do not speculate, do not propose fixes, and do not volunteer best-practice advice unless the user explicitly asks. If the evidence is insufficient, say what is missing rather than inferring.
 
 ---
 

@@ -53,6 +53,8 @@ aliyun pairecservice list-engine-configs
 aliyun pairecservice get-engine-config
 aliyun pairecservice apply-engine-config
 aliyun pairecservice create-engine-config
+aliyun pairecservice get-experiment-group
+aliyun pairecservice get-experiment
 ```
 
 **Why correct:** All commands use lowercase words connected with hyphens (plugin mode format).
@@ -149,6 +151,30 @@ aliyun pairecservice get-engine-config \
 - `--instance-id`: Required
 - `--engine-config-id`: Required
 
+#### ✅ CORRECT - PAI-RecService get-experiment-group
+
+```bash
+aliyun pairecservice get-experiment-group \
+  --instance-id pairec-cn-xxxxx \
+  --experiment-group-id 21
+```
+
+**Parameters:**
+- `--instance-id`: Required
+- `--experiment-group-id`: Required, numeric ID extracted from experiment_id string (EG{id} pattern)
+
+#### ✅ CORRECT - PAI-RecService get-experiment
+
+```bash
+aliyun pairecservice get-experiment \
+  --instance-id pairec-cn-xxxxx \
+  --experiment-id 44
+```
+
+**Parameters:**
+- `--instance-id`: Required
+- `--experiment-id`: Required, numeric ID extracted from experiment_id string (E{id} pattern)
+
 #### ❌ INCORRECT - Wrong parameter names
 
 ```bash
@@ -178,6 +204,16 @@ aliyun pairecservice list-engine-configs \
 aliyun pairecservice get-engine-config \
   --instance pairec-cn-xxxxx \         # Use --instance-id
   --config-id config-12345             # Use --engine-config-id
+
+# PAI-RecService get-experiment-group - wrong parameters
+aliyun pairecservice get-experiment-group \
+  --instance pairec-cn-xxxxx \         # Use --instance-id
+  --group-id 21                        # Use --experiment-group-id
+
+# PAI-RecService get-experiment - wrong parameters
+aliyun pairecservice get-experiment \
+  --instance pairec-cn-xxxxx \         # Use --instance-id
+  --exp-id 44                          # Use --experiment-id
 ```
 
 **Why incorrect:** Parameter names must match exactly as defined in `--help` output.
@@ -245,30 +281,32 @@ aliyun eas describe-service-log \
 
 ---
 
-### 5. AI-Mode Commands
+### 5. Per-command --user-agent (Observability)
 
 #### ✅ CORRECT
 
 ```bash
-# Enable AI-mode at skill start
-aliyun configure ai-mode enable
-aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-pai-rec-diagnosis"
-
-# Disable AI-mode at skill end
-aliyun configure ai-mode disable
+# Session-id is a 32-char lowercase hex string generated once per session
+# Every aliyun API command includes --user-agent with session-id
+aliyun eas describe-service \
+  --cluster-id cn-hangzhou \
+  --service-name embedding_recall \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-rec-diagnosis/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6
 ```
 
 #### ❌ INCORRECT
 
 ```bash
-# Missing AI-mode setup
-# (Skill runs without enabling AI-mode)
+# Missing --user-agent flag
+aliyun eas describe-service --cluster-id cn-hangzhou --service-name test
 
-# Wrong user-agent format
-aliyun configure ai-mode set-user-agent --user-agent "MySkill"
+# Wrong user-agent format (missing session-id)
+aliyun eas describe-service --cluster-id cn-hangzhou --service-name test \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-rec-diagnosis
 
-# Forgetting to disable AI-mode
-# (AI-mode stays enabled after skill completes)
+# Using quoted user-agent value (should not be quoted)
+aliyun eas describe-service --cluster-id cn-hangzhou --service-name test \
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-pai-rec-diagnosis/a1b2c3d4"
 ```
 
 ---
@@ -302,57 +340,54 @@ aliyun update-plugins                   # Use plugin update
 #### ✅ CORRECT - Complete workflow
 
 ```bash
-# 1. Enable AI-mode
-aliyun configure ai-mode enable
-aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-pai-rec-diagnosis"
+# 1. Session-id is a 32-char lowercase hex string generated once per session
+# Example: a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6
 
 # 2. Get service information
 aliyun eas describe-service \
   --cluster-id cn-hangzhou \
-  --service-name embedding_recall
+  --service-name embedding_recall \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-rec-diagnosis/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6
 
 # 3. Query service logs by request_id
 aliyun eas describe-service-log \
   --cluster-id cn-hangzhou \
   --service-name embedding_recall \
   --keyword "941b4e14-d1c5-489f-a184-b2b17f8b4fdb" \
-  --start-time "2025-04-28T08:00:00Z" \
-  --end-time "2025-04-28T09:00:00Z"
+  --page-size 500 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-rec-diagnosis/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6
 
 # 4. List engine configs
 aliyun pairecservice list-engine-configs \
   --instance-id pairec-cn-xxxxx \
   --environment Prod \
-  --status Released
+  --status Released \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-rec-diagnosis/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6
 
 # 5. Get specific config
 aliyun pairecservice get-engine-config \
   --instance-id pairec-cn-xxxxx \
-  --engine-config-id config-12345
-
-# 6. Disable AI-mode
-aliyun configure ai-mode disable
+  --engine-config-id config-12345 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-rec-diagnosis/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6
 ```
 
 **Why correct:**
-- AI-mode enabled at start
+- Session-id is a 32-char lowercase hex string generated once per session
+- Every API command includes --user-agent (without quotes) with session-id
+- Local utility commands (configure, plugin, version) excluded
 - Logical sequence of operations
 - Proper parameter usage
-- AI-mode disabled at end
 
 #### ❌ INCORRECT - Missing steps or wrong order
 
 ```bash
-# Missing AI-mode setup
-aliyun eas describe-service ...
+# Missing --user-agent (no observability)
+aliyun eas describe-service --cluster-id cn-hangzhou --service-name test
 
 # Wrong environment mapping (using "product" instead of "Prod")
 aliyun pairecservice list-engine-configs \
   --instance-id pairec-cn-xxxxx \
   --environment product
-
-# Missing AI-mode disable at end
-# (Skill completes without disabling AI-mode)
 ```
 
 ---
@@ -362,23 +397,21 @@ aliyun pairecservice list-engine-configs \
 #### ✅ CORRECT
 
 ```bash
-# 1. Enable AI-mode
-aliyun configure ai-mode enable
-aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-pai-rec-diagnosis"
+# 1. Session-id is a 32-char lowercase hex string generated once per session
+# Example: a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6
 
 # 2. List config versions (if user didn't provide ID)
 aliyun pairecservice list-engine-configs \
   --instance-id pairec-cn-xxxxx \
   --environment Prod \
-  --name my_config
+  --name my_config \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-rec-diagnosis/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6
 
 # 3. Get specific config for validation
 aliyun pairecservice get-engine-config \
   --instance-id pairec-cn-xxxxx \
-  --engine-config-id config-12345
-
-# 4. Disable AI-mode
-aliyun configure ai-mode disable
+  --engine-config-id config-12345 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-rec-diagnosis/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6
 ```
 
 #### ❌ INCORRECT
@@ -469,19 +502,14 @@ aliyun eas describe-service \
 
 ```bash
 # Check if command succeeded
-if ! SERVICE_INFO=$(aliyun eas describe-service --cluster-id cn-hangzhou --service-name test 2>&1); then
+if ! SERVICE_INFO=$(aliyun eas describe-service --cluster-id cn-hangzhou --service-name test --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-rec-diagnosis/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6 2>&1); then
   echo "Error: Failed to retrieve service information"
   echo "Details: $SERVICE_INFO"
-  # Disable AI-mode before exit
-  aliyun configure ai-mode disable
   exit 1
 fi
-
-# Disable AI-mode on success too
-aliyun configure ai-mode disable
 ```
 
-**Why correct:** Always disables AI-mode on all exit paths.
+**Why correct:** Includes --user-agent for observability and handles errors gracefully.
 
 #### ❌ INCORRECT - No error handling
 
@@ -491,8 +519,6 @@ SERVICE_INFO=$(aliyun eas describe-service --cluster-id cn-hangzhou --service-na
 
 # Process results without checking if command succeeded
 # (May fail silently or with confusing errors)
-
-# Missing AI-mode disable on error path
 ```
 
 ---
@@ -584,11 +610,11 @@ SERVICE_INFO=$(aliyun eas describe-service ...)
 - [ ] Use UTC time format: `YYYY-MM-DDTHH:MM:SSZ`
 
 ### Workflow
-- [ ] Enable AI-mode at start
-- [ ] Set correct user-agent
+- [ ] Generate session-id (32-char lowercase hex) at start
+- [ ] Include `--user-agent` on every `aliyun` API command
+- [ ] Exclude `--user-agent` from local utility commands (configure, plugin, version)
 - [ ] Confirm parameters with user before execution
 - [ ] Execute commands in logical order
-- [ ] Disable AI-mode at ALL exit points
 
 ### Environment Mapping
 - [ ] Map `product` → `Prod`
@@ -597,7 +623,6 @@ SERVICE_INFO=$(aliyun eas describe-service ...)
 ### Error Handling
 - [ ] Check command success
 - [ ] Handle errors gracefully
-- [ ] Always disable AI-mode on error
 
 ### Verification
 - [ ] Verify command results

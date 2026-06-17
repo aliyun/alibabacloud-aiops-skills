@@ -9,19 +9,18 @@ Workflow 2 (Engine Configuration Validation) in `SKILL.md`.
 
 | Path | Purpose |
 |------|---------|
-| `scripts/validate.py` | Validator entry point (CLI + library). |
-| `references/schema.json` | JSON Schema (Draft-7) describing the top-level engine-config structure. |
+| `scripts/validate.py` | Validator entry point (CLI + library). Loads a bundled JSON Schema (Draft-7) that describes the top-level engine-config structure. |
 
-Both files live inside this skill — no external skill dependency.
+All files live inside this skill — no external skill dependency.
 
 ---
 
 ## 2. Dependencies
 
 - Python 3.8+
-- `jsonschema` (optional but recommended):
+- `jsonschema` >=4.0,<5.0 (optional but recommended):
   ```bash
-  pip install jsonschema
+  pip install "jsonschema>=4.0,<5.0"
   ```
   If `jsonschema` is not installed the script **still runs** but skips Schema checks
   and relies on the built-in rule validator only. A single warning-equivalent note
@@ -40,6 +39,11 @@ python3 scripts/validate.py '{"RunMode":"product","RecallConfs":[...]}'
 
 # From stdin (recommended when ConfigValue is already in a shell variable)
 printf '%s' "$CONFIG_VALUE" | python3 scripts/validate.py --stdin
+
+# Validate with experiment configs (reference-existence check)
+python3 scripts/validate.py /tmp/raw_engine_config.json \
+  --experiment-config /tmp/experiment_group_21.json \
+  --experiment-config /tmp/experiment_44.json
 ```
 
 ### Exit codes
@@ -91,7 +95,7 @@ for e in errors:
 
 ### 5.1 Structural / Type checks (JSON Schema)
 
-Enforced by `references/schema.json` via `jsonschema.Draft7Validator`. Covers:
+Enforced by the bundled JSON Schema (Draft-7) via `jsonschema.Draft7Validator`. Covers:
 
 - Top-level keys: `RunMode`, `ListenConf`, `RecallConfs`, `FilterConfs`,
   `SortConfs`, `AlgoConfs`, `SceneConfs`, `FilterNames`, `SortNames`, `RankConf`,
@@ -232,11 +236,56 @@ the configuration from `pairecservice get-engine-config`:
 
 ---
 
-## 7. Extending the Validator
+## 7. Experiment Config Validation
+
+When `--experiment-config <file>` is passed, the script validates experiment
+override parameters against the base engine config.
+
+### Recognized predefined keys
+
+| Key pattern | Override target | Value type |
+|------------|----------------|------------|
+| `{cat}.RecallNames` | Scene recall list | `string[]` |
+| `filterNames` | Filter chain | `string[]` |
+| `{cat}.SortNames` | Sort/rerank list | `string[]` |
+| `rankconf` | RankConf (fine-rank) | `object` |
+| `rankscore` | RankScore expression | `string` |
+| `sort.{SortName}` | Override specific sort config | (any) |
+| `recall.{RecallName}` | Override specific recall config | (any) |
+| `generalRankConf` | GeneralRankConf (coarse-rank) | `object` |
+| `features.scene.name` / `user_features.scene.name` | Feature scene | `string` |
+| `pid_task_params` / `pid_target_params` | Traffic control PID | `object` |
+
+Keys not matching any pattern above are treated as **user-defined custom
+parameters** and skipped without error.
+
+### Validation rules
+
+1. **Type check** — predefined keys must have the expected value type.
+2. **Reference existence** — names in list-type keys must exist in the
+   corresponding base config section:
+   - `{cat}.RecallNames` values → `RecallConfs[].Name` (exception: `ContextItemRecall`)
+   - `filterNames` values → `FilterConfs[].Name` (exception: `UniqueFilter`)
+   - `{cat}.SortNames` values → `SortConfs[].Name` (exception: `ItemRankScore`)
+   - `rankconf.RankAlgoList` values → `AlgoConfs[].Name`
+   - `sort.{X}` → X must exist in `SortConfs[].Name`
+   - `recall.{X}` → X must exist in `RecallConfs[].Name`
+
+### Auto-detection
+
+The script auto-detects the API response wrapper:
+- Base config file: if it contains a `ConfigValue` string field, that field is
+  parsed as the actual engine config.
+- Experiment file: the `Config` string field is parsed as the experiment
+  parameters JSON.
+
+---
+
+## 8. Extending the Validator
 
 When adding new rules:
 
-1. Prefer expressing structural constraints in `references/schema.json` (Draft-7).
+1. Prefer expressing structural constraints in the bundled JSON Schema (Draft-7).
 2. Put cross-section / business-logic rules in
    `PairecConfigValidator._validate_*` methods of `scripts/validate.py`.
 3. Keep `ValidationError.severity` aligned with real impact:

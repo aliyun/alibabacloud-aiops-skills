@@ -152,23 +152,19 @@ Error: No credential configured
 
 ---
 
-### Issue: AI-Mode Still Enabled
+### Issue: Missing --user-agent Flag
 
 **Symptoms:**
-Subsequent CLI commands behave unexpectedly
+CLI calls succeed but cannot be traced back to this skill session.
 
 **Solution:**
-Always disable AI-mode at skill completion:
+Ensure a session-id (32-char lowercase hex string) was generated at session start and every `aliyun` API command includes:
 ```bash
-aliyun configure ai-mode disable
+--user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-rec-diagnosis/{session-id}
 ```
 
 **Prevention:**
-Ensure disable command is called at ALL exit points:
-- Normal completion
-- Error exit
-- User cancellation
-- Timeout
+Generate the session-id once at the very start of the workflow. Local utility commands (`configure`, `plugin`, `version`) do not support `--user-agent` and should be excluded.
 
 ---
 
