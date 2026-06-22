@@ -1,101 +1,109 @@
-# 阿里云ECS远程连接/服务访问问题诊断指南
+# Alibaba Cloud ECS Remote Connection / Service Access Diagnostic Guide
 
-## 概述
+## Overview
 
-本指南提供系统化的阿里云ECS实例远程连接问题诊断流程，适用于SSH/RDP无法连接、服务无法访问等场景。
+This guide provides a systematic diagnostic workflow for Alibaba Cloud ECS remote
+connection issues, applicable to scenarios such as SSH/RDP failures and inaccessible services.
 
 ---
 
-## 1. 问题定位策略
+## 1. Problem Localization Strategy
 
-### 1.1 初始信息收集
+### 1.1 Initial Information Gathering
 
-当用户报告"无法远程连接ECS实例"或"服务无法访问"时，采用**渐进式信息收集**策略：
+When a user reports "cannot remotely connect to an ECS instance" or "service is inaccessible",
+use a **progressive information-gathering** strategy:
 
-**第一步：询问关键信息**
+**Step 1: Ask for key information**
 
-✩ 实例ID（必需）- 格式：`i-xxxxxxxxxxxxxxxxx`
-✩ 地域Region（必需）- 如：`cn-hangzhou`、`cn-beijing`、`cn-shanghai`
-✩ 连接方式 - SSH(22)/RDP(3389)/VNC/其他端口/workbench/Web服务
-✩ 错误信息或现象描述
+✩ Instance ID (required) — format: `i-xxxxxxxxxxxxxxxxx`
+✩ Region (required) — e.g., `cn-hangzhou`, `cn-beijing`, `cn-shanghai`
+✩ Connection method — SSH(22) / RDP(3389) / VNC / other ports / Workbench / Web service
+✩ Error message or symptom description
 
-**设计理由：**
+**Rationale:**
 
-✫ 避免盲目猜测，获取最小必要信息
-✫ 同时提供常见问题清单，让用户自行初步排查
-✫ 如果用户只提供部分信息，主动请求缺失信息
+✫ Avoid blind guessing; gather the minimum necessary information
+✫ Provide a common-issues checklist so the user can do initial self-triage
+✫ If the user provides only partial information, proactively request what is missing
 
-### 1.2 自适应查询
+### 1.2 Adaptive Lookup
 
-当用户说"自己查找"或信息不全时，立即切换策略：
+When the user says "find it for me" or the information is incomplete, switch strategy immediately:
 
-✩ 遍历常用阿里云地域查找实例
-✩ 优先检查高频使用地域：`cn-hangzhou`、`cn-beijing`、`cn-shanghai`、`cn-shenzhen`
-✩ 找到后立即停止搜索
+✩ Traverse common Alibaba Cloud regions to locate the instance
+✩ Prioritize high-frequency regions: `cn-hangzhou`, `cn-beijing`, `cn-shanghai`, `cn-shenzhen`
+✩ Stop searching as soon as the instance is found
 
-**地域遍历命令：**
+> **⚠️ Empty-result handling ([MUST]):** If `describe-instances` still returns an empty
+> result after traversing the candidate regions (`TotalCount = 0`), **follow the
+> "Empty-result protocol" in Phase 0 of `SKILL.md`** strictly (terminate the workflow,
+> do NOT enumerate/switch instances, output the fixed message template). This document
+> does not repeat the rule, to keep a single source of truth.
+
+**Region-traversal commands:**
 
 ```bash
-# 获取所有地域列表
-aliyun ecs describe-regions --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+# Get the list of all regions
+aliyun ecs describe-regions --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 
-# 在指定地域查找实例
+# Look up the instance in a specific region
 aliyun ecs describe-instances \
   --biz-region-id cn-hangzhou \
   --instance-ids '["i-xxx"]' \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 ```
 
 ---
 
-## 2. 系统化诊断流程
+## 2. Systematic Diagnostic Workflow
 
-### 2.1 分层诊断模型
+### 2.1 Layered Diagnostic Model
 
 ```
-Layer 1: 实例基础状态
-  ├─ 实例是否存在
-  ├─ 实例运行状态（Running/Stopped/Pending/Starting/Stopping）
-  └─ 系统状态检查（StatusKey）
+Layer 1: Instance basic status
+  ├─ Whether the instance exists
+  ├─ Instance running status (Running/Stopped/Pending/Starting/Stopping)
+  └─ System status check (StatusKey)
 
-Layer 2: 网络可达性
-  ├─ 是否有公网IP/弹性公网IP(EIP)
-  ├─ VPC/交换机(VSwitch)配置
-  └─ 路由表和NAT网关
+Layer 2: Network reachability
+  ├─ Whether a public IP / Elastic IP (EIP) exists
+  ├─ VPC / VSwitch configuration
+  └─ Route tables and NAT gateway
 
-Layer 3: 安全控制
-  ├─ 安全组入方向规则 ⭐ 最常见问题
-  ├─ 网络ACL规则（企业版VPC）
-  └─ 操作系统防火墙（iptables/firewalld/Windows防火墙）
+Layer 3: Security control
+  ├─ Security group inbound rules ⭐ most common issue
+  ├─ Network ACL rules (Enterprise Edition VPC)
+  └─ OS firewall (iptables/firewalld/Windows Firewall)
 
-Layer 4: 认证配置
-  ├─ 密钥对配置（Linux SSH）
-  ├─ 登录密码（Linux/Windows）
-  └─ 用户名正确性（root/ecs-user/Administrator）
+Layer 4: Authentication configuration
+  ├─ Key pair configuration (Linux SSH)
+  ├─ Login password (Linux/Windows)
+  └─ Username correctness (root/ecs-user/Administrator)
 ```
 
-### 2.2 诊断执行顺序
+### 2.2 Diagnostic Execution Order
 
-#### 步骤1：获取实例完整信息
+#### Step 1: Get complete instance information
 
 ```bash
 aliyun ecs describe-instances \
   --biz-region-id <region> \
   --instance-ids '["<instance-id>"]' \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 ```
 
-**一次调用获取：**
+**A single call returns:**
 
-✫ 运行状态（Status）
-✫ 公网IP（PublicIpAddress）
-✫ 弹性公网IP（EipAddress）
-✫ 安全组ID列表（SecurityGroupIds）
-✫ VPC/交换机ID（VpcAttributes）
-✫ 密钥对名称（KeyPairName）
-✫ 操作系统类型（OSType: linux/windows）
+✫ Running status (Status)
+✫ Public IP (PublicIpAddress)
+✫ Elastic IP (EipAddress)
+✫ Security group ID list (SecurityGroupIds)
+✫ VPC / VSwitch ID (VpcAttributes)
+✫ Key pair name (KeyPairName)
+✫ Operating system type (OSType: linux/windows)
 
-**关键字段解析：**
+**Key field parsing:**
 
 ```json
 {
@@ -113,24 +121,24 @@ aliyun ecs describe-instances \
 }
 ```
 
-#### 步骤2：检查安全组规则
+#### Step 2: Check security group rules
 
 ```bash
-# 查询安全组入方向规则
+# Query security group inbound rules
 aliyun ecs describe-security-group-attribute \
   --biz-region-id <region> \
   --security-group-id <sg-id> \
   --direction ingress \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 ```
 
-**重点检查：**
+**Focus on:**
 
-✫ SSH端口22（Linux）或RDP端口3389（Windows）是否开放
-✫ 目标服务端口是否开放（如80、443、8080等）
-✫ 授权对象（SourceCidrIp）是否包含用户IP或`0.0.0.0/0`
+✫ Whether SSH port 22 (Linux) or RDP port 3389 (Windows) is open
+✫ Whether the target service port is open (e.g., 80, 443, 8080)
+✫ Whether the authorization object (SourceCidrIp) includes the user's IP or `0.0.0.0/0`
 
-**安全组规则响应示例：**
+**Security group rule response example:**
 
 ```json
 {
@@ -148,94 +156,95 @@ aliyun ecs describe-security-group-attribute \
 }
 ```
 
-#### 步骤3：检查实例系统状态
+#### Step 3: Check instance system status
 
 ```bash
-# 检查实例状态
+# Check instance status
 aliyun ecs describe-instance-status \
   --biz-region-id <region> \
   --instance-id.1 <instance-id> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 
-# 检查系统事件（计划内维护、异常等）
+# Check system events (planned maintenance, anomalies, etc.)
 aliyun ecs describe-instance-history-events \
   --biz-region-id <region> \
   --instance-id <instance-id> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 ```
 
-#### 步骤4：检查云助手状态（备用连接方案）
+#### Step 4: Check Cloud Assistant status (backup connection method)
 
 ```bash
 aliyun ecs describe-cloud-assistant-status \
   --biz-region-id <region> \
   --instance-id.1 <instance-id> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 ```
 
-#### 步骤5：根据发现问题提供解决方案
+#### Step 5: Provide solutions based on findings
 
 ---
 
-## 3. 问题识别逻辑
+## 3. Problem Identification Logic
 
-### 3.1 典型诊断结果示例
+### 3.1 Typical Diagnostic Result Example
 
 ```
-实例状态检查:
+Instance status check:
   ✓ Status: Running
   ✓ PublicIp: 47.xx.xx.xx
   ✓ KeyPairName: my-keypair
 
-安全组规则检查:
+Security group rule check:
   ✓ 80/80 TCP - 0.0.0.0/0 (HTTP)
   ✓ 443/443 TCP - 0.0.0.0/0 (HTTPS)
-  ❌ 缺少 22/22 TCP (SSH) 入方向规则
+  ❌ Missing 22/22 TCP (SSH) inbound rule
 ```
 
-**诊断结论：** 安全组未开放SSH端口 → 这是80%连接问题的根本原因
+**Diagnostic conclusion:** Security group does not open the SSH port → this is the root
+cause of 80% of connection issues.
 
-### 3.2 常见问题模式及优先级
+### 3.2 Common Problem Patterns and Priority
 
-| 优先级 | 问题类型 | 占比 | 检查方法 |
-|--------|----------|------|----------|
-| 1 | 安全组端口未开放 | 80% | DescribeSecurityGroupAttribute |
-| 2 | 实例未运行 | 8% | DescribeInstances查看Status |
-| 3 | 无公网IP | 5% | 检查PublicIpAddress和EipAddress |
-| 4 | 密钥/密码问题 | 4% | 用户确认或通过VNC验证 |
-| 5 | 系统内部故障 | 3% | 云助手或VNC诊断 |
+| Priority | Problem Type | Proportion | Check Method |
+|----------|--------------|------------|--------------|
+| 1 | Security group port not open | 80% | DescribeSecurityGroupAttribute |
+| 2 | Instance not running | 8% | DescribeInstances → Status |
+| 3 | No public IP | 5% | Check PublicIpAddress and EipAddress |
+| 4 | Key/password issue | 4% | User confirmation or verify via VNC |
+| 5 | OS internal fault | 3% | Cloud Assistant or VNC diagnostics |
 
 ---
 
-## 4. 解决方案库
+## 4. Solution Library
 
-### 4.1 添加安全组规则
+### 4.1 Add Security Group Rules
 
-**添加SSH访问规则（Linux）：**
+**Add SSH access rule (Linux):**
 
 ```bash
-# 临时方案 - 允许所有IP（不推荐生产环境）
+# Temporary option - allow all IPs (not recommended for production)
 aliyun ecs authorize-security-group \
   --biz-region-id <region> \
   --security-group-id <sg-id> \
   --ip-protocol tcp \
   --port-range 22/22 \
   --source-cidr-ip 0.0.0.0/0 \
-  --description "SSH访问-临时" \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --description "SSH access - temporary" \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 
-# 推荐方案 - 限制为特定IP
+# Recommended option - restrict to a specific IP
 aliyun ecs authorize-security-group \
   --biz-region-id <region> \
   --security-group-id <sg-id> \
   --ip-protocol tcp \
   --port-range 22/22 \
   --source-cidr-ip <user-ip>/32 \
-  --description "SSH访问-指定IP" \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --description "SSH access - specific IP" \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 ```
 
-**添加RDP访问规则（Windows）：**
+**Add RDP access rule (Windows):**
 
 ```bash
 aliyun ecs authorize-security-group \
@@ -244,11 +253,11 @@ aliyun ecs authorize-security-group \
   --ip-protocol tcp \
   --port-range 3389/3389 \
   --source-cidr-ip <user-ip>/32 \
-  --description "RDP远程桌面访问" \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --description "RDP remote desktop access" \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 ```
 
-**添加Web服务端口：**
+**Add Web service ports:**
 
 ```bash
 # HTTP 80
@@ -258,7 +267,7 @@ aliyun ecs authorize-security-group \
   --ip-protocol tcp \
   --port-range 80/80 \
   --source-cidr-ip 0.0.0.0/0 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 
 # HTTPS 443
 aliyun ecs authorize-security-group \
@@ -267,228 +276,228 @@ aliyun ecs authorize-security-group \
   --ip-protocol tcp \
   --port-range 443/443 \
   --source-cidr-ip 0.0.0.0/0 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 ```
 
-### 4.2 实例无公网IP解决方案
+### 4.2 Solution for Instance Without Public IP
 
-**方案A：绑定弹性公网IP**
+**Option A: Bind an Elastic IP**
 
 ```bash
-# 1. 创建EIP
+# 1. Create an EIP
 aliyun vpc allocate-eip-address \
   --biz-region-id <region> \
   --bandwidth 5 \
   --internet-charge-type PayByTraffic \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 
-# 2. 绑定EIP到实例
+# 2. Bind the EIP to the instance
 aliyun vpc associate-eip-address \
   --biz-region-id <region> \
   --allocation-id <eip-allocation-id> \
   --instance-id <instance-id> \
   --instance-type EcsInstance \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 ```
 
-**方案B：使用NAT网关（私网实例）**
+**Option B: Use a NAT gateway (private-network instance)**
 
 ```bash
-# 查询NAT网关
+# Query NAT gateways
 aliyun vpc describe-nat-gateways \
   --biz-region-id <region> \
   --vpc-id <vpc-id> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 ```
 
-### 4.3 实例未运行解决方案
+### 4.3 Solution for Instance Not Running
 
 ```bash
-# 启动实例
+# Start the instance
 aliyun ecs start-instance \
   --instance-id <instance-id> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 
-# 检查启动状态
+# Check startup status
 aliyun ecs describe-instance-status \
   --biz-region-id <region> \
   --instance-id.1 <instance-id> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 ```
 
-### 4.4 密码重置（无法登录时）
+### 4.4 Password Reset (when login is impossible)
 
 ```bash
-# 重置密码（需要重启生效）
+# Reset password (requires a reboot to take effect)
 aliyun ecs modify-instance-attribute \
   --instance-id <instance-id> \
   --password '<NewPassword123!>' \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 
-# 重启实例使密码生效
+# Reboot the instance to apply the new password
 aliyun ecs reboot-instance \
   --instance-id <instance-id> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 ```
 
-### 4.5 使用云助手连接（备用方案）
+### 4.5 Connect via Cloud Assistant (backup option)
 
-当SSH/RDP都无法使用时：
+When neither SSH nor RDP is usable:
 
 ```bash
-# 1. 检查云助手状态
+# 1. Check Cloud Assistant status
 aliyun ecs describe-cloud-assistant-status \
   --biz-region-id <region> \
   --instance-id.1 <instance-id> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 
-# 2. 发送诊断命令（命令内容需Base64编码）
+# 2. Send a diagnostic command (command content must be Base64-encoded)
 aliyun ecs run-command \
   --biz-region-id <region> \
   --instance-id.1 <instance-id> \
   --type RunShellScript \
   --command-content '<base64-encoded-command>' \
   --timeout 60 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 
-# 3. 查看命令执行结果
+# 3. View command execution results
 aliyun ecs describe-invocation-results \
   --biz-region-id <region> \
   --invoke-id <invoke-id> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 ```
 
-### 4.6 使用VNC控制台（最后手段）
+### 4.6 Use the VNC Console (last resort)
 
-通过阿里云控制台：
-✩ 登录ECS控制台
-✩ 找到目标实例 → 远程连接 → VNC连接
-✩ 使用VNC密码登录进行内部诊断
+Via the Alibaba Cloud console:
+✩ Log in to the ECS console
+✩ Find the target instance → Remote Connect → VNC connection
+✩ Log in with the VNC password to perform internal diagnostics
 
 ---
 
-## 5. 验证策略
+## 5. Verification Strategy
 
-### 5.1 多层验证
+### 5.1 Multi-Layer Verification
 
-**验证1：配置层**
+**Verification 1: Configuration layer**
 
 ```bash
-# 确认安全组规则已添加
+# Confirm the security group rule has been added
 aliyun ecs describe-security-group-attribute \
   --biz-region-id <region> \
   --security-group-id <sg-id> \
   --direction ingress \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 ```
 
-**验证2：网络层**
+**Verification 2: Network layer**
 
 ```bash
-# 测试端口可达性（10秒超时）
+# Test port reachability (10s timeout)
 nc -zv -w 10 <public-ip> 22
 
-# 或使用timeout包装telnet（10秒超时）
+# Or wrap telnet with timeout (10s timeout)
 timeout 10 telnet <public-ip> 22
 ```
 
-**验证3：应用层**
+**Verification 3: Application layer**
 
 ```bash
-# SSH连接测试（10秒超时）
+# SSH connection test (10s timeout)
 ssh -o ConnectTimeout=10 -i <key-file> root@<public-ip>
 
-# RDP连接测试（Windows）- 使用远程桌面客户端或PowerShell
+# RDP connection test (Windows) - use a remote desktop client or PowerShell
 Test-NetConnection -ComputerName <public-ip> -Port 3389 -InformationLevel Detailed
 ```
 
-### 5.2 问题转移处理
+### 5.2 Problem-Transfer Handling
 
-当发现新问题时的处理流程：
+Process for handling newly discovered issues:
 
 ```
-SSH端口已开放但仍无法连接
+SSH port is open but connection still fails
     ↓
-检查操作系统防火墙
+Check the OS firewall
     ↓
-通过云助手执行: iptables -L / firewall-cmd --list-all
+Run via Cloud Assistant: iptables -L / firewall-cmd --list-all
     ↓
-发现iptables阻止 → 提供关闭/配置命令
+Found iptables blocking → provide disable/configure commands
     ↓
-验证连接
+Verify the connection
 ```
 
 ---
 
-## 6. 用户交互设计原则
+## 6. User Interaction Design Principles
 
-### 6.1 渐进式披露
+### 6.1 Progressive Disclosure
 
-**阶段1：快速诊断**
-✫ 不等用户提供所有信息就开始行动
-✫ 用户说"自己查找" → 立即自动搜索常用地域
+**Stage 1: Quick diagnosis**
+✫ Start acting without waiting for the user to provide all information
+✫ User says "find it for me" → immediately auto-search common regions
 
-**阶段2：问题呈现**
-
-```
-诊断结果：
-✓ 实例状态：Running
-✓ 公网IP：47.xx.xx.xx
-✓ 云助手：已安装
-❌ 安全组未开放22端口 ← 问题根因
-```
-
-**阶段3：解决方案**
-✫ 提供具体CLI命令
-✫ 询问是否执行
-✫ 给出安全建议
-
-### 6.2 操作确认规则
-
-**需要用户确认的操作：**
-✩ 修改安全组规则
-✩ 重启实例
-✩ 重置密码
-✩ 绑定/解绑EIP
-
-**可自动执行的操作：**
-✩ 查询实例信息
-✩ 检查配置状态
-✩ 测试端口连通性
-✩ 查看云助手状态
-
-### 6.3 安全提醒
+**Stage 2: Problem presentation**
 
 ```
-⚠️ 安全建议：
-当前配置允许所有IP访问（0.0.0.0/0），建议：
-1. 将源IP限制为您的实际IP地址
-2. 您当前的公网IP是：<通过API获取>
-3. 推荐命令：--SourceCidrIp <your-ip>/32
+Diagnostic result:
+✓ Instance status: Running
+✓ Public IP: 47.xx.xx.xx
+✓ Cloud Assistant: installed
+❌ Security group does not open port 22 ← root cause
+```
+
+**Stage 3: Solution**
+✫ Provide concrete CLI commands
+✫ Ask whether to execute them
+✫ Give security recommendations
+
+### 6.2 Operation Confirmation Rules
+
+**Operations requiring user confirmation:**
+✩ Modify security group rules
+✩ Reboot the instance
+✩ Reset the password
+✩ Bind/unbind an EIP
+
+**Operations that can run automatically:**
+✩ Query instance information
+✩ Check configuration status
+✩ Test port connectivity
+✩ Check Cloud Assistant status
+
+### 6.3 Security Reminder
+
+```
+⚠️ Security recommendation:
+The current configuration allows access from all IPs (0.0.0.0/0). Recommendations:
+1. Restrict the source IP to your actual IP address
+2. Your current public IP is: <obtained via API>
+3. Recommended command: --SourceCidrIp <your-ip>/32
 ```
 
 ---
 
-## 7. 并行诊断优化
+## 7. Parallel Diagnostics Optimization
 
-### 7.1 可并行执行的检查项
+### 7.1 Checks That Can Run in Parallel
 
 ```bash
-# 以下检查可同时执行：
-并行任务1: aliyun ecs describe-instances ... --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose        # 实例状态
-并行任务2: aliyun ecs describe-security-group-attribute ... --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose  # 安全组
-并行任务3: aliyun ecs describe-cloud-assistant-status ... --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose    # 云助手
-并行任务4: nc -zv -w 10 <ip> 22                    # 端口测试（10秒超时）
+# The following checks can run simultaneously:
+Parallel task 1: aliyun ecs describe-instances ... --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}        # Instance status
+Parallel task 2: aliyun ecs describe-security-group-attribute ... --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}  # Security group
+Parallel task 3: aliyun ecs describe-cloud-assistant-status ... --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}    # Cloud Assistant
+Parallel task 4: nc -zv -w 10 <ip> 22                    # Port test (10s timeout)
 ```
 
-### 7.2 智能推荐
+### 7.2 Smart Recommendation
 
-基于实例名称/标签推测所需端口：
+Infer the required ports from the instance name/tags:
 
-| 实例名称关键词 | 推荐开放端口 |
-|----------------|--------------|
-| web、nginx、httpd | 80, 443 |
-| mysql、mariadb | 3306 |
+| Instance Name Keyword | Recommended Ports to Open |
+|-----------------------|---------------------------|
+| web, nginx, httpd | 80, 443 |
+| mysql, mariadb | 3306 |
 | redis | 6379 |
 | mongodb | 27017 |
 | postgresql | 5432 |
@@ -497,175 +506,175 @@ SSH端口已开放但仍无法连接
 
 ---
 
-## 8. 常用CLI命令速查
+## 8. Common CLI Command Quick Reference
 
-### 8.1 实例操作
+### 8.1 Instance Operations
 
 ```bash
-# 查询实例详情
+# Query instance details
 aliyun ecs describe-instances \
   --biz-region-id <region> \
   --instance-ids '["<id>"]' \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 
-# 查询实例状态
+# Query instance status
 aliyun ecs describe-instance-status \
   --biz-region-id <region> \
   --instance-id.1 <id> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 
-# 启动实例
+# Start instance
 aliyun ecs start-instance \
   --instance-id <id> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 
-# 停止实例
+# Stop instance
 aliyun ecs stop-instance \
   --instance-id <id> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 
-# 重启实例
+# Reboot instance
 aliyun ecs reboot-instance \
   --instance-id <id> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 ```
 
-### 8.2 安全组操作
+### 8.2 Security Group Operations
 
 ```bash
-# 查询实例关联的安全组
+# Query the security groups associated with the instance
 aliyun ecs describe-security-groups \
   --biz-region-id <region> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 
-# 查询安全组规则
+# Query security group rules
 aliyun ecs describe-security-group-attribute \
   --biz-region-id <region> \
   --security-group-id <sg-id> \
   --direction ingress \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 
-# 添加入方向规则
+# Add an inbound rule
 aliyun ecs authorize-security-group \
   --biz-region-id <region> \
   --security-group-id <sg-id> \
   --ip-protocol tcp \
   --port-range <port>/<port> \
   --source-cidr-ip <cidr> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 
-# 删除入方向规则
+# Delete an inbound rule
 aliyun ecs revoke-security-group \
   --biz-region-id <region> \
   --security-group-id <sg-id> \
   --ip-protocol tcp \
   --port-range <port>/<port> \
   --source-cidr-ip <cidr> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 ```
 
-### 8.3 网络操作
+### 8.3 Network Operations
 
 ```bash
-# 查询EIP
+# Query EIPs
 aliyun vpc describe-eip-addresses \
   --biz-region-id <region> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 
-# 分配EIP
+# Allocate an EIP
 aliyun vpc allocate-eip-address \
   --biz-region-id <region> \
   --bandwidth 5 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 
-# 绑定EIP
+# Bind an EIP
 aliyun vpc associate-eip-address \
   --biz-region-id <region> \
   --allocation-id <eip-id> \
   --instance-id <instance-id> \
   --instance-type EcsInstance \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 
-# 解绑EIP
+# Unbind an EIP
 aliyun vpc unassociate-eip-address \
   --allocation-id <eip-id> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 ```
 
-### 8.4 云助手操作
+### 8.4 Cloud Assistant Operations
 
 ```bash
-# 检查云助手状态
+# Check Cloud Assistant status
 aliyun ecs describe-cloud-assistant-status \
   --biz-region-id <region> \
   --instance-id.1 <id> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 
-# 执行Shell命令（Linux）- 命令内容需Base64编码
+# Run a Shell command (Linux) - command content must be Base64-encoded
 aliyun ecs run-command \
   --biz-region-id <region> \
   --instance-id.1 <id> \
   --type RunShellScript \
   --command-content '<base64-encoded-command>' \
   --timeout 60 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 
-# 执行PowerShell命令（Windows）- 命令内容需Base64编码
+# Run a PowerShell command (Windows) - command content must be Base64-encoded
 aliyun ecs run-command \
   --biz-region-id <region> \
   --instance-id.1 <id> \
   --type RunPowerShellScript \
   --command-content '<base64-encoded-command>' \
   --timeout 60 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 
-# 查看命令执行结果
+# View command execution results
 aliyun ecs describe-invocation-results \
   --biz-region-id <region> \
   --invoke-id <invoke-id> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 ```
 
 ---
 
-## 9. 诊断决策树
+## 9. Diagnostic Decision Tree
 
 ```
-开始诊断
+Start diagnosis
     │
     ▼
-实例是否存在？ ──No──► 检查实例ID和地域是否正确
+Does the instance exist? ──No──► Check that the instance ID and region are correct
     │Yes
     ▼
-实例状态是否Running？ ──No──► 启动实例
+Is the instance Running? ──No──► Start the instance
     │Yes
     ▼
-是否有公网IP/EIP？ ──No──► 绑定EIP或配置NAT
+Does it have a public IP/EIP? ──No──► Bind an EIP or configure NAT
     │Yes
     ▼
-安全组是否开放目标端口？ ──No──► 添加安全组规则
+Does the security group open the target port? ──No──► Add a security group rule
     │Yes
     ▼
-端口是否可达(nc/telnet)？ ──No──► 检查系统防火墙(iptables/firewalld)
+Is the port reachable (nc/telnet)? ──No──► Check the OS firewall (iptables/firewalld)
     │Yes
     ▼
-SSH/RDP服务是否运行？ ──No──► 通过云助手启动服务
+Is the SSH/RDP service running? ──No──► Start the service via Cloud Assistant
     │Yes
     ▼
-密钥/密码是否正确？ ──No──► 重置密码或更换密钥
+Are the key/password correct? ──No──► Reset the password or replace the key
     │Yes
     ▼
-连接成功 ✓
+Connection succeeds ✓
 ```
 
 ---
 
-## 10. 总结
+## 10. Summary
 
-本诊断流程体现：
+This diagnostic workflow embodies:
 
-✩ **系统化思维**：分层诊断模型，从外到内逐层排查
-✩ **效率优先**：最小信息获取，最快问题定位
-✩ **用户友好**：主动行动，清晰反馈，提供选择
-✩ **安全意识**：在便利性和安全性间平衡
-✩ **容错设计**：遇到新问题时自动调整策略，提供备用方案
+✩ **Systematic thinking**: a layered diagnostic model, troubleshooting from outside in
+✩ **Efficiency first**: minimal information gathering, fastest problem localization
+✩ **User-friendly**: proactive action, clear feedback, offering choices
+✩ **Security awareness**: balancing convenience and security
+✩ **Fault-tolerant design**: automatically adjusting strategy on new issues, providing backups

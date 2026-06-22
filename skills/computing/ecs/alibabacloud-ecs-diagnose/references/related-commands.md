@@ -13,7 +13,7 @@ This document provides a comprehensive reference of all Aliyun CLI commands used
 | Rule | Correct | Incorrect |
 |------|---------|-----------|
 | **Command name** | `run-command` (kebab-case) | `RunCommand` (PascalCase) |
-| **User agent** | Always include `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose` | Missing user-agent |
+| **User agent** | Always include `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}` | Missing user-agent |
 
 ### Region Parameter (Command-Specific)
 
@@ -46,7 +46,7 @@ aliyun ecs run-command \
   --type RunShellScript \
   --command-content '<base64-encoded-command>' \
   --timeout 60 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 
 # Windows instance
 aliyun ecs run-command \
@@ -55,7 +55,7 @@ aliyun ecs run-command \
   --type RunPowerShellScript \
   --command-content '<base64-encoded-command>' \
   --timeout 60 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 ```
 
 ### Query Invocation Results
@@ -64,7 +64,7 @@ aliyun ecs run-command \
 aliyun ecs describe-invocation-results \
   --biz-region-id <region-id> \
   --invoke-id <invoke-id> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 ```
 
 > **Note:** The `Output` field in response is Base64 encoded. Decode before analysis.
@@ -77,23 +77,23 @@ aliyun ecs describe-invocation-results \
 
 | Command | Description | Example |
 |---------|-------------|---------|
-| `aliyun ecs describe-instances` | Query instance details by various filters | `aliyun ecs describe-instances --region-id cn-hangzhou --instance-ids '["i-xxxxx"]' --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose` |
-| `aliyun ecs describe-instance-attribute` | Query detailed attributes of a single instance | `aliyun ecs describe-instance-attribute --region-id cn-hangzhou --instance-id i-xxxxx --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose` |
-| `aliyun ecs describe-instance-status` | Query runtime status of instances | `aliyun ecs describe-instance-status --region-id cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose` |
-| `aliyun ecs describe-instances-full-status` | Query full status including scheduled events | `aliyun ecs describe-instances-full-status --region-id cn-hangzhou --instance-id.1 i-xxxxx --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose` |
+| `aliyun ecs describe-instances` | Query instance details by various filters | `aliyun ecs describe-instances --region-id cn-hangzhou --instance-ids '["i-xxxxx"]' --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}` |
+| `aliyun ecs describe-instance-attribute` | Query detailed attributes of a single instance | `aliyun ecs describe-instance-attribute --region-id cn-hangzhou --instance-id i-xxxxx --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}` |
+| `aliyun ecs describe-instance-status` | Query runtime status of instances | `aliyun ecs describe-instance-status --region-id cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}` |
+| `aliyun ecs describe-instances-full-status` | Query full status including scheduled events | `aliyun ecs describe-instances-full-status --region-id cn-hangzhou --instance-id.1 i-xxxxx --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}` |
 
 ### System Event Commands
 
 | Command | Description | Example |
 |---------|-------------|---------|
-| `aliyun ecs describe-instance-history-events` | Query historical and active system events | `aliyun ecs describe-instance-history-events --region-id cn-hangzhou --instance-id i-xxxxx --instance-event-cycle-status.1 Executing --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose` |
+| `aliyun ecs describe-instance-history-events` | Query historical and active system events | `aliyun ecs describe-instance-history-events --region-id cn-hangzhou --instance-id i-xxxxx --instance-event-cycle-status.1 Executing --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}` |
 
 ### Security Group Commands
 
 | Command | Description | Example |
 |---------|-------------|---------|
-| `aliyun ecs describe-security-group-attribute` | Query security group rules | `aliyun ecs describe-security-group-attribute --region-id cn-hangzhou --security-group-id sg-xxxxx --direction ingress --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose` |
-| `aliyun ecs describe-security-groups` | List all security groups | `aliyun ecs describe-security-groups --region-id cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose` |
+| `aliyun ecs describe-security-group-attribute` | Query security group rules | `aliyun ecs describe-security-group-attribute --region-id cn-hangzhou --security-group-id sg-xxxxx --direction ingress --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}` |
+| `aliyun ecs describe-security-groups` | List all security groups | `aliyun ecs describe-security-groups --region-id cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}` |
 | `aliyun ecs authorize-security-group` | Add ingress rule to security group | See detailed example below |
 | `aliyun ecs revoke-security-group` | Remove ingress rule from security group | See detailed example below |
 
@@ -107,7 +107,7 @@ aliyun ecs authorize-security-group \
   --ip-protocol tcp \
   --port-range 22/22 \
   --source-cidr-ip 1.2.3.4/32 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 ```
 
 **Add ingress rule (allow HTTP from anywhere):**
@@ -118,7 +118,7 @@ aliyun ecs authorize-security-group \
   --ip-protocol tcp \
   --port-range 80/80 \
   --source-cidr-ip 0.0.0.0/0 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 ```
 
 **Remove ingress rule (MUST specify all matching parameters):**
@@ -129,7 +129,7 @@ aliyun ecs revoke-security-group \
   --ip-protocol tcp \
   --port-range 22/22 \
   --source-cidr-ip 0.0.0.0/0 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 ```
 
 > **Important:** When revoking a security group rule, you MUST specify `--ip-protocol`, `--port-range`, and `--source-cidr-ip` (or `--source-group-id`). Using `--security-group-rule-id` alone will fail.
@@ -138,9 +138,9 @@ aliyun ecs revoke-security-group \
 
 | Command | Description | Example |
 |---------|-------------|---------|
-| `aliyun ecs run-command` | Execute command on instance via Cloud Assistant | `aliyun ecs run-command --biz-region-id cn-hangzhou --instance-id.1 i-xxxxx --type RunShellScript --command-content "dXB0aW1l" --timeout 60 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose` |
-| `aliyun ecs describe-invocation-results` | Query command execution results | `aliyun ecs describe-invocation-results --biz-region-id cn-hangzhou --invoke-id t-xxxxx --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose` |
-| `aliyun ecs describe-invocations` | Query command invocation records | `aliyun ecs describe-invocations --biz-region-id cn-hangzhou --instance-id i-xxxxx --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose` |
+| `aliyun ecs run-command` | Execute command on instance via Cloud Assistant | `aliyun ecs run-command --biz-region-id cn-hangzhou --instance-id.1 i-xxxxx --type RunShellScript --command-content "dXB0aW1l" --timeout 60 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}` |
+| `aliyun ecs describe-invocation-results` | Query command execution results | `aliyun ecs describe-invocation-results --biz-region-id cn-hangzhou --invoke-id t-xxxxx --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}` |
+| `aliyun ecs describe-invocations` | Query command invocation records | `aliyun ecs describe-invocations --biz-region-id cn-hangzhou --instance-id i-xxxxx --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}` |
 
 ## VPC Commands (use --region-id)
 
@@ -148,14 +148,14 @@ aliyun ecs revoke-security-group \
 
 | Command | Description | Example |
 |---------|-------------|---------|
-| `aliyun vpc describe-vpcs` | Query VPC details | `aliyun vpc describe-vpcs --region-id cn-hangzhou --vpc-id vpc-xxxxx --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose` |
-| `aliyun vpc describe-vswitch-attributes` | Query VSwitch attributes | `aliyun vpc describe-vswitch-attributes --region-id cn-hangzhou --vswitch-id vsw-xxxxx --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose` |
+| `aliyun vpc describe-vpcs` | Query VPC details | `aliyun vpc describe-vpcs --region-id cn-hangzhou --vpc-id vpc-xxxxx --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}` |
+| `aliyun vpc describe-vswitch-attributes` | Query VSwitch attributes | `aliyun vpc describe-vswitch-attributes --region-id cn-hangzhou --vswitch-id vsw-xxxxx --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}` |
 
 ### EIP Commands
 
 | Command | Description | Example |
 |---------|-------------|---------|
-| `aliyun vpc describe-eip-addresses` | Query Elastic IP addresses | `aliyun vpc describe-eip-addresses --region-id cn-hangzhou --associated-instance-id i-xxxxx --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose` |
+| `aliyun vpc describe-eip-addresses` | Query Elastic IP addresses | `aliyun vpc describe-eip-addresses --region-id cn-hangzhou --associated-instance-id i-xxxxx --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}` |
 
 ## Cloud Monitor (CMS) Commands (use --region-id)
 
@@ -163,8 +163,8 @@ aliyun ecs revoke-security-group \
 
 | Command | Description | Example |
 |---------|-------------|---------|
-| `aliyun cms describe-metric-last` | Query the latest monitoring data point | `aliyun cms describe-metric-last --region-id cn-hangzhou --namespace acs_ecs_dashboard --metric-name CPUUtilization --dimensions '[{"instanceId":"i-xxxxx"}]' --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose` |
-| `aliyun cms describe-metric-list` | Query monitoring data within a time range | `aliyun cms describe-metric-list --region-id cn-hangzhou --namespace acs_ecs_dashboard --metric-name CPUUtilization --dimensions '[{"instanceId":"i-xxxxx"}]' --start-time 1640000000000 --end-time 1640086400000 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose` |
+| `aliyun cms describe-metric-last` | Query the latest monitoring data point | `aliyun cms describe-metric-last --region-id cn-hangzhou --namespace acs_ecs_dashboard --metric-name CPUUtilization --dimensions '[{"instanceId":"i-xxxxx"}]' --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}` |
+| `aliyun cms describe-metric-list` | Query monitoring data within a time range | `aliyun cms describe-metric-list --region-id cn-hangzhou --namespace acs_ecs_dashboard --metric-name CPUUtilization --dimensions '[{"instanceId":"i-xxxxx"}]' --start-time 1640000000000 --end-time 1640086400000 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}` |
 
 ### Common Monitoring Metrics
 
@@ -189,7 +189,7 @@ aliyun ecs revoke-security-group \
 aliyun ecs describe-instances \
   --region-id cn-hangzhou \
   --instance-ids '["i-xxxxx","i-yyyyy"]' \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 ```
 
 **By Instance Name:**
@@ -197,7 +197,7 @@ aliyun ecs describe-instances \
 aliyun ecs describe-instances \
   --region-id cn-hangzhou \
   --instance-name "my-instance" \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 ```
 
 **By Private IP:**
@@ -205,7 +205,7 @@ aliyun ecs describe-instances \
 aliyun ecs describe-instances \
   --region-id cn-hangzhou \
   --private-ip-addresses '["192.168.1.10"]' \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 ```
 
 **By Public IP:**
@@ -213,7 +213,7 @@ aliyun ecs describe-instances \
 aliyun ecs describe-instances \
   --region-id cn-hangzhou \
   --public-ip-addresses '["47.100.1.1"]' \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 ```
 
 **By VPC ID:**
@@ -221,7 +221,7 @@ aliyun ecs describe-instances \
 aliyun ecs describe-instances \
   --region-id cn-hangzhou \
   --vpc-id vpc-xxxxx \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 ```
 
 **By Security Group ID:**
@@ -229,7 +229,7 @@ aliyun ecs describe-instances \
 aliyun ecs describe-instances \
   --region-id cn-hangzhou \
   --security-group-id sg-xxxxx \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 ```
 
 ### Execute Cloud Assistant Commands
@@ -242,7 +242,7 @@ aliyun ecs run-command \
   --type RunShellScript \
   --command-content "$(echo 'df -h' | base64)" \
   --timeout 60 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 ```
 
 **Execute PowerShell script (Windows):**
@@ -253,7 +253,7 @@ aliyun ecs run-command \
   --type RunPowerShellScript \
   --command-content "$(echo 'Get-Volume' | base64)" \
   --timeout 60 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 ```
 
 **Execute with parameters:**
@@ -265,7 +265,7 @@ aliyun ecs run-command \
   --command-content "$(echo 'echo {{param1}} {{param2}}' | base64)" \
   --parameters '{"param1":"value1","param2":"value2"}' \
   --timeout 60 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 ```
 
 **Execute on multiple instances:**
@@ -278,7 +278,7 @@ aliyun ecs run-command \
   --type RunShellScript \
   --command-content "$(echo 'uptime' | base64)" \
   --timeout 60 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 ```
 
 ### Query Monitoring with Time Range
@@ -293,7 +293,7 @@ aliyun cms describe-metric-list \
   --start-time $(date -d '15 minutes ago' +%s)000 \
   --end-time $(date +%s)000 \
   --period 60 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 ```
 
 **Last 1 hour:**
@@ -306,7 +306,7 @@ aliyun cms describe-metric-list \
   --start-time $(date -d '1 hour ago' +%s)000 \
   --end-time $(date +%s)000 \
   --period 300 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 ```
 
 ## Advanced Usage
@@ -321,14 +321,14 @@ aliyun ecs describe-instances \
   --region-id cn-hangzhou \
   --page-size 50 \
   --page-number 1 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 
 # Second page
 aliyun ecs describe-instances \
   --region-id cn-hangzhou \
   --page-size 50 \
   --page-number 2 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 ```
 
 ### Output Formatting
@@ -338,7 +338,7 @@ aliyun ecs describe-instances \
 aliyun ecs describe-instances \
   --region-id cn-hangzhou \
   --instance-ids '["i-xxxxx"]' \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 ```
 
 **Table format:**
@@ -347,7 +347,7 @@ aliyun ecs describe-instances \
   --region-id cn-hangzhou \
   --instance-ids '["i-xxxxx"]' \
   --output table \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 ```
 
 **Extract specific fields with jq:**
@@ -355,7 +355,7 @@ aliyun ecs describe-instances \
 aliyun ecs describe-instances \
   --region-id cn-hangzhou \
   --instance-ids '["i-xxxxx"]' \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} \
   | jq '.Instances.Instance[0].InstanceId'
 ```
 
@@ -368,13 +368,13 @@ aliyun ecs describe-instances \
 aliyun ecs describe-cloud-assistant-status \
   --region-id cn-hangzhou \
   --instance-id.1 i-xxxxx \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 
 # List Cloud Assistant agents
 aliyun ecs describe-instance-attribute \
   --region-id cn-hangzhou \
   --instance-id i-xxxxx \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} \
   | jq '.CloudAssistantStatus'
 ```
 
@@ -385,7 +385,7 @@ aliyun ecs describe-invocations \
   --biz-region-id cn-hangzhou \
   --instance-id i-xxxxx \
   --invocation-status Failed \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
 ```
 
 ### View Command Output in Detail
@@ -394,7 +394,7 @@ aliyun ecs describe-invocations \
 aliyun ecs describe-invocation-results \
   --biz-region-id cn-hangzhou \
   --invoke-id t-xxxxx \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} \
   | jq -r '.Invocation.InvocationResults.InvocationResult[0].Output' \
   | base64 -d
 ```

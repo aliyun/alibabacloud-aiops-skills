@@ -16,7 +16,7 @@ This document provides detailed verification steps to confirm the success of eac
 aliyun ecs describe-instances \
   --region-id <region-id> \
   --instance-ids '["<instance-id>"]' \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} \
   | jq '.Instances.Instance | length'
 ```
 
@@ -40,7 +40,7 @@ aliyun ecs describe-instances \
 aliyun ecs describe-instances \
   --region-id <region-id> \
   --instance-ids '["<instance-id>"]' \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} \
   | jq -r '.Instances.Instance[0].Status'
 ```
 
@@ -70,7 +70,7 @@ aliyun ecs describe-instance-history-events \
   --instance-id <instance-id> \
   --instance-event-cycle-status.1 Executing \
   --instance-event-cycle-status.2 Inquiring \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} \
   | jq '.InstanceSystemEventSet.InstanceSystemEventType | length'
 ```
 
@@ -100,7 +100,7 @@ aliyun ecs describe-security-group-attribute \
   --region-id <region-id> \
   --security-group-id <sg-id> \
   --direction ingress \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} \
   | jq '.Permissions.Permission | length'
 ```
 
@@ -120,7 +120,7 @@ aliyun ecs describe-security-group-attribute \
   --region-id <region-id> \
   --security-group-id <sg-id> \
   --direction ingress \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} \
   | jq '.Permissions.Permission[] | select(.PortRange == "22/22" and .IpProtocol == "tcp")'
 ```
 
@@ -139,7 +139,7 @@ aliyun ecs describe-security-group-attribute \
 aliyun vpc describe-vpcs \
   --region-id <region-id> \
   --vpc-id <vpc-id> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} \
   | jq -r '.Vpcs.Vpc[0].Status'
 ```
 
@@ -156,7 +156,7 @@ aliyun vpc describe-vpcs \
 aliyun vpc describe-eip-addresses \
   --region-id <region-id> \
   --associated-instance-id <instance-id> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} \
   | jq -r '.EipAddresses.EipAddress[0].Status'
 ```
 
@@ -180,7 +180,7 @@ aliyun cms describe-metric-last \
   --namespace acs_ecs_dashboard \
   --metric-name CPUUtilization \
   --dimensions '[{"instanceId":"<instance-id>"}]' \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} \
   | jq -r '.Datapoints' | jq -r '.[0].Average'
 ```
 
@@ -198,7 +198,7 @@ aliyun cms describe-metric-last \
   --namespace acs_ecs_dashboard \
   --metric-name memory_usedutilization \
   --dimensions '[{"instanceId":"<instance-id>"}]' \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} \
   | jq -r '.Datapoints' | jq -r '.[0].Average'
 ```
 
@@ -216,7 +216,7 @@ aliyun cms describe-metric-last \
   --namespace acs_ecs_dashboard \
   --metric-name diskusage_utilization \
   --dimensions '[{"instanceId":"<instance-id>"}]' \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} \
   | jq -r '.Datapoints' | jq -r '.[0].Average'
 ```
 
@@ -234,7 +234,7 @@ aliyun cms describe-metric-last \
   --namespace acs_ecs_dashboard \
   --metric-name InternetInRate \
   --dimensions '[{"instanceId":"<instance-id>"}]' \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} \
   | jq -r '.Datapoints' | jq -r '.[0].Average'
 ```
 
@@ -245,7 +245,7 @@ aliyun cms describe-metric-last \
   --namespace acs_ecs_dashboard \
   --metric-name InternetOutRate \
   --dimensions '[{"instanceId":"<instance-id>"}]' \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} \
   | jq -r '.Datapoints' | jq -r '.[0].Average'
 ```
 
@@ -270,7 +270,7 @@ aliyun cms describe-metric-last \
 aliyun ecs describe-invocation-results \
   --region-id <region-id> \
   --invoke-id <invoke-id> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} \
   | jq -r '.Invocation.InvocationResults.InvocationResult[0].InvocationStatus'
 ```
 
@@ -282,7 +282,7 @@ aliyun ecs describe-invocation-results \
 aliyun ecs describe-invocation-results \
   --region-id <region-id> \
   --invoke-id <invoke-id> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} \
   | jq -r '.Invocation.InvocationResults.InvocationResult[0].Output' \
   | base64 -d
 ```
@@ -306,7 +306,7 @@ aliyun ecs describe-invocation-results \
 aliyun ecs describe-invocation-results \
   --region-id <region-id> \
   --invoke-id <invoke-id> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} \
   | jq -r '.Invocation.InvocationResults.InvocationResult[0].InvocationStatus'
 ```
 
@@ -337,7 +337,7 @@ aliyun ecs describe-invocation-results \
 aliyun ecs describe-invocation-results \
   --region-id <region-id> \
   --invoke-id <invoke-id> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} \
   | jq -r '.Invocation.InvocationResults.InvocationResult[0].Output' \
   | base64 -d
 ```
@@ -367,7 +367,7 @@ aliyun ecs describe-invocation-results \
 aliyun ecs describe-invocation-results \
   --region-id <region-id> \
   --invoke-id <invoke-id> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} \
   | jq -r '.Invocation.InvocationResults.InvocationResult[0].Output' \
   | base64 -d
 ```
@@ -393,7 +393,7 @@ aliyun ecs describe-invocation-results \
 aliyun ecs describe-invocation-results \
   --region-id <region-id> \
   --invoke-id <invoke-id> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} \
   | jq -r '.Invocation.InvocationResults.InvocationResult[0].Output' \
   | base64 -d
 ```
@@ -419,7 +419,7 @@ aliyun ecs describe-invocation-results \
 aliyun ecs describe-instance-attribute \
   --region-id <region-id> \
   --instance-id <instance-id> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} \
   | jq -r '.CloudAssistantStatus'
 ```
 
@@ -442,7 +442,7 @@ aliyun ecs describe-instance-attribute \
 aliyun ecs describe-invocation-results \
   --region-id <region-id> \
   --invoke-id <invoke-id> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} \
   | jq -r '.Invocation.InvocationResults.InvocationResult[0].InvocationStatus'
 ```
 
@@ -466,7 +466,7 @@ aliyun ecs describe-invocation-results \
 aliyun ecs describe-invocation-results \
   --region-id <region-id> \
   --invoke-id <invoke-id> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} \
   | jq -r '.Invocation.InvocationResults.InvocationResult[0].ErrorInfo'
 ```
 
@@ -524,7 +524,7 @@ echo "[1/6] Verifying instance exists..."
 INSTANCE_COUNT=$(aliyun ecs describe-instances \
   --region-id "$REGION_ID" \
   --instance-ids "[\"$INSTANCE_ID\"]" \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} \
   | jq '.Instances.Instance | length')
 
 if [ "$INSTANCE_COUNT" -eq 1 ]; then
@@ -538,7 +538,7 @@ echo "[2/6] Verifying instance status..."
 INSTANCE_STATUS=$(aliyun ecs describe-instances \
   --region-id "$REGION_ID" \
   --instance-ids "[\"$INSTANCE_ID\"]" \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} \
   | jq -r '.Instances.Instance[0].Status')
 
 echo "Status: $INSTANCE_STATUS"
@@ -554,7 +554,7 @@ EVENT_COUNT=$(aliyun ecs describe-instance-history-events \
   --instance-id "$INSTANCE_ID" \
   --instance-event-cycle-status.1 Executing \
   --instance-event-cycle-status.2 Inquiring \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} \
   | jq '.InstanceSystemEventSet.InstanceSystemEventType | length')
 
 if [ "$EVENT_COUNT" -eq 0 ]; then
@@ -569,7 +569,7 @@ CPU_UTIL=$(aliyun cms describe-metric-last \
   --namespace acs_ecs_dashboard \
   --metric-name CPUUtilization \
   --dimensions "[{\"instanceId\":\"$INSTANCE_ID\"}]" \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} \
   | jq -r '.Datapoints' | jq -r '.[0].Average // "N/A"')
 
 echo "CPU: $CPU_UTIL%"
@@ -580,7 +580,7 @@ MEM_UTIL=$(aliyun cms describe-metric-last \
   --namespace acs_ecs_dashboard \
   --metric-name memory_usedutilization \
   --dimensions "[{\"instanceId\":\"$INSTANCE_ID\"}]" \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} \
   | jq -r '.Datapoints' | jq -r '.[0].Average // "N/A"')
 
 echo "Memory: $MEM_UTIL%"
@@ -591,7 +591,7 @@ DISK_UTIL=$(aliyun cms describe-metric-last \
   --namespace acs_ecs_dashboard \
   --metric-name diskusage_utilization \
   --dimensions "[{\"instanceId\":\"$INSTANCE_ID\"}]" \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} \
   | jq -r '.Datapoints' | jq -r '.[0].Average // "N/A"')
 
 echo "Disk: $DISK_UTIL%"

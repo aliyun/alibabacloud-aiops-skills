@@ -40,19 +40,6 @@ This skill provides comprehensive diagnostics for Alibaba Cloud ECS instances ex
 > [MUST] run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
 > [MUST] run `aliyun plugin update` to ensure that any existing plugins on your local machine are always up-to-date.
 
-At the **start** of the Core Workflow (before any CLI invocation):
-**[MUST] Enable AI-Mode** — AI-mode is required for Agent Skill execution.
-Run the following commands before any CLI invocation:
-```bash
-aliyun configure ai-mode enable
-aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose"
-```
-**[MUST] Disable AI-Mode at EVERY exit point** — Before delivering the final response for ANY reason, always disable AI-mode first. This applies to ALL exit paths: workflow success, workflow failure, error/exception, user cancellation, session end, or any other scenario where no further CLI commands will be executed.
-AI-mode is only used for Agent Skill invocation scenarios and MUST NOT remain enabled after the skill stops running.
-```bash
-aliyun configure ai-mode disable
-```
-
 > **Pre-check: Alibaba Cloud Credentials Required**
 >
 > **Security Rules:**
@@ -73,6 +60,22 @@ aliyun configure ai-mode disable
 
 ---
 
+## Observability (MUST follow for every aliyun command)
+
+Upon loading this skill, generate a random session ID (32-char lowercase hex string) once
+for the entire session. Use it as `{session-id}` in the User-Agent below.
+
+**Rule: Every `aliyun` CLI command that calls a cloud API MUST include the `--user-agent` flag:**
+
+```
+--user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
+```
+
+Local utility commands (e.g. `configure`, `plugin`, `version`) do not support this flag
+and must be excluded.
+
+---
+
 ## CLI Command Standards
 
 > **[MUST]** Before executing any CLI command, read `references/related-commands.md` for command format standards.
@@ -83,10 +86,10 @@ aliyun configure ai-mode disable
 >   - Cloud Assistant commands: `--biz-region-id`
 >   - All other commands: `--region-id`
 > - Instance ID format varies: `--instance-id.1`, `--instance-ids '["..."]'`, or `--instance-id`
-> - Always include `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose`
+> - Always include `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}`
 
 **[MUST] CLI User-Agent** — Every `aliyun` CLI command invocation must include:
-`--user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose`
+`--user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}`
 
 ## Required Permissions
 
@@ -128,6 +131,50 @@ See `references/ram-policies.md` for detailed policy configuration.
 
 ---
 
+## Phase 0: Instance Discovery (MUST run BEFORE Scenario-Based Routing)
+
+> **[MUST] This phase runs first for ALL scenarios.** Do NOT enter the Scenario-Based
+> Routing table until an instance has been successfully located. Every downstream
+> workflow assumes a valid instance already exists.
+>
+> **Step A — Locate the instance** via `ecs:DescribeInstances`. If RegionId is unknown
+> or the first lookup is empty, traverse candidate regions.
+> Region-traversal method: see `references/remote-connection-diagnose-design.md` §1.2.
+>
+> **Step B — Check the result.** Inspect `TotalCount` / `Instances.Instance`.
+>
+> **If `TotalCount > 0`** → proceed to Scenario-Based Routing.
+>
+> **If `TotalCount = 0` (no ECS instance found)** → execute the empty-result protocol below.
+
+> **[MUST] Empty-result protocol**
+> 1. **STOP.** Terminate the diagnostic workflow. Do NOT proceed to routing or any
+>    diagnostic step. An empty result is NOT a healthy system; continuing would produce
+>    a false-negative diagnosis.
+> 2. **[FORBIDDEN] Do NOT enumerate or list other instances in the account.**
+>    **[FORBIDDEN] Do NOT suggest the user "pick one of the available instances".**
+>    **[FORBIDDEN] Do NOT switch to any instance the user did not specify.**
+>    Rationale: the user asked to diagnose instance A; diagnosing B is a wrong answer
+>    and hides the real conclusion (A is hybrid-cloud / released / in another account).
+> 3. Output the fixed message template below verbatim (adapt id/region/region-count).
+> 4. The ONLY follow-up allowed: ask the user to re-check the original
+>    InstanceId / RegionId for typos, or to provide another explicit, valid standard ECS instance.
+
+**Empty-result message template:**
+```
+Instance <InstanceId> not found (region <RegionId>, searched <N> regions). Possible causes:
+1. Non-standard Alibaba Cloud ECS: hybrid-cloud / third-party managed (TRIPARTITE) servers
+   are not covered by DescribeInstances and cannot be diagnosed by this skill;
+2. InstanceId / RegionId was entered incorrectly;
+3. The instance has been released or belongs to another account.
+This skill only supports troubleshooting of standard Alibaba Cloud ECS instances. Please
+re-check the identifier and region and retry, or provide a valid standard ECS instance ID.
+-> Diagnostic workflow terminated.
+```
+
+
+---
+
 ## Scenario-Based Routing
 
 > **IMPORTANT: Before starting diagnostics, identify the problem scenario and follow the appropriate diagnostic approach.**
@@ -140,9 +187,9 @@ Based on the user's problem description, route to the appropriate diagnostic app
 | Problem Scenario | Trigger Keywords | Diagnostic Approach |
 |-----------------|------------------|---------------------|
 | **Remote Connection Failure / Service Inaccessible** | "cannot connect", "SSH timeout", "RDP failure", "connection refused", "port unreachable", "website inaccessible", "service unavailable", "HTTP/HTTPS not working", "workbench" | **STEP 1:** Read `references/remote-connection-diagnose-design.md` <br> **STEP 2:** Follow its layered diagnostic model (Layer 1 → Layer 2 → Layer 3 → Layer 4) in strict order <br> **DO NOT** skip any layer or jump directly to GuestOS diagnostics |
-| **Performance Issues** | "slow", "lag", "high CPU", "high memory", "unresponsive" | **STEP 1:** Read `references/generic-diagnostics-workflow.md` <br> **STEP 2:** Follow the workflow in order |
-| **Disk Issues** | "disk full", "cannot write", "storage exhausted" | **STEP 1:** Read `references/generic-diagnostics-workflow.md` <br> **STEP 2:** Follow the workflow in order |
-| **Instance Status Abnormal** | "stopped", "locked", "expired", "system event" | **STEP 1:** Read `references/generic-diagnostics-workflow.md` <br> **STEP 2:** Follow the workflow in order |
+| **Performance Issues** | "slow", "lag", "high CPU", "high memory", "unresponsive" | **STEP 1:** Read `references/verification-method.md` (Step 6 metrics + Step 7–11 deep diagnostics) <br> **STEP 2:** Use commands from `references/related-commands.md` (CMS / Cloud Assistant) |
+| **Disk Issues** | "disk full", "cannot write", "storage exhausted" | **STEP 1:** Read `references/verification-method.md` (Step 6 disk metric + Step 8 disk usage) <br> **STEP 2:** Use commands from `references/related-commands.md` |
+| **Instance Status Abnormal** | "stopped", "locked", "expired", "system event" | **STEP 1:** Read `references/verification-method.md` (Step 2 status + Step 3 system events) <br> **STEP 2:** Use commands from `references/related-commands.md` |
 
 
 ---
@@ -188,7 +235,6 @@ This diagnostic skill does not create any cloud resources and therefore requires
 | [CLI Installation Guide](references/cli-installation-guide.md) | Aliyun CLI installation instructions |
 | [Acceptance Criteria](references/acceptance-criteria.md) | Skill testing acceptance criteria |
 | [Remote Connection Diagnose Design](references/remote-connection-diagnose-design.md) | Specialized diagnostic design for remote connection and service access issues |
-| [Generic Diagnostics Workflow](references/generic-diagnostics-workflow.md) | Standard two-level diagnostic workflow for general ECS issues |
 
 ## Notes
 
