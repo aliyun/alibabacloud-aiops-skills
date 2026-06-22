@@ -16,6 +16,7 @@ from collections import OrderedDict
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import Enum
+from pathlib import Path
 from typing import Any, Callable, Iterable, Mapping, Optional
 from urllib.parse import quote, quote_plus, urlencode
 
@@ -30,11 +31,16 @@ except Exception:  # pragma: no cover - exercised only when dependency is missin
 API_VERSION = "2026-04-28"
 ALGORITHM = "ACS3-HMAC-SHA256"
 JSON_CONTENT_TYPE = "application/json; charset=utf-8"
-DEFAULT_REGION = "cn-beijing"
+DEFAULT_ENDPOINT = "starops.cn-beijing.aliyuncs.com"
+CONFIG_DIR = ".starops"
+CONFIG_FILE_NAME = "config.json"
+CONFIG_PATH_ENV = "STAROPS_AGENT_CONFIG"
 DEFAULT_TIMEOUT_SECONDS = 1800
 DEFAULT_IDLE_TIMEOUT_SECONDS = 60
 STAROPS_CONSOLE_CHAT_URL = "https://starops.console.aliyun.com/chat"
 TEXT_TOOL_NAMES = {"generate_diagnosis_report"}
+SESSION_ID_ENV = "SKILL_SESSION_ID"
+USER_AGENT_TEMPLATE = "AlibabaCloud-Agent-Skills/alibabacloud-starops-chat/{session_id}"
 
 
 class OutputMode(str, Enum):
@@ -65,7 +71,6 @@ class StarOpsConfig:
     workspace: str
     uid: str
     endpoint: str
-    region: str
     timeout_seconds: float
     idle_timeout_seconds: float
     assistant_id: str
@@ -98,6 +103,7 @@ class SignatureRequest:
         host: str,
         action: str,
         version: str,
+        user_agent: str,
         body: bytes = b"",
     ):
         self.method = method.upper()
@@ -116,7 +122,7 @@ class SignatureRequest:
                 ("x-acs-date", datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")),
                 ("x-acs-signature-nonce", str(uuid.uuid4())),
                 ("x-acs-content-sha256", sha256_hex(self.body)),
-                ("user-agent", "AlibabaCloud-Agent-Skills/alibabacloud-starops-chat"),
+                ("user-agent", user_agent),
             ]
         )
 
@@ -196,33 +202,196 @@ def build_starops_console_url(thread_id: str, assistant_id: str) -> str:
     return f"{STAROPS_CONSOLE_CHAT_URL}?{urlencode({'threadId': thread_id, 'assistantId': assistant_id})}"
 
 
-def read_env_config(args: argparse.Namespace) -> StarOpsConfig:
+def resolve_session_id() -> str:
+    session_id = os.environ.get(SESSION_ID_ENV, "").strip()
+    if session_id:
+        if not re.fullmatch(r"[0-9a-fA-F]{32}", session_id):
+            raise ConfigError(f"{SESSION_ID_ENV} must be a 32-character hexadecimal string.")
+        return session_id.lower()
+
+    session_id = uuid.uuid4().hex
+    os.environ[SESSION_ID_ENV] = session_id
+    return session_id
+
+
+def build_user_agent(session_id: str) -> str:
+    return USER_AGENT_TEMPLATE.format(session_id=session_id)
+
+
+def user_config_path() -> Path:
+    return Path.home() / CONFIG_DIR / CONFIG_FILE_NAME
+
+
+def project_config_path() -> Path:
+    return Path(CONFIG_DIR) / CONFIG_FILE_NAME
+
+
+def read_json_config_file(config_path: Path) -> dict[str, Any]:
+    if not config_path.exists():
+        raise ConfigError(f"STAROps config file does not exist: {config_path}")
+    if not config_path.is_file():
+        raise ConfigError(f"STAROps config path is not a file: {config_path}")
+
+    try:
+        with config_path.open("r", encoding="utf-8") as file_obj:
+            payload = json.load(file_obj)
+    except json.JSONDecodeError as exc:
+        raise ConfigError(f"STAROps config file is not valid JSON: {config_path}: {exc}") from exc
+    except OSError as exc:
+        raise ConfigError(f"Failed to read STAROps config file {config_path}: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise ConfigError(f"STAROps config file must contain a JSON object: {config_path}")
+    return payload
+
+
+def config_value_is_present(value: Any) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, str) and not value.strip():
+        return False
+    return True
+
+
+def config_path_key(config_path: Path) -> str:
+    try:
+        return str(config_path.resolve())
+    except OSError:
+        return str(config_path)
+
+
+def config_file_paths(args: argparse.Namespace) -> list[Path]:
+    paths: list[Path] = []
+    seen: set[str] = set()
+
+    def add_existing(config_path: Path) -> None:
+        if not config_path.exists():
+            return
+        key = config_path_key(config_path)
+        if key in seen:
+            return
+        seen.add(key)
+        paths.append(config_path)
+
+    add_existing(user_config_path())
+    add_existing(project_config_path())
+
+    explicit_path = getattr(args, "config", None) or os.environ.get(CONFIG_PATH_ENV)
+    if explicit_path:
+        config_path = Path(explicit_path).expanduser()
+        key = config_path_key(config_path)
+        if key not in seen:
+            seen.add(key)
+            paths.append(config_path)
+    return paths
+
+
+def read_file_config(args: argparse.Namespace) -> dict[str, Any]:
+    merged_config: dict[str, Any] = {}
+    for config_path in config_file_paths(args):
+        merged_config.update(read_json_config_file(config_path))
+    return merged_config
+
+
+def config_text_value(config: Mapping[str, Any], *keys: str) -> Optional[str]:
+    for key in keys:
+        value = config.get(key)
+        if value is None:
+            continue
+        text = str(value).strip()
+        if text:
+            return text
+    return None
+
+
+def resolve_text_value(
+    env_name: str,
+    config: Mapping[str, Any],
+    *config_keys: str,
+    default: Optional[str] = None,
+) -> Optional[str]:
+    env_value = os.environ.get(env_name)
+    if env_value is not None:
+        env_text = env_value.strip()
+        if env_text:
+            return env_text
+    return config_text_value(config, *config_keys) or default
+
+
+def resolve_float_value(
+    cli_value: Optional[float],
+    env_name: str,
+    config: Mapping[str, Any],
+    config_keys: tuple[str, ...],
+    default: float,
+) -> float:
+    value: Any = cli_value
+    if value is None:
+        value = os.environ.get(env_name)
+    if not config_value_is_present(value):
+        value = config_text_value(config, *config_keys)
+    if not config_value_is_present(value):
+        return float(default)
+    try:
+        result = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ConfigError(f"{env_name} must be a number of seconds.") from exc
+    if result <= 0:
+        raise ConfigError(f"{env_name} must be greater than 0.")
+    return result
+
+
+def build_starops_config(args: argparse.Namespace) -> StarOpsConfig:
+    file_config = read_file_config(args)
     required = {
-        "STAROPS_AGENT_EMPLOYEE": os.environ.get("STAROPS_AGENT_EMPLOYEE"),
-        "STAROPS_AGENT_WORKSPACE": os.environ.get("STAROPS_AGENT_WORKSPACE"),
-        "STAROPS_AGENT_UID": os.environ.get("STAROPS_AGENT_UID"),
+        "employeeId": resolve_text_value(
+            "STAROPS_AGENT_EMPLOYEE",
+            file_config,
+            "employeeId",
+        ),
+        "workspace": resolve_text_value(
+            "STAROPS_AGENT_WORKSPACE",
+            file_config,
+            "workspace",
+        ),
+        "uid": resolve_text_value(
+            "STAROPS_AGENT_UID",
+            file_config,
+            "uid",
+        ),
     }
     missing = [key for key, value in required.items() if not value]
     if missing:
         raise ConfigError(
-            "Missing required STAROps environment variables: "
+            "Missing required STAROps configuration values: "
             + ", ".join(missing)
-            + ". Set the STAROps employee, workspace, and uid before invoking this Skill."
+            + ". Set STAROPS_AGENT_EMPLOYEE, STAROPS_AGENT_WORKSPACE, and STAROPS_AGENT_UID, "
+            + "or provide employeeId/workspace/uid in a config file."
         )
 
-    region = os.environ.get("STAROPS_AGENT_REGION") or DEFAULT_REGION
-    endpoint = os.environ.get("STAROPS_AGENT_ENDPOINT") or f"starops.{region}.aliyuncs.com"
-    timeout_seconds = args.timeout
-    idle_timeout_seconds = max(1.0, min(args.idle_timeout, timeout_seconds))
-    assistant_id = required["STAROPS_AGENT_EMPLOYEE"]
-    project = args.project or os.environ.get("STAROPS_AGENT_PROJECT")
+    endpoint = resolve_text_value("STAROPS_AGENT_ENDPOINT", file_config, "endpoint", default=DEFAULT_ENDPOINT)
+    timeout_seconds = resolve_float_value(
+        getattr(args, "timeout", None),
+        "STAROPS_AGENT_TIMEOUT",
+        file_config,
+        ("timeout",),
+        DEFAULT_TIMEOUT_SECONDS,
+    )
+    raw_idle_timeout = resolve_float_value(
+        getattr(args, "idle_timeout", None),
+        "STAROPS_AGENT_IDLE_TIMEOUT",
+        file_config,
+        ("idleTimeout",),
+        DEFAULT_IDLE_TIMEOUT_SECONDS,
+    )
+    project = getattr(args, "project", None) or resolve_text_value("STAROPS_AGENT_PROJECT", file_config, "project")
+    idle_timeout_seconds = max(1.0, min(raw_idle_timeout, timeout_seconds))
+    assistant_id = required["employeeId"]
 
     return StarOpsConfig(
-        employee=required["STAROPS_AGENT_EMPLOYEE"],
-        workspace=required["STAROPS_AGENT_WORKSPACE"],
-        uid=required["STAROPS_AGENT_UID"],
+        employee=required["employeeId"],
+        workspace=required["workspace"],
+        uid=required["uid"],
         endpoint=endpoint,
-        region=region,
         timeout_seconds=timeout_seconds,
         idle_timeout_seconds=idle_timeout_seconds,
         assistant_id=assistant_id,
@@ -241,6 +410,8 @@ class StarOpsAgentClient:
     ):
         self.config = config
         self.host = config.endpoint
+        self.session_id = resolve_session_id()
+        self.user_agent = build_user_agent(self.session_id)
         self.credential_provider = credential_provider if credential_provider is not None else self._default_credentials()
         self.transport = transport or requests.request
         self.out = out if out is not None else sys.stdout
@@ -313,6 +484,7 @@ class StarOpsAgentClient:
             host=self.host,
             action=action,
             version=API_VERSION,
+            user_agent=self.user_agent,
             body=body_bytes if method.upper() != "GET" else b"",
         )
         self.sign_request(request)
@@ -362,6 +534,7 @@ class StarOpsAgentClient:
             host=self.host,
             action=action,
             version=API_VERSION,
+            user_agent=self.user_agent,
             body=body_bytes,
         )
         self.sign_request(request)
@@ -422,7 +595,6 @@ class StarOpsAgentClient:
     def variables(self) -> dict[str, str]:
         variables = {
             "workspace": self.config.workspace,
-            "region": self.config.region,
         }
         if self.config.project:
             variables["project"] = self.config.project
@@ -643,7 +815,9 @@ def iter_sse_payloads(response: Any) -> Iterable[dict[str, Any]]:
         return payload if isinstance(payload, dict) else {"data": payload}
 
     if hasattr(response, "iter_lines"):
-        lines = response.iter_lines(decode_unicode=True)
+        # Server-sent events are UTF-8. Decode bytes ourselves so requests does
+        # not fall back to ISO-8859-1 when the response omits a charset.
+        lines = response.iter_lines(decode_unicode=False)
     else:
         lines = str(getattr(response, "text", "") or "").splitlines()
 
@@ -878,17 +1052,24 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--thread", help="Existing STAROps thread ID for follow-up questions.")
     parser.add_argument("--json", action="store_true", help="Emit machine-readable JSONL events.")
     parser.add_argument("--pipe", action="store_true", help="Emit agent-friendly pipe output with THREAD and answer delimiters.")
+    parser.add_argument(
+        "--config",
+        help=(
+            "Path to optional JSON config file. Loaded after "
+            f"~/{CONFIG_DIR}/{CONFIG_FILE_NAME} and ./{CONFIG_DIR}/{CONFIG_FILE_NAME}."
+        ),
+    )
     parser.add_argument("--project", help="Optional STAROps project variable to pass to the Agent.")
     parser.add_argument(
         "--timeout",
         type=float,
-        default=float(os.environ.get("STAROPS_AGENT_TIMEOUT", DEFAULT_TIMEOUT_SECONDS)),
+        default=None,
         help="CreateChat stream timeout in seconds. Defaults to 1800.",
     )
     parser.add_argument(
         "--idle-timeout",
         type=float,
-        default=float(os.environ.get("STAROPS_AGENT_IDLE_TIMEOUT", DEFAULT_IDLE_TIMEOUT_SECONDS)),
+        default=None,
         help="Maximum seconds to wait for the next CreateChat SSE event before failing. Defaults to 60.",
     )
     return parser
@@ -917,7 +1098,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     mode = OutputMode.CLI
     try:
         mode = mode_from_args(args)
-        config = read_env_config(args)
+        config = build_starops_config(args)
         client = StarOpsAgentClient(config)
         client.ask(args.question, thread_id=args.thread, mode=mode)
         return 0

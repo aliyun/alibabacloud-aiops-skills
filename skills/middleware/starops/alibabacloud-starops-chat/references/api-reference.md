@@ -6,10 +6,10 @@ This skill uses STAROps OpenAPI version `2026-04-28` with ACS3-HMAC-SHA256 signi
 
 Requests are signed with Alibaba Cloud Credentials default-chain credentials. The Python script builds the ACS3 canonical request, signs it with `ACS3-HMAC-SHA256`, and sends HTTPS requests directly.
 
-The default endpoint is derived from the region:
+The default endpoint is:
 
 ```text
-starops.<region>.aliyuncs.com
+starops.cn-beijing.aliyuncs.com
 ```
 
 Override with `STAROPS_AGENT_ENDPOINT` when a different endpoint is required.
@@ -17,7 +17,7 @@ Override with `STAROPS_AGENT_ENDPOINT` when a different endpoint is required.
 ## CreateThread
 
 ```http
-POST /digitalEmployee/{name}/thread
+POST /digitalEmployee/{employeeId}/thread
 ```
 
 Body:
@@ -28,7 +28,6 @@ Body:
   "idempotencyKey": "uuid",
   "variables": {
     "workspace": "workspace-name",
-    "region": "cn-beijing",
     "project": "optional-project"
   },
   "attributes": {
@@ -56,7 +55,7 @@ Body:
 ```json
 {
   "action": "create",
-  "digitalEmployeeName": "employee-name",
+  "digitalEmployeeName": "employee-id",
   "threadId": "thread-id",
   "messages": [
     {
@@ -71,8 +70,7 @@ Body:
     }
   ],
   "variables": {
-    "workspace": "workspace-name",
-    "region": "cn-beijing"
+    "workspace": "workspace-name"
   }
 }
 ```

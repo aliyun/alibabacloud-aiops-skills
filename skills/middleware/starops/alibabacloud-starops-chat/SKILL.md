@@ -19,51 +19,75 @@ Use this skill when the user wants to:
 - Triage alerts or investigate incidents
 - Ask questions about their STAROps workspace or services
 
-## Environment Variables
+## Configuration
 
-The script reads the following environment variables. They are typically **pre-configured by the execution platform** — verify they are set before running; do **not** overwrite them with placeholder values.
+The script reads STAROps connection values from environment variables and optional JSON config files. Environment variables and command-line flags override config file values.
 
-| Variable | Required | Description | How to obtain |
-|----------|----------|-------------|---------------|
-| `STAROPS_AGENT_EMPLOYEE` | Yes | Digital employee name in STAROps | STAROps console → Digital Employee list → name column |
-| `STAROPS_AGENT_WORKSPACE` | Yes | Workspace identifier | STAROps console → Workspace settings → workspace name |
-| `STAROPS_AGENT_UID` | Yes | Alibaba Cloud account UID that owns the workspace | Alibaba Cloud console → Account Management → Account ID |
-| `STAROPS_AGENT_ENDPOINT` | No | API endpoint (default: `starops.<region>.aliyuncs.com`) | Use default unless a private or custom endpoint is required |
-| `STAROPS_AGENT_REGION` | No | Region (default: `cn-beijing`) | STAROps is centrally deployed; use `cn-beijing` for all regions |
+Config files are loaded in this order:
 
-### Environment Setup
+1. User config: `~/.starops/config.json`
+2. Project config: `./.starops/config.json` (overrides user config)
+3. Explicit config: `--config <path>` or `STAROPS_AGENT_CONFIG` (overrides user/project config)
 
-If the variables are not pre-configured by the platform, set them manually before running the script:
+The three required values (`employeeId`, `workspace`, `uid`) may come from either environment variables or config files.
 
-```bash
-export STAROPS_AGENT_EMPLOYEE="<your-digital-employee-name>"
-export STAROPS_AGENT_WORKSPACE="<your-workspace-name>"
-export STAROPS_AGENT_UID="<your-alibaba-cloud-account-uid>"
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `STAROPS_AGENT_EMPLOYEE` | Yes, unless config provides `employeeId` | Digital Employee ID in STAROps (from console → Digital Employee list → ID column) |
+| `STAROPS_AGENT_WORKSPACE` | Yes, unless config provides `workspace` | Workspace identifier |
+| `STAROPS_AGENT_UID` | Yes, unless config provides `uid` | Alibaba Cloud account UID that owns the workspace |
+| `STAROPS_AGENT_ENDPOINT` | No | API endpoint (default: `starops.cn-beijing.aliyuncs.com`) |
+| `STAROPS_AGENT_PROJECT` | No | Optional STAROps project variable forwarded with each request. Overridden by `--project` |
+| `STAROPS_AGENT_TIMEOUT` | No | Default value for `--timeout` (CreateChat stream total timeout in seconds; default `1800`) |
+| `STAROPS_AGENT_IDLE_TIMEOUT` | No | Default value for `--idle-timeout` (max seconds to wait for the next SSE event; default `60`) |
+| `STAROPS_AGENT_CONFIG` | No | Path to an explicit JSON config file loaded after user/project config |
+
+Minimal config file example:
+
+```json
+{
+  "employeeId": "<your-digital-employee-id>",
+  "workspace": "<your-workspace-name>",
+  "uid": "<your-alibaba-cloud-account-uid>"
+}
 ```
 
-**Credentials** — The script uses the Alibaba Cloud Credentials SDK default chain. Configure one of the following (in priority order):
+Optional fields:
 
-1. **STS token** — Recommended for CI/sandbox. The platform injects STS credentials via `~/.aliyun/config.json` or environment.
-2. **RAM role** — For ECS/container workloads with instance metadata.
-3. **CLI profile** — Run `aliyun configure` to create a profile in `~/.aliyun/config.json`.
-4. **Environment variables** — Set `ALIBABA_CLOUD_ACCESS_KEY_ID` and `ALIBABA_CLOUD_ACCESS_KEY_SECRET` (least preferred; avoid in production).
+```json
+{
+  "endpoint": "starops.cn-beijing.aliyuncs.com",
+  "project": "optional-project",
+  "timeout": 1800,
+  "idleTimeout": 60
+}
+```
 
-Do not define skill-specific AccessKey variables; the credential SDK handles resolution automatically.
+Config files use the exact key names shown above. Do not use alternate aliases such as `employee`, `digitalEmployeeId`, `workspaceName`, or `accountUid`.
 
-**Pre-flight check — run this before invoking the script to confirm the variables are set:**
+**Pre-flight check — run this before invoking the script to confirm environment or config values are available:**
 
 ```bash
 missing=""
 [ -z "$STAROPS_AGENT_EMPLOYEE" ] && missing="$missing STAROPS_AGENT_EMPLOYEE"
 [ -z "$STAROPS_AGENT_WORKSPACE" ] && missing="$missing STAROPS_AGENT_WORKSPACE"
 [ -z "$STAROPS_AGENT_UID" ] && missing="$missing STAROPS_AGENT_UID"
-if [ -n "$missing" ]; then echo "ERROR: Missing required environment variables:$missing" >&2; exit 1; fi
-echo "OK: EMPLOYEE=$STAROPS_AGENT_EMPLOYEE WORKSPACE=$STAROPS_AGENT_WORKSPACE UID=$STAROPS_AGENT_UID"
+config_file_found=""
+[ -f ".starops/config.json" ] && config_file_found=1
+[ -f "$HOME/.starops/config.json" ] && config_file_found=1
+[ -n "$STAROPS_AGENT_CONFIG" ] && [ -f "$STAROPS_AGENT_CONFIG" ] && config_file_found=1
+if [ -n "$missing" ] && [ -z "$config_file_found" ]; then
+  echo "ERROR: Missing required environment variables:$missing and no STAROps config file was found" >&2
+  exit 1
+fi
+echo "OK: STAROps configuration is available from environment variables or config file"
 ```
 
-If any required variable is empty, **stop and ask the user** to provide the value. Never substitute placeholder strings like `example-employee`.
+If any required value is still unavailable, ask the user to provide it. Never substitute placeholder strings like `example-employee`.
 
 The STAROps console link uses the same digital employee ID as `assistantId`.
+
+Credentials use the Alibaba Cloud Credentials default chain. Do not define skill-specific AccessKey variables; use standard Alibaba Cloud credential sources such as environment credentials (`ALIBABA_CLOUD_ACCESS_KEY_ID` / `ALIBABA_CLOUD_ACCESS_KEY_SECRET`), profiles, STS, RAM role, or instance metadata.
 
 ## Invocation
 
@@ -76,6 +100,9 @@ pip3 install -r scripts/requirements.txt
 
 # First call - creates a new thread automatically
 python3 scripts/call_starops_agent.py --question "<complete user context>" --pipe
+
+# First call with an explicit config file
+python3 scripts/call_starops_agent.py --config ".starops/config.json" --question "<complete user context>" --pipe
 
 # Follow-up calls - MUST reuse the thread ID from previous response
 python3 scripts/call_starops_agent.py --thread "<thread_id>" --question "<follow-up question>" --pipe
@@ -99,6 +126,19 @@ STAROPS_URL: https://starops.console.aliyun.com/chat?threadId=thread-abc123-xyz&
 $ python3 scripts/call_starops_agent.py --thread "thread-abc123-xyz" --question "Deep dive into notification app errors" --pipe
 ```
 
+## Command-Line Options
+
+| Flag | Description |
+|------|-------------|
+| `--question <text>` | **Required.** Natural-language question to send to STAROps Agent. |
+| `--thread <id>` | Existing STAROps thread ID. **Required for follow-up questions** to preserve investigation context. |
+| `--pipe` | **Mandatory for agent invocations.** Emit structured output with `THREAD`, `STAROPS_URL`, and `=== STAROPS ANSWER BEGIN/END ===` delimiters for reliable parsing. |
+| `--json` | Emit machine-readable JSONL events. Mutually exclusive with `--pipe`. **Do not use for agent invocations** — `--pipe` is the supported agent format. |
+| `--config <path>` | Optional JSON config file. Loaded after `~/.starops/config.json` and `./.starops/config.json`. |
+| `--project <name>` | Optional STAROps project variable. Overrides `STAROPS_AGENT_PROJECT`. |
+| `--timeout <seconds>` | Total CreateChat stream timeout in seconds. Overrides `STAROPS_AGENT_TIMEOUT` (default `1800`). |
+| `--idle-timeout <seconds>` | Maximum seconds to wait for the next SSE event before failing. Overrides `STAROPS_AGENT_IDLE_TIMEOUT` (default `60`). |
+
 ## Behavioral Notes
 
 1. STAROps Agent calls are long-running by design. A single `CreateChat` stream may start multiple internal diagnostic steps and take minutes; the default timeout is 30 minutes.
@@ -110,16 +150,32 @@ $ python3 scripts/call_starops_agent.py --thread "thread-abc123-xyz" --question 
 7. **Output integrity rule**: Your final report MUST be based on the actual content returned between `=== STAROPS ANSWER BEGIN ===` and `=== STAROPS ANSWER END ===`. Specifically:
    - Quote or paraphrase concrete data points from the STAROps response (HTTP status codes, service names, error paths, metrics).
    - Do NOT infer or fabricate diagnostic conclusions that are not supported by the STAROps output.
-   - If the STAROps answer is empty (`(No assistant answer was returned.)`), incomplete, or only contains generic text, retry once using the same `--thread`. If the retry still yields no actionable data, report honestly: "STAROps 未返回有效诊断数据，请确认 workspace 中是否存在相关服务和时间范围内的数据。"
+   - If the STAROps answer is empty (`(No assistant answer was returned.)`), incomplete, or only contains generic text, retry once using the same `--thread`. If the retry still yields no actionable data, report honestly: "STAROps did not return actionable diagnostic data. Confirm that the workspace contains relevant services and data for the requested time range."
    - Never substitute your own prior knowledge for missing STAROps evidence. For example, do not claim "database connection pool exhaustion" if STAROps did not mention it.
+
+## Observability
+
+All STAROps OpenAPI HTTP requests must use this User-Agent template declaration:
+
+```text
+--user-agent AlibabaCloud-Agent-Skills/{SKILL_NAME}/{session-id}
+```
+
+For this skill, the concrete template is:
+
+```text
+--user-agent AlibabaCloud-Agent-Skills/alibabacloud-starops-chat/{session-id}
+```
+
+Generate exactly one `session-id` per skill invocation as a 32-char hex value. If `SKILL_SESSION_ID` is already set, reuse that value after validating it is 32 hex characters; otherwise generate `uuid4().hex`, set `SKILL_SESSION_ID`, and reuse it for all outbound calls. The same `session-id` must be consistent across CLI/SDK/Terraform and direct HTTP requests made during the invocation, including both `CreateThread` and `CreateChat`; do not generate a new `session-id` per request. The Python script sets the HTTP `User-Agent` header to `AlibabaCloud-Agent-Skills/alibabacloud-starops-chat/{session-id}`.
 
 ## Troubleshooting
 
 When the script exits with an error, check the following in order:
 
-1. **HTTP 401 Unauthorized** — The credential chain did not resolve to a valid identity with STAROps permissions. Verify that the Alibaba Cloud Credentials default chain can resolve a valid credential (STS token, RAM role, CLI profile, or instance metadata) and that the identity has `cms:CreateThread` and `cms:CreateChat` permissions. See [references/ram-policies.md](references/ram-policies.md).
-2. **HTTP 404 Not Found** — The digital employee name (`STAROPS_AGENT_EMPLOYEE`) or workspace (`STAROPS_AGENT_WORKSPACE`) does not exist, or the UID (`STAROPS_AGENT_UID`) does not match the owning account. Double-check all three environment variables.
-3. **ConfigError: Missing required STAROps environment variables** — One or more of `STAROPS_AGENT_EMPLOYEE`, `STAROPS_AGENT_WORKSPACE`, `STAROPS_AGENT_UID` is empty or unset.
+1. **HTTP 401 Unauthorized** — The credential chain did not resolve to a valid identity with STAROps permissions. Verify that `ALIBABA_CLOUD_ACCESS_KEY_ID` / `ALIBABA_CLOUD_ACCESS_KEY_SECRET` (or STS / RAM role) are set and that the identity has `starops:CreateThread` and `starops:CreateChat` permissions. See [references/ram-policies.md](references/ram-policies.md).
+2. **HTTP 404 Not Found** — The Digital Employee ID (`STAROPS_AGENT_EMPLOYEE`) or workspace (`STAROPS_AGENT_WORKSPACE`) does not exist, or the UID (`STAROPS_AGENT_UID`) does not match the owning account. Double-check all three environment variables.
+3. **ConfigError: Missing required STAROps configuration values** — One or more of `employeeId`, `workspace`, or `uid` is missing from both environment variables and config files.
 4. **CredentialError** — The Alibaba Cloud Credentials SDK could not find any valid credential source. Ensure at least one credential provider is configured (environment variables, `~/.aliyun/config.json`, STS, RAM role, or instance metadata).
 5. **Idle timeout** — No SSE event was received within `--idle-timeout` seconds (default 60). The STAROps Agent may be stalled. Retry with the same `--thread` if a THREAD line was printed, or increase `--idle-timeout` for investigations expected to be quiet.
 6. **Stream interruption / network error** — The HTTPS connection was reset or timed out. Retry the same request with `--thread` to resume context.
@@ -129,7 +185,7 @@ When the script exits with an error, check the following in order:
 
 This skill directly calls STAROps OpenAPI:
 
-- `CreateThread`: `POST /digitalEmployee/{name}/thread`
+- `CreateThread`: `POST /digitalEmployee/{employeeId}/thread`
 - `CreateChat`: `POST /chat`
 
 See [references/api-reference.md](references/api-reference.md) and [references/ram-policies.md](references/ram-policies.md).

@@ -4,17 +4,17 @@ This skill does not use STAROps-specific AccessKey environment variables. It rel
 
 ## Required Access
 
-The STAROps OpenAPI actions are registered under the **`cms`** service code. Grant the caller the following actions:
+Grant the caller the following STAROps actions:
 
 | Action | Description |
 |--------|-------------|
-| `cms:CreateThread` | Create an investigation thread |
-| `cms:CreateChat` | Send a message and stream the agent response |
+| `starops:CreateThread` | Create an investigation thread |
+| `starops:CreateChat` | Send a message and stream the agent response |
 
 Resource ARN format:
 
 ```
-acs:cms::{uid}:digitalemployee/{employee_name}
+acs:starops::{uid}:digitalemployee/{employeeId}
 ```
 
 ### Example Custom Policy
@@ -26,16 +26,16 @@ acs:cms::{uid}:digitalemployee/{employee_name}
     {
       "Effect": "Allow",
       "Action": [
-        "cms:CreateThread",
-        "cms:CreateChat"
+        "starops:CreateThread",
+        "starops:CreateChat"
       ],
-      "Resource": "acs:cms::*:digitalemployee/*"
+      "Resource": "acs:starops::*:digitalemployee/*"
     }
   ]
 }
 ```
 
-To restrict access to a specific account and digital employee, replace `*` with concrete values, e.g. `acs:cms::<your-uid>:digitalemployee/<employee-name>`.
+To restrict access to a specific account and digital employee, replace `*` with concrete values, e.g. `acs:starops::<your-uid>:digitalemployee/<employee-id>`.
 
 ## Recommended Credential Sources
 
@@ -64,5 +64,5 @@ When the script returns an HTTP 401 or 403 error indicating an authorization fai
 1. Stop immediately. Do **not** retry with different credentials or fabricate diagnostic results.
 2. Report the exact error message to the user, including the `Action` and `Resource` from the error response.
 3. Direct the user to check that their identity has the required STAROps permissions listed in the **Required Access** section above.
-4. If using STS credentials, verify that the STS token has not expired and that the assumed role's policy includes `cms:CreateThread` and `cms:CreateChat`.
+4. If using STS credentials, verify that the STS token has not expired and that the assumed role's policy includes `starops:CreateThread` and `starops:CreateChat`.
 5. Wait for the user to confirm that permissions have been granted before retrying.

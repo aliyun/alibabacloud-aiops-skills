@@ -13,7 +13,7 @@
 
 ```bash
 python3 scripts/call_starops_agent.py \
-  --question "帮我排查 inventory 服务报错的根因是什么" \
+  --question "Help me investigate the root cause of inventory service errors" \
   --pipe
 ```
 
@@ -21,7 +21,7 @@ python3 scripts/call_starops_agent.py \
 
 ```bash
 python3 scripts/call_starops_agent.py \
-  --question "帮我排查 inventory 服务报错的根因是什么"
+  --question "Help me investigate the root cause of inventory service errors"
 ```
 
 **Why**: `--pipe` is mandatory. Without it, the script outputs in CLI mode, which lacks `=== STAROPS ANSWER BEGIN ===` delimiters and produces unstructured output that cannot be reliably parsed.
@@ -41,13 +41,13 @@ python3 scripts/call_starops_agent.py --pipe
 ```bash
 # First call
 python3 scripts/call_starops_agent.py \
-  --question "当前 workspace 中有多少个 APM 服务" --pipe
+  --question "How many APM services are in the current workspace?" --pipe
 # Output: THREAD: thread-abc123-xyz
 
 # Follow-up call with --thread
 python3 scripts/call_starops_agent.py \
   --thread "thread-abc123-xyz" \
-  --question "其中哪个服务错误率最高" --pipe
+  --question "Which service has the highest error rate?" --pipe
 ```
 
 #### INCORRECT — New thread for follow-up
@@ -55,11 +55,11 @@ python3 scripts/call_starops_agent.py \
 ```bash
 # First call
 python3 scripts/call_starops_agent.py \
-  --question "当前 workspace 中有多少个 APM 服务" --pipe
+  --question "How many APM services are in the current workspace?" --pipe
 
 # Follow-up WITHOUT --thread — loses all prior context
 python3 scripts/call_starops_agent.py \
-  --question "其中哪个服务错误率最高" --pipe
+  --question "Which service has the highest error rate?" --pipe
 ```
 
 **Why**: Omitting `--thread` creates a new conversation. The STAROps Agent loses all prior investigation context and findings.
@@ -81,25 +81,45 @@ pip3 install -r requirements.txt
 
 **Why**: `uv` is not available in all environments. `requirements.txt` is located under `scripts/`, not the project root.
 
-### 4. Environment Variables — required before invocation
+### 4. Environment Variables or Config File — required before invocation
 
 #### CORRECT — All required variables set
 
 ```bash
-export STAROPS_AGENT_EMPLOYEE="apsara-ops"
+export STAROPS_AGENT_EMPLOYEE="<your-digital-employee-id>"
 export STAROPS_AGENT_WORKSPACE="rca-benchmark"
 export STAROPS_AGENT_UID="<your-uid>"
 ```
+
+#### CORRECT — Project config file supplies required values
+
+```bash
+mkdir -p .starops
+cat > .starops/config.json <<'JSON'
+{
+  "employeeId": "<your-digital-employee-id>",
+  "workspace": "rca-benchmark",
+  "uid": "<your-uid>"
+}
+JSON
+
+python3 scripts/call_starops_agent.py \
+  --question "How many APM services are in the current workspace?" \
+  --pipe
+```
+
+**Why**: The script loads `~/.starops/config.json` first, then `./.starops/config.json`, so project-level values override user-level defaults. Environment variables still override config file values.
 
 #### INCORRECT — Missing required variables
 
 ```bash
 # Missing STAROPS_AGENT_UID
-export STAROPS_AGENT_EMPLOYEE="apsara-ops"
+export STAROPS_AGENT_EMPLOYEE="<your-digital-employee-id>"
 export STAROPS_AGENT_WORKSPACE="rca-benchmark"
+# No ~/.starops/config.json, ./.starops/config.json, or STAROPS_AGENT_CONFIG fallback
 ```
 
-**Why**: The script requires all three variables (`STAROPS_AGENT_EMPLOYEE`, `STAROPS_AGENT_WORKSPACE`, `STAROPS_AGENT_UID`). Missing any of them produces a `ConfigError`.
+**Why**: The script requires all three values (`employeeId`, `workspace`, `uid`) from environment variables or config files. Missing any of them produces a `ConfigError`.
 
 ### 5. Authentication — credential security
 
