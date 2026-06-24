@@ -7,8 +7,7 @@ For the complete, current category list, call:
 ```bash
 curl -sS 'https://agentexplorer.aliyuncs.com/openapi/for-agent/categories' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 ```
 
 ## Category Code Format
@@ -48,8 +47,7 @@ curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
   --data-urlencode 'categoryCode=database' \
   --data-urlencode 'maxResults=20' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 ```
 
 ### Search Within A Category
@@ -61,8 +59,7 @@ curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
   --data-urlencode 'searchMode=semantic' \
   --data-urlencode 'maxResults=20' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 ```
 
 ### Try A Child Category Or Product Keyword
@@ -73,8 +70,7 @@ curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
   --data-urlencode 'categoryCode=computing.ecs' \
   --data-urlencode 'maxResults=20' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 
 # Product keyword fallback
 curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
@@ -82,8 +78,7 @@ curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
   --data-urlencode 'searchMode=semantic' \
   --data-urlencode 'maxResults=20' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 ```
 
 ## Domain Mapping Hints

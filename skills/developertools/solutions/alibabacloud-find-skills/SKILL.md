@@ -50,11 +50,8 @@ Every AgentExplorer HTTP request must include these headers.
 # Bash-compatible header snippet for macOS, Linux, WSL, and Git Bash.
 # On Windows, use the PowerShell command shape below instead.
 -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
--H 'x-acs-version: 2026-03-17' \
--H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+-H 'x-acs-version: 2026-03-17'
 ```
-
-`x-acs-date` must be generated at request execution time. Use the timestamp expression for the active shell; never replace it with a copied, static, or literal value such as `YYYY-MM-DDT00:00:00Z`.
 
 Every AgentExplorer HTTP `curl` / `curl.exe` request must include `--connect-timeout 10 --max-time 30`.
 
@@ -76,20 +73,17 @@ curl -sS -G --connect-timeout 10 --max-time 30 'https://agentexplorer.aliyuncs.c
   --data-urlencode 'searchMode=semantic' \
   --data-urlencode 'maxResults=20' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 
 # List categories
 curl -sS --connect-timeout 10 --max-time 30 'https://agentexplorer.aliyuncs.com/openapi/for-agent/categories' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 
 # Get skill content
 curl -sS --connect-timeout 10 --max-time 30 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills/<skillName>' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 ```
 
 #### Windows PowerShell Search Example
@@ -97,7 +91,7 @@ curl -sS --connect-timeout 10 --max-time 30 'https://agentexplorer.aliyuncs.com/
 Use this command shape on Windows and replace only query parameters as needed:
 
 ```powershell
-powershell -NoProfile -Command "curl.exe -sS -G --connect-timeout 10 --max-time 30 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' --data-urlencode 'keyword=<user-intent-or-keyword>' --data-urlencode 'searchMode=semantic' --data-urlencode 'maxResults=20' -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' -H 'x-acs-version: 2026-03-17' -H ('x-acs-date: ' + [DateTimeOffset]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ'))"
+powershell -NoProfile -Command "curl.exe -sS -G --connect-timeout 10 --max-time 30 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' --data-urlencode 'keyword=<user-intent-or-keyword>' --data-urlencode 'searchMode=semantic' --data-urlencode 'maxResults=20' -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' -H 'x-acs-version: 2026-03-17'"
 ```
 
 ## Core Workflow
@@ -141,22 +135,19 @@ curl -sS -G --connect-timeout 10 --max-time 30 'https://agentexplorer.aliyuncs.c
   --data-urlencode 'searchMode=semantic' \
   --data-urlencode 'maxResults=20' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 
 # Get all categories before listing skills in a category
 curl -sS --connect-timeout 10 --max-time 30 'https://agentexplorer.aliyuncs.com/openapi/for-agent/categories' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 
 # List skills in a category
 curl -sS -G --connect-timeout 10 --max-time 30 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
   --data-urlencode 'categoryCode=<category-code>' \
   --data-urlencode 'maxResults=20' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 
 # Fetch the next category page if nextToken is returned
 curl -sS -G --connect-timeout 10 --max-time 30 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
@@ -164,8 +155,7 @@ curl -sS -G --connect-timeout 10 --max-time 30 'https://agentexplorer.aliyuncs.c
   --data-urlencode 'maxResults=20' \
   --data-urlencode 'nextToken=<next-token-from-previous-response>' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 
 # Combined semantic search after category selection
 curl -sS -G --connect-timeout 10 --max-time 30 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
@@ -174,8 +164,7 @@ curl -sS -G --connect-timeout 10 --max-time 30 'https://agentexplorer.aliyuncs.c
   --data-urlencode 'searchMode=semantic' \
   --data-urlencode 'maxResults=20' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 ```
 
 ### Step 3: Iterate Until Found
@@ -203,8 +192,7 @@ Optionally retrieve skill content to verify it matches user intent before instal
 
 curl -sS --connect-timeout 10 --max-time 30 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills/<skillName>' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 ```
 
 ### Step 5: Install Selected Skill(s)
@@ -311,8 +299,7 @@ A single searchable intent unit may still require multiple complementary Skills.
 # Strategy 5: Browse or filter by category
 curl -sS --connect-timeout 10 --max-time 30 'https://agentexplorer.aliyuncs.com/openapi/for-agent/categories' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 
 curl -sS -G --connect-timeout 10 --max-time 30 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
   --data-urlencode 'keyword=ECS 实例管理' \
@@ -320,8 +307,7 @@ curl -sS -G --connect-timeout 10 --max-time 30 'https://agentexplorer.aliyuncs.c
   --data-urlencode 'searchMode=semantic' \
   --data-urlencode 'maxResults=20' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 ```
 
 ### 6. Display Results to Users
@@ -377,26 +363,6 @@ For examples, see [references/search-examples.md](references/search-examples.md)
 | [references/npx-skills-agents.md](references/npx-skills-agents.md)     | Supported `--agent` values for `npx skills add` |
 
 ## Troubleshooting
-
-### Error: `MissingDate`
-
-**Cause**: The request is missing `x-acs-date`.
-
-**Solution**: Add the UTC timestamp header:
-
-```bash
-# Bash-compatible header snippet for macOS, Linux, WSL, and Git Bash.
-# On Windows, use the PowerShell command shape above instead.
--H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-```
-
-### Error: `InvalidTimeStamp.Expired` or `Invalidx-acs-date`
-
-**Cause**: `x-acs-date` is stale, local time, malformed, copied from an earlier request, or hardcoded as a literal timestamp.
-
-**Solution**: Regenerate current UTC time at request execution time and retry the same request. On Windows PowerShell, use the exact timestamp expression from [references/curl-shell-compatibility.md](references/curl-shell-compatibility.md); do not switch to Unix timestamps, invent a different PowerShell date expression, or reuse an old header value.
-
-If the failed Windows command contains `$(date -u ...)`, it used the Bash timestamp expression. Retry with the Windows `powershell -NoProfile -Command` template above.
 
 If PowerShell reports `Invoke-WebRequest` or parameter-binding errors, the command used the `curl` alias. Retry with `curl.exe`.
 

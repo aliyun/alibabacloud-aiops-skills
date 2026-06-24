@@ -15,8 +15,7 @@ curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
   --data-urlencode 'searchMode=semantic' \
   --data-urlencode 'maxResults=20' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 ```
 
 ### Incorrect
@@ -44,8 +43,7 @@ curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
   --data-urlencode 'searchMode=semantic' \
   --data-urlencode 'maxResults=20' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 ```
 
 #### Incorrect
@@ -73,8 +71,7 @@ curl -sS -G 'https://agentexplorer.aliyuncs.com/search-skills'
 ```bash
 curl -sS 'https://agentexplorer.aliyuncs.com/openapi/for-agent/categories' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 ```
 
 #### Incorrect
@@ -91,8 +88,7 @@ curl -sS 'https://agentexplorer.aliyuncs.com/openapi/for-agent/list-categories'
 ```bash
 curl -sS 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills/alibabacloud-cli-guidance' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 ```
 
 #### Incorrect
@@ -110,21 +106,20 @@ curl -sS 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skill/alibabaclou
 
 ### Correct
 
-Every discovery API call includes all three headers:
+Every discovery API call includes both required headers:
 
 ```bash
 -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
--H 'x-acs-version: 2026-03-17' \
--H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+-H 'x-acs-version: 2026-03-17'
 ```
 
 ### Incorrect
 
 ```bash
-# Missing date header
+# Missing API version header
 curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
   --data-urlencode 'keyword=ECS' \
-  -H 'x-acs-version: 2026-03-17'
+  -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills'
 
 # Wrong user agent
 curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
@@ -136,7 +131,7 @@ curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
   -H 'x-acs-api-version: 2026-03-17'
 ```
 
-**Why**: `x-acs-date` is mandatory. The skill user-agent is required for attribution. The API version header must be `x-acs-version`.
+**Why**: The skill user-agent is required for attribution. The API version header must be `x-acs-version`.
 
 ## Search Parameter Rules
 
@@ -149,16 +144,14 @@ curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
   --data-urlencode 'searchMode=semantic' \
   --data-urlencode 'maxResults=20' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 
 # Category listing
 curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
   --data-urlencode 'categoryCode=database' \
   --data-urlencode 'maxResults=20' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 
 # Combined semantic search
 curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
@@ -167,8 +160,7 @@ curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
   --data-urlencode 'searchMode=semantic' \
   --data-urlencode 'maxResults=20' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 ```
 
 ### Incorrect
@@ -193,8 +185,7 @@ curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
   --data-urlencode 'maxResults=20' \
   --data-urlencode 'nextToken=<next-token-from-previous-response>' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 ```
 
 ### Incorrect
@@ -251,7 +242,6 @@ npx skills add aliyun/alibabacloud-aiops-skills --skill <skill-name>
 
 ## Failure Handling
 
-- On `MissingDate`, add `x-acs-date`.
 - On network failure, retry once and report endpoint/network context.
 - On weak or empty results, rewrite the search phrase toward the underlying capability.
 - Do not tell the user to install or configure Aliyun CLI for this discovery workflow.
@@ -264,7 +254,6 @@ npx skills add aliyun/alibabacloud-aiops-skills --skill <skill-name>
 - [ ] Uses `/openapi/for-agent/skills/{skillName}` for details
 - [ ] Includes `User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills`
 - [ ] Includes `x-acs-version: 2026-03-17`
-- [ ] Includes `x-acs-date`
 - [ ] Uses `--data-urlencode` for query parameters
 - [ ] Splits compound requests into searchable intent units
 - [ ] Installs selected Skills only when requested

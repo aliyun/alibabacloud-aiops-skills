@@ -20,14 +20,12 @@ curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
   --data-urlencode 'searchMode=semantic' \
   --data-urlencode 'maxResults=20' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 
 # Display results table, then get details for the best candidate if needed
 curl -sS 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills/<selected-skill-name>' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 ```
 
 ### Example 2: Category Listing Request
@@ -39,15 +37,13 @@ User: "List all database Skills and point out which ones may fit RDS daily opera
 ```bash
 curl -sS 'https://agentexplorer.aliyuncs.com/openapi/for-agent/categories' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 
 curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
   --data-urlencode 'categoryCode=database' \
   --data-urlencode 'maxResults=20' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 
 # If nextToken is returned, fetch the next page
 curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
@@ -55,8 +51,7 @@ curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
   --data-urlencode 'maxResults=20' \
   --data-urlencode 'nextToken=<next-token-from-previous-response>' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 ```
 
 ### Example 3: Natural-Language Intent Search
@@ -73,8 +68,7 @@ curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
   --data-urlencode 'searchMode=semantic' \
   --data-urlencode 'maxResults=20' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 ```
 
 ### Example 4: Refine Weak Results
@@ -91,8 +85,7 @@ curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
   --data-urlencode 'searchMode=semantic' \
   --data-urlencode 'maxResults=20' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 ```
 
 ### Example 5: Compound Request With Support Needs
@@ -113,24 +106,21 @@ curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
   --data-urlencode 'searchMode=semantic' \
   --data-urlencode 'maxResults=20' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 
 curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
   --data-urlencode 'keyword=knowledge base retrieval document Q&A content citation' \
   --data-urlencode 'searchMode=semantic' \
   --data-urlencode 'maxResults=20' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 
 curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
   --data-urlencode 'keyword=runtime dependency installation environment troubleshooting' \
   --data-urlencode 'searchMode=semantic' \
   --data-urlencode 'maxResults=20' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 ```
 
 Before installation, present the final de-duplicated install plan:

@@ -26,8 +26,7 @@ curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
   --data-urlencode 'searchMode=semantic' \
   --data-urlencode 'maxResults=20' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 echo "Exit code: $?"
 ```
 
@@ -58,8 +57,7 @@ RESULT=$(curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skill
   --data-urlencode 'searchMode=semantic' \
   --data-urlencode 'maxResults=5' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)")
+  -H 'x-acs-version: 2026-03-17')
 
 if [ $? -ne 0 ]; then
   echo "search request failed"
@@ -79,8 +77,7 @@ List categories succeeds:
 ```bash
 curl -sS 'https://agentexplorer.aliyuncs.com/openapi/for-agent/categories' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 ```
 
 Expected category fields:
@@ -97,8 +94,7 @@ curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
   --data-urlencode 'categoryCode=database' \
   --data-urlencode 'maxResults=20' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 ```
 
 Search results should contain `categoryCode` matching the requested top-level category.
@@ -112,8 +108,7 @@ The request succeeds with a valid skill name:
 ```bash
 curl -sS 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills/alibabacloud-cli-guidance' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 ```
 
 Expected response fields:
@@ -136,8 +131,7 @@ curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
   --data-urlencode 'searchMode=semantic' \
   --data-urlencode 'maxResults=10' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 ```
 
 Results should be relevant to both the keyword and category.
@@ -153,8 +147,7 @@ PAGE1=$(curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills
   --data-urlencode 'categoryCode=database' \
   --data-urlencode 'maxResults=2' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)")
+  -H 'x-acs-version: 2026-03-17')
 
 echo "$PAGE1" | grep -q '"nextToken"'
 ```
@@ -169,8 +162,7 @@ curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
   --data-urlencode 'maxResults=2' \
   --data-urlencode "nextToken=$NEXT_TOKEN" \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 ```
 
 Do not invent or edit pagination tokens.
@@ -196,23 +188,6 @@ Manual checklist:
 
 ## Error Verification
 
-### Missing `x-acs-date`
-
-If `x-acs-date` is omitted, the API returns an error similar to:
-
-```json
-{
-  "Code": "MissingDate",
-  "Message": "Date is mandatory for this action."
-}
-```
-
-Fix by adding:
-
-```bash
--H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-```
-
 ### Network Failure
 
 For DNS, proxy, or TLS errors:
@@ -230,7 +205,6 @@ For DNS, proxy, or TLS errors:
 - [ ] Uses `https://agentexplorer.aliyuncs.com`
 - [ ] Includes `User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills`
 - [ ] Includes `x-acs-version: 2026-03-17`
-- [ ] Includes `x-acs-date`
 - [ ] Uses `--data-urlencode` for query values with spaces, Chinese text, or tokens
 
 ### Response Format

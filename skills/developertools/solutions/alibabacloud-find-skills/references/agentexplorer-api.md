@@ -10,11 +10,8 @@ Every AgentExplorer request must include:
 
 ```bash
 -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
--H 'x-acs-version: 2026-03-17' \
--H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+-H 'x-acs-version: 2026-03-17'
 ```
-
-`x-acs-date` is mandatory and must be current UTC time.
 
 For Windows PowerShell, Command Prompt, macOS, Linux, WSL, and Git Bash curl templates, see [curl-shell-compatibility.md](curl-shell-compatibility.md).
 
@@ -59,8 +56,7 @@ curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
   --data-urlencode 'searchMode=semantic' \
   --data-urlencode 'maxResults=20' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 ```
 
 ### List Skills In A Category
@@ -72,8 +68,7 @@ curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
   --data-urlencode 'categoryCode=<category-code>' \
   --data-urlencode 'maxResults=20' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 ```
 
 Fetch the next page only when `nextToken` is returned:
@@ -84,8 +79,7 @@ curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
   --data-urlencode 'maxResults=20' \
   --data-urlencode 'nextToken=<next-token-from-previous-response>' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 ```
 
 ### Combined Semantic Search
@@ -99,8 +93,7 @@ curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
   --data-urlencode 'searchMode=semantic' \
   --data-urlencode 'maxResults=20' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 ```
 
 **Response shape**:
@@ -140,8 +133,7 @@ GET https://agentexplorer.aliyuncs.com/openapi/for-agent/categories
 ```bash
 curl -sS 'https://agentexplorer.aliyuncs.com/openapi/for-agent/categories' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 ```
 
 **Response shape**:
@@ -177,8 +169,7 @@ GET https://agentexplorer.aliyuncs.com/openapi/for-agent/skills/{skillName}
 ```bash
 curl -sS 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills/<skillName>' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 ```
 
 **Response shape**:
@@ -208,8 +199,7 @@ curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
   --data-urlencode 'searchMode=semantic' \
   --data-urlencode 'maxResults=20' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 
 # Intent search
 curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
@@ -217,8 +207,7 @@ curl -sS -G 'https://agentexplorer.aliyuncs.com/openapi/for-agent/skills' \
   --data-urlencode 'searchMode=semantic' \
   --data-urlencode 'maxResults=20' \
   -H 'User-Agent: AlibabaCloud-Agent-Skills/alibabacloud-find-skills' \
-  -H 'x-acs-version: 2026-03-17' \
-  -H "x-acs-date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  -H 'x-acs-version: 2026-03-17'
 ```
 
 ## Notes
