@@ -38,6 +38,8 @@ from typing import Any, Dict, List, Optional
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from common.utils import request_openapi, require_user_id, read_config
+from common.config_loader import get_skill_work_home
+from common.messages import msg
 
 # 支持的文件格式（根据接口文档）
 SUPPORTED_EXTENSIONS = {
@@ -45,11 +47,21 @@ SUPPORTED_EXTENSIONS = {
     '.doc', '.docx', '.ppt', '.pptx', '.xls', '.xlsx', '.csv'
 }
 
-# 最大文件大小 10MB
-MAX_FILE_SIZE = 10 * 1024 * 1024
+# 最大文件大小 5MB
+MAX_FILE_SIZE = 5 * 1024 * 1024
 
 # 最大轮询时间 120 秒
 MAX_POLL_TIME = 120
+
+# 输出目录（延迟初始化，避免在模块加载时调用 get_skill_work_home）
+_output_dir = None
+
+def get_output_dir() -> Path:
+    """获取输出目录（延迟解析，确保 workspace-dir 已设置）。"""
+    global _output_dir
+    if _output_dir is None:
+        _output_dir = get_skill_work_home() / "output"
+    return _output_dir
 
 
 def upload_document(file_path: str, config: dict) -> Dict[str, Any]:
@@ -71,7 +83,10 @@ def upload_document(file_path: str, config: dict) -> Dict[str, Any]:
 
     file_size = file_path.stat().st_size
     if file_size > MAX_FILE_SIZE:
-        raise ValueError(f"文件大小 {file_size / 1024 / 1024:.2f}MB 超过限制 10MB: {file_path.name}")
+        err_msg = msg("ocr_validate_too_large", name=file_path.name, size=f"{file_size / 1024 / 1024:.2f}")
+        print(err_msg, flush=True)
+        print("[STOP] Do NOT preprocess, filter, split, or compress the file locally. Show the above message to the user AS-IS and terminate.", flush=True)
+        raise ValueError(err_msg)
 
     print(f"[上传] 正在上传: {file_path.name} ({file_size / 1024:.1f}KB)", flush=True)
 
@@ -244,8 +259,8 @@ def poll_task_status(task_id: str, config: dict, poll_interval: float = 3.0) -> 
             print(f"[轮询] ✗ 查询异常: {e}", flush=True)
             # 检查是否是试用到期
             error_str = str(e)
-            from config_loader import check_trial_expired
-            if check_trial_expired(error_str):
+            from common.config_loader import check_known_error_code
+            if check_known_error_code(error_str):
                 raise
 
             # 其他异常，使用较短间隔重试
@@ -356,7 +371,8 @@ def collect_files_from_directory(directory: str) -> List[str]:
                     if file_size <= MAX_FILE_SIZE:
                         files.append(str(file_path))
                     else:
-                        print(f"[扫描] ⚠ 跳过超大文件: {file_path.name} ({file_size / 1024 / 1024:.2f}MB > 10MB)", flush=True)
+                        print(msg("ocr_scan_skip_large", name=file_path.name, size=f"{file_size / 1024 / 1024:.2f}"), flush=True)
+                        print("[STOP] Do NOT preprocess, filter, split, or compress the file locally. Show the above message to the user AS-IS and terminate.", flush=True)
                 except Exception as e:
                     print(f"[扫描] ⚠ 无法访问文件: {file_path.name} - {e}", flush=True)
 
@@ -410,7 +426,8 @@ def validate_and_collect_files(
 
         file_size = file_path.stat().st_size
         if file_size > MAX_FILE_SIZE:
-            print(f"[验证] ✗ 文件过大: {file_path.name} ({file_size / 1024 / 1024:.2f}MB > 10MB)", flush=True)
+            print(msg("ocr_validate_too_large", name=file_path.name, size=f"{file_size / 1024 / 1024:.2f}"), flush=True)
+            print("[STOP] Do NOT preprocess, filter, split, or compress the file locally. Show the above message to the user AS-IS and terminate.", flush=True)
             continue
 
         valid_files.append(str(file_path))
@@ -467,7 +484,7 @@ def main():
         "--output",
         type=str,
         default=None,
-        help="输出 JSON 文件路径（默认输出到脚本同级 output/ocr_result.json）"
+        help="输出 JSON 文件路径（默认 $WORKSPACE_DIR/.qbi/output/ocr_result_{timestamp}.json）"
     )
     parser.add_argument(
         "--json",
@@ -565,13 +582,12 @@ def main():
     # 输出最终 JSON 结果
     output_json = json.dumps(results, ensure_ascii=False, indent=2)
 
-    # 确定输出路径（默认 output/ocr_result_{timestamp}.json）
+    # 确定输出路径（默认 $WORKSPACE_DIR/.qbi/output/ocr_result_{timestamp}.json）
     if args.output:
         output_path = Path(args.output).resolve()
     else:
-        # 默认输出到脚本同级的 output 文件夹，带时间戳
-        script_dir = Path(__file__).resolve().parent.parent
-        output_dir = script_dir / "output"
+        # 默认输出到 $WORKSPACE_DIR/.qbi/output/ 文件夹，带时间戳
+        output_dir = get_output_dir()
         timestamp = int(time.time())
         output_path = output_dir / f"ocr_result_{timestamp}.json"
 

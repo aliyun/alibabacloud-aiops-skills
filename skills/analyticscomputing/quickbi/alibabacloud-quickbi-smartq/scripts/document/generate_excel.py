@@ -4,7 +4,7 @@ Excel 生成脚本
 根据提取数据 JSON 生成汇总 Excel 报表
 遵循 xlsx-format.md 格式规范
 
-输出路径: output/doc_scan_result_{timestamp}.xlsx
+输出路径: $WORKSPACE_DIR/.qbi/output/doc_scan_result_{timestamp}.xlsx
 """
 import json
 import sys
@@ -15,8 +15,20 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 
-# 输出目录
-OUTPUT_DIR = Path(__file__).resolve().parent.parent / "output"
+# 添加 scripts 目录到路径(以便导入 common 模块)
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from common.config_loader import get_skill_work_home
+
+# 输出目录（延迟初始化，避免在模块加载时调用 get_skill_work_home）
+OUTPUT_DIR = None
+
+def get_output_dir() -> Path:
+    """获取输出目录（延迟解析，确保 workspace-dir 已设置）。"""
+    global OUTPUT_DIR
+    if OUTPUT_DIR is None:
+        OUTPUT_DIR = get_skill_work_home() / "output"
+    return OUTPUT_DIR
 
 # 样式常量（遵循 xlsx-format.md 规范）
 HEADER_FILL = PatternFill("solid", fgColor="4472C4")
@@ -208,7 +220,7 @@ def generate_excel(input_json_path: str, output_path: str = None) -> str:
     
     Args:
         input_json_path: 输入 JSON 文件路径
-        output_path: 输出 Excel 路径（默认 output/doc_scan_result_{timestamp}.xlsx）
+        output_path: 输出 Excel 路径（默认 $WORKSPACE_DIR/.qbi/output/doc_scan_result_{timestamp}.xlsx）
     
     Returns:
         输出 Excel 文件路径
@@ -233,14 +245,15 @@ def generate_excel(input_json_path: str, output_path: str = None) -> str:
     # 创建汇总 Sheet
     create_summary_sheet(wb, extraction_data, scan_time, total_files)
     
-    # 输出路径（默认 output/doc_scan_result_{timestamp}.xlsx）
+    # 输出路径（默认 $WORKSPACE_DIR/.qbi/output/doc_scan_result_{timestamp}.xlsx）
     if output_path:
         output_path = Path(output_path).resolve()
     else:
-        # 默认输出到 output 目录
-        OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+        # 默认输出到 $WORKSPACE_DIR/.qbi/output/ 目录
+        output_dir = get_output_dir()
+        output_dir.mkdir(parents=True, exist_ok=True)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_path = OUTPUT_DIR / f"doc_scan_result_{timestamp}.xlsx"
+        output_path = output_dir / f"doc_scan_result_{timestamp}.xlsx"
     
     wb.save(str(output_path))
     print(f"[保存] ✓ Excel 结果已保存到: {output_path}", flush=True)
@@ -261,7 +274,7 @@ def main():
         "output_path",
         nargs="?",
         default=None,
-        help="输出 Excel 路径（可选，默认 output/doc_scan_result_{timestamp}.xlsx）"
+        help="输出 Excel 路径（可选，默认 $WORKSPACE_DIR/.qbi/output/doc_scan_result_{timestamp}.xlsx）"
     )
     parser.add_argument(
         "--workspace-dir",

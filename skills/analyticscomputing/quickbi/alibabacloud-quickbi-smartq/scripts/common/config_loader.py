@@ -16,10 +16,13 @@ from __future__ import annotations
 import base64
 import json
 import os
+from datetime import date
 from pathlib import Path
 from typing import Any, Dict, Optional
 
 import yaml
+
+from common.messages import msg, set_locale
 
 # ---------------------------------------------------------------------------
 # 路径常量
@@ -52,20 +55,16 @@ def _resolve_work_dir() -> Path:
     # 1. CLI 参数（最高优先级）
     if _workspace_dir_override:
         work_dir = Path(_workspace_dir_override)
-        print(f"[配置] 工作目录: {work_dir} (来源=--workspace-dir 参数)", flush=True)
+        print(msg("config_workdir_cli", work_dir=work_dir), flush=True)
         return work_dir
     # 2. 环境变量
     env_cwd = os.environ.get("WORKSPACE_DIR")
     if env_cwd:
         work_dir = Path(env_cwd)
-        print(f"[配置] 工作目录: {work_dir} (来源=WORKSPACE_DIR 环境变量)", flush=True)
+        print(msg("config_workdir_env", work_dir=work_dir), flush=True)
         return work_dir
     # 3. 未设置 → 报错，要求 agent 显式传入
-    raise RuntimeError(
-        "[配置错误] 工作目录未设置！--workspace-dir 参数和 WORKSPACE_DIR 环境变量均未提供。\n"
-        "请通过 --workspace-dir 参数传入用户实际工作目录的绝对路径后重新执行脚本。\n"
-        "示例: python3 script.py ... --workspace-dir '/path/to/workspace'"
-    )
+    raise RuntimeError(msg("config_workdir_missing"))
 
 
 def get_skill_work_home() -> Path:
@@ -112,25 +111,8 @@ def _rv(v: str) -> str:
 # 试用欢迎提示
 # ---------------------------------------------------------------------------
 
-_TRIAL_WELCOME_MSG = """
-============================================================
-您的超级数据分析师已就位！
-只需自然语言提问，即可智能匹配并分析您的 Excel 或 Quick BI 数据集，
-将洞察即时呈现。让复杂分析，从未如此简单。
-
-检测到您尚未配置凭证，我们将自动为您注册试用凭证并进入试用期。
-
-试用到期后，请前往 Quick BI 控制台获取正式凭证：
-  https://www.aliyun.com/product/quickbi-smart?utm_content=g_1000411205
-
-如需帮助，请扫码加入交流群获取最新资讯：
-  https://at.umtrack.com/r4Tnme
-============================================================
-""".strip()
-
-
 def _print_trial_welcome():
-    print(f"\n{_TRIAL_WELCOME_MSG}\n", flush=True)
+    print(f"\n{msg('config_trial_welcome')}\n", flush=True)
 
 
 # ---------------------------------------------------------------------------
@@ -139,24 +121,21 @@ def _print_trial_welcome():
 
 TRIAL_EXPIRED_CODE = "AE0579100004"
 
-_TRIAL_EXPIRED_MESSAGE = """
-============================================================
-小 Q 超级分析助理已陪伴您一周，我们看到您在通过 AI 寻找数据背后的真相，这很了不起。
-
-🕙 试用模式已结束
-授权到期后，动态分析将暂告一段落。
-
-💡 其实，您可以更轻松
-目前的"文件模式"仍需您手动搬运数据。让 AI 直连企业存量数据资产，实现分析结果自动更新？立即体验完整功能。
-
-🚀 0 元体验，限时加码
-现在上阿里云，将额外赠送 30 天全功能体验，解锁企业级安全管控与深度分析引擎，让 AI 洞察更准、更稳。点击下方链接，领取试用：
-https://www.aliyun.com/product/quickbi-smart?utm_content=g_1000411205
-
-💬 点击下方链接，进入交流群获取最新资讯：
-https://at.umtrack.com/r4Tnme
-============================================================
-""".strip()
+# 已知业务错误码 → 消息 key 映射
+# 带 {service} 占位符的需要从响应中提取服务名
+KNOWN_ERROR_CODES: dict = {
+    "AE0570010014": "error_agent_not_deployed",       # Agent未部署
+    "AE0580800012": "error_access_forbidden",         # 功能裁剪/禁止访问
+    "AE0581030022": "error_module_not_purchased",     # NL2SQL模块未购买
+    "AE0581030029": "error_quota_not_granted",        # 席位配额未授权
+    "AE0581030019": "error_smartq_quota_exhausted",   # 问数额度用尽
+    "AE0581030025": "error_token_exhausted",          # Token用尽
+    "AE0581030027": "error_explore_quota_exhausted",  # 探索版额度用尽
+    "AE0533330017": "error_qreport_exceed_limits",    # 报告免费额度用尽
+    "AE0533330025": "error_qreport_exceed_quota",     # 报告并发超限
+    "AE0150100004": "error_user_not_in_org",          # 用户不在组织
+    "AE0510200000": "error_no_permission",            # 无操作权限
+}
 
 
 def check_trial_expired(result) -> bool:
@@ -176,9 +155,60 @@ def check_trial_expired(result) -> bool:
             code = TRIAL_EXPIRED_CODE
 
     if code == TRIAL_EXPIRED_CODE:
-        print(f"\n{_TRIAL_EXPIRED_MESSAGE}", flush=True)
+        print(f"\n{msg('config_trial_expired')}", flush=True)
         return True
     return False
+
+
+def check_known_error_code(result) -> bool:
+    """检查 API 响应是否包含已知业务错误码，命中则打印用户友好提示。
+
+    检测范围包括 TRIAL_EXPIRED_CODE 和 KNOWN_ERROR_CODES 中所有错误码。
+    优先级：试用到期 > 其他已知错误码。
+
+    Args:
+        result: API 响应 dict 或原始文本 str。
+
+    Returns:
+        True 表示命中已知错误码并已打印提示，False 表示未命中。
+    """
+    # 先检查试用到期（优先级最高）
+    if check_trial_expired(result):
+        return True
+
+    code = None
+    raw_message = ""
+    if isinstance(result, dict):
+        code = str(result.get("code", ""))
+        raw_message = str(result.get("message", ""))
+    elif isinstance(result, str):
+        # 在原始文本中扫描已知错误码
+        for known_code in KNOWN_ERROR_CODES:
+            if known_code in result:
+                code = known_code
+                break
+
+    if code and code in KNOWN_ERROR_CODES:
+        msg_key = KNOWN_ERROR_CODES[code]
+        # error_agent_not_deployed 需要从响应中提取服务名
+        if msg_key == "error_agent_not_deployed":
+            service = _extract_service_name(raw_message)
+            print(f"\n{msg(msg_key, service=service)}", flush=True)
+        else:
+            print(f"\n{msg(msg_key)}", flush=True)
+        return True
+    return False
+
+
+def _extract_service_name(message: str) -> str:
+    """从错误消息中提取服务名，如 'SmartQ agent service is not deployed...' → 'SmartQ'。"""
+    if not message:
+        return "SmartQ"
+    # 模式: "{service} agent service is not deployed"
+    parts = message.split(" agent service")
+    if len(parts) > 1:
+        return parts[0].strip()
+    return message.split(" ")[0] if message else "SmartQ"
 
 
 # ---------------------------------------------------------------------------
@@ -215,8 +245,7 @@ def load_config() -> dict:
     """
     # --- 第 1 层：包内默认配置 ---
     print(
-        f"[配置] 包内默认配置路径: {DEFAULT_CONFIG_PATH}"
-        f" (存在={DEFAULT_CONFIG_PATH.exists()})",
+        msg("config_default_path", path=DEFAULT_CONFIG_PATH, exists=DEFAULT_CONFIG_PATH.exists()),
         flush=True,
     )
     config = _load_yaml(DEFAULT_CONFIG_PATH)
@@ -224,8 +253,7 @@ def load_config() -> dict:
     # --- 提前读取工作目录级配置，用于判断 save_global_property 开关 ---
     skill_config_path = get_skill_config_path()
     print(
-        f"[配置] 工作目录级配置路径: {skill_config_path}"
-        f" (存在={skill_config_path.exists()})",
+        msg("config_skill_path", path=skill_config_path, exists=skill_config_path.exists()),
         flush=True,
     )
     skill_config = _load_yaml(skill_config_path)
@@ -241,42 +269,47 @@ def load_config() -> dict:
     # --- 第 2 层：QBI 全局配置（受 save_global_property 开关控制） ---
     if _global_enabled:
         print(
-            f"[配置] 全局配置路径: {GLOBAL_CONFIG_PATH}"
-            f" (存在={GLOBAL_CONFIG_PATH.exists()})",
+            msg("config_global_path", path=GLOBAL_CONFIG_PATH, exists=GLOBAL_CONFIG_PATH.exists()),
             flush=True,
         )
         global_config = _load_yaml(GLOBAL_CONFIG_PATH)
         _merge_config(config, global_config)
     else:
         print(
-            f"[配置] save_global_property 为 false，跳过全局配置读取"
-            f" (路径={GLOBAL_CONFIG_PATH})",
+            msg("config_global_skip", path=GLOBAL_CONFIG_PATH),
             flush=True,
         )
 
     # --- 第 3 层：工作目录级配置（已提前读取，直接合并） ---
     _merge_config(config, skill_config)
 
+    # --- 设置 locale（在所有配置层合并后、环境变量覆盖前） ---
+    language = config.get("language")
+    if language:
+        locale_map = {"zh": "zh_CN", "en": "en_US"}
+        set_locale(locale_map.get(language, language))
+
     # --- 第 4 层：环境变量覆盖（最高优先级） ---
     if config.get("use_env_property"):
         access_token = os.environ.get("ACCESS_TOKEN")
-        if not access_token:
-            raise ValueError("use_env_property 为 true 时，必须设置 ACCESS_TOKEN 环境变量")
-        try:
-            token_data = json.loads(access_token)
-        except json.JSONDecodeError as exc:
-            raise ValueError(f"ACCESS_TOKEN 解析失败：{exc}") from exc
+        if access_token:
+            try:
+                token_data = json.loads(access_token)
+            except json.JSONDecodeError as exc:
+                raise ValueError(msg("config_env_access_token_parse_error", exc=exc)) from exc
 
-        env_mapping = {
-            "qbi_api_key": "api_key",
-            "qbi_api_secret": "api_secret",
-            "qbi_server_domain": "server_domain",
-            "qbi_user_token": "user_token",
-        }
-        for env_key, config_key in env_mapping.items():
-            env_val = token_data.get(env_key)
-            if env_val:
-                config[config_key] = env_val
+            env_mapping = {
+                "qbi_api_key": "api_key",
+                "qbi_api_secret": "api_secret",
+                "qbi_server_domain": "server_domain",
+                "qbi_user_token": "user_token",
+            }
+            for env_key, config_key in env_mapping.items():
+                env_val = token_data.get(env_key)
+                if env_val:
+                    config[config_key] = env_val
+        else:
+            print(msg("config_env_access_token_missing"), flush=True)
 
     # --- 试用凭证兜底 ---
     # 先检查全局配置和工作目录级配置原始文件中是否已有 api_key / api_secret
@@ -285,14 +318,19 @@ def load_config() -> dict:
     # user_token 可能来自试用自动注册（_persist_user_id force=True），
     # 单独存在 user_token 不代表用户已有自有凭证，不应阻止试用凭证填充。
     _raw_global_cfg = global_config if _global_enabled else _load_yaml(GLOBAL_CONFIG_PATH)
-    _has_external_api_creds = (
+    # 外部凭证：YAML 配置或 ACCESS_TOKEN 环境变量提供的 api_key/api_secret
+    # 该时点 config 已依次 merge 过 default/global/skill 三层及 env 覆盖，
+    # 若 config 中已有 api_key/api_secret，则说明用户有自有凭证。
+    _has_external_api_creds = bool(
         _raw_global_cfg.get("api_key") or _raw_global_cfg.get("api_secret")
         or skill_config.get("api_key") or skill_config.get("api_secret")
+        or config.get("api_key") or config.get("api_secret")
     )
 
+    _using_trial_creds = False
     if _has_external_api_creds:
-        # 全局配置或工作目录级配置已有 api_key/api_secret，不进入试用链路
-        print("[配置] 检测到全局配置或工作目录级配置已有 API 凭证，跳过试用凭证填充", flush=True)
+        # 全局配置、工作目录级配置或 ACCESS_TOKEN 已有 api_key/api_secret，不进入试用链路
+        print(msg("config_api_creds_detected"), flush=True)
     else:
         missing_key = not config.get("api_key")
         missing_secret = not config.get("api_secret")
@@ -303,8 +341,21 @@ def load_config() -> dict:
 
         if missing_key:
             config["api_key"] = _rv(_R0)
+            _using_trial_creds = True
         if missing_secret:
             config["api_secret"] = _rv(_R1)
+            _using_trial_creds = True
+
+    # --- 首次使用 skill 打点 ---
+    # 仅试用用户需要打点：atexit 钩子的试用提醒以此字段计天。
+    # 拥有自有凭证的用户（YAML 或 ACCESS_TOKEN）不应看到试用提醒。
+    if _using_trial_creds and not _raw_global_cfg.get("first_use_date"):
+        try:
+            persist_to_global_config(
+                "first_use_date", date.today().isoformat(), force=True
+            )
+        except Exception:
+            pass  # 打点失败不能影响配置加载主流程
 
     return config
 
@@ -335,11 +386,7 @@ def persist_to_skill_config(key: str, value: str):
         config_path,
         key,
         value,
-        header=(
-            "# Quick BI 用户配置（此文件不受技能包更新影响）\n"
-            "# 配置优先级：此文件 > ~/.qbi/config.yaml > 包内 default_config.yaml\n"
-            f"# 路径：{config_path}\n\n"
-        ),
+        header=msg("config_header_skill", path=config_path),
     )
 
 
@@ -368,7 +415,7 @@ def persist_to_global_config(key: str, value: str, *, force: bool = False):
     """
     if not force and not is_global_save_enabled():
         print(
-            f"[配置] save_global_property 为 false，跳过全局配置写入: {key}",
+            msg("config_global_skip_write", key=key),
             flush=True,
         )
         return
@@ -377,10 +424,7 @@ def persist_to_global_config(key: str, value: str, *, force: bool = False):
         GLOBAL_CONFIG_PATH,
         key,
         value,
-        header=(
-            "# Quick BI 全局配置（所有 skill 共享，不受技能包更新影响）\n"
-            "# 所有配置（server_domain、api_key、api_secret、user_token 等）建议放在此文件\n\n"
-        ),
+        header=msg("config_header_global"),
     )
 
 

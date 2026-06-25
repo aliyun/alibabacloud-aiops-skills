@@ -21,6 +21,8 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+from common.messages import msg
+
 try:
     import matplotlib
     matplotlib.use("Agg")
@@ -86,9 +88,9 @@ MAX_DISPLAY_ITEMS_HORIZONTAL = 30
 def _format_value(v: float) -> str:
     abs_v = abs(v)
     if abs_v >= 1e8:
-        return f"{v / 1e8:.2f}亿"
+        return f"{v / 1e8:.2f}{msg('chart_unit_hundred_million')}"
     if abs_v >= 1e4:
-        return f"{v / 1e4:.2f}万"
+        return f"{v / 1e4:.2f}{msg('chart_unit_ten_thousand')}"
     if abs_v == int(abs_v):
         return str(int(v))
     return f"{v:.2f}"
@@ -194,22 +196,17 @@ def _setup_style():
 
     if not _font_setup_done:
         if chosen_font:
-            print(f"[chart_renderer] 使用中文字体: {chosen_font}", file=sys.stderr)
+            print(f"[chart_renderer] {msg('chart_font_using', font=chosen_font)}", file=sys.stderr)
         else:
             _sys_name = platform.system()
             if _sys_name == "Windows":
-                _install_hint = (
-                    "建议安装: 在 Windows 设置 → 时间和语言 → 语言 → "
-                    "中文（简体）→ 安装语言包，或手动安装 SimHei / Microsoft YaHei 字体"
-                )
+                _install_hint = msg('chart_font_install_win')
             elif _sys_name == "Darwin":
-                _install_hint = "建议安装: macOS 通常自带 PingFang SC，若缺失请通过字体册安装中文字体"
+                _install_hint = msg('chart_font_install_mac')
             else:
-                _install_hint = (
-                    "建议安装: yum install -y google-noto-sans-cjk-sc-fonts && fc-cache -fv"
-                )
+                _install_hint = msg('chart_font_install_linux')
             print(
-                "[chart_renderer] 警告: 未找到可用中文字体，图表中文可能显示异常。"
+                f"[chart_renderer] {msg('chart_font_not_found')}\n"
                 f"{_install_hint}",
                 file=sys.stderr,
             )
@@ -283,7 +280,7 @@ def _apply_common_style(ax, title: str = "", ylabel: str = "", show_grid_y=True)
 def _add_truncation_note(ax, shown: int, total: int, position: str = "bottom"):
     if shown >= total:
         return
-    note = f"显示前 {shown} 条（共 {total} 条）"
+    note = msg('chart_truncation_note', shown=shown, total=total)
     if position == "bottom":
         ax.annotate(
             note, xy=(0.5, -0.02), xycoords="axes fraction",
@@ -308,8 +305,8 @@ def _save_and_close(fig, path: Path):
 # ── 图表类型自动推断 ────────────────────────────────────────
 
 # 仅支持单指标的图表类型，多指标时需回退到自动推断
-_SINGLE_METRIC_TYPES = {"indicator", "bar", "horizontal_bar", "ranking", "pie", "funnel"}
-
+_SINGLE_METRIC_TYPES = {"bar", "horizontal_bar"}
+# "indicator", "ranking", "pie", "funnel"先不处理
 
 def _infer_chart_type(
     dims: List[dict],
@@ -531,7 +528,7 @@ def _render_grouped_bar(rows, dims, metrics, title, path):
                             _format_value(val), ha="center", va="bottom", fontsize=7, color="#475569")
 
     _set_x_labels(ax, labels)
-    _apply_common_style(ax, title or "数据对比")
+    _apply_common_style(ax, title or msg('chart_data_comparison'))
     ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda x, _: _format_value(x)))
     ax.legend(fontsize=8, loc="upper right", framealpha=0.9)
     _add_truncation_note(ax, n_g, original_total)
@@ -570,7 +567,7 @@ def _render_stacked_bar(rows, dims, metrics, title, path):
         bottom += arr
 
     _set_x_labels(ax, labels)
-    _apply_common_style(ax, title or "堆积柱状图")
+    _apply_common_style(ax, title or msg('chart_stacked_bar'))
     ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda x, _: _format_value(x)))
     ax.legend(fontsize=8, loc="upper right", framealpha=0.9)
     _add_truncation_note(ax, n, original_total)
@@ -613,7 +610,7 @@ def _render_percent_bar(rows, dims, metrics, title, path):
 
     ax.set_ylim(0, 100)
     _set_x_labels(ax, labels)
-    _apply_common_style(ax, title or "百分比柱状图")
+    _apply_common_style(ax, title or msg('chart_percent_bar'))
     ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda x, _: f"{x:.0f}%"))
     ax.legend(fontsize=8, loc="upper right", framealpha=0.9)
     _add_truncation_note(ax, n, original_total)
@@ -684,7 +681,7 @@ def _render_stacked_horizontal_bar(rows, dims, metrics, title, path):
 
     ax.set_yticks(y)
     ax.set_yticklabels(labels, fontsize=9)
-    _apply_common_style(ax, title or "堆积条形图", show_grid_y=False)
+    _apply_common_style(ax, title or msg('chart_stacked_horizontal_bar'), show_grid_y=False)
     ax.grid(axis="x", color="#f1f5f9", linewidth=0.8)
     ax.legend(fontsize=8, loc="lower right", framealpha=0.9)
     _save_and_close(fig, path)
@@ -718,7 +715,7 @@ def _render_percent_horizontal_bar(rows, dims, metrics, title, path):
     ax.set_xlim(0, 100)
     ax.set_yticks(y)
     ax.set_yticklabels(labels, fontsize=9)
-    _apply_common_style(ax, title or "百分比条形图", show_grid_y=False)
+    _apply_common_style(ax, title or msg('chart_percent_horizontal_bar'), show_grid_y=False)
     ax.xaxis.set_major_formatter(ticker.FuncFormatter(lambda x, _: f"{x:.0f}%"))
     ax.legend(fontsize=8, loc="lower right", framealpha=0.9)
     _save_and_close(fig, path)
@@ -854,7 +851,7 @@ def _render_combo(rows, dims, metrics, title, path):
     ax2.yaxis.set_major_formatter(ticker.FuncFormatter(lambda x, _: _format_value(x)))
 
     _set_x_labels(ax1, labels)
-    _apply_common_style(ax1, title or "组合图")
+    _apply_common_style(ax1, title or msg('chart_combo'))
 
     lines1, labels1 = ax1.get_legend_handles_labels()
     lines2, labels2 = ax2.get_legend_handles_labels()
@@ -888,7 +885,7 @@ def _render_pie(rows, dims, metrics, title, path):
         pairs = sorted(zip(labels, values), key=lambda x: x[1], reverse=True)
         top = pairs[:_MAX_PIE_SLICES - 1]
         others_sum = sum(v for _, v in pairs[_MAX_PIE_SLICES - 1:])
-        labels = [l for l, _ in top] + ["其他"]
+        labels = [l for l, _ in top] + [msg('chart_pie_other')]
         values = [v for _, v in top] + [others_sum]
 
     colors = [PALETTE[i % len(PALETTE)] for i in range(len(labels))]
@@ -990,7 +987,7 @@ def _render_scatter(rows, dims, metrics, title, path):
 
     ax.set_xlabel(x_metric, fontsize=10, color="#475569")
     ax.set_ylabel(y_metric, fontsize=10, color="#475569")
-    _apply_common_style(ax, title or "散点图")
+    _apply_common_style(ax, title or msg('chart_scatter'))
     ax.xaxis.set_major_formatter(ticker.FuncFormatter(lambda x, _: _format_value(x)))
     ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda x, _: _format_value(x)))
     _save_and_close(fig, path)
@@ -1034,7 +1031,7 @@ def _render_bubble(rows, dims, metrics, title, path):
 
     ax.set_xlabel(x_metric, fontsize=10, color="#475569")
     ax.set_ylabel(y_metric, fontsize=10, color="#475569")
-    _apply_common_style(ax, title or "气泡图")
+    _apply_common_style(ax, title or msg('chart_bubble'))
     ax.xaxis.set_major_formatter(ticker.FuncFormatter(lambda x, _: _format_value(x)))
     ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda x, _: _format_value(x)))
     _save_and_close(fig, path)
@@ -1110,9 +1107,9 @@ def chart_data_to_markdown(chart_data: dict) -> str:
     title = chart_data.get("title", "")
 
     if not data or not field_info:
-        return f"**{title}**\n\n（无数据）"
+        return f"**{title}**\n\n{msg('chart_no_data')}"
 
-    headers = [f.get("fieldName", f"列{i}") for i, f in enumerate(field_info)]
+    headers = [f.get("fieldName", msg('chart_column_default', idx=i)) for i, f in enumerate(field_info)]
     lines: List[str] = [f"**{title}**\n"] if title else []
     lines.append("| " + " | ".join(headers) + " |")
     lines.append("|" + "|".join([" --- "] * len(headers)) + "|")
@@ -1122,6 +1119,6 @@ def chart_data_to_markdown(chart_data: dict) -> str:
         lines.append("| " + " | ".join(row_vals) + " |")
 
     if len(data) > 50:
-        lines.append(f"\n（共 {len(data)} 行，仅显示前 50 行）")
+        lines.append(f"\n{msg('chart_table_truncated', total=len(data))}")
 
     return "\n".join(lines)

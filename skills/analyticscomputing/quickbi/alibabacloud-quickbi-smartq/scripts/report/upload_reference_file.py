@@ -13,12 +13,14 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from common.utils import UPLOAD_CHAT_TYPE, read_config, upload_files
+from common.messages import msg, set_locale
 
 
 def parse_args() -> argparse.Namespace:
     """解析命令行参数。"""
     parser = argparse.ArgumentParser(description="上传本地文件到小Q报告")
     parser.add_argument("files", nargs="+", help="要上传的本地文件路径")
+    parser.add_argument("--locale", required=True, choices=["zh_CN", "en_US"], help="语言环境: zh_CN(简体中文) 或 en_US(英文)")
     parser.add_argument("--workspace-dir", default=None, help="用户工作目录路径")
     return parser.parse_args()
 
@@ -30,6 +32,8 @@ def main() -> int:
     if args.workspace_dir:
         from common.config_loader import set_workspace_dir
         set_workspace_dir(args.workspace_dir)
+
+    set_locale(args.locale)
 
     config = read_config()
 
@@ -60,5 +64,5 @@ if __name__ == "__main__":
     try:
         raise SystemExit(main())
     except Exception as exc:  # pragma: no cover - 终端脚本直接输出错误
-        print(f"上传文件失败：{exc}", file=sys.stderr)
+        print(msg('report_upload_failed', exc=exc), file=sys.stderr)
         raise SystemExit(1)

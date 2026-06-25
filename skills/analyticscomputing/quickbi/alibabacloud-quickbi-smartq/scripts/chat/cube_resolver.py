@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from common.utils import read_config, require_user_id, request_openapi
+from common.messages import msg
 
 
 # ---------------------------------------------------------------------------
@@ -40,7 +41,7 @@ def query_accessible_cubes(*, config: Optional[dict] = None) -> List[dict]:
 
     if not result.get("success", False):
         raise RuntimeError(
-            f"查询问数数据集权限失败: code={result.get('code')}, message={result.get('message')}"
+            msg("cube_permission_query_failed", code=result.get('code'), message=result.get('message'))
         )
 
     data = result.get("data") or {}
@@ -103,6 +104,76 @@ def rank_cubes_by_relevance(
 
 
 # ---------------------------------------------------------------------------
+# 名称直查
+# ---------------------------------------------------------------------------
+
+def match_cube_by_name(name_hint: str, cubes: List[dict]) -> dict:
+    """
+    按名称匹配数据集。
+
+    匹配策略：
+    1. 精确匹配（大小写不敏感、忽略首尾空格）→ status=exact
+    2. 相似匹配：复用 rank_cubes_by_relevance 的评分逻辑，返回 top 3 → status=similar
+    3. cubes 为空或无候选超过阈值 → status=not_found
+
+    返回格式：
+      {"status": "exact",     "cube": {"cubeId": "...", "cubeName": "..."}}
+      {"status": "similar",   "candidates": [{"cubeId":..., "cubeName":..., "score":...}, ...]}
+      {"status": "not_found", "candidates": []}
+    """
+    if not cubes:
+        return {"status": "not_found", "candidates": []}
+
+    # 1. 精确匹配
+    hint_normalized = name_hint.strip().lower()
+    for cube in cubes:
+        cube_name = cube.get("cubeName", "")
+        if cube_name.strip().lower() == hint_normalized:
+            return {"status": "exact", "cube": cube}
+
+    # 2. 相似匹配：内部执行评分逻辑（与 rank_cubes_by_relevance 一致）
+    SCORE_THRESHOLD = 10.0
+    scored: List[tuple] = []
+    q_lower = hint_normalized
+
+    for cube in cubes:
+        name = cube.get("cubeName", "")
+        if not name:
+            continue
+
+        n_lower = name.lower()
+        score = 0.0
+
+        if n_lower in q_lower:
+            score += 100.0
+        elif q_lower in n_lower:
+            score += 80.0
+
+        matcher = SequenceMatcher(None, q_lower, n_lower)
+        longest = matcher.find_longest_match(0, len(q_lower), 0, len(n_lower))
+        if longest.size > 0:
+            score += (longest.size / max(len(n_lower), 1)) * 50.0
+
+        common_chars = set(q_lower) & set(n_lower)
+        name_chars = set(n_lower)
+        if name_chars:
+            score += (len(common_chars) / len(name_chars)) * 30.0
+
+        if score >= SCORE_THRESHOLD:
+            scored.append((score, cube))
+
+    if not scored:
+        return {"status": "not_found", "candidates": []}
+
+    scored.sort(key=lambda x: x[0], reverse=True)
+    candidates = [
+        {"cubeId": cube["cubeId"], "cubeName": cube["cubeName"], "score": round(score, 1)}
+        for score, cube in scored[:3]
+    ]
+    return {"status": "similar", "candidates": candidates}
+
+
+# ---------------------------------------------------------------------------
 # 智能选表
 # ---------------------------------------------------------------------------
 
@@ -140,7 +211,7 @@ def call_table_search(
         return body
     if isinstance(body, dict):
         if str(body.get("success", "")).lower() != "true":
-            raise RuntimeError(f"tableSearch 失败: [{body.get('code')}] {body.get('message')}")
+            raise RuntimeError(msg("cube_table_search_failed", code=body.get('code'), message=body.get('message')))
         data = body.get("data")
         if isinstance(data, list):
             return data
@@ -170,12 +241,14 @@ TABLE_SEARCH_BATCH_SIZES = [30, 10]
 def resolve_cube_id(
     question: str,
     *,
+    name_hint: Optional[str] = None,
     cube_ids: Optional[List[str]] = None,
     config: Optional[dict] = None,
 ) -> Optional[str]:
     """
     完整的数据集解析流程：
     1. 查询用户有权限的问数数据集列表
+    1.5 若提供了 name_hint，先尝试名称直查（精确匹配时直接返回）
     2. 将权限数据集 cubeIds（与调用方传入的候选合并）按文本相关性预筛选
     3. 使用自适应降级策略调用智能选表（尝试批次大小 [30, 10]）
     4. 智能选表未匹配时，按文本相关性从权限数据集中选择最相关的
@@ -185,40 +258,40 @@ def resolve_cube_id(
     config = config or read_config()
 
     print(f"{'=' * 60}", flush=True)
-    print(f"[智能选表] 未指定数据集，正在根据问题自动匹配 ...", flush=True)
-    print(f"[智能选表] 问题: {question}", flush=True)
+    print(msg("cube_smart_select_start"), flush=True)
+    print(msg("cube_smart_select_question", question=question), flush=True)
     print(f"{'=' * 60}", flush=True)
 
     # Step 1: 查询用户有权限的数据集
     try:
         accessible = query_accessible_cubes(config=config)
     except Exception as e:
-        print(f"[权限查询失败] GET /openapi/v2/smartq/query/llmCubeWithThemeList 调用异常:\n  {e}", flush=True)
+        print(msg("cube_permission_failed", exc=e), flush=True)
         return None
 
     if not accessible:
-        print("[权限查询] 该用户没有任何数据集的问数权限", flush=True)
-        print(
-            "\n============================================================\n"
-            "您当前没有可用的问数数据集。\n\n"
-            "📂 试试「文件问数」\n"
-            "无需任何权限配置，上传 Excel/CSV 文件即可直接分析。\n\n"
-            "🚀 0 元体验，限时加码\n"
-            "现在上阿里云，将额外赠送 30 天全功能体验，解锁企业级安全管控与深度分析引擎，\n"
-            "让 AI 洞察更准、更稳。点击下方链接，领取试用：\n"
-            "https://www.aliyun.com/product/quickbi-smart?utm_content=g_1000411205\n\n"
-            "💬 点击下方链接，进入交流群获取最新资讯：\n"
-            "https://at.umtrack.com/r4Tnme\n"
-            "============================================================",
-            flush=True,
-        )
+        print(msg("cube_no_permission"), flush=True)
+        print(msg("cube_no_datasets_promo"), flush=True)
         return None
 
-    print(f"[权限查询] 用户共有 {len(accessible)} 个可用数据集:", flush=True)
+    print(msg("cube_accessible_count", count=len(accessible)), flush=True)
     for item in accessible[:10]:
         print(f"  - {item['cubeId']}  {item['cubeName']}", flush=True)
     if len(accessible) > 10:
-        print(f"  ... 共 {len(accessible)} 个", flush=True)
+        print(msg("cube_accessible_total", count=len(accessible)), flush=True)
+
+    # Step 1.5: 名称直查（当提供了 name_hint 时）
+    if name_hint:
+        print(msg("cube_name_lookup_start", name=name_hint), flush=True)
+        lookup_result = match_cube_by_name(name_hint, accessible)
+        if lookup_result["status"] == "exact":
+            cube = lookup_result["cube"]
+            print(msg("cube_name_lookup_exact", cube_name=cube["cubeName"], cube_id=cube["cubeId"]), flush=True)
+            return cube["cubeId"]
+        elif lookup_result["status"] == "similar":
+            print(msg("cube_name_lookup_similar", count=len(lookup_result["candidates"])), flush=True)
+        else:
+            print(msg("cube_name_lookup_not_found", name=name_hint), flush=True)
 
     # Step 2: 合并权限 cubeIds 与调用方传入的候选
     accessible_ids = [item["cubeId"] for item in accessible]
@@ -245,35 +318,35 @@ def resolve_cube_id(
         if not candidates:
             continue
         
-        print(f"[智能选表] 尝试使用 top {len(candidates)} 个相关数据集进行匹配...", flush=True)
+        print(msg("cube_smart_select_trying", count=len(candidates)), flush=True)
         
         try:
             matched_cube_ids = call_table_search(question, cube_ids=candidates, config=config)
             if matched_cube_ids:
-                print(f"[智能选表] 匹配成功（批次大小 {len(candidates)}）", flush=True)
+                print(msg("cube_smart_select_success", count=len(candidates)), flush=True)
                 break  # 找到匹配，提前终止
         except Exception as e2:
             error_msg = str(e2)
             if "cubeIds can not be empty or over limit" in error_msg:
-                print(f"[智能选表] 候选数量 {len(candidates)} 超出接口限制，降级到下一批次...", flush=True)
+                print(msg("cube_smart_select_over_limit", count=len(candidates)), flush=True)
                 continue  # 尝试更小批次
             # 其他异常直接抛出
-            print(f"[智能选表失败] POST /openapi/v2/smartq/tableSearch 调用异常:\n  {e2}", flush=True)
+            print(msg("cube_smart_select_failed", exc=e2), flush=True)
             matched_cube_ids = []
             break
 
     if matched_cube_ids:
         cube_id = matched_cube_ids[0]
-        print(f"[智能选表] 匹配到数据集: {cube_id}", flush=True)
+        print(msg("cube_smart_select_matched", cube_id=cube_id), flush=True)
         if len(matched_cube_ids) > 1:
-            print(f"[智能选表] 其他候选: {matched_cube_ids[1:]}", flush=True)
+            print(msg("cube_smart_select_others", others=matched_cube_ids[1:]), flush=True)
         return cube_id
 
     # Step 4: 智能选表未匹配，按文本相关性从权限数据集中选择
     ranked = rank_cubes_by_relevance(question, accessible, top_n=2)
     cube_id = ranked[0]["cubeId"]
-    print(f"[相关性匹配] 智能选表未返回结果，根据问题与数据集名称相关性选择:", flush=True)
+    print(msg("cube_relevance_fallback"), flush=True)
     for i, rc in enumerate(ranked):
-        tag = "→ 选定" if i == 0 else "  候选"
+        tag = msg("cube_relevance_selected") if i == 0 else msg("cube_relevance_candidate")
         print(f"  {tag}: {rc['cubeId']}  {rc['cubeName']}", flush=True)
     return cube_id

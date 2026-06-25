@@ -1,543 +1,276 @@
 ---
 name: quickbi-smartq-dashboard
 description: >
-  根据 QuickBI 仪表板生成专用查询技能。
-  当用户提供仪表板 URL 并希望创建查询技能时使用。
-  触发关键词：生成技能、仪表板转 Skill。
+  Generate a dedicated query skill based on a QuickBI dashboard.
+  Use when the user provides a dashboard URL and wants to create a query skill.
+  Trigger keywords: generate skill, dashboard to Skill.
 ---
 
-# QuickBI 仪表板技能生成器
+# QuickBI Dashboard Skill Generator
 
-通过 OpenAPI 获取 QuickBI 仪表板数据，发现其图表组件、字段配置、查询控件、布局关系，提炼分析思路，生成一份可用于数据查询的 SKILL.md 文件。
+Retrieve QuickBI dashboard data through OpenAPI, discover its chart components, field configurations, query controls, and layout relationships, extract the analytical approach, and generate a SKILL.md file that can be used for data queries.
 
 ## Scope
 
 **Does:**
-- 接收 QuickBI 仪表板 URL 或数据门户 URL，解析出 pageId
-- 调用 OpenAPI 获取仪表板完整 JSON 结构
-- 解析图表组件、查询控件、数据集、字段配置
-- 分析布局模式，匹配适用的分析框架（L1-L4 金字塔或专业框架）
-- 生成完整的查询技能 SKILL.md 文件并安装到技能中心
+- Accept a QuickBI dashboard URL or data portal URL and parse out the pageId
+- Call OpenAPI to retrieve the complete dashboard JSON structure
+- Parse chart components, query controls, datasets, and field configurations
+- Analyze layout patterns and match an appropriate analysis framework (L1-L4 Pyramid or a specialized framework)
+- Generate a complete query skill SKILL.md file and install it into the skill center
 
 **Does NOT:**
-- 不执行实际的数据查询（查询由生成的子 skill 负责）
-- 不支持非 QuickBI 平台的仪表板
-- 不处理需要特殊权限的仪表板（会在预校验阶段提示错误）
-- **不在 `fetch_dashboard_data` 失败时尝试任何替代方案**（必须终止流程，禁止绕行）
+- Does NOT perform actual data queries (queries are handled by the generated child skill)
+- Does NOT support dashboards outside the QuickBI platform
+- Does NOT handle dashboards that require special permissions (an error will be surfaced during the pre-validation stage)
+- **Does NOT attempt any alternative solution when `fetch_dashboard_data` fails** (MUST terminate the flow; workarounds are prohibited)
 
-## 触发场景
+## Trigger Scenarios
 
-当用户提出以下类型的请求时使用此 Skill：
-- "帮我把这个 QuickBI 仪表板转化为一个查询 Skill"
-- "把这个看板变成一个可以查询数据的 Skill"
-- "生成这个仪表板的查询技能"
-- "提取这个仪表板的分析思路，生成 Skill"
-- "为这个仪表板生成技能：{URL}"
-- 用户提供了一个 类似 `https://bi.aliyun.com/dashboard/view/pc.htm?pageId=XXXXXXX` 格式的仪表板 URL，并希望创建查询能力
-- 用户提供了一个数据门户页面 URL（格式如 `https://bi.aliyun.com/product/view.htm?module=dashboard&productId=xxx&menuId=yyy`），并希望创建查询能力
+Use this skill when the user makes requests like the following:
+- "Help me turn this QuickBI dashboard into a query Skill"
+- "Help me convert this QuickBI dashboard into a query Skill"
+- "Generate a query skill for this dashboard: {URL}"
+- "Generate a skill for this dashboard: {URL}"
+- The user provides a dashboard URL similar to `https://bi.aliyun.com/dashboard/view/pc.htm?pageId=XXXXXXX` and wants to create query capability
+- The user provides a data portal page URL (e.g., `https://bi.aliyun.com/product/view.htm?module=dashboard&productId=xxx&menuId=yyy`) and wants to create query capability
 
-### 支持的 URL 格式
+### Supported URL Formats
 
-| URL 类型 | 路径特征 | 关键参数 | 处理方式 |
+| URL Type | Path Characteristic | Key Parameter | Handling Method |
 |----------|---------|---------|----------|
-| **仪表板页面** | `/dashboard/view/pc.htm` | `pageId` | 直接提取 pageId |
-| **数据门户页面** | `/product/view.htm` | `productId`, `menuId` | 通过 OpenAPI 获取关联的 pageId |
+| **Dashboard page** | `/dashboard/view/pc.htm` | `pageId` | Extract pageId directly |
+| **Data portal page** | `/product/view.htm` | `productId`, `menuId` | Retrieve the associated pageId via OpenAPI |
 
-## 前置条件
+## Phase 1: Input Collection and Validation
 
-- 需要有效的 API 凭证（用于调用 OpenAPI 获取仪表板数据）
-- 配置说明请参见主文件的「配置」章节
+### Step 1.0: Get User Input
 
----
+Extract from the user message:
 
-## Phase 1: 输入收集与验证
-
-### Step 1.0: 获取用户输入
-
-从用户消息中提取：
-
-1. **页面地址**（必需）：QuickBI 仪表板链接或数据门户链接
-2. **技能名称**（可选）：生成的 skill 目录名（kebab-case 格式）
-   - 如果用户指定了技能名称，直接使用（会覆盖同名技能）
-   - 如果未指定，将在 Phase 2 发现仪表板标题后自动推导
+1. **Page URL** (required): QuickBI dashboard link or data portal link
+2. **Skill name** (optional): the generated skill directory name (kebab-case format)
+   - If the user specified a skill name, use it directly (a skill with the same name will be automatically overwritten in Phase 2, no pre-check needed)
+   - If not specified, it will be derived automatically after discovering the dashboard title in Phase 2
 
 ---
 
-## Phase 2: 仪表板数据获取与解析
+## Phase 2: Dashboard Data Retrieval and Parsing
 
-### Step 2.1: 一站式获取仪表板数据
+### Step 2.1: One-Stop Dashboard Data Retrieval
 
-> **⚠️ 强制约束**：必须使用封装脚本，禁止自行拆分执行。
+> **⚠️ Mandatory Constraint**: You MUST use the encapsulated script; splitting the execution manually is prohibited.
 
-使用 `scripts/fetch_dashboard_data.py` 一站式完成：配置加载 → URL 解析 → 预校验 → 获取 JSON → 解析结构 → 获取数据集名称。
+Use `scripts/fetch_dashboard_data.py` to complete the following in one step: configuration loading → URL parsing → pre-validation → JSON retrieval → structure parsing → dataset name retrieval.
 
-**[强制规则] 失败立即终止，禁止任何绕行**：
+**[Mandatory Rule] Terminate immediately on failure; any workaround is prohibited**:
 
-> ⛔ **绝对禁止**：当 `fetch_dashboard_data` 返回失败时，**禁止尝试任何替代方案**，包括但不限于：
-> - ❌ 直接调用底层 API（如 `get_dashboard_json`）
-> - ❌ 跳过预校验步骤
-> - ❌ 尝试"其他方法"获取数据
-> - ❌ 继续执行后续任何步骤
+> ⛔ **Absolutely prohibited**: When `fetch_dashboard_data` returns failure, **do NOT attempt any alternative solution**, including but not limited to:
+> - ❌ Directly calling low-level APIs (such as `get_dashboard_json`)
+> - ❌ Skipping the pre-validation step
+> - ❌ Trying "other methods" to obtain data
+> - ❌ Continuing with any subsequent step
 >
-> **唯一正确的行为**：输出错误信息 → 终止流程 → 等待用户修正后重新触发
+> **The ONLY correct behavior**: Output the error message → terminate the flow → wait for the user to correct it and trigger again
 
-- 如果获取失败（`result["success"] == False`），**必须立即终止整个流程**
-- **失败原因已在 `result["error"]` 中说明**，直接展示给用户即可
-- **不要尝试"智能"地绕过错误**——预校验失败说明前置条件不满足，绕行只会导致后续步骤全部失败
+- If retrieval fails (`result["success"] == False`), **the entire flow MUST be terminated immediately**
+- **The failure reason is already described in `result["error"]`**; display it to the user directly
+- **Do NOT try to "intelligently" work around the error** — pre-validation failure means prerequisites are not satisfied; workarounds will only cause all subsequent steps to fail
 
 ```python
 from dashboard.fetch_dashboard_data import fetch_dashboard_data
 
-# 一站式获取（自动处理：配置加载、URL解析、预校验、获取JSON、解析、数据集名称）
+# One-stop retrieval (automatically handles: configuration loading, URL parsing, pre-validation, JSON retrieval, parsing, dataset names)
 result = fetch_dashboard_data(user_input_url)
 
 if not result["success"]:
-    print(f"获取失败: {result['error']}")
-    # ⛔ 必须立即终止！禁止尝试其他方法，禁止继续执行任何后续步骤
-    return  # 流程到此结束，等待用户修正后重新触发
+    print(f"Retrieval failed: {result['error']}")
+    # ⛔ MUST terminate immediately! Trying any other method or continuing any subsequent step is prohibited
+    return  # The flow ends here; wait for the user to correct the issue and trigger again
 
-# 提取结果
-dashboardData = result["dashboardData"]      # 解析后的仪表板结构
-datasetNameMap = result["datasetNameMap"]    # cubeId -> cubeName 映射
-page_id = result["pageId"]                   # 仪表板 pageId
-dashboard_url = result["dashboardUrl"]       # 标准仪表板预览页地址（用于生成 skill）
+# Extract results
+dashboardData = result["dashboardData"]      # Parsed dashboard structure
+datasetNameMap = result["datasetNameMap"]    # cubeId -> cubeName mapping
+page_id = result["pageId"]                   # Dashboard pageId
+dashboard_url = result["dashboardUrl"]       # Standard dashboard preview URL (used for skill generation)
 
-print(f"获取成功: {dashboardData['basicInfo']['name']}")
+print(f"Retrieved successfully: {dashboardData['basicInfo']['name']}")
 ```
 
-**脚本位置**：[scripts/fetch_dashboard_data.py](scripts/fetch_dashboard_data.py)
+**Script location**: [scripts/fetch_dashboard_data.py](scripts/fetch_dashboard_data.py)
 
-**执行后必须输出**（确认数据已获取）：
+**MUST output after execution** (one-line summary only; **do NOT expand into tables** — the full dataset list, field mapping, etc. will be written into SKILL.md exactly once in Phase 3.2):
 
 ```markdown
----
-## Step 2.1 执行结果
-
-**执行状态**：{成功/失败}
-**仪表板名称**：{dashboardData.basicInfo.name}
-**仪表板URL**：{dashboard_url}（用于仪表板知识库的 URL 字段）
-**pageId**：{page_id}
-**gmtModified**：{dashboardData.basicInfo.gmtModified}（用于 SKILL_METADATA.skill_generated_at）
-**图表组件数**：{dashboardData.chartComponents.length} 个
-**查询控件数**：{dashboardData.queryControls.length} 个
-**Tab组件数**：{dashboardData.tabComponents.length} 个
-
-> ⚠️ **pageId 校验**：上方 pageId 值来自脚本返回的 `result["pageId"]`。
-> 如果用户传入的是数据门户 URL（含 productId），pageId 与 productId **一定不同**。
-> 后续 Phase 3 生成技能文件时，所有需要 pageId 的地方**必须使用此值**，禁止使用 URL 中的 productId。
-
-**数据集清单**（去重）：
-| 数据集名称 | 数据集ID |
-|-----------|----------|
-| {datasetNameMap[cubeId]} | {cubeId} |
-
-> 数据已存储到 `dashboardData`、`datasetNameMap` 和 `dashboard_url`，继续执行 Step 2.2
----
+✅ Step 2.1 retrieved "{dashboardData.basicInfo.name}" | pageId=`{page_id}` | charts=N / datasets=M / tabs=K / gmtModified={dashboardData.basicInfo.gmtModified}
 ```
 
-**失败处理**（⛔ 禁止绕行）：
-- 如果 `result["success"] == False`，**立即终止整个流程**
-- 输出错误信息 `result["error"]`，告知用户失败原因
-- **禁止**尝试直接调用 `get_dashboard_json` 或任何其他方法
-- 提示用户检查配置或仪表板权限后重新触发
+> ⛔ **Critical constraint** (even when the input is a data portal URL): everywhere pageId is needed in Phase 3, you **MUST use `result["pageId"]`**; do NOT use the `productId` from the user-input URL (portal ID ≠ dashboard pageId).
 
-**返回数据结构**：`dashboardData` 包含 `basicInfo`、`queryControls`、`chartComponents`、`tabComponents`、`richTextComponents`、`layoutAnalysis` 等字段，完整定义见 [reference.md - dashboardData 数据结构](./reference.md#dashboarddata-数据结构)。
+**Returned data structure**: `dashboardData` contains `basicInfo`, `queryControls`, `chartComponents`, `tabComponents`, `richTextComponents`, `layoutAnalysis`, `fieldMapping`, and other fields. For the full definition, see [reference.md - dashboardData Data Structure](./reference.md#dashboarddata-data-structure).
 
-### Step 2.2: 数据验证与补充
+### Step 2.2: Data Validation and Supplementation
 
-**目的**：验证解析结果的完整性，必要时补充信息。
+**Purpose**: Validate the completeness of the parsing result and supplement information if necessary.
 
-#### 2.2.1 Tab 结构验证
+#### 2.2.1 Tab Structure Validation
 
-如果 `dashboardData.tabComponents.length > 0`：
+If `dashboardData.tabComponents.length > 0`:
 
-1. 列出所有 Tab 及其标题
-2. 确认每个 Tab 下包含的图表组件
-3. 记录 Tab 与图表的从属关系
+1. List all Tabs and their titles
+2. Confirm the chart components included under each Tab
+3. Record the ownership relationship between Tabs and charts
 
-#### 2.2.2 图表标题验证
+#### 2.2.2 Chart Title Validation
 
-1. 检查 `dashboardData.chartComponents[].componentName` 是否有意义
-2. 如果为空或无意义，根据度量/维度字段推断主题
-3. 记录调整后的图表标题
+1. Check whether `dashboardData.chartComponents[].componentName` is meaningful
+2. If it is empty or not meaningful, infer the theme based on measure/dimension fields
+3. Record the adjusted chart titles
 
-#### 2.2.3 富文本内容提取
+#### 2.2.3 Rich Text Content Extraction
 
-1. 从 `dashboardData.richTextComponents[].textContent` 提取纯文本
-2. 用于理解仪表板的业务背景和使用说明
+1. Extract plain text from `dashboardData.richTextComponents[].textContent`
+2. Use it to understand the business background and usage instructions of the dashboard
 
-### Step 2.3: 提炼分析思路与匹配分析框架
+### Step 2.3: Extract Analytical Approach and Match Analysis Framework
 
-> **【必须执行步骤】** 完成 5 个子步骤 + 强制输出（2.3.2-OUTPUT）。
-> 这是将仪表板数据转化为可用分析框架的核心步骤。即使时间紧迫，也必须完成此步骤的所有子步骤（2.3.1 - 2.3.5）和强制输出（2.3.2-OUTPUT）。
+> **[Mandatory Step]** Complete all substeps 2.3.1-2.3.4 and the mandatory output (2.3.2-OUTPUT). All content MUST be inferred based on `dashboardData`; do NOT fabricate information.
 
-> **核心原则**：所有内容必须基于 `dashboardData`（Step 2.1 获取的数据）推断，不可臆造。
+#### 2.3.1 Data Extraction
 
-#### 2.3.1 数据提取
+Extract from `dashboardData.chartComponents`:
 
-从 `dashboardData.chartComponents` 中提取：
+**Dataset List**: Collect all charts' `sourceId`, deduplicate, and build a list:
 
-**数据集清单**：收集所有图表的 `sourceId`，去重后建立清单：
-
-| 数据集ID | 关联图表 | 可用维度 | 可用度量 |
+| Dataset ID | Associated Charts | Available Dimensions | Available Measures |
 |----------|---------|---------|----------|
-| {sourceId} | {图表名列表} | {维度字段} | {度量字段(聚合方式)} |
+| {sourceId} | {list of chart names} | {dimension fields} | {measure fields (aggregation method)} |
 
-**指标体系**：遍历 `chartComponents[].measures`，按 `caption` 去重。
+**Metric System**: Traverse `chartComponents[].measures` and deduplicate by `caption`.
 
-**维度体系**：遍历 `chartComponents[].dimensions`，按 `itemType` 分类：
-- `datetime` → 时间维度 | `geographic` → 地理维度 | `dimension` → 分类维度
+**Dimension System**: Traverse `chartComponents[].dimensions` and classify by `itemType`:
+- `datetime` → Time dimensions | `geographic` → Geographic dimensions | `dimension` → Categorical dimensions
 
-#### 2.3.2 分析框架匹配
+#### 2.3.2 Analysis Framework Matching and Output
 
-综合**指标语义 + 布局模式 + 联动关系**，匹配最适合的分析框架。
+Match the most suitable analysis framework by combining **metric semantics + layout pattern + linkage relationships**.
 
-**框架匹配规则**：详见 [reference.md - 分析框架匹配规则](reference.md#分析框架匹配规则)
+**Framework Matching Rules**: See [reference.md - Analysis Framework Matching Rules](reference.md#analysis-framework-matching-rules)
 
-常用框架：杜邦分析、AARRR 海盗模型、RFM 客户分析、漏斗分析、目标达成分析、同环比分析等。无法匹配时使用 **L1-L4 金字塔**（概览→趋势→分解→明细）。
+Common frameworks: DuPont Analysis, AARRR Pirate Model, RFM Customer Analysis, Funnel Analysis, Goal Achievement Analysis, Period-over-Period & Year-over-Year Analysis, etc. When no match is found, use **L1-L4 Pyramid** (Overview → Trend → Breakdown → Detail).
 
-#### 2.3.2-OUTPUT: 【强制】输出分析框架匹配结果
+**Matching Reasoning Process**:
 
-> **不可跳过**：完成 2.3.1-2.3.2 后，**必须输出**以下格式：
+1. List all metric names from `uniqueMeasures`
+2. List all dimension names from `uniqueDimensions` (classified by datetime/geographic/dimension)
+3. Identify the layout pattern (Metric Matrix / Detail-Oriented / Comparative Analysis / Focused Analysis)
+4. Analyze linkage relationships (shared filters) and drill-down direction (`drillFields` dimension types)
+5. Synthesize the above information to match the best analysis framework, and record the matching basis
 
-```markdown
----
-## 【分析框架匹配结果】
+**[Mandatory] Output format**: Output the "Analysis Framework Matching Result", including extracted real fields (measures/dimensions), layout pattern, framework matching (name/confidence/basis), and level preview. See [reference.md - Analysis Framework Output Template](reference.md#analysis-framework-output-template)
 
-### 提取到的真实字段
-**度量字段**：{measures 列表}
-**维度字段**：时间({datetime}) | 地理({geographic}) | 分类({dimension})
+#### 2.3.3 Layout Pattern Analysis and Dashboard Type Inference
 
-### 布局模式
-**布局特征**：第一行{N}个{类型}组件，总{M}行，底部{有/无}明细表
-**布局模式**：{指标矩阵型/明细导向型/对比分析型/聚焦分析型}
+Infer the dashboard's overall analysis pattern based on `tileLayout` positional information. See [reference.md - Layout Pattern Analysis Rules](reference.md#layout-pattern-analysis-rules)
 
-### 框架匹配
-**匹配框架**：{框架名称}
-**置信度**：{high/medium/default}
-**匹配依据**：{指标特征} + {布局特征} + {联动特征}
+**Layout Pattern Types**: Metric Matrix, Core Chart, Detail-Oriented, Comparative Analysis, Focused Analysis.
 
-### 层级预览（仅 L1-L4 框架）
-| 层级 | 图表数 | 典型图表 | 归类依据 |
-|-----|-------|---------|----------|
-| L1 | {N} | {示例} | {类型+位置} |
----
-```
+#### 2.3.4 Business Logic Inference
 
-#### 2.3.3 布局模式分析与仪表板类型推断
+Infer calculation relationships based on metric combinations. For inference rules, see [reference.md - Business Logic Inference Rules](reference.md#business-logic-inference-rules)
 
-基于 `tileLayout` 位置信息推断仪表板的整体分析模式。详见 [reference.md - 布局模式分析规则](reference.md#布局模式分析规则)
+### Step 2.4: Infer the Intent Routing Matrix
 
-**布局模式类型**：指标矩阵型、核心图表型、明细导向型、对比分析型、聚焦分析型。
+> **Core Goal**: Establish an accurate mapping from user question → target chart → dataset ID
 
-#### 2.3.4 自动匹配分析框架（多维度综合推断）
+Extract intent by user query pattern and match target level (L1 metric card / L2 trend chart / L3 grouped chart / L4 detail table, etc.). For complete rules, see [reference.md - Intent Routing Rules](reference.md#intent-routing-rules)
 
-> **综合指标语义 + 布局模式 + 联动关系，匹配最适合的分析框架**
-> 
-> **重要**：这是一个**思考推断步骤**，综合多个维度的信息来推断分析框架。
+### Step 2.5: Exploration Completion Confirmation
 
-**层级归类规则**：详见 [reference.md - 层级归类规则](reference.md#层级归类规则)
+> **[Pre-check] Confirm that Step 2.1 and Step 2.3.2 have already output the analysis framework matching result**
 
-- **L1**（整体监控）：indicator-card/kpi/gauge，顶部位置
-- **L2**（趋势分析）：line/area/indicator-trend，含 datetime 维度
-- **L3**（维度分解）：bar/pie/ranking-list，含分类维度
-- **L4**（明细追踪）：common-table，底部位置
+> ⚠️ **Design change note**: This step only outputs a **short confirmation**. Do **NOT** repeat the chart list, field mapping, intent routing or any other details from `dashboardData` here. All details will be written into SKILL.md exactly once in Phase 3.2 (re-emitting the same content here is the main reason skill generation used to take 15-25 minutes).
 
-**匹配思考流程**：
-
-1. **列出所有真实指标**：从 `uniqueMeasures` 中列出所有指标名称
-2. **列出所有真实维度**：从 `uniqueDimensions` 中列出所有维度名称
-3. **识别布局模式**：根据布局特征判断仪表板类型
-4. **分析联动关系**：哪些图表共享筛选器？暗示它们在同一分析路径上
-5. **分析下钻方向**：`drillFields` 的维度类型暗示分析深入的方向
-6. **综合语义分析**：结合以上信息，理解仪表板的整体分析意图
-7. **框架匹配**：根据综合特征判断最匹配的分析框架
-8. **记录匹配依据**：说明是基于哪些特征（指标+布局+联动）匹配到该框架
-
-#### 2.3.5 业务逻辑推断
-
-**业务逻辑推断（基于指标组合）**：
-
-| 指标组合 | 推断公式 |
-|---------|----------|
-| 销售额 + 成本 + 利润 | 利润 = 销售额 - 成本 |
-| 销售额 + 销量 | 客单价 = 销售额 / 销量 |
-| 目标值 + 实际值 | 达成率 = 实际 / 目标 × 100% |
-
-更多推断规则详见 [reference.md - 业务逻辑推断规则](reference.md#业务逻辑推断规则)
-
-### Step 2.4: 推断意图路由矩阵
-
-> **核心目标**：建立用户问题 → 目标图表 → 数据集ID 的精准映射
-
-**意图关键词提取规则**：
-
-| 用户问法模式 | 提取的意图 | 匹配目标 |
-|-------------|-----------|----------|
-| "XX是多少/有多少" | 查询单一指标 | L1 指标卡 |
-| "XX趋势/走势/变化" | 趋势分析 | L2 折线图/趋势图 |
-| "XX排行/TOP/最高/最低" | 排序分析 | L3 排行榜 |
-| "XX分布/占比/构成" | 结构分析 | L3 饼图/柱图 |
-| "各XX的YY" | 维度分解 | L3 分组图表 |
-| "XX明细/详情/列表" | 明细查询 | L4 明细表 |
-| "为什么XX下降/上升" | 归因分析 | L1→L2→L3 联合 |
-
-更多规则详见 [reference.md - 意图路由规则](reference.md#意图路由规则)
-
-### Step 2.5: 汇总探索结果
-
-> **【前置检查】确认 Step 2.1 和 Step 2.3.2-OUTPUT 已输出分析框架匹配结果**
-
-整理所有探查结果，按以下结构输出（详细格式见 Phase 3.2 模板），必须确保：
-- 所有图表组件都被列出（包含数据集ID、字段列表、分析主题、层级归属）
-- 分析框架匹配结果基于真实提取的指标和维度
-- 业务背景综合仪表板标题、图表标题、字段名称、富文本内容
-```
-## 探索结果汇总
-├── 基本信息（名称/pageId/URL）
-├── 业务背景与统计口径
-├── 分析框架匹配结果
-├── 核心指标体系
-├── 维度体系
-├── 业务逻辑推断
-├── 层级结构（A/B/C 形式）
-├── 数据集清单
-├── 查询控件
-├── 图表组件完整列表（12列）
-├── 意图路由矩阵
-├── 联动与下钻路径
-├── 下钻字段配置
-└── 适用场景与查询路径
-```
-
-**关键要求**：
-- 所有图表组件必须完整列出，每个都包含数据集ID、字段列表、分析主题
-- 分析框架匹配结果基于真实提取的指标和维度
-- 层级归属基于图表类型和布局位置
+**[Mandatory] Output** (keep within 10 lines): chart component count N (Phase 3.2 MUST output N rows), dataset count M, query control count K, matched framework name, business background keywords. Do **NOT** repeat chart list, field mapping, intent routing or other details — these will be written directly into SKILL.md in Phase 3.2.
 
 ---
 
-## Phase 3: 技能文件生成
+## Phase 3: Skill File Generation
 
-根据探索结果，组装并写入 SKILL.md 和 config.yaml 文件。
+Based on the exploration results, assemble and write the SKILL.md and config.yaml files.
 
-> ⚠️ **关键变量确认**：生成技能文件前，确认以下值的来源：
-> - **pageId** = `result["pageId"]`（Step 2.1 脚本返回值）—— **不是**用户输入 URL 中的 `productId`
-> - **dashboard_url** = `result["dashboardUrl"]`（Step 2.1 脚本返回值，已包含正确 pageId）
+> ⚠️ **Key Variable Confirmation**: Before generating the skill file, confirm the source of the following values:
+> - **pageId** = `result["pageId"]` (Step 2.1 script return value) — **NOT** the `productId` in the user-input URL
+> - **dashboard_url** = `result["dashboardUrl"]` (Step 2.1 script return value, already contains the correct pageId)
 > - **skill_generated_at** = `dashboardData.basicInfo.gmtModified`
 >
-> 数据门户 URL 中的 `productId` 是门户 ID，与仪表板 `pageId` 是完全不同的值，禁止混用。
+> The `productId` in a data portal URL is a portal ID and is completely different from the dashboard `pageId`; mixing them is prohibited.
 
-### Step 3.1: 确定技能名称
+### Step 3.1: Determine the Skill Name
 
-如果用户提供了技能名称，直接使用（会覆盖同名技能）。否则：
-1. 取仪表板标题
-2. 转换为 kebab-case 格式（中文用拼音或有意义的英文缩写）
-3. 添加 `qbi-` 前缀
-4. **追加 pageId 前8位确保唯一性**
-5. 例如："好美家零售数据" (pageId: `ab12cd34-xxxx`) → `qbi-retail-query-ab12cd34`
+If the user provided a skill name, use it directly. Otherwise, generate one using the format `qbi-{title-kebab}-{first 8 chars of pageId}`.
 
-### Step 3.2: 组装 SKILL.md 内容
+### Step 3.2: Assemble SKILL.md Content
 
-按以下模板生成技能文件。**{占位符}** 表示用探索结果填充的内容。
+Generate the skill file according to the following template. **{placeholders}** indicate content populated from the exploration results.
 
-#### 3.2.1-3.2.7 内容模板
+#### 3.2.1-3.2.7 Content Template
 
-> **【必须执行】读取模板文件**
+> **[MUST execute] Read the template file**
 >
-> 使用 `read_file` 工具读取 `./templates/output_skill_template.md` 文件，获取以下内容的完整模板：
-> - **YAML Frontmatter + 技能元数据**（3.2.1）：name/description 格式、SKILL_METADATA 注释块
-> - **标题和触发场景**（3.2.2-3.2.3）：5-8 个自然语言查询示例
-> - **前置条件**（3.2.4）：配置引导流程（与本 skill 的前置条件逻辑一致）
-> - **仪表板知识库**（3.2.5）：基本信息、业务背景、数据集清单、查询控件、图表组件完整列表、意图路由矩阵
-> - **仪表板分析思路**（3.2.6）：分析框架匹配、层级结构、核心指标、维度体系、业务逻辑、联动路径
-> - **工作流程**（3.2.7）：问题理解→拆解→构建查询→调用 SmartQ→汇总结果→错误处理
+> Use the `read_file` tool to read the file `./templates/output_skill_template.md` and obtain the full template for the following content:
+> - **YAML Frontmatter + skill metadata** (3.2.1): name/description format, SKILL_METADATA comment block
+> - **Title and description** (3.2.2): skill title and one-line description
+> - **Prerequisites** (3.2.4): configuration guidance flow (consistent logic with this skill's prerequisites)
+> - **Dashboard Knowledge Base** (3.2.5): basic information, business context (conditional output), dataset list, query controls, chart component complete list, intent routing matrix, field mapping
+> - **Dashboard Analytical Approach** (3.2.6, simplified): metric relationships, linkage and drill-down paths
+> - **Workflow** (3.2.7): question understanding → decomposition → build query → call SmartQ → summarize results → error handling
 >
-> 按模板格式生成对应内容，填充 `dashboardData` 中提取的真实数据。
+> Generate the corresponding content according to the template format and fill it with real data extracted from `dashboardData`.
 
-**关键要求**：
-- description 必须保留 `INSTEAD OF generic quickbi-smartq-chat` 优先级声明
-- 所有图表组件必须完整列出，不遗漏
-- 指标和维度必须来自 `dashboardData`，不可臆造
+**Key Requirements**:
+- description MUST retain the `INSTEAD OF generic quickbi-smartq-chat` priority declaration
+- Metrics and dimensions MUST come from `dashboardData`; do NOT fabricate them
 
-### Step 3.3: 生成 config.yaml
+### Step 3.3: Generate skill files
 
-复制配置模板，敏感字段置空：
+Phase 2 automatically completes the following:
+- Creates the complete skill directory structure
+- Copies runtime scripts with adjusted import paths
+- Splices fragments and replaces all placeholders
+- Generates config.yaml
+- Validates no placeholder residuals
 
-```yaml
-# Quick BI 文件问数配置文件
+After Phase 2 succeeds, the output directory is a ready-to-install skill package.
 
-# QBI 域名
-server_domain: https://bi.aliyun.com
+### Step 3.4: Skill is already in place (no separate install step)
 
-# OpenAPI 认证配置
-api_key:
-api_secret:
-
-# 用户令牌
-user_token:
-
-# 是否从环境变量读取认证信息
-use_env_property: false
-```
-
-### Step 3.4: 写入文件
-1. **确定输出目录**：与当前技能所在目录保持一致
-   - 获取当前技能的目录路径（即本 SKILL.md 文件所在的父目录的父目录）
-   - 在该目录下创建 `{skill-name}/` 子目录
-   - 例如：如果当前技能在 `.qoderwork/skills/quickbi-smartq-chat/`，则新技能应在 `.qoderwork/skills/{skill-name}/`
-2. 创建目录（如不存在）
-3. 写入 SKILL.md 文件
-4. 写入 config.yaml 模板
-5. **复制脚本文件到生成的 skill 的 scripts 目录**（需调整 import）：
-   - 复制 `scripts/dashboard/quickbi_openapi.py` → `{skill-name}/scripts/quickbi_openapi.py`
-     - **必须调整 import**：移除 `sys.path.insert(0, ...)` 行，将 `from common.config_loader import load_config as _load_config_from_loader` 改为 `from config_loader import load_config as _load_config_from_loader`（注意：不要加点号前缀，因为 scripts 目录不是 Python 包，脚本通过 `sys.path.insert` 方式加载，只能使用绝对导入）
-   - 复制 `scripts/common/config_loader.py` → `{skill-name}/scripts/config_loader.py`
-     - **必须调整**：将 `DEFAULT_CONFIG_PATH = BASE_DIR.parent.parent / "default_config.yaml"` 改为 `DEFAULT_CONFIG_PATH = BASE_DIR.parent / "config.yaml"`（扁平结构下 `BASE_DIR` 指向 `scripts/`，`BASE_DIR.parent` 即 skill 根目录）
-6. **复制 `references/common/copy_skill_config.png`** 到生成的 skill 的 `example/` 目录，用于首次配置引导
-7. 告知用户：
-   - 技能文件已生成
-   - 首次使用时会引导配置 API 凭证（config.yaml）
-   - 生成的技能如何使用
-8. **将生成的技能安装到技能中心**（必须执行）：
-   执行以下命令将技能注册到技能中心：
-   ```bash
-   skills install local --json '{"sourcePath": "<生成的 skill 目录绝对路径>"}'
-   ```
-
-**生成的 Skill 目录结构**：
-```
-./skills/{skill-name}/
-├── SKILL.md           # 技能文件
-├── config.yaml        # API 配置（首次使用时会引导用户配置）
-├── example/
-│   └── copy_skill_config.png  # 首次配置引导图片（来源：common/copy_skill_config.png）
-└── scripts/
-    ├── quickbi_openapi.py  # OpenAPI 调用工具函数
-    └── config_loader.py    # 配置加载器（全局配置存在即用）
-```
+Pass the **skill center target path** directly as `--output-dir` (e.g. `<skill_center_root>/qbi-dashboard-<first 8 chars of pageId>`). Phase 2 handles "target exists → auto-rename to `.bak.<timestamp>` backup" internally. When Phase 2 returns `success: true`, the skill is already installed; **do NOT run any extra `cp` / `mv` / `rm`**. Backup directories will accumulate over re-generations and may be cleaned up by the user periodically.
 ---
 
 ## Examples
 
-### Example 1: 从仪表板 URL 生成查询技能
+### Example 1: Generate a Query Skill from a Dashboard URL
 
-**Input:**
-```
-用户：帮我把这个仪表板转成查询技能
-https://bi.aliyun.com/dashboard/view/pc.htm?pageId=ab12cd34-5678-90ef-ghij-klmnopqrstuv
-```
+**Input:** User provides a dashboard URL and requests generating a query skill
 
-**Expected Output:**
-1. 执行预校验，确认用户有访问权限
-2. 获取仪表板 JSON 并解析组件结构
-3. 输出分析框架匹配结果（如 L1-L4 金字塔）
-4. 生成 `skills/qbi-xxx-ab12cd34/SKILL.md`
-5. 自动安装到技能中心
+**Output:** Pre-validation passes → Parse dashboard components → Output analysis framework matching → Generate `skills/qbi-xxx-{first 8 chars of pageId}/SKILL.md` → Install into the skill center
 
-### Example 2: 从数据门户 URL 生成查询技能
+### Example 2: Generate a Query Skill from a Data Portal URL
 
-**Input:**
-```
-用户：这是我们的数据门户，生成一个可以查数据的 skill
-https://bi.aliyun.com/product/view.htm?module=dashboard&productId=abc123&menuId=menu456
-```
+**Input:** User provides a data portal URL (with productId/menuId)
 
-**Expected Output:**
-1. 识别为数据门户 URL，调用 `get_dataportal_page_id` 获取关联的仪表板 pageId
-2. 执行后续标准流程（同 Example 1）
+**Output:** First resolve the associated dashboard pageId via OpenAPI, then follow the same flow as Example 1
 
 ---
 
-## 重要注意事项
+## Important Notes
 
-1. **API 凭证安全**：config.yaml 中的 AccessKey 是敏感信息，提醒用户妥善保管
-2. **数据集ID是关键**：问数查询依赖正确的 `sourceId`（数据集ID），必须从 JSON 中准确提取
-3. **意图路由准确性**：意图路由矩阵决定了用户问题能否正确匹配到数据集，需要仔细推断
-4. **分析框架基于真实数据**：所有分析框架的指标和维度必须来自 `dashboardData`（Step 2.1 获取的数据），不可臆造
-5. **分析框架必须输出**：Step 2.3.2-OUTPUT 是强制步骤，必须在汇总探索结果前输出分析框架匹配结果。如果跳过此步骤，生成的 Skill 将缺少核心分析能力
+1. **Intent Routing Accuracy**: The intent routing matrix determines whether a user question can be correctly matched to a dataset and needs to be inferred carefully
+2. **Analysis Framework MUST Be Output**: Step 2.3.2 is a mandatory step; the analysis framework matching result MUST be output before summarizing the exploration results
 
 ---
 
-## 附录 C: 工具函数
+## Appendix
 
-### 目录结构
-
-```
-quickbi-smartq-chat/
-├── SKILL.md                       # 统一入口技能
-├── default_config.yaml            # 默认配置
-├── references/
-│   ├── dashboard/
-│   │   ├── module-dashboard.md        # 本文档
-│   │   ├── module-dashboard-reference.md  # 详细参考文档
-│   │   └── templates/
-│   │       └── output_skill_template.md  # 生成模板
-│   └── common/
-│       └── copy_skill_config.png      # 配置引导图片
-└── scripts/
-    ├── common/
-    │   └── config_loader.py           # 配置加载器（四层配置优先级）
-    └── dashboard/
-        ├── fetch_dashboard_data.py    # 一站式仪表板数据获取
-        ├── get_dashboard_json.js      # JSON 解析脚本
-        └── quickbi_openapi.py         # OpenAPI 工具函数
-```
-
-### 核心函数
-
-#### fetch_dashboard_data.py
-
-| 函数名 | 用途 | 使用阶段 |
-|--------|------|----------|
-| `fetch_dashboard_data(url, config=None)` | 一站式获取仪表板数据（配置加载+URL解析+预校验+获取JSON+解析+数据集名称） | Step 2.1 |
-
-#### quickbi_openapi.py
-
-| 函数名 | 用途 | 使用阶段 |
-|--------|------|----------|
-| `load_config(config_path=None)` | 加载配置（优先级：环境变量 > 工作目录级 > 全局 > 包内默认） | Step 1.0 |
-| `is_dataportal_url(url)` | 判断是否为数据门户 URL | Step 1.0 |
-| `extract_dataportal_ids(url)` | 从数据门户 URL 提取 productId 和 menuId | Step 1.0 |
-| `get_dataportal_page_id(...)` | 通过 OpenAPI 获取数据门户关联的仪表板 pageId | Step 1.0 |
-| `extract_page_id(url)` | 从仪表板 URL 提取 pageId | Step 1.0 |
-| `validate_and_prepare_dashboard(...)` | 仪表板预校验及预处理 | Step 1.0 |
-| `get_dashboard_json(...)` | 获取仪表板完整 JSON 数据 | 内部调用 |
-| `batch_get_dataset_schema(...)` | 批量获取数据集详情（名称等） | 内部调用 |
-| `query_openapi(...)` | 调用 SmartQ 查询接口 | 生成的 skill 查询阶段 |
-| `get_dashboard_update_time(...)` | 查询仪表板更新时间 | 生成的 skill 启动校验 |
-
-#### get_dashboard_json.js
-
-| 函数名 | 用途 |
-|--------|------|
-| `parseDashboardJson(json)` | 解析仪表板原始 JSON，提取组件结构 |
-| `analyzeLayout(charts)` | 基于 tileLayout 分析图表布局 |
-
-#### config_loader.py（scripts/common/）
-
-| 函数名 | 用途 |
-|--------|------|
-| `load_config()` | 四层配置加载（优先级：环境变量 > 工作目录级 > 全局 > 包内默认） |
-| `check_trial_expired(result)` | 检查 API 返回结果是否为试用过期错误 |
-| `get_server_domain(config=None)` | 获取 server_domain（可选传入已加载的 config） |
-| `persist_to_global_config(key, value)` | 写入全局配置 `~/.qbi/config.yaml` |
-| `persist_to_skill_config(key, value)` | 写入工作目录级配置 `$WORKSPACE_DIR/.qbi/smartq-chat/config.yaml` |
-
-### 预校验接口错误码
-
-| 错误码 | 含义 | 处理建议 |
-|--------|------|----------|
-| `AE0510000005` | 用户不在组织中 | 检查 user_token 是否正确 |
-| `AE0510150002` | 没有仪表板访问权限 | 检查用户是否有该仪表板的访问权限 |
-| `AE0510200000` | 没有数据集管理或者授权的权限 | 检查是否有数据集管理和问数配置权限 |
-| `AE0581030022` | 未购买问数功能 | 确认已购买 SmartQ 问数功能 |
-| `OE10010106` | API 未授权 | 检查 api_key/api_secret 配置 |
-| `CONNECTION_ERROR` | 网络连接失败 | 检查网络和 server_domain 配置 |
-
-### 数据门户接口错误码
-
-| 错误码 | 含义 | 处理建议 |
-|--------|------|----------|
-| `NO_PAGE_ID` | 数据门户菜单未关联仪表板 | 检查门户菜单是否正确配置了仪表板页面 |
-| `CONNECTION_ERROR` | 网络连接失败 | 检查网络和 server_domain 配置 |
+See [reference document](module-dashboard-reference.md) for tool functions, API error codes, and other detailed references.

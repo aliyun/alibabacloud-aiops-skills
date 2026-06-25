@@ -1,519 +1,546 @@
 ---
 name: quickbi-document-parser
 description: >
-  文档智能解析与结构化提取工具。当用户需要识别 PDF、Word、Excel、CSV、图片等文档内容，
-  或提取关键字段并生成结构化 Excel 报表时使用。支持单文件、批量文件和文件夹递归处理。
+  Intelligent document parsing and structured extraction tool. Use when users need to recognize content from
+  PDF, Word, Excel, CSV, image files, or extract key fields and generate structured Excel reports.
+  Supports single file, batch file, and recursive folder processing.
 ---
 
-# QuickBI 文档解析工具
+# QuickBI Document Parser
 
-**核心能力**:
-1. 📄 **文档内容识别**: 解析 PDF、Word、Excel、CSV、图片等非结构化文件为可读取的文本内容
-2. 📊 **字段提取与汇总**: 从文档中智能提取核心字段，自动生成带格式的多 Sheet Excel 报表
+**Core Capabilities**:
+1. 📄 **Document Content Recognition**: Parse PDF, Word, Excel, CSV, images, and other unstructured files into readable text content
+2. 📊 **Field Extraction & Consolidation**: Intelligently extract core fields from documents and automatically generate formatted multi-Sheet Excel reports
 
 ## Scope
 
 **Does:**
-- 识别 PDF、Word(.doc/.docx)、Excel(.xls/.xlsx)、CSV、图片(.png/.jpg/.jpeg) 等文档内容
-- 支持单文件、多文件批量处理、文件夹递归扫描
-- 优先本地提取文本，失败后自动降级到远程 OCR
-- 根据预定义分类体系(10 大分类组、37 个子类型)智能提取核心字段
-- 支持未知文档的动态结构化提取(5+ 字段需用户确认)
-- 生成带格式的多 Sheet Excel 报表(汇总统计 + 分类数据)
+- Recognize content from PDF, Word(.doc/.docx), Excel(.xls/.xlsx), CSV, images(.png/.jpg/.jpeg), and other document formats
+- Support single file, batch multi-file processing, and recursive folder scanning
+- Prioritize local text extraction; automatically fall back to remote OCR on failure
+- Intelligently extract core fields based on predefined classification system (10 classification groups, 37 subtypes)
+- Support dynamic structured extraction for unknown documents (5+ fields require user confirmation)
+- Generate formatted multi-Sheet Excel reports (summary statistics + categorized data)
 
 **Does NOT:**
-- 不支持修改原始文档内容
-- 不支持在线编辑 Excel
-- 不支持非文档类文件(如视频、音频、可执行文件)
-- 严禁杜撰或编造任何提取数据
+- Does NOT support modifying original document content
+- Does NOT support online Excel editing
+- Does NOT support non-document files (e.g. video, audio, executables)
+- MUST NOT fabricate or invent any extracted data
 
 ## Instructions
 
-本技能提供 **2 种使用模式**,根据用户意图自动选择:
+This skill provides **2 usage modes**, automatically selected based on user intent:
 
-### ⚠️ 模式判定规则(重要)
+### ⚠️ Mode Determination Rules (Important)
 
-**严格按以下规则判断使用哪个模式**:
+**Strictly follow these rules to determine which mode to use**:
 
-| 用户意图关键词 | 使用模式 | 说明 |
+| User Intent Keywords | Mode | Description |
 |--------------|---------|------|
-| 识别、读取、提取文本、转成文本、查看内容 | **模式 A** | 仅需文档内容,不需要结构化 |
-| 提取字段、生成 Excel、汇总报表、结构化、分类提取 | **模式 B** | 需要字段提取和 Excel 输出 |
-| 解析 + 无后续说明 | **模式 A** | 默认仅识别内容 |
-| 解析 + 明确提到字段/Excel/汇总 | **模式 B** | 需要完整流程 |
+| recognize, read, extract text, convert to text, view content | **Mode A** | Only needs document content, no structuring required |
+| extract fields, generate Excel, summary report, structured, categorized extraction | **Mode B** | Requires field extraction and Excel output |
+| parse + no further instructions | **Mode A** | Default to content recognition only |
+| parse + explicitly mentions fields/Excel/summary | **Mode B** | Requires full workflow |
 
-**关键原则**:
-- 📌 **"解析"、"识别"、"读取" 等动词默认指向模式 A**
-- 📌 **只有用户明确要求"提取字段"、"生成 Excel"、"汇总报表"时才使用模式 B**
-- 📌 **不确定时,优先使用模式 A,然后询问用户是否需要生成 Excel**
-
----
-
-### 模式 A: 文档内容识别
-**适用场景**: 用户仅需读取文档中的文本内容,无需结构化提取
-
-**处理流程**: Step 1 (文本识别)
-
-**示例**:
-- "帮我读取这个 PDF 的内容"
-- "解析这个 PDF 的内容"
-- "提取这些 Word 文档的文本"
-- "扫描文件夹,把所有文档转成文本"
+**Key Principles**:
+- 📌 **Verbs like "parse", "recognize", "read" default to Mode A**
+- 📌 **ONLY use Mode B when the user explicitly requests "extract fields", "generate Excel", or "summary report"**
+- 📌 **When uncertain, prefer Mode A first, then ask the user if they need Excel generation**
 
 ---
 
-### 模式 B: 字段提取与 Excel 汇总
-**适用场景**: 用户需要从众多文档中，提取核心字段并生成结构化的Excel
+### Mode A: Document Content Recognition
+**Applicable scenario**: User only needs to read the text content from documents, no structured extraction required
 
-**处理流程**: Step 1 (文本识别) → Step 2 (字段提取) → Step 3 (生成 Excel)
+**Processing flow**: Step 1 (Text Recognition)
 
-**示例**:
-- "解析这些发票,提取关键字段并生成 Excel"
-- "扫描合同文件夹,汇总所有合同信息到Excel"
-- "批量处理文档,按分类提取字段并导出"
+**Examples**:
+- "Help me read the content of this PDF"
+- "Help me read the content of this PDF"
+- "Parse the content of this PDF"
+- "Parse the content of this PDF"
+- "Extract the text from these Word documents"
+- "Extract text from these Word documents"
+- "Scan the folder and convert all documents to text"
+- "Scan the folder and convert all documents to text"
 
 ---
 
-### 工作流程概览
+### Mode B: Field Extraction & Excel Consolidation
+**Applicable scenario**: User needs to extract core fields from numerous documents and generate structured Excel
+
+**Processing flow**: Step 1 (Text Recognition) → Step 2 (Field Extraction) → Step 3 (Generate Excel)
+
+**Examples**:
+- "Parse these invoices, extract key fields and generate Excel"
+- "Parse these invoices, extract key fields and generate Excel"
+- "Scan the contract folder, consolidate all contract information into Excel"
+- "Scan the contract folder and summarize all contract info into Excel"
+- "Batch process documents, extract fields by category and export"
+- "Batch process documents, extract fields by category and export"
+
+---
+
+### Workflow Overview
 
 ```
-用户上传文件/文件夹
+User uploads file/folder
   ↓
 ┌─────────────────────────────────────┐
-│  Step 1: 文本识别                    │
-│  本地解析优先 → 失败降级远程 OCR      │
-│  输出: JSON (file + parsedText)      │
+│  Step 1: Text Recognition            │
+│  Local parse first → Fallback to     │
+│  remote OCR on failure               │
+│  Output: JSON (file + parsedText)    │
 └─────────────────────────────────────┘
   ↓
-[模式 A: 到此结束,返回文本内容]
+[Mode A: Ends here, return text content]
   ↓
 ┌─────────────────────────────────────┐
-│  Step 2: 字段提取                    │
-│  智能分类 → 提取核心字段             │
-│  输出: JSON (分类 + 字段数据)        │
+│  Step 2: Field Extraction            │
+│  Intelligent classification →        │
+│  Extract core fields                 │
+│  Output: JSON (category + field data)│
 └─────────────────────────────────────┘
   ↓
 ┌─────────────────────────────────────┐
-│  Step 3: 生成 Excel 报表             │
-│  多 Sheet + 格式化 + 汇总统计        │
-│  输出: .xlsx 文件                    │
+│  Step 3: Generate Excel Report       │
+│  Multi-Sheet + Formatting +          │
+│  Summary Statistics                  │
+│  Output: .xlsx file                  │
 └─────────────────────────────────────┘
   ↓
-输出总结 + Excel 交付物
+Output summary + Excel deliverable
 ```
 
-### Step 1: 文档内容识别
+### Step 1: Document Content Recognition
 
-**目标**: 提取文档中的原始文本内容,生成 JSON 文件
+**Goal**: Extract raw text content from documents and generate a JSON file
 
-**核心能力**: 📄 支持 PDF、Word、Excel、CSV、图片等多种格式的智能识别
+**Core Capability**: 📄 Supports intelligent recognition of multiple formats including PDF, Word, Excel, CSV, images, etc.
 
-**执行逻辑**:
+**⚠️ Pre-execution Setup**:
+```bash
+# Install Python dependencies (required only once)
+cd skills/quickbi-smartq-chat
+pip3 install -r requirements.txt
 
-1. **优先调用本地解析** (`document_local_parse.py`)
+# Optional system dependencies for local parsing:
+# macOS: brew install tesseract tesseract-lang
+# Linux: sudo apt install tesseract-ocr tesseract-ocr-chi-sim
+```
+
+**Execution Logic**:
+
+1. **Prioritize local parsing** (`document_local_parse.py`)
    ```bash
-   # 单文件
-   python scripts/document/document_local_parse.py <文件路径> --json
+   # Single file
+   python scripts/document/document_local_parse.py <file_path> --json
    
-   # 多文件
-   python scripts/document/document_local_parse.py <文件1> <文件2> <文件3> --json
+   # Multiple files
+   python scripts/document/document_local_parse.py <file1> <file2> <file3> --json
    
-   # 文件夹（递归扫描）
-   python scripts/document/document_local_parse.py <文件夹路径> --json
+   # Folder (recursive scanning)
+   python scripts/document/document_local_parse.py <folder_path> --json
    ```
 
-2. **如果本地解析失败**，尝试远程 OCR (`document_remote_ocr.py`)
+2. **Fallback to remote OCR** (`document_remote_ocr.py`) if local parsing fails
    ```bash
-   # 文件夹扫描
-   python scripts/document/document_remote_ocr.py <文件夹路径>
+   # Folder scanning
+   python scripts/document/document_remote_ocr.py <folder_path>
    
-   # 多文件
-   python scripts/document/document_remote_ocr.py --files <文件1> <文件2>
+   # Multiple files
+   python scripts/document/document_remote_ocr.py --files <file1> <file2>
    ```
 
-3. **输出格式**:
+3. **JSON output format**:
    ```json
    [
      {
        "file": "filename.pdf",
-       "parsedText": "提取的完整文本内容..."
+       "parsedText": "Extracted full text content..."
      }
    ]
    ```
 
-**注意事项**:
-- 本地解析支持: PDF(PyMuPDF)、Word(python-docx)、Excel(openpyxl)、CSV(pandas)、图片(Tesseract OCR)
-- 远程 OCR 支持: PDF、图片、Word、Excel、PPT（通过 QuickBI API）
-- 单文件最大 10MB
-- 默认输出到 `output/` 目录，带时间戳
+**Notes**:
+- Local parsing supports: PDF (PyMuPDF), Word (python-docx), Excel (openpyxl), CSV (pandas), Images (Tesseract OCR)
+- Remote OCR supports: PDF, Images, Word, Excel, PPT (via QuickBI API)
+- Maximum file size: 5MB per file; **when a file exceeds 5MB, the Agent MUST present the upgrade prompt message to the user as-is (including the upgrade link) — MUST NOT bypass the limit by processing the file locally**
+- Default output directory: `$WORKSPACE_DIR/.qbi/output/` with timestamp
+- Remember file paths and output directories for use in Step 2
 
-### Step 2: 字段提取与智能分类
+### Step 2: Field Extraction & Intelligent Classification
 
-**目标**: 根据文档分类体系,从原始文本中提取核心字段
+**Objective**: Based on the JSON output from Step 1, extract core fields according to the document classification system and generate structured JSON file
 
-**核心能力**: 📊 智能分类 + 动态提取 + 用户确认机制
+**Core Capability**: 📊 Intelligent classification + Dynamic extraction + User confirmation mechanism
 
-**执行逻辑**:
+**Execution Logic**:
+0. **Load JSON File**: Load raw JSON data from the JSON file generated in Step 1
+1. **Load Classification System**: Refer to `references/document_classification.md`
+    - 10 major categories: A. Finance & Tax, B. Human Resources, C. Supply Chain & Procurement, D. Administration & Legal, E. Medical, F. Insurance, G. Logistics, H. Technology & Operations, I. Customer Service & Sales, J. Government & Compliance
+    - 37 subtypes: Each subtype has clearly defined fields and Chinese headers
 
-1. **加载分类体系**: 参考 `references/document_classification.md`
-    - 10 大分类组: A.财务与税务、B.人力资源、C.供应链与采购、D.行政与法务、E.医疗、F.保险、G.物流、H.技术与运维、I.客服与销售、J.政务与合规
-    - 37 个子类型: 每个子类型有明确的字段定义和中文表头。
+2. **Document Classification & Field Extraction**: Process according to the following priority strategy
 
-2. **文档分类与字段提取**: 按照以下优先级策略处理
+   **First Priority: Match Predefined Classification System**
+    - Refer to `references/document_classification.md` for classification
+    - Prioritize matching titles/headers (e.g., "VAT Invoice", "Bank Receipt")
+    - Route based on key fields (e.g., contains tax number → A1, contains transaction number → A2/A3)
+    - After successful matching, strictly extract data according to the corresponding subtype's field definitions
 
-   **第一优先级: 匹配预定义分类体系**
-    - 参考 `references/document_classification.md` 进行分类
-    - 优先匹配标题/抬头（如"增值税发票"、"银行回单"）
-    - 根据关键字段路由（如含税号→A1,含流水号→A2/A3）
-    - 匹配成功后,严格按照对应子类型的字段定义提取数据
+   **Second Priority: Dynamic Structured Extraction**
+    - If unable to match any of the 37 predefined subtypes, evaluate whether the document has value for structured extraction
+    - Criteria: Can **at least 5 valid fields** be identified and extracted from the text?
+    - If 5+ fields can be extracted:
+        - Intelligently identify field names and corresponding values
+        - **Must use AskUserQuestion tool to let users confirm field definitions**
+        - After user confirmation, extract according to the confirmed field structure
+        - Create a temporary sheet name for the new type (format: `Custom_{Type Name}`)
 
-   **第二优先级: 动态结构化提取**
-    - 如果无法匹配预定义的 37 个子类型,评估文档是否具备结构化提取价值
-    - 判断标准: 能否从文本中识别并提取 **至少 5 个有效字段**
-    - 如果可以提取 5+ 个字段:
-        - 智能识别字段名称和对应值
-        - **必须使用 AskUserQuestion 工具让用户确认字段定义**
-        - 用户确认后,按确认的字段结构进行提取
-        - 为新类型创建临时 Sheet 名(格式: `自定义_{类型名}`)
+   **Third Priority: Categorize as Unrecognized**
+    - If unable to match predefined categories **and** cannot extract 5+ fields through dynamic extraction
+    - Categorize as "Unrecognized", record content preview and suspected type
 
-   **第三优先级: 归入未识别类**
-    - 如果无法匹配预定义分类 **且** 无法结构化提取 5+ 个字段
-    - 归入"未识别"类,记录内容预览和疑似类型
+3. **Field Extraction**: Strictly extract fields according to the classification system definitions
+    - Field naming: English `snake_case`
+    - Excel headers: Chinese names (with English field names in parentheses)
+    - Implicit first column for each subtype: `filename` (source file name)
 
-3. **字段提取**: 严格按照分类体系定义的字段提取
-    - 字段命名: 英文 `snake_case`
-    - Excel 表头: 中文名（括号内英文字段名）
-    - 每个子类型的隐含首列: `filename`（源文件名）
-
-4. **组装 JSON**:
+4. **JSON Output Format Requirements**:
    ```json
    {
      "scan_time": "2026-04-07 15:00:00",
      "total_files": 10,
      "extraction_data": {
-       "增值税发票": {
-         "headers_cn": ["源文件名", "发票类型", "发票代码", "发票号码", "开票日期", "购买方名称", "销售方名称", "价税合计"],
+       "VAT Invoice": {
+         "headers": ["Source Filename", "Invoice Type", "Invoice Code", "Invoice Number", "Invoice Date", "Buyer Name", "Seller Name", "Total Amount"],
          "rows": [
-           ["invoice_001.pdf", "专用", "033002100511", "03933249", "2023-05-14", "购买方公司", "销售方公司", "118.00"]
+           ["invoice_001.pdf", "Special", "033002100511", "03933249", "2023-05-14", "Buyer Company", "Seller Company", "118.00"]
          ]
        },
-       "未识别": {
-         "headers_cn": ["源文件名", "内容预览", "疑似类型", "置信度"],
+       "Unrecognized": {
+         "headers": ["Source Filename", "Content Preview", "Suspected Type", "Confidence"],
          "rows": [
-           ["unknown.pdf", "这是一段文本...", "合同", "中"]
+           ["unknown.pdf", "This is some text...", "Contract", "Medium"]
          ]
        }
      }
    }
    ```
 
-**⚠️ 核心原则: 严禁杜撰数据**
+**⚠️ Step 2 Execution Constraints**:
+- ✅ **Required**: Directly use AI model to read the JSON file generated by Step 1, perform classification and field extraction in memory
+- ✅ **Allowed**: Extract existing field values from `parsedText`
+- ✅ **Allowed**: Leave fields empty (empty string) when data is missing
+- ❌ **Prohibited**: Write Python scripts or other code to perform field extraction
+- ❌ **Prohibited**: Call external scripts or command-line tools to process JSON data
+- ❌ **Prohibited**: Fabricate non-existent fields or field values, no data invention
+- ❌ **Prohibited**: Infer or fill in data based on context
+- ❌ **Prohibited**: Modify original text content
+- ❌ **Prohibited**: Fill in default values (unless explicitly stated in the classification system, e.g., "currency defaults to CNY")
+- ✅ **Correct Approach**:
+  - 1. Read the JSON file content from Step 1
+  - 2. Perform intelligent classification and field extraction according to the classification system
+  - 3. Assemble extracted results into the JSON format required by Step 2
+  - 4. Save the JSON file to `$WORKSPACE_DIR/.qbi/output/` directory
+  - 5. Remember the JSON file path for use as input to Step 3
 
-- ✅ **允许**: 从 `parsedText` 中提取存在的字段值
-- ✅ **允许**: 字段缺失时留空（空字符串）
-- ❌ **禁止**: 编造不存在的字段和字段值，禁止杜撰数据
-- ❌ **禁止**: 根据上下文推测或补全数据
-- ❌ **禁止**: 修改原始文本内容
-- ❌ **禁止**: 填充默认值（除非分类体系明确说明，如"币种默认 CNY"）
-
-**提取示例**:
+**Extraction Example**:
 
 ```python
-# ✅ 正确: 从文本中提取
-if "发票代码" in text:
-    invoice_code = extract_value(text, "发票代码")  # 提取实际值
+# ✅ Correct: Extract from text
+if "Invoice Code" in text:
+    invoice_code = extract_value(text, "Invoice Code")  # Extract actual value
 else:
-    invoice_code = ""  # 留空，不编造
+    invoice_code = ""  # Leave empty, do not fabricate
 
-# ❌ 错误: 杜撰数据
-invoice_code = "1234567890"  # 文本中没有，禁止编造
+# ❌ Wrong: Fabricate data
+invoice_code = "1234567890"  # Not in text, prohibited from fabricating
 ```
 
-### Step 3: 生成 Excel 汇总报表
+### Step 3: Generate Excel Summary Report
 
-**目标**: 将提取的字段数据生成结构化、带格式的 Excel 报表
+**Objective**: Generate structured, formatted Excel reports from the JSON data extracted in Step 2
 
-**核心能力**: 📈 多 Sheet 自动化 + 格式化 + 汇总统计
+**Core Capability**: 📈 Multi-sheet automation + Formatting + Summary statistics
 
-**执行命令**:
+**Execution Command**:
 ```bash
-# 默认输出到 output/doc_scan_result_{timestamp}.xlsx
-python scripts/document/generate_excel.py <Step2的JSON路径>
+# Default output to $WORKSPACE_DIR/.qbi/output/doc_scan_result_{timestamp}.xlsx
+python scripts/document/generate_excel.py <Step2_JSON_path>
 
-# 自定义输出路径
-python scripts/document/generate_excel.py <Step2的JSON路径> /path/to/output.xlsx
+# Custom output path
+python scripts/document/generate_excel.py <Step2_JSON_path> /path/to/output.xlsx
 ```
 
-**Excel 结构**:
-- **excel名称** ：`{category名称}_{timestamp}.xlsx`
-- **汇总 Sheet**（首页）: 统计各分类组的文件数量和提取字段
-- **数据 Sheet**（每个子类型一个）: 带格式的表格数据
-    - 蓝色表头（`#4472C4`）+ 白色粗体
-    - 自动筛选 + 冻结首行
-    - 自动列宽 + 单元格换行
+**Excel Structure**:
+- **Excel filename**: `{category_name}_{timestamp}.xlsx`
+- **Summary Sheet** (first sheet): Statistics on file count and extracted fields by category
+- **Data Sheets** (one per subtype): Formatted table data
+    - Blue headers (`#4472C4`) + white bold text
+    - Auto-filter + freeze first row
+    - Auto column width + cell text wrapping
 
-### 最终交付
+### Final Delivery
 
-在窗口中输出:
+Output in the conversation window:
 
-1. **处理总结**:
+1. **Processing Summary**:
    ```
+   Document parsing completed
 
-   文档解析完成
-
-   文件总数: 10
-   成功识别: 9
-   识别失败: 1
+   Total files: 10
+   Successfully recognized: 9
+   Recognition failed: 1
    
-   分类统计:
-   - A.财务与税务: 5 个文件（增值税发票 3, 银行回单 2）
-   - B.人力资源: 2 个文件（简历 1, 劳动合同 1）
-   - 未识别: 1 个文件
+   Category Statistics:
+   - A. Finance & Tax: 5 files (VAT Invoice 3, Bank Receipt 2)
+   - B. Human Resources: 2 files (Resume 1, Labor Contract 1)
+   - Unrecognized: 1 file
    
-   提取字段: 45 个
+   Extracted fields: 45
    ```
 
-2. **Excel 交付物路径**:
+2. **Excel Deliverable Path**:
    ```
-   ✓ Excel 已生成: /path/to/output/invoice_20260407_150000.xlsx
+   ✓ Excel generated: $WORKSPACE_DIR/.qbi/output/invoice_20260407_150000.xlsx
    ```
 
 ## Examples
 
-### 模式 A 示例
+### Mode A Examples
 
-**Example 1: 解析单个文件内容**
+**Example 1: Parse Single File Content**
 
 Input:
 ```
-请帮我读取这个 PDF 的内容: /Users/user/document.pdf
+Please read the content of this PDF: /Users/user/document.pdf
 ```
 
 Expected output:
 ```
-[Step 1] 本地解析 document.pdf...
-[PDF提取] 成功提取 2350 字符
-[保存] JSON 结果已保存到: output/extract_results_1775575200.json
+[Step 1] Locally parsing document.pdf...
+[PDF Extraction] Successfully extracted 2350 characters
+[Save] JSON results saved to: $WORKSPACE_DIR/.qbi/output/extract_results_1775575200.json
 
 
-文档解析完成
+Document parsing completed
 
-文件总数: 1
-成功识别: 1
-提取文本: 2350 字符
+Total files: 1
+Successfully recognized: 1
+Extracted text: 2350 characters
 
-✓ 文本内容已保存: output/extract_results_1775575200.json
+✓ Text content saved: $WORKSPACE_DIR/.qbi/output/extract_results_1775575200.json
 ```
 
-**Example 2: 批量解析文件夹**
+**Example 2: Batch Parse Folder**
 
 Input:
 ```
-扫描并解析 /Users/user/documents/ 下的所有文档,提取文本内容
+Scan and parse all documents in /Users/user/documents/, extract text content
 ```
 
 Expected output:
 ```
-[Step 1] 扫描文件夹...
-[扫描] 在 /Users/user/documents/ 中找到 15 个支持的文件
-[并行提取] 开始处理 15 个文件 (最大并行数: 10)
+[Step 1] Scanning folder...
+[Scan] Found 15 supported files in /Users/user/documents/
+[Parallel Extraction] Processing 15 files (max concurrency: 10)
 ...
 
 
-文档解析完成
+Document parsing completed
 
-文件总数: 15
-成功识别: 14
-识别失败: 1
-总文本量: 45,230 字符
+Total files: 15
+Successfully recognized: 14
+Recognition failed: 1
+Total text: 45,230 characters
 
-✓ 文本内容已保存: output/extract_results_1775576400.json
+✓ Text content saved: $WORKSPACE_DIR/.qbi/output/extract_results_1775576400.json
 ```
 
 ---
 
-### 模式 B 示例
+### Mode B Examples
 
-**Example 3: 解析发票并生成 Excel 表格**
+**Example 3: Parse Invoices and Generate Excel Report**
 
 Input:
 ```
-请解析这些发票文件,提取关键字段并生成 Excel 报表: /Users/user/invoices/
+Please parse these invoice files, extract key fields, and generate an Excel report: /Users/user/invoices/
 ```
 
 Expected output:
 ```
-[Step 1] 本地解析 invoices/ 文件夹...
-[扫描] 找到 10 个支持的文件
-[并行提取] 开始处理 10 个文件 (最大并行数: 10)
+[Step 1] Locally parsing invoices/ folder...
+[Scan] Found 10 supported files
+[Parallel Extraction] Processing 10 files (max concurrency: 10)
 ...
 
-[Step 2] 智能分类与字段提取...
-- 增值税发票: 5 个文件 (提取 13 个字段/文件)
-- 银行回单: 3 个文件 (提取 11 个字段/文件)
-- 未识别: 2 个文件
+[Step 2] Intelligent classification and field extraction...
+- VAT Invoice: 5 files (13 fields/file extracted)
+- Bank Receipt: 3 files (11 fields/file extracted)
+- Unrecognized: 2 files
 
-[Step 3] 生成 Excel 汇总报表...
-[格式化] 应用蓝色表头 + 自动筛选 + 冻结首行
-[保存] ✓ Excel 结果已保存到: output/doc_scan_result_20260407_150000.xlsx
+[Step 3] Generating Excel summary report...
+[Formatting] Applying blue headers + auto-filter + freeze first row
+[Save] ✓ Excel results saved to: $WORKSPACE_DIR/.qbi/output/doc_scan_result_20260407_150000.xlsx
 
-文档解析完成
+Document parsing completed
 
-文件总数: 10
-文件总数: 10
-成功识别: 8
-未识别: 2
+Total files: 10
+Successfully recognized: 8
+Unrecognized: 2
 
-分类统计:
-- A.财务与税务: 8 个文件 (增值税发票 5, 银行回单 3)
-- 未识别: 2 个文件
+Category Statistics:
+- A. Finance & Tax: 8 files (VAT Invoice 5, Bank Receipt 3)
+- Unrecognized: 2 files
 
-提取字段: 98 个
+Extracted fields: 98
 
-✓ Excel 报表已生成: output/doc_scan_result_20260407_150000.xlsx
+✓ Excel report generated: $WORKSPACE_DIR/.qbi/output/doc_scan_result_20260407_150000.xlsx
 ```
 
-**Example 4: 本地解析失败,降级到远程 OCR**
+**Example 4: Local Parsing Fails, Fallback to Remote OCR**
 
 Input:
 ```
-解析这个扫描件 PDF 并提取字段: /Users/user/scanned_invoice.pdf
+Parse this scanned PDF and extract fields: /Users/user/scanned_invoice.pdf
 ```
 
 Expected output:
 ```
-[Step 1] 本地解析 scanned_invoice.pdf...
-[PDF提取] 警告: 本地提取文本较少 (12 字符),可能是扫描件,尝试 OCR...
-[PDF提取] 降级到 Tesseract OCR 识别...
-[OCR降级] OCR 识别质量不佳,尝试远程 OCR...
+[Step 1] Locally parsing scanned_invoice.pdf...
+[PDF Extraction] Warning: Local extraction returned minimal text (12 characters), possibly a scanned document, attempting OCR...
+[PDF Extraction] Falling back to Tesseract OCR...
+[OCR Fallback] OCR quality insufficient, attempting remote OCR...
 
-[远程 OCR] 上传 scanned_invoice.pdf...
-[上传] ✓ scanned_invoice.pdf -> taskId: abc123
-[轮询] ✓ 任务解析成功 (850 字符)
+[Remote OCR] Uploading scanned_invoice.pdf...
+[Upload] ✓ scanned_invoice.pdf -> taskId: abc123
+[Poll] ✓ Task parsed successfully (850 characters)
 
-[Step 2] 智能分类: 增值税发票 (vat-invoice)
-提取字段: 发票代码、发票号码、开票日期、购买方名称... (从 OCR 文本中提取)
+[Step 2] Intelligent classification: VAT Invoice (vat-invoice)
+Extracted fields: Invoice Code, Invoice Number, Invoice Date, Purchaser Name... (extracted from OCR text)
 
-[Step 3] 生成 Excel 汇总报表...
-[保存] ✓ Excel 结果已保存到: output/doc_scan_result_20260407_160000.xlsx
+[Step 3] Generating Excel summary report...
+[Save] ✓ Excel results saved to: $WORKSPACE_DIR/.qbi/output/doc_scan_result_20260407_160000.xlsx
 
-文档解析完成
+Document parsing completed
 
-文件总数: 1
-成功识别: 1 (远程 OCR)
-文件总数: 1
-成功识别: 1 (远程 OCR)
+Total files: 1
+Successfully recognized: 1 (Remote OCR)
 
-分类统计:
-- A.财务与税务: 1 个文件 (增值税发票 1)
+Category Statistics:
+- A. Finance & Tax: 1 file (VAT Invoice 1)
 
-提取字段: 13 个
+Extracted fields: 13
 
-✓ Excel 报表已生成: output/doc_scan_result_20260407_160000.xlsx
+✓ Excel report generated: $WORKSPACE_DIR/.qbi/output/doc_scan_result_20260407_160000.xlsx
 ```
 
-**Example 5: 未知文档动态提取(需用户确认)**
+**Example 5: Unknown Document Dynamic Extraction (Requires User Confirmation)**
 
 Input:
 ```
-解析这个自定义文档并提取字段: /Users/user/custom_report.pdf
+Parse this custom document and extract fields: /Users/user/custom_report.pdf
 ```
 
 Expected output:
 ```
-[Step 1] 本地解析 custom_report.pdf...
-[PDF提取] 成功提取 1580 字符
+[Step 1] Locally parsing custom_report.pdf...
+[PDF Extraction] Successfully extracted 1580 characters
 
-[Step 2] 智能分类...
-⚠️ 无法匹配预定义的 37 个标准分类
-🔍 评估文档结构化提取价值...
-✓ 识别到 8 个潜在字段: 报告编号、检测日期、样品名称、检测项目、结果值、检测员、审核人、检测机构
+[Step 2] Intelligent classification...
+⚠️ Unable to match 37 predefined standard categories
+🔍 Evaluating document structured extraction value...
+✓ Identified 8 potential fields: Report Number, Test Date, Sample Name, Test Items, Result Values, Inspector, Reviewer, Testing Organization
 
-[AskUserQuestion] 检测到未知文档类型,确认识别字段:
+[AskUserQuestion] Unknown document type detected, confirm identified fields:
 ┌─────────────────────────────────────┐
-│ 文档类型: 检测报告 (自定义)          │
-│ 识别字段:                            │
-│ 1. 报告编号 (report_no)             │
-│ 2. 检测日期 (test_date)             │
-│ 3. 样品名称 (sample_name)           │
-│ 4. 检测项目 (test_items)            │
-│ 5. 结果值 (results)                 │
-│ 6. 检测员 (inspector)               │
-│ 7. 审核人 (reviewer)                │
-│ 8. 检测机构 (testing_org)           │
+│ Document Type: Test Report (Custom)  │
+│ Identified Fields:                   │
+│ 1. Report Number (report_no)        │
+│ 2. Test Date (test_date)            │
+│ 3. Sample Name (sample_name)        │
+│ 4. Test Items (test_items)          │
+│ 5. Result Values (results)          │
+│ 6. Inspector (inspector)            │
+│ 7. Reviewer (reviewer)              │
+│ 8. Testing Organization (testing_org)│
 │                                     │
-│ 是否确认按此结构提取?                │
+│ Confirm extraction with this structure?│
 └─────────────────────────────────────┘
-用户确认: ✓ 是
+User confirmation: ✓ Yes
 
-[Step 2] 按确认结构提取字段...
-[提取] 成功提取 8 个字段
+[Step 2] Extracting fields according to confirmed structure...
+[Extraction] Successfully extracted 8 fields
 
-[Step 3] 生成 Excel 汇总报表...
-[创建 Sheet] 自定义_检测报告
-[保存] ✓ Excel 结果已保存到: output/doc_scan_result_20260407_170000.xlsx
+[Step 3] Generating Excel summary report...
+[Creating Sheet] Custom_Test Report
+[Save] ✓ Excel results saved to: $WORKSPACE_DIR/.qbi/output/doc_scan_result_20260407_170000.xlsx
 
 ============================================================
-文档解析完成
+Document parsing completed
 ============================================================
-文件总数: 1
-成功识别: 1 (自定义类型)
+Total files: 1
+Successfully recognized: 1 (Custom type)
 
-分类统计:
-- 自定义_检测报告: 1 个文件
+Category Statistics:
+- Custom_Test Report: 1 file
 
-提取字段: 8 个
+Extracted fields: 8
 ============================================================
-✓ Excel 报表已生成: output/doc_scan_result_20260407_170000.xlsx
+✓ Excel report generated: $WORKSPACE_DIR/.qbi/output/doc_scan_result_20260407_170000.xlsx
 ```
 
 ## Additional Resources
 
-- **分类体系详细定义**: [document_classification.md](./document_classification.md)
+- **Detailed Classification System Definitions**: [document_classification.md](./document_classification.md)
 
-## 脚本接口参考
+## Script Interface Reference
 
-### 1. 本地解析脚本 (`document_local_parse.py`)
+### 1. Local Parsing Script (`document_local_parse.py`)
 
-**功能**: 纯本地文本提取,支持 PDF/Word/Excel/CSV/图片,不依赖外部 API
+**Functionality**: Pure local text extraction, supports PDF/Word/Excel/CSV/Images without external API dependency
 
-**支持格式**:
-- PDF(.pdf)、Word(.doc/.docx)、Excel(.xls/.xlsx)、CSV(.csv)
-- 图片(.png/.jpg/.jpeg/.bmp/.tiff/.webp) - 使用 Tesseract OCR
+**Supported Formats**:
+- PDF (.pdf), Word (.doc/.docx), Excel (.xls/.xlsx), CSV (.csv)
+- Images (.png/.jpg/.jpeg/.bmp/.tiff/.webp) - Using Tesseract OCR
 
-**命令行用法**:
+**Command Line Usage**:
 ```bash
-# 单文件
-python scripts/document/document_local_parse.py <文件路径> --json
+# Single file
+python scripts/document/document_local_parse.py <file_path> --json
 
-# 多文件
-python scripts/document/document_local_parse.py <文件1> <文件2> <文件3> --json
+# Multiple files
+python scripts/document/document_local_parse.py <file1> <file2> <file3> --json
 
-# 文件夹递归扫描
-python scripts/document/document_local_parse.py <文件夹路径> --json
+# Folder recursive scanning
+python scripts/document/document_local_parse.py <folder_path> --json
 
-# 自定义输出目录
-python scripts/document/document_local_parse.py <路径> --json --output-dir /custom/output/
+# Custom output directory
+python scripts/document/document_local_parse.py <path> --json --output-dir /custom/output/
 
-# 禁用 OCR 降级
-python scripts/document/document_local_parse.py <文件路径> --json --no-ocr
+# Disable OCR fallback
+python scripts/document/document_local_parse.py <file_path> --json --no-ocr
 ```
 
-**核心参数**:
-| 参数 | 说明 | 默认值 |
+**Core Parameters**:
+| Parameter | Description | Default |
 |------|------|-------|
-| `--json` | 保存 JSON 结果 | False |
-| `--output-dir` | JSON 输出目录 | `output/` |
-| `--no-ocr` | 禁用 OCR 降级 | False |
+| `--json` | Save JSON result | False |
+| `--output-dir` | JSON output directory | `$WORKSPACE_DIR/.qbi/output/` |
+| `--no-ocr` | Disable OCR fallback | False |
 
-**输出格式**:
+**Output Format**:
 ```json
 [
-  {"file": "filename.pdf", "parsedText": "提取的文本内容..."}
+  {"file": "filename.pdf", "parsedText": "Extracted text content..."}
 ]
 ```
 
-**系统依赖**:
+**System Dependencies**:
 ```bash
 # macOS
 brew install tesseract tesseract-lang
@@ -524,97 +551,100 @@ sudo apt-get install tesseract-ocr tesseract-ocr-chi-sim tesseract-ocr-eng
 
 ---
 
-### 2. 远程 OCR 脚本 (`document_remote_ocr.py`)
+### 2. Remote OCR Script (`document_remote_ocr.py`)
 
-**功能**: 基于 QuickBI API 的远程 OCR 识别,支持批量并发处理
+**Function**: Remote OCR recognition based on QuickBI API, supports batch concurrent processing
 
-**支持格式**:
-- PDF、图片(.png/.jpg/.jpeg/.webp/.bmp/.gif/.jp2)
-- Word(.doc/.docx)、PPT(.ppt/.pptx)、Excel(.xls/.xlsx/.csv)
-- **文件大小限制**: 单文件 ≤ 10MB
+**Supported formats**:
+- PDF, Images(.png/.jpg/.jpeg/.webp/.bmp/.gif/.jp2)
+- Word(.doc/.docx), PPT(.ppt/.pptx), Excel(.xls/.xlsx/.csv)
+- **File size limit**: Single file ≤ 5MB; **when the limit is exceeded, the Agent MUST present the upgrade prompt message to the user as-is (including the upgrade link) — MUST NOT bypass the limit by processing the file locally**
 
-**命令行用法**:
+**Command line usage**:
 ```bash
-# 文件夹扫描(递归)
-python scripts/document/document_remote_ocr.py <文件夹路径>
+# Folder scanning (recursive)
+python scripts/document/document_remote_ocr.py <folder_path>
 
-# 多文件
-python scripts/document/document_remote_ocr.py --files <文件1> <文件2> <文件3>
+# Multiple files
+python scripts/document/document_remote_ocr.py --files <file1> <file2> <file3>
 
-# 自定义输出路径
-python scripts/document/document_remote_ocr.py <路径> --output /custom/result.json
+# Custom output path
+python scripts/document/document_remote_ocr.py <path> --output /custom/result.json
 
-# JSON 模式(仅输出JSON,无日志)
-python scripts/document/document_remote_ocr.py <路径> --json
+# JSON mode (output JSON only, no logs)
+python scripts/document/document_remote_ocr.py <path> --json
 
-# 调整并发数
-python scripts/document/document_remote_ocr.py <路径> --upload-workers 5 --poll-workers 10
+# Adjust concurrency
+python scripts/document/document_remote_ocr.py <path> --upload-workers 5 --poll-workers 10
 ```
 
-**核心参数**:
-| 参数 | 类型 | 默认值 | 说明 |
+**Core parameters**:
+| Parameter | Type | Default | Description |
 |------|------|--------|------|
-| `directory` | 可选 | - | 目录路径(递归扫描) |
-| `--files` | 可选 | - | 文件列表(与 directory 二选一) |
-| `--upload-workers` | int | 5 | 上传并发数(最大10) |
-| `--poll-workers` | int | 10 | 轮询并发数(最大10) |
-| `--output` | str | - | 输出 JSON 路径 |
-| `--json` | flag | false | 仅输出JSON(无日志) |
+| `directory` | Optional | - | Directory path (recursive scan) |
+| `--files` | Optional | - | File list (mutually exclusive with directory) |
+| `--upload-workers` | int | 5 | Upload concurrency (max 10) |
+| `--poll-workers` | int | 10 | Polling concurrency (max 10) |
+| `--output` | str | - | Output JSON path |
+| `--json` | flag | false | JSON output only (no logs) |
 
-**输出格式**:
+**Output format**:
 ```json
 [
-  {"file": "filename.pdf", "parsedText": "识别文本..."},
-  {"file": "error.pdf", "parsedText": null, "error": "错误信息"}
+  {"file": "filename.pdf", "parsedText": "Recognized text..."},
+  {"file": "error.pdf", "parsedText": null, "error": "Error message"}
 ]
 ```
 
-**配置说明**：请参见主文件的「配置」章节。
+**Configuration**: Please refer to the Configuration section in the main file.
 
 ---
 
-### 3. Excel 生成脚本 (`generate_excel.py`)
+### 3. Excel Generation Script (`generate_excel.py`)
 
-**功能**: 将分类提取的 JSON 数据转换为多 Sheet Excel 报表
+**Function**: Convert categorized extraction JSON data into multi-Sheet Excel reports
 
-**命令行用法**:
+**Command line usage**:
 ```bash
-# 默认输出到 output/doc_scan_result_{timestamp}.xlsx
-python scripts/document/generate_excel.py <JSON路径>
+# Default output to $WORKSPACE_DIR/.qbi/output/doc_scan_result_{timestamp}.xlsx
+python scripts/document/generate_excel.py <JSON_path>
 
-# 自定义输出路径
-python scripts/document/generate_excel.py <JSON路径> /path/to/output.xlsx
+# Custom output path
+python scripts/document/generate_excel.py <JSON_path> /path/to/output.xlsx
 ```
 
-**输入 JSON 格式**:
+**Input JSON format**:
 ```json
 {
   "scan_time": "2026-04-07 15:00:00",
   "total_files": 10,
   "extraction_data": {
-    "增值税发票": {
-      "headers_cn": ["源文件名", "发票类型", "发票代码", "..."],
-      "rows": [["file.pdf", "专用", "033002100511", "..."]]
+    "VAT Invoice": {
+      "headers": ["Source Filename", "Invoice Type", "Invoice Code", "..."],
+      "rows": [["file.pdf", "Special", "033002100511", "..."]]
     },
-    "未识别": {
-      "headers_cn": ["源文件名", "内容预览", "疑似类型", "置信度"],
-      "rows": [["unknown.pdf", "文本...", "合同", "中"]]
+    "Unrecognized": {
+      "headers": ["Source Filename", "Content Preview", "Suspected Type", "Confidence"],
+      "rows": [["unknown.pdf", "Text...", "Contract", "Medium"]]
     }
   }
 }
 ```
 
-**Excel 结构**:
-- **汇总 Sheet**(首页): 统计各分类组文件数量和提取字段
-- **数据 Sheet**(每子类型一个): 蓝色表头 + 自动筛选 + 冻结首行 + 自动列宽
+**Note**:
+- The input JSON is NOT the JSON generated by `document_remote_ocr.py` or `document_local_parse.py`. Refer to Step 2 output.
 
-## 依赖安装
+**Excel Structure**:
+- **Summary Sheet** (first sheet): Statistics on file count and extracted fields by category
+- **Data Sheets** (one per subtype): Blue headers + auto-filter + freeze first row + auto column width
+
+## Dependency Installation
 
 ```bash
-# 安装所有 Python 依赖（requirements.txt 位于 scripts 目录下）
-pip install -r <项目根目录>/scripts/requirements.txt
+# Install all Python dependencies
+pip install -r requirements.txt
 
-# 系统依赖(仅本地解析需要)
+# System dependencies (only needed for local parsing)
 # macOS
 brew install tesseract tesseract-lang
 
@@ -622,20 +652,20 @@ brew install tesseract tesseract-lang
 sudo apt-get install tesseract-ocr tesseract-ocr-chi-sim tesseract-ocr-eng
 ```
 
-**核心 Python 依赖**:
-- 本地解析: `PyMuPDF`, `python-docx`, `openpyxl`, `xlrd`, `pandas`, `pytesseract`, `Pillow`
-- 远程 OCR: `requests`, `pyyaml`
-- Excel 生成: `openpyxl>=3.1.0`
+**Core Python dependencies**:
+- Local parsing: `PyMuPDF`, `python-docx`, `openpyxl`, `xlrd`, `pandas`, `pytesseract`, `Pillow`
+- Remote OCR: `requests`, `pyyaml`
+- Excel generation: `openpyxl>=3.1.0`
 
-## 注意事项
+## Important Notes
 
-1. **模式判定优先级**: 严格按"模式判定规则"表格判断,不确定的话**优先使用模式 A**,然后询问用户是否需要生成 Excel
-2. **数据真实性**: Step 2 字段提取严禁杜撰,所有数据必须来源于 Step 1 的 `parsedText`
-3. **字段缺失处理**: 如果文本中不存在某字段,留空(`""`),不要编造
-4. **分类容错**: 无法匹配预定义分类的文档,优先尝试动态提取(5+ 字段),失败后归入"未识别"类
-5. **动态提取确认**: 未知文档提取 5+ 字段时,**必须**使用 AskUserQuestion 让用户确认
-6. **输出路径**: 所有输出文件默认在 `output/` 目录,带时间戳避免覆盖
-7. **并发限制**: 远程 OCR 最大并发 10 个文件,本地解析最大并行 10 个文件
-8. **文件大小**: 单文件最大 10MB(远程 OCR 限制)
-9. **OCR 降级策略**: 本地解析 PDF 提取文本 < 50 字符时,自动降级到 Tesseract OCR;仍失败则尝试远程 OCR
+1. **Mode Determination Priority**: Strictly follow the "Mode Determination Rules" table. When uncertain, **prefer Mode A first**, then ask if the user needs Excel generation
+2. **Data Authenticity**: Step 2 field extraction strictly prohibits fabrication. All data must originate from Step 1's `parsedText`
+3. **Missing Field Handling**: If a field does not exist in the text, leave it empty (`""`), do not fabricate
+4. **Classification Fallback**: For documents that cannot match predefined categories, prioritize dynamic extraction (5+ fields), then categorize as "Unrecognized" if it fails
+5. **Dynamic Extraction Confirmation**: When extracting 5+ fields from unknown documents, **must** use AskUserQuestion to let the user confirm
+6. **Output Path**: All output files default to `$WORKSPACE_DIR/.qbi/output/` directory with timestamps to prevent overwriting
+7. **Concurrency Limits**: Remote OCR maximum concurrency is 10 files, local parsing maximum concurrency is 10 files
+8. **File Size**: Maximum 5MB per file (remote OCR limit); **when the limit is exceeded, the Agent MUST present the upgrade prompt message to the user as-is (including the upgrade link) — MUST NOT bypass the limit by processing the file locally**
+9. **OCR Fallback Strategy**: When local PDF parsing extracts < 50 characters, automatically fallback to Tesseract OCR; if still failing, attempt remote OCR
 

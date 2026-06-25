@@ -25,6 +25,7 @@ from urllib import parse
 
 import requests
 
+from .messages import msg
 from .config_loader import (
     load_config as read_config,    # 向后兼容：其他脚本 from utils import read_config
     persist_to_skill_config,
@@ -35,6 +36,7 @@ from .config_loader import (
     get_skill_config_path,
     get_skill_output_dir,
     check_trial_expired,
+    check_known_error_code,
     TRIAL_EXPIRED_CODE,
     DEFAULT_CONFIG_PATH,
     GLOBAL_CONFIG_PATH,
@@ -84,8 +86,8 @@ def _add_user_to_org(account_id: str, hostname: str, config: dict) -> Optional[s
         "accountName": hostname,
         "nickName": hostname
     }
-    print(f"[用户注册][添加用户] 请求: POST {uri}", flush=True)
-    print(f"[用户注册][添加用户] 入参: {json.dumps(body, ensure_ascii=False)}", flush=True)
+    print(msg("reg_add_user_request", uri=uri), flush=True)
+    print(msg("reg_add_user_params", body=json.dumps(body, ensure_ascii=False)), flush=True)
     global _last_add_user_code
     try:
         resp = request_openapi(
@@ -95,14 +97,14 @@ def _add_user_to_org(account_id: str, hostname: str, config: dict) -> Optional[s
             config=config,
         )
         result = resp.json()
-        print(f"[用户注册][添加用户] 响应: {json.dumps(result, ensure_ascii=False)}", flush=True)
+        print(msg("reg_add_user_response", body=json.dumps(result, ensure_ascii=False)), flush=True)
         _last_add_user_code = str(result.get("code", ""))
         if result.get("success") is True and isinstance(result.get("data"), dict):
             user_id = result["data"].get("userId")
             if user_id:
                 return user_id
     except Exception as e:
-        print(f"[用户注册][添加用户] 异常: {e}", flush=True)
+        print(msg("reg_add_user_exception", exc=e), flush=True)
     return None
 
 
@@ -112,15 +114,15 @@ def _query_user_by_account(account_name: str, config: dict) -> Optional[str]:
     """
     uri = "/openapi/v2/organization/user/queryByAccount"
     params = {"account": account_name}
-    print(f"[用户注册][查询用户] 请求: GET {uri}?account={account_name}", flush=True)
+    print(msg("reg_query_request", uri=uri, account=account_name), flush=True)
     try:
         resp = request_openapi("GET", uri, params=params, config=config)
         result = resp.json()
-        print(f"[用户注册][查询用户] 响应: {json.dumps(result, ensure_ascii=False)}", flush=True)
+        print(msg("reg_query_response", body=json.dumps(result, ensure_ascii=False)), flush=True)
         if result.get("success") and isinstance(result.get("data"), dict):
             return result["data"].get("userId")
     except Exception as e:
-        print(f"[用户注册][查询用户] 异常: {e}", flush=True)
+        print(msg("reg_query_exception", exc=e), flush=True)
     return None
 
 
@@ -133,9 +135,9 @@ def _persist_user_id(user_id: str):
     """
     try:
         persist_to_global_config("user_token", user_id, force=True)
-        print(f"[用户注册] user_token 已写入 {GLOBAL_CONFIG_PATH}", flush=True)
+        print(msg("reg_token_written", path=GLOBAL_CONFIG_PATH), flush=True)
     except Exception as e:
-        print(f"[用户注册] 警告：无法将 user_token 写入 {GLOBAL_CONFIG_PATH}: {e}", flush=True)
+        print(msg("reg_token_write_warn", path=GLOBAL_CONFIG_PATH, exc=e), flush=True)
 
 
 def _auto_provision_user(config: dict) -> str:
@@ -148,40 +150,39 @@ def _auto_provision_user(config: dict) -> str:
     """
     account_id = _get_device_account_id()
     hostname = _get_device_hostname()
-    print(f"[用户注册] 未配置 user_token，开始自动注册 (accountId={account_id}, accountName={hostname})", flush=True)
+    print(msg("reg_start", account_id=account_id, hostname=hostname), flush=True)
 
     existing_uid = _query_user_by_account(hostname, config)
     if existing_uid:
-        print(f"[用户注册] 通过 accountName 查询到已有用户，userId={existing_uid}", flush=True)
+        print(msg("reg_found_existing", uid=existing_uid), flush=True)
         _persist_user_id(existing_uid)
         return existing_uid
 
-    print(f"[用户注册] 未查询到已有用户，正在添加 (accountName={hostname}) ...", flush=True)
+    print(msg("reg_no_existing", hostname=hostname), flush=True)
     uid = _add_user_to_org(account_id, hostname, config)
     if uid:
-        print(f"[用户注册] 添加成功，userId={uid}", flush=True)
+        print(msg("reg_add_success", uid=uid), flush=True)
         _persist_user_id(uid)
         return uid
 
     if _last_add_user_code in (_ALREADY_IN_ORG_CODE, _NICK_EXISTS_CODE):
-        print(f"[用户注册] 添加返回已存在（错误码={_last_add_user_code}），重新查询 userId ...", flush=True)
+        print(msg("reg_already_exists", code=_last_add_user_code), flush=True)
         queried_uid = _query_user_by_account(hostname, config)
         if queried_uid:
-            print(f"[用户注册] 查询成功，userId={queried_uid}", flush=True)
+            print(msg("reg_query_success", uid=queried_uid), flush=True)
             _persist_user_id(queried_uid)
             return queried_uid
 
     suffixed_name = f"{hostname}_{''.join(random.choices(string.ascii_lowercase + string.digits, k=5))}"
-    print(f"[用户注册] 使用带后缀名称重试 (accountName={suffixed_name}) ...", flush=True)
+    print(msg("reg_retry_suffix", name=suffixed_name), flush=True)
     uid = _add_user_to_org(account_id, suffixed_name, config)
     if uid:
-        print(f"[用户注册] 重试添加成功，userId={uid}", flush=True)
+        print(msg("reg_retry_success", uid=uid), flush=True)
         _persist_user_id(uid)
         return uid
 
     raise ValueError(
-        "自动注册用户失败，请手动在 ~/.qbi/config.yaml 中配置 user_token。"
-        "可通过 Quick BI 管理控制台获取用户 ID。"
+        msg("reg_failed") + msg("reg_failed_console_hint")
     )
 
 
@@ -332,9 +333,9 @@ def request_openapi(
             body = resp.text[:2000]
         except Exception:
             pass
-        check_trial_expired(body)
+        check_known_error_code(body)
         raise requests.HTTPError(
-            f"HTTP {resp.status_code} {resp.reason} for {method} {uri}\n响应体: {body}",
+            msg("util_http_error", status=resp.status_code, reason=resp.reason, method=method, uri=uri, body=body),
             response=resp,
         )
     return resp
@@ -369,9 +370,9 @@ def request_openapi_stream(
                 body = resp.text[:2000]
             except Exception:
                 pass
-            check_trial_expired(body)
+            check_known_error_code(body)
             raise requests.HTTPError(
-                f"HTTP {resp.status_code} {resp.reason} for POST {uri}\n响应体: {body}",
+                msg("util_http_error", status=resp.status_code, reason=resp.reason, method="POST", uri=uri, body=body),
                 response=resp,
             )
         resp.encoding = "utf-8"
@@ -432,24 +433,24 @@ UPLOAD_CHAT_TYPE = "manus"
 DEFAULT_POLL_INTERVAL_SECONDS = 10.0
 DEFAULT_MAX_POLL_SECONDS = 30 * 60
 SUPPORTED_UPLOAD_SUFFIXES = {".doc", ".docx", ".xls", ".xlsx", ".csv"}
-MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024
+MAX_UPLOAD_SIZE_BYTES = 5 * 1024 * 1024
 
 
 def validate_upload_file(file_path: str) -> Path:
     """校验上传文件类型与大小。"""
     path = Path(file_path).expanduser().resolve()
     if not path.exists():
-        raise FileNotFoundError(f"文件不存在：{path}")
+        raise FileNotFoundError(msg("util_file_not_found", path=path))
     if not path.is_file():
-        raise ValueError(f"不是有效文件：{path}")
+        raise ValueError(msg("util_not_valid_file", path=path))
     if path.suffix.lower() not in SUPPORTED_UPLOAD_SUFFIXES:
         raise ValueError(
-            f"不支持的文件类型：{path.suffix}，仅支持 doc/docx/xls/xlsx/csv"
+            msg("util_unsupported_type", suffix=path.suffix)
         )
     file_size = path.stat().st_size
     if file_size > MAX_UPLOAD_SIZE_BYTES:
         raise ValueError(
-            f"文件超过 10MB：{path.name}，当前大小 {file_size} 字节"
+            msg("util_file_too_large")
         )
     return path
 
@@ -480,17 +481,17 @@ def upload_reference_file(
     try:
         result = response.json()
     except json.JSONDecodeError as exc:
-        raise ValueError(f"上传文件接口返回了非 JSON 响应：{response.text}") from exc
+        raise ValueError(msg("util_upload_non_json", text=response.text)) from exc
 
     if not isinstance(result, dict):
-        raise ValueError(f"上传文件接口返回结构异常：{result}")
+        raise ValueError(msg("util_upload_unexpected", result=result))
 
     data = result.get("data", result)
     if isinstance(data, dict) and data.get("fileId"):
         result = data
 
     if not result.get("fileId") or not result.get("fileName") or not result.get("fileType"):
-        raise ValueError(f"上传文件接口未返回完整文件信息：{result}")
+        raise ValueError(msg("util_upload_incomplete", result=result))
 
     return result
 
@@ -524,7 +525,7 @@ def normalize_resources(resources: Optional[Sequence[Dict[str, Any]]]) -> List[D
         elif {"fileId", "fileName", "fileType"}.issubset(item.keys()):
             normalized.append(resource_from_reference_file(item))
         else:
-            raise ValueError(f"资源格式不正确：{item}")
+            raise ValueError(msg("util_resource_format_error", item=item))
     return normalized
 
 
@@ -628,6 +629,7 @@ def create_report_chat(
     upload_results: Optional[Sequence[Dict[str, Any]]] = None,
     chat_id: Optional[str] = None,
     message_id: Optional[str] = None,
+    locale: str,
     config: Optional[dict] = None,
 ) -> Dict[str, Any]:
     """创建小Q报告会话。
@@ -641,6 +643,11 @@ def create_report_chat(
     server_domain = get_server_domain(config)
 
     normalized_resources = normalize_resources(resources)
+
+    biz_args: Dict[str, Any] = {
+        "qbiHost": server_domain,
+        "qbiLocale": locale,
+    }
 
     payload: Dict[str, Any] = {
         "async": True,
@@ -662,9 +669,7 @@ def create_report_chat(
             }
         ],
         "attachment": _build_attachment(normalized_resources, upload_results),
-        "bizArgs": {
-            "qbiHost": server_domain,
-        },
+        "bizArgs": biz_args,
     }
 
     response = request_openapi(
@@ -678,15 +683,28 @@ def create_report_chat(
 
     response_text = response.text.strip()
 
+    # 检查 HTTP 200 但 body 中包含业务错误码的情况
+    try:
+        _resp_json = json.loads(response_text)
+        if isinstance(_resp_json, dict) and _resp_json.get("success") is False:
+            if check_known_error_code(_resp_json):
+                raise RuntimeError(
+                    msg("util_report_biz_error",
+                        code=_resp_json.get("code", ""),
+                        message=_resp_json.get("message", ""))
+                )
+    except (json.JSONDecodeError, ValueError):
+        pass
+
     running_task = _parse_running_task_response(response_text)
     if running_task:
         existing_chat_id = running_task["chatId"]
         existing_question = running_task["question"]
         print(f"\n{'=' * 60}", flush=True)
-        print(f"[运行中任务] 检测到当前用户已有运行中的任务", flush=True)
-        print(f"[运行中任务] 已有任务问题：{existing_question}", flush=True)
-        print(f"[运行中任务] 已有任务chatId：{existing_chat_id}", flush=True)
-        print(f"[运行中任务] 将使用上述 chatId 进行后续轮询", flush=True)
+        print(msg("util_running_task_detected"), flush=True)
+        print(msg("util_running_task_question", question=existing_question), flush=True)
+        print(msg("util_running_task_chatid", chat_id=existing_chat_id), flush=True)
+        print(msg("util_running_task_reuse"), flush=True)
         print(f"{'=' * 60}\n", flush=True)
         return {
             "chatId": existing_chat_id,
@@ -824,12 +842,12 @@ def truncate_text(text: str, limit: int = 800) -> str:
     return text[:limit].rstrip() + "…"
 
 
-_FUNCTION_LABEL = {
-    "thinking": "思考中...",
-    "learn": "文件学习",
-    "refuse": "拒识",
-    "mainText": "规划步骤",
-    "interrupt": "等待确认",
+_FUNCTION_LABEL_KEYS = {
+    "thinking": "util_thinking",
+    "learn": "util_label_learn",
+    "refuse": "util_label_refuse",
+    "mainText": "util_label_main_text",
+    "interrupt": "util_label_interrupt",
 }
 
 _SKIP_TYPES = {"heartbeat", "locale", "check", "time"}
@@ -919,7 +937,7 @@ def summarize_structured_chart(parsed_payload: Dict[str, Any]) -> List[str]:
     else:
         data_list = []
     if not data_list:
-        return ["[structuredChart] 空结果"]
+        return [msg("util_structured_chart_empty")]
 
     lines: List[str] = []
     for index, item in enumerate(data_list, start=1):
@@ -936,7 +954,7 @@ def summarize_unstructured_chart(parsed_payload: Dict[str, Any]) -> List[str]:
     """生成非结构化图表/大纲的终端摘要。"""
     chart = parsed_payload.get("chart") or []
     if not chart:
-        return ["[unStructuredChart] 空结果"]
+        return [msg("util_unstructured_chart_empty")]
 
     lines: List[str] = []
     for index, item in enumerate(chart, start=1):
@@ -963,9 +981,9 @@ def _render_token_info(parsed_data: Dict[str, Any], label: str) -> Tuple[List[st
     return [line], info
 
 
-_SUBSTEP_LABEL = {
-    "onlineSearchResult": "联网搜索结果",
-    "knowledgeBaseResult": "知识库结果",
+_SUBSTEP_LABEL_KEYS = {
+    "onlineSearchResult": "util_label_online_search",
+    "knowledgeBaseResult": "util_label_knowledge_base",
 }
 
 
@@ -975,13 +993,14 @@ def _render_substep(parsed_data: Dict[str, Any]) -> List[str]:
         return [f"  [subStep] {truncate_text(str(parsed_data), 1000)}"]
 
     function_name = parsed_data.get("function", "subStep")
-    label = _SUBSTEP_LABEL.get(function_name, function_name)
+    _label_key = _SUBSTEP_LABEL_KEYS.get(function_name)
+    label = msg(_label_key) if _label_key else function_name
     prefix = f"[subStep:{label}]" if label else "[subStep]"
     raw_lines: List[str] = []
 
     if function_name == "onlineSearchResult":
         web_items = parsed_data.get("webItems") or []
-        raw_lines.append(f"{prefix} {len(web_items)} 条网页结果")
+        raw_lines.append(f"{prefix} " + msg("util_web_results_count", count=len(web_items)))
         for idx, item in enumerate(web_items[:3], 1):
             title = item.get("title", "")
             link = item.get("link", "")
@@ -995,7 +1014,7 @@ def _render_substep(parsed_data: Dict[str, Any]) -> List[str]:
                 raw_lines.append(f"  {idx}. {display_title}")
     elif function_name == "knowledgeBaseResult":
         kb_items = parsed_data.get("knowledgeItems") or []
-        raw_lines.append(f"{prefix} {len(kb_items)} 条知识库结果")
+        raw_lines.append(f"{prefix} " + msg("util_kb_results_count", count=len(kb_items)))
         for idx, item in enumerate(kb_items[:3], 1):
             name = item.get("resourceName", "")
             raw_lines.append(f"  {idx}. {truncate_text(name, 120)}")
@@ -1051,7 +1070,7 @@ def render_event_group(
     if etype == "error":
         error_msg = clean_text_fragment(_collect_content(events))
         if not error_msg:
-            error_msg = "未知错误"
+            error_msg = msg("util_unknown_error")
         lines.append(f"[error] {error_msg}")
         finished = True
         return lines, finished, token_info, error_msg
@@ -1059,7 +1078,8 @@ def render_event_group(
     if etype == "plan":
         if func == "usedToken":
             return lines, finished, token_info, error_msg
-        label = _FUNCTION_LABEL.get(func, func or "plan")
+        label = _FUNCTION_LABEL_KEYS.get(func)
+        label = msg(label) if label else (func or "plan")
         content = _streaming_content(events)
         if content:
             if not continuation:
@@ -1096,7 +1116,7 @@ def render_event_group(
         content = _streaming_content(events)
         if content:
             if not continuation:
-                lines.append("思考中...")
+                lines.append(msg("util_thinking"))
             lines.append(content)
         return lines, finished, token_info, error_msg
 
@@ -1121,7 +1141,7 @@ def render_event_group(
                 pd = e.get("parsedData")
                 if isinstance(pd, dict):
                     web_items = pd.get("webItems") or []
-                    lines.append(f"[qreport:联网搜索结果] {len(web_items)} 条网页结果")
+                    lines.append(f"[qreport:{msg('util_label_online_search')}] " + msg("util_web_results_count", count=len(web_items)))
                     for idx, item in enumerate(web_items[:3], 1):
                         title = item.get("title", "")
                         link = item.get("link", "")
@@ -1195,7 +1215,7 @@ def poll_report_result(
     while True:
         elapsed = time.time() - start_time
         if elapsed > max_wait_seconds:
-            raise TimeoutError(f"轮询超时：已等待 {max_wait_seconds // 60} 分钟")
+            raise TimeoutError(msg("util_poll_timeout", minutes=max_wait_seconds // 60))
 
         raw_text = fetch_report_result(chat_id, config=config)
         events = parse_report_events(raw_text)
@@ -1211,7 +1231,7 @@ def poll_report_result(
                 and time.time() - last_new_event_time >= _IDLE_HINT_SECONDS
             ):
                 print(flush=True)
-                print("结果生成中，请耐心等待", flush=True)
+                print(msg("util_result_generating"), flush=True)
                 print(flush=True)
                 idle_hint_printed = True
             time.sleep(poll_interval)
@@ -1267,11 +1287,12 @@ def poll_report_result(
             if show_progress:
                 print(flush=True)
                 if result.get("error"):
-                    print(f"报告生成失败：{result['error']}", flush=True)
+                    print(msg("util_report_failed", error=result['error']), flush=True)
                 elif success_with_url and result.get("reportUrl"):
                     url = result["reportUrl"]
-                    print("📊 报告链接", flush=True)
-                    print(f"在线数据报告：[点击查看完整报告]({url})", flush=True)
+                    print(f"\U0001f4ca {msg('util_report_link_label')}", flush=True)
+                    print(msg("util_report_link", url=url), flush=True)
+                    print(msg("util_report_edit_hint"), flush=True)
             return result
 
         time.sleep(poll_interval)

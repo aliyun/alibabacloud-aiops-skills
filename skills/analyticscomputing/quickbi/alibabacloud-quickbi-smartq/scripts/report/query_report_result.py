@@ -12,6 +12,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from common.utils import DEFAULT_MAX_POLL_SECONDS, DEFAULT_POLL_INTERVAL_SECONDS, poll_report_result
+from common.messages import msg, set_locale
 
 
 def parse_args() -> argparse.Namespace:
@@ -31,6 +32,7 @@ def parse_args() -> argparse.Namespace:
         help="最大等待时间（秒）",
     )
     parser.add_argument("--workspace-dir", default=None, help="用户工作目录路径")
+    parser.add_argument("--locale", required=True, choices=["zh_CN", "en_US"], help="语言环境: zh_CN(简体中文) 或 en_US(英文)")
     return parser.parse_args()
 
 
@@ -41,6 +43,8 @@ def main() -> int:
     if args.workspace_dir:
         from common.config_loader import set_workspace_dir
         set_workspace_dir(args.workspace_dir)
+
+    set_locale(args.locale)
 
     result = poll_report_result(
         args.chat_id,
@@ -58,5 +62,5 @@ if __name__ == "__main__":
     try:
         raise SystemExit(main())
     except Exception as exc:  # pragma: no cover - 终端脚本直接输出错误
-        print(f"轮询失败：{exc}", file=sys.stderr)
+        print(msg('report_poll_failed', exc=exc), file=sys.stderr)
         raise SystemExit(1)

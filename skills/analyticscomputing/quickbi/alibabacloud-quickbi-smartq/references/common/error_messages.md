@@ -1,45 +1,109 @@
-# 异常提示文案
+# Error Message Copy
 
-以下为各异常场景的用户提示文案。Agent 输出时**禁止**使用 `[text](url)` 链接语法，所有 URL 直接以纯文本形式内嵌在文案中。
+Below is the user-facing copy for each exception scenario. When the Agent outputs these messages, it **MUST NOT** use `[text](url)` link syntax. All URLs MUST be embedded directly as plain text within the copy.
 
-## 1. 无数据集权限
+## Error Summary
 
-> 您当前没有可用的问数数据集。
+| Error Scenario | Error Code | Summary |
+|---|---|---|
+| No Dataset Permission | — | You currently do not have any available datasets for SmartQ |
+| Trial Expired | `AE0579100004` | Trial mode has ended |
+| Data File Parsing Failed | — | Data file parsing failed |
+
+---
+
+## 1. No Dataset Permission
+
+**zh_CN template:**
+
+```
+> You currently do not have any available datasets for SmartQ.
 >
-> 📂 **试试「文件问数」**
-> 无需任何权限配置，上传 Excel/CSV 文件即可直接分析。
+> Try "File Q&A"
+> No permission configuration is required. Simply upload an Excel/CSV file to analyze it directly.
 >
-> 🚀 **0 元体验，限时加码**
-> 现在上阿里云，将额外赠送 30 天全功能体验，解锁企业级安全管控与深度分析引擎，让 AI 洞察更准、更稳。点击下方链接，领取试用：
+> Zero-cost trial, limited-time bonus
+> Try it on Alibaba Cloud now and receive an extra 30 days of full-feature access, unlocking enterprise-grade security controls and a deep analysis engine to make AI insights more accurate and more reliable. Click the link below to claim your trial:
 > https://www.aliyun.com/product/quickbi-smart?utm_content=g_1000411205
 >
-> 💬 点击下方链接，进入交流群获取最新资讯：
+> Click the link below to join the community group and get the latest updates:
 > https://at.umtrack.com/r4Tnme
+```
 
-## 2. 试用到期
+**en_US template:**
 
-> 小 Q 超级分析助理已陪伴您一周，我们看到您在通过 AI 寻找数据背后的真相，这很了不起。
+> You currently do not have any available datasets for SmartQ.
 >
-> 🕙 **试用模式已结束**
-> 授权到期后，动态分析将暂告一段落。
+> 📂 **Try "File Q&A"**
+> No permission configuration is required. Simply upload an Excel/CSV file to analyze it directly.
 >
-> 💡 **其实，您可以更轻松**
-> 目前的"文件模式"仍需您手动搬运数据。让 AI 直连企业存量数据资产，实现分析结果自动更新？立即体验完整功能。
->
-> 🚀 **0 元体验，限时加码**
-> 现在上阿里云，将额外赠送 30 天全功能体验，解锁企业级安全管控与深度分析引擎，让 AI 洞察更准、更稳。点击下方链接，领取试用：
+> 🚀 **Zero-cost trial, limited-time bonus**
+> Try it on Alibaba Cloud now and receive an extra 30 days of full-feature access, unlocking enterprise-grade security controls and a deep analysis engine to make AI insights more accurate and more reliable. Click the link below to claim your trial:
 > https://www.aliyun.com/product/quickbi-smart?utm_content=g_1000411205
 >
-> 💬 点击下方链接，进入交流群获取最新资讯：
+> 💬 Click the link below to join the community group and get the latest updates:
 > https://at.umtrack.com/r4Tnme
 
-## 3. 数据文件解析失败
+## 2. Trial Expired
 
-> ⚠️ **数据文件解析失败**
-> 当前问数的数据文件可能存在格式或内容问题，服务端多次重试执行均未成功。
+**zh_CN template:**
+
+```
+> Xiao Q, your super analysis assistant, has accompanied you for a week. We see that you have been using AI to uncover the truth behind your data, and that is remarkable.
 >
-> 💡 **建议排查**
-> 请检查文件是否为标准的 Excel/CSV 格式，确认数据内容完整无损后重新上传。
+> Trial mode has ended
+> After the authorization expires, dynamic analysis will be paused for now.
 >
-> 💬 如仍无法解决，点击下方链接，进入交流群联系 Quick BI 产品服务同学获取支持：
+> In fact, you can do this more easily
+> The current "file mode" still requires you to move data manually. Want AI to connect directly to your enterprise's existing data assets and keep analysis results updated automatically? Experience the full features now.
+>
+> Zero-cost trial, limited-time bonus
+> Try it on Alibaba Cloud now and receive an extra 30 days of full-feature access, unlocking enterprise-grade security controls and a deep analysis engine to make AI insights more accurate and more reliable. Click the link below to claim your trial:
+> https://www.aliyun.com/product/quickbi-smart?utm_content=g_1000411205
+>
+> Click the link below to join the community group and get the latest updates:
+> https://at.umtrack.com/r4Tnme
+```
+
+**en_US template:**
+
+> Xiao Q, your super analysis assistant, has accompanied you for a week. We see that you have been using AI to uncover the truth behind your data, and that is remarkable.
+>
+> 🕙 **Trial mode has ended**
+> After the authorization expires, dynamic analysis will be paused for now.
+>
+> 💡 **In fact, you can do this more easily**
+> The current "file mode" still requires you to move data manually. Want AI to connect directly to your enterprise's existing data assets and keep analysis results updated automatically? Experience the full features now.
+>
+> 🚀 **Zero-cost trial, limited-time bonus**
+> Try it on Alibaba Cloud now and receive an extra 30 days of full-feature access, unlocking enterprise-grade security controls and a deep analysis engine to make AI insights more accurate and more reliable. Click the link below to claim your trial:
+> https://www.aliyun.com/product/quickbi-smart?utm_content=g_1000411205
+>
+> 💬 Click the link below to join the community group and get the latest updates:
+> https://at.umtrack.com/r4Tnme
+
+## 3. Data File Parsing Failed
+
+**zh_CN template:**
+
+```
+> Data file parsing failed
+> The data file used for the current SmartQ request may have format or content issues. Multiple retry attempts on the server side were unsuccessful.
+>
+> Suggested checks
+> Please verify that the file is in a standard Excel/CSV format, confirm that the data content is complete and intact, and then upload it again.
+>
+> If the issue still cannot be resolved, click the link below to join the community group and contact the Quick BI product service team for support:
+> https://at.umtrack.com/r4Tnme
+```
+
+**en_US template:**
+
+> ⚠️ **Data file parsing failed**
+> The data file used for the current SmartQ request may have format or content issues. Multiple retry attempts on the server side were unsuccessful.
+>
+> 💡 **Suggested checks**
+> Please verify that the file is in a standard Excel/CSV format, confirm that the data content is complete and intact, and then upload it again.
+>
+> 💬 If the issue still cannot be resolved, click the link below to join the community group and contact the Quick BI product service team for support:
 > https://at.umtrack.com/r4Tnme

@@ -52,6 +52,11 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
+# 添加 scripts 目录到路径(以便导入 common 模块)
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from common.config_loader import get_skill_work_home
+
 # ---------------------------------------------------------------------------
 # 格式分类
 # ---------------------------------------------------------------------------
@@ -66,8 +71,15 @@ ALL_SUPPORTED_EXTENSIONS = (
     PDF_EXTENSIONS | IMAGE_EXTENSIONS | WORD_EXTENSIONS | EXCEL_EXTENSIONS | CSV_EXTENSIONS
 )
 
-# 输出目录
-OUTPUT_DIR = Path(__file__).resolve().parent.parent / "output"
+# 输出目录（延迟初始化，避免在模块加载时调用 get_skill_work_home）
+OUTPUT_DIR = None
+
+def get_output_dir() -> Path:
+    """获取输出目录（延迟解析，确保 workspace-dir 已设置）。"""
+    global OUTPUT_DIR
+    if OUTPUT_DIR is None:
+        OUTPUT_DIR = get_skill_work_home() / "output"
+    return OUTPUT_DIR
 
 # 最大并行数
 MAX_WORKERS = 10
@@ -833,7 +845,7 @@ def save_results_json(
     
     Args:
         results: 提取结果列表
-        output_dir: 输出目录（默认 OUTPUT_DIR）
+        output_dir: 输出目录（默认 $WORKSPACE_DIR/.qbi/output/）
         
     Returns:
         JSON 文件路径
@@ -841,7 +853,7 @@ def save_results_json(
     import time
     
     if output_dir is None:
-        output_dir = OUTPUT_DIR
+        output_dir = get_output_dir()
     else:
         output_dir = Path(output_dir)
     
@@ -909,7 +921,7 @@ def main():
         "--output-dir",
         type=str,
         default=None,
-        help="JSON 输出目录（默认为 output/）"
+        help="JSON 输出目录（默认为 $WORKSPACE_DIR/.qbi/output/）"
     )
     parser.add_argument(
         "--json",

@@ -1,12 +1,12 @@
-requests
-pyyaml
-matplotlib
-numpy
-openpyxl
-xlrd
+requests==2.32.3
+pyyaml==6.0.2
+matplotlib==3.9.4
+numpy==1.26.4
+openpyxl==3.1.5
+xlrd==2.0.1
 
-PyMuPDF
-python-docx
-pandas
-pytesseract
-Pillow
+PyMuPDF==1.25.3
+python-docx==1.1.2
+pandas==2.2.3
+pytesseract==0.3.13
+Pillow==11.1.0

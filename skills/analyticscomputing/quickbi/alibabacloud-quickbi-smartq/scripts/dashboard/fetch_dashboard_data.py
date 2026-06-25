@@ -40,6 +40,19 @@ from dashboard.quickbi_openapi import (
 )
 
 
+def _extract_json(raw_output: str) -> str:
+    """从可能混杂非 JSON 内容的输出中提取 JSON 对象。"""
+    stripped = raw_output.strip()
+    if stripped.startswith('{'):
+        return stripped
+    # 尝试定位 JSON 开始和结束位置
+    start = stripped.find('{')
+    end = stripped.rfind('}')
+    if start != -1 and end != -1 and end > start:
+        return stripped[start:end + 1]
+    return stripped  # 无法提取，返回原始内容由后续 json.loads 报错
+
+
 def fetch_dashboard_data(url: str, config: dict = None) -> dict:
     """
     一站式获取仪表板数据（包含解析和数据集名称）
@@ -218,7 +231,7 @@ def fetch_dashboard_data(url: str, config: dict = None) -> dict:
                 "error_code": "SCRIPT_EXEC_ERROR"
             }
 
-        dashboard_data = json.loads(result.stdout)
+        dashboard_data = json.loads(_extract_json(result.stdout))
 
         if not dashboard_data.get('success'):
             return {
@@ -239,11 +252,16 @@ def fetch_dashboard_data(url: str, config: dict = None) -> dict:
             pass  # Windows 上文件可能仍被锁定，忽略删除失败
 
     # 6. 从解析结果中提取数据集名称映射
-    # datasetSchemaMap 已由 Node.js 脚本在解析过程中使用，并保留在返回结果中
+    # 优先从 fieldMapping 中提取（JS 已完成过滤，仅含不一致字段的数据集）
+    # 如果某数据集不在 fieldMapping 中，说明该数据集所有字段名一致，使用 cubeId 作为名称
     dataset_name_map = {}
-    if dashboard_data.get("datasetSchemaMap"):
-        for cube_id, schema_info in dashboard_data["datasetSchemaMap"].items():
-            dataset_name_map[cube_id] = schema_info.get("cubeName", cube_id)
+    if dashboard_data.get("fieldMapping"):
+        for cube_id, mapping_info in dashboard_data["fieldMapping"].items():
+            dataset_name_map[cube_id] = mapping_info.get("datasetName") or cube_id
+    # 补充未出现在 fieldMapping 中的数据集（所有字段名一致的数据集）
+    for cube_id in dataset_schema_map:
+        if cube_id not in dataset_name_map:
+            dataset_name_map[cube_id] = dataset_schema_map[cube_id].get("cubeName", cube_id)
 
     # 构建标准仪表板预览页 URL
     dashboard_url = f"{config['server_domain']}/dashboard/view/pc.htm?pageId={page_id}"

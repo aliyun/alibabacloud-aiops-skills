@@ -3,7 +3,7 @@
 文件上传脚本（步骤 1）：将 Excel/CSV 文件上传至 Quick BI 并获取 fileId。
 
 用法：
-    python scripts/upload_file.py /path/to/data.xlsx
+    python3 scripts/upload_file.py /path/to/data.xlsx
 """
 
 from __future__ import annotations
@@ -18,10 +18,11 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import requests
 
-from common.utils import read_config, require_user_id, get_server_domain, build_request_headers, check_trial_expired, _should_skip_ssl
+from common.utils import read_config, require_user_id, get_server_domain, build_request_headers, check_known_error_code, _should_skip_ssl
+from common.messages import msg
 
 ALLOWED_EXTENSIONS = {"xls", "xlsx", "csv"}
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
 
 MIME_MAP = {
     ".xls": "application/vnd.ms-excel",
@@ -36,13 +37,13 @@ def validate_file(file_path: str):
     """校验文件格式和大小。"""
     p = Path(file_path)
     if not p.exists():
-        raise FileNotFoundError(f"文件不存在: {file_path}")
+        raise FileNotFoundError(msg("upload_file_not_found", path=file_path))
     ext = p.suffix.lstrip(".").lower()
     if ext not in ALLOWED_EXTENSIONS:
-        raise ValueError(f"不支持的文件格式 .{ext}，仅支持: {', '.join(ALLOWED_EXTENSIONS)}")
+        raise ValueError(msg("upload_unsupported_format", ext=ext, allowed=', '.join(ALLOWED_EXTENSIONS)))
     size = p.stat().st_size
     if size > MAX_FILE_SIZE:
-        raise ValueError(f"文件大小 {size / 1024 / 1024:.1f}MB 超过限制 10MB")
+        raise ValueError(msg("upload_size_exceeded"))
 
 
 def upload_file(file_path: str, *, config: Optional[dict] = None) -> dict:
@@ -74,9 +75,9 @@ def upload_file(file_path: str, *, config: Optional[dict] = None) -> dict:
     headers["origin"] = server_domain
 
     file_size = p.stat().st_size
-    print(f"[文件上传] 请求: POST {url}", flush=True)
-    print(f"[文件上传] 表单参数: {json.dumps(form_data, ensure_ascii=False)}", flush=True)
-    print(f"[文件上传] 文件: name={file_name}, size={file_size / 1024:.1f}KB, contentType={content_type}", flush=True)
+    print(msg("upload_request", url=url), flush=True)
+    print(msg("upload_form_params", params=json.dumps(form_data, ensure_ascii=False)), flush=True)
+    print(msg("upload_file_info", name=file_name, size=f"{file_size / 1024:.1f}", content_type=content_type), flush=True)
 
     with open(file_path, "rb") as f:
         files = {"file": (file_name, f, content_type)}
@@ -90,7 +91,7 @@ def upload_file(file_path: str, *, config: Optional[dict] = None) -> dict:
         except Exception:
             pass
         raise requests.HTTPError(
-            f"HTTP {resp.status_code} {resp.reason} for POST {UPLOAD_URI}\n响应体: {body}",
+            msg("util_http_error", status=resp.status_code, reason=resp.reason, method="POST", uri=UPLOAD_URI, body=body),
             response=resp,
         )
     return resp.json()
@@ -105,7 +106,7 @@ def _is_success(result: dict) -> bool:
 
 def main():
     parser = argparse.ArgumentParser(description="上传 Excel/CSV 文件并获取 fileId")
-    parser.add_argument("file", help="要上传的文件路径（支持 xls/xlsx/csv，≤10MB）")
+    parser.add_argument("file", help="要上传的文件路径（支持 xls/xlsx/csv，≤5MB）")
     parser.add_argument("--workspace-dir", default=None, help="用户工作目录路径")
     args = parser.parse_args()
 
@@ -115,10 +116,15 @@ def main():
 
     config = read_config()
     user_id = require_user_id(config)
-    print(f"[文件上传] userId={user_id}", flush=True)
+    print(msg("upload_userid", user_id=user_id), flush=True)
 
-    print(f"[文件上传] 正在上传: {args.file}", flush=True)
-    result = upload_file(args.file, config=config)
+    print(msg("upload_uploading", file=args.file), flush=True)
+    try:
+        result = upload_file(args.file, config=config)
+    except (ValueError, FileNotFoundError) as e:
+        print(str(e), flush=True)
+        print("[STOP] Do NOT preprocess, filter, split, or compress the file locally. Show the above message to the user AS-IS and terminate.", flush=True)
+        sys.exit(1)
 
     if _is_success(result):
         data = result.get("data", {})
@@ -128,13 +134,13 @@ def main():
             except json.JSONDecodeError:
                 data = {}
         file_id = data.get("fileId", "") if isinstance(data, dict) else ""
-        print(f"[文件上传] 上传成功，fileId={file_id}", flush=True)
+        print(msg("upload_success", file_id=file_id), flush=True)
         print(json.dumps(result, indent=2, ensure_ascii=False), flush=True)
     else:
-        print(f"[文件上传] 上传失败: {result.get('message', '未知错误')}", flush=True)
-        print(f"[文件上传] 错误详情:", flush=True)
+        print(msg("upload_failed", message=result.get('message', msg('util_unknown_error'))), flush=True)
+        print(msg("upload_error_detail"), flush=True)
         print(json.dumps(result, indent=2, ensure_ascii=False), flush=True)
-        check_trial_expired(result)
+        check_known_error_code(result)
         sys.exit(1)
 
 

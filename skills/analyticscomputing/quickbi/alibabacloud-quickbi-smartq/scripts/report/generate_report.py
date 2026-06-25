@@ -20,6 +20,7 @@ from common.utils import (
     read_config,
     upload_files,
 )
+from common.messages import msg, set_locale
 
 
 def parse_args() -> argparse.Namespace:
@@ -39,6 +40,7 @@ def parse_args() -> argparse.Namespace:
         default=30 * 60,
         help="最大等待时间（秒）",
     )
+    parser.add_argument("--locale", required=True, choices=["zh_CN", "en_US"], help="语言环境: zh_CN(简体中文) 或 en_US(英文)")
     parser.add_argument("--workspace-dir", default=None, help="用户工作目录路径")
     return parser.parse_args()
 
@@ -50,6 +52,8 @@ def main() -> int:
     if args.workspace_dir:
         from common.config_loader import set_workspace_dir
         set_workspace_dir(args.workspace_dir)
+
+    set_locale(args.locale)
 
     config = read_config()
     resources: List[Dict[str, Any]] = []
@@ -75,6 +79,7 @@ def main() -> int:
     create_result = create_report_chat(
         args.question,
         resources=resources,
+        locale=args.locale,
         config=config,
     )
 
@@ -117,5 +122,5 @@ if __name__ == "__main__":
     try:
         raise SystemExit(main())
     except Exception as exc:  # pragma: no cover - 终端脚本直接输出错误
-        print(f"生成报告失败：{exc}", file=sys.stderr)
+        print(msg('report_generate_failed', exc=exc), file=sys.stderr)
         raise SystemExit(1)

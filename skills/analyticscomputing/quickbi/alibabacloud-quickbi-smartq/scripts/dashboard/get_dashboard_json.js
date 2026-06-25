@@ -19,10 +19,10 @@
 // 布局分析辅助函数 - 基于 tileLayout 的 x/y 坐标
 function analyzeLayout(charts) {
   if (charts.length === 0) return { rows: [], source: 'none' };
-  
+
   // 基于 tileLayout 的 y 坐标分组（同一行的 y 值相同或相近）
   const rowMap = {};
-  
+
   charts.forEach(chart => {
     const y = chart.position.y || 0;
     // 找到最近的行（允许 y 值有小幅偏差）
@@ -33,11 +33,11 @@ function analyzeLayout(charts) {
         break;
       }
     }
-    
+
     if (!rowMap[targetY]) {
       rowMap[targetY] = { y: targetY, items: [] };
     }
-    
+
     rowMap[targetY].items.push({
       chart: chart,
       x: chart.position.x || 0,
@@ -45,10 +45,10 @@ function analyzeLayout(charts) {
       h: chart.position.h || 1
     });
   });
-  
+
   // 按行号（y 坐标）排序
   const sortedRows = Object.values(rowMap).sort((a, b) => a.y - b.y);
-  
+
   // 每行内按 x 坐标排序
   sortedRows.forEach(row => {
     row.items.sort((a, b) => a.x - b.x);
@@ -62,7 +62,7 @@ function analyzeLayout(charts) {
     }));
     delete row.items;
   });
-  
+
   return { rows: sortedRows, source: 'tileLayout' };
 }
 
@@ -101,6 +101,82 @@ function findFieldCaptionFromSchema(pathId, fields) {
     }
   }
   return null;
+}
+
+/**
+ * 从数据集schema中查找字段的完整信息（caption + name）
+ * @param {string} pathId - 字段的pathId
+ * @param {Array} fields - 数据集schema中的fields数组
+ * @returns {{caption: string|null, name: string|null}} 字段信息，未找到返回 {caption: null, name: null}
+ */
+function findFieldInfoFromSchema(pathId, fields) {
+  if (!pathId || !fields || !Array.isArray(fields)) return { caption: null, name: null };
+
+  for (const field of fields) {
+    // 检查当前字段
+    if (field.uniqueId === pathId || field.name === pathId) {
+      return { caption: field.caption || null, name: field.name || null };
+    }
+    // 检查attributes中的子字段
+    if (field.attributes && Array.isArray(field.attributes)) {
+      for (const attr of field.attributes) {
+        if (attr.uniqueId === pathId || attr.id === pathId) {
+          return { caption: attr.caption || null, name: attr.id || attr.name || null };
+        }
+      }
+    }
+  }
+  return { caption: null, name: null };
+}
+
+/**
+ * 构建字段映射条目
+ * 解析单个字段的映射：报表展示名 → 数据集原名
+ *
+ * @param {Object} col - queryInput.area 中的字段对象
+ * @param {Object} fieldSettingMap - 字段别名映射
+ * @param {Array|null} schemaFields - 数据集schema中的fields数组
+ * @returns {{caption: string, originalCaption: string|null, pathId: string, itemType: string, uuid: string|null}}
+ */
+function buildFieldMappingEntry(col, fieldSettingMap, schemaFields) {
+  const uuid = col.uuid;
+  const pathId = col.pathId;
+
+  // 1. 确定报表展示名（caption）：与 getFieldCaption 逻辑一致
+  let caption;
+  let aliasName = null;
+
+  // 1a. 尝试从 fieldSettingMap 获取别名
+  if (uuid && fieldSettingMap && fieldSettingMap[uuid] && fieldSettingMap[uuid].aliasName) {
+    const rawAlias = fieldSettingMap[uuid].aliasName;
+    if (!isGarbageString(rawAlias)) {
+      aliasName = rawAlias;
+    }
+  }
+
+  // 1b. 从 schema 获取数据集标题
+  const schemaInfo = findFieldInfoFromSchema(pathId, schemaFields);
+
+  // 1c. 确定最终的 caption（优先级：aliasName > schemaCaption > col.caption > col.name）
+  if (aliasName) {
+    caption = aliasName;
+  } else if (schemaInfo.caption) {
+    caption = schemaInfo.caption;
+  } else {
+    caption = col.caption || col.name;
+  }
+
+  // 2. 确定 originalCaption：使用图表JSON中保存的原始字段标题（col.caption）
+  // 而非 schema 中的 caption，因为 schema 的 caption 可能已被数据集级别别名覆盖
+  const originalCaption = col.caption || schemaInfo.caption || col.name || null;
+
+  return {
+    caption: caption,
+    originalCaption: originalCaption,
+    pathId: pathId || null,
+    itemType: col.itemType || null,
+    uuid: uuid || null
+  };
 }
 
 /**
@@ -155,7 +231,7 @@ function parseDashboardJson(json, datasetSchemaMap = {}) {
         position: position
       };
 
-      if (comp.customComponentId === 'query2') {
+      if (content.type === 'query2') {
         // === 查询控件 ===
         const modelConfig = content.modelConfig || {};
         const fieldConfigs = modelConfig.fieldConfigs || [];
@@ -169,6 +245,7 @@ function parseDashboardJson(json, datasetSchemaMap = {}) {
           internalId: internalId,
           needManualQuery: needManualQuery,
           isSingleComponent: isSingleComponent,
+          componentType: comp.type || comp.componentType,
           parentId: parentId,
           position: position,
           fields: fieldConfigs.map(f => ({
@@ -184,7 +261,7 @@ function parseDashboardJson(json, datasetSchemaMap = {}) {
           }))
         });
 
-      } else if (comp.customComponentId === 'tab') {
+      } else if (content.type === 'tab') {
         // === Tab 组件 ===
         const attr = content.attribute || {};
         const tabs = attr.tabs || content.items || [];
@@ -195,13 +272,14 @@ function parseDashboardJson(json, datasetSchemaMap = {}) {
           componentName: content.caption || 'Tab',
           activeId: content.activeId,
           position: position,
+          componentType: content.type || content.componentType,
           tabs: tabs.map(tab => ({
             id: tab.id,
             title: tab.title || tab.text
           }))
         });
 
-      } else if (comp.customComponentId === 'text') {
+      } else if (content.type === 'text') {
         // === 文本组件 ===
         const attr = content.attribute || {};
         // 提取纯文本内容（去除HTML标签）
@@ -212,6 +290,7 @@ function parseDashboardJson(json, datasetSchemaMap = {}) {
           richTextComponents.push({
             componentId: comp.componentId,
             internalId: internalId,
+            componentType: content.type || content.componentType,
             position: position,
             htmlContent: htmlContent,
             textContent: textContent
@@ -229,18 +308,18 @@ function parseDashboardJson(json, datasetSchemaMap = {}) {
         const datasetSchema = sourceId ? datasetSchemaMap[sourceId] : null;
         const schemaFields = datasetSchema ? datasetSchema.fields : null;
 
-        // 获取字段别名映射（funcSettingMap）
-        const funcSettingMap = attr.funcSettingMap || {};
+        // 获取字段别名映射（fieldSettingMap）
+        const fieldSettingMap = attr.fieldSettingMap || {};
 
         // 辅助函数：获取字段别名
-        // 优先级：1. funcSettingMap.aliasName（非乱码） 2. cubeSchema.fields.caption 3. col.caption 4. col.name
+        // 优先级：1. fieldSettingMap.aliasName（非乱码） 2. cubeSchema.fields.caption 3. col.caption 4. col.name
         const getFieldCaption = (col) => {
           const uuid = col.uuid;
           const pathId = col.pathId;
 
-          // 1. 尝试从 funcSettingMap 获取别名
-          if (uuid && funcSettingMap[uuid] && funcSettingMap[uuid].aliasName) {
-            const aliasName = funcSettingMap[uuid].aliasName;
+          // 1. 尝试从 fieldSettingMap 获取别名
+          if (uuid && fieldSettingMap[uuid] && fieldSettingMap[uuid].aliasName) {
+            const aliasName = fieldSettingMap[uuid].aliasName;
             // 检查别名是否为乱码（10位十六进制字符串）
             if (!isGarbageString(aliasName)) {
               return aliasName;
@@ -258,20 +337,22 @@ function parseDashboardJson(json, datasetSchemaMap = {}) {
           // 3. 降级到 col.caption 或 col.name
           return col.caption || col.name;
         };
-        
+
         // 解析 queryInput.area 获取字段配置
         const areas = queryInput.area || [];
         const dimensions = [];  // 维度字段
         const measures = [];    // 度量字段
         const filters = [];     // 过滤器字段
         const drillFields = []; // 下钻字段
-        
+
         areas.forEach(area => {
           // 提取下钻字段（id 为 drill 的 area）
           if (area.id === 'drill') {
             (area.columnList || []).forEach(col => {
+              const schemaInfo = schemaFields ? findFieldInfoFromSchema(col.pathId || col.key, schemaFields) : null;
               drillFields.push({
                 caption: getFieldCaption(col),
+                originalCaption: col.caption || (schemaInfo && schemaInfo.caption) || col.name || null,  // 图表JSON中的原始字段标题
                 pathId: col.pathId,
                 itemType: col.itemType,
                 key: col.key,
@@ -281,11 +362,43 @@ function parseDashboardJson(json, datasetSchemaMap = {}) {
             });
             return; // drill area 处理完毕，跳过后续逻辑
           }
-          
-          // 处理其他 area（维度、度量、过滤器）
+
+          // 提取过滤器字段（id 为 filters 的 area,去除使用了相对时间的过滤项）
+          if (area.id === 'filters' || area.queryAxis === 'filter') {
+            (area.columnList || []).forEach(col => {
+              const hasRelativeTime = (column) => {
+                const defaultConfig = column.filter?.config?.baseConfig?.config?.defaultConfig;
+                if (!defaultConfig) return false
+                /** 单日期粒度: { timeConfig: TimeConfigDefine } */
+                if (defaultConfig.timeConfig?.timeSettingType === 'relative') return true;
+                /** 区间粒度: { startTimeConfig, endTimeConfig } — 任一为相对即算 */
+                if (defaultConfig.startTimeConfig?.timeSettingType === 'relative') return true;
+                if (defaultConfig.endTimeConfig?.timeSettingType === 'relative') return true;
+                return false;
+              }
+
+              if (!hasRelativeTime(col)) {
+                  const schemaInfo = schemaFields ? findFieldInfoFromSchema(col.pathId || col.key, schemaFields) : null;
+                  filters.push({
+                    key: col.key,
+                    caption: getFieldCaption(col),
+                    originalCaption: col.caption || (schemaInfo && schemaInfo.caption) || col.name || null,  // 图表JSON中的原始字段标题
+                    complexFilter: col?.complexFilter || col?.levels[0]?.complexFilter, // 过滤器配置
+                    aggregator: col?.aggregator || null, // 聚合方式
+                    itemType: col.itemType, // dimension / measure / datetime / geographic
+                    colType: col?.colType || col?.levels[0]?.colType // 类型
+                  });
+                }
+            });
+            return
+          }
+
+          // 处理其他 area（维度、度量）
           (area.columnList || []).forEach(col => {
+            const schemaInfo = schemaFields ? findFieldInfoFromSchema(col.pathId || col.key, schemaFields) : null;
             const fieldInfo = {
               caption: getFieldCaption(col),
+              originalCaption: col.caption || (schemaInfo && schemaInfo.caption) || col.name || null,  // 图表JSON中的原始字段标题
               pathId: col.pathId,
               itemType: col.itemType,  // dimension / measure / datetime / geographic
               key: col.key,
@@ -293,42 +406,36 @@ function parseDashboardJson(json, datasetSchemaMap = {}) {
               aggregateType: col.aggregator || col.aggregateType || null,
               isDrillEnabled: col.isDrillEnabled || false
             };
-            
-            if (area.id === 'filters' || area.queryAxis === 'filters') {
-              filters.push(fieldInfo);
-            } else if (col.itemType === 'measure') {
+
+            if (col.itemType === 'measure') {
               measures.push(fieldInfo);
             } else {
               dimensions.push(fieldInfo);
             }
           });
         });
-        
-        // 提取默认过滤器配置
-        const filterConfigs = content.filterConfigs || queryInput.filter || [];
-        
+
         chartComponents.push({
           componentId: comp.componentId,
           internalId: internalId,
           componentName: caption,
-          componentType: comp.componentType,
+          componentType: content.type || content.componentType,
           customComponentId: comp.customComponentId,
           sourceId: queryInput.sourceId,          // 数据集ID - 问数调用的关键
           position: position,                      // 位置信息（来自 tileLayout）
           dimensions: dimensions,                  // 维度字段
           measures: measures,                      // 度量字段
-          filters: filters,                        // 过滤器字段
           drillFields: drillFields,               // 下钻字段
-          defaultFilters: filterConfigs,          // 默认过滤器
+          defaultFilters: filters,          // 默认过滤器
           parentId: parentId
         });
       }
     });
-    
+
     // 3. 建立图表与 Tab 的从属关系
     chartComponents.forEach(chart => {
       chart.tabInfo = null;
-      
+
       if (chart.parentId) {
         for (const tab of tabComponents) {
           for (const tabItem of tab.tabs) {
@@ -347,11 +454,11 @@ function parseDashboardJson(json, datasetSchemaMap = {}) {
         }
       }
     });
-    
+
     // 4. 建立查询控件与图表的关联关系
     chartComponents.forEach(chart => {
       chart.relatedQueryControls = [];
-      
+
       queryControls.forEach(qc => {
         if (qc.isSingleComponent && qc.parentId === chart.internalId) {
           chart.relatedQueryControls.push({
@@ -360,7 +467,7 @@ function parseDashboardJson(json, datasetSchemaMap = {}) {
             fields: qc.fields.map(f => f.labelName)
           });
         } else if (!qc.isSingleComponent) {
-          const matchedFields = qc.fields.filter(f => 
+          const matchedFields = qc.fields.filter(f =>
             f.relatedGraphIds.includes(chart.internalId)
           );
           if (matchedFields.length > 0) {
@@ -373,7 +480,7 @@ function parseDashboardJson(json, datasetSchemaMap = {}) {
         }
       });
     });
-    
+
     // 5. 为查询控件字段添加关联图表名称
     queryControls.forEach(qc => {
       qc.fields.forEach(f => {
@@ -383,9 +490,76 @@ function parseDashboardJson(json, datasetSchemaMap = {}) {
         });
       });
     });
-    
+
     // 6. 布局分析 - 基于 tileLayout 的 x/y 坐标
     const layoutAnalysis = analyzeLayout(chartComponents);
+
+    // 7. 构建字段映射（fieldMapping）：按数据集分组
+    // 建立报表展示名 → 数据集原名的映射，仅输出 caption !== originalCaption 的字段
+    const fieldMapping = {};
+    chartComponents.forEach(chart => {
+      const sourceId = chart.sourceId;
+      if (!sourceId) return;
+
+      if (!fieldMapping[sourceId]) {
+        const schemaInfo = datasetSchemaMap[sourceId];
+        fieldMapping[sourceId] = {
+          datasetName: schemaInfo ? schemaInfo.cubeName : null,
+          fields: []
+        };
+      }
+
+      // 获取该图表关联的数据集 schema fields
+      const schemaFields = (datasetSchemaMap[sourceId] && datasetSchemaMap[sourceId].fields) || null;
+
+      // 遍历维度和度量字段，构建映射条目
+      const allFields = [
+        ...(chart.dimensions || []),
+        ...(chart.measures || []),
+        ...(chart.defaultFilters || []),
+        ...(chart.drillFields || [])
+      ];
+
+      allFields.forEach(field => {
+        const pathId = field.pathId;
+        const caption = field.caption;
+
+        // 确定 originalCaption：使用图表JSON中保存的原始字段标题（col.caption）
+        // 而非 schema 中的 caption，因为 schema 的 caption 可能已被数据集级别别名覆盖
+        const originalCaption = field.originalCaption || null;
+
+        // 仅输出 caption 与 originalCaption 不一致的字段（一致的字段无需映射）
+        if (caption === originalCaption) {
+          return;
+        }
+
+        // 按路径 ID + caption 组合去重：同一数据集下相同 pathId 但不同 caption 的字段分别记录
+        // 因为同一字段在不同图表中可能有不同的别名
+        const existing = fieldMapping[sourceId].fields.find(f => f.pathId === pathId && f.caption === caption && pathId);
+        if (existing) {
+          // 追加图表信息到 charts 数组（按 componentId 去重）
+          if (!existing.charts.some(c => c.componentId === chart.componentId)) {
+            existing.charts.push({ componentId: chart.componentId, componentName: chart.componentName });
+          }
+          return;
+        }
+
+        fieldMapping[sourceId].fields.push({
+          caption: field.caption,
+          originalCaption: originalCaption,
+          pathId: pathId || null,
+          itemType: field.itemType || null,
+          charts: [{ componentId: chart.componentId, componentName: chart.componentName }]
+        });
+      });
+    });
+
+    // 清理空数据集：如果某数据集下所有字段均一致（fields 为空），则移除该数据集条目
+    for (const sid of Object.keys(fieldMapping)) {
+      if (fieldMapping[sid].fields.length === 0) {
+        delete fieldMapping[sid];
+      }
+    }
 
     return {
       success: true,
@@ -395,7 +569,7 @@ function parseDashboardJson(json, datasetSchemaMap = {}) {
       tabComponents,
       richTextComponents,
       layoutAnalysis,
-      datasetSchemaMap  // 保留数据集schema信息，供后续使用
+      fieldMapping            // 字段映射（按数据集分组，仅含 caption !== originalCaption 的字段）
     };
   } catch (e) {
     return { success: false, error: e.message };

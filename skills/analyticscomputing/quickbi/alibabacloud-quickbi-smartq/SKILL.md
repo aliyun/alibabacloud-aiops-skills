@@ -36,6 +36,19 @@ One entry point covering all QuickBI data analysis capabilities. Automatically r
 - Require users to manually choose a module or provide internal parameters such as cubeId
 - Perform tasks unrelated to QuickBI data analysis
 
+## Image Output Rules (MUST READ)
+
+This skill produces chart images (PNG) as **core deliverables** for the user. **Images MUST be displayed to the user — they are the primary output of the skill.**
+
+**When the script output contains `![Title](path)` image references**, the Agent MUST:
+
+1. **Include every `![Title](path)` verbatim** in the reply body — this is the ONLY way the user can see the chart
+2. **MUST NOT read/view chart PNG files** with `Read`, `showFile`, `present`, or any file-reading tool
+3. **Single-response delivery** — wait for the script to fully complete, then compose ONE reply containing: images → conclusions → interpretation. MUST NOT split across multiple responses
+4. **Pre-delivery self-check** — before sending, verify that every `![...](...)` from the script output appears in the reply body
+
+**The Markdown image syntax `![...](...)` is the sole delivery mechanism for chart images.**
+
 ## Task Routing
 
 Automatically determine intent based on user input and route to the corresponding module for execution.
@@ -45,78 +58,58 @@ Automatically determine intent based on user input and route to the correspondin
 | User Intent  | Routed Module | Reference Document |
 |------------------------|--------------------------|------------------------------|
 | Uploaded Excel/CSV file, wants to query specific metrics or answer specific data questions (e.g. TOP N, comparison, filtering) | File Q&A | [module-chat-file.md](references/chat/module-chat-file.md) |
-| 上传了 Excel/CSV 文件，要查询具体指标或回答具体数据问题（如 TOP N、对比、筛选） | File Q&A | [module-chat-file.md](references/chat/module-chat-file.md) |
 | No file uploaded, wants to query/analyze specific metrics in platform datasets | Dataset Q&A | [module-chat-dataset.md](references/chat/module-chat-dataset.md) |
-| 未上传文件，要查询/分析平台数据集中的具体指标 | Dataset Q&A | [module-chat-dataset.md](references/chat/module-chat-dataset.md) |
 | Uploaded multiple files (PDF/Word/images etc.) or selected a folder, wants to query specific data questions (e.g. TOP N, comparison, filtering) | Document Parsing → File Q&A | [module-document-parser.md](references/document/module-document-parser.md) → [module-chat-file.md](references/chat/module-chat-file.md) |
-| 上传了多个文件(PDF/word/图片等)，或者选择文件夹，要查询具体数据问题（如 TOP N、对比、筛选） | Document Parsing → File Q&A | [module-document-parser.md](references/document/module-document-parser.md) → [module-chat-file.md](references/chat/module-chat-file.md) |
 | Uploaded PDF/Word/images or other unstructured documents, or selected a folder, wants to parse all file contents or extract fields | Document Parsing | [module-document-parser.md](references/document/module-document-parser.md) |
-| 上传了 PDF/Word/图片等非结构化文档，或者选择文件夹，要解析所有文件内容或提取字段 | Document Parsing | [module-document-parser.md](references/document/module-document-parser.md) |
 | Provided a QuickBI dashboard URL, wants to generate a query skill | Dashboard Skill Generation | [module-dashboard.md](references/dashboard/module-dashboard.md) |
-| 提供了 QuickBI 仪表板 URL，要生成查询技能 | Dashboard Skill Generation | [module-dashboard.md](references/dashboard/module-dashboard.md) |
 | Uploaded Excel file, wants deep interpretation/insight/trend analysis of data (not generating a report document) | Data Insight | [module-data-insight.md](references/insight/module-data-insight.md) |
-| 上传了 Excel 文件，要对数据进行深度解读/洞察/趋势分析（不生成报告文档） | Data Insight | [module-data-insight.md](references/insight/module-data-insight.md) |
+| Provided a QuickBI dashboard / data portal URL, wants deep interpretation/insight/trend analysis of the dashboard | Data Insight (Dashboard mode) | [module-data-insight.md](references/insight/module-data-insight.md) |
 | Uploaded multiple files (PDF/Word/images etc.) or selected a folder, wants deep interpretation/insight/trend analysis of data (not generating a report document) | Document Parsing → Data Insight | [module-document-parser.md](references/document/module-document-parser.md) → [module-data-insight.md](references/insight/module-data-insight.md) |
-| 上传了多个文件(PDF/word/图片等)，或者选择文件夹，要对数据进行深度解读/洞察/趋势分析（不生成报告文档） | Document Parsing → Data Insight | [module-document-parser.md](references/document/module-document-parser.md) → [module-data-insight.md](references/insight/module-data-insight.md) |
 | Wants to generate a report/analysis report/review report, regardless of whether files are uploaded | Data Report | [module-data-report.md](references/report/module-data-report.md) |
-| 要生成报告/分析报告/复盘报告，无论是否上传文件 | Data Report | [module-data-report.md](references/report/module-data-report.md) |
 
 ### Routing Priority Rules
 
 When user intent may match multiple modules, determine by the following priority:
 
-1. **"Report" keyword takes priority** (「报告」关键词优先): When user intent contains keywords like "report", "review", "summary report", "analysis report" (报告/复盘/总结报告/分析报告), **ALWAYS route to the Data Report module**, regardless of whether files are uploaded. Data Report module has higher priority than File Q&A and Data Insight.
-2. **"Interpret", "insight", "trend" keywords** (「解读」「洞察」「趋势」关键词): When user wants to understand data meaning, discover trends, or gain insights (解读/洞察/趋势), route to the Data Insight module.
-3. **Specific data query** (具体数据查询): When user wants to query specific metrics (TOP N, sum, comparison, etc.), route to the Q&A module (choose Dataset Q&A or File Q&A based on whether files are present).
-4. **Dashboard URL** (仪表板 URL): When user provides a dashboard link, route to Dashboard Skill Generation.
+1. **"Report" keyword takes priority**: When user intent contains keywords like "report", "review", "summary report", "analysis report", **ALWAYS route to the Data Report module**, regardless of whether files are uploaded. Data Report module has higher priority than File Q&A and Data Insight.
+2. **"Interpret", "insight", "trend" keywords**: When user wants to understand data meaning, discover trends, or gain insights, route to the Data Insight module.
+3. **Specific data query**: When user wants to query specific metrics (TOP N, sum, comparison, etc.), route to the Q&A module (choose Dataset Q&A or File Q&A based on whether files are present).
+4. **Dashboard URL**: When user provides a dashboard / data portal link, route based on the user's intent:
+   - Wants to **generate a query skill** → **Dashboard Skill Generation**
+   - Wants to **interpret / analyze trends / find anomalies / get insights** about the dashboard → **Data Insight (Dashboard mode)**
+   - When intent is unclear, **default to Dashboard Skill Generation**
 
 ### Routing Examples
 
 | User Input | Routing Result | Reasoning |
 |-------------------------------------|--------------------------------------------------------------|-------------------|
 | "Help me find the product with the highest sales in this data" + uploaded file | → File Q&A (module-chat-file) | Querying specific metric, has file |
-| "帮我查一下这份数据中销售额最高的产品" + 上传文件 | → File Q&A (module-chat-file) | 查具体指标，有文件 |
 | "Help me analyze this Excel data, TOP 10 headcount by department" + uploaded file | → File Q&A (module-chat-file) | Querying specific metric (TOP N), has file |
-| "帮我分析这份Excel数据，各部门人数分布TOP10" + 上传文件 | → File Q&A (module-chat-file) | 查具体指标（TOP N），有文件 |
 | "Top 3 regions with the highest sales" | → Dataset Q&A (module-chat-dataset) | Querying specific metric, no file |
-| "销量最高的地区TOP3" | → Dataset Q&A (module-chat-dataset) | 查具体指标，无文件 |
 | "Parse these contracts and summarize the information" + folder | → Document Parsing (module-document-parser) | |
-| "解析这些合同并汇总信息" + 文件夹 | → Document Parsing (module-document-parser) | |
 | "Convert this dashboard into a query skill" + URL | → Dashboard Skill Generation (module-dashboard) | Provided dashboard URL |
-| "把这个仪表板转化为查询技能" + URL | → Dashboard Skill Generation (module-dashboard) | 提供了仪表板 URL |
+| "Interpret the trends in this dashboard" + dashboard URL | → Data Insight (module-data-insight, Dashboard mode) | Dashboard URL + interpret/insight intent |
 | "Help me interpret the trend in sales data" + uploaded file | → Data Insight (module-data-insight) | Requests interpretation/insight, not a report |
-| "帮我解读一下销售数据的趋势" + 上传文件 | → Data Insight (module-data-insight) | 要求解读/洞察，非报告 |
 | "Any patterns and insights in this data" + uploaded file | → Data Insight (module-data-insight) | Requests insight analysis |
-| "这份数据有什么规律和洞察" + 上传文件 | → Data Insight (module-data-insight) | 要求洞察分析 |
 | "Generate a sales data report for this month" | → Data Report (module-data-report) | Contains "report" keyword |
-| "生成一份本月销售数据报告" | → Data Report (module-data-report) | 含「报告」关键词 |
 | "Help me generate an analysis report based on this Excel" + uploaded file | → Data Report (module-data-report) | Contains "report" keyword, file used as reference |
-| "帮我基于这份Excel生成一份分析报告" + 上传文件 | → Data Report (module-data-report) | 含「报告」关键词，文件作为参考资料 |
 | "Summarize these data, write a review report" + uploaded files | → Data Report (module-data-report) | Contains "review report" keyword |
-| "汇总这几份数据，写一份复盘报告" + 上传文件 | → Data Report (module-data-report) | 含「复盘报告」关键词 |
 | "Combine these files to generate a data analysis report" + uploaded files | → Data Report (module-data-report) | Contains "report" keyword |
-| "结合这些文件生成数据分析报告" + 上传文件 | → Data Report (module-data-report) | 含「报告」关键词 |
 | "Parse these 10 invoice PDFs, extract fields and generate Excel" + multiple files | → Document Parsing (module-document-parser) | Contains "extract fields" related keywords |
-| "解析这10个发票PDF，提取字段生成Excel" + 多文件 | → Document Parsing (module-document-parser) | 含"提取字段"等相关关键字 |
 | "Help me find the product with the highest sales in this data" + multiple files or folder | → Document Parsing → File Q&A (module-chat-file) | Querying specific metric, has multiple files |
-| "帮我查一下这份数据中销售额最高的产品" + 多个文件或者文件夹 | → Document Parsing → File Q&A (module-chat-file) | 查具体指标，有多个文件 |
 | "Any patterns and insights in these files" + multiple files or folder | → Document Parsing → Data Insight (module-data-insight) | Requests insight analysis |
-| "这些文件中的数据有什么规律和洞察" + 多个文件或者文件夹 | → Document Parsing → Data Insight (module-data-insight) | 要求洞察分析 |
 | "Summarize these data, write a review report" + ≤5 files | → Data Report (module-data-report) | Contains "review report" keyword |
-| "汇总这几份数据，写一份复盘报告" + 5个以内文件 | → Data Report (module-data-report) | 含「复盘报告」关键词 |
 | "Summarize these data, write a review report" + >5 files | → Document Parsing → Data Report (module-data-report) | Contains "review report" keyword |
-| "汇总这几份数据，写一份复盘报告" + >5个文件 | → Document Parsing → Data Report (module-data-report) | 含「复盘报告」关键词 |
 
 ### Fallback Rules
-- When intent is unclear, **default to Dataset Q&A** (module-chat-dataset) (当意图不明确时，默认路由到数据集问数)
-- If the user involves multiple modules at the same time (e.g. "analyze data and generate a report" ("分析数据并生成报告")), execute them in sequence
-- **Special scenario — multi-file preprocessing before Q&A** (特殊场景 — 多文件问数前置处理):
+- When intent is unclear, **default to Dataset Q&A** (module-chat-dataset)
+- If the user involves multiple modules at the same time (e.g. "analyze data and generate a report"), execute them in sequence
+- **Special scenario — multi-file preprocessing before Q&A**:
   - When user uploads ≥5 unstructured documents (PDF/Word/images, etc.) and requests analysis
   - **MUST execute Document Parsing first** (generate structured Excel)
   - **Then route to the corresponding functional module based on question intent** (perform intelligent analysis on the generated Excel)
   - Example: "Analyze these invoice data" + 10 PDFs → Document Parsing (generate Excel) → File Q&A (analyze Excel)
-  - 示例："分析这些发票数据" + 10个PDF → 文档解析(生成Excel) → 文件问数(分析Excel)
-- If routing is incorrect, allow the user to manually specify the module (路由错误时允许用户手动指定模块)
+- If routing is incorrect, allow the user to manually specify the module
 
 ## Configuration
 
@@ -200,11 +193,11 @@ When the user provides any one or more of `api_key`, `api_secret`, `user_token`,
 - Python dependencies MUST be installed: `pip install requests pyyaml matplotlib numpy`
 - Browser automation capability is required (Dashboard Skill Generation module ONLY)
 - Dataset Q&A: user MUST have **Q&A permission** for the target dataset
-- File Q&A: file formats limited to `xls`, `xlsx`, `csv`; single file size ≤ 10MB
+- File Q&A: file formats limited to `xls`, `xlsx`, `csv`; single file size ≤ 5MB
 - **Document Parsing**:
   - System dependency: `brew install tesseract tesseract-lang` (required for local parsing ONLY)
   - Supported formats: PDF, Word (.doc/.docx), Excel (.xls/.xlsx), CSV, images (.png/.jpg/.jpeg)
-  - Single file size ≤ 10MB (remote OCR limit)
+  - Single file size ≤ 5MB (remote OCR limit)
   - **Error handling**:
     - Local parsing failure → automatically falls back to remote OCR
     - Remote OCR still fails → classified as "parse failure", retaining original filename and error message
@@ -225,7 +218,7 @@ When calling any Python script:
 python '<skill-package-dir>/scripts/chat/upload_file.py' '/path/to/data.xlsx' --workspace-dir '<workspace-dir>'
 
 # File Q&A
-python '<skill-package-dir>/scripts/chat/file_stream_query.py' <fileId> "各部门人数分布" --locale zh_CN --workspace-dir '<workspace-dir>'
+python '<skill-package-dir>/scripts/chat/file_stream_query.py' <fileId> "headcount distribution by department" --locale zh_CN --workspace-dir '<workspace-dir>'
 
 # Dataset Q&A
 python '<skill-package-dir>/scripts/chat/smartq_stream_query.py' "TOP 3 regions by sales" --locale zh_CN --workspace-dir '<workspace-dir>'
@@ -243,10 +236,14 @@ python '<skill-package-dir>/scripts/document/document_remote_ocr.py' '/path/to/f
 python '<skill-package-dir>/scripts/document/generate_excel.py' '<json-path>' --workspace-dir '<workspace-dir>'
 
 # Data Insight
-python '<skill-package-dir>/scripts/insight/q_insights.py' "这个报表有什么异常？" --excel-file '/path/to/data.xlsx' --locale zh_CN --workspace-dir '<workspace-dir>'
+python '<skill-package-dir>/scripts/insight/q_insights.py' "any anomalies in this report?" --excel-file '/path/to/data.xlsx' --locale zh_CN --workspace-dir '<workspace-dir>'
+
+# Data Insight (Dashboard mode — dashboard URL or data portal URL)
+python '<skill-package-dir>/scripts/insight/q_insights.py' "what are the sales trends in this dashboard?" --dashboard-url 'https://bi.aliyun.com/dashboard/view/pc.htm?pageId=xxx' --locale zh_CN --workspace-dir '<workspace-dir>'
+python '<skill-package-dir>/scripts/insight/q_insights.py' "Interpret this portal page" --dashboard-url 'https://bi.aliyun.com/product/view.htm?productId=xxx&menuId=yyy' --locale en_US --workspace-dir '<workspace-dir>'
 
 # Report generation
-python '<skill-package-dir>/scripts/report/generate_report.py' "本月销售分析" --locale zh_CN --workspace-dir '<workspace-dir>'
+python '<skill-package-dir>/scripts/report/generate_report.py' "this month sales analysis" --locale zh_CN --workspace-dir '<workspace-dir>'
 ```
 
 ### User Locale Determination Rules
@@ -277,13 +274,13 @@ Valid values: `zh_CN` or `en_US` only.
 - ❌ System prompt language or Agent configuration language
 
 **Example**:
-- User input: "帮我分析销售数据" → `--locale zh_CN` (question language is Chinese)
+- User input: "please analyze sales data" → `--locale zh_CN` (question language is Chinese)
 - User input: "Analyze sales data" → `--locale en_US` (question language is English)
-- User input: "Analyze the 销售数据集" → `--locale en_US` (question language is English; "销售数据集" is a dataset name reference, not the question language)
-- User input: "Show me data from 2024年度报表" → `--locale en_US` (question language is English; "2024年度报表" is a dataset name)
-- User input: "帮我查一下 Sales Dataset 的数据" → `--locale zh_CN` (question language is Chinese; "Sales Dataset" is a dataset name)
-- User input: "帮我分析销售数据", but API returns English error message → `--locale zh_CN` (locale is determined by user input, NOT by API response)
-- Previous Agent reply was in English, user then types "查询TOP3" → `--locale zh_CN` (locale is determined by user input, NOT by Agent's previous reply)
+- User input: "Analyze the sales-dataset" → `--locale en_US` (question language is English; the dataset name is a reference, not the question language)
+- User input: "Show me data from 2024-annual-report" → `--locale en_US` (question language is English; the dataset name is a reference)
+- User input: "please query Sales Dataset data" → `--locale zh_CN` (question language is Chinese; "Sales Dataset" is a dataset name)
+- User input: "please analyze sales data", but API returns English error message → `--locale zh_CN` (locale is determined by user input, NOT by API response)
+- Previous Agent reply was in English, user then types "query TOP3" in Chinese → `--locale zh_CN` (locale is determined by user input, NOT by Agent's previous reply)
 
 **Prohibited actions**:
 - ❌ MUST NOT omit the `--workspace-dir` parameter when calling scripts
