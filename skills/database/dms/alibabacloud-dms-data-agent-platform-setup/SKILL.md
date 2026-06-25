@@ -32,17 +32,36 @@ After installation, enable automatic plugin installation:
 aliyun configure set --auto-plugin-install true
 ```
 
-### 2. Enable Aliyun CLI AI-Mode
+### 2. Observability — Session ID & User-Agent
 
-Before executing any CLI commands in this skill, run the following to enable AI-Mode, set the User-Agent, and update plugins:
+> **[REQUIRED] Generate a session-id at the start of every skill session. Use it consistently across ALL CLI commands and Python SDK calls.**
+
+#### Session-ID Generation Rule
+
+- Generate **once per session**, reuse throughout the entire workflow
+- Format: **32-character lowercase hex string** (e.g., `openssl rand -hex 16`)
+- Must be consistent across CLI / SDK / Terraform within the same session
 
 ```bash
-aliyun configure ai-mode enable
-aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dms-data-agent-platform-setup"
-aliyun plugin update
+export SKILL_SESSION_ID=$(openssl rand -hex 16)
 ```
 
-> **[REQUIRED] Run `aliyun configure ai-mode disable` after the workflow is complete.**
+#### User-Agent Template
+
+```
+AlibabaCloud-Agent-Skills/alibabacloud-dms-data-agent-platform-setup/{session-id}
+```
+
+- **Python scripts** (`detect_dify_instance.py`, `openAPI_call.py`): read `SKILL_SESSION_ID` from environment automatically
+- **Aliyun CLI commands**: inject via `--user-agent` flag on each command:
+
+```bash
+aliyun dms-enterprise <action> \
+  --endpoint dms-enterprise.aliyuncs.com \
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dms-data-agent-platform-setup/${SKILL_SESSION_ID}"
+```
+
+> **Do NOT use `aliyun configure ai-mode set-user-agent` (deprecated). Always use per-command `--user-agent` injection.**
 
 ### 3. Configure Alibaba Cloud Credentials
 
@@ -95,9 +114,28 @@ uv pip install --python .venv/bin/python -r scripts/requirements.txt
 
 ## Script Location
 
-`./scripts/openAPI_call.py`
+- `./scripts/detect_dify_instance.py` — Check whether the DMS Dify service is available in the target region
+- `./scripts/openAPI_call.py` — Provision a Dify instance
 
-> Run commands from the directory containing this `skill.md` file.
+> Run commands from the directory containing this `SKILL.md` file.
+
+---
+
+## Pre-check: Verify DMS Service Availability
+
+> **[REQUIRED] Before running `openAPI_call.py`, run `detect_dify_instance.py` to verify that the DMS service is accessible in the target region.**
+
+```bash
+.venv/bin/python ./scripts/detect_dify_instance.py <region-id>
+```
+
+Example:
+```bash
+.venv/bin/python ./scripts/detect_dify_instance.py cn-shanghai
+```
+
+- If the API returns an empty list (`[]`), that is normal — it means no Dify instances exist yet, but the service is available.
+- If the API returns an error, prompt the user to enable the DMS service in the [Alibaba Cloud Console](https://dms.aliyun.com) before proceeding.
 
 ---
 
@@ -188,7 +226,9 @@ Ask the user to choose for each of the following independently:
   - Ask the user if they know the `DbResourceId` (integer)
   - If not, run the following command and find the `InstanceId` from `InstanceList.Instance`:
     ```bash
-    aliyun dms-enterprise list-instances --endpoint dms-enterprise.aliyuncs.com
+    aliyun dms-enterprise list-instances \
+      --endpoint dms-enterprise.aliyuncs.com \
+      --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dms-data-agent-platform-setup/${SKILL_SESSION_ID}"
     ```
 
 #### KvStoreOption
@@ -198,7 +238,9 @@ Ask the user to choose for each of the following independently:
   - Ask the user if they know the `KvStoreResourceId` (integer)
   - If not, run:
     ```bash
-    aliyun dms-enterprise list-instances --endpoint dms-enterprise.aliyuncs.com
+    aliyun dms-enterprise list-instances \
+      --endpoint dms-enterprise.aliyuncs.com \
+      --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dms-data-agent-platform-setup/${SKILL_SESSION_ID}"
     ```
 
 #### VectordbOption
@@ -208,7 +250,9 @@ Ask the user to choose for each of the following independently:
   - Ask the user if they know the `VectordbResourceId` (integer)
   - If not, run:
     ```bash
-    aliyun dms-enterprise list-instances --endpoint dms-enterprise.aliyuncs.com
+    aliyun dms-enterprise list-instances \
+      --endpoint dms-enterprise.aliyuncs.com \
+      --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dms-data-agent-platform-setup/${SKILL_SESSION_ID}"
     ```
 
 ### Step 4: Collect Account and Password
@@ -250,4 +294,4 @@ The following parameters have default values. Ask the user if any need to be cha
 - `WorkspaceId` (use existing Workspace) and `WorkspaceName` (create new Workspace) are mutually exclusive
 - `DbResourceId`, `KvStoreResourceId`, and `VectordbResourceId` are all integer types
 - Always perform a dry run with `DryRun=true` before final provisioning
-- After the workflow is complete, run `aliyun configure ai-mode disable` to disable AI-Mode
+- Ensure `SKILL_SESSION_ID` is exported before running any command in this workflow
