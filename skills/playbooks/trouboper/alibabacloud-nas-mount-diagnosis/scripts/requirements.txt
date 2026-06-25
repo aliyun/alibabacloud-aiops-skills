@@ -1,0 +1,4 @@
+# NAS mount failure diagnosis script dependencies
+# Python standard library: argparse, json, subprocess, sys, ipaddress (no extra installation needed)
+# External dependency: aliyun CLI (Alibaba Cloud CLI tool)
+#   Installation: https://help.aliyun.com/document_detail/139508.html
