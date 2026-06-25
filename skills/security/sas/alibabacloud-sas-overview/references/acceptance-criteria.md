@@ -87,7 +87,7 @@ aliyun sas describe-chart-data --chart-id CID_ASSET_RISK_TREND --time-start "$ST
 #### CORRECT
 ```bash
 # Step 1: Auto-fetch WAF Instance ID (per region)
-aliyun waf-openapi describe-instance --region cn-shanghai --user-agent AlibabaCloud-Agent-Skills
+aliyun waf-openapi describe-instance --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills
 aliyun waf-openapi describe-instance --region ap-southeast-1 --user-agent AlibabaCloud-Agent-Skills
 # Extract InstanceId from each region's response
 

@@ -53,20 +53,16 @@ aliyun sas describe-version-config --user-agent "AlibabaCloud-Agent-Skills/aliba
 
 ## Prerequisites
 
-> **Pre-check: Aliyun CLI >= 3.3.3 required**
-> Run `aliyun version` to verify >= 3.3.3. If not installed or version too low,
+> **Pre-check: Aliyun CLI >= 3.3.1 required**
+> Run `aliyun version` to verify >= 3.3.1. If not installed or version too low,
 > run `curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash` to update,
 > or see `references/cli-installation-guide.md` for installation instructions.
 
 > **Pre-check: Aliyun CLI plugin update required**
 > [MUST] run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
 > [MUST] run `aliyun plugin update` to ensure that any existing plugins are always up-to-date.
-
-Install required CLI plugins:
-
-```bash
-aliyun plugin install --names aliyun-cli-sas aliyun-cli-waf-openapi aliyun-cli-bssopenapi
-```
+>
+> With `--auto-plugin-install true` set, the required plugins (sas, waf-openapi, bssopenapi) are installed automatically on first use — no manual `aliyun plugin install` step is needed.
 
 > **Pre-check: Alibaba Cloud Credentials Required**
 >
@@ -200,18 +196,20 @@ aliyun sas describe-secure-suggestion --cal-type home_security_score --user-agen
 #### 3b. Security Protection — WAF Blocks (multi-region, two-step, WAF 3.0 only)
 
 > **WAF Version Requirement**: This module uses WAF 3.0 API (Product: `waf-openapi`, Version: `2021-10-01`). WAF 2.0 instances (Version `2019-09-10`) are NOT compatible — fields such as `InstanceId` and `WafBlockSum` may be missing or structured differently. If the user's WAF instance is 2.0, inform them that this module is not supported for their instance version.
+>
+> **Region note**: `waf-openapi` (WAF 3.0) is a centralized-endpoint product — the China-site RegionId is `cn-hangzhou` (do NOT use `cn-shanghai`). Also do NOT pass `--version` on these commands: it forces the Location-service endpoint resolver, which only knows `cn-hangzhou`/`ap-southeast-1` and would fail on other RegionIds.
 
 ```bash
 # Step 1: Get WAF Instance ID (per region)
-aliyun waf-openapi describe-instance --region cn-shanghai --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-overview/{session-id}
+aliyun waf-openapi describe-instance --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-overview/{session-id}
 aliyun waf-openapi describe-instance --region ap-southeast-1 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-overview/{session-id}
 # Extract: InstanceId from each region's response
 
 # Step 2: Query WAF flow chart using each region's InstanceId
 START_SEC=$(python3 -c "import time; print(int(time.time()-86400*7))")
 aliyun waf-openapi describe-flow-chart \
-  --region cn-shanghai \
-  --instance-id "<InstanceId from cn-shanghai>" \
+  --region cn-hangzhou \
+  --instance-id "<InstanceId from cn-hangzhou>" \
   --start-timestamp "$START_SEC" \
   --interval 3600 \
   --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-overview/{session-id}
