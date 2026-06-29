@@ -71,7 +71,7 @@ Each time you enter a product scenario, extract information in the following ord
 
 | Item | Constraint |
 |------|-----------|
-| organizationId | Required by all tools; obtain via `get_current_organization_info` |
+| organizationId | Required by all tools; obtain via `base-get-user-by-token` (MCP: `get_current_organization_info`) |
 | Pagination | Most `list_*` endpoints support `page` / `perPage`; paginate when exceeding 100 results |
 | Naming | Pipeline/application/branch names only support letters, digits, hyphens, and underscores; refer to specific product limitations |
 | Time format | Date: `YYYY-MM-DD`; Timestamp: UTC ISO 8601 |

@@ -22,61 +22,98 @@ For the full product and tool catalog (MCP tools and CLI commands by product), s
 
 ## 2. Prerequisites
 
-### 2.1 Alibaba Cloud CLI Environment Check
+> **[MUST] Execution order is mandatory.** Steps in this section form a sequential decision tree. You **MUST** execute them in the numbered order below. **Do NOT** check Node.js, MCP, or mcporter availability until the CLI path (Steps 1–4) has been fully attempted and failed. **Do NOT** run any checks in parallel across subsections 2.1 and 2.2.
 
-> The Alibaba Cloud CLI (`aliyun devops`) is one of three invocation channels alongside MCP Server and mcporter. Full configuration guide: [references/aliyun-cli-setup.md](references/aliyun-cli-setup.md).
+> **Token Security Rules (applies to ALL channels):**
+> - **NEVER** ask users to paste plaintext tokens in conversation or command line
+> - **NEVER** read/print token values using `echo` or similar commands
+> - **ONLY** verify token existence via check (see steps below for channel-specific env var names)
+> - **If token is not configured, STOP** and guide user to [Yunxiao Personal Access Token](https://help.aliyun.com/zh/yunxiao/developer-reference/obtain-personal-access-token). Required scopes: Organization Management (R/W), Project Collaboration (R/W), Code Management (R/W), Pipeline (R/W), Packages (R/W), Application Delivery (R/W), Test Management (R/W).
 
-**Check flow (execute in order)**:
+### 2.1 CLI Channel Setup (Primary — MUST complete first)
 
-**Step 1: CLI availability**
+> The Alibaba Cloud CLI (`aliyun devops`) is the **primary** invocation channel. MCP Server and mcporter are fallbacks only. Full configuration guide: [references/aliyun-cli-setup.md](references/aliyun-cli-setup.md).
+
+**Step 1: CLI availability check**
 ```bash
 aliyun devops --help >/dev/null 2>&1 && echo "cli ready" || echo "cli not available"
 ```
-- Not available → Skip CLI checks, proceed to 2.2 (use MCP Server or mcporter)
-- Available → Continue to Step 2
+- Available → Go to **Step 3**
+- Not available → Go to **Step 2** (attempt installation)
 
-**Step 2: Identify authentication configuration**
+**Step 2: [MUST] Attempt CLI installation**
 
-Cloud DevOps (Yunxiao) uses **Personal Access Token** for authentication, not AK/SK profiles. Two configuration methods are supported:
+> **[MUST]** If CLI is not found in Step 1, you **MUST** attempt installation before considering any fallback channel. Skipping this step is prohibited. Full installation guide: [references/aliyun-cli-install.md](references/aliyun-cli-install.md).
 
-**Method A: Environment variables (recommended)**
+1. **Detect OS and install**:
+   - **macOS (Homebrew available):**
+     ```bash
+     brew install aliyun-cli
+     ```
+   - **macOS / Linux (no Homebrew):**
+     ```bash
+     /bin/bash -c "$(curl -fsSL https://aliyuncli.alicdn.com/install.sh)"
+     ```
+   - **Windows (PowerShell):** Guide user to download and run the PowerShell install script. See [references/aliyun-cli-install.md](references/aliyun-cli-install.md).
 
-| Environment variable | Description | Required (Central) | Required (Region) |
-| --- | --- | --- | --- |
-| `ALIBABA_CLOUD_YUNXIAO_ACCESS_TOKEN` | Yunxiao Personal Access Token | Yes | Yes |
-| `ALIBABA_CLOUD_YUNXIAO_API_BASE_URL` | API base URL | No | Yes |
-| `ALIBABA_CLOUD_YUNXIAO_ORGANIZATION_ID` | Organization ID | Yes | No |
+2. **Verify installation and re-check**:
+   ```bash
+   aliyun version
+   aliyun devops --help >/dev/null 2>&1 && echo "cli ready" || echo "cli not available"
+   ```
+   - Available → Go to **Step 3**
+   - Still not available → Go to **Section 2.2 Fallback**
 
+**Step 3: Authentication and site type detection**
+
+Cloud DevOps (Yunxiao) uses **Personal Access Token** for authentication, not AK/SK profiles.
+
+**3a. Check token:**
 ```bash
-# Region site
-export ALIBABA_CLOUD_YUNXIAO_ACCESS_TOKEN=<your-personal-access-token>
-export ALIBABA_CLOUD_YUNXIAO_API_BASE_URL=<your-api-base-url>
+[ -n "$ALIBABA_CLOUD_YUNXIAO_ACCESS_TOKEN" ] && echo "token configured" || echo "token missing"
+```
 
-# Central site
+If token is missing, guide user to configure. Provide **both** site types and let user choose based on their organization:
+
+**Central site:**
+```bash
 export ALIBABA_CLOUD_YUNXIAO_ACCESS_TOKEN=<your-personal-access-token>
 export ALIBABA_CLOUD_YUNXIAO_ORGANIZATION_ID=<your-organization-id>
 ```
 
-**Method B: Command-line parameters**
+**Region site:**
+```bash
+export ALIBABA_CLOUD_YUNXIAO_ACCESS_TOKEN=<your-personal-access-token>
+export ALIBABA_CLOUD_YUNXIAO_API_BASE_URL=<your-api-base-url>
+```
 
-| Parameter | Description | Required (Central) | Required (Region) |
-| --- | --- | --- | --- |
-| `--yunxiao-access-token` | Yunxiao Personal Access Token | Yes | Yes |
-| `--api-base-url` | API base URL | No | Yes |
-| `--organization-id` | Organization ID | Yes | No |
+Recommend adding these to the user's shell profile (`~/.bashrc`, `~/.zshrc`, etc.) for persistence.
 
-**Step 3: Confirm final invocation format**
+**3b. Detect site type:**
 
-All commands must include `--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-devops/{session-id}"` (see Section 7: Observability). Shown as `--user-agent <UA>` below for brevity:
+After token is confirmed, detect which site type is configured:
+```bash
+[ -n "$ALIBABA_CLOUD_YUNXIAO_ORGANIZATION_ID" ] && echo "central site" || echo "not central"
+[ -n "$ALIBABA_CLOUD_YUNXIAO_API_BASE_URL" ] && echo "region site" || echo "not region"
+```
 
-- Central site (env vars): `aliyun devops <cmd> --user-agent <UA>`
-- Central site (params): `aliyun devops <cmd> --yunxiao-access-token=<token> --organization-id=<ID> --user-agent <UA>`
-- Region site (env vars): `aliyun devops <cmd> --user-agent <UA>`
-- Region site (params): `aliyun devops <cmd> --yunxiao-access-token=<token> --api-base-url=<url> --user-agent <UA>`
+- `ALIBABA_CLOUD_YUNXIAO_ORGANIZATION_ID` set → **Central site**: subsequent CLI calls use `--organization-id`
+- `ALIBABA_CLOUD_YUNXIAO_API_BASE_URL` set → **Region site**: subsequent CLI calls do **NOT** use `--organization-id`; the API base URL is read from the environment variable automatically
+- Neither set → STOP, guide user to configure one of the above
 
-> **Decision point**: If Steps 1–3 all pass, CLI channel is ready — skip to Section 3. If CLI is unavailable, proceed to 2.2–2.4.
+> **[MUST]** Remember the detected site type. All subsequent CLI calls in this session must use the corresponding parameter pattern. **CLI parameters use kebab-case** (e.g., `--organization-id`), not camelCase (`--organizationId`).
 
-### 2.2 Pre-check: Node.js/Docker Runtime
+> **CLI ready** — If Steps 1–3 all pass, CLI channel is ready. **Skip Section 2.2 entirely** and proceed to Section 3.
+
+### 2.2 Fallback Channel Setup (ONLY when CLI is unavailable)
+
+> **[GATE]** You may **ONLY** enter this section if **both** conditions are true:
+> 1. Step 1 (CLI check) returned "cli not available"
+> 2. Step 2 (CLI installation attempt) was executed and failed
+>
+> If you have not attempted Step 2, **go back and execute it now**. Do NOT proceed here.
+
+#### 2.2.1 Node.js/Docker Runtime Check
 
 This skill invokes `alibabacloud-devops-mcp-server@0.3.38` via `npx` or `docker`. Verify:
 
@@ -90,28 +127,17 @@ npx --version
 > npm install -g alibabacloud-devops-mcp-server@0.3.38 mcporter@0.11.1 --registry=https://registry.npmmirror.com
 > ```
 
-### 2.3 Pre-check: Yunxiao Personal Access Token
+#### 2.2.2 Yunxiao Personal Access Token (for MCP/mcporter)
 
-> **Security Rules:**
-> - **NEVER** ask users to paste plaintext tokens in conversation or command line
-> - **NEVER** read/print token values using `echo $YUNXIAO_ACCESS_TOKEN` or similar
-> - **NEVER** output the token environment variable name literally — use "Yunxiao access token" instead
-> - **ONLY** verify via existence check:
->
-> ```bash
-> [ -n "$YUNXIAO_ACCESS_TOKEN" ] && echo "token configured" || echo "token missing"
-> ```
->
-> **If not configured, STOP:**
-> 1. Guide user to [Yunxiao Personal Access Token](https://help.aliyun.com/zh/yunxiao/developer-reference/obtain-personal-access-token)
-> 2. Required scopes: Organization Management (R/W), Project Collaboration (R/W), Code Management (R/W), Pipeline (R/W), Packages (R/W), Application Delivery (R/W), Test Management (R/W)
-> 3. Inject env var outside the session (shell profile / IDE MCP config), then retry
+MCP/mcporter uses `YUNXIAO_ACCESS_TOKEN` (different from CLI's `ALIBABA_CLOUD_YUNXIAO_ACCESS_TOKEN`):
 
-**CLI-specific security rules**:
-- Do not embed plaintext access tokens in commands; prefer environment variables
-- Never output the token environment variable value literally
+```bash
+[ -n "$YUNXIAO_ACCESS_TOKEN" ] && echo "token configured" || echo "token missing"
+```
 
-### 2.4 MCP Server Setup
+If missing, guide user to obtain a token and inject as env var (see Token Security Rules at the top of Section 2).
+
+#### 2.2.3 MCP Server Setup
 
 See [references/mcp-setup.md](references/mcp-setup.md) for three connection modes (Stdio / Docker / SSE). Recommended — Stdio:
 
@@ -283,7 +309,7 @@ npx -y mcporter@0.11.1 list --stdio "npx -y alibabacloud-devops-mcp-server@0.3.3
 > **[MUST] Never fabricate results**: All tool calls must be actually executed with real return values.
 
 **Pre-execution checklist (mandatory):**
-1. Obtain `organizationId` via `get_current_organization_info` (CLI: `aliyun devops base-get-user-by-token`)
+1. Obtain `organizationId` via `aliyun devops base-get-user-by-token` (MCP: `get_current_organization_info`)
 2. **[Mandatory]** Verify target resource exists via `list_*` / `search_*` / `get_*` — even if ID is provided
 3. All required parameters confirmed with user (Section 4)
 4. Delete operations require confirmation
@@ -291,8 +317,8 @@ npx -y mcporter@0.11.1 list --stdio "npx -y alibabacloud-devops-mcp-server@0.3.3
    - Method B: Check platform tool registry
    - Method C: `npx -y mcporter@0.11.1 list --stdio "npx -y alibabacloud-devops-mcp-server@0.3.38" --schema 2>&1 | grep -A 30 'function <tool_name>'`
    - If schema returns a different tool name, use the schema's version
-   - For Testhub: call `get_testcase_field_config` first
-   - For Projex: call `list_work_item_types` first — never use hardcoded type IDs
+   - For Testhub: call `test-hub-get-testcase-field-config` (MCP: `get_testcase_field_config`) first
+   - For Projex: call `projex-list-workitem-types` (MCP: `list_work_item_types`) first — never use hardcoded type IDs
 
 Full tool catalog: [references/tool-catalog.md](references/tool-catalog.md). Scenario examples: [references/common-scenarios.md](references/common-scenarios.md).
 
@@ -304,14 +330,14 @@ Full tool catalog: [references/tool-catalog.md](references/tool-catalog.md). Sce
 >
 > **Known API limitations**: Some fields may differ between write and read-back — see [references/verification-method.md](references/verification-method.md).
 
-| Operation | Verification tool | Check |
-|-----------|------------------|-------|
-| Create pipeline | `get_pipeline` | pipelineId + name match |
-| Run pipeline | `get_latest_pipeline_run` | status != `FAIL` |
-| Create branch | `get_branch` / `list_branches` | Branch appears |
-| Create MR | `get_change_request` | state = `OPENED` |
-| Create work item | `get_work_item` | subject + workItemTypeId correct |
-| Create sprint | `get_sprint` | Date range matches |
+| Operation | Verification command (CLI / MCP) | Check |
+|-----------|----------------------------------|-------|
+| Create pipeline | `flow-get-pipeline` (MCP: `get_pipeline`) | pipelineId + name match |
+| Run pipeline | `flow-get-latest-pipeline-run` (MCP: `get_latest_pipeline_run`) | status != `FAIL` |
+| Create branch | `codeup-get-branch` (MCP: `get_branch`) | Branch appears |
+| Create MR | `codeup-get-change-request` (MCP: `get_change_request`) | state = `OPENED` |
+| Create work item | `projex-get-workitem` (MCP: `get_work_item`) | subject + workItemTypeId correct |
+| Create sprint | `projex-get-sprint` (MCP: `get_sprint`) | Date range matches |
 
 More: [references/verification-method.md](references/verification-method.md).
 
@@ -355,8 +381,8 @@ aliyun devops <command> --<param1> <value1> \
 
 1. **Read before write**: `get_*` before `update_*` / `delete_*` to confirm current state
 2. **Pagination**: List APIs paginate by default; pass `page` / `perPage` for large lists
-3. **YAML first**: Pipeline creation: `generate_pipeline_yaml` → validate → `create_pipeline_from_description`
-4. **Smart search**: `smart_list_pipelines` supports natural-language time ranges
+3. **YAML first**: Pipeline creation: `flow-create-pipeline` (MCP provides higher-level helpers: `generate_pipeline_yaml` → `create_pipeline_from_description`)
+4. **Smart search**: `flow-list-pipelines` with timestamp parameters (MCP provides `smart_list_pipelines` supporting natural-language time ranges)
 5. **Read-only first**: When uncertain, use `list_*` / `search_*` / `get_*`
 6. **Fail fast**: Two consecutive same-parameter failures → change approach. Report: methods tried, errors, root cause, next steps
 7. **Budget discipline**: Plan critical path first; debugging ≤3 steps; near limit (≤2 remaining) → stop and report
@@ -368,15 +394,15 @@ aliyun devops <command> --<param1> <value1> \
 
 Full examples: [references/common-scenarios.md](references/common-scenarios.md).
 
-| Scenario | Product | Key tools |
-|----------|---------|-----------|
-| Create Java build pipeline | Flow | `list_repositories` → `create_pipeline_from_description` → `get_pipeline` |
-| Create MR with review comment | Codeup | `get_repository` → `create_change_request` → `create_change_request_comment` |
-| Create sprint and add requirement | Projex | `search_projects` → `create_sprint` → `create_work_item` |
-| Run pipeline and view logs | Flow | `get_pipeline` → `create_pipeline_run` → `get_pipeline_run` → `get_pipeline_job_run_log` |
-| Batch query artifacts | Packages | `list_package_repositories` → `list_artifacts` |
-| Create test cases | Testhub | `list_testcase_directories` → `create_testcase` → `search_testcases` |
-| Application release workflow | AppStack | `list_app_release_workflows` → `execute_app_release_stage` |
+| Scenario | Product | Key CLI commands | Key MCP tools |
+|----------|---------|-----------------|---------------|
+| Create Java build pipeline | Flow | `codeup-list-repositories` → `flow-create-pipeline` → `flow-get-pipeline` | `list_repositories` → `create_pipeline_from_description` → `get_pipeline` |
+| Create MR with review comment | Codeup | `codeup-get-repository` → `codeup-create-change-request` → `codeup-create-change-request-comment` | `get_repository` → `create_change_request` → `create_change_request_comment` |
+| Create sprint and add requirement | Projex | `projex-search-projects` → `projex-create-sprint` → `projex-create-workitem` | `search_projects` → `create_sprint` → `create_work_item` |
+| Run pipeline and view logs | Flow | `flow-get-pipeline` → `flow-create-pipeline-run` → `flow-get-pipeline-run` → `flow-get-pipeline-job-run-log` | `get_pipeline` → `create_pipeline_run` → `get_pipeline_run` → `get_pipeline_job_run_log` |
+| Batch query artifacts | Packages | `packages-list-repositories` → `packages-list-artifacts` | `list_package_repositories` → `list_artifacts` |
+| Create test cases | Testhub | `test-hub-list-directories` → `test-hub-create-testcase` → `test-hub-search-testcases` | `list_testcase_directories` → `create_testcase` → `search_testcases` |
+| Application release workflow | AppStack | `app-stack-list-all-release-workflows` → `app-stack-execute-change-request-release-stage` | `list_app_release_workflows` → `execute_app_release_stage` |
 
 ---
 
@@ -384,6 +410,7 @@ Full examples: [references/common-scenarios.md](references/common-scenarios.md).
 
 | Reference file | Content |
 |---------------|---------|
+| [references/aliyun-cli-install.md](references/aliyun-cli-install.md) | Alibaba Cloud CLI installation guide (macOS/Linux/Windows) |
 | [references/mcp-setup.md](references/mcp-setup.md) | MCP Server connection modes and environment variables |
 | [references/intent-classification.md](references/intent-classification.md) | Intent classification decision tree |
 | [references/product-mapping.md](references/product-mapping.md) | Keyword → product mapping table |
