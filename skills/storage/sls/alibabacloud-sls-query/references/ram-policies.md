@@ -8,6 +8,7 @@ The following RAM permissions are required to execute the APIs used by this skil
 |-----|-------------|------------|---------------------|-------------|
 | GetLogsV2 | `get-logs-v2` | `log:GetLogStoreLogs` | `acs:log:{#regionId}:{#accountId}:project/{#ProjectName}/logstore/{#LogstoreName}` | Query logs from a Logstore using index query, SQL analysis, or SPL pipelines |
 | GetIndex | `get-index` | `log:GetIndex` | `acs:log:{#regionId}:{#accountId}:project/{#ProjectName}/logstore/{#LogstoreName}` | Get the index configuration of a Logstore, used to verify index settings before running queries or analysis |
+| GetProject | `get-project` | `log:GetProject` | `acs:log:{#regionId}:{#accountId}:project/{#ProjectName}` | Get project metadata; supports cross-region discovery to locate a project's actual region |
 
 Placeholders in the resource ARN:
 

@@ -6,74 +6,13 @@ Complete guide for installing and configuring Aliyun CLI.
 
 ## Installation
 
-### macOS
-
-**Using Homebrew (Recommended)**
+### macOS or linux
 
 ```bash
-brew install aliyun-cli
-# Upgrade to latest
-brew upgrade aliyun-cli
-
-# Verify version (>= 3.3.8)
-aliyun version
-```
-
-**Using Binary**
-
-```bash
-# Download
-wget https://aliyuncli.alicdn.com/aliyun-cli-macosx-latest-amd64.tgz
-
-# Extract
-tar -xzf aliyun-cli-macosx-latest-amd64.tgz
-
-# Move to PATH
-sudo mv aliyun /usr/local/bin/
+/bin/bash -c "$(curl -fsSL https://aliyuncli.alicdn.com/install.sh)"
 
 # Verify
 aliyun version
-```
-
-### Linux
-
-**Debian/Ubuntu**
-
-```bash
-# Download
-wget https://aliyuncli.alicdn.com/aliyun-cli-linux-latest-amd64.tgz
-
-# Extract and install
-tar -xzf aliyun-cli-linux-latest-amd64.tgz
-sudo mv aliyun /usr/local/bin/
-
-# Verify
-aliyun version
-```
-
-**CentOS/RHEL**
-
-```bash
-# Download
-wget https://aliyuncli.alicdn.com/aliyun-cli-linux-latest-amd64.tgz
-
-# Extract and install
-tar -xzf aliyun-cli-linux-latest-amd64.tgz
-sudo mv aliyun /usr/local/bin/
-
-# Verify
-aliyun version
-```
-
-**ARM64 Architecture**
-
-```bash
-# Download ARM64 version
-wget https://aliyuncli.alicdn.com/aliyun-cli-linux-latest-arm64.tgz
-
-# Extract and install
-tar -xzf aliyun-cli-linux-latest-arm64.tgz
-sudo mv aliyun /usr/local/bin/
 ```
 
 ### Windows

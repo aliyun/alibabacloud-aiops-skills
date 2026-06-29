@@ -22,13 +22,9 @@ Use this skill when the user wants to:
 
 Run `aliyun version` to verify if version >= `3.3.8`. If not installed or outdated, follow the doc [references/cli-installation-guide.md](references/cli-installation-guide.md) to install or update.
 
-### Ensure AI Mode Enabled
-
-Before executing any CLI commands, enable AI-Mode, set User-Agent, and update plugins:
+### Update Plugins
 
 ```bash
-aliyun configure ai-mode enable
-aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-sls-query"
 aliyun plugin update
 ```
 
@@ -55,6 +51,28 @@ If no valid profile is shown, **STOP** here and ask the user to run `aliyun conf
 For the minimum and complete RAM policy JSON, see [references/ram-policies.md](references/ram-policies.md).
 
 > **Permission failure handling:** If a call returns `Unauthorized` permission error, stop and surface [references/ram-policies.md](references/ram-policies.md) to the user. Do **not** retry with a different account without explicit user confirmation.
+
+---
+
+## Observability (MUST follow for every aliyun api command)
+
+Upon loading this skill, generate a random session ID (32-char lowercase hex string) once for the entire session. Use it as `{session-id}` below.
+
+**Rule:** Every `aliyun` CLI command that calls a cloud API **MUST** include the `--user-agent` flag. Local utility commands (e.g. `configure`, `plugin`, `version`) do not support this flag and should be excluded.
+
+```
+--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-sls-query/{session-id}"
+```
+
+Example (assuming session-id is `a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6`):
+
+```bash
+aliyun sls get-logs-v2 --project my-project --logstore my-logstore \
+  --from 1740000000 --to 1740003600 --query '*' \
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-sls-query/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6"
+```
+
+Do not skip, alter the format, or omit `--user-agent` on any `aliyun` API command invocation.
 
 ---
 
@@ -321,16 +339,6 @@ Use `jq` (preferred) or `--cli-query` (JMESPath) to extract the fields the user 
 
 ---
 
-## Cleanup
-
-**Whether operations succeed or fail, you MUST disable AI-Mode before ending the session:**
-
-```bash
-aliyun configure ai-mode disable
-```
-
----
-
 ## Global Rules
 
 - **Always prefer Index search for fastest raw-log retrieval, and use Index search + SQL for analysis or field projection.**
@@ -350,7 +358,7 @@ When the user reports "no data", "wrong result", or a CLI error, walk through th
 4. **Syntax** — mixed SQL and SPL? Leading `*` in fuzzy match? SPL string escaping?
 5. **Mode choice** — scanning when an index-based query would do? Aggregating in SPL instead of SQL?
 6. **Completeness** — `meta.progress = Incomplete`, caller did not retry (see Step 5).
-7. **ProjectNotExist** — region or endpoint is wrong. See [references/regions.md](references/regions.md).
+7. **ProjectNotExist** — region or endpoint is wrong. Use cross-region discovery to locate the project automatically, or ask the user to confirm the region. **Before calling `get-project --cross-region true`, you MUST read the Cross-Region Discovery section in [references/regions.md](references/regions.md)** — this API is only available via `cn-zhangjiakou.log.aliyuncs.com` endpoint.
 8. **Network failure** (timeout, connection refused) — try switching to internal endpoint. See [references/regions.md](references/regions.md).
 
 For the full catalog of failure modes and error codes, see [references/troubleshooting.md](references/troubleshooting.md) and the `Common Errors` table in [references/related-apis.md](references/related-apis.md).
@@ -368,6 +376,6 @@ For the full catalog of failure modes and error codes, see [references/troublesh
 | [references/related-apis.md](references/related-apis.md) | `GetLogsV2` and `GetIndex` API & CLI reference |
 | [references/ram-policies.md](references/ram-policies.md) | Minimum and complete RAM policies |
 | [references/cli-installation-guide.md](references/cli-installation-guide.md) | Aliyun CLI install, auth modes, profiles |
-| [references/regions.md](references/regions.md) | Region / endpoint configuration, internal endpoint, ProjectNotExist troubleshooting |
+| [references/regions.md](references/regions.md) | Region / endpoint configuration, internal endpoint, cross-region discovery (`get-project --cross-region true`, **only cn-zhangjiakou**) |
 | [references/acceptance-criteria.md](references/acceptance-criteria.md) | CLI invocation acceptance tests |
 | `references/query_analysis/*.yaml` · `references/spl/*.yaml` · `references/functions/*.yaml` | Source-of-truth YAMLs bundled with this skill |

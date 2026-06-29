@@ -11,6 +11,7 @@ other docs in this skill.
 |-------------|------------|-------------|---------------|
 | `aliyun sls get-logs-v2` | GetLogsV2 | Run a query / SQL / SPL statement against a Logstore and return log rows or aggregated results | [Doc](https://help.aliyun.com/zh/sls/developer-reference/api-sls-2020-12-30-getlogsv2) |
 | `aliyun sls get-index` | GetIndex | Read the current index configuration of a Logstore (full-text index, field indexes, JSON keys, TTL, log-reduce) | [Doc](https://help.aliyun.com/zh/sls/developer-reference/api-sls-2020-12-30-getindex) |
+| `aliyun sls get-project` | GetProject | Get project metadata. Supports `--cross-region true` for cross-region discovery (endpoint fixed to `cn-zhangjiakou.log.aliyuncs.com`) | [Doc](https://help.aliyun.com/zh/sls/developer-reference/api-sls-2020-12-30-getproject) |
 
 > **Deprecated — do not use**: `GetLogs` (`aliyun sls get-logs`). Use `GetLogsV2` instead.
 
@@ -83,7 +84,7 @@ other docs in this skill.
 
 | HTTP Status | ErrorCode | Meaning |
 |-------------|-----------|---------|
-| 404 | `ProjectNotExist` | Project name is wrong or in a different region. |
+| 404 | `ProjectNotExist` | Project name is wrong or in a different region. Use [cross-region discovery](regions.md#cross-region-discovery) to locate. |
 | 404 | `LogStoreNotExist` | Logstore name is wrong. |
 | 404 | `IndexConfigNotExist` | No index configured on this Logstore — any query/SQL will fail. |
 | 500 | `InternalServerError` | Retry with backoff. |

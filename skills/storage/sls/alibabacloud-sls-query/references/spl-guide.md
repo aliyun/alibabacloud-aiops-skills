@@ -1,48 +1,48 @@
-# SPL 使用指南
+# SPL Usage Guide
 
-## 1. SPL 适用场景
+## 1. SPL Scope
 
-- 本 skill 只覆盖查询分析里的扫描查询 SPL
-- 不覆盖 Logtail 采集处理、写入处理器、实时消费、数据加工等非查询分析场景
+- This skill covers only SPL for scan queries within the query & analysis context
+- Does not cover Logtail collection processing, write processors, real-time consumption, data transformation, or other non-query scenarios
 
-## 2. 基本语法
+## 2. Basic Syntax
 
 ```text
 <data-source> | <spl-cmd> | <spl-cmd> | ...
 ```
 
-- 查询分析里常见数据源是 `*`
-- 扫描查询时，`<data-source>` 也可以写索引查询语句
-- 如果 `<data-source>` 写的是索引查询语句，那么它会先过滤数据，再把结果交给后面的 SPL 指令
-- SPL 管道后不能接 SQL，反之亦然
-- 末尾分号可选
+- In query & analysis, the common data source is `*`
+- For scan queries, `<data-source>` can also be an index search statement
+- If `<data-source>` is an index search statement, it filters data first, then passes results to subsequent SPL commands
+- SPL cannot follow SQL in a pipeline, and vice versa
+- Trailing semicolons are optional
 
-## 3. 写 SPL 时必须记住
+## 3. Must-Know Rules for SPL
 
-- 字段默认是 `VARCHAR`
-- 做数值比较或计算前先 `cast()` / `try_cast()`
-- 字符串常量用单引号
-- 字段名包含 `.` `:` `-` 空格等特殊字符时，用双引号
-- 非扫描场景默认字段名大小写敏感
-- SPL 不做转义处理，`\n` 默认是字面量，不会自动转成换行
-- 正则使用 RE2，不支持后向引用和环视
+- Fields are `VARCHAR` by default
+- Always `cast()` / `try_cast()` before numeric comparison or arithmetic
+- String constants use single quotes
+- Field names containing `.` `:` `-` or spaces must be double-quoted
+- In non-scan scenarios, field names are case-sensitive by default
+- SPL does not process escape sequences; `\n` is a literal, not a newline
+- Regex uses RE2 engine — back-references and lookaround are not supported
 
-## 4. 推荐流水线顺序
+## 4. Recommended Pipeline Order
 
 ```text
 where -> parse -> extend -> project
 ```
 
-扫描聚合场景常用：
+For scan aggregation scenarios:
 
 ```text
 where -> parse -> extend -> stats -> sort -> limit
 ```
 
-## 5. 高频指令
+## 5. High-Frequency Commands
 
 ### `where`
-按布尔表达式过滤数据。
+Filters rows by a boolean expression.
 
 ```spl
 * | where status = '500'
@@ -50,50 +50,50 @@ where -> parse -> extend -> stats -> sort -> limit
 ```
 
 ### `extend`
-计算新字段，复杂表达式先在这里处理。
+Computes new fields; use this for complex expressions.
 
 ```spl
 * | extend latency_ms = try_cast(latency as BIGINT)
 ```
 
 ### `parse-json` / `parse-regexp` / `parse-csv` / `parse-kv`
-从弱结构化字段里提取结构化字段。
+Extracts structured fields from semi-structured text fields.
 
 ### `stats`
-做聚合统计。
+Performs aggregation.
 
 ```spl
 * | stats pv = count(*) by ip
 * | extend latency_ms = try_cast(latency as BIGINT) | stats avg_latency = avg(latency_ms) by api
 ```
 
-关键限制：
-- `stats` 里聚合函数只能直接作用于字段，不能直接写表达式
-- 如果要 `sum(cast(bytes as BIGINT))`，先在 `extend` 里算出字段再聚合
-- 虽然 `stats` 可以做聚合，但在查询分析场景下，除非用户明确要求 SPL，或者已经处于扫描查询/流水线处理中，否则默认优先使用 SQL 来生成分析语句
+Key limitations:
+- Aggregate functions inside `stats` can only operate directly on fields, not on expressions
+- If you need `sum(cast(bytes as BIGINT))`, compute the field in `extend` first, then aggregate
+- Although `stats` can do aggregation, in query & analysis scenarios, unless the user explicitly requests SPL or the context is already a scan/pipeline workflow, default to SQL for analysis
 
 ### `sort` / `limit`
-对聚合结果排序和截断。
+Sorts and truncates aggregation results.
 
-## 6. 何时优先用扫描查询 SPL
+## 6. When to Prefer Scan Query SPL
 
-- 字段未建索引，但需要做临时分析
-- 需要 `parse` / `extend` / `stats` 这类流水线处理
-- 需要在扫描场景里替代索引查询做更灵活的过滤
+- The target field has no index but ad-hoc analysis is needed
+- Row-level `parse` / `extend` / `stats` pipeline processing is required
+- More flexible filtering is needed in a scan scenario to replace index search
 
-如果只是常规聚合统计，且字段已经具备索引和统计，优先普通 SQL，不要默认切到 SQL SCAN。
-如果某些过滤条件本身可以用索引查询表达，优先把这些条件前置到第一级管道前，再在后面接 SPL。
+If only standard aggregation is needed and the field has both index and statistics, prefer standard SQL — do not default to SQL SCAN.
+If some filter conditions can be expressed in index search syntax, pre-filter before `|`, then append SPL.
 
-## 7. 带点字段的处理
+## 7. Handling Dotted Field Names
 
-如果字段名里有 `.`，先判断它是不是 JSON 子 key 的索引展示形式，而不是真实名字。
-常见替代写法：
+If a field name contains `.`, first determine whether it is a JSON sub-key's index representation rather than the actual field name.
+Common alternative:
 
 ```spl
 * | where json_extract_scalar(fieldA, '$.xxx') = 'value'
 ```
 
-## 本地源文档
+## Source YAMLs
 
 - `./spl/overview.yaml`
 - `./spl/where.yaml`
