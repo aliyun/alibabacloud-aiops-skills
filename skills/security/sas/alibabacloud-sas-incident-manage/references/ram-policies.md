@@ -4,9 +4,9 @@ This document details the RAM permissions required for the Cloud SIEM incident m
 
 ## Required Permissions
 
-- `yundun-sas:ListIncidents` — 查询安全事件列表 (Query security incident list)
-- `yundun-sas:GetIncident` — 获取事件详情 (Get incident details)
-- `yundun-sas:DescribeEventCountByThreatLevel` — 查询各威胁等级事件统计 (Query event count by threat level)
+- `yundun-sas:ListIncidents` — Query security incident list
+- `yundun-sas:GetIncident` — Get incident details
+- `yundun-sas:DescribeEventCountByThreatLevel` — Query event count by threat level
 
 ## Minimum Permission Policy (Recommended)
 

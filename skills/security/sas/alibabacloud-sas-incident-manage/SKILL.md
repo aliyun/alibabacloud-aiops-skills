@@ -47,6 +47,32 @@ aliyun cloud-siem --api-version 2024-12-12 --help
 
 > **Pre-check**: Aliyun CLI >= 3.3.1 required. See [references/cli-installation-guide.md](references/cli-installation-guide.md).
 
+## Pre-Check (read before running ANY command)
+
+> **`--region`** — Defaults to `cn-shanghai`; always include it.
+> - cloud-siem has no global endpoint; every command MUST carry `--region` (plugin mode; `--region` sets the endpoint for all commands including `describe-event-count-by-threat-level`).
+> - Supported regions: `cn-shanghai` (default), `ap-southeast-1` (Singapore). Use `ap-southeast-1` only when Singapore is explicitly requested.
+>
+> **`--lang`** — Defaults to `zh`; include it for `list-incidents` / `get-incident`.
+> - Override with `--lang en` only when English output is explicitly requested.
+> - `describe-event-count-by-threat-level` has no `--lang` parameter; do not add it.
+>
+> **`--api-version`** — Per-API; must match the table below.
+> - Omitting it falls back to `2022-06-16`, which breaks `list-incidents` / `get-incident`.
+>
+> | API | Command | `--api-version` |
+> |-----|---------|-----------------|
+> | List incidents | `list-incidents` | `2024-12-12` |
+> | Get incident details | `get-incident` | `2024-12-12` |
+> | Event trend | `describe-event-count-by-threat-level` | `2022-06-16` (default) |
+
+> **Reference command** (all required flags applied):
+> ```bash
+> aliyun cloud-siem list-incidents --api-version 2024-12-12 --region cn-shanghai --page-number 1 --page-size 10 --lang zh --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-incident-manage/{session-id} --read-timeout 120 --connect-timeout 10
+> ```
+>
+> Full parameters: [references/related-commands.md](references/related-commands.md). Usage patterns: [references/acceptance-criteria.md](references/acceptance-criteria.md).
+
 ## Authentication
 
 > This skill uses the **default credential chain**. Ensure credentials are configured.
@@ -65,9 +91,23 @@ aliyun cloud-siem --api-version 2024-12-12 --help
 ## CLI Configuration
 
 > **REQUIRED CLI Flags** - All commands MUST include:
-> - `--user-agent AlibabaCloud-Agent-Skills`
+> - `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-incident-manage/{session-id}` (see Observability)
 > - `--read-timeout 120` (use 120 seconds to avoid timeout issues)
 > - `--connect-timeout 10`
+
+## Observability
+
+> Every command MUST carry a User-Agent that identifies the skill and the session, for tracing and auditing.
+>
+> **UA template**: `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-incident-manage/{session-id}`
+> - `AlibabaCloud-Agent-Skills` — fixed prefix.
+> - `alibabacloud-sas-incident-manage` — this skill's name (fixed).
+> - `{session-id}` — a 32-character lowercase hex string (matching `^[a-f0-9]{32}$`).
+>
+> **session-id rule**:
+> - Generate ONE session-id at the start of a session (e.g. `openssl rand -hex 16`) and reuse the SAME value for every command in that session.
+> - DO NOT regenerate per command. DO NOT log or expose it to the user.
+> - In the command examples below, substitute the generated value for the literal `{session-id}` placeholder.
 
 ## Parameter Validation
 
@@ -95,9 +135,9 @@ aliyun cloud-siem --api-version 2024-12-12 --help
 >
 > **Example Output Format**:
 > ```
-> 发现 3 个高危事件:
-> 1. [高危] 异常登录行为 - 影响资源: *** (UUID: b6515...)
-> 2. [高危] 恶意进程检测 - 影响主机: 192.168.*.**
+> Found 3 high-risk incidents:
+> 1. [High] Abnormal login behavior - Affected resource: *** (UUID: b6515...)
+> 2. [High] Malicious process detected - Affected host: 192.168.*.**
 > ```
 
 ## Quick Reference
@@ -106,17 +146,17 @@ aliyun cloud-siem --api-version 2024-12-12 --help
 
 | User Request Keywords | Action | EXACT Command to Execute |
 |----------------------|--------|-------------------------|
-| "查事件" / "安全事件列表" / "basic query" | Basic list | `aliyun cloud-siem list-incidents --api-version 2024-12-12 --region cn-shanghai --page-number 1 --page-size 10 --lang zh --user-agent AlibabaCloud-Agent-Skills --read-timeout 120 --connect-timeout 10` |
-| "未处理" / "还没处理" / "所有事件" / "unhandled" / "全部列出来" | All unhandled | `aliyun cloud-siem list-incidents --api-version 2024-12-12 --region cn-shanghai --page-number 1 --page-size 10 --incident-status 0 --lang zh --user-agent AlibabaCloud-Agent-Skills --read-timeout 120 --connect-timeout 10` |
-| "高危" / "ThreatLevel>=4" / "high-risk" | High-risk | `aliyun cloud-siem list-incidents --api-version 2024-12-12 --region cn-shanghai --page-number 1 --page-size 10 --threat-level 5,4 --lang zh --user-agent AlibabaCloud-Agent-Skills --read-timeout 120 --connect-timeout 10` |
-| "中低风险" / "ThreatLevel 3,2" / "中危" / "低危" | Medium/low | `aliyun cloud-siem list-incidents --api-version 2024-12-12 --region cn-shanghai --page-number 1 --page-size 10 --threat-level 3,2 --lang zh --user-agent AlibabaCloud-Agent-Skills --read-timeout 120 --connect-timeout 10` |
-| "已处理" / "处理过" / "handled" / "IncidentStatus=10" / "状态是已处理" | Handled | `aliyun cloud-siem list-incidents --api-version 2024-12-12 --region cn-shanghai --page-number 1 --page-size 10 --incident-status 10 --lang zh --user-agent AlibabaCloud-Agent-Skills --read-timeout 120 --connect-timeout 10` |
-| "第二页" / "第2页" / "翻到第2页" / "翻页" / "page 2" / "--page-number 2" | Pagination | `aliyun cloud-siem list-incidents --api-version 2024-12-12 --region cn-shanghai --page-number 2 --page-size 10 --lang zh --user-agent AlibabaCloud-Agent-Skills --read-timeout 120 --connect-timeout 10` |
-| "新加坡" / "Singapore" / "ap-southeast-1" | Singapore | `aliyun cloud-siem list-incidents --api-version 2024-12-12 --region ap-southeast-1 --page-number 1 --page-size 10 --lang zh --user-agent AlibabaCloud-Agent-Skills --read-timeout 120 --connect-timeout 10` |
-| "UUID" / "详情" / "b6515eb76b73cd4995a902b6df5a766b" | Get detail | `aliyun cloud-siem get-incident --api-version 2024-12-12 --region cn-shanghai --incident-uuid <UUID> --lang zh --user-agent AlibabaCloud-Agent-Skills --read-timeout 120 --connect-timeout 10` |
-| "排查" / "先查列表再详情" / "完整排查" / "list then detail" | **Multi-Step** | See Workflow B below (必须执行两步!) |
-| "7天趋势" / "trend" / "7days" | 7-day trend | `START=$(($(date -v-7d +%s) * 1000)) && END=$(($(date +%s) * 1000)) && aliyun cloud-siem DescribeEventCountByThreatLevel --RegionId cn-shanghai --StartTime $START --EndTime $END --user-agent AlibabaCloud-Agent-Skills --read-timeout 120 --connect-timeout 10` |
-| "30天" / "月度" / "月度安全报告" / "monthly" / "月报" | 30-day trend | `START=$(($(date -v-30d +%s) * 1000)) && END=$(($(date +%s) * 1000)) && aliyun cloud-siem DescribeEventCountByThreatLevel --RegionId cn-shanghai --StartTime $START --EndTime $END --user-agent AlibabaCloud-Agent-Skills --read-timeout 120 --connect-timeout 10` |
+| "查事件" / "安全事件列表" / "basic query" | Basic list | `aliyun cloud-siem list-incidents --api-version 2024-12-12 --region cn-shanghai --page-number 1 --page-size 10 --lang zh --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-incident-manage/{session-id} --read-timeout 120 --connect-timeout 10` |
+| "未处理" / "还没处理" / "所有事件" / "unhandled" / "全部列出来" | All unhandled | `aliyun cloud-siem list-incidents --api-version 2024-12-12 --region cn-shanghai --page-number 1 --page-size 10 --incident-status 0 --lang zh --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-incident-manage/{session-id} --read-timeout 120 --connect-timeout 10` |
+| "高危" / "ThreatLevel>=4" / "high-risk" | High-risk | `aliyun cloud-siem list-incidents --api-version 2024-12-12 --region cn-shanghai --page-number 1 --page-size 10 --threat-level 5,4 --lang zh --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-incident-manage/{session-id} --read-timeout 120 --connect-timeout 10` |
+| "中低风险" / "ThreatLevel 3,2" / "中危" / "低危" | Medium/low | `aliyun cloud-siem list-incidents --api-version 2024-12-12 --region cn-shanghai --page-number 1 --page-size 10 --threat-level 3,2 --lang zh --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-incident-manage/{session-id} --read-timeout 120 --connect-timeout 10` |
+| "已处理" / "处理过" / "handled" / "IncidentStatus=10" / "状态是已处理" | Handled | `aliyun cloud-siem list-incidents --api-version 2024-12-12 --region cn-shanghai --page-number 1 --page-size 10 --incident-status 10 --lang zh --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-incident-manage/{session-id} --read-timeout 120 --connect-timeout 10` |
+| "第二页" / "第2页" / "翻到第2页" / "翻页" / "page 2" / "--page-number 2" | Pagination | `aliyun cloud-siem list-incidents --api-version 2024-12-12 --region cn-shanghai --page-number 2 --page-size 10 --lang zh --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-incident-manage/{session-id} --read-timeout 120 --connect-timeout 10` |
+| "新加坡" / "Singapore" / "ap-southeast-1" | Singapore | `aliyun cloud-siem list-incidents --api-version 2024-12-12 --region ap-southeast-1 --page-number 1 --page-size 10 --lang zh --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-incident-manage/{session-id} --read-timeout 120 --connect-timeout 10` |
+| "UUID" / "详情" / "b6515eb76b73cd4995a902b6df5a766b" | Get detail | `aliyun cloud-siem get-incident --api-version 2024-12-12 --region cn-shanghai --incident-uuid <UUID> --lang zh --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-incident-manage/{session-id} --read-timeout 120 --connect-timeout 10` |
+| "排查" / "先查列表再详情" / "完整排查" / "list then detail" | **Multi-Step** | See Workflow B below (must run BOTH steps!) |
+| "7天趋势" / "trend" / "7days" | 7-day trend | `START=$(($(date -v-7d +%s) * 1000)) && END=$(($(date +%s) * 1000)) && aliyun cloud-siem describe-event-count-by-threat-level --region cn-shanghai --start-time $START --end-time $END --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-incident-manage/{session-id} --read-timeout 120 --connect-timeout 10` |
+| "30天" / "月度" / "月度安全报告" / "monthly" / "月报" | 30-day trend | `START=$(($(date -v-30d +%s) * 1000)) && END=$(($(date +%s) * 1000)) && aliyun cloud-siem describe-event-count-by-threat-level --region cn-shanghai --start-time $START --end-time $END --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-incident-manage/{session-id} --read-timeout 120 --connect-timeout 10` |
 
 > **DEFAULT BEHAVIOR**: When no specific filter mentioned, use basic query without filters.
 
@@ -148,26 +188,26 @@ aliyun cloud-siem --api-version 2024-12-12 --help
 |---------|---------|-----|----------|
 | Query Incidents | "查事件", "安全事件" | `list-incidents` | See Quick Reference table above |
 | Get Details | "UUID", "详情" | `get-incident` | See Quick Reference table above |
-| Event Trend | "趋势", "统计" | `DescribeEventCountByThreatLevel` | See related-commands.md |
+| Event Trend | "趋势", "统计" | `describe-event-count-by-threat-level` | See related-commands.md |
 
 ### Multi-Step Workflows
 
 > **CRITICAL**: Multi-step workflows require executing ALL steps. DO NOT skip any step!
 
-#### Workflow A: Weekly Security Report (周报/安全报告)
+#### Workflow A: Weekly Security Report
 
 **Trigger**: "周报", "security report" with statistics AND incident list
 
 **MUST execute BOTH commands in sequence**:
 ```bash
 # Step 1: Get 7-day statistics
-START=$(($(date -v-7d +%s) * 1000)) && END=$(($(date +%s) * 1000)) && aliyun cloud-siem DescribeEventCountByThreatLevel --RegionId cn-shanghai --StartTime $START --EndTime $END --user-agent AlibabaCloud-Agent-Skills --read-timeout 120 --connect-timeout 10
+START=$(($(date -v-7d +%s) * 1000)) && END=$(($(date +%s) * 1000)) && aliyun cloud-siem describe-event-count-by-threat-level --region cn-shanghai --start-time $START --end-time $END --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-incident-manage/{session-id} --read-timeout 120 --connect-timeout 10
 
 # Step 2: Get high-risk incident list
-aliyun cloud-siem list-incidents --api-version 2024-12-12 --region cn-shanghai --page-number 1 --page-size 10 --threat-level 5,4 --lang zh --user-agent AlibabaCloud-Agent-Skills --read-timeout 120 --connect-timeout 10
+aliyun cloud-siem list-incidents --api-version 2024-12-12 --region cn-shanghai --page-number 1 --page-size 10 --threat-level 5,4 --lang zh --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-incident-manage/{session-id} --read-timeout 120 --connect-timeout 10
 ```
 
-#### Workflow B: Full Investigation (排查/完整排查)
+#### Workflow B: Full Investigation
 
 **Trigger Keywords**: "排查", "先查...再查", "完整排查", "把详情也查出来"
 
@@ -175,11 +215,11 @@ aliyun cloud-siem list-incidents --api-version 2024-12-12 --region cn-shanghai -
 
 ```bash
 # Step 1: List high-risk incidents
-aliyun cloud-siem list-incidents --api-version 2024-12-12 --region cn-shanghai --page-number 1 --page-size 10 --threat-level 5,4 --lang zh --user-agent AlibabaCloud-Agent-Skills --read-timeout 120 --connect-timeout 10
+aliyun cloud-siem list-incidents --api-version 2024-12-12 --region cn-shanghai --page-number 1 --page-size 10 --threat-level 5,4 --lang zh --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-incident-manage/{session-id} --read-timeout 120 --connect-timeout 10
 # Output: {"Incidents": [{"IncidentUuid": "abc123def456...", ...}]}
 
 # Step 2: Extract IncidentUuid from Step 1, then get details (REQUIRED!)
-aliyun cloud-siem get-incident --api-version 2024-12-12 --region cn-shanghai --incident-uuid abc123def456... --lang zh --user-agent AlibabaCloud-Agent-Skills --read-timeout 120 --connect-timeout 10
+aliyun cloud-siem get-incident --api-version 2024-12-12 --region cn-shanghai --incident-uuid abc123def456... --lang zh --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-incident-manage/{session-id} --read-timeout 120 --connect-timeout 10
 ```
 
 **Example**: "帮我做个完整的安全事件排查：先查高危事件列表，然后把第一条事件的详情也查出来"
@@ -191,7 +231,7 @@ aliyun cloud-siem get-incident --api-version 2024-12-12 --region cn-shanghai --i
 
 1. `list-incidents` returns JSON with `RequestId` and `Incidents` array
 2. `get-incident` returns JSON with `Incident` object
-3. `DescribeEventCountByThreatLevel` returns `Data` object
+3. `describe-event-count-by-threat-level` returns `Data` object
 
 > **Detailed verification**: [references/verification-method.md](references/verification-method.md)
 

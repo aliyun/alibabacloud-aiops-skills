@@ -12,7 +12,7 @@
 > - ❌ Reporting success without actual API responses
 
 > **REQUIRED Flags**: All commands MUST include:
-> - `--user-agent AlibabaCloud-Agent-Skills`
+> - `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-incident-manage/{session-id}` (substitute a per-session 32-char hex; see SKILL.md Observability)
 > - `--read-timeout 60`
 > - `--connect-timeout 10`
 
@@ -25,13 +25,13 @@
 #### ✅ CORRECT
 ```bash
 # Basic query
-aliyun cloud-siem list-incidents --api-version 2024-12-12 --region cn-shanghai --page-number 1 --page-size 10 --lang zh --user-agent AlibabaCloud-Agent-Skills --read-timeout 60 --connect-timeout 10
+aliyun cloud-siem list-incidents --api-version 2024-12-12 --region cn-shanghai --page-number 1 --page-size 10 --lang zh --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-incident-manage/{session-id} --read-timeout 60 --connect-timeout 10
 
 # Filter by threat level
-aliyun cloud-siem list-incidents --api-version 2024-12-12 --region cn-shanghai --page-number 1 --page-size 10 --threat-level 5,4 --lang zh --user-agent AlibabaCloud-Agent-Skills --read-timeout 60 --connect-timeout 10
+aliyun cloud-siem list-incidents --api-version 2024-12-12 --region cn-shanghai --page-number 1 --page-size 10 --threat-level 5,4 --lang zh --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-incident-manage/{session-id} --read-timeout 60 --connect-timeout 10
 
 # Singapore region
-aliyun cloud-siem list-incidents --api-version 2024-12-12 --region ap-southeast-1 --page-number 1 --page-size 10 --lang zh --user-agent AlibabaCloud-Agent-Skills --read-timeout 60 --connect-timeout 10
+aliyun cloud-siem list-incidents --api-version 2024-12-12 --region ap-southeast-1 --page-number 1 --page-size 10 --lang zh --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-incident-manage/{session-id} --read-timeout 60 --connect-timeout 10
 ```
 
 #### ❌ INCORRECT
@@ -42,11 +42,10 @@ aliyun cloud-siem list-incidents --api-version 2024-12-12 --region cn-shanghai -
 # Wrong: Missing --api-version (defaults to 2022-06-16!)
 aliyun cloud-siem list-incidents --region cn-shanghai --page-number 1 --lang zh
 
-# Wrong: Using wrong API (DescribeCloudSiemEvents is different API)
-aliyun cloud-siem DescribeCloudSiemEvents --CurrentPage 1
+# Wrong: Using a different/forbidden API — NEVER use DescribeCloudSiemEvents
+# (use list-incidents instead)
 
-# Wrong: Using wrong product
-aliyun sas DescribeSecurityEvents --RegionId cn-hangzhou
+# Wrong: Using wrong product — `aliyun sas ...` is the wrong product, use `aliyun cloud-siem`
 ```
 
 ---
@@ -56,7 +55,7 @@ aliyun sas DescribeSecurityEvents --RegionId cn-hangzhou
 #### ✅ CORRECT
 ```bash
 # Get incident by UUID (32-char hex string)
-aliyun cloud-siem get-incident --api-version 2024-12-12 --region cn-shanghai --incident-uuid b6515eb76b73cd4995a902b6df5a766b --lang zh --user-agent AlibabaCloud-Agent-Skills --read-timeout 60 --connect-timeout 10
+aliyun cloud-siem get-incident --api-version 2024-12-12 --region cn-shanghai --incident-uuid b6515eb76b73cd4995a902b6df5a766b --lang zh --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-incident-manage/{session-id} --read-timeout 60 --connect-timeout 10
 ```
 
 **UUID Format**: 32-character hexadecimal string (no dashes)
@@ -72,7 +71,7 @@ aliyun cloud-siem get-incident --region cn-shanghai --incident-uuid xxx --lang z
 
 ---
 
-### 3. DescribeEventCountByThreatLevel (Version: 2022-06-16)
+### 3. describe-event-count-by-threat-level (API: DescribeEventCountByThreatLevel, Version: 2022-06-16)
 
 #### ✅ CORRECT
 ```bash
@@ -80,17 +79,18 @@ aliyun cloud-siem get-incident --region cn-shanghai --incident-uuid xxx --lang z
 START=$(($(date -v-7d +%s) * 1000))  # macOS
 END=$(($(date +%s) * 1000))
 
-# 7-day trend
-aliyun cloud-siem DescribeEventCountByThreatLevel --RegionId cn-shanghai --StartTime $START --EndTime $END --user-agent AlibabaCloud-Agent-Skills --read-timeout 60 --connect-timeout 10
+# 7-day trend (plugin mode: lowercase-hyphenated command and flags)
+aliyun cloud-siem describe-event-count-by-threat-level --region cn-shanghai --start-time $START --end-time $END --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sas-incident-manage/{session-id} --read-timeout 60 --connect-timeout 10
 ```
 
 #### ❌ INCORRECT
 ```bash
 # Wrong: Using old SAS CLI (wrong product!)
-aliyun sas describe-event-count-by-threat-level --RegionId cn-shanghai
+aliyun sas <action> --RegionId cn-hangzhou
 
-# Wrong: Lowercase parameter names
-aliyun cloud-siem DescribeEventCountByThreatLevel --regionId cn-shanghai --startTime $START --endTime $END
+# Wrong: PascalCase action name and PascalCase flags
+# Plugin mode requires lowercase-hyphenated: use `describe-event-count-by-threat-level`
+# with `--region` / `--start-time` / `--end-time`, NOT the PascalCase RPC form.
 ```
 
 ---
@@ -131,7 +131,7 @@ aliyun cloud-siem DescribeEventCountByThreatLevel --regionId cn-shanghai --start
 }
 ```
 
-### DescribeEventCountByThreatLevel Response
+### describe-event-count-by-threat-level Response
 
 ```json
 {
@@ -155,7 +155,7 @@ aliyun cloud-siem DescribeEventCountByThreatLevel --regionId cn-shanghai --start
 - [ ] Pagination parameters work (`--page-number`, `--page-size`)
 - [ ] Filter parameters work (`--threat-level`, `--incident-status`)
 - [ ] `get-incident` returns valid JSON with `Incident` object
-- [ ] `DescribeEventCountByThreatLevel` returns valid JSON with `Data` object
+- [ ] `describe-event-count-by-threat-level` returns valid JSON with `Data` object
 - [ ] Multi-region support works (`cn-shanghai`, `ap-southeast-1`)
 
 > **For parameter values (threat levels, status, regions)**, see [related-commands.md](related-commands.md).

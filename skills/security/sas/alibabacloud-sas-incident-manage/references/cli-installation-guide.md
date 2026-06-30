@@ -6,6 +6,14 @@ Complete guide for installing and configuring Aliyun CLI.
 
 ## Installation
 
+> **No root required**: The binary install steps below place `aliyun` in the
+> user-level directory `~/.local/bin`, so no elevated privileges are needed.
+> Ensure that directory is on your `PATH` (add once to `~/.bashrc` or `~/.zshrc` if missing):
+> ```bash
+> export PATH="$HOME/.local/bin:$PATH"
+> ```
+> Prefer a package manager (Homebrew on macOS) when available.
+
 ### macOS
 
 **Using Homebrew (Recommended)**
@@ -27,7 +35,7 @@ wget https://aliyuncli.alicdn.com/aliyun-cli-macosx-latest-amd64.tgz
 tar -xzf aliyun-cli-macosx-latest-amd64.tgz
 
 # Move to PATH
-sudo mv aliyun /usr/local/bin/
+mkdir -p "$HOME/.local/bin" && mv aliyun "$HOME/.local/bin/"
 
 # Verify
 aliyun version
@@ -42,7 +50,7 @@ wget https://aliyuncli.alicdn.com/aliyun-cli-linux-latest-amd64.tgz
 
 # Extract and install
 tar -xzf aliyun-cli-linux-latest-amd64.tgz
-sudo mv aliyun /usr/local/bin/
+mkdir -p "$HOME/.local/bin" && mv aliyun "$HOME/.local/bin/"
 
 # Verify
 aliyun version
@@ -55,7 +63,7 @@ wget https://aliyuncli.alicdn.com/aliyun-cli-linux-latest-amd64.tgz
 
 # Extract and install
 tar -xzf aliyun-cli-linux-latest-amd64.tgz
-sudo mv aliyun /usr/local/bin/
+mkdir -p "$HOME/.local/bin" && mv aliyun "$HOME/.local/bin/"
 
 # Verify
 aliyun version
@@ -68,7 +76,7 @@ wget https://aliyuncli.alicdn.com/aliyun-cli-linux-latest-arm64.tgz
 
 # Extract and install
 tar -xzf aliyun-cli-linux-latest-arm64.tgz
-sudo mv aliyun /usr/local/bin/
+mkdir -p "$HOME/.local/bin" && mv aliyun "$HOME/.local/bin/"
 ```
 
 ### Windows
@@ -129,8 +137,8 @@ Most common mode for personal accounts and scripts.
 ```bash
 aliyun configure set \
   --mode AK \
-  --access-key-id LTAI5tXXXXXXXX \
-  --access-key-secret 8dXXXXXXXXXXXXXXXXXXXXXXXX \
+  --access-key-id <your-access-key-id> \
+  --access-key-secret <your-access-key-secret> \
   --region cn-hangzhou
 ```
 
@@ -143,8 +151,8 @@ Configuration is stored in `~/.aliyun/config.json`:
     {
       "name": "default",
       "mode": "AK",
-      "access_key_id": "LTAI5tXXXXXXXX",
-      "access_key_secret": "8dXXXXXXXXXXXXXXXXXXXXXXXX",
+      "access_key_id": "<your-access-key-id>",
+      "access_key_secret": "<your-access-key-secret>",
       "region_id": "cn-hangzhou",
       "output_format": "json",
       "language": "en"
@@ -160,9 +168,9 @@ For short-lived access (tokens expire in 1-12 hours).
 ```bash
 aliyun configure set \
   --mode StsToken \
-  --access-key-id LTAI5tXXXXXXXX \
-  --access-key-secret 8dXXXXXXXXXXXXXXXXXXXXXXXX \
-  --sts-token v1.0:XXXXXXXXXXXXXXXX \
+  --access-key-id <your-access-key-id> \
+  --access-key-secret <your-access-key-secret> \
+  --sts-token <your-sts-token> \
   --region cn-hangzhou
 ```
 
@@ -175,8 +183,8 @@ Assume a RAM role for elevated or cross-account access.
 ```bash
 aliyun configure set \
   --mode RamRoleArn \
-  --access-key-id LTAI5tXXXXXXXX \
-  --access-key-secret 8dXXXXXXXXXXXXXXXXXXXXXXXX \
+  --access-key-id <your-access-key-id> \
+  --access-key-secret <your-access-key-secret> \
   --ram-role-arn acs:ram::123456789012:role/AdminRole \
   --role-session-name my-session \
   --region cn-hangzhou
@@ -242,14 +250,14 @@ Aliyun CLI uses the **default credential chain** - credentials are loaded automa
 ```bash
 aliyun configure set --profile projectA \
   --mode AK \
-  --access-key-id LTAI5tAAAAAAAA \
-  --access-key-secret 8dAAAAAAAAAAAAAAAAAAAAAAAA \
+  --access-key-id <projectA-access-key-id> \
+  --access-key-secret <projectA-access-key-secret> \
   --region cn-hangzhou
 
 aliyun configure set --profile projectB \
   --mode AK \
-  --access-key-id LTAI5tBBBBBBBB \
-  --access-key-secret 8dBBBBBBBBBBBBBBBBBBBBBBBB \
+  --access-key-id <projectB-access-key-id> \
+  --access-key-secret <projectB-access-key-secret> \
   --region cn-shanghai
 ```
 
