@@ -1,0 +1,17 @@
+# Alibaba Cloud FinOps Resource Inspection - Dependencies
+# Python 3.10+ required
+
+# Core SDK
+alibabacloud_credentials>=1.0.0
+alibabacloud_tea_openapi>=0.3.0
+alibabacloud_tea_util>=0.3.0
+alibabacloud_openapi_util>=0.2.0
+
+# Product SDKs
+alibabacloud_ecs20140526>=4.0.0
+alibabacloud_rds20140815>=3.0.0
+alibabacloud_vpc20160428>=3.0.0
+alibabacloud_slb20140515>=3.0.0
+alibabacloud_alb20200616>=1.0.0
+alibabacloud_nlb20220430>=1.0.0
+alibabacloud_cms20190101>=2.0.0
