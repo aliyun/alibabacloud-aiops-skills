@@ -1,0 +1,176 @@
+schema_version: "2.0"
+exported_at: "2026-06-17T10:00:00+08:00"
+exported_from:
+  account_uid: "1234567890"
+  region: cn-hangzhou
+  instance_ids:
+    - ddoscoo-cn-5es4t7x52001
+
+domains:
+  - domain: api.example.com
+    instance_id_ref: 0
+    cname: "xxx.aliyunddos1003.com"
+
+    # ====================================
+    # 1. proxy -- Protocol & Access
+    # ====================================
+    proxy:
+      protocols:
+        - {protocol: http, ports: [80]}
+        - {protocol: https, ports: [443]}
+
+      ssl_cert:
+        cert_name: "24203010.pem"
+        cert_region: cn-hangzhou
+        user_cert_name: "jiafei"
+
+      gm_cert:
+        cert_id: ""
+        gm_enable: 0
+        gm_only: 0
+
+      tls:
+        ssl_protocols: "tls1.2"
+        ssl_ciphers: "default"
+        ssl13_enabled: false
+        custom_ciphers: []
+        tls13_custom_ciphers: []
+
+      ocsp_enabled: false
+
+      http2https: 0
+      http2: 1
+
+      mutual_auth:                       # Export: aliyun ddoscoo describe-l7-mutual-auth-conf --domain; Import: aliyun ddoscoo config-l7-mutual-authentication (with OpenAPI fallback when plugin doesn't recognize the action)
+        ca_cert_enable: 0                # API: Enable
+        cert_issuer: "aliyun"            # API: CertIssuer
+        cert_region: "cn-hangzhou"       # !! Not returned by Describe, only used during import (--CertRegion)
+        cert_identifier: ""              # API: CertId
+
+    # ====================================
+    # 2. client -- Client-Side Settings
+    # ====================================
+    client:
+      ds_keepalive_timeout: 120
+
+      cookie:
+        aliyungf_tc: 1
+        cookie_secure: 0
+        max_age_enable: 0
+        max_age: ""
+
+      cname_reuse:
+        enabled: 0
+        cname: ""
+
+    # ====================================
+    # 3. server -- Back-to-Origin Settings
+    # ====================================
+    server:
+      real_servers:
+        - {address: "www.taobao.com", rs_type: 1}
+
+      proxy_mode: "ip_hash"
+      upstream_retry: 1
+
+      headers:
+        custom: {}
+        embedded:
+          x_forwarded_proto: true
+          x_client_ip: true
+          x_true_ip: true
+          wl_proxy_client_ip: true
+          web_server_type: true
+
+      https2http: 0
+
+      attributes:
+        - real_server: "www.taobao.com"
+          weight: 100
+          connect_timeout: 5
+          read_timeout: 120
+          send_timeout: 120
+          mode: "active"
+          max_fails: 3
+          fail_timeout: 10
+
+      keepalive:
+        enabled: true
+        keepalive_timeout: 30
+        keepalive_requests: 1000
+
+      cache:
+        enabled: 0
+        mode: "standard"
+        custom_rules: []
+
+      cdn_linkage:
+        enabled: 0
+        cname: ""
+        rule_name: ""
+        param:
+          param_type: "cdn"
+          param_data:
+            domain: ""
+            cname: ""
+            access_qps: 0
+            upstream_qps: 0
+        rules: []                        # Non-empty structure: [{type: CNAME, value: "<CdnCname>", priority: 50, value_type: 5}]
+
+    # ====================================
+    # 4. security -- Security Policies
+    # ====================================
+    security:
+      ai_protect:
+        rule_enable: 1
+        mode: "defense"
+        template: "level60"
+
+      global_protection:
+        enabled: true
+        mode: "hard"
+        rules:
+          - rule_id: "global_03"
+            rule_name: "Simulate browser request"
+            action: "watch"
+            action_default: "challenge"
+            enabled: 1
+
+      ip_blackwhite:
+        enabled: 1
+        black_list:
+          - "140.205.11.30"
+        white_list: []                   # Source: describe-web-rules -> WhiteList (field not returned when array is empty)
+
+      area_block:
+        enabled: 0
+        regions: []
+
+      cc:
+        global_switch: "open"
+        enable: 1
+        template: "default"
+        custom_rule_enable: 1
+        custom_rules:
+          - name: "cc"
+            action: "block"
+            owner: "manual"
+            expires: 0
+            condition:
+              - {field: "uri", match_method: "contain", content: "/"}
+            ratelimit:
+              target: "ip"
+              interval: 5
+              threshold: 2
+              ttl: 6660
+            statistics: {}               # !! Must be removed if empty {} during import
+            status_code: {}              # !! Must be removed if empty {} during import
+        precise_access_enable: 1
+        precise_access_rules:
+          - name: "block-admin"
+            action: "block"
+            owner: "manual"
+            expires: 0
+            expire_period: 0
+            condition:
+              - {field: "uri", match_method: "contain", content: "/admin"}
