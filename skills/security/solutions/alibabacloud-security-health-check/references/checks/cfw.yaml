@@ -1,0 +1,288 @@
+product: Cloud Firewall CFW
+version: 0.1.0
+
+checks:
+  - id: cfw-001
+    name: Internet Access Activity Enablement Rate
+    category: Coverage
+    weight: 12
+    severity: high
+    rule:
+      type: ratio
+      numerator: $.internet_firewall.ProtectedPublicIPs
+      denominator: $.internet_firewall.TotalPublicIPs
+      thresholds:
+        full: ">= 0.95"
+        partial: ">= 0.7"
+        fail: "< 0.7"
+    remediation:
+      effort: low
+      steps: |
+        CFW -> Firewall Switch -> Internet Border -> Batch enable unprotected public IPs
+        Note: Enabling will route traffic through CFW; recommend verifying with small traffic in test environment first
+      doc: https://help.aliyun.com/zh/cloud-firewall/user-guide/turn-on-or-turn-off-cloud-firewall
+
+  - id: cfw-002
+    name: IPS Rule Set Mode (Monitor vs Block)
+    category: Protection Strength
+    weight: 10
+    severity: high
+    rule:
+      type: enum
+      path: $.ips_config.RuleMode
+      expect: "block"
+      partial_values: ["monitor"]
+      fail_values: ["off"]
+    remediation:
+      effort: medium
+      steps: |
+        1. Remaining in "Monitor Mode" long-term = not actually blocking
+        2. Recommend observing for 1-2 weeks to collect false positives, then switch to Block Mode after whitelisting
+        3. Strict mode is suitable for high-security scenarios like finance/government
+      doc: https://help.aliyun.com/zh/cloud-firewall/user-guide/ips-configuration
+
+  - id: cfw-003
+    name: Outbound Connection Detection Enabled
+    category: Best Practice
+    weight: 8
+    severity: high
+    rule:
+      type: exists
+      path: $.outbound_protection.Status
+      expect: "enabled"
+    remediation:
+      effort: low
+      steps: |
+        CFW -> Intrusion Prevention -> Outbound Connections -> Enable.
+        This is a key capability for discovering compromised hosts (C2 callbacks/cryptomining domain resolution).
+        Recall rate improves significantly when combined with threat intelligence.
+      doc: https://help.aliyun.com/zh/cloud-firewall/user-guide/outbound-traffic-protection
+
+  - id: cfw-004
+    name: North-South Policy Density
+    category: Protection Strength
+    weight: 6
+    severity: medium
+    rule:
+      type: ratio
+      numerator: $.policies.SouthNorthRuleCount
+      denominator: $.client_assets.TotalPublicIPs
+      thresholds:
+        full: ">= 1.0"            # At least 1 policy per public IP on average
+        partial: ">= 0.3"
+        fail: "< 0.3"
+    remediation:
+      effort: medium
+      steps: |
+        North-south policies = access control from internet to internal network.
+        Policy density too low = default allow, equivalent to no protection.
+        Recommend configuring for each external-facing service: Only allow necessary ports (80/443) + deny all others.
+        CFW -> Access Control -> Internet Border -> Create Policy.
+      doc: https://help.aliyun.com/zh/cloud-firewall/user-guide/configure-access-control-policies-on-the-internet-firewall
+
+  - id: cfw-005
+    name: East-West (Inter-VPC) Policy Coverage
+    category: Protection Strength
+    weight: 8
+    severity: high
+    rule:
+      type: ratio
+      numerator: $.policies.VpcPolicyCovered
+      denominator: $.client_assets.TotalVPCs
+      thresholds:
+        full: ">= 0.8"
+        partial: ">= 0.3"
+        fail: "< 0.3"
+    remediation:
+      effort: high
+      steps: |
+        Missing east-west policies = once compromised, lateral movement to all VPCs is possible.
+        1. CFW -> Firewall Switch -> VPC Border -> Enable protection for critical VPC interconnections
+        2. Default deny + explicitly allow only business-required ports
+        3. Prioritize protecting production VPCs; test VPCs can be deferred
+      doc: https://help.aliyun.com/zh/cloud-firewall/user-guide/configure-an-access-control-policy-for-a-vpc-firewall
+
+  - id: cfw-006
+    name: Threat Intelligence Enabled
+    category: Protection Strength
+    weight: 7
+    severity: high
+    rule:
+      type: exists
+      path: $.threat_intel.Status
+      expect: "enabled"
+    remediation:
+      effort: low
+      steps: |
+        Alibaba Cloud threat intelligence database covers globally known C2/cryptomining pools/malicious IPs.
+        CFW -> Intrusion Prevention -> Threat Intelligence -> Enable.
+        Recommend also enabling "Advanced Threat Intelligence" (enhanced subscription, covers APT group IOCs).
+      doc: https://help.aliyun.com/zh/cloud-firewall/user-guide/threat-intelligence
+
+  - id: cfw-007
+    name: Unauthorized Access Alert
+    category: Response Timeliness
+    weight: 5
+    severity: medium
+    rule:
+      type: exists
+      path: $.alerts.UnauthAccessAlert
+      expect: true
+    remediation:
+      effort: low
+      steps: |
+        Unauthorized access = blocked attack attempts, a high-value alert signal.
+        CFW -> Security Operations -> Alert Settings -> Enable DingTalk/Feishu notification for "Unauthorized Access".
+        Recommend also monitoring "Port Scan" and "Brute Force" alert types.
+      doc: https://help.aliyun.com/zh/cloud-firewall/user-guide/alert-management
+
+  - id: cfw-008
+    name: VPC Border Firewall Enablement Rate
+    category: Coverage
+    weight: 7
+    severity: high
+    rule:
+      type: ratio
+      numerator: $.vpc_firewall.EnabledVPCs
+      denominator: $.client_assets.TotalVPCs
+      thresholds:
+        full: ">= 0.8"
+        partial: ">= 0.4"
+        fail: "< 0.4"
+    remediation:
+      effort: medium
+      steps: |
+        All VPC border switches must be enabled = to force east-west traffic through CFW.
+        1. CFW -> Firewall Switch -> VPC Border -> Enable for VPCs not yet activated
+        2. Before enabling, ensure VPC interconnection routing passes through TR/VBR
+      doc: https://help.aliyun.com/zh/cloud-firewall/user-guide/enable-or-disable-a-vpc-firewall
+
+  - id: cfw-009
+    name: Log Audit Enabled
+    category: Compliance Alignment
+    weight: 4
+    severity: low
+    rule:
+      type: exists
+      path: $.log_service.Status
+      expect: "enabled"
+    remediation:
+      effort: low
+      steps: |
+        Essential for compliance-driven customers. CFW -> Log Audit -> One-click enable log delivery to SLS.
+        Recommend retention >= 180 days; MLPS Level 3 requires >= 6 months.
+      doc: https://help.aliyun.com/zh/cloud-firewall/user-guide/log-management
+
+  - id: cfw-010
+    name: Compromised Host Detection Enabled
+    category: Best Practice
+    weight: 6
+    severity: medium
+    rule:
+      type: exists
+      path: $.compromised_detection.Status
+      expect: "enabled"
+    remediation:
+      effort: low
+      steps: |
+        Identifies compromised hosts through DNS anomaly resolution/C2 callback patterns/cryptomining pool outbound connections.
+        CFW -> Intrusion Prevention -> Compromised Host Detection -> Enable.
+        Recommend integrating with SAS for automatic host isolation upon trigger.
+      doc: https://help.aliyun.com/zh/cloud-firewall/user-guide/compromised-host-detection
+
+  - id: cfw-011
+    name: ACL Policy Redundancy
+    category: Best Practice
+    weight: 4
+    severity: low
+    rule:
+      type: range
+      path: $.policies.RedundantRuleRatio
+      thresholds:
+        full: "0..0.1"            # Below 10% redundancy is normal
+        partial: "0.1..0.3"
+        fail: "> 0.3"
+    remediation:
+      effort: medium
+      steps: |
+        Redundancy > 30% means many historical policies not cleaned up, impacting performance + increasing misconfiguration risk.
+        CFW -> Access Control -> Policy Management -> Enable "Policy Optimization Suggestions", clean up per recommendations.
+      doc: https://help.aliyun.com/zh/cloud-firewall/user-guide/policy-optimization
+
+  - id: cfw-012
+    name: Domain Resolution Protection
+    category: Protection Strength
+    weight: 5
+    severity: medium
+    rule:
+      type: exists
+      path: $.dns_protection.Status
+      expect: "enabled"
+    remediation:
+      effort: low
+      steps: |
+        Blocks malicious domain resolution (phishing/malware distribution/C2).
+        CFW -> Intrusion Prevention -> DNS Protection -> Enable malicious domain blocking.
+      doc: https://help.aliyun.com/zh/cloud-firewall/user-guide/dns-firewall
+
+  - id: cfw-013
+    name: Intrusion Prevention Depth
+    category: Protection Strength
+    weight: 6
+    severity: medium
+    rule:
+      type: enum
+      path: $.ips_config.RuleDepth
+      expect: "strict"
+      partial_values: ["balanced"]
+      fail_values: ["basic"]
+    remediation:
+      effort: medium
+      steps: |
+        basic = Basic rule set, approximately 60% coverage
+        balanced = Balanced, approximately 80% coverage
+        strict = Strict, approximately 95% coverage, but requires false positive assessment
+        Recommend strict + whitelisting mechanism for production VPCs, balanced for test VPCs.
+      doc: https://help.aliyun.com/zh/cloud-firewall/user-guide/ips-configuration
+
+  - id: cfw-014
+    name: Custom Policy VPC Coverage Ratio
+    category: Coverage
+    weight: 6
+    severity: medium
+    rule:
+      type: ratio
+      numerator: $.policies.VPCsWithCustomPolicy
+      denominator: $.client_assets.TotalVPCs
+      thresholds:
+        full: ">= 0.6"
+        partial: ">= 0.2"
+        fail: "< 0.2"
+    remediation:
+      effort: high
+      steps: |
+        Relying only on system default policies = homogeneous protection. Recommend custom policies for at least production VPCs:
+        - Database VPC: Only allow inbound from application VPC
+        - Management VPC: Only allow inbound from jump server IPs
+      doc: https://help.aliyun.com/zh/cloud-firewall/user-guide/configure-an-access-control-policy-for-a-vpc-firewall
+
+  - id: cfw-015
+    name: Intelligent Policy Recommendation Adoption Rate
+    category: Best Practice
+    weight: 6
+    severity: medium
+    rule:
+      type: ratio
+      numerator: $.smart_policy.AcceptedCount
+      denominator: $.smart_policy.RecommendedCount
+      thresholds:
+        full: ">= 0.5"
+        partial: ">= 0.2"
+        fail: "< 0.2"
+    remediation:
+      effort: low
+      steps: |
+        Intelligent policy recommendations are based on actual traffic learning. Adoption rate < 20% = customer not reviewing recommendations.
+        CFW -> Access Control -> Intelligent Policy -> Review Recommendations -> Batch Adopt.
+        Recommend doing a monthly recommendation review to keep policies current with business changes.
+      doc: https://help.aliyun.com/zh/cloud-firewall/user-guide/intelligent-policy

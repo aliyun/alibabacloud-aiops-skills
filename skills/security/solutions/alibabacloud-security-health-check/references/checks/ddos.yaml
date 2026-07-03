@@ -1,0 +1,299 @@
+product: DDoS Protection
+version: 0.1.0
+
+checks:
+  - id: ddos-001
+    name: Origin Server IP Exposure Detection
+    category: Best Practice
+    weight: 18
+    severity: high
+    rule:
+      type: ratio
+      numerator: $.origin_exposure.HiddenOriginCount
+      denominator: $.origin_exposure.TotalDomains
+      thresholds:
+        full: ">= 0.95"
+        partial: ">= 0.7"
+        fail: "< 0.7"
+    remediation:
+      effort: medium
+      steps: |
+        1. Customer provides ECS/SLB public IP list in collect.sh
+        2. Detect which IPs are still exposed on the public internet (discoverable via DNS history/search engines)
+        3. Configure ECS security groups to only allow Anti-DDoS back-to-origin IP ranges, disable direct public access
+        4. For already exposed IPs, recommend requesting replacement
+      doc: https://help.aliyun.com/zh/anti-ddos/anti-ddos-pro/user-guide/protect-the-origin-server
+
+  - id: ddos-002
+    name: CC Protection Mode Reasonableness
+    category: Protection Strength
+    weight: 8
+    severity: high
+    rule:
+      type: enum
+      path: $.cc_protection.Mode
+      expect: "emergency"
+      partial_values: ["normal", "strict"]
+      fail_values: ["off"]
+    remediation:
+      effort: low
+      steps: |
+        During normal business operations, recommend using normal/strict mode;
+        Switch to emergency mode during attacks (automatically blocks high-frequency requests).
+        Switching does not require restart, takes effect in seconds.
+      doc: https://help.aliyun.com/zh/anti-ddos/anti-ddos-pro/user-guide/configure-frequency-control
+
+  - id: ddos-003
+    name: Elastic Protection Bandwidth Configuration
+    category: Protection Strength
+    weight: 10
+    severity: high
+    rule:
+      type: range
+      path: $.instance.ElasticBandwidth
+      thresholds:
+        full: ">= 100"
+        partial: ">= 50"
+        fail: "< 50"
+    remediation:
+      effort: low
+      steps: |
+        1. Elastic protection is billed post-attack based on actual peak; not configured = blackholed when facing high-volume attacks
+        2. Recommend configuring at least 100 Gbps elastic; finance/gaming recommend 300 Gbps+
+        3. Note: Elastic bandwidth costs are tiered based on attack peak; budget limits should be assessed
+      doc: https://help.aliyun.com/zh/anti-ddos/anti-ddos-pro/user-guide/elastic-protection
+
+  - id: ddos-004
+    name: Scrubbing Threshold vs Business Peak Alignment
+    category: Protection Strength
+    weight: 8
+    severity: high
+    rule:
+      type: range
+      path: $.cleaning_threshold.BusinessRatio
+      thresholds:
+        full: "1.5..3.0"          # Threshold = 1.5-3x business peak
+        partial: "1.0..1.5 or 3.0..5.0"
+        fail: "< 1.0 or > 5.0"
+    remediation:
+      effort: medium
+      steps: |
+        Threshold too low (< business peak) = false scrubbing during business peaks, affecting availability
+        Threshold too high (> 5x business peak) = scrubbing only triggers at very high QPS, origin may crash first
+        Recommendations: 1) Use SLS to check business QPS peak over the past 30 days
+              2) Set threshold to peak x 2, leaving buffer for promotions/flash sales
+              3) Temporarily increase by 50% before major promotions
+      doc: https://help.aliyun.com/zh/anti-ddos/anti-ddos-pro/user-guide/configure-the-cleaning-threshold
+
+  - id: ddos-005
+    name: Custom Rule Count
+    category: Best Practice
+    weight: 4
+    severity: low
+    rule:
+      type: range
+      path: $.custom_rules.Count
+      thresholds:
+        full: ">= 3"
+        partial: ">= 1"
+        fail: "< 1"
+    remediation:
+      effort: medium
+      steps: |
+        No custom rules = relying purely on default engine. Recommend at least:
+        - Rate limiting rules for high-frequency business APIs
+        - Geo-blocking rules for overseas regions (if business only serves domestic users)
+        - Blocklist rules for known malicious IP ranges
+      doc: https://help.aliyun.com/zh/anti-ddos/anti-ddos-pro/user-guide/configure-custom-frequency-control-rules
+
+  - id: ddos-006
+    name: Domain Count vs Instance Specification Alignment
+    category: Compliance Alignment
+    weight: 6
+    severity: medium
+    rule:
+      type: ratio
+      numerator: $.instance.DomainCount
+      denominator: $.instance.DomainQuota
+      thresholds:
+        full: "0..0.85"           # Usage < 85% is healthy
+        partial: "0.85..1.0"      # Near capacity, scaling needed
+        fail: "> 1.0"             # Exceeded specification, some domains unprotected
+    remediation:
+      effort: medium
+      steps: |
+        Domains exceeding instance specification are effectively unprotected, though customers may not be aware.
+        1. Console -> Instance List -> Upgrade domain expansion package
+        2. Or assess whether a new instance is needed
+        3. Promptly clean up old domains for decommissioned services
+      doc: https://help.aliyun.com/zh/anti-ddos/anti-ddos-pro/user-guide/instance-specifications
+
+  - id: ddos-007
+    name: Health Check Enabled
+    category: Response Timeliness
+    weight: 5
+    severity: medium
+    rule:
+      type: ratio
+      numerator: $.health_check.EnabledDomains
+      denominator: $.origin_exposure.TotalDomains
+      thresholds:
+        full: ">= 0.9"
+        partial: ">= 0.5"
+        fail: "< 0.5"
+    remediation:
+      effort: low
+      steps: |
+        Without health check = Anti-DDoS still routes to failed origin servers when they go down.
+        DDoS Pro -> Website Access -> Select domain -> Health Check -> Enable.
+        Essential for multi-origin customers; enables automatic failover on server failure.
+      doc: https://help.aliyun.com/zh/anti-ddos/anti-ddos-pro/user-guide/configure-health-check
+
+  - id: ddos-008
+    name: HTTPS Encrypted Back-to-Origin
+    category: Compliance Alignment
+    weight: 6
+    severity: medium
+    rule:
+      type: ratio
+      numerator: $.https_origin.EncryptedDomains
+      denominator: $.https_origin.HttpsEnabledDomains
+      thresholds:
+        full: ">= 0.95"
+        partial: ">= 0.6"
+        fail: "< 0.6"
+    remediation:
+      effort: medium
+      steps: |
+        Client=HTTPS but back-to-origin=HTTP is a common blind spot; traffic between origin and ECS is transmitted in plaintext.
+        DDoS Pro -> Domain Configuration -> Protocol Type -> Set back-to-origin protocol to HTTPS.
+        Origin server must also have HTTPS port enabled.
+      doc: https://help.aliyun.com/zh/anti-ddos/anti-ddos-pro/user-guide/configure-https-back-to-origin
+
+  - id: ddos-009
+    name: Port Forwarding Security Configuration
+    category: Best Practice
+    weight: 4
+    severity: low
+    rule:
+      type: range
+      path: $.port_forward.OpenPortCount
+      thresholds:
+        full: "1..20"             # Necessary business ports
+        partial: "20..50"
+        fail: "0 or > 50"
+    remediation:
+      effort: medium
+      steps: |
+        0 ports = Non-web services not onboarded, relying only on web protocol protection
+        > 50 ports = Excessive port exposure, recommend cleaning up ports without active business
+        DDoS Pro -> Non-Web Services -> Port List -> Review necessity.
+      doc: https://help.aliyun.com/zh/anti-ddos/anti-ddos-pro/user-guide/configure-port-forwarding
+
+  - id: ddos-010
+    name: Protection Package Bound IP Count (DDoS Native Protection)
+    category: Coverage
+    weight: 5
+    severity: medium
+    rule:
+      type: ratio
+      numerator: $.native_protection.BoundIpCount
+      denominator: $.native_protection.IpQuota
+      thresholds:
+        full: "0.5..0.9"          # Moderate utilization is healthiest, leave headroom
+        partial: "0..0.5 or 0.9..1.0"
+        fail: "> 1.0"
+    remediation:
+      effort: low
+      steps: |
+        Utilization too low (< 50%) = Wasting protection package quota
+        Utilization too high (> 90%) = Cannot bind new IPs
+        DDoS Native Protection -> Instance Management -> Bound IP Management -> Release expired/unbind idle.
+      doc: https://help.aliyun.com/zh/anti-ddos/anti-ddos-origin/user-guide/manage-the-protected-ip-addresses
+
+  - id: ddos-011
+    name: Blocklist/Allowlist Usage Reasonableness
+    category: Best Practice
+    weight: 4
+    severity: low
+    rule:
+      type: range
+      path: $.ip_lists.TotalEntries
+      thresholds:
+        full: "5..500"
+        partial: "0..5 or 500..2000"
+        fail: "> 2000"
+    remediation:
+      effort: medium
+      steps: |
+        Too many (> 2000) are mostly historical invalid entries; recommend quarterly cleanup of entries inactive for 90 days.
+        Too few (0) = Lacking basic protection policies; at minimum, establish an internal IP allowlist.
+      doc: https://help.aliyun.com/zh/anti-ddos/anti-ddos-pro/user-guide/blacklist-and-whitelist
+
+  - id: ddos-012
+    name: Geo-Blocking Policy
+    category: Best Practice
+    weight: 5
+    severity: medium
+    rule:
+      type: exists
+      path: $.geo_block.PolicyConfigured
+      expect: true
+    remediation:
+      effort: low
+      steps: |
+        When business only serves specific regions, blocking other regions can directly reject large volumes of overseas attacks.
+        DDoS Pro -> Protection Policy -> Geo-Blocking -> Configure based on actual business regions.
+        For domestic business, recommend blocking at minimum high-attack-source regions like Russia/Iran/North Korea.
+      doc: https://help.aliyun.com/zh/anti-ddos/anti-ddos-pro/user-guide/configure-region-blocking
+
+  - id: ddos-013
+    name: WebSocket Protocol Support Configuration
+    category: Compliance Alignment
+    weight: 3
+    severity: low
+    rule:
+      type: exists
+      path: $.websocket.Configured
+      expect: true
+    remediation:
+      effort: low
+      steps: |
+        Essential for instant messaging/online gaming/live streaming barrage and other long-connection services.
+        Not configured = WebSocket upgrade handshake blocked by default rules.
+        DDoS Pro -> Domain Configuration -> Protocol Settings -> Enable WebSocket.
+      doc: https://help.aliyun.com/zh/anti-ddos/anti-ddos-pro/user-guide/configure-websocket-protocol
+
+  - id: ddos-014
+    name: TCP / UDP Proxy Configuration
+    category: Best Practice
+    weight: 4
+    severity: low
+    rule:
+      type: exists
+      path: $.tcp_udp_proxy.Configured
+      expect: true
+    remediation:
+      effort: medium
+      steps: |
+        Non-web services (game servers/database proxies/SSH jump servers) need to be onboarded via TCP/UDP proxy.
+        DDoS Pro -> Non-Web Services -> Configure Layer 4 port forwarding.
+        Recommend setting session persistence to avoid long-connection service anomalies.
+      doc: https://help.aliyun.com/zh/anti-ddos/anti-ddos-pro/user-guide/configure-tcp-protection
+
+  - id: ddos-015
+    name: Intelligent Protection Enabled
+    category: Protection Strength
+    weight: 10
+    severity: high
+    rule:
+      type: exists
+      path: $.intelligent_protection.Status
+      expect: "enabled"
+    remediation:
+      effort: low
+      steps: |
+        AI-based defense learned from historical business traffic; higher accuracy than default engine for CC-type attacks.
+        DDoS Pro -> Protection Configuration -> Intelligent Protection -> Enable.
+        Recommend observing for at least 7 days to let the model learn business baseline, avoiding cold-start false positives.
+      doc: https://help.aliyun.com/zh/anti-ddos/anti-ddos-pro/user-guide/intelligent-protection

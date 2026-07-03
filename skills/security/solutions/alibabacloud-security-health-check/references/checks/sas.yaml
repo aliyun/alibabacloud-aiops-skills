@@ -1,0 +1,304 @@
+product: Security Center SAS
+version: 0.1.0
+
+checks:
+  - id: sas-001
+    name: Agent Online Rate
+    category: Coverage
+    weight: 12
+    severity: high
+    rule:
+      type: ratio
+      numerator: $.agent_stats.OnlineCount
+      denominator: $.agent_stats.TotalCount
+      thresholds:
+        full: ">= 0.95"
+        partial: ">= 0.85"
+        fail: "< 0.85"
+    remediation:
+      effort: medium
+      steps: |
+        1. SAS Console -> Asset Center -> Host Assets -> Filter by "Offline"
+        2. Offline hosts fall into two categories: Decommissioned machines (recommend deleting/releasing license in SAS)
+                       Agent anomaly (reinstall agent or troubleshoot network)
+        3. Reinstall command: wget [client installation script] && bash install.sh
+      doc: https://help.aliyun.com/zh/security-center/user-guide/install-the-security-center-agent
+
+  - id: sas-002
+    name: High-Risk Vulnerability Fix Rate (Linux Software Vulnerabilities)
+    category: Response Timeliness
+    weight: 12
+    severity: high
+    rule:
+      type: ratio
+      numerator: $.vulnerabilities.linux_high.HandledCount
+      denominator: $.vulnerabilities.linux_high.TotalCount
+      thresholds:
+        full: ">= 0.9"
+        partial: ">= 0.6"
+        fail: "< 0.6"
+    remediation:
+      effort: high
+      steps: |
+        1. SAS -> Risk Governance -> Vulnerability Management -> Urgency=High + Status=Unhandled
+        2. Prioritize vulnerabilities with "Low exploitation difficulty" + "Widely exploited"
+        3. For those that cannot be fixed immediately: Apply virtual patches via WAF or RASP for mitigation
+      doc: https://help.aliyun.com/zh/security-center/user-guide/vulnerability-management
+
+  - id: sas-003
+    name: Container / K8s Asset KSPM Onboarding Rate
+    category: Coverage
+    weight: 8
+    severity: medium
+    rule:
+      type: ratio
+      numerator: $.container_assets.KspmEnabledClusters
+      denominator: $.container_assets.TotalClusters
+      thresholds:
+        full: ">= 0.9"
+        partial: ">= 0.5"
+        fail: "< 0.5"
+    remediation:
+      effort: medium
+      steps: |
+        Refer to skill `aliyun-sas-kspm-onboard` for batch onboarding.
+        ACK clusters can use auto-deployment; self-managed clusters require SSH to master to execute deploy.yaml.
+      doc: https://help.aliyun.com/zh/security-center/user-guide/kspm-overview
+
+  - id: sas-004
+    name: Baseline Check Pass Rate
+    category: Compliance Alignment
+    weight: 10
+    severity: high
+    rule:
+      type: ratio
+      numerator: $.baseline.PassedItems
+      denominator: $.baseline.TotalItems
+      thresholds:
+        full: ">= 0.85"
+        partial: ">= 0.6"
+        fail: "< 0.6"
+    remediation:
+      effort: high
+      steps: |
+        1. SAS -> Risk Governance -> Baseline Check -> View Top 20 failed items
+        2. Sort by "High risk + Most affected hosts", fix in priority order
+        3. Recommend enabling at least the first two of the three major baselines: MLPS 2.0/CIS/Best Practice
+        4. Manually re-check after fixes; track pass rate monthly
+      doc: https://help.aliyun.com/zh/security-center/user-guide/baseline-check-overview
+
+  - id: sas-005
+    name: High-Risk Alert Average Response Time MTTR
+    category: Response Timeliness
+    weight: 8
+    severity: high
+    rule:
+      type: range
+      path: $.alerts.high.AvgMttrHours
+      thresholds:
+        full: "0..4"              # Handled within 4h = excellent
+        partial: "4..24"
+        fail: "> 24"
+    remediation:
+      effort: medium
+      steps: |
+        MTTR > 24h means alerts are effectively unhandled.
+        Recommendations: 1) Configure alert classification and dispatching -> DingTalk bot/SMS notification
+              2) Auto-escalate high-risk alerts to ticket system
+              3) Enable SAS automated response (for clearly malicious types like cryptomining/reverse shells)
+      doc: https://help.aliyun.com/zh/security-center/user-guide/alert-management
+
+  - id: sas-006
+    name: Automated Response Policy Count
+    category: Best Practice
+    weight: 5
+    severity: medium
+    rule:
+      type: range
+      path: $.auto_response.PolicyCount
+      thresholds:
+        full: ">= 3"
+        partial: ">= 1"
+        fail: "< 1"
+    remediation:
+      effort: medium
+      steps: |
+        No automated response = high-risk alerts rely entirely on manual monitoring.
+        Recommend enabling at least three policies:
+        - Auto-isolate cryptomining processes
+        - Auto-block reverse shells
+        - Auto-add brute force source IPs to firewall blocklist
+        SAS -> Security Operations -> Automated Response -> Policy Management
+      doc: https://help.aliyun.com/zh/security-center/user-guide/automated-response
+
+  - id: sas-007
+    name: RASP Onboarding Rate
+    category: Protection Strength
+    weight: 8
+    severity: high
+    rule:
+      type: ratio
+      numerator: $.rasp.ProtectedApps
+      denominator: $.rasp.TotalApps
+      thresholds:
+        full: ">= 0.7"
+        partial: ">= 0.3"
+        fail: "< 0.3"
+    remediation:
+      effort: high
+      steps: |
+        RASP intercepts attacks at application runtime, highly effective against known/unknown deserialization vulnerabilities like Log4j/Fastjson.
+        1. SAS -> Application Security (RASP) -> Application Onboarding
+        2. Prioritize onboarding externally-facing Java/PHP/Python applications
+        3. After onboarding, enable "Observation Mode" for 1-2 weeks, then switch to "Block Mode" after whitelisting
+      doc: https://help.aliyun.com/zh/security-center/user-guide/application-protection-overview
+
+  - id: sas-008
+    name: Web Tamper-Proofing Enabled
+    category: Best Practice
+    weight: 5
+    severity: medium
+    rule:
+      type: range
+      path: $.tamper_proof.ProtectedDirs
+      thresholds:
+        full: ">= 3"
+        partial: ">= 1"
+        fail: "< 1"
+    remediation:
+      effort: low
+      steps: |
+        Essential for government/enterprise/media/education customers with high risk of hidden link/ad page injection.
+        SAS -> Application Security -> Web Tamper-Proofing -> Add protected directories (recommend business root directories like /var/www/html).
+      doc: https://help.aliyun.com/zh/security-center/user-guide/web-tamper-proofing
+
+  - id: sas-009
+    name: File Integrity Monitoring
+    category: Compliance Alignment
+    weight: 4
+    severity: low
+    rule:
+      type: exists
+      path: $.fim.Status
+      expect: "enabled"
+    remediation:
+      effort: low
+      steps: |
+        Real-time alerts when critical system files (/etc/passwd, /etc/shadow, sshd_config, etc.) are modified.
+        Required for MLPS Level 3 compliance. SAS -> Host Protection -> File Integrity Monitoring -> Enable.
+      doc: https://help.aliyun.com/zh/security-center/user-guide/file-integrity-monitoring
+
+  - id: sas-010
+    name: Abnormal Login Policy
+    category: Protection Strength
+    weight: 5
+    severity: medium
+    rule:
+      type: exists
+      path: $.abnormal_login.PolicyConfigured
+      expect: true
+    remediation:
+      effort: low
+      steps: |
+        Default only performs brute force detection. Recommend supplementing with:
+        - Unusual location login alerts (overseas/remote)
+        - Unusual time period login alerts (early morning hours)
+        - Unusual account login alerts
+        SAS -> Security Prevention -> Abnormal Login -> Customize legitimate login baseline.
+      doc: https://help.aliyun.com/zh/security-center/user-guide/abnormal-logon
+
+  - id: sas-011
+    name: Image Scanning Enabled
+    category: Coverage
+    weight: 6
+    severity: medium
+    rule:
+      type: ratio
+      numerator: $.container_image.ScannedRepos
+      denominator: $.container_image.TotalRepos
+      thresholds:
+        full: ">= 0.9"
+        partial: ">= 0.5"
+        fail: "< 0.5"
+    remediation:
+      effort: medium
+      steps: |
+        Essential for containerized customers. Image vulnerabilities discovered only at container runtime stage is too late.
+        1. SAS -> Container Security -> Image Security -> Associate ACR/Harbor repositories
+        2. Configure CI/CD blocking policy: Auto-fail builds when high-risk vulnerabilities are detected
+      doc: https://help.aliyun.com/zh/security-center/user-guide/container-image-scan
+
+  - id: sas-012
+    name: Application Whitelist
+    category: Protection Strength
+    weight: 4
+    severity: low
+    rule:
+      type: exists
+      path: $.app_whitelist.Status
+      expect: "enabled"
+    remediation:
+      effort: high
+      steps: |
+        Recommended for high-security scenarios (financial core/industrial control/government):
+        Only allow processes from a preset list to run; block all unknown binaries.
+        Long setup period (requires 1-2 weeks of application inventory first), but provides the best root-cause defense against cryptomining/ransomware/0-day.
+      doc: https://help.aliyun.com/zh/security-center/user-guide/application-whitelist
+
+  - id: sas-013
+    name: Honeypot / Decoy Deployment
+    category: Best Practice
+    weight: 3
+    severity: low
+    rule:
+      type: range
+      path: $.honeypot.DeployedCount
+      thresholds:
+        full: ">= 3"
+        partial: ">= 1"
+        fail: "< 1"
+    remediation:
+      effort: medium
+      steps: |
+        Honeypots capture lateral movement attacks at extremely low cost; recommend deploying at least 3 (one each for DB/SSH/Web).
+        SAS -> Advanced Threat -> Honeypot -> Deploy to internal network segments.
+        Triggers automatic alerts + forensics upon detection, with virtually no false positives.
+      doc: https://help.aliyun.com/zh/security-center/user-guide/honeypot-overview
+
+  - id: sas-014
+    name: AK / Credential Leak Monitoring
+    category: Protection Strength
+    weight: 6
+    severity: medium
+    rule:
+      type: exists
+      path: $.ak_leak_monitor.Status
+      expect: "enabled"
+    remediation:
+      effort: low
+      steps: |
+        AK leak incidents rank in the Top 3 of major Alibaba Cloud security events.
+        SAS -> Cloud Platform Configuration -> AK Leak Monitoring -> Enable full GitHub/GitLab monitoring.
+        Recommend also enabling Cloud Product Configuration Check (CSPM) to detect high-risk roles/publicly accessible OSS, etc.
+      doc: https://help.aliyun.com/zh/security-center/user-guide/ak-leak-monitoring
+
+  - id: sas-015
+    name: Asset Synchronization Completeness
+    category: Coverage
+    weight: 4
+    severity: low
+    rule:
+      type: ratio
+      numerator: $.asset_sync.SyncedAccounts
+      denominator: $.asset_sync.TotalCloudAccounts
+      thresholds:
+        full: ">= 0.9"
+        partial: ">= 0.5"
+        fail: "< 0.5"
+    remediation:
+      effort: medium
+      steps: |
+        Most common issue for multi-account customers: SAS only installed on the primary account, sub-account assets completely invisible.
+        SAS -> Multi-Account Management -> Associate sub-accounts -> Authorize asset synchronization.
+        Recommend using Alibaba Cloud Resource Directory (RD) for batch authorization.
+      doc: https://help.aliyun.com/zh/security-center/user-guide/multi-account-management

@@ -1,0 +1,285 @@
+product: WAF 3.0
+version: 0.1.0
+# Total weight within a single product = 100
+# severity is only used for report sorting, does not affect scoring
+
+checks:
+  - id: waf-001
+    name: Protection Object Coverage Rate
+    category: Coverage
+    weight: 12
+    severity: high
+    rule:
+      type: ratio
+      numerator: $.defense_resources.TotalCount
+      denominator: $.client_assets.TotalDomains
+      thresholds:
+        full: ">= 0.95"
+        partial: ">= 0.7"
+        fail: "< 0.7"
+    remediation:
+      effort: medium
+      steps: |
+        1. WAF 3.0 Console -> Asset Center -> Protected Objects -> Add unprotected domains
+        2. Modify DNS CNAME to point to the CNAME address provided by WAF
+        3. Enable protection after verifying back-to-origin connectivity
+      doc: https://help.aliyun.com/zh/waf/web-application-firewall-3-0/user-guide/add-a-domain-name-1
+
+  - id: waf-002
+    name: Bot Management Score Threshold Reasonableness
+    category: Protection Strength
+    weight: 6
+    severity: medium
+    rule:
+      type: range
+      path: $.bot_config.ScoreThreshold
+      thresholds:
+        full: "60..80"
+        partial: "40..60 or 80..90"
+        fail: "< 40 or > 90"
+    remediation:
+      effort: low
+      steps: |
+        A threshold too low tends to block legitimate users; too high will miss malicious crawlers.
+        Recommend starting at 70 and observing for 7 days, then fine-tuning based on false positive rate (adjust by +/-5 each time).
+      doc: https://help.aliyun.com/zh/waf/web-application-firewall-3-0/user-guide/configure-bot-management
+
+  - id: waf-003
+    name: Log Archiving Enabled
+    category: Compliance Alignment
+    weight: 4
+    severity: low
+    rule:
+      type: exists
+      path: $.log_service.Status
+      expect: "enabled"
+    remediation:
+      effort: low
+      steps: |
+        WAF 3.0 -> System Management -> Log Service -> One-click enable log delivery to SLS.
+        For compliance-driven customers, recommend retention >= 180 days; MLPS Level 3 requires >= 6 months.
+      doc: https://help.aliyun.com/zh/waf/web-application-firewall-3-0/user-guide/log-service
+
+  - id: waf-004
+    name: Precise Protection Rule Enablement Status
+    category: Protection Strength
+    weight: 10
+    severity: high
+    rule:
+      type: range
+      path: $.defense_rules.CustomAclRuleCount
+      thresholds:
+        full: ">= 5"
+        partial: ">= 1"
+        fail: "< 1"
+    remediation:
+      effort: medium
+      steps: |
+        No precise protection rules = fully relying on default rule sets, lacking business-side protection.
+        Recommend configuring at least: admin panel IP whitelist, API path restrictions, sensitive parameter validation.
+        WAF 3.0 -> Protection Configuration -> Precise Protection -> Create Rule.
+      doc: https://help.aliyun.com/zh/waf/web-application-firewall-3-0/user-guide/configure-custom-rules
+
+  - id: waf-005
+    name: API Security Feature Activation
+    category: Coverage
+    weight: 12
+    severity: high
+    rule:
+      type: exists
+      path: $.api_security.Status
+      expect: "enabled"
+    remediation:
+      effort: medium
+      steps: |
+        1. WAF 3.0 -> API Security -> Activate (billed by API count)
+        2. Wait 24h for API asset discovery to complete
+        3. Configure sensitive data detection rules (phone numbers/ID cards/bank cards)
+        4. Enable abnormal call behavior analysis
+      doc: https://help.aliyun.com/zh/waf/web-application-firewall-3-0/user-guide/api-security-overview
+
+  - id: waf-006
+    name: Custom Rule Count Healthy Range
+    category: Best Practice
+    weight: 5
+    severity: medium
+    rule:
+      type: range
+      path: $.defense_rules.TotalCustomRules
+      thresholds:
+        full: "10..200"
+        partial: "5..10 or 200..500"
+        fail: "< 5 or > 500"
+    remediation:
+      effort: medium
+      steps: |
+        Too few rules: Precise protection not implemented, recommend reviewing business whitelists/path restrictions
+        Too many rules (>500): Likely contains historical redundancies, recommend quarterly cleanup
+        WAF 3.0 -> Protection Configuration -> Rule Management -> Filter by "0 hits in last 30 days" for cleanup
+      doc: https://help.aliyun.com/zh/waf/web-application-firewall-3-0/user-guide/configure-custom-rules
+
+  - id: waf-007
+    name: Alert Notification Channel Configuration
+    category: Response Timeliness
+    weight: 4
+    severity: low
+    rule:
+      type: exists
+      path: $.notifications.WebhookConfigured
+      expect: true
+    remediation:
+      effort: low
+      steps: |
+        No alert channel = can only review logs after the fact when under attack.
+        WAF 3.0 -> System Management -> Alert Settings -> Configure DingTalk/Feishu/Email Webhook.
+        Recommend configuring at least two rules: "Attack event IP frequency > 1000/min" and "Protection object anomaly".
+      doc: https://help.aliyun.com/zh/waf/web-application-firewall-3-0/user-guide/alarm-settings
+
+  - id: waf-008
+    name: HTTPS Certificate + TLS Version
+    category: Compliance Alignment
+    weight: 8
+    severity: high
+    rule:
+      type: enum
+      path: $.tls_config.MinVersion
+      expect: "TLSv1.2"
+      partial_values: ["TLSv1.3"]
+      fail_values: ["TLSv1.0", "TLSv1.1", "SSLv3"]
+    remediation:
+      effort: low
+      steps: |
+        TLS 1.0/1.1 has been marked as insecure by PCI-DSS and MLPS 2.0 Level 3.
+        WAF 3.0 -> Protected Objects -> Select domain -> Advanced -> TLS Configuration -> Minimum version = TLSv1.2.
+        Note: This will disconnect access from browsers below IE10; assess business impact beforehand.
+      doc: https://help.aliyun.com/zh/waf/web-application-firewall-3-0/user-guide/configure-https
+
+  - id: waf-009
+    name: Big Data Deep Learning Engine Enabled
+    category: Protection Strength
+    weight: 7
+    severity: high
+    rule:
+      type: exists
+      path: $.ai_engine.Status
+      expect: "enabled"
+    remediation:
+      effort: low
+      steps: |
+        The deep learning engine provides significant improvement over rule-based engines for detecting unknown attacks/0-day exploits.
+        WAF 3.0 -> Protection Configuration -> Protection Rule Groups -> Enable "Big Data Deep Learning Engine".
+        For first-time activation, recommend running in "Observation Mode" for 7 days, then switch to "Block Mode" after whitelisting.
+      doc: https://help.aliyun.com/zh/waf/web-application-firewall-3-0/user-guide/big-data-deep-learning
+
+  - id: waf-010
+    name: Mainstream CMS Rule Set Enabled
+    category: Best Practice
+    weight: 5
+    severity: medium
+    rule:
+      type: exists
+      path: $.rule_groups.CmsRuleEnabled
+      expect: true
+    remediation:
+      effort: low
+      steps: |
+        If your business uses open-source CMS platforms like WordPress/Drupal/ThinkPHP/Discuz,
+        make sure to enable the corresponding CMS rule sets to cover common CVEs for that CMS.
+        WAF 3.0 -> Protection Rule Groups -> CMS Rules -> Select based on your business.
+      doc: https://help.aliyun.com/zh/waf/web-application-firewall-3-0/user-guide/web-protection-rule-groups
+
+  - id: waf-011
+    name: Rate Limiting Rules
+    category: Protection Strength
+    weight: 8
+    severity: high
+    rule:
+      type: range
+      path: $.defense_rules.RateLimitRuleCount
+      thresholds:
+        full: ">= 3"
+        partial: ">= 1"
+        fail: "< 1"
+    remediation:
+      effort: medium
+      steps: |
+        No rate limiting = CC attacks/API abuse/enumeration attacks will hit the origin server directly.
+        Recommend configuring at least three rules:
+        - Login endpoint: Single IP/minute <= 10 requests
+        - Registration endpoint: Single IP/hour <= 5 requests
+        - SMS verification code endpoint: Single IP/day <= 20 requests
+        WAF 3.0 -> Protection Configuration -> CC Protection -> Custom Rules.
+      doc: https://help.aliyun.com/zh/waf/web-application-firewall-3-0/user-guide/configure-rate-limit
+
+  - id: waf-012
+    name: Data Masking Rules
+    category: Compliance Alignment
+    weight: 6
+    severity: medium
+    rule:
+      type: exists
+      path: $.data_masking.Status
+      expect: "enabled"
+    remediation:
+      effort: low
+      steps: |
+        Retaining plaintext phone numbers/ID cards/bank cards in logs = high privacy compliance risk (PIPL/GDPR).
+        WAF 3.0 -> Protection Configuration -> Data Masking -> Enable default rules (phone numbers/ID cards/bank cards).
+        Masking is completed before log delivery to SLS; downstream audit/analysis is not affected.
+      doc: https://help.aliyun.com/zh/waf/web-application-firewall-3-0/user-guide/data-masking
+
+  - id: waf-013
+    name: IP Blocklist Usage Reasonableness
+    category: Best Practice
+    weight: 5
+    severity: medium
+    rule:
+      type: range
+      path: $.defense_rules.IpBlocklistCount
+      thresholds:
+        full: "5..200"
+        partial: "0..5 or 200..1000"
+        fail: "> 1000"
+    remediation:
+      effort: medium
+      steps: |
+        Too few blocklist entries: Frequently attacking malicious IPs not captured
+        Too large blocklist (>1000): Impacts matching performance, mostly historical invalid entries
+        Recommendation: Auto-blocklist single IPs with >100 attacks; quarterly archive and clean entries inactive for 90 days.
+      doc: https://help.aliyun.com/zh/waf/web-application-firewall-3-0/user-guide/configure-ip-blacklist
+
+  - id: waf-014
+    name: Protection Object Group Reasonableness
+    category: Best Practice
+    weight: 4
+    severity: low
+    rule:
+      type: range
+      path: $.defense_resources.GroupCount
+      thresholds:
+        full: ">= 3"
+        partial: ">= 1"
+        fail: "< 1"
+    remediation:
+      effort: low
+      steps: |
+        All domains mixed in one group: Cannot differentiate policies by business needs (production vs test vs admin).
+        Recommend at least three groups: External business/Admin panel/Test environment, each with different strictness rules.
+      doc: https://help.aliyun.com/zh/waf/web-application-firewall-3-0/user-guide/protection-object-group
+
+  - id: waf-015
+    name: Custom Block Page
+    category: Best Practice
+    weight: 4
+    severity: low
+    rule:
+      type: exists
+      path: $.block_page.Customized
+      expect: true
+    remediation:
+      effort: low
+      steps: |
+        Default 405 block page exposes WAF vendor = gives attackers bypass clues.
+        WAF 3.0 -> Protected Objects -> Advanced Configuration -> Custom Block Page ->
+        Recommend changing to simple business-neutral HTML (e.g., "Access error, please try again later") with a tracking ID.
+      doc: https://help.aliyun.com/zh/waf/web-application-firewall-3-0/user-guide/custom-block-page

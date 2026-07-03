@@ -1,0 +1,78 @@
+# {{ customer_name }} - Cloud Security Configuration Health Check - Executive Summary
+
+This assessment covers {{ product_count }} product(s): {{ product_list }}.
+
+> Check Time: {{ generated_at }}  |  Products Covered: {{ product_count }}  |  Check Rules: {{ total_checks }}
+
+---
+
+## 1. Overall Conclusion
+
+End-to-end configuration health check performed for **{{ customer_name }}**. {% if skipped_products %}Skipped products (not purchased / no data): {{ skipped_products }}.{% endif %}
+
+**Overall Score {{ overall_score }} / 100  -  Grade {{ overall_grade }} ({{ grade_label }})**
+
+{{ headline_sentence }}
+
+| Product | Score | Grade | Passed | Partial | Failed |
+|---------|------:|:-----:|:------:|:-------:|:------:|
+{% for p in products -%}
+| {{ p.name }} | **{{ p.score }}** | {{ p.grade }} | {{ p.full }} | {{ p.partial }} | {{ p.fail }} |
+{% endfor %}
+
+---
+
+## 2. Risk Breakdown
+
+Based on "Severity x Business Impact", **{{ top_risks | length }}** high-priority remediation items were identified, concentrated in three areas:
+
+{% for area in risk_areas %}
+**{{ loop.index }}. {{ area.title }}**
+
+{{ area.desc }}
+
+{% for item in area.entries %}
+- `{{ item.product_label }} - {{ item.name }}` — Current: {{ item.actual_value }}, {{ item.impact }}
+{% endfor %}
+
+{% endfor %}
+
+---
+
+## 3. Recommended Actions (by Priority)
+
+{% if p0_items %}
+### P0 - Immediate Action (Within 1 Week)
+
+{% for it in p0_items -%}
+- **[{{ it.product_label }}]** {{ it.name }}  ->  {{ it.first_step }} (Effort: {{ it.effort_label }})
+{% endfor %}
+{% endif %}
+
+{% if p1_items %}
+### P1 - Near-term Improvement (2-4 Weeks)
+
+{% for it in p1_items -%}
+- **[{{ it.product_label }}]** {{ it.name }}  ->  {{ it.first_step }} (Effort: {{ it.effort_label }})
+{% endfor %}
+{% endif %}
+
+{% if p2_items %}
+### P2 - Long-term Optimization (Within Quarter)
+
+{% for it in p2_items -%}
+- **[{{ it.product_label }}]** {{ it.name }} (Effort: {{ it.effort_label }})
+{% endfor %}
+{% endif %}
+
+---
+
+## 4. Next Steps
+
+1. Customer ops team to take the **Remediation Checklist Excel** (10-column structure) and track progress via the "Implementation Status" column
+2. After P0 items are remediated, submit new configuration data for re-testing to verify fixes
+3. Recommend conducting a configuration health re-scan quarterly, incorporating into the security monthly report
+
+---
+
+*This report is generated based on configuration metadata submitted by the customer and does not involve any credential transfer. Check criteria are based on Alibaba Cloud security product official documentation and industry best practices.*
