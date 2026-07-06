@@ -35,31 +35,15 @@ This skill performs comprehensive security inspection for Alibaba Cloud WAF 3.0 
 ## Observability Initialization (MUST run before any command)
 
 ```bash
-if [ -z "$ALICLOUD_SKILL_SESSION_ID" ]; then
-  export ALICLOUD_SKILL_SESSION_ID="$(cat /proc/sys/kernel/random/uuid 2>/dev/null | tr -d '-' || uuidgen | tr -d '-' | tr 'A-F' 'a-f')"
+if [ -z "$SKILL_SESSION_ID" ]; then
+  export SKILL_SESSION_ID="$(cat /proc/sys/kernel/random/uuid 2>/dev/null | tr -d '-' || uuidgen | tr -d '-' | tr 'A-F' 'a-f')"
 fi
-export ALICLOUD_SKILL_INVOCATION_ID="$(cat /proc/sys/kernel/random/uuid 2>/dev/null | tr -d '-' | head -c 16 || uuidgen | tr -d '-' | tr 'A-F' 'a-f' | head -c 16)"
-export ALIBABA_CLOUD_USER_AGENT="AlibabaCloud-Agent-Skills/alibabacloud-waf-security-monitor/s-${ALICLOUD_SKILL_SESSION_ID}/i-${ALICLOUD_SKILL_INVOCATION_ID}"
-export ALIBABA_CLOUD_OTEL_TRACEPARENT="00-${ALICLOUD_SKILL_SESSION_ID}-${ALICLOUD_SKILL_INVOCATION_ID}-01"
+export ALIBABA_CLOUD_USER_AGENT="AlibabaCloud-Agent-Skills/alibabacloud-waf-security-monitor/${SKILL_SESSION_ID}"
+export ALIBABA_CLOUD_OTEL_TRACEPARENT="00-${SKILL_SESSION_ID}-01"
 export ALIBABA_CLOUD_OTEL_BAGGAGE="skill=alibabacloud-waf-security-monitor,source=agent-skills"
 ```
 
 Do not skip, alter formats, or place PII in baggage.
-
-## AI-Mode Lifecycle
-
-> At the **start** of the Core Workflow (before any CLI invocation):
-> **[MUST] Enable AI-Mode** -- AI-mode is required for Agent Skill execution.
-> Run the following commands before any CLI invocation:
-> ```bash
-> aliyun configure ai-mode enable
-> aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-waf-security-monitor"
-> ```
-> **[MUST] Disable AI-Mode at EVERY exit point** -- Before delivering the final response for ANY reason, always disable AI-mode first. This applies to ALL exit paths: workflow success, workflow failure, error/exception, user cancellation, session end, or any other scenario where no further CLI commands will be executed.
-> AI-mode is only used for Agent Skill invocation scenarios and MUST NOT remain enabled after the skill stops running.
-> ```bash
-> aliyun configure ai-mode disable
-> ```
 
 ## Authentication
 
@@ -112,6 +96,8 @@ All permissions are **read-only** (Describe/List only). See [references/ram-poli
 | Time range | Optional | Inspection time window | Last 24 hours |
 | Comparison mode | Optional | Period-over-period baseline | Day-over-day |
 | Region scope | Optional | Which WAF regions to inspect | Both cn-hangzhou and ap-southeast-1 |
+
+> **Note: InstanceId is auto-discovered — no user input needed.** Phase 1 calls `describe-instance` for each region to obtain the WAF InstanceId automatically. All subsequent API calls use the discovered value. Users never need to provide `--instance-id` manually.
 
 ## Core Inspection Workflow
 
@@ -183,6 +169,9 @@ for region in cn-hangzhou ap-southeast-1; do
       --instance-id $instance_id --region $region \
       --user-agent "$ALIBABA_CLOUD_USER_AGENT" 2>&1)
     echo "$RESULT" >> /tmp/waf_skill_output.log
+    # Cross-region mismatch detection: flag resources whose ResourceRegionId != WAF instance region
+    echo "$RESULT" | python3 scripts/detect_region_mismatch.py \
+      --region "$region" --instance-id "$instance_id" >> /tmp/waf_skill_output.log
     RESULT=$(aliyun waf-openapi describe-certs \
       --instance-id $instance_id --region $region \
       --user-agent "$ALIBABA_CLOUD_USER_AGENT" 2>&1)
@@ -329,6 +318,8 @@ Change rate = (Base - Compare) / Compare x 100%. Thresholds: +/-50-100%=Attentio
 
 > **Report**: Follow [Report Template](references/report-template.md). Group by Region.
 >
+> **Cross-Region Mismatch**: After verification, check if the log contains `[REGION_MISMATCH_SUMMARY]` lines. If present, include a "Cross-Region Resource Risk" section in the report listing each mismatched resource. Treat as a configuration risk item in the Conclusion.
+>
 > **Error vs Empty** -- distinguishing these prevents misrepresenting API failures as "zero incidents":
 > - API 200 + `[]` -> `0 (API returned empty)`
 > - API error -> `[QUERY FAILED (ErrorCode: XXX)]`
@@ -364,9 +355,7 @@ See [references/verification-method.md](references/verification-method.md) for d
 
 ## Cleanup
 
-```bash
-aliyun configure ai-mode disable
-```
+> No explicit cleanup required. All operations are read-only and no resources are provisioned.
 
 ## Best Practices
 
@@ -379,7 +368,7 @@ aliyun configure ai-mode disable
 7. Distinguish API errors from empty results in the report
 8. Use `scripts/verify_output.py` to validate data completeness before writing the report
 9. Never fabricate data -- all numbers must trace to API responses in the log file
-10. Disable AI-mode at every exit path (success, failure, timeout)
+10. Execute all inspection phases regardless of prior errors -- each dimension is independent
 11. Use `--page-size 10` for describe-domains (larger values trigger API parameter errors)
 
 ## References

@@ -83,7 +83,17 @@ for b in blocks:
                 seen_certs.add(key)
                 certs.append(key)
 
-print(f'[VERIFY] Instances={instances} Domains={domains} Certs={len(certs)}')
+region_mismatches = []
+for line in raw.splitlines():
+    if line.startswith('[REGION_MISMATCH] '):
+        region_mismatches.append(line)
+
+print(f'[VERIFY] Instances={instances} Domains={domains} Certs={len(certs)} RegionMismatches={len(region_mismatches)}')
+
+if region_mismatches:
+    print(f'[WARN] verify_output: {len(region_mismatches)} cross-region resource mismatch(es) detected -- WAF instance region differs from resource region. Review the report "Cross-Region Resource Risk" section.')
+    for m in region_mismatches:
+        print(m)
 
 if not instances:
     print("[WARN] verify_output: no WAF instances discovered. Check describe-instance output for errors.", file=sys.stderr)

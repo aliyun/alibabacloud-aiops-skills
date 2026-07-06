@@ -96,3 +96,4 @@
 11. Conclusion respects red-line: no positive assertion when QUERY FAILED exists
 12. AI-Mode disabled at exit
 13. Error interception active: [API ERROR] logged for each failed call, execution not interrupted
+14. Cross-region mismatch: `detect_region_mismatch.py` called after each `describe-cloud-resource-list`; if `[REGION_MISMATCH_SUMMARY]` in log, report contains "Cross-Region Resource Risk" section

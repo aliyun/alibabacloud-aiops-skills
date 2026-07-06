@@ -41,6 +41,8 @@
 |-------------|-------------|---------------|--------|--------|
 | ALB/ECS/CLB | <...> | <...> | <...> | Normal |
 
+> **Cross-Region Check**: If `[REGION_MISMATCH_SUMMARY]` exists in the log (output by `scripts/detect_region_mismatch.py`), add a "Cross-Region Resource Risk" section immediately after this table (see template below).
+
 #### SSL Certificates
 | Certificate Name | Bound Domain | Expiry Date | Days Remaining | Status |
 |-----------------|-------------|-------------|----------------|--------|
@@ -195,4 +197,23 @@ When certificates are expiring soon, add a dedicated section:
 1. Contact certificate administrator to renew immediately
 2. If using Alibaba Cloud SSL Certificate Service, one-click renewal is available in the console
 3. After renewal, re-upload the certificate to WAF
+```
+
+---
+
+## Cross-Region Resource Risk Template
+
+When `[REGION_MISMATCH_SUMMARY]` is present in the log, add this section under Asset Inventory:
+
+```markdown
+### Cross-Region Resource Risk
+
+> **Risk**: The following cloud resources are connected to a WAF instance in a different region.
+> This may cause increased latency, routing anomalies, or protection policy mismatches.
+> Confirm whether this is intentional (e.g. Global Accelerator scenarios). If not, reconfigure the access.
+
+| WAF Instance Region | Resource Type | Resource ID | Resource Region | Recommendation |
+|---------------------|---------------|-------------|-----------------|----------------|
+| ap-southeast-1 | ecs | i-xxx | cn-hangzhou | Verify intent; reconfigure if unintentional |
+| <waf_region> | <resource_type> | <resource_id> | <resource_region> | Verify intent |
 ```

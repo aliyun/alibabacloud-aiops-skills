@@ -99,6 +99,14 @@ INCORRECT: Writing "status normal" / "no risk" when ANY `[QUERY FAILED]` exists.
 INCORRECT: Cross-API data substitution (using cert data to fill domain fields).
 INCORRECT: Generating positive conclusion when majority of APIs failed.
 
+## 16. Cross-Region Resource Mismatch Detection
+
+CORRECT: After each `describe-cloud-resource-list` call, pipe output to `python3 scripts/detect_region_mismatch.py --region "$region" --instance-id "$instance_id"` and append result to log.
+CORRECT: When log contains `[REGION_MISMATCH_SUMMARY]`, report includes "Cross-Region Resource Risk" table with waf_region, resource_region, resource_type, resource_id columns.
+INCORRECT: Skipping the detect_region_mismatch.py call after describe-cloud-resource-list.
+INCORRECT: Reporting "all normal" when log contains `[REGION_MISMATCH]` lines.
+INCORRECT: Treating cross-region mismatch as an error (it is a risk/warning requiring user confirmation).
+
 ## 15. Unified Error Interception
 
 CORRECT: After every Phase 4 API call, checks for `HttpCode:400` or `ErrorCode`, logs `[API ERROR]`, and continues.

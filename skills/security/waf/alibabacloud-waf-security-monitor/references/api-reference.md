@@ -1,5 +1,17 @@
 # API Parameter Reference
 
+## API Version
+
+The `waf-openapi` CLI plugin supports two API versions:
+
+| Version | Scope | Used by this Skill |
+|---------|-------|-------------------|
+| `2021-10-01` | WAF 3.0 — all APIs in this skill | **Yes** (CLI default, no `--api-version` needed) |
+| `2019-09-10` | WAF 2.0 legacy APIs (e.g. `describe-instance-info`) | **No** |
+
+**[FORBIDDEN]** Never add commands from `2019-09-10` to this skill. WAF 3.0 accounts use `2021-10-01` exclusively.
+If a command call fails with "This command is not available in the current API version", it means you have used a legacy command — do NOT add `--api-version 2019-09-10` to this skill.
+
 ## Region Parameter
 
 WAF 3.0 uses `--region` (CLI global flag) for region routing. Only 2 business regions are supported:
@@ -27,7 +39,7 @@ Pattern:
 |-----|---------------------|-------------|
 | `describe-instance` | --region | Query WAF instance details |
 | `describe-domains` | --instance-id, --region | Query CNAME-connected domains |
-| `describe-cloud-resource-list` | --instance-id, --region | Query cloud product access |
+| `describe-cloud-resource-list` | --instance-id, --region | Query cloud product access. Response includes `ResourceRegionId` (region of the protected resource), `ResourceProduct` (ecs/alb/clb), `ResourceInstanceId`. Use `ResourceRegionId` vs WAF `--region` to detect cross-region mismatches. |
 | `describe-certs` | --instance-id, --region | Query SSL certificates |
 | `describe-flow-chart` | --instance-id, --start-timestamp, --end-timestamp, --interval, --region | Traffic time-series |
 | `describe-peak-trend` | --instance-id, --start-timestamp, --end-timestamp, --interval, --region | QPS trend |
