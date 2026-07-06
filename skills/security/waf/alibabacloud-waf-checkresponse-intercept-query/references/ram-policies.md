@@ -12,6 +12,7 @@ This skill requires the following RAM permissions to operate correctly.
 | `waf:DescribeSlsLogStore` | `*` | Get SLS log storage configuration |
 | `waf:DescribeSlsLogStoreStatus` | `*` | Check global log service status |
 | `waf:DescribeResourceLogStatus` | `*` | Check protection object log switch |
+| `waf:DescribeDefenseResources` | `*` | List protection objects (resources) associated with a WAF instance |
 | `waf:DescribeDefenseTemplates` | `*` | List defense templates |
 | `waf:DescribeDefenseRule` | `*` | Query defense rule details |
 | `waf:DescribeDefenseRules` | `*` | List defense rules |
@@ -53,6 +54,7 @@ These permissions are only needed when enabling log service or log collection fo
         "waf:DescribeSlsLogStore",
         "waf:DescribeSlsLogStoreStatus",
         "waf:DescribeResourceLogStatus",
+        "waf:DescribeDefenseResources",
         "waf:DescribeDefenseTemplates",
         "waf:DescribeDefenseRule",
         "waf:DescribeDefenseRules",

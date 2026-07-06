@@ -6,11 +6,11 @@
 
 ### 1. Only Perform Disable Operations
 
-Only call `ModifyDefenseRule` or `ModifyDefenseTemplate` to set the rule status to `Status=0`
+Only call `modify-defense-rule` or `modify-defense-template` to set the rule status to `Status=0`
 
 ### 2. Never Delete Rules
 
-Even if the disable operation fails, you **must not** call `DeleteDefenseRule` to delete the rule
+Even if the disable operation fails, you **must not** call `delete-defense-rule` to delete the rule
 
 ### 3. Never Modify Rule Content
 
@@ -28,14 +28,12 @@ Before executing any write operation, **always query the current state first** a
 
 ```bash
 # Step 1: Check current rule status
-aliyun waf-openapi DescribeDefenseRule \
+aliyun waf-openapi describe-defense-rule \
   --region <region-id> \
-  --InstanceId '<instance-id>' \
-  --TemplateId <template-id> \
-  --RuleId <rule-id> \
-  --DefenseScene '<defense-scene>' \
-  --RegionId '<region-id>' \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-checkresponse-intercept-query
+  --instance-id '<instance-id>' \
+  --template-id <template-id> \
+  --rule-id <rule-id> \
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-waf-checkresponse-intercept-query/${SESSION_ID}"
 
 # Step 2: Only proceed if the rule is NOT already in the target state
 # If the rule is already disabled (Status=0), skip the disable call
@@ -60,54 +58,51 @@ Continue? Reply "yes" to confirm
 
 ## Example Commands
 
-### Recommended: Use ModifyDefenseRuleStatus (Simple and Direct)
+### Recommended: Use modify-defense-rule-status (Simple and Direct)
 
 **Disable a rule**:
 ```bash
-aliyun waf-openapi ModifyDefenseRuleStatus \
+aliyun waf-openapi modify-defense-rule-status \
   --region ap-southeast-1 \
-  --InstanceId 'waf_v2_public_cn-xxx' \
-  --RuleId 20400384 \
-  --RuleStatus 0 \
-  --RegionId ap-southeast-1 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-checkresponse-intercept-query
+  --instance-id 'waf_v2_public_cn-xxx' \
+  --rule-id 20400384 \
+  --rule-status 0 \
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-waf-checkresponse-intercept-query/${SESSION_ID}"
 ```
 
 **Enable a rule**:
 ```bash
-aliyun waf-openapi ModifyDefenseRuleStatus \
+aliyun waf-openapi modify-defense-rule-status \
   --region ap-southeast-1 \
-  --InstanceId 'waf_v2_public_cn-xxx' \
-  --RuleId 20400384 \
-  --RuleStatus 1 \
-  --RegionId ap-southeast-1 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-checkresponse-intercept-query
+  --instance-id 'waf_v2_public_cn-xxx' \
+  --rule-id 20400384 \
+  --rule-status 1 \
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-waf-checkresponse-intercept-query/${SESSION_ID}"
 ```
 
-### Alternative: Use ModifyDefenseRule (Requires Full Configuration)
+### Alternative: Use modify-defense-rule (Requires Full Configuration)
 
 ```bash
-aliyun waf-openapi ModifyDefenseRule \
+aliyun waf-openapi modify-defense-rule \
   --region ap-southeast-1 \
-  --InstanceId waf_v2_public_cn-xxx \
-  --Rules '{"id": 20400384, "Status": 0, "Config": "..."}' \
-  --RegionId ap-southeast-1 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-waf-checkresponse-intercept-query
+  --instance-id waf_v2_public_cn-xxx \
+  --rules '{"id": 20400384, "Status": 0, "Config": "..."}' \
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-waf-checkresponse-intercept-query/${SESSION_ID}"
 ```
 
-> **Note**: `ModifyDefenseRule` requires passing the complete rule configuration with complex parameters. It is recommended to use `ModifyDefenseRuleStatus` first.
+> **Note**: `modify-defense-rule` requires passing the complete rule configuration with complex parameters. It is recommended to use `modify-defense-rule-status` first.
 
 ### Wrong: Never Delete (Even on Failure)
 
 ```bash
-aliyun waf-openapi DeleteDefenseRule ...  # Forbidden
+aliyun waf-openapi delete-defense-rule ...  # Forbidden
 ```
 
 ### Wrong: Never Modify Configuration
 
 ```bash
-aliyun waf-openapi ModifyDefenseRule \
-  --Rules '{"id": 20400384, "Config": {"action": "monitor"}}'  # Forbidden
+aliyun waf-openapi modify-defense-rule \
+  --rules '{"id": 20400384, "Config": {"action": "monitor"}}'  # Forbidden
 ```
 
 ---
@@ -130,7 +125,7 @@ Check current rule status via DescribeDefenseRule    <-- Idempotent check
    Inform user    Confirm operation with user
    (no action     (disable only, no deletion)
     needed)              |
-                  Execute ModifyDefenseRuleStatus
+                  Execute modify-defense-rule-status
                          |
                     +-------------+
                     |   Success?  |

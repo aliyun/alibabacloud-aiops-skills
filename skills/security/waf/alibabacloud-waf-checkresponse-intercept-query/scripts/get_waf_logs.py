@@ -10,9 +10,12 @@ import json
 import time
 import argparse
 import re
+import uuid
 
-# User-Agent header for all Alibaba Cloud API calls
-ALIYUN_USER_AGENT = "AlibabaCloud-Agent-Skills/alibabacloud-waf-checkresponse-intercept-query"
+# User-Agent header for all Alibaba Cloud API calls (includes session-id per Observability spec)
+_SKILL_NAME = "AlibabaCloud-Agent-Skills/alibabacloud-waf-checkresponse-intercept-query"
+_SESSION_ID = uuid.uuid4().hex
+ALIYUN_USER_AGENT = f"{_SKILL_NAME}/{_SESSION_ID}"
 
 # ---------------------------------------------------------------------------
 # Sensitive data masking helpers
@@ -227,11 +230,10 @@ def query_rule_detail(instance_id, rule_id, region):
         Rule detail dict, or None on failure
     """
     cmd = [
-        "aliyun", "waf-openapi", "DescribeDefenseRule",
+        "aliyun", "waf-openapi", "describe-defense-rule",
         "--region", region,
-        "--InstanceId", instance_id,
-        "--RuleId", str(rule_id),
-        "--RegionId", region,
+        "--instance-id", instance_id,
+        "--rule-id", str(rule_id),
         "--user-agent", ALIYUN_USER_AGENT
     ]
     
