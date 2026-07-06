@@ -18,35 +18,51 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def _print_human(result: dict) -> None:
-    print(f"[目标] instance={result['instance_id']} region={result['region_id']}")
+    print(f"[Target] instance={result['instance_id']} region={result['region_id']}")
     if result.get("inspection_metric_source"):
-        print(f"[指标来源] metricSource={result['inspection_metric_source']}")
-    print(f"[InitialSysom] {'通过' if result.get('initial_sysom_ready') else '未通过'}")
+        print(f"[Metric Source] metricSource={result['inspection_metric_source']}")
+    print(f"[InitialSysom] {'Ready' if result.get('initial_sysom_ready') else 'Not Ready'}")
     initial_check = result.get("initial_sysom_check")
     if isinstance(initial_check, dict) and not result.get("initial_sysom_ready"):
         if initial_check.get("message"):
-            print(f"[InitialSysom说明] {initial_check['message']}")
+            print(f"[InitialSysom Details] {initial_check['message']}")
         if initial_check.get("activation_prompt"):
-            print(f"[开通确认] {initial_check['activation_prompt']}")
+            print(f"[Activation Confirmation] {initial_check['activation_prompt']}")
         if initial_check.get("activation_hint"):
-            print(f"[说明] {initial_check['activation_hint']}")
+            print(f"[Hint] {initial_check['activation_hint']}")
         return
-    print(f"[巡检任务] {'已发起' if result.get('inspection_invoked') else '未发起'}")
+    print(f"[Inspection Task] {'Started' if result.get('inspection_invoked') else 'Not Started'}")
     if result.get("inspection_api_available") is False and result.get("inspection_api_unavailable_reason"):
-        print(f"[巡检API状态] 不可用：{result['inspection_api_unavailable_reason']}")
+        print(f"[Inspection API] Unavailable: {result['inspection_api_unavailable_reason']}")
         return
     if result.get("inspection_report_id"):
-        print(f"[报告] report_id={result['inspection_report_id']}")
+        print(f"[Report] report_id={result['inspection_report_id']}")
     if "memory_usage_issue_detected" in result:
-        print(f"[内存高问题] {'命中' if result['memory_usage_issue_detected'] else '未命中'}")
-    print(f"[memgraph 诊断] {'已发起' if result.get('memgraph_diagnosis_invoked') else '未发起'}")
+        print(f"[High Memory Issue] {'Detected' if result['memory_usage_issue_detected'] else 'Not Detected'}")
+    if result.get("memgraph_diagnosis_invoked"):
+        print("[memgraph Diagnosis] Started")
     if result.get("memgraph_diagnosis_task_id"):
-        print(f"[诊断任务] task_id={result['memgraph_diagnosis_task_id']}")
+        print(f"[Diagnosis Task] task_id={result['memgraph_diagnosis_task_id']}")
     diag_result = result.get("memgraph_diagnosis_result")
     if isinstance(diag_result, dict):
-        print(f"[诊断结果] code={diag_result.get('code', '')} message={diag_result.get('message', '')}")
+        print(f"[Diagnosis Result] code={diag_result.get('code', '')} message={diag_result.get('message', '')}")
     if result.get("memgraph_diagnosis_skipped_reason"):
-        print(f"[说明] {result['memgraph_diagnosis_skipped_reason']}")
+        print(f"[Reason] {result['memgraph_diagnosis_skipped_reason']}")
+    conclusion = result.get("inspection_conclusion")
+    if isinstance(conclusion, dict):
+        if conclusion.get("inspection_report_result"):
+            print(f"[Inspection Report Conclusion] {conclusion['inspection_report_result']}")
+        if conclusion.get("diagnosis_report_result"):
+            print(f"[Diagnosis Report Conclusion] {conclusion['diagnosis_report_result']}")
+        if conclusion.get("final_conclusion"):
+            print(f"[Inspection Conclusion] {conclusion['final_conclusion']}")
+        if conclusion.get("report_file_path") and conclusion.get("report_file_path") != "-":
+            print(f"[Report File] {conclusion['report_file_path']}")
+        if conclusion.get("report_file_write_error"):
+            print(f"[Report File Write Failed] {conclusion['report_file_write_error']}")
+        if conclusion.get("report_markdown"):
+            print("[Full Inspection Report]")
+            print(conclusion["report_markdown"])
 
 
 def main() -> int:
@@ -67,10 +83,10 @@ def main() -> int:
         parser.print_help()
         return 1
     except SysomAuthError as e:
-        print(f"[认证失败] {e}", file=sys.stderr)
+        print(f"[Authentication Failed] {e}", file=sys.stderr)
         return 3
     except Exception as e:  # noqa: BLE001
-        print(f"[执行失败] {e}", file=sys.stderr)
+        print(f"[Execution Failed] {e}", file=sys.stderr)
         return 1
 
 

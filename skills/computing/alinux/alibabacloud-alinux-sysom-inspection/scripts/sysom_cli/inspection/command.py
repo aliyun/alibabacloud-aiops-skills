@@ -3,8 +3,10 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+from datetime import datetime
 import hashlib
 import json
+from pathlib import Path
 import re
 import sys
 from typing import Any, Dict, Optional
@@ -14,15 +16,18 @@ from sysom_cli.lib.openapi import SysomOpenApiCaller, normalize_sysom_body
 
 
 class InspectionApiUnavailableError(RuntimeError):
-    """标准巡检 API 在当前环境不可用（如 InvalidAction.NotFound）。"""
+    """Standard inspection API is unavailable in this environment (for example InvalidAction.NotFound)."""
 
 
 MEMORY_USAGE_ITEM = "sysom:metric:memory_usage_rate"
+DIAGNOSIS_TRIGGER_ITEM = "memory_usage_rate"
 SKILL_HUB_SOURCE = "skill_hub"
 DIAGNOSIS_SOURCE_KEY = "__sysom_diagnosis_source"
 LEGACY_DIAGNOSIS_SOURCE_KEYS = ("$diagnosis_source",)
 DEFAULT_DIAGNOSIS_TIMEOUT_SECONDS = 150
 DEFAULT_DIAGNOSIS_POLL_INTERVAL_SECONDS = 1
+DEFAULT_INSPECTION_REPORT_TIMEOUT_SECONDS = 150
+DEFAULT_INSPECTION_REPORT_POLL_INTERVAL_SECONDS = 1
 DEFAULT_ACTIVATION_RETRY_COUNT = 3
 DEFAULT_ACTIVATION_RETRY_INTERVAL_SECONDS = 2
 DEFAULT_SYSOM_AGENT_ID = "74a86327-3170-412c-8e67-da3389ec56a9"
@@ -54,37 +59,74 @@ DEFAULT_INSPECTION_ITEMS = [
     "sysom:metric:file_descriptor_usage",
     "sysom:metric:tid_usage",
 ]
+REPORT_TEMPLATE_FILE = Path(__file__).resolve().parents[3] / "references" / "report-template.md"
+REPORT_OUTPUT_DIR = Path("inspection-reports")
+
+
+def _load_report_template() -> str:
+    default_template = """## Inspection Overview
+- Target Instance: `{instance_id}` ({region_id})
+- Inspection Time: `{report_time}`
+- Inspection Report: `{inspection_report_id}` (Status: {inspection_report_status})
+- Inspection Result: {inspection_report_result}
+- Report File: `{report_file_name}`
+- File Path: `{report_file_path}`
+
+## Abnormal Item Details
+{abnormal_items_markdown}
+
+## Diagnosis Information
+- Diagnosis Status: {diagnosis_status}
+- Diagnosis Task: `{diagnosis_task_id}`
+- Diagnosis Conclusion: {diagnosis_report_result}
+- Root Cause: {diagnosis_root_cause}
+- Suggestion: {diagnosis_suggestion}
+
+## Key Findings
+{diagnosis_key_findings}
+
+## Application Memory Usage Ranking (TOP10)
+{diagnosis_app_mem_ranking}
+
+## Final Conclusion
+{final_conclusion}
+"""
+    try:
+        raw = REPORT_TEMPLATE_FILE.read_text(encoding="utf-8")
+        return raw.strip() or default_template
+    except Exception:  # noqa: BLE001
+        return default_template
 
 
 def _validate_region_id(raw: str) -> str:
     value = str(raw or "").strip()
     if not value:
-        raise argparse.ArgumentTypeError("region-id 不能为空")
+        raise argparse.ArgumentTypeError("region-id cannot be empty")
     if len(value) < 3 or len(value) > 32:
-        raise argparse.ArgumentTypeError("region-id 长度必须在 3~32 之间")
+        raise argparse.ArgumentTypeError("region-id length must be between 3 and 32")
     if "-" not in value or not _REGION_ID_RE.fullmatch(value):
-        raise argparse.ArgumentTypeError("region-id 格式非法，例如 cn-hangzhou")
+        raise argparse.ArgumentTypeError("invalid region-id format, for example cn-hangzhou")
     return value
 
 
 def _validate_instance_id(raw: str) -> str:
     value = str(raw or "").strip()
     if not value:
-        raise argparse.ArgumentTypeError("instance-id 不能为空")
+        raise argparse.ArgumentTypeError("instance-id cannot be empty")
     if len(value) < 10 or len(value) > 66:
-        raise argparse.ArgumentTypeError("instance-id 长度非法")
+        raise argparse.ArgumentTypeError("invalid instance-id length")
     if not _INSTANCE_ID_RE.fullmatch(value):
-        raise argparse.ArgumentTypeError("instance-id 格式非法，例如 i-abcdefgh12345678")
+        raise argparse.ArgumentTypeError("invalid instance-id format, for example i-abcdefgh12345678")
     return value
 
 
 def _validate_metric_source(raw: str) -> str:
     value = str(raw or "").strip().lower()
     if not value:
-        raise argparse.ArgumentTypeError("metric-source 不能为空")
+        raise argparse.ArgumentTypeError("metric-source cannot be empty")
     if value not in ALLOWED_METRIC_SOURCES:
         raise argparse.ArgumentTypeError(
-            f"metric-source 必须是 {', '.join(ALLOWED_METRIC_SOURCES)} 之一"
+            f"metric-source must be one of {', '.join(ALLOWED_METRIC_SOURCES)}"
         )
     return value
 
@@ -92,17 +134,17 @@ def _validate_metric_source(raw: str) -> str:
 def _validate_instance_type(raw: str) -> str:
     value = str(raw or "").strip().lower()
     if value != DEFAULT_SYSOM_INSTANCE_TYPE:
-        raise argparse.ArgumentTypeError("instance-type 当前仅支持 ecs")
+        raise argparse.ArgumentTypeError("instance-type currently only supports ecs")
     return value
 
 
 def _validate_managed_type(raw: str) -> str:
     value = str(raw or "").strip().lower()
     if not value:
-        raise argparse.ArgumentTypeError("managed-type 不能为空")
+        raise argparse.ArgumentTypeError("managed-type cannot be empty")
     if value not in ALLOWED_MANAGED_TYPES:
         raise argparse.ArgumentTypeError(
-            f"managed-type 必须是 {', '.join(ALLOWED_MANAGED_TYPES)} 之一"
+            f"managed-type must be one of {', '.join(ALLOWED_MANAGED_TYPES)}"
         )
     return value
 
@@ -111,9 +153,9 @@ def _validate_positive_int(raw: str) -> int:
     try:
         value = int(str(raw).strip())
     except (TypeError, ValueError):
-        raise argparse.ArgumentTypeError("必须是正整数")
+        raise argparse.ArgumentTypeError("must be a positive integer")
     if value <= 0:
-        raise argparse.ArgumentTypeError("必须是正整数")
+        raise argparse.ArgumentTypeError("must be a positive integer")
     return value
 
 
@@ -125,7 +167,7 @@ def _build_client_token(prefix: str, payload: Dict[str, Any]) -> str:
 
 def _is_http_ok(status: Any) -> bool:
     if status is None:
-        # 某些 ROA 场景 SDK 只返回 body，不带 statusCode；此时交由业务 code 判定
+        # In some ROA cases SDK only returns body without statusCode; rely on business code then.
         return True
     try:
         return int(status) == 200
@@ -134,48 +176,70 @@ def _is_http_ok(status: Any) -> bool:
 
 
 def add_inspection_subparser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
-    p = subparsers.add_parser("inspection", help="实例巡检并按报告触发诊断")
-    p.add_argument("--region-id", required=True, type=_validate_region_id, help="目标实例 RegionId")
-    p.add_argument("--instance-id", type=_validate_instance_id, help="目标实例 ID；不传则先拉取实例列表并交互选择")
+    p = subparsers.add_parser("inspection", help="Inspect an instance and trigger diagnosis based on the report")
+    p.add_argument("--region-id", required=True, type=_validate_region_id, help="Target instance RegionId")
+    p.add_argument(
+        "--instance-id",
+        type=_validate_instance_id,
+        help="Target instance ID; if omitted, list instances and select interactively",
+    )
     p.add_argument(
         "--instance-type",
         type=_validate_instance_type,
         default=DEFAULT_SYSOM_INSTANCE_TYPE,
-        help="ListAllInstances 的 instanceType，当前仅支持 ecs",
+        help="instanceType for ListAllInstances, currently only ecs is supported",
     )
     p.add_argument(
         "--managed-type",
         type=_validate_managed_type,
         default="all",
-        help="ListAllInstances 的 managedType：managed/unmanaged/all",
+        help="managedType for ListAllInstances: managed/unmanaged/all",
     )
-    p.add_argument("--current", type=_validate_positive_int, default=1, help="ListAllInstances 起始页码（从 1 开始）")
-    p.add_argument("--page-size", type=_validate_positive_int, default=50, help="ListAllInstances 每页条数")
+    p.add_argument(
+        "--current", type=_validate_positive_int, default=1, help="Start page number for ListAllInstances (from 1)"
+    )
+    p.add_argument("--page-size", type=_validate_positive_int, default=50, help="Page size for ListAllInstances")
     p.add_argument(
         "--inspection-items",
         nargs="*",
         default=DEFAULT_INSPECTION_ITEMS,
-        help="CreateInstanceInspection 的巡检项列表；显式传空表示巡检全部项目",
+        help="Inspection items for CreateInstanceInspection; explicitly pass empty to inspect all items",
     )
     p.add_argument(
         "--metric-source",
         type=_validate_metric_source,
-        help="CreateInstanceInspection 的 metricSource，可选 cms/sysom/auto；不传保持服务端默认行为",
+        help="metricSource for CreateInstanceInspection, one of cms/sysom/auto; omit to use service default",
     )
-    p.add_argument("--disable-memgraph-diagnosis", action="store_true", help="命中内存高时不触发 memgraph 诊断")
+    p.add_argument(
+        "--disable-memgraph-diagnosis",
+        action="store_true",
+        help="Do not trigger memgraph diagnosis when high memory usage is detected",
+    )
+    p.add_argument(
+        "--inspection-report-timeout-seconds",
+        type=int,
+        default=DEFAULT_INSPECTION_REPORT_TIMEOUT_SECONDS,
+        help="Total polling timeout seconds for GetInspectionReport",
+    )
+    p.add_argument(
+        "--inspection-report-poll-interval-seconds",
+        type=int,
+        default=DEFAULT_INSPECTION_REPORT_POLL_INTERVAL_SECONDS,
+        help="Polling interval seconds for GetInspectionReport",
+    )
     p.add_argument(
         "--diagnosis-timeout-seconds",
         type=int,
         default=DEFAULT_DIAGNOSIS_TIMEOUT_SECONDS,
-        help="GetDiagnosisResult 轮询总超时秒数",
+        help="Total polling timeout seconds for GetDiagnosisResult",
     )
     p.add_argument(
         "--diagnosis-poll-interval-seconds",
         type=int,
         default=DEFAULT_DIAGNOSIS_POLL_INTERVAL_SECONDS,
-        help="GetDiagnosisResult 轮询间隔秒数",
+        help="Polling interval seconds for GetDiagnosisResult",
     )
-    p.add_argument("--json", action="store_true", help="输出 JSON")
+    p.add_argument("--json", action="store_true", help="Output JSON")
     p.set_defaults(top_cmd="inspection")
 
 
@@ -219,7 +283,7 @@ async def _create_instance_inspection(
     code = str(body.get("code") or body.get("Code") or "").strip()
     if int(status or 0) == 404 and code == "InvalidAction.NotFound":
         raise InspectionApiUnavailableError(
-            "CreateInstanceInspection 在当前 API 版本不可用（InvalidAction.NotFound）"
+            "CreateInstanceInspection is unavailable for current API version (InvalidAction.NotFound)"
         )
     if status != 200:
         raise RuntimeError(f"CreateInstanceInspection HTTP {status}: {body.get('message') or body}")
@@ -371,11 +435,11 @@ async def _list_all_instances(
 
 def _select_instance_interactive(instances: list[Dict[str, Any]]) -> Dict[str, Any]:
     if not instances:
-        raise RuntimeError("ListAllInstances 未返回可选实例")
+        raise RuntimeError("ListAllInstances returned no selectable instances")
     if not sys.stdin.isatty():
-        raise RuntimeError("未传 --instance-id 且当前为非交互环境，无法选择实例")
+        raise RuntimeError("No --instance-id provided and current environment is non-interactive")
 
-    print("请选择要巡检的实例：")
+    print("Select an instance to inspect:")
     for idx, item in enumerate(instances, start=1):
         instance_id = _extract_instance_id(item) or "-"
         instance_name = _extract_instance_name(item)
@@ -385,19 +449,19 @@ def _select_instance_interactive(instances: list[Dict[str, Any]]) -> Dict[str, A
 
     while True:
         try:
-            answer = input(f"请输入序号 [1-{len(instances)}]（回车取消）: ").strip()
+            answer = input(f"Enter index [1-{len(instances)}] (press Enter to cancel): ").strip()
         except EOFError:
             answer = ""
         if not answer:
-            raise RuntimeError("用户取消实例选择")
+            raise RuntimeError("Instance selection cancelled by user")
         try:
             pos = int(answer)
         except ValueError:
-            print("输入非法，请输入数字序号。")
+            print("Invalid input, please enter a numeric index.")
             continue
         if 1 <= pos <= len(instances):
             return instances[pos - 1]
-        print("序号超出范围，请重新输入。")
+        print("Index out of range, please retry.")
 
 
 def _extract_initial_sysom_role_exist(data: Any) -> Optional[bool]:
@@ -446,7 +510,7 @@ async def _call_initial_sysom(
         return {
             "ok": False,
             "error_code": "api_call_failed",
-            "message": str(body.get("message") or body.get("Message") or "InitialSysom 返回非 Success"),
+            "message": str(body.get("message") or body.get("Message") or "InitialSysom returned non-Success"),
             "raw_response": body,
         }
 
@@ -458,7 +522,7 @@ async def _call_initial_sysom(
         return {
             "ok": False,
             "error_code": "service_not_activated",
-            "message": "SysOM 服务未开通（InitialSysom 返回 data 为空）",
+            "message": "SysOM service is not activated (InitialSysom returned empty data)",
             "raw_response": body,
         }
 
@@ -467,7 +531,7 @@ async def _call_initial_sysom(
         return {
             "ok": False,
             "error_code": "sysom_role_not_exist",
-            "message": "SysOM 服务关联角色未创建或未就绪（role_exist=false）",
+            "message": "SysOM service-linked role is not created or not ready (role_exist=false)",
             "raw_response": body,
         }
     return {"ok": True, "response": body}
@@ -502,32 +566,40 @@ async def _ensure_sysom_ready(caller: SysomOpenApiCaller, *, instance_id: str, r
     ret: Dict[str, Any] = {
         "ready": False,
         "error_code": first.get("error_code"),
-        "message": first.get("message") or "InitialSysom 未通过",
+        "message": first.get("message") or "InitialSysom check did not pass",
         "initial_sysom_response": first.get("raw_response"),
     }
     ret["activation_confirmation_required"] = True
-    ret["activation_prompt"] = "检测到未开通或未安装 SysOM，是否需要帮您开通并安装 SysOM 后继续巡检？"
+    ret["activation_prompt"] = (
+        "SysOM is not activated or installed. Activate and install SysOM, then continue inspection?"
+    )
 
     if not sys.stdin.isatty():
         ret["activation_interactive_unavailable"] = True
         ret["activation_cancelled"] = True
-        ret["activation_hint"] = "当前为非交互环境，无法确认开通，已停止后续巡检与诊断。"
+        ret["activation_hint"] = (
+            "Current environment is non-interactive, cannot confirm activation. Inspection and diagnosis stopped."
+        )
         return ret
 
     try:
-        answer = input("检测到未开通或未安装 SysOM，是否需要帮您开通并安装 SysOM 后继续巡检？[y/N]: ").strip().lower()
+        answer = input(
+            "SysOM is not activated or installed. Activate and install SysOM, then continue inspection? [y/N]: "
+        ).strip().lower()
     except EOFError:
         answer = ""
     if answer not in ("y", "yes"):
         ret["activation_cancelled"] = True
-        ret["activation_hint"] = "您已取消开通，已停止后续巡检与诊断。"
+        ret["activation_hint"] = "Activation cancelled. Inspection and diagnosis stopped."
         return ret
 
     ret["activation_attempted"] = True
     activate_result = await _call_initial_sysom(caller, check_only=False, require_ready=False)
     if not activate_result.get("ok"):
         ret["activation_failed"] = True
-        ret["activation_hint"] = activate_result.get("message") or "InitialSysom(check_only=false) 开通失败。"
+        ret["activation_hint"] = (
+            activate_result.get("message") or "InitialSysom(check_only=false) activation failed."
+        )
         ret["activation_response"] = activate_result.get("raw_response")
         return ret
     ret["activation_response"] = activate_result.get("response")
@@ -539,7 +611,7 @@ async def _ensure_sysom_ready(caller: SysomOpenApiCaller, *, instance_id: str, r
     except Exception as e:  # noqa: BLE001
         ret["install_attempted"] = True
         ret["install_failed"] = True
-        ret["activation_hint"] = f"安装 SysOM 失败：{e}"
+        ret["activation_hint"] = f"Failed to install SysOM: {e}"
         return ret
 
     retry_count = DEFAULT_ACTIVATION_RETRY_COUNT
@@ -562,7 +634,7 @@ async def _ensure_sysom_ready(caller: SysomOpenApiCaller, *, instance_id: str, r
 
     ret["activation_failed"] = True
     ret["activation_hint"] = (
-        "已执行开通与安装，但 InitialSysom 复检仍未通过，请稍后重试。"
+        "Activation and installation were attempted, but InitialSysom recheck still failed. Please retry later."
     )
     return ret
 
@@ -579,17 +651,49 @@ async def _get_inspection_report(caller: SysomOpenApiCaller, report_id: str) -> 
     code = str(body.get("code") or body.get("Code") or "").strip()
     if int(status or 0) == 404 and code == "InvalidAction.NotFound":
         raise InspectionApiUnavailableError(
-            "GetInspectionReport 在当前 API 版本不可用（InvalidAction.NotFound）"
+            "GetInspectionReport is unavailable for current API version (InvalidAction.NotFound)"
         )
     if status != 200:
         raise RuntimeError(f"GetInspectionReport HTTP {status}: {body.get('message') or body}")
     return body
 
 
+def _extract_inspection_report_status(report_body: Dict[str, Any]) -> str:
+    data = report_body.get("data") or report_body.get("Data") or {}
+    if not isinstance(data, dict):
+        return ""
+    for key in ("status", "Status", "reportStatus", "ReportStatus", "inspectionStatus", "InspectionStatus"):
+        value = data.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return ""
+
+
+async def _wait_inspection_report_success(
+    caller: SysomOpenApiCaller,
+    *,
+    report_id: str,
+    timeout_seconds: int = DEFAULT_INSPECTION_REPORT_TIMEOUT_SECONDS,
+    poll_interval_seconds: int = DEFAULT_INSPECTION_REPORT_POLL_INTERVAL_SECONDS,
+) -> Dict[str, Any]:
+    timeout_seconds = max(1, int(timeout_seconds))
+    poll_interval_seconds = max(1, int(poll_interval_seconds))
+    start = asyncio.get_running_loop().time()
+    while (asyncio.get_running_loop().time() - start) < timeout_seconds:
+        body = await _get_inspection_report(caller, report_id)
+        status = _extract_inspection_report_status(body).lower()
+        if status == "success":
+            return body
+        await asyncio.sleep(poll_interval_seconds)
+    raise TimeoutError(
+        f"GetInspectionReport timed out ({timeout_seconds}s), report_id: {report_id}"
+    )
+
+
 async def _probe_get_inspection_report(caller: SysomOpenApiCaller) -> Dict[str, Any]:
     """
-    在 CreateInstanceInspection 不可用时，仍执行一次 GetInspectionReport 调用探测，
-    便于评测与日志确认该动作确实被触发。
+    When CreateInstanceInspection is unavailable, still run one GetInspectionReport probe call
+    so evaluation and logs can confirm the action was actually triggered.
     """
     probe_report_id = "inspection-probe-unavailable"
     try:
@@ -619,7 +723,7 @@ async def _invoke_memgraph_diagnosis(
     params: Dict[str, Any] = {
         "region": region_id,
         "instance": instance_id,
-        "trigger_item": MEMORY_USAGE_ITEM,
+        "trigger_item": DIAGNOSIS_TRIGGER_ITEM,
         "trigger_report_id": report_id,
     }
     for key in LEGACY_DIAGNOSIS_SOURCE_KEYS:
@@ -729,7 +833,7 @@ async def _wait_diagnosis_result(
         body = await _get_diagnosis_result(caller, task_id)
         code = str(body.get("code") or body.get("Code") or "").strip().lower()
         if code and code != "success":
-            message = body.get("message") or body.get("Message") or "GetDiagnosisResult 返回非 Success"
+            message = body.get("message") or body.get("Message") or "GetDiagnosisResult returned non-Success"
             return {
                 "code": "GetResultFailed",
                 "message": str(message),
@@ -753,7 +857,7 @@ async def _wait_diagnosis_result(
                 err_msg = str(data.get("err_msg") or data.get("ErrMsg") or data.get("message") or "").strip()
             return {
                 "code": "TaskExecuteFailed",
-                "message": err_msg or "诊断任务执行失败",
+                "message": err_msg or "Diagnosis task execution failed",
                 "task_id": task_id,
                 "raw_response": body,
             }
@@ -761,15 +865,32 @@ async def _wait_diagnosis_result(
 
     return {
         "code": "TaskTimeout",
-        "message": f"诊断执行超时（{timeout_seconds}秒），task_id: {task_id}",
+        "message": f"Diagnosis timed out ({timeout_seconds}s), task_id: {task_id}",
         "task_id": task_id,
     }
 
 
 def _has_memory_usage_issue(report_body: Dict[str, Any]) -> bool:
-    marker_keys = ("item", "metric", "metricName", "name", "key", "type")
+    marker_keys = (
+        "item",
+        "item_name",
+        "itemName",
+        "metric",
+        "metricName",
+        "name",
+        "key",
+        "type",
+    )
     positive_keys = ("abnormal", "isAbnormal", "hasIssue", "isIssue", "triggered", "detected", "hit")
-    positive_status_values = {"abnormal", "alert", "warning", "critical", "high", "异常", "告警"}
+    positive_status_values = {
+        "abnormal",
+        "alert",
+        "warning",
+        "warn",
+        "critical",
+        "high",
+        "error",
+    }
 
     def _contains_marker(obj: Any) -> bool:
         if isinstance(obj, str):
@@ -795,7 +916,7 @@ def _has_memory_usage_issue(report_body: Dict[str, Any]) -> bool:
         if isinstance(obj, dict):
             if _contains_marker(obj) and _is_positive(obj):
                 return True
-            # 常见聚合结构：abnormalItems/issues/alerts 中出现内存项即认为命中
+            # Common aggregate structures: treat memory item hit in abnormalItems/issues/alerts as detected.
             for k in ("abnormalItems", "issues", "alerts", "abnormal_metrics"):
                 v = obj.get(k)
                 if isinstance(v, list):
@@ -813,6 +934,269 @@ def _has_memory_usage_issue(report_body: Dict[str, Any]) -> bool:
 
     data = report_body.get("data") or report_body.get("Data") or report_body
     return _walk(data)
+
+
+def _render_report_markdown(template: str, values: Dict[str, str]) -> str:
+    rendered = template
+    for k, v in values.items():
+        rendered = rendered.replace("{" + k + "}", str(v))
+    return rendered
+
+
+def _format_abnormal_items_markdown(abnormal_items: list[Dict[str, str]]) -> str:
+    if not abnormal_items:
+        return "- No abnormal items were found in this inspection."
+    lines: list[str] = []
+    for idx, item in enumerate(abnormal_items, start=1):
+        item_name = item.get("item") or "-"
+        level = item.get("level") or "Unknown"
+        reason = item.get("reason") or "No detailed reason"
+        lines.append(f"- {idx}. `{item_name}` (Level: {level}): {reason}")
+    return "\n".join(lines)
+
+
+def _extract_top_process_findings(diagnosis_result: Dict[str, Any]) -> str:
+    result = diagnosis_result.get("result")
+    if not isinstance(result, dict):
+        return "- No process-level diagnosis details are available."
+    app_top = result.get("dataAppMemTopN")
+    if not isinstance(app_top, dict):
+        return "- No process-level diagnosis details are available."
+    data = app_top.get("data")
+    if not isinstance(data, list) or not data:
+        return "- No process-level diagnosis details are available."
+
+    lines: list[str] = []
+    for row in data[:3]:
+        if not isinstance(row, dict):
+            continue
+        task = str(row.get("task") or "-").strip()
+        mem_total = str(row.get("memTotal") or "-").strip()
+        rss_anon = str(row.get("rssAnon") or "-").strip()
+        cmdline = str(row.get("cmdline") or "").strip()
+        if cmdline:
+            lines.append(f"- `{task}`: total memory {mem_total}, anonymous memory {rss_anon}, command `{cmdline}`")
+        else:
+            lines.append(f"- `{task}`: total memory {mem_total}, anonymous memory {rss_anon}")
+    return "\n".join(lines) if lines else "- No process-level diagnosis details are available."
+
+
+def _format_app_mem_ranking_markdown(diagnosis_result: Dict[str, Any], limit: int = 10) -> str:
+    result = diagnosis_result.get("result")
+    if not isinstance(result, dict):
+        return "- No application memory usage ranking data is available."
+    app_top = result.get("dataAppMemTopN")
+    if not isinstance(app_top, dict):
+        return "- No application memory usage ranking data is available."
+    data = app_top.get("data")
+    if not isinstance(data, list) or not data:
+        return "- No application memory usage ranking data is available."
+
+    def _sanitize(cell: Any) -> str:
+        text = str(cell or "-").replace("\n", " ").strip()
+        return text.replace("|", "\\|")
+
+    lines = [
+        "| Rank | Process | Total Memory | Anonymous Memory | Command Line |",
+        "|---|---|---|---|---|",
+    ]
+    for idx, row in enumerate(data[: max(1, int(limit))], start=1):
+        if not isinstance(row, dict):
+            continue
+        lines.append(
+            f"| {idx} | {_sanitize(row.get('task'))} | {_sanitize(row.get('memTotal'))} | {_sanitize(row.get('rssAnon'))} | {_sanitize(row.get('cmdline'))} |"
+        )
+
+    if len(lines) == 2:
+        return "- No application memory usage ranking data is available."
+    return "\n".join(lines)
+
+
+def _normalize_report_time_token(raw_value: str) -> str:
+    value = str(raw_value or "").strip()
+    if not value:
+        return datetime.now().strftime("%Y%m%d-%H%M%S-%f")
+    digits = "".join(ch for ch in value if ch.isdigit())
+    if len(digits) >= 20:
+        return f"{digits[:8]}-{digits[8:14]}-{digits[14:20]}"
+    if len(digits) >= 14:
+        return f"{digits[:8]}-{digits[8:14]}-000000"
+    if len(digits) >= 8:
+        return f"{digits[:8]}-{datetime.now().strftime('%H%M%S-%f')}"
+    return datetime.now().strftime("%Y%m%d-%H%M%S-%f")
+
+
+def _persist_report_markdown(*, report_markdown: str, report_time_token: str) -> tuple[str, str]:
+    report_file_name = f"inspection-report-{report_time_token}.md"
+    report_path = REPORT_OUTPUT_DIR / report_file_name
+    REPORT_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(report_markdown, encoding="utf-8")
+    return report_file_name, str(report_path.resolve())
+
+
+def _build_inspection_conclusion(result: Dict[str, Any]) -> Dict[str, Any]:
+    report_resp = result.get("inspection_report_response")
+    report_data = report_resp.get("data") if isinstance(report_resp, dict) else None
+    if not isinstance(report_data, dict):
+        report_data = report_resp.get("Data") if isinstance(report_resp, dict) else None
+    if not isinstance(report_data, dict):
+        report_data = {}
+
+    report_time_token = _normalize_report_time_token(
+        str(report_data.get("updated_at") or report_data.get("created_at") or "")
+    )
+    report_status = str(report_data.get("status") or report_data.get("Status") or "").strip() or "Unknown"
+    report_items = report_data.get("report_items")
+    if not isinstance(report_items, list):
+        report_items = report_data.get("reportItems")
+    if not isinstance(report_items, list):
+        report_items = []
+
+    abnormal_items: list[Dict[str, str]] = []
+    for item in report_items:
+        if not isinstance(item, dict):
+            continue
+        item_name = str(
+            item.get("item_name")
+            or item.get("itemName")
+            or item.get("item")
+            or item.get("metric")
+            or ""
+        ).strip()
+        level = str(item.get("level") or item.get("severity") or item.get("status") or "").strip()
+        reason = str(item.get("reason") or "").strip()
+        if not item_name:
+            continue
+        if level.lower() not in ("", "normal", "ok", "success"):
+            abnormal_items.append(
+                {
+                    "item": item_name,
+                    "level": level or "Unknown",
+                    "reason": reason,
+                }
+            )
+
+    if result.get("inspection_invoked") is not True:
+        inspection_report_result = "Inspection was not started successfully, so no report result is available."
+    elif result.get("inspection_report_id") and report_status.lower() == "success":
+        if abnormal_items:
+            inspection_report_result = (
+                f"Inspection report completed (Success), {len(abnormal_items)} abnormal item(s) found."
+            )
+        else:
+            inspection_report_result = "Inspection report completed (Success), no abnormal items found."
+    elif result.get("inspection_report_id"):
+        inspection_report_result = f"Inspection report retrieved, but status is {report_status}."
+    else:
+        inspection_report_result = "Inspection task started, but no reportId was returned."
+
+    diagnosis_result = result.get("memgraph_diagnosis_result")
+    diag_code = ""
+    diag_message = ""
+    if isinstance(diagnosis_result, dict):
+        diag_code = str(diagnosis_result.get("code") or "").strip()
+        diag_message = str(diagnosis_result.get("message") or "").strip()
+
+    diagnosis_status = "Not Triggered"
+    diagnosis_task_id = str(result.get("memgraph_diagnosis_task_id") or "-")
+    diagnosis_root_cause = "N/A"
+    diagnosis_suggestion = "N/A"
+    diagnosis_key_findings = "- Automatic diagnosis was not triggered, no diagnosis details available."
+    diagnosis_app_mem_ranking = "- Automatic diagnosis was not triggered, no app memory ranking available."
+    if result.get("memgraph_diagnosis_invoked"):
+        diagnosis_status = "Triggered"
+        if diag_code.lower() == "success":
+            summary = diagnosis_result.get("result", {}).get("summary") if isinstance(diagnosis_result, dict) else None
+            cause = ""
+            suggestion = ""
+            if isinstance(summary, dict):
+                cause = str(summary.get("cause") or "").strip()
+                suggestion = str(summary.get("suggestion") or "").strip()
+            diagnosis_root_cause = cause or "Not Provided"
+            diagnosis_suggestion = suggestion or "Not Provided"
+            diagnosis_key_findings = (
+                _extract_top_process_findings(diagnosis_result)
+                if isinstance(diagnosis_result, dict)
+                else "- No process-level diagnosis details are available."
+            )
+            diagnosis_app_mem_ranking = (
+                _format_app_mem_ranking_markdown(diagnosis_result, limit=10)
+                if isinstance(diagnosis_result, dict)
+                else "- No application memory usage ranking data is available."
+            )
+            detail_parts = [p for p in (cause, suggestion) if p]
+            detail = f" Conclusion: {'; '.join(detail_parts)}" if detail_parts else ""
+            diagnosis_report_result = f"memgraph diagnosis was triggered automatically, result is Success.{detail}".strip()
+        else:
+            diagnosis_report_result = (
+                f"memgraph diagnosis was triggered automatically, result is {diag_code or 'Unknown'}, "
+                f"{diag_message or 'no detailed message'}."
+            )
+            diagnosis_root_cause = diag_message or "Diagnosis did not return root cause details"
+            diagnosis_suggestion = "Please investigate further with task logs"
+            diagnosis_key_findings = "- Diagnosis task was triggered, but no usable structured details were returned."
+            diagnosis_app_mem_ranking = "- Diagnosis did not return usable app memory ranking data."
+    else:
+        diagnosis_report_result = "Automatic diagnosis was not triggered."
+
+    final_parts = [inspection_report_result, diagnosis_report_result]
+    if result.get("memgraph_diagnosis_skipped_reason"):
+        final_parts.append(f"Note: {result['memgraph_diagnosis_skipped_reason']}")
+
+    final_conclusion = " ".join(final_parts)
+    abnormal_items_markdown = _format_abnormal_items_markdown(abnormal_items)
+    template_values = {
+        "instance_id": str(result.get("instance_id") or "-"),
+        "region_id": str(result.get("region_id") or "-"),
+        "report_time": report_time_token,
+        "inspection_report_id": str(result.get("inspection_report_id") or "-"),
+        "inspection_report_status": report_status,
+        "inspection_report_result": inspection_report_result,
+        "abnormal_items_markdown": abnormal_items_markdown,
+        "diagnosis_status": diagnosis_status,
+        "diagnosis_task_id": diagnosis_task_id,
+        "diagnosis_report_result": diagnosis_report_result,
+        "diagnosis_root_cause": diagnosis_root_cause,
+        "diagnosis_suggestion": diagnosis_suggestion,
+        "diagnosis_key_findings": diagnosis_key_findings,
+        "diagnosis_app_mem_ranking": diagnosis_app_mem_ranking,
+        "final_conclusion": final_conclusion,
+        "report_file_name": "-",
+        "report_file_path": "-",
+    }
+    template = _load_report_template()
+    report_markdown = _render_report_markdown(template, template_values)
+    report_file_name = "-"
+    report_file_path = "-"
+    report_file_write_error = ""
+    try:
+        report_file_name, report_file_path = _persist_report_markdown(
+            report_markdown=report_markdown,
+            report_time_token=report_time_token,
+        )
+        template_values["report_file_name"] = report_file_name
+        template_values["report_file_path"] = report_file_path
+        report_markdown = _render_report_markdown(template, template_values)
+        Path(report_file_path).write_text(report_markdown, encoding="utf-8")
+    except Exception as e:  # noqa: BLE001
+        report_file_write_error = str(e)
+
+    return {
+        "inspection_report_result": inspection_report_result,
+        "diagnosis_report_result": diagnosis_report_result,
+        "final_conclusion": final_conclusion,
+        "abnormal_items": abnormal_items,
+        "report_markdown": report_markdown,
+        "report_file_name": report_file_name,
+        "report_file_path": report_file_path,
+        "report_time": report_time_token,
+        "report_file_write_error": report_file_write_error,
+    }
+
+
+def _attach_conclusion(result: Dict[str, Any]) -> Dict[str, Any]:
+    result["inspection_conclusion"] = _build_inspection_conclusion(result)
+    return result
 
 
 async def run_inspection(args: argparse.Namespace) -> Dict[str, Any]:
@@ -833,11 +1217,12 @@ async def run_inspection(args: argparse.Namespace) -> Dict[str, Any]:
         selected_instance = _select_instance_interactive(listed_instances)
         selected_instance_id = _extract_instance_id(selected_instance)
         if not selected_instance_id:
-            raise RuntimeError("所选实例缺少 instanceId，无法发起巡检")
+            raise RuntimeError("Selected instance has no instanceId, cannot start inspection")
 
     readiness = await _ensure_sysom_ready(caller, instance_id=selected_instance_id, region_id=args.region_id)
     if not readiness.get("ready"):
-        return {
+        return _attach_conclusion(
+            {
             "instance_id": selected_instance_id,
             "region_id": args.region_id,
             "inspection_invoked": False,
@@ -852,7 +1237,8 @@ async def run_inspection(args: argparse.Namespace) -> Dict[str, Any]:
                 "list_pages": list_pages,
                 "listed_count": len(listed_instances),
             },
-        }
+            }
+        )
 
     items = list(getattr(args, "inspection_items", DEFAULT_INSPECTION_ITEMS))
     managed_type = _infer_instance_managed_type(selected_instance or {}) if selected_instance else "unknown"
@@ -874,7 +1260,8 @@ async def run_inspection(args: argparse.Namespace) -> Dict[str, Any]:
         )
     except InspectionApiUnavailableError as e:
         report_probe = await _probe_get_inspection_report(caller)
-        return {
+        return _attach_conclusion(
+            {
             "instance_id": selected_instance_id,
             "region_id": args.region_id,
             "inspection_invoked": False,
@@ -893,7 +1280,8 @@ async def run_inspection(args: argparse.Namespace) -> Dict[str, Any]:
                 "list_pages": list_pages,
                 "listed_count": len(listed_instances),
             },
-        }
+            }
+        )
 
     result: Dict[str, Any] = {
         "instance_id": selected_instance_id,
@@ -921,45 +1309,66 @@ async def run_inspection(args: argparse.Namespace) -> Dict[str, Any]:
     report_data = create_resp.get("data") or create_resp.get("Data") or {}
     report_id: Optional[str] = report_data.get("reportId") or report_data.get("ReportId")
     if not report_id:
-        result["memgraph_diagnosis_skipped_reason"] = "CreateInstanceInspection 未返回 reportId"
-        return result
+        result["memgraph_diagnosis_skipped_reason"] = "CreateInstanceInspection did not return reportId"
+        return _attach_conclusion(result)
 
     result["inspection_report_id"] = report_id
     try:
-        report_resp = await _get_inspection_report(caller, str(report_id))
+        report_resp = await _wait_inspection_report_success(
+            caller,
+            report_id=str(report_id),
+            timeout_seconds=getattr(args, "inspection_report_timeout_seconds", DEFAULT_INSPECTION_REPORT_TIMEOUT_SECONDS),
+            poll_interval_seconds=getattr(
+                args,
+                "inspection_report_poll_interval_seconds",
+                DEFAULT_INSPECTION_REPORT_POLL_INTERVAL_SECONDS,
+            ),
+        )
     except InspectionApiUnavailableError as e:
         result["inspection_api_available"] = False
         result["inspection_api_unavailable_reason"] = str(e)
         result["inspection_invoked"] = False
-        return result
+        return _attach_conclusion(result)
+    except TimeoutError as e:
+        result["inspection_report_wait_timeout"] = True
+        result["inspection_report_wait_timeout_reason"] = str(e)
+        result["memgraph_diagnosis_skipped_reason"] = "Inspection report wait timed out before diagnosis stage"
+        return _attach_conclusion(result)
     result["inspection_report_response"] = report_resp
 
     memory_issue = _has_memory_usage_issue(report_resp)
     result["memory_usage_issue_detected"] = memory_issue
     if not memory_issue:
-        result["memgraph_diagnosis_skipped_reason"] = "巡检报告未命中 memory_usage_rate 异常"
-        return result
+        return _attach_conclusion(result)
     if getattr(args, "disable_memgraph_diagnosis", False):
-        result["memgraph_diagnosis_skipped_reason"] = "已通过参数禁用 memgraph 诊断"
-        return result
+        result["memgraph_diagnosis_skipped_reason"] = "memgraph diagnosis was disabled by argument"
+        return _attach_conclusion(result)
 
     result["memgraph_diagnosis_invoked"] = True
-    invoke_resp = await _invoke_memgraph_diagnosis(
-        caller,
-        region_id=args.region_id,
-        instance_id=selected_instance_id,
-        report_id=str(report_id),
-    )
+    try:
+        invoke_resp = await _invoke_memgraph_diagnosis(
+            caller,
+            region_id=args.region_id,
+            instance_id=selected_instance_id,
+            report_id=str(report_id),
+        )
+    except Exception as e:  # noqa: BLE001
+        result["memgraph_diagnosis_result"] = {
+            "code": "InvokeFailed",
+            "message": str(e),
+            "task_id": "",
+        }
+        return _attach_conclusion(result)
     result["memgraph_diagnosis_response"] = invoke_resp
     task_id = _extract_diagnosis_task_id(invoke_resp)
     result["memgraph_diagnosis_task_id"] = task_id
     if not task_id:
         result["memgraph_diagnosis_result"] = {
             "code": "TaskCreateFailed",
-            "message": "InvokeDiagnosis 未返回 task_id，无法调用 GetDiagnosisResult",
+            "message": "InvokeDiagnosis did not return task_id, cannot call GetDiagnosisResult",
             "task_id": "",
         }
-        return result
+        return _attach_conclusion(result)
 
     result["memgraph_diagnosis_result"] = await _wait_diagnosis_result(
         caller,
@@ -971,4 +1380,4 @@ async def run_inspection(args: argparse.Namespace) -> Dict[str, Any]:
             DEFAULT_DIAGNOSIS_POLL_INTERVAL_SECONDS,
         ),
     )
-    return result
+    return _attach_conclusion(result)

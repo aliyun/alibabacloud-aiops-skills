@@ -1,7 +1,12 @@
 ---
 name: alibabacloud-alinux-sysom-inspection
 version: 0.1.0
-description: Inspect ECS instance health, detect anomalies in memory, disk, CPU, load, and resource leaks, and automatically trigger deep diagnosis when critical memory issues are detected. Suitable for routine inspections, troubleshooting, and risk warning scenarios. Trigger keywords: SysOM, inspection, instance diagnosis, memory_usage_rate, memory usage.
+description: >
+  Inspect ECS instance health, detect anomalies in memory, disk, CPU, load,
+  and resource leaks, and automatically trigger deep diagnosis when critical
+  memory issues are detected. Suitable for routine inspections, troubleshooting,
+  and risk warning scenarios. Trigger keywords: SysOM, inspection, instance
+  diagnosis, memory_usage_rate, memory usage.
 layer: application
 category: os-ops
 lifecycle: operations

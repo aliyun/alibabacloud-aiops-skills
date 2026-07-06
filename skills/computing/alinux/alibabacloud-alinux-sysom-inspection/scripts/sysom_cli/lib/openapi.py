@@ -13,18 +13,18 @@ from alibabacloud_tea_util import models as tea_util_models
 
 try:
     from alibabacloud_tea_openapi.utils import Utils
-except ImportError:  # 兼容不导出 utils 模块的 tea-openapi 版本
+except ImportError:  # Compatible with tea-openapi versions without exported utils module.
     Utils = None
 
 try:
-    # tea-openapi 新版本
+    # Newer tea-openapi versions.
     from alibabacloud_tea_openapi import utils_models as open_api_util_models
 except ImportError:
     try:
-        # 部分旧版本命名
+        # Naming used by some older versions.
         from alibabacloud_tea_openapi import util_models as open_api_util_models
     except ImportError:
-        # 再兜底到 models，避免因模块导出差异导致启动失败
+        # Fallback to models to avoid startup failure due to export differences.
         open_api_util_models = open_api_models
 
 SYSOM_ENDPOINT = "sysom.cn-hangzhou.aliyuncs.com"
@@ -95,7 +95,7 @@ class SysomOpenApiCaller:
         )
         out = await self._client.call_api_async(params, req, self._runtime)
         if not isinstance(out, dict):
-            raise RuntimeError(f"{action} 返回类型异常: {type(out)}")
+            raise RuntimeError(f"{action} returned unexpected type: {type(out)}")
         return out
 
     async def call_roa(
@@ -124,7 +124,7 @@ class SysomOpenApiCaller:
         )
         out = await self._client.call_api_async(params, req, self._runtime)
         if not isinstance(out, dict):
-            raise RuntimeError(f"{action} 返回类型异常: {type(out)}")
+            raise RuntimeError(f"{action} returned unexpected type: {type(out)}")
         return out
 
 

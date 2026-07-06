@@ -112,5 +112,5 @@ def resolve_sysom_credentials() -> Dict[str, str]:
     if creds:
         return creds
     raise SysomAuthError(
-        "未找到可用凭证，请配置环境变量 AK/SK 或 ~/.aliyun/config.json（AK/StsToken/EcsRamRole）。"
+        "No valid credentials found. Configure AK/SK environment variables or ~/.aliyun/config.json (AK/StsToken/EcsRamRole)."
     )
