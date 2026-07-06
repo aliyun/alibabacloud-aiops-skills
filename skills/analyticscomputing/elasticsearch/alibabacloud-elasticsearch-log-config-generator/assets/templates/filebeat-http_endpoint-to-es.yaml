@@ -1,0 +1,30 @@
+# Filebeat — accept log webhooks and ship to Elasticsearch.
+# Reference: ../reference/beats/04-input-http_endpoint.md, 05-output-elasticsearch.md
+
+filebeat.inputs:
+  - type: http_endpoint
+    enabled: true
+    listen_address: 0.0.0.0
+    listen_port: 8080
+    url: /<<URL_PATH>>                   # e.g. /webhook
+    method: POST
+    content_type: application/json
+    prefix: json                         # use "." to put payload at root
+    response_code: 200
+    response_body: '{"message":"ok"}'
+    # secret.header: X-Webhook-Token
+    # secret.value: "${WEBHOOK_SECRET}"
+    # OR HMAC validation:
+    # hmac.header: X-Hub-Signature-256
+    # hmac.key: "${WEBHOOK_HMAC_KEY}"
+    # hmac.type: sha256
+    # hmac.prefix: "sha256="
+    # ssl:
+    #   enabled: true
+    #   certificate: /etc/filebeat/certs/server.crt
+    #   key: /etc/filebeat/certs/server.key
+    #   certificate_authorities: [/etc/filebeat/certs/ca.crt]
+
+output.elasticsearch:
+  hosts: ["<<ELASTICSEARCH_URL>>"]
+  api_key: "${ELASTIC_API_KEY}"

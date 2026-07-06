@@ -1,0 +1,42 @@
+# Filebeat — tail log files and ship to Elasticsearch.
+# Reference: ../reference/beats/02-input-filestream.md, 05-output-elasticsearch.md
+#
+# Validate: filebeat test config -c filebeat.yml
+#           filebeat test output
+# Run:      filebeat -e -c filebeat.yml
+
+filebeat.inputs:
+  - type: filestream
+    id: <<UNIQUE_INPUT_ID>>          # MUST be unique; never reuse
+    enabled: true
+    paths:
+      - <<ABSOLUTE_GLOB_PATH>>       # e.g. /var/log/myapp/*.log
+    # parsers:
+    #   - multiline:
+    #       type: pattern
+    #       pattern: '^\d{4}-\d{2}-\d{2}'
+    #       negate: true
+    #       match: after
+    #   - ndjson:                     # uncomment when log lines are JSON
+    #       target: ""
+    #       message_key: msg
+    #       add_error_key: true
+
+# processors:
+#   - add_host_metadata:
+#       when.not.contains.tags: forwarded
+#   - add_cloud_metadata: ~
+
+output.elasticsearch:
+  hosts: ["<<ELASTICSEARCH_URL>>"]   # e.g. https://es:9200
+  api_key: "${ELASTIC_API_KEY}"      # OR username/password (only one)
+  # ssl:
+  #   certificate_authorities: ["/etc/pki/elastic-ca.pem"]
+  #   verification_mode: full
+
+# When ILM (default) manages the data stream, the `index` setting is ignored.
+# To use a custom static index instead, uncomment and disable ILM:
+# setup.ilm.enabled: false
+# setup.template.name: "myapp"
+# setup.template.pattern: "myapp-*"
+# output.elasticsearch.index: "myapp-%{+yyyy.MM.dd}"

@@ -1,0 +1,30 @@
+# Filebeat — read log topics from Kafka and ship to Elasticsearch.
+# Reference: ../reference/beats/03-input-kafka.md, 05-output-elasticsearch.md
+
+filebeat.inputs:
+  - type: kafka
+    enabled: true
+    hosts:
+      - <<KAFKA_BROKER_1>>:9092
+      - <<KAFKA_BROKER_2>>:9092
+    topics: [<<KAFKA_TOPIC>>]
+    group_id: filebeat-logs
+    version: "<<KAFKA_PROTOCOL_VERSION>>"   # e.g. "2.8.0"
+    initial_offset: oldest                  # newest if user does NOT want backfill
+    # username: ${KAFKA_USER}
+    # password: ${KAFKA_PASSWORD}
+    # sasl.mechanism: SCRAM-SHA-512
+    # ssl.enabled: true
+    # ssl.certificate_authorities: ["/etc/ssl/certs/kafka-ca.pem"]
+    parsers:
+      - ndjson:
+          target: ""
+          message_key: log
+          add_error_key: true
+
+output.elasticsearch:
+  hosts: ["<<ELASTICSEARCH_URL>>"]
+  api_key: "${ELASTIC_API_KEY}"
+  # ssl:
+  #   certificate_authorities: ["/etc/pki/elastic-ca.pem"]
+  #   verification_mode: full

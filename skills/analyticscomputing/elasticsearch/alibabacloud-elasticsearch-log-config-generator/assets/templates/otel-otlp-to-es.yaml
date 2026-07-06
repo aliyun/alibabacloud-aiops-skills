@@ -1,0 +1,34 @@
+# OpenTelemetry Collector — accept logs over OTLP and ship to Elasticsearch.
+# Reference: ../reference/opentelemetry/05-otlpreceiver.md, 03-elasticsearchexporter.md
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317      # localhost:4317 if same-host clients only
+      http:
+        endpoint: 0.0.0.0:4318
+        # cors:
+        #   allowed_origins: [https://*.example.com]
+    # auth:
+    #   authenticator: bearertokenauth
+
+# extensions:
+#   bearertokenauth:
+#     scheme: Bearer
+#     token: ${env:OTLP_BEARER_TOKEN}
+
+exporters:
+  elasticsearch:
+    endpoints:
+      - <<ELASTICSEARCH_URL>>
+    api_key: ${env:ELASTIC_API_KEY}
+    mapping:
+      mode: otel
+
+service:
+  # extensions: [bearertokenauth]
+  pipelines:
+    logs:
+      receivers: [otlp]
+      exporters: [elasticsearch]

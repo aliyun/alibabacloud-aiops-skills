@@ -1,0 +1,39 @@
+# OpenTelemetry Collector — tail log files and ship to Elasticsearch.
+# Reference: ../reference/opentelemetry/02-filelogreceiver.md, 03-elasticsearchexporter.md
+#
+# REPLACE placeholders marked with <<...>> before use.
+# Run: otelcol-contrib validate --config=otelcol-config.yaml
+#      otelcol-contrib --config=otelcol-config.yaml
+
+receivers:
+  filelog:
+    include:
+      - <<ABSOLUTE_GLOB_PATH>>      # e.g. /var/log/myapp/*.log
+    # start_at: beginning           # uncomment to backfill existing files (asks user)
+    # multiline:                    # uncomment for stack-trace style logs
+    #   line_start_pattern: '^\d{4}-\d{2}-\d{2}'
+    operators:
+      - type: regex_parser          # remove if logs are unstructured plain text
+        regex: '^(?P<time>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z)\s+(?P<sev>[A-Z]+)\s+(?P<msg>.*)$'
+        timestamp:
+          parse_from: attributes.time
+          layout: '%Y-%m-%dT%H:%M:%S.%LZ'
+        severity:
+          parse_from: attributes.sev
+
+exporters:
+  elasticsearch:
+    endpoints:
+      - <<ELASTICSEARCH_URL>>       # e.g. https://es:9200
+    api_key: ${env:ELASTIC_API_KEY} # OR replace this block with: user/password
+    # tls:
+    #   ca_file: /etc/ssl/certs/elastic-ca.pem
+    mapping:
+      mode: otel                     # otel | ecs | none | raw | bodymap
+    # logs_index: my-logs-index      # only if user wants a static index, not a data stream
+
+service:
+  pipelines:
+    logs:
+      receivers: [filelog]
+      exporters: [elasticsearch]

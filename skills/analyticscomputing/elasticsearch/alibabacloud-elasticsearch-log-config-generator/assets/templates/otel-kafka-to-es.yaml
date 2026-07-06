@@ -1,0 +1,37 @@
+# OpenTelemetry Collector — read log topics from Kafka and ship to Elasticsearch.
+# Reference: ../reference/opentelemetry/04-kafkareceiver.md, 03-elasticsearchexporter.md
+
+receivers:
+  kafka:
+    brokers:
+      - <<KAFKA_BROKER_1>>:9092
+      - <<KAFKA_BROKER_2>>:9092
+    protocol_version: <<KAFKA_PROTOCOL_VERSION>>   # e.g. "2.8.0"
+    client_id: otel-logs
+    group_id: otel-logs-consumer
+    initial_offset: latest                         # earliest if backfill required (ask user)
+    logs:
+      topics:
+        - <<KAFKA_TOPIC>>
+      encoding: json                               # json | text | otlp_proto | otlp_json
+    # auth:
+    #   sasl:
+    #     username: ${env:KAFKA_USER}
+    #     password: ${env:KAFKA_PASSWORD}
+    #     mechanism: SCRAM-SHA-512
+    # tls:
+    #   ca_file: /etc/ssl/certs/kafka-ca.pem
+
+exporters:
+  elasticsearch:
+    endpoints:
+      - <<ELASTICSEARCH_URL>>
+    api_key: ${env:ELASTIC_API_KEY}
+    mapping:
+      mode: otel
+
+service:
+  pipelines:
+    logs:
+      receivers: [kafka]
+      exporters: [elasticsearch]
