@@ -1,0 +1,3 @@
+alibabacloud_aisc20260101>=1.1.0
+alibabacloud_credentials>=1.0.0
+alibabacloud_tea_openapi>=0.4.0
