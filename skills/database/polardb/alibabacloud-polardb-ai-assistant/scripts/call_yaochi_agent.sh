@@ -25,6 +25,7 @@ QUERY=""
 SESSION_ID=""
 PROFILE=""
 DEBUG=false
+OBSERVABILITY_SESSION_ID="${ALIBABACLOUD_AGENT_SKILL_SESSION_ID:-}"
 
 # --- Functions ---
 usage() {
@@ -56,11 +57,181 @@ debug_log() {
     fi
 }
 
+generate_observability_session_id() {
+    if command -v openssl >/dev/null 2>&1; then
+        openssl rand -hex 16
+        return 0
+    fi
+
+    if command -v uuidgen >/dev/null 2>&1; then
+        uuidgen | tr '[:upper:]' '[:lower:]' | tr -d '-' | cut -c1-32
+        return 0
+    fi
+
+    od -An -N16 -tx1 /dev/urandom 2>/dev/null | tr -d ' \n'
+}
+
+json_field_from_lines() {
+    local raw="$1"
+    local jq_filter="$2"
+    local line
+
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        [[ -z "$line" ]] && continue
+        if echo "$line" | jq -e . &>/dev/null 2>&1; then
+            local value
+            value=$(echo "$line" | jq -r "$jq_filter // empty" 2>/dev/null) || true
+            if [[ -n "$value" ]]; then
+                echo "$value"
+                return 0
+            fi
+        fi
+    done <<< "$raw"
+}
+
+extract_error_code() {
+    local raw="$1"
+    local value
+
+    value=$(json_field_from_lines "$raw" '.Code // .ErrorCode // .code // .errorCode') || true
+    if [[ -n "$value" ]]; then
+        echo "$value"
+        return 0
+    fi
+
+    value=$(echo "$raw" | sed -nE 's/.*"(Code|ErrorCode|code|errorCode)"[[:space:]]*:[[:space:]]*"([^"]+)".*/\2/p' | head -n 1)
+    if [[ -z "$value" ]]; then
+        value=$(echo "$raw" | sed -nE 's/^[[:space:]]*(Code|ErrorCode)[[:space:]]*:[[:space:]]*([^[:space:]]+).*/\2/p' | head -n 1)
+    fi
+    echo "$value"
+}
+
+extract_error_message() {
+    local raw="$1"
+    local value
+
+    value=$(json_field_from_lines "$raw" '.Message // .ErrorMessage // .Description // .message // .errorMessage // .description') || true
+    if [[ -n "$value" ]]; then
+        echo "$value"
+        return 0
+    fi
+
+    value=$(echo "$raw" | sed -nE 's/.*"(Message|ErrorMessage|Description|message|errorMessage|description)"[[:space:]]*:[[:space:]]*"([^"]+)".*/\2/p' | head -n 1)
+    if [[ -z "$value" ]]; then
+        value=$(echo "$raw" | sed -nE 's/^[[:space:]]*(Message|ErrorMessage|Description)[[:space:]]*:[[:space:]]*(.*)$/\2/p' | head -n 1)
+    fi
+    echo "$value"
+}
+
+extract_auth_action() {
+    local raw="$1"
+    local value
+
+    value=$(json_field_from_lines "$raw" '.AuthAction // .authAction // .Data.AuthAction // .data.AuthAction') || true
+    if [[ -n "$value" ]]; then
+        echo "$value"
+        return 0
+    fi
+
+    value=$(echo "$raw" | sed -nE 's/.*"(AuthAction|authAction)"[[:space:]]*:[[:space:]]*"([^"]+)".*/\2/p' | head -n 1)
+    if [[ -z "$value" ]]; then
+        value=$(echo "$raw" | sed -nE 's/^[[:space:]]*(AuthAction|authAction)[[:space:]]*:[[:space:]]*([^[:space:]]+).*/\2/p' | head -n 1)
+    fi
+    echo "$value"
+}
+
+extract_request_id() {
+    local raw="$1"
+    local value
+
+    value=$(json_field_from_lines "$raw" '.RequestId // .requestId // .RequestID // .requestID') || true
+    if [[ -n "$value" ]]; then
+        echo "$value"
+        return 0
+    fi
+
+    value=$(echo "$raw" | sed -nE 's/.*"(RequestId|requestId|RequestID|requestID)"[[:space:]]*:[[:space:]]*"([^"]+)".*/\2/p' | head -n 1)
+    if [[ -z "$value" ]]; then
+        value=$(echo "$raw" | sed -nE 's/^[[:space:]]*(RequestId|RequestID)[[:space:]]*:[[:space:]]*([^[:space:]]+).*/\2/p' | head -n 1)
+    fi
+    echo "$value"
+}
+
+error_suggestion() {
+    local code="$1"
+    local auth_action="$2"
+
+    case "$code" in
+        *Forbidden*|*NoPermission*|*Unauthorized*)
+            if [[ -n "$auth_action" ]]; then
+                echo "Grant the RAM action $auth_action to the current aliyun CLI identity, then retry."
+            else
+                echo "Grant the required RAM permissions for YaoChi Agent and PolarDB read-only access, then retry."
+            fi
+            ;;
+        *InvalidAccessKeyId*|*SignatureDoesNotMatch*|*InvalidSecurityToken*|*SecurityToken*)
+            echo "Check aliyun CLI credentials with 'aliyun configure get'; refresh expired STS/OAuth credentials if needed."
+            ;;
+        *Throttling*|*ConcurrentLimit*)
+            echo "Wait for the previous query to finish and retry. YaoChi Agent allows at most 2 concurrent sessions per account."
+            ;;
+        *Timeout*|*Connection*|*ServiceUnavailable*)
+            echo "Check network connectivity to das.cn-shanghai.aliyuncs.com and retry; use --debug if the issue persists."
+            ;;
+        "")
+            echo "Run the same command with --debug and inspect the raw Aliyun CLI error."
+            ;;
+        *)
+            echo "Review the Aliyun CLI error details below, apply the suggested permission or configuration fix, then retry."
+            ;;
+    esac
+}
+
+print_structured_error() {
+    local raw="$1"
+    local code message auth_action request_id suggestion
+
+    code=$(extract_error_code "$raw") || true
+    message=$(extract_error_message "$raw") || true
+    auth_action=$(extract_auth_action "$raw") || true
+    request_id=$(extract_request_id "$raw") || true
+    suggestion=$(error_suggestion "$code" "$auth_action")
+
+    echo "" >&2
+    echo "[YaoChi Agent Error]" >&2
+    echo "ErrorCode: ${code:-Unknown}" >&2
+    echo "ErrorMessage: ${message:-No detailed message returned by aliyun CLI.}" >&2
+    if [[ -n "$auth_action" ]]; then
+        echo "AuthAction: $auth_action" >&2
+    fi
+    if [[ -n "$request_id" ]]; then
+        echo "RequestId: $request_id" >&2
+    fi
+    echo "Suggestion: $suggestion" >&2
+    echo "Reference: references/ram-policies.md" >&2
+    echo "Reference: references/verification-method.md" >&2
+    if [[ -n "$code" ]]; then
+        echo "Troubleshooting: https://api.aliyun.com/troubleshoot?q=$code" >&2
+    fi
+    if [[ "$DEBUG" == "true" ]]; then
+        echo "RawError:" >&2
+        echo "$raw" >&2
+    fi
+}
+
+looks_like_cli_error() {
+    local raw="$1"
+
+    [[ "$raw" == *"SDKError"* ]] \
+        || [[ "$raw" == *"Error:"* ]] \
+        || [[ -n "$(extract_error_code "$raw")" ]]
+}
+
 # Check dependencies
 check_dependencies() {
     if ! command -v aliyun &>/dev/null; then
         echo "Error: aliyun CLI not found, please install (>= 3.3.3)" >&2
-        echo "Install: curl -fsSL https://aliyuncli.alicdn.com/install.sh | bash" >&2
+        echo "Install: download and review the official installer before running it locally" >&2
         echo "See: references/cli-installation-guide.md" >&2
         exit 1
     fi
@@ -93,9 +264,9 @@ parse_sse_streaming() {
     local format_detected=false
     local is_sse=false
     local is_json_stream=false
-    local error_buffer=""
+    local pending_buffer=""
 
-    while IFS= read -r line; do
+    while IFS= read -r line || [[ -n "$line" ]]; do
         line="${line%$'\r'}"
         [[ -z "$line" ]] && continue
 
@@ -108,18 +279,11 @@ parse_sse_streaming() {
                 is_json_stream=true
                 debug_log "Detected streaming JSON format response (DAS plugin)"
             else
-                # Might be error response or plain JSON, buffer first
-                error_buffer="$line"
                 # Check if error response
                 local error_code
                 error_code=$(echo "$line" | jq -r '.Code // empty' 2>/dev/null) || true
                 if [[ -n "$error_code" ]]; then
-                    local error_msg
-                    error_msg=$(echo "$line" | jq -r '.Message // empty' 2>/dev/null) || true
-                    echo "Error: ${error_msg:-Unknown error} (${error_code})" >&2
-                    if [[ "$error_code" == *"Throttling"* ]] || [[ "$error_code" == *"ConcurrentLimit"* ]]; then
-                        echo "Max 2 concurrent sessions per account. Please wait for previous query to complete." >&2
-                    fi
+                    print_structured_error "$line"
                     return 1
                 fi
                 # Try to handle as plain JSON response
@@ -128,11 +292,11 @@ parse_sse_streaming() {
                 if [[ -n "$content" ]]; then
                     printf "%s" "$content"
                     session_id=$(echo "$line" | jq -r '.SessionId // empty' 2>/dev/null) || true
-                else
-                    # Cannot parse, output as-is
-                    echo "$line"
+                    format_detected=true
+                    continue
                 fi
-                format_detected=true
+
+                pending_buffer+="${line}"$'\n'
                 continue
             fi
             format_detected=true
@@ -142,7 +306,8 @@ parse_sse_streaming() {
         if [[ "$is_sse" == true ]]; then
             if [[ "$line" =~ ^data:\ ?(.*) ]]; then
                 local data="${BASH_REMATCH[1]}"
-                [[ "$data" == "[DONE]" || -z "$data" ]] && continue
+                [[ -z "$data" ]] && continue
+                [[ "$data" == "[DONE]" ]] && break
 
                 local chunk_content
                 chunk_content=$(echo "$data" | jq -r '.Content // empty' 2>/dev/null) || true
@@ -162,6 +327,10 @@ parse_sse_streaming() {
 
         # Process streaming JSON format
         if [[ "$is_json_stream" == true ]]; then
+            local done_marker
+            done_marker=$(echo "$line" | jq -r 'if (.data == "[DONE]") or (((.data | type) == "object") and (.data.Done == true or .data.done == true)) then "true" else empty end' 2>/dev/null) || true
+            [[ "$done_marker" == "true" ]] && break
+
             local chunk_content
             chunk_content=$(echo "$line" | jq -r '.data.Content // empty' 2>/dev/null) || true
             [[ -n "$chunk_content" ]] && printf "%s" "$chunk_content"
@@ -177,6 +346,15 @@ parse_sse_streaming() {
             fi
         fi
     done
+
+    if [[ "$format_detected" == false && -n "$pending_buffer" ]]; then
+        if looks_like_cli_error "$pending_buffer"; then
+            print_structured_error "$pending_buffer"
+            return 1
+        fi
+        printf "%s" "$pending_buffer"
+        return 0
+    fi
 
     # Output newline (end of content)
     echo ""
@@ -265,6 +443,15 @@ validate_input() {
             exit 1
         fi
     fi
+
+    if [[ -z "$OBSERVABILITY_SESSION_ID" ]]; then
+        OBSERVABILITY_SESSION_ID="$(generate_observability_session_id)"
+    fi
+
+    if [[ ! "$OBSERVABILITY_SESSION_ID" =~ ^[0-9a-f]{32}$ ]]; then
+        echo "Error: ALIBABACLOUD_AGENT_SKILL_SESSION_ID must be a 32-character lowercase hexadecimal string." >&2
+        exit 1
+    fi
 }
 
 # --- Validation ---
@@ -280,7 +467,7 @@ cli_args=(das get-yao-chi-agent
     --endpoint "$ENDPOINT"
     --read-timeout "$READ_TIMEOUT"
     --connect-timeout "$CONNECT_TIMEOUT"
-    --user-agent AlibabaCloud-Agent-Skills/alibabacloud-polardb-ai-assistant
+    --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-polardb-ai-assistant/${OBSERVABILITY_SESSION_ID}"
 )
 
 if [[ -n "$SESSION_ID" ]]; then
@@ -302,11 +489,39 @@ echo "[YaoChi Agent Response]" >&2
 debug_log "Executing: aliyun ${cli_args[*]}"
 
 # --- Execute and stream parse ---
-# Use pipe for real streaming output, avoid command substitution blocking
-aliyun "${cli_args[@]}" 2>&1 | parse_sse_streaming
-exit_code=${PIPESTATUS[0]}
+# Use a FIFO so the parser can stop on stream end markers and then terminate
+# a CLI plugin process that keeps the connection open.
+STREAM_DIR=$(mktemp -d)
+STREAM_FIFO="$STREAM_DIR/aliyun-stream"
+mkfifo "$STREAM_FIFO"
 
-if [[ $exit_code -ne 0 ]]; then
+set +e
+aliyun "${cli_args[@]}" >"$STREAM_FIFO" 2>&1 &
+ALIYUN_PID=$!
+
+parse_sse_streaming <"$STREAM_FIFO"
+parser_exit_code=$?
+
+aliyun_was_killed=false
+if jobs -pr | grep -qx "$ALIYUN_PID"; then
+    kill "$ALIYUN_PID" 2>/dev/null || true
+    aliyun_was_killed=true
+fi
+
+wait "$ALIYUN_PID"
+exit_code=$?
+set -e
+rm -rf "$STREAM_DIR"
+
+if [[ "$aliyun_was_killed" == "true" && $parser_exit_code -eq 0 ]]; then
+    exit_code=0
+fi
+
+if [[ $exit_code -ne 0 || $parser_exit_code -ne 0 ]]; then
     # Non-zero exit but content already output via pipe, just log debug info
     debug_log "aliyun CLI exit code: $exit_code (streaming response may return non-zero)"
+    if [[ $exit_code -ne 0 ]]; then
+        exit "$exit_code"
+    fi
+    exit "$parser_exit_code"
 fi

@@ -11,7 +11,7 @@
 
 #### CORRECT
 ```bash
-aliyun das GetYaoChiAgent --Query "List clusters" --Source "polardb-console" --endpoint das.cn-shanghai.aliyuncs.com --user-agent AlibabaCloud-Agent-Skills
+aliyun das GetYaoChiAgent --Query "List clusters" --Source "polardb-console" --endpoint das.cn-shanghai.aliyuncs.com --user-agent AlibabaCloud-Agent-Skills/alibabacloud-polardb-ai-assistant/${ALIBABACLOUD_AGENT_SKILL_SESSION_ID}
 ```
 
 #### INCORRECT
@@ -29,7 +29,7 @@ aliyun das get-yao-chi-agent --query "List clusters"
 
 #### CORRECT
 ```bash
-aliyun das GetYaoChiAgent --Query "Hello" --endpoint das.cn-shanghai.aliyuncs.com --user-agent AlibabaCloud-Agent-Skills
+aliyun das GetYaoChiAgent --Query "Hello" --endpoint das.cn-shanghai.aliyuncs.com --user-agent AlibabaCloud-Agent-Skills/alibabacloud-polardb-ai-assistant/${ALIBABACLOUD_AGENT_SKILL_SESSION_ID}
 ```
 
 #### INCORRECT
@@ -48,16 +48,16 @@ aliyun das YaoChiAgent --Query "Hello"
 #### CORRECT
 ```bash
 # Required parameter --Query
-aliyun das GetYaoChiAgent --Query "List PolarDB clusters in Hangzhou region" --endpoint das.cn-shanghai.aliyuncs.com --user-agent AlibabaCloud-Agent-Skills
+aliyun das GetYaoChiAgent --Query "List PolarDB clusters in Hangzhou region" --endpoint das.cn-shanghai.aliyuncs.com --user-agent AlibabaCloud-Agent-Skills/alibabacloud-polardb-ai-assistant/${ALIBABACLOUD_AGENT_SKILL_SESSION_ID}
 
 # Optional parameter --Source
-aliyun das GetYaoChiAgent --Query "List clusters" --Source "polardb-console" --endpoint das.cn-shanghai.aliyuncs.com --user-agent AlibabaCloud-Agent-Skills
+aliyun das GetYaoChiAgent --Query "List clusters" --Source "polardb-console" --endpoint das.cn-shanghai.aliyuncs.com --user-agent AlibabaCloud-Agent-Skills/alibabacloud-polardb-ai-assistant/${ALIBABACLOUD_AGENT_SKILL_SESSION_ID}
 
 # Optional parameter --SessionId (multi-turn conversation)
-aliyun das GetYaoChiAgent --Query "Continue analysis" --SessionId "sess-xxx" --Source "polardb-console" --endpoint das.cn-shanghai.aliyuncs.com --user-agent AlibabaCloud-Agent-Skills
+aliyun das GetYaoChiAgent --Query "Continue analysis" --SessionId "sess-xxx" --Source "polardb-console" --endpoint das.cn-shanghai.aliyuncs.com --user-agent AlibabaCloud-Agent-Skills/alibabacloud-polardb-ai-assistant/${ALIBABACLOUD_AGENT_SKILL_SESSION_ID}
 
 # Optional parameter --ExtraInfo
-aliyun das GetYaoChiAgent --Query "Show cluster" --ExtraInfo "{}" --endpoint das.cn-shanghai.aliyuncs.com --user-agent AlibabaCloud-Agent-Skills
+aliyun das GetYaoChiAgent --Query "Show cluster" --ExtraInfo "{}" --endpoint das.cn-shanghai.aliyuncs.com --user-agent AlibabaCloud-Agent-Skills/alibabacloud-polardb-ai-assistant/${ALIBABACLOUD_AGENT_SKILL_SESSION_ID}
 ```
 
 #### INCORRECT
@@ -80,7 +80,7 @@ aliyun das GetYaoChiAgent --Query "List clusters" --RegionId "cn-hangzhou"
 #### CORRECT
 ```bash
 # GetYaoChiAgent uses cn-shanghai endpoint uniformly
-aliyun das GetYaoChiAgent --Query "List clusters" --endpoint das.cn-shanghai.aliyuncs.com --user-agent AlibabaCloud-Agent-Skills
+aliyun das GetYaoChiAgent --Query "List clusters" --endpoint das.cn-shanghai.aliyuncs.com --user-agent AlibabaCloud-Agent-Skills/alibabacloud-polardb-ai-assistant/${ALIBABACLOUD_AGENT_SKILL_SESSION_ID}
 ```
 
 #### INCORRECT
@@ -96,7 +96,7 @@ aliyun das GetYaoChiAgent --Query "List clusters"
 
 #### CORRECT
 ```bash
-aliyun das GetYaoChiAgent --Query "List clusters" --endpoint das.cn-shanghai.aliyuncs.com --user-agent AlibabaCloud-Agent-Skills
+aliyun das GetYaoChiAgent --Query "List clusters" --endpoint das.cn-shanghai.aliyuncs.com --user-agent AlibabaCloud-Agent-Skills/alibabacloud-polardb-ai-assistant/${ALIBABACLOUD_AGENT_SKILL_SESSION_ID}
 ```
 
 #### INCORRECT
@@ -110,13 +110,13 @@ aliyun das GetYaoChiAgent --Query "List clusters" --endpoint das.cn-shanghai.ali
 #### CORRECT
 ```bash
 # SSE streaming API requires longer read timeout (180 seconds)
-aliyun das GetYaoChiAgent --Query "List clusters" --endpoint das.cn-shanghai.aliyuncs.com --read-timeout 180 --connect-timeout 30 --user-agent AlibabaCloud-Agent-Skills
+aliyun das GetYaoChiAgent --Query "List clusters" --endpoint das.cn-shanghai.aliyuncs.com --read-timeout 180 --connect-timeout 30 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-polardb-ai-assistant/${ALIBABACLOUD_AGENT_SKILL_SESSION_ID}
 ```
 
 #### INCORRECT
 ```bash
 # Error: Read timeout too short, streaming API may timeout
-aliyun das GetYaoChiAgent --Query "List clusters" --endpoint das.cn-shanghai.aliyuncs.com --read-timeout 10 --user-agent AlibabaCloud-Agent-Skills
+aliyun das GetYaoChiAgent --Query "List clusters" --endpoint das.cn-shanghai.aliyuncs.com --read-timeout 10 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-polardb-ai-assistant/${ALIBABACLOUD_AGENT_SKILL_SESSION_ID}
 ```
 
 ---

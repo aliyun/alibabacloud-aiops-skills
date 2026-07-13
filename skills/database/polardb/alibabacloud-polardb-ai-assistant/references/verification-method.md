@@ -14,7 +14,8 @@ aliyun configure get
 # Expected output: Display current profile configuration
 
 # Test basic connectivity
-aliyun das describe-instance-das-pro --instance-id "pc-test" --endpoint das.cn-shanghai.aliyuncs.com --user-agent AlibabaCloud-Agent-Skills/alibabacloud-polardb-ai-assistant 2>&1
+export ALIBABACLOUD_AGENT_SKILL_SESSION_ID="${ALIBABACLOUD_AGENT_SKILL_SESSION_ID:-$(openssl rand -hex 16)}"
+aliyun das describe-instance-das-pro --instance-id "pc-test" --endpoint das.cn-shanghai.aliyuncs.com --user-agent AlibabaCloud-Agent-Skills/alibabacloud-polardb-ai-assistant/${ALIBABACLOUD_AGENT_SKILL_SESSION_ID} 2>&1
 # Expected: Return JSON response (even if instance doesn't exist, should return API error not connection error)
 ```
 

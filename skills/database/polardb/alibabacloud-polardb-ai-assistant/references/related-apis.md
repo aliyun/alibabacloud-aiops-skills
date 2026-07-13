@@ -4,8 +4,8 @@
 
 | Product | CLI Command | API Action | Description |
 |---------|------------|------------|-------------|
-| DAS | `aliyun das GetYaoChiAgent --Query "<query>" --Source "polardb-console" --endpoint das.cn-shanghai.aliyuncs.com --user-agent AlibabaCloud-Agent-Skills` | GetYaoChiAgent | YaoChi Intelligent Diagnostic Agent (SSE streaming response) |
-| DAS | `aliyun das GetDasAgentSSE --Query "<query>" --endpoint das.cn-shanghai.aliyuncs.com --user-agent AlibabaCloud-Agent-Skills` | GetDasAgentSSE | DAS Agent SSE interface |
+| DAS | `aliyun das GetYaoChiAgent --Query "<query>" --Source "polardb-console" --endpoint das.cn-shanghai.aliyuncs.com --user-agent AlibabaCloud-Agent-Skills/alibabacloud-polardb-ai-assistant/${ALIBABACLOUD_AGENT_SKILL_SESSION_ID}` | GetYaoChiAgent | YaoChi Intelligent Diagnostic Agent (SSE streaming response) |
+| DAS | `aliyun das GetDasAgentSSE --Query "<query>" --endpoint das.cn-shanghai.aliyuncs.com --user-agent AlibabaCloud-Agent-Skills/alibabacloud-polardb-ai-assistant/${ALIBABACLOUD_AGENT_SKILL_SESSION_ID}` | GetDasAgentSSE | DAS Agent SSE interface |
 
 ## GetYaoChiAgent API Parameters
 
