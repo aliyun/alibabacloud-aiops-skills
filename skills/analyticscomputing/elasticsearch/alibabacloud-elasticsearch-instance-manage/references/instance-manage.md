@@ -2,7 +2,7 @@
 
 > Routing entry: [../SKILL.md](../SKILL.md)
 >
-> This document covers the **6 instance lifecycle APIs**: create, describe, list, restart, update (upgrade/downgrade), and node-info query.
+> This document covers the **13 instance lifecycle APIs**: create, describe, list, restart, update (upgrade/downgrade), node-info query, admin password update, description update, charge type conversion, version upgrade (info + execute), change-record query, plus gray-upgrade continuation.
 > Global conventions (Authentication, Observability, common CLI args, idempotency, RAM rules) are defined in `SKILL.md` and apply to every command below.
 
 ## Table of Contents
@@ -15,6 +15,13 @@
   - [4. RestartInstance](#4-restartinstance)
   - [5. UpdateInstance](#5-updateinstance)
   - [6. ListAllNode](#6-listallnode)
+  - [7. UpdateAdminPassword](#7-updateadminpassword)
+  - [8. UpdateDescription](#8-updatedescription)
+  - [9. UpdateInstanceChargeType](#9-updateinstancechargetype)
+  - [10. UpgradeInfo](#10-upgradeinfo)
+  - [11. UpgradeEngineVersion](#11-upgradeengineversion)
+  - [12. ListActionRecords](#12-listactionrecords)
+  - [13. ContinueEsVersionUpgrade](#13-continueesversionupgrade)
 - [Instance Status Reference](#instance-status-reference)
 - [Elasticsearch Version Reference](#elasticsearch-version-reference)
 - [Official Documentation](#official-documentation)
@@ -27,7 +34,7 @@
 |---|---|
 | Common CLI args | **`--user-agent` applies ONLY to business API commands** (e.g. `aliyun elasticsearch ...`); such commands MUST pass `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage/${SESSION_ID}` (see `SKILL.md#observability` for `SESSION_ID` generation rule). **System / tool commands** (`aliyun configure`, `aliyun version`, `aliyun plugin update`, `aliyun help`, etc.) **MUST NOT** carry `--user-agent` — they do not support the flag. Each business command also appends `--connect-timeout 3 --read-timeout 10` (write op: `--read-timeout 30`). |
 | Region | `--region` is REQUIRED and MUST be explicitly provided by the user. Do NOT guess. |
-| Idempotency | Write APIs (`createInstance`, `RestartInstance`, `UpdateInstance`) MUST pass `--client-token $(uuidgen)`. Use the SAME token when retrying after timeout. |
+| Idempotency | Write APIs (`createInstance`, `RestartInstance`, `UpdateInstance`, `UpdateInstanceChargeType`) MUST pass `--client-token $(uuidgen)`. Use the SAME token when retrying after timeout. `ContinueEsVersionUpgrade` uses `X-Request-ChangeId` (the change id from `ListActionRecords`) instead of `clientToken`. |
 | API style | All APIs use ROA (RESTful). `--body` accepts a JSON string for HTTP request body. |
 
 ---
@@ -668,6 +675,480 @@ aliyun elasticsearch list-all-node \
 
 ---
 
+### 7. UpdateAdminPassword
+
+Update the elastic admin account password for a specified Elasticsearch instance.
+
+- **API**: `UpdateAdminPassword`
+- **HTTP**: `POST /openapi/instances/{InstanceId}/admin-pwd`
+- **Idempotent**: Yes — `clientToken` recommended.
+
+> **Note**: This API cannot be called when the instance is in `activating`, `invalid`, or `inactive` status.
+
+> **Important behaviors**:
+> - Password reset does **NOT** trigger an instance restart.
+> - The new password takes effect in approximately **5 minutes**.
+> - Only the `elastic` built-in account is affected; other custom users are not impacted.
+> - Best practice: avoid using the `elastic` account for programmatic access — create dedicated users with appropriate roles instead.
+
+**Parameters**
+
+| Name | Position | Required | Description |
+|---|---|---|---|
+| `InstanceId` | Path | Yes | Instance ID |
+| `clientToken` | Query | No | Idempotency token (max 64 ASCII chars) |
+| `esAdminPassword` | Body | Yes | New password. Must contain ≥3 of: uppercase / lowercase / digit / special char (`!@#$%^&*()_+-=`). Length: 8–32 chars. |
+
+**CLI Example**
+
+```bash
+aliyun elasticsearch update-admin-password --instance-id es-cn-xxxxx \
+  --region cn-hangzhou \
+  --body '{"esAdminPassword":"NewPass@123"}' \
+  --client-token $(uuidgen) \
+  --connect-timeout 3 \
+  --read-timeout 30 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage/${SESSION_ID}
+```
+
+**Response Fields**
+
+| Field | Description |
+|---|---|
+| `Result` | `true` if password updated successfully, `false` otherwise |
+| `RequestId` | Request ID |
+
+---
+
+### 8. UpdateDescription
+
+Update the name (description) of a specified Elasticsearch instance.
+
+- **API**: `UpdateDescription`
+- **HTTP**: `POST /openapi/instances/{InstanceId}/description`
+- **Idempotent**: Yes — `clientToken` recommended.
+
+**Parameters**
+
+| Name | Position | Required | Description |
+|---|---|---|---|
+| `InstanceId` | Path | Yes | Instance ID |
+| `clientToken` | Query | No | Idempotency token (max 64 ASCII chars) |
+| `description` | Body | Yes | New instance name. Constraints: 0–128 chars; must start with a letter (upper/lower), digit, or Chinese character; may contain underscore (`_`) or hyphen (`-`). |
+
+**CLI Example**
+
+```bash
+aliyun elasticsearch update-description --instance-id es-cn-xxxxx \
+  --region cn-hangzhou \
+  --body '{"description":"my_test_instance"}' \
+  --client-token $(uuidgen) \
+  --connect-timeout 3 \
+  --read-timeout 30 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage/${SESSION_ID}
+```
+
+**Response Fields**
+
+| Field | Description |
+|---|---|
+| `Result.description` | The updated instance name |
+| `RequestId` | Request ID |
+
+---
+
+### 9. UpdateInstanceChargeType
+
+Convert a pay-as-you-go (postpaid) Elasticsearch instance to subscription (prepaid).
+
+- **API**: `UpdateInstanceChargeType`
+- **HTTP**: `POST /openapi/instances/{InstanceId}/actions/convert-pay-type`
+- **Idempotent**: Yes — `clientToken` recommended.
+
+> **Important Behaviors**
+> - Only supports converting **postpaid → prepaid** (pay-as-you-go to subscription). Reverse conversion is not supported via this API.
+> - The `paymentType` field must be fixed to `"prepaid"`.
+
+**Parameters**
+
+| Name | Position | Required | Description |
+|---|---|---|---|
+| `InstanceId` | Path | Yes | Instance ID |
+| `clientToken` | Query | No | Idempotency token (max 64 ASCII chars) |
+
+**Request Body**
+
+```json
+{
+  "paymentInfo": {
+    "duration": 1,
+    "pricingCycle": "Month"
+  },
+  "paymentType": "prepaid"
+}
+```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `paymentType` | String | Yes | Fixed value: `prepaid` |
+| `paymentInfo.duration` | Integer | Yes | Duration. If `pricingCycle` is `Year`: 1–3; if `Month`: 1–9 |
+| `paymentInfo.pricingCycle` | String | Yes | Billing cycle: `Year` or `Month` |
+
+**CLI Example**
+
+```bash
+aliyun elasticsearch update-instance-charge-type --instance-id es-cn-xxxxx \
+  --region cn-hangzhou \
+  --body '{"paymentInfo":{"duration":1,"pricingCycle":"Month"},"paymentType":"prepaid"}' \
+  --client-token $(uuidgen) \
+  --connect-timeout 3 \
+  --read-timeout 30 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage/${SESSION_ID}
+```
+
+**Response Fields**
+
+| Field | Description |
+|---|---|
+| `Result` | `true` if conversion succeeded; `false` otherwise |
+| `RequestId` | Request ID |
+
+---
+
+### 10. UpgradeInfo
+
+Query whether there are available upgrade versions (ES major version or kernel patch) for the specified instance.
+
+- **API**: `UpgradeInfo`
+- **HTTP**: `GET /openapi/instances/{InstanceId}/upgradeInfo`
+- **Read-only**: Yes — no `clientToken` needed.
+
+**Parameters**
+
+| Name | Position | Required | Description |
+|---|---|---|---|
+| `InstanceId` | Path | Yes | Instance ID |
+
+**CLI Example**
+
+```bash
+aliyun elasticsearch upgrade-info --instance-id es-cn-xxxxx \
+  --region cn-hangzhou \
+  --connect-timeout 3 \
+  --read-timeout 10 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage/${SESSION_ID}
+```
+
+**Response Fields**
+
+| Field | Description |
+|---|---|
+| `Result.UpgradeInfo.Upgrade` | `true` if an upgrade is available; `false` otherwise |
+| `Result.UpgradeInfo.curEsVersion` | Current ES version (e.g. `8.17.0`) |
+| `Result.UpgradeInfo.upgradeEsVersion` | Available ES upgrade version (e.g. `8.17.0`) |
+| `Result.UpgradeInfo.curApackVersion` | Current kernel (apack) version (e.g. `2.2.4`) |
+| `Result.UpgradeInfo.upgradeApackVersion` | Available kernel upgrade version (e.g. `2.2.4`) |
+| `Result.UpgradeInfo.CurRepoVersion` | Current repo version (e.g. `1.7.3`) |
+| `Result.UpgradeInfo.UpdateRepoVersion` | Available repo upgrade version (e.g. `1.7.3`) |
+| `RequestId` | Request ID |
+
+---
+
+### 11. UpgradeEngineVersion
+
+Upgrade the Elasticsearch instance major version or kernel patch version.
+
+- **API**: `UpgradeEngineVersion`
+- **HTTP**: `POST /openapi/instances/{InstanceId}/actions/upgrade-version`
+- **Idempotent**: Yes — `clientToken` recommended.
+
+> **Important Behaviors**
+> - The instance must be in `active` status before calling this API.
+> - **[MANDATORY GATE]** You MUST call with `dryRun=true` first and it MUST pass before the actual upgrade. The validation checks cluster health, config/plugin compatibility, resources, and snapshots. If the dry-run reports any error, STOP and resolve it — do NOT execute the upgrade until the dry-run passes.
+> - Version upgrade paths differ by instance architecture:
+>   - **v2 basic architecture**: version upgrade via this API/CLI is **NOT supported** for now. Direct the user to perform the upgrade in the [Elasticsearch console](https://elasticsearch.console.aliyun.com/) instead.
+>   - **v3 cloud-native architecture**: the available target version(s) must be queried via `UpgradeInfo` (see §10) before upgrading.
+> - Kernel patch upgrade (`type=aliVersion`) follows different versioning (e.g. `2.2.8`).
+> - **Major version upgrade (`engineVersion`) only — [MANDATORY GATE]** — before executing, check installed **user (custom) plugins** (`ListUserPlugin`, see plugin-manage.md) for target-version compatibility: compare each installed plugin's `elasticsearchVersion` against the TARGET ES version. **A version mismatch WILL make the upgrade get stuck**, so if any custom plugin's version does NOT match the target (or dry-run reports `errorType=clusterConfigPlugins`), you MUST STOP, prompt the user, and require them to first upload the target-version plugin via `PluginAnalysis` (see plugin-manage.md → PluginAnalysis). Do NOT execute the upgrade until resolved. After a successful upload, pass the target-version plugin metadata (from `ListUserPlugin` → `Result[].bingoPlugins[]`) in the `plugins` array of the `UpgradeEngineVersion` request body — the upgrade will then re-install the compatible plugins as part of the upgrade.
+> - **Major version upgrade (`engineVersion`) only** — the upgrade runs as a gray (canary) change: after the gray batch completes (`ListActionRecords` → `detail.grayType == "grayDone"`), call `ContinueEsVersionUpgrade` (see §13) with the change id to finish upgrading the remaining nodes. Kernel patch upgrade does NOT need this continuation step.
+> - Upgrade may trigger a cluster restart depending on the version gap.
+>
+> **Upgrade Precautions** (inform the user before executing):
+> 1. If you use any Elasticsearch plugins, ensure each plugin is compatible with the target version — otherwise the plugin may not work after upgrade.
+> 2. Test the upgrade process on a test environment or test instance before upgrading production clusters.
+> 3. Ensure you have a recent snapshot of the cluster data before upgrading. The dry-run's `checkClusterSnapshot` REQUIRES a completed snapshot within the last hour; if it fails (`errorCode=WithInvalidElasticsearchSnapshots`), BLOCK and ASK the user whether to create one now via `CreateSnapshot` (see config-manage.md), then re-run the dry-run. Downgrade is NOT possible after upgrade; you must restore from snapshot if issues occur.
+> 4. If you also use Logstash, APM, Beats, Fleet/Elastic Agent, Elastic Security, or Enterprise Search, ensure they are compatible with the target version.
+> 5. Breaking changes may exist between your current version and the target version. Versions 8.9, 8.14, and 8.15 contain breaking changes; other 8.x versions have minor changes only. Refer to [Elastic official docs](https://www.elastic.co/guide/en/elasticsearch/reference/current/breaking-changes.html).
+> 6. Perform upgrades during **off-peak hours** on production clusters.
+
+**Parameters**
+
+| Name | Position | Required | Description |
+|---|---|---|---|
+| `InstanceId` | Path | Yes | Instance ID |
+| `clientToken` | Query | No | Idempotency token (max 64 ASCII chars) |
+| `dryRun` | Query | No | Default `false`. Set `true` to perform pre-upgrade validation only (does not execute upgrade). **Strongly recommended before actual upgrade.** |
+
+**Request Body**
+
+```json
+{
+  "type": "engineVersion",
+  "version": "6.7"
+}
+```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `type` | string | Yes | Upgrade type: `engineVersion` (major version) or `aliVersion` (kernel patch) |
+| `version` | string | Yes | Target version. For `engineVersion`: e.g. `6.7`. For `aliVersion`: e.g. `2.2.8` |
+| `plugins` | array | No | **Major version upgrade only.** Required when the instance has custom (USER) plugins whose version does not match the target. Each element is the target-version plugin metadata obtained from `ListUserPlugin` → `Result[].bingoPlugins[]` (fields: `elasticsearchVersion`, `pluginType`, `imageBuiltin`, `name`, `description`, `state`, `source`, `version`, `fileVersion`). The upgrade re-installs these compatible plugins as part of the upgrade. |
+
+**CLI Examples**
+
+Each upgrade type (major version OR kernel patch) is an independent operation — only one can be performed at a time.
+
+```bash
+## === Major Version Upgrade (engineVersion) ===
+
+# Step 1: Query available upgrade versions
+aliyun elasticsearch upgrade-info --instance-id es-cn-xxxxx \
+  --region cn-hangzhou \
+  --connect-timeout 3 \
+  --read-timeout 10 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage/${SESSION_ID}
+# If Result.UpgradeInfo.Upgrade == true, use upgradeEsVersion as target version
+
+# Step 2: [MANDATORY GATE] Dry-run validation — MUST be run and MUST pass before executing the upgrade.
+# It validates cluster health, config/plugin compatibility, resources and snapshots.
+aliyun elasticsearch upgrade-engine-version --instance-id es-cn-xxxxx --dry-run true \
+  --region cn-hangzhou \
+  --body '{"type":"engineVersion","version":"6.7"}' \
+  --client-token $(uuidgen) \
+  --connect-timeout 3 \
+  --read-timeout 30 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage/${SESSION_ID}
+# Inspect Result[].status per validateType. If ANY check has status=failed you MUST STOP and resolve it before Step 4:
+#   - checkClusterSnapshot failed (errorType=clusterSnapshot, e.g. errorCode=WithInvalidElasticsearchSnapshots,
+#     errorMsg "最近一个小时内未有已完成的集群快照，请进行快照备份"): a COMPLETED snapshot within the last hour is REQUIRED.
+#     BLOCK and ASK the user whether to create a snapshot now. If yes, trigger CreateSnapshot
+#     (see config-manage.md → CreateSnapshot: aliyun elasticsearch create-snapshot --instance-id es-cn-xxxxx --client-token $(uuidgen) ...),
+#     wait until the snapshot completes, then re-run this dry-run.
+#   - checkConfigCompatible failed with errorType=clusterConfigPlugins: handle custom plugins per Step 3.
+#   - checkClusterHealth / checkClusterResource failed: resolve the cluster health/resource issue first.
+# Do NOT run the actual upgrade until the dry-run passes (every check status=success).
+
+# Step 3: [MANDATORY GATE] Check installed user (custom) plugins for target-version compatibility (major version upgrade only)
+# Call ListUserPlugin and compare each installed plugin's elasticsearchVersion against the TARGET version.
+aliyun elasticsearch list-user-plugin --instance-id es-cn-xxxxx \
+  --region cn-hangzhou \
+  --connect-timeout 3 \
+  --read-timeout 10 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage/${SESSION_ID}
+# STRICT RULE — a version mismatch WILL make the upgrade get STUCK. If ANY installed custom plugin's
+# elasticsearchVersion != target version (e.g. installed 8.15.1 but upgrading to 8.17.0), you MUST:
+#   1) STOP here. Do NOT run Step 4. Prompt the user that a target-version plugin must be uploaded first.
+#   2) Have the user upload the target-version plugin via PluginAnalysis (see plugin-manage.md → PluginAnalysis: dry-run, then --dry-run false to actually upload).
+#   3) After a successful upload, re-run ListUserPlugin to get the target-version plugin metadata
+#      (Result[].bingoPlugins[] where elasticsearchVersion == target version, state=UNINSTALLED).
+#   4) Only then proceed to Step 4, putting that metadata into the UpgradeEngineVersion body's `plugins` array.
+
+# Step 4: Execute upgrade (only after dry-run passes)
+# When the instance has custom plugins, include the target-version plugin metadata (from ListUserPlugin) in `plugins`;
+# the upgrade re-installs the compatible plugins as part of the upgrade.
+aliyun elasticsearch upgrade-engine-version --instance-id es-cn-xxxxx \
+  --region cn-hangzhou \
+  --body '{"version":"8.17.0","type":"engineVersion","plugins":[{"elasticsearchVersion":"8.17.0","pluginType":"CUSTOM_PLUGIN","imageBuiltin":false,"name":"analysis-icu","description":"The ICU Analysis plugin integrates the Lucene ICU module into Elasticsearch, adding ICU-related analysis components.","state":"UNINSTALLED","source":"USER","version":"8.17.0","fileVersion":"CAEQigEYgYCAg_eehPoZIiA5YzM2MzY1M2U4MTE0NDliYWY2YjQ2ZmIwNWJiMGY0ZA--"}]}' \
+  --client-token $(uuidgen) \
+  --connect-timeout 3 \
+  --read-timeout 30 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage/${SESSION_ID}
+# No custom plugins? Use a minimal body: {"version":"8.17.0","type":"engineVersion"}
+
+# Step 5: Poll change progress until the gray batch is done
+aliyun elasticsearch list-action-records --instance-id es-cn-xxxxx \
+  --region cn-hangzhou \
+  --connect-timeout 3 \
+  --read-timeout 10 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage/${SESSION_ID}
+# Wait until Result[].detail.grayType == "grayDone"; take Result[].requestId (= detail.changeId) as the change id
+
+# Step 6: Continue upgrading the remaining nodes (gray done → finish upgrade)
+# General (ROA) invocation: `--roa 2017-06-13` + `--force` are REQUIRED to bypass plugin path validation.
+aliyun elasticsearch POST "/openapi/instances/es-cn-xxxxx/actions/continueEsVersionUpgrade?X-Request-ChangeId=<changeId>" \
+  --roa 2017-06-13 --force \
+  --region cn-hangzhou \
+  --connect-timeout 3 \
+  --read-timeout 30 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage/${SESSION_ID}
+```
+
+```bash
+## === Kernel Patch Upgrade (aliVersion) ===
+
+# Step 1: Query available upgrade versions
+aliyun elasticsearch upgrade-info --instance-id es-cn-xxxxx \
+  --region cn-hangzhou \
+  --connect-timeout 3 \
+  --read-timeout 10 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage/${SESSION_ID}
+# If Result.UpgradeInfo.Upgrade == true, use upgradeApackVersion as target version
+
+# Step 2: [MANDATORY GATE] Dry-run validation — MUST be run and MUST pass before executing the upgrade.
+# It validates cluster health, config compatibility, resources and snapshots.
+aliyun elasticsearch upgrade-engine-version --instance-id es-cn-xxxxx --dry-run true \
+  --region cn-hangzhou \
+  --body '{"version":"2.2.8","type":"aliVersion"}' \
+  --client-token $(uuidgen) \
+  --connect-timeout 3 \
+  --read-timeout 30 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage/${SESSION_ID}
+# Inspect Result[].status per validateType. If ANY check has status=failed you MUST STOP and resolve it before Step 3:
+#   - checkClusterSnapshot failed (errorType=clusterSnapshot, e.g. errorCode=WithInvalidElasticsearchSnapshots,
+#     errorMsg "最近一个小时内未有已完成的集群快照，请进行快照备份"): a COMPLETED snapshot within the last hour is REQUIRED.
+#     BLOCK and ASK the user whether to create a snapshot now. If yes, trigger CreateSnapshot
+#     (see config-manage.md → CreateSnapshot: aliyun elasticsearch create-snapshot --instance-id es-cn-xxxxx --client-token $(uuidgen) ...),
+#     wait until the snapshot completes, then re-run this dry-run.
+#   - checkClusterHealth / checkConfigCompatible / checkClusterResource failed: resolve the reported issue first.
+# Do NOT run the actual upgrade until the dry-run passes (every check status=success).
+
+# Step 3: Execute upgrade (only after dry-run passes)
+aliyun elasticsearch upgrade-engine-version --instance-id es-cn-xxxxx \
+  --region cn-hangzhou \
+  --body '{"version":"2.2.8","type":"aliVersion"}' \
+  --client-token $(uuidgen) \
+  --connect-timeout 3 \
+  --read-timeout 30 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage/${SESSION_ID}
+```
+
+**Response Fields (dryRun=true)**
+
+When `dryRun=true`, the response contains validation results for 4 checks:
+
+| Field | Description |
+|---|---|
+| `Result[].validateType` | Check type: `checkClusterHealth` / `checkConfigCompatible` / `checkClusterResource` / `checkClusterSnapshot` |
+| `Result[].status` | `success` or `failed` |
+| `Result[].validateResult[].errorType` | Error category: `clusterStatus` / `clusterConfigYml` / `clusterConfigPlugins` / `clusterResource` / `clusterSnapshot` |
+| `Result[].validateResult[].errorCode` | Error code (e.g. `ClusterStatusNotHealth`, `ClusterYamlNotCompatible`, `WithInvalidElasticsearchSnapshots`) |
+| `Result[].validateResult[].errorMsg` | Error message |
+| `RequestId` | Request ID |
+
+**Response Fields (dryRun=false / actual upgrade)**
+
+| Field | Description |
+|---|---|
+| `Result` | Upgrade result |
+| `RequestId` | Request ID |
+
+---
+
+### 12. ListActionRecords
+
+Query the management change records (action records) of an instance over a time window. Use this to **track how a version upgrade / config change is progressing** (e.g. how far the gray restart has advanced, how many nodes are done).
+
+- **API**: `ListActionRecords`
+- **HTTP**: `GET /openapi/instances/{InstanceId}/action-records`
+- **Read-only**: Yes — no `clientToken` needed.
+
+**Parameters**
+
+| Name | Position | Required | Description |
+|---|---|---|---|
+| `InstanceId` | Path | Yes | Instance ID |
+| `actionNames` | Query | No | Filter by action name(s), e.g. the upgrade action |
+| `filter` | Query | No | Additional filter expression |
+| `requestId` | Query | No | Filter by the request ID of a specific change |
+| `userId` | Query | No | Filter by operator user ID |
+| `startTime` | Query | No | Start time (epoch millis) |
+| `endTime` | Query | No | End time (epoch millis) |
+| `page` | Query | No | Page number |
+| `size` | Query | No | Page size |
+
+**CLI Example**
+
+```bash
+aliyun elasticsearch list-action-records --instance-id es-cn-xxxxx \
+  --region cn-hangzhou \
+  --connect-timeout 3 \
+  --read-timeout 10 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage/${SESSION_ID}
+```
+
+**Response Fields**
+
+| Field | Description |
+|---|---|
+| `RequestId` | Request ID |
+| `Headers.X-Total-Count` / `Headers.totalCount` | Total number of change records |
+| `Result[]` | Array of change records |
+| `Result[].actionName` | Change action name, e.g. `UpgradeEngineVersion` (use as `actionNames` filter) |
+| `Result[].actionParams.type` | Action sub-type, e.g. `engineVersion` (major version) / `aliVersion` (kernel patch) |
+| `Result[].instanceId` | Instance ID |
+| `Result[].stateType` | Overall change state, e.g. `ACTIVATING` (in progress) / `FINISHED` |
+| `Result[].requestId` | **Change ID** of this action record (the id needed to continue an in-progress change) |
+| `Result[].startTime` | Start time (epoch millis) |
+| `Result[].metaOld` / `Result[].metaNow` | Source / target version, e.g. `"8.15.1_with_X-Pack"` → `"8.17.0_with_X-Pack"` |
+| `Result[].recordDiff` | Change diff, e.g. `upgradeSetting/version.old` / `.now` |
+| `Result[].canCancelable` / `Result[].interruptible` | Whether the change can be cancelled / interrupted |
+| `Result[].statusInfo[]` | High-level phase list |
+| `Result[].statusInfo[].subState` | Phase name, e.g. `INITIALLY` / `updating-task` |
+| `Result[].statusInfo[].stateType` | Phase state: `FINISHED` / `ACTIVATING` |
+| `Result[].statusInfo[].detail.pendingOperationNodesCount` | Number of nodes still pending operation |
+| `Result[].changeDetail.stateType` | Detailed change state, e.g. `UPDATING` / `OK` |
+| `Result[].changeDetail.grayType` | Gray state (mirror of `detail.grayType`) |
+| `Result[].changeDetail.detail.hasDoneNodeCount` / `.totalNodeCount` | Completed / total node count (gray progress) |
+| `Result[].changeDetail.detail.subTasks[]` | Nested sub-tasks (`initially` / `createNode` / `deleteNode` / `ending`) each with `stateType`, `progress`, `startTime`, `endTime`, and `detail.nodeStatusRecordList[]` per-node status |
+| `Result[].detail.changeId` | Change ID (same as `requestId`) |
+| `Result[].detail.grayType` | **Gray state** — `grayDone` means the gray batch is complete (ready to continue the remaining nodes). Use this field to judge gray completion. |
+| `Result[].detail.elasticsearchStatus` | Instance status during the change, e.g. `Updating` |
+| `Result[].detail.updateItem[]` | Per-node update items: `name`, `phase`, `ready`, `restartCount`, `pendingOperation.type` (`Remove` / `None`) |
+
+> **Tip — judging gray completion**: when `detail.grayType == "grayDone"`, the gray phase has finished and the remaining nodes can be continued via the continuation API using `Result[].requestId` (= `detail.changeId`) as the change id.
+
+---
+
+### 13. ContinueEsVersionUpgrade
+
+Continue a gray version upgrade: after the gray batch of nodes has been upgraded and validated (i.e. `ListActionRecords` shows `detail.grayType == "grayDone"`), call this API to **continue upgrading the remaining nodes** and finish the change.
+
+- **API**: `ContinueEsVersionUpgrade`
+- **HTTP**: `POST /openapi/instances/{InstanceId}/actions/continueEsVersionUpgrade`
+- **Write**: Yes — uses `X-Request-ChangeId` (not `clientToken`).
+- **CLI note**: This API is not yet published as a named subcommand (`aliyun elasticsearch continue-es-version-upgrade` does NOT exist in the CLI). Use the general ROA method+url form shown below until it is available. The general invocation REQUIRES `--roa 2017-06-13` and `--force` to bypass plugin API path validation (otherwise it fails with `can not find api by path`). `X-Request-ChangeId` MUST be passed as a URL **query** parameter, NOT a header.
+
+> **Important Behaviors**
+> - Only call this after the gray batch has completed (`ListActionRecords` → `detail.grayType == "grayDone"`); it proceeds to upgrade the remaining nodes.
+> - `X-Request-ChangeId` identifies which in-progress upgrade to continue — obtain it from `ListActionRecords` (`Result[].requestId`, i.e. `detail.changeId`).
+
+**Parameters**
+
+| Name | Position | Required | Description |
+|---|---|---|---|
+| `InstanceId` | Path | Yes | Instance ID |
+| `X-Request-ChangeId` | Query | No | Change ID of the in-progress gray upgrade to continue (from `ListActionRecords`) |
+
+**CLI Example**
+
+```bash
+aliyun elasticsearch POST "/openapi/instances/es-cn-xxxxx/actions/continueEsVersionUpgrade?X-Request-ChangeId=<changeId>" \
+  --roa 2017-06-13 --force \
+  --region cn-hangzhou \
+  --connect-timeout 3 \
+  --read-timeout 30 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage/${SESSION_ID}
+```
+
+**Response Fields**
+
+| Field | Description |
+|---|---|
+| `Result` | `true` if the continuation was triggered successfully |
+| `RequestId` | Request ID |
+
+---
+
 ## Instance Status Reference
 
 | Status | Description |
@@ -697,4 +1178,11 @@ aliyun elasticsearch list-all-node \
 - [RestartInstance](https://next.api.aliyun.com/api/elasticsearch/2017-06-13/RestartInstance)
 - [UpdateInstance](https://next.api.aliyun.com/api/elasticsearch/2017-06-13/UpdateInstance)
 - [ListAllNode](https://next.api.aliyun.com/api/elasticsearch/2017-06-13/ListAllNode)
+- [UpdateAdminPassword](https://next.api.aliyun.com/api/elasticsearch/2017-06-13/UpdateAdminPassword)
+- [UpdateDescription](https://next.api.aliyun.com/api/elasticsearch/2017-06-13/UpdateDescription)
+- [UpdateInstanceChargeType](https://help.aliyun.com/zh/es/developer-reference/api-updateinstancechargetype)
+- [UpgradeInfo](https://api.aliyun.com/api/elasticsearch/2017-06-13/UpgradeInfo)
+- [UpgradeEngineVersion](https://help.aliyun.com/zh/es/developer-reference/api-upgradeengineversion)
+- [ListActionRecords](https://next.api.aliyun.com/api/elasticsearch/2017-06-13/ListActionRecords)
+- [ContinueEsVersionUpgrade](https://next.api.aliyun.com/api/elasticsearch/2017-06-13/ContinueEsVersionUpgrade)
 - [Elasticsearch Pricing](https://www.aliyun.com/price/product#/elasticsearch/detail)

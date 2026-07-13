@@ -2,7 +2,7 @@
 
 > Routing entry: [../SKILL.md](../SKILL.md)
 >
-> This document covers **Snapshot (backup) management** and **Dict (analyzer dictionary) management** for an existing Elasticsearch instance.
+> This document covers **Snapshot (backup) management**, **Dict (analyzer dictionary) management**, **Kibana settings**, and **ES cluster YML configuration** for an existing Elasticsearch instance.
 > Global conventions (Authentication, Observability, common CLI args, idempotency, RAM rules) are defined in `SKILL.md` and apply to every command below.
 
 ## Table of Contents
@@ -17,6 +17,11 @@
   - [6. UpdateHotIkDicts](#6-updatehotikdicts)
   - [7. UpdateSynonymsDicts](#7-updatesynonymsdicts)
   - [8. UpdateAliwsDict](#8-updatealiwsdict)
+- [Kibana Settings](#kibana-settings)
+  - [9. DescribeKibanaSettings](#9-describekibanasettings)
+  - [10. UpdateKibanaSettings](#10-updatekibanasettings)
+- [ES Cluster YML Configuration](#es-cluster-yml-configuration)
+  - [11. UpdateInstanceSettings](#11-updateinstancesettings)
 - [Common Conventions](#common-conventions)
 - [Official Documentation](#official-documentation)
 
@@ -31,7 +36,7 @@
 | Common CLI args | **`--user-agent` applies ONLY to business API commands** (e.g. `aliyun elasticsearch ...`); such commands MUST pass `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage/${SESSION_ID}` (see `SKILL.md#observability` for `SESSION_ID` generation rule). **System / tool commands** (`aliyun configure`, `aliyun version`, `aliyun plugin update`, `aliyun help`, etc.) **MUST NOT** carry `--user-agent` — they do not support the flag. Each business command also appends `--connect-timeout 3 --read-timeout 10` (write op: `--read-timeout 30`). |
 | Region | `--region` is REQUIRED and MUST be explicitly provided by the user. Do NOT guess. |
 | InstanceId | `--instance-id` is REQUIRED and MUST be explicitly provided by the user. |
-| Idempotency | All write APIs (`UpdateSnapshotSetting`, `CreateSnapshot`, `UpdateDict`, `UpdateHotIkDicts`, `UpdateSynonymsDicts`, `UpdateAliwsDict`) MUST pass `--client-token $(uuidgen)`. Use the SAME token when retrying after timeout. |
+| Idempotency | All write APIs (`UpdateSnapshotSetting`, `CreateSnapshot`, `UpdateDict`, `UpdateHotIkDicts`, `UpdateSynonymsDicts`, `UpdateAliwsDict`, `UpdateKibanaSettings`, `UpdateInstanceSettings`) MUST pass `--client-token $(uuidgen)`. Use the SAME token when retrying after timeout. |
 | Pre-check | All write APIs require the instance to be in `active` status. Run `aliyun elasticsearch describe-instance --region <RegionId> --instance-id <InstanceId> --cli-query "Result.status"` first. |
 | OSS dict files | For `sourceType=OSS`, the OSS bucket must be in the SAME region as the ES instance and PUBLICLY READABLE. Existing dict files NOT explicitly listed with `sourceType=ORIGIN` will be DELETED — every Update*Dict call MUST include the full final desired dict list. |
 
@@ -514,6 +519,187 @@ aliyun elasticsearch update-aliws-dict \
 
 ---
 
+## Kibana Settings
+
+### 9. DescribeKibanaSettings
+
+Retrieve the current Kibana configuration for a specified Elasticsearch instance.
+
+- **API**: `DescribeKibanaSettings`
+- **HTTP**: `GET /openapi/instances/{InstanceId}/kibana-settings`
+- **Read-only**: Yes — no `clientToken` needed.
+
+**Parameters**
+
+| Name | Position | Required | Description |
+|---|---|---|---|
+| `InstanceId` | Path | Yes | Instance ID |
+
+**CLI Example**
+
+```bash
+aliyun elasticsearch describe-kibana-settings --instance-id es-cn-xxxxx \
+  --region cn-hangzhou \
+  --connect-timeout 3 \
+  --read-timeout 10 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage/${SESSION_ID}
+```
+
+**Response Fields**
+
+| Field | Description |
+|---|---|
+| `Result` | Map of Kibana settings key-value pairs (e.g. `map.includeElasticMapsService`, `server.ssl.enabled`, etc.) |
+| `RequestId` | Request ID |
+
+---
+
+### 10. UpdateKibanaSettings
+
+Update the Kibana configuration for a specified Elasticsearch instance. Currently only supports changing the Kibana UI language.
+
+- **API**: `UpdateKibanaSettings`
+- **HTTP**: `POST /openapi/instances/{InstanceId}/actions/update-kibana-settings`
+- **Idempotent**: Yes — `clientToken` recommended.
+
+**Parameters**
+
+| Name | Position | Required | Description |
+|---|---|---|---|
+| `InstanceId` | Path | Yes | Instance ID |
+| `clientToken` | Query | No | Idempotency token (max 64 ASCII chars) |
+| `i18n.locale` | Body | No | Kibana language. Only two values allowed: `en` (English, default) or `zh-CN` (Chinese). |
+
+**CLI Example**
+
+```bash
+aliyun elasticsearch update-kibana-settings --instance-id es-cn-xxxxx \
+  --region cn-hangzhou \
+  --body '{"i18n.locale":"zh-CN"}' \
+  --client-token $(uuidgen) \
+  --connect-timeout 3 \
+  --read-timeout 30 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage/${SESSION_ID}
+```
+
+**Response Fields**
+
+| Field | Description |
+|---|---|
+| `Result` | `true` if Kibana settings updated successfully, `false` otherwise |
+| `RequestId` | Request ID |
+
+---
+
+## ES Cluster YML Configuration
+
+### 11. UpdateInstanceSettings
+
+Update the YML parameter configuration (`elasticsearch.yml`) of a specified Elasticsearch instance.
+
+- **API**: `UpdateInstanceSettings`
+- **HTTP**: `POST /openapi/instances/{InstanceId}/instance-settings`
+- **Idempotent**: Yes — `clientToken` recommended.
+
+> **Important Behaviors**
+> - This API **triggers a rolling restart** of the cluster. Operate during low-traffic periods.
+> - Instance must be in `active` status. Cannot be called when instance is in `activating`, `invalid`, or `inactive` state.
+> - If an ongoing blue-green change exists (instance status = `activating`), only `normal` (in-place) update strategy is allowed.
+
+> **CRITICAL — Full-replacement semantics**
+> - `esConfig` is applied as the **complete, final** YML config set — it **fully replaces** the existing config. It is **NOT** an incremental patch: any existing key **NOT** present in the submitted `esConfig` will be **removed/reset**.
+> - Therefore you **MUST NOT** submit only the single key you want to change. The correct workflow is:
+>   1. Call `DescribeInstance` first and read the current full YML config from `Result.esConfig`.
+>   2. Merge your change into that full map (add / modify / delete the target key).
+>   3. Submit the **entire merged `esConfig`** in the request body.
+> - If `DescribeInstance` returns no `esConfig` (empty/absent), the instance currently has no custom YML overrides — submit the full desired set explicitly.
+
+**Parameters**
+
+| Name | Position | Required | Description |
+|---|---|---|---|
+| `InstanceId` | Path | Yes | Instance ID |
+| `clientToken` | Query | No | Idempotency token (max 64 ASCII chars) |
+| `updateStrategy` | Query | No | Change strategy: `normal` (in-place, default — rolling restart one-by-one, no data copy), `blue_green` (blue-green — adds new nodes, copies data, smooth but slow, IPs will change), `intelligent` (system auto-selects optimal strategy). |
+
+**Request Body**
+
+> The `esConfig` object MUST be the **full** desired config map (see Full-replacement semantics above), not just the changed key.
+
+```json
+{
+  "esConfig": {
+    "<yml_param_key>": "<value>"
+  }
+}
+```
+
+**Supported YML Parameters**
+
+| Parameter | Default | Version | Description |
+|---|---|---|---|
+| `action.auto_create_index` | `false` | All | Allow auto-creation of indices when a new document arrives for a non-existent index. |
+| `action.destructive_requires_name` | `true` | All | Require explicit index name when deleting (disallow wildcards). |
+| `xpack.security.audit.enabled` | `false` | All | Enable audit logging. Logs take disk space and affect performance — use with caution. |
+| `xpack.watcher.enabled` | `false` | All | Enable X-Pack Watcher. Remember to periodically clean `.watcher-history*` indices. |
+| `http.cors.enabled` | `false` | All | Enable CORS access. |
+| `http.cors.allow-origin` | `""` | All | Allowed origin domains (supports regex, e.g. `/https?:\/\/localhost(:[0-9]+)?/`). `*` allows all (not recommended). |
+| `http.cors.max-age` | `1728000` | All | CORS preflight cache time in seconds (default 20 days). |
+| `http.cors.allow-methods` | `OPTIONS,HEAD,GET,POST,PUT,DELETE` | All | Allowed HTTP methods. |
+| `http.cors.allow-headers` | `X-Requested-With,Content-Type,Content-Length` | All | Allowed request headers. |
+| `http.cors.allow-credentials` | `false` | All | Whether to return `Access-Control-Allow-Credentials`. |
+| `reindex.remote.whitelist` | — | All | Remote reindex whitelist (host:port). |
+| `thread_pool.bulk.queue_size` | `200` | 5.x, 6.x | Write queue size (use `thread_pool.write.queue_size` for 6.x+). |
+| `thread_pool.write.queue_size` | `200` | 6.x, 7.x, 8.x | Write queue size. |
+| `thread_pool.search.queue_size` | `1000` | All | Search queue size (max 1000 via API; contact support for higher). |
+| `xpack.sql.enabled` | `true` | All | X-Pack SQL plugin. Set `false` to use a custom SQL plugin. |
+| `xpack.security.audit.logfile.events.include` | `access_denied, anonymous_access_denied, authentication_failed, connection_denied, tampered_request, run_as_denied, run_as_granted` | 7.x, 8.x | Audit event types to include in log file. Add `access_granted` to capture successful requests (increases disk usage significantly). |
+| `xpack.security.audit.index.bulk_size` | `1000` | 5.x, 6.x | Bulk size for audit index writes. |
+| `xpack.security.audit.index.flush_interval` | `1s` | 5.x, 6.x | Flush interval for audit index buffer. |
+| `xpack.security.audit.index.rollover` | `daily` | 5.x, 6.x | Audit index rollover frequency (hourly/daily/weekly/monthly). |
+| `xpack.security.audit.index.events.include` | `access_denied, access_granted, anonymous_access_denied, authentication_failed, connection_denied, tampered_request, run_as_denied, run_as_granted` | 5.x, 6.x | Audit event types to write to index. |
+| `xpack.security.audit.index.events.exclude` | — | 5.x, 6.x | Audit event types to exclude from index. |
+| `xpack.security.audit.index.events.emit_request_body` | `false` | 5.x, 6.x | Include REST request body in audit events (security risk). |
+| `xpack.security.audit.index.settings.index.number_of_shards` | `5` | 5.x, 6.x | Number of primary shards for the audit log index. Must be set together with `xpack.security.audit.enabled: true`. |
+| `xpack.security.audit.index.settings.index.number_of_replicas` | `1` | 5.x, 6.x | Number of replicas for the audit log index. Must be set together with `xpack.security.audit.enabled: true`. |
+| `xpack.security.authc.realms.ldap1` | — | 6.x+ | LDAP realm configuration. |
+| `xpack.security.authc.realms.active_directory1` | — | 6.x+ | Active Directory realm configuration. |
+| `xpack.security.authc.realms.pki1` | — | 6.x+ | PKI realm configuration. |
+| `xpack.security.authc.realms.saml1` | — | 6.x+ | SAML realm configuration. |
+| `xpack.security.authc.realms.kerberos1` | — | 6.x+ | Kerberos realm configuration. |
+| `xpack.security.authc.token.enabled` | — | 6.x+ | Token-based authentication. |
+
+**CLI Example**
+
+```bash
+# Step 1: Fetch the current FULL YML config (full-replacement semantics — you must resubmit all existing keys)
+aliyun elasticsearch describe-instance --instance-id es-cn-xxxxx \
+  --region cn-hangzhou \
+  --cli-query "Result.esConfig" \
+  --connect-timeout 3 \
+  --read-timeout 10 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage/${SESSION_ID}
+
+# Step 2: Merge your change into the full esConfig, then submit the ENTIRE map.
+# Example: existing esConfig already had {"action.auto_create_index":"true"}; now also set thread_pool.write.queue_size=500
+aliyun elasticsearch update-instance-settings --instance-id es-cn-xxxxx \
+  --region cn-hangzhou \
+  --body '{"esConfig":{"action.auto_create_index":"true","thread_pool.write.queue_size":500}}' \
+  --client-token $(uuidgen) \
+  --connect-timeout 3 \
+  --read-timeout 30 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-elasticsearch-instance-manage/${SESSION_ID}
+```
+
+**Response Fields**
+
+| Field | Description |
+|---|---|
+| `Result` | Full instance detail object (same structure as `DescribeInstance` response) |
+| `RequestId` | Request ID |
+
+---
+
 ## Official Documentation
 
 - [UpdateSnapshotSetting](https://www.alibabacloud.com/help/zh/es/developer-reference/api-updatesnapshotsetting)
@@ -524,3 +710,6 @@ aliyun elasticsearch update-aliws-dict \
 - [UpdateHotIkDicts](https://www.alibabacloud.com/help/zh/es/developer-reference/api-updatehotikdicts)
 - [UpdateSynonymsDicts](https://www.alibabacloud.com/help/zh/es/developer-reference/api-updatesynonymsdicts)
 - [UpdateAliwsDict](https://www.alibabacloud.com/help/zh/es/developer-reference/api-updatealiwsdict)
+- [DescribeKibanaSettings](https://next.api.aliyun.com/api/elasticsearch/2017-06-13/DescribeKibanaSettings)
+- [UpdateKibanaSettings](https://next.api.aliyun.com/api/elasticsearch/2017-06-13/UpdateKibanaSettings)
+- [UpdateInstanceSettings](https://next.api.aliyun.com/api/elasticsearch/2017-06-13/UpdateInstanceSettings)

@@ -21,18 +21,37 @@ Alibaba Cloud Elasticsearch Management
 │   ├── ListInstance             (List Instances)
 │   ├── RestartInstance          (Restart Instance)
 │   ├── UpdateInstance           (Upgrade / Downgrade)
-│   └── ListAllNode              (Query Cluster Node Info)
-└── Instance Config              --> references/config-manage.md
-    ├── Snapshot Management
-    │   ├── UpdateSnapshotSetting    (Set auto-snapshot policy)
-    │   ├── DescribeSnapshotSetting  (Query auto-snapshot policy)
-    │   └── CreateSnapshot           (Trigger one-shot snapshot)
-    └── Dict Management
-        ├── ListDicts                (List analyzer dicts)
-        ├── UpdateDict               (Cold-update IK dict)
-        ├── UpdateHotIkDicts         (Hot-update IK dict)
-        ├── UpdateSynonymsDicts      (Update synonyms dict)
-        └── UpdateAliwsDict          (Update AliNLP dict)
+│   ├── ListAllNode              (Query Cluster Node Info)
+│   ├── UpdateAdminPassword      (Update Admin Password)
+│   ├── UpdateDescription        (Update Instance Name)
+│   ├── UpdateInstanceChargeType (Convert pay-as-you-go to subscription)
+│   ├── UpgradeInfo              (Query available upgrade versions)
+│   ├── UpgradeEngineVersion     (Upgrade ES version / kernel patch)
+│   ├── ListActionRecords        (Query change records / upgrade progress)
+│   └── ContinueEsVersionUpgrade (Continue gray upgrade of remaining nodes)
+├── Instance Config              --> references/config-manage.md
+│   ├── Snapshot Management
+│   │   ├── UpdateSnapshotSetting    (Set auto-snapshot policy)
+│   │   ├── DescribeSnapshotSetting  (Query auto-snapshot policy)
+│   │   └── CreateSnapshot           (Trigger one-shot snapshot)
+│   ├── Dict Management
+│   │   ├── ListDicts                (List analyzer dicts)
+│   │   ├── UpdateDict               (Cold-update IK dict)
+│   │   ├── UpdateHotIkDicts         (Hot-update IK dict)
+│   │   ├── UpdateSynonymsDicts      (Update synonyms dict)
+│   │   └── UpdateAliwsDict          (Update AliNLP dict)
+│   ├── Kibana Settings
+│   │   ├── DescribeKibanaSettings   (Query Kibana config)
+│   │   └── UpdateKibanaSettings     (Update Kibana language)
+│   └── ES Cluster YML
+│       └── UpdateInstanceSettings   (Update YML config — triggers restart)
+└── Plugin Management            --> references/plugin-manage.md
+    ├── ListPlugins              (List system plugins)
+    ├── ListUserPlugin           (List user custom plugins)
+    ├── InstallSystemPlugin      (Install system plugin)
+    ├── UninstallPlugin          (Uninstall system plugin)
+    ├── PluginAnalysis           (Upload custom plugin to library)
+    └── InstallUserPlugins       (Install user custom plugins)
 ```
 
 ---
@@ -43,9 +62,12 @@ Match the user request to the FIRST matching row, then load the listed module do
 
 | If the user wants to ... (keywords) | Module | Required reading | Key APIs |
 |---|---|---|---|
-| Create / describe / list / restart instance, upgrade / downgrade configuration, query nodes, scale, resize, query cluster status | Instance Lifecycle | [references/instance-manage.md](references/instance-manage.md) | createInstance, DescribeInstance, ListInstance, RestartInstance, UpdateInstance, ListAllNode |
+| Create / describe / list / restart instance, upgrade / downgrade configuration, query nodes, scale, resize, query cluster status, change password, reset password, rename instance, update description, convert charge type, pay-as-you-go to subscription, postpaid to prepaid, upgrade version, upgrade engine, kernel patch, aliVersion, check available version, upgrade info, change records, action records, upgrade progress, change history, continue upgrade, resume upgrade, gray upgrade, continue gray, finish upgrade | Instance Lifecycle | [references/instance-manage.md](references/instance-manage.md) | createInstance, DescribeInstance, ListInstance, RestartInstance, UpdateInstance, ListAllNode, UpdateAdminPassword, UpdateDescription, UpdateInstanceChargeType, UpgradeInfo, UpgradeEngineVersion, ListActionRecords, ContinueEsVersionUpgrade |
 | Configure / view / trigger snapshot, automatic backup, manual backup, snapshot cron | Config — Snapshot | [references/config-manage.md#snapshot-management](references/config-manage.md#snapshot-management) | UpdateSnapshotSetting, DescribeSnapshotSetting, CreateSnapshot |
 | Manage analyzer dictionaries: IK main / stopword (cold or hot update), synonyms, AliWS / AliNLP | Config — Dict | [references/config-manage.md#dict-management](references/config-manage.md#dict-management) | ListDicts, UpdateDict, UpdateHotIkDicts, UpdateSynonymsDicts, UpdateAliwsDict |
+| Query / view / update Kibana settings, Kibana configuration, Kibana language | Config — Kibana | [references/config-manage.md#kibana-settings](references/config-manage.md#kibana-settings) | DescribeKibanaSettings, UpdateKibanaSettings |
+| Update ES YML configuration, elasticsearch.yml, CORS, reindex whitelist, thread pool queue size, audit log, watcher, auto create index, update strategy | Config — ES Cluster YML | [references/config-manage.md#es-cluster-yml-configuration](references/config-manage.md#es-cluster-yml-configuration) | UpdateInstanceSettings |
+| List / query plugins, system plugins, user plugins, custom plugins, plugin status, install plugin, uninstall plugin, remove plugin, upload plugin, plugin analysis | Plugin Management | [references/plugin-manage.md](references/plugin-manage.md) | ListPlugins, ListUserPlugin, InstallSystemPlugin, UninstallPlugin, PluginAnalysis, InstallUserPlugins |
 
 > If multiple intents are present, handle them sequentially: route → execute → verify → next route.
 > If the intent does not match any row, ask the user to clarify; do NOT guess an API.
@@ -167,7 +189,7 @@ These conventions apply to EVERY CLI command produced by this skill, regardless 
 
 ### Idempotency for Write Operations
 
-For write APIs (`createInstance`, `RestartInstance`, `UpdateInstance`, `CreateSnapshot`, `UpdateSnapshotSetting`, `UpdateDict`, `UpdateHotIkDicts`, `UpdateSynonymsDicts`, `UpdateAliwsDict`) you **MUST** use `--client-token`.
+For write APIs (`createInstance`, `RestartInstance`, `UpdateInstance`, `CreateSnapshot`, `UpdateSnapshotSetting`, `UpdateDict`, `UpdateHotIkDicts`, `UpdateSynonymsDicts`, `UpdateAliwsDict`, `UpdateKibanaSettings`, `UpdateInstanceSettings`, `InstallSystemPlugin`, `UninstallPlugin`, `UpdateInstanceChargeType`, `UpgradeEngineVersion`) you **MUST** use `--client-token`.
 
 - Format: UUID. Generate via `uuidgen` (or PowerShell `[guid]::NewGuid()`); fall back to `idem-<timestamp>-<semantic>` if `uuidgen` is unavailable. Never abort the workflow because of an unavailable command.
 - On timeout / failure, retry with **the same** `clientToken`. Wait ~10 seconds before retrying.

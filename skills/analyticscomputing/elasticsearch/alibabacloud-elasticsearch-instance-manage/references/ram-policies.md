@@ -37,6 +37,13 @@ This document lists the RAM (Resource Access Management) permissions required fo
 | ListAllNode | `elasticsearch:ListAllNode` | Query Cluster Node Information |
 | RestartInstance | `elasticsearch:RestartInstance` | Restart Instance |
 | UpdateInstance | `elasticsearch:UpdateInstance` | Upgrade/Downgrade Instance Configuration |
+| UpdateAdminPassword | `elasticsearch:UpdateAdminPassword` | Update elastic admin password |
+| UpdateDescription | `elasticsearch:UpdateDescription` | Update instance name |
+| UpdateInstanceChargeType | `elasticsearch:UpdateInstanceChargeType` | Convert pay-as-you-go to subscription |
+| UpgradeEngineVersion | `elasticsearch:UpgradeEngineVersion` | Upgrade instance version or kernel patch |
+| UpgradeInfo | `elasticsearch:DescribeInstance` | Query available upgrade versions (shares permission with DescribeInstance) |
+| ListActionRecords | `elasticsearch:ListActionRecords` | Query instance change records / upgrade progress |
+| ContinueEsVersionUpgrade | `elasticsearch:ContinueEsVersionUpgrade` | Continue gray upgrade of remaining nodes |
 
 ### Snapshot Management
 
@@ -52,9 +59,33 @@ This document lists the RAM (Resource Access Management) permissions required fo
 |------------|---------------------|-------------|
 | ListDicts | `elasticsearch:ListDicts` | List analyzer dicts |
 | UpdateDict | `elasticsearch:UpdateDict` | Cold-update IK analyzer dicts |
-| UpdateHotIkDicts | `elasticsearch:UpdateHotIkDicts` | Hot-update IK analyzer dicts |
-| UpdateSynonymsDicts | `elasticsearch:UpdateSynonymsDicts` | Update synonyms dict |
-| UpdateAliwsDict | `elasticsearch:UpdateAliwsDict` | Update AliNLP (AliWS) dict |
+| UpdateHotIkDicts | `elasticsearch:UpdateDict` | Hot-update IK analyzer dicts (shares permission with UpdateDict) |
+| UpdateSynonymsDicts | `elasticsearch:UpdateDict` | Update synonyms dict (shares permission with UpdateDict) |
+| UpdateAliwsDict | `elasticsearch:UpdateDict` | Update AliNLP (AliWS) dict (shares permission with UpdateDict) |
+
+### Kibana Settings
+
+| API Action | Required Permission | Description |
+|------------|---------------------|-------------|
+| DescribeKibanaSettings | `elasticsearch:DescribeKibanaSettings` | Query Kibana configuration |
+| UpdateKibanaSettings | `elasticsearch:UpdateKibanaSettings` | Update Kibana language settings |
+
+### ES Cluster YML Configuration
+
+| API Action | Required Permission | Description |
+|------------|---------------------|-------------|
+| UpdateInstanceSettings | `elasticsearch:UpdateInstanceSettings` | Update ES YML configuration (triggers restart) |
+
+### Plugin Management
+
+| API Action | Required Permission | Description |
+|------------|---------------------|-------------|
+| ListPlugins | `elasticsearch:ListPlugin` | List system plugins |
+| ListUserPlugin | `elasticsearch:ListPlugin` | List user custom plugins (shares permission with ListPlugins) |
+| InstallSystemPlugin | `elasticsearch:InstallSystemPlugin` | Install system plugin |
+| UninstallPlugin | `elasticsearch:UninstallPlugin` | Uninstall system plugin |
+| PluginAnalysis | `elasticsearch:UploadPlugin` | Upload custom plugin to library (validate/upload) |
+| InstallUserPlugins | `elasticsearch:InstallUserPlugins` | Install user custom plugins |
 
 > Snapshot module additionally requires OSS access on the snapshot repository bucket; Dict module additionally requires OSS read access on the dict-source bucket. See [Additional Permissions for OSS](#additional-permissions-for-oss-dict--snapshot).
 
@@ -62,7 +93,7 @@ This document lists the RAM (Resource Access Management) permissions required fo
 
 ## Minimum Required Policy
 
-Grant the union of the actions for whichever modules will be used. Below is the **full union** for both modules:
+Grant the union of the actions for whichever modules will be used. Below is the **full union** for all modules:
 
 ```json
 {
@@ -77,14 +108,25 @@ Grant the union of the actions for whichever modules will be used. Below is the 
         "elasticsearch:ListAllNode",
         "elasticsearch:RestartInstance",
         "elasticsearch:UpdateInstance",
+        "elasticsearch:UpdateAdminPassword",
+        "elasticsearch:UpdateDescription",
+        "elasticsearch:UpdateInstanceChargeType",
+        "elasticsearch:UpgradeEngineVersion",
+        "elasticsearch:ListActionRecords",
+        "elasticsearch:ContinueEsVersionUpgrade",
         "elasticsearch:UpdateSnapshotSetting",
         "elasticsearch:DescribeSnapshotSetting",
         "elasticsearch:CreateSnapshot",
         "elasticsearch:ListDicts",
         "elasticsearch:UpdateDict",
-        "elasticsearch:UpdateHotIkDicts",
-        "elasticsearch:UpdateSynonymsDicts",
-        "elasticsearch:UpdateAliwsDict"
+        "elasticsearch:DescribeKibanaSettings",
+        "elasticsearch:UpdateKibanaSettings",
+        "elasticsearch:UpdateInstanceSettings",
+        "elasticsearch:ListPlugin",
+        "elasticsearch:InstallSystemPlugin",
+        "elasticsearch:UninstallPlugin",
+        "elasticsearch:UploadPlugin",
+        "elasticsearch:InstallUserPlugins"
       ],
       "Resource": "*"
     }
@@ -112,7 +154,13 @@ When the principal only uses one module, grant just that module's actions.
         "elasticsearch:ListInstance",
         "elasticsearch:ListAllNode",
         "elasticsearch:RestartInstance",
-        "elasticsearch:UpdateInstance"
+        "elasticsearch:UpdateInstance",
+        "elasticsearch:UpdateAdminPassword",
+        "elasticsearch:UpdateDescription",
+        "elasticsearch:UpdateInstanceChargeType",
+        "elasticsearch:UpgradeEngineVersion",
+        "elasticsearch:ListActionRecords",
+        "elasticsearch:ContinueEsVersionUpgrade"
       ],
       "Resource": "*"
     }
@@ -153,10 +201,7 @@ When the principal only uses one module, grant just that module's actions.
       "Action": [
         "elasticsearch:DescribeInstance",
         "elasticsearch:ListDicts",
-        "elasticsearch:UpdateDict",
-        "elasticsearch:UpdateHotIkDicts",
-        "elasticsearch:UpdateSynonymsDicts",
-        "elasticsearch:UpdateAliwsDict"
+        "elasticsearch:UpdateDict"
       ],
       "Resource": "acs:elasticsearch:*:*:instances/*"
     }
@@ -189,14 +234,25 @@ For better security, restrict permissions to specific resources. `CreateInstance
         "elasticsearch:ListAllNode",
         "elasticsearch:RestartInstance",
         "elasticsearch:UpdateInstance",
+        "elasticsearch:UpdateAdminPassword",
+        "elasticsearch:UpdateDescription",
+        "elasticsearch:UpdateInstanceChargeType",
+        "elasticsearch:UpgradeEngineVersion",
+        "elasticsearch:ListActionRecords",
+        "elasticsearch:ContinueEsVersionUpgrade",
         "elasticsearch:UpdateSnapshotSetting",
         "elasticsearch:DescribeSnapshotSetting",
         "elasticsearch:CreateSnapshot",
         "elasticsearch:ListDicts",
         "elasticsearch:UpdateDict",
-        "elasticsearch:UpdateHotIkDicts",
-        "elasticsearch:UpdateSynonymsDicts",
-        "elasticsearch:UpdateAliwsDict"
+        "elasticsearch:DescribeKibanaSettings",
+        "elasticsearch:UpdateKibanaSettings",
+        "elasticsearch:UpdateInstanceSettings",
+        "elasticsearch:ListPlugin",
+        "elasticsearch:InstallSystemPlugin",
+        "elasticsearch:UninstallPlugin",
+        "elasticsearch:UploadPlugin",
+        "elasticsearch:InstallUserPlugins"
       ],
       "Resource": "acs:elasticsearch:*:*:instances/*"
     }
@@ -223,14 +279,25 @@ Restrict operations to specific regions (example: `cn-hangzhou`):
         "elasticsearch:ListAllNode",
         "elasticsearch:RestartInstance",
         "elasticsearch:UpdateInstance",
+        "elasticsearch:UpdateAdminPassword",
+        "elasticsearch:UpdateDescription",
+        "elasticsearch:UpdateInstanceChargeType",
+        "elasticsearch:UpgradeEngineVersion",
+        "elasticsearch:ListActionRecords",
+        "elasticsearch:ContinueEsVersionUpgrade",
         "elasticsearch:UpdateSnapshotSetting",
         "elasticsearch:DescribeSnapshotSetting",
         "elasticsearch:CreateSnapshot",
         "elasticsearch:ListDicts",
         "elasticsearch:UpdateDict",
-        "elasticsearch:UpdateHotIkDicts",
-        "elasticsearch:UpdateSynonymsDicts",
-        "elasticsearch:UpdateAliwsDict"
+        "elasticsearch:DescribeKibanaSettings",
+        "elasticsearch:UpdateKibanaSettings",
+        "elasticsearch:UpdateInstanceSettings",
+        "elasticsearch:ListPlugin",
+        "elasticsearch:InstallSystemPlugin",
+        "elasticsearch:UninstallPlugin",
+        "elasticsearch:UploadPlugin",
+        "elasticsearch:InstallUserPlugins"
       ],
       "Resource": "acs:elasticsearch:cn-hangzhou:*:instances/*"
     }
@@ -242,7 +309,7 @@ Restrict operations to specific regions (example: `cn-hangzhou`):
 
 ## Read-Only Policy
 
-For users who only need to view instance information, snapshot settings, and dict listings:
+For users who only need to view instance information, snapshot settings, dict listings, Kibana config, and plugin listings:
 
 ```json
 {
@@ -255,7 +322,9 @@ For users who only need to view instance information, snapshot settings, and dic
         "elasticsearch:ListInstance",
         "elasticsearch:ListAllNode",
         "elasticsearch:DescribeSnapshotSetting",
-        "elasticsearch:ListDicts"
+        "elasticsearch:ListDicts",
+        "elasticsearch:DescribeKibanaSettings",
+        "elasticsearch:ListPlugin"
       ],
       "Resource": "*"
     }
