@@ -134,12 +134,4 @@ Error codes and actions are listed in `aliyun cms2 --help`. Additional tips:
 | AgentLoop, AgentLoop APM, AgentLoop monitoring, APM, APM onboarding, application monitoring, agent install, Java agent, AliyunJavaAgent, Golang agent, Python agent, Node.js agent, PHP agent, .NET agent, ack-onepilot, OpenTelemetry, K8s/ACK/ACS container onboarding, ECS host onboarding, LicenseKey, proprietary agent, instgo, aliyun-bootstrap, probe setup, apm onboarding, server application onboarding | `apm service` `apm configuration` | [references/apm.md](references/apm.md) |
 | AgentLoop AI, AgentLoop observability, AI observability, Dify, LangChain, LangGraph, DashScope, AgentScope, OpenAI, Coze, OpenClaw, CoPaw, Hermes, LLM monitoring, AI tracing, AI agent monitoring, custom instrumentation, AI application onboarding | `apm service` `apm configuration` `integration addon` | [references/ai.md](references/ai.md) |
 
-## User Documentation
-
-| Topic | Document |
-|-------|----------|
-| Application onboarding overview | [docs/onboard-applications-with-ai-agent.md](docs/onboard-applications-with-ai-agent.md) |
-| Server-side application onboarding | [docs/onboard-server-applications-with-ai-agent.md](docs/onboard-server-applications-with-ai-agent.md) |
-| AI application onboarding | [docs/onboard-ai-applications-with-ai-agent.md](docs/onboard-ai-applications-with-ai-agent.md) |
-
 Commands not listed above - see `aliyun cms2 --help`.
