@@ -1,0 +1,3 @@
+# Runtime dependencies for alibabacloud-ecs-vpc-publicnetwork-troubleshoot
+# All versions pinned to exact versions to prevent runtime behavior drift
+aliyun-python-sdk-core==2.15.2
