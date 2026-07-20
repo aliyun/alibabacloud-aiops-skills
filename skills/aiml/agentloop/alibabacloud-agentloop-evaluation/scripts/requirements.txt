@@ -1,0 +1,11 @@
+# AgentLoop Evaluation Scripts - Python Dependencies
+#
+# The scripts in this directory (agentloop_eval.py, analyze_evaluation_results.py)
+# use only the Python 3.8+ standard library. No external packages are required.
+#
+# Standard library modules used:
+#   argparse, copy, json, math, os, shlex, shutil, subprocess, sys, time,
+#   datetime, pathlib, typing
+#
+# Local module dependency:
+#   analyze_evaluation_results.py imports from agentloop_eval (same directory)

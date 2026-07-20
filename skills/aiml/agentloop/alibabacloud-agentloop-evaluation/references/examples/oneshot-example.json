@@ -1,0 +1,28 @@
+{
+  "agent_space": "replace-with-agent-space",
+  "region": "cn-hangzhou",
+  "task": {
+    "name": "correctness-smoke-test",
+    "mode": "oneshot",
+    "data_type": "trace",
+    "data_filter": {
+      "provided": {
+        "input": "中国的首都是哪里？",
+        "output": "中国的首都是北京。",
+        "expected_output": "中国的首都是北京。"
+      }
+    },
+    "evaluator_refs": [
+      {
+        "ref": "Builtin.agent_correctness",
+        "result_name": "correctness",
+        "result_type": "score",
+        "variable_mapping": {
+          "input": "input",
+          "output": "output",
+          "expected_output": "expected_output"
+        }
+      }
+    ]
+  }
+}
