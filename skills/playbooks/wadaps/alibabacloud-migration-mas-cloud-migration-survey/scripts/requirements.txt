@@ -1,0 +1,9 @@
+# cloud-migration-survey skill dependencies
+# Install: pip install -r scripts/requirements.txt
+#
+# Version pinning policy:
+#   - Exact version pinning (==) to keep the build and runtime environments identical
+#   - Kept in sync with the versions declared in SKILL.md and extract.py validate_dependencies()
+
+openpyxl==3.1.2     # Excel read/write (extract.py)
+python-docx==1.1.0  # Word document generation (generate_report.py)
