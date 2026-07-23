@@ -1,0 +1,437 @@
+# OPC Cloud Deploy - lite_seed SKU params
+# Lite (OpenClaw) + ECS c9i 2C4G + RDS 1C2G + OSS 40GB + Token Plan + PDS + ESA
+# Use case: just got seed users, a few to a dozen concurrent
+
+sku: lite_seed
+version: v1.0.0
+region_default: cn-beijing
+monthly_price: "¥596.54/月 + OSS ¥9/年"
+disclaimer: "💡 价格供参考，实际以最终下单为准。"
+
+# ═══════════════════════════════════════
+# Package contents (user-facing output)
+# ═══════════════════════════════════════
+package_contents: |
+  这个套餐包含（完整业务栈）：
+  ✦ AI 助理的家（轻量应用服务器 + OpenClaw）—— AI 助理住在这里帮你管服务器
+  ✦ 业务专用店面（ECS 2核4G）—— 你的产品跑在这台服务器上
+  ✦ 客户档案柜（RDS 数据库 1核2G）—— 存用户数据和业务数据
+  ✦ 储物间（OSS 40GB）—— 存图片/文件/附件
+  ✦ AI 能力（Token Plan 标准版）—— 产品调 AI 的额度
+  ✦ 存储空间（阿里云盘 200GB）—— 产品相关文件
+  ✦ 全球加速（ESA 免费版）
+
+deploy_creates: |
+  接下来我帮你创建的资源：
+  - 自动创建：轻量应用服务器 + ECS + RDS + OSS + VPC 网络
+  - 手动引导：Token Plan + PDS + ESA
+
+# ═══════════════════════════════════════
+# Plain-language summary shown before user confirmation (user-facing output)
+# ═══════════════════════════════════════
+user_summary: |
+  即将为你创建/开通：
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ✦ AI 助理的家（轻量服务器 + OpenClaw 2核4G + 50GiB 系统盘）    → 自动创建
+  ✦ 业务专用店面（ECS 2核4G + 40GiB 系统盘）              → 自动创建
+  ✦ 客户档案柜（RDS 数据库 1核2G + 100GB 数据存储空间）         → 自动创建
+  ✦ 储物间（OSS 40GB）                     → 自动创建
+  ✦ AI 能力（Token Plan 标准版）            → 引导手动开通
+  ✦ 存储空间（阿里云盘 200GB）              → 引导手动开通
+  ✦ 全球加速（ESA 免费版）                  → 引导手动开通
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  费用：¥596.54/月 + OSS ¥9/年（北京地域）
+  
+  确认开始创建？
+
+# ═══════════════════════════════════════
+# Create steps (Phase 3 executes them in order)
+# ═══════════════════════════════════════
+steps:
+
+  # ─── Step 1: SWAS lightweight server + OpenClaw image ───
+  - name: "创建 AI 助理的家（轻量应用服务器 + OpenClaw）"
+    type: api
+    product: swas-open
+    action: CreateInstances
+    params:
+      RegionId: "${region}"
+      ImageId: "${openclaw_image_id}"
+      # ImageId is dynamically looked up in Phase 1.2.6 (list-images + filter ImageName prefix OpenClaw- + parse YYYY.M.DD, take newest not exceeding today)
+      # No longer hardcoded (the old value 74dab916b0ca4ca29e67988f03a1adc3 = OpenClaw-2026.5.19 would expire)
+      PlanId: "swas.s.c2m4s50b1.linux"
+      # ⚠️ PlanId hardcoded: c2m4=2C4G s50=50GiB system disk b1=1 BGP public IP; 200 Mbps peak bandwidth is the plan's inherent spec, traffic is included and not billed extra
+      # Beijing general-purpose; the PlanId for Hangzhou/Shanghai/Shenzhen etc. is the same as Beijing
+      # SWAS has no ListPlans API (Alibaba does not publicly expose a full plan listing)
+      Period: 1
+      # unit: month
+      AutoRenew: false  # auto-renew off by default, avoid silent charges
+    wait_until:
+      product: swas-open
+      action: ListInstances
+      params:
+        RegionId: "${region}"
+      condition: "Instances[last].Status == Running"
+      timeout_seconds: 300
+      poll_interval_seconds: 15
+    output_vars:
+      swas_instance_id: "InstanceIds[0]"
+    post_actions:
+      - product: swas-open
+        action: ListInstances
+        params:
+          RegionId: "${region}"
+          InstanceIds: '["${swas_instance_id}"]'
+        output_vars:
+          swas_public_ip: "Instances[0].PublicIpAddress"
+    report: |
+      ✓ AI 助理的家已就绪！
+        公网 IP：${swas_public_ip}
+        登录入口：去轻量应用服务器控制台 https://swas.console.aliyun.com/
+                 → 找到「OPC-Lite-Seed-OpenClaw」→ 点「应用详情」→「登录 Web UI」按钮（用控制台显示的 Token 登录）
+        配置：2核4G · 50GiB 系统盘（类似你电脑的系统盘）· 200Mbps 峰值带宽
+        网络：套餐内含流量，不另收费（类似手机流量套餐）
+        状态：运行中
+      
+      💡 等全部资源创建完成后，按上面入口登录 OpenClaw（不直接用 IP+8080，更安全）。
+
+  # ─── Step 2: ECS business server ───
+  - name: "创建业务专用店面（ECS 服务器）"
+    type: api
+    product: ecs
+    action: RunInstances
+    params:
+      RegionId: "${region}"
+      ZoneId: "${zone_id}"
+      InstanceType: "ecs.c9i.large"
+      # c9i compute-type 2C4G (the Lite default family)
+      ImageId: "${state.resources.ecs.image_id}"
+      # ⚠️ ImageId is centrally resolved by SKILL.md Phase 0.4 and written to state (iron-rule #27)
+      SecurityGroupId: "${security_group_id}"
+      VSwitchId: "${vswitch_id}"
+      InstanceName: "OPC-Lite-Seed-ECS"
+      HostName: "opc-lite-seed"
+      InstanceChargeType: "PrePaid"
+      Period: 1
+      PeriodUnit: "Month"
+      AutoRenew: false  # auto-renew off by default
+      SystemDisk.Category: "cloud_essd"
+      SystemDisk.Size: 40
+      SystemDisk.PerformanceLevel: "PL0"
+      InternetChargeType: "PayByTraffic"
+      InternetMaxBandwidthOut: 100
+      Amount: 1
+      Tag.1.Key: "opc:managed"
+      Tag.1.Value: "true"
+      Tag.2.Key: "opc:sku"
+      Tag.2.Value: "lite_seed"
+    wait_until:
+      product: ecs
+      action: DescribeInstanceStatus
+      params:
+        RegionId: "${region}"
+        InstanceId.1: "${ecs_instance_id}"
+      condition: "InstanceStatuses.InstanceStatus[0].Status == Running"
+      timeout_seconds: 300
+      poll_interval_seconds: 10
+    output_vars:
+      ecs_instance_id: "InstanceIdSets.InstanceIdSet[0]"
+    post_actions:
+      # ECS RunInstances --Tag.1.Key/Value measured NOT to persist; must call TagResources after creation to backfill the tag explicitly
+      - product: ecs
+        action: TagResources
+        params:
+          RegionId: "${region}"
+          ResourceType: "instance"
+          ResourceId.1: "${ecs_instance_id}"
+          Tag.1.Key: "opc:managed"
+          Tag.1.Value: "true"
+          Tag.2.Key: "opc:sku"
+          Tag.2.Value: "lite_seed"
+      - product: ecs
+        action: DescribeInstances
+        params:
+          RegionId: "${region}"
+          InstanceIds: '["${ecs_instance_id}"]'
+        output_vars:
+          ecs_public_ip: "Instances.Instance[0].PublicIpAddress.IpAddress[0]"
+          ecs_private_ip: "Instances.Instance[0].VpcAttributes.PrivateIpAddress.IpAddress[0]"
+    report: |
+      ✓ 业务店面已开门！
+        公网 IP：${ecs_public_ip}
+        内网 IP：${ecs_private_ip}（数据库通过这个连接）
+        配置：2核4G · 40GiB 系统盘（类似你电脑的系统盘）· 100Mbps 峰值带宽
+        网络：流量按使用量计费，每月送 220GB 免费额度（类似手机流量套餐——超出免费额度才计费）
+        状态：运行中
+
+  # ─── Step 3: RDS database ───
+  - name: "创建客户档案柜（RDS 数据库）"
+    type: api
+    product: rds
+    action: CreateDBInstance
+    params:
+      RegionId: "${region}"
+      ZoneId: "${zone_id}"
+      Engine: "MySQL"
+      EngineVersion: "8.0"
+      DBInstanceClass: "mysql.n2e.small.1"
+      # lite_seed default binding: Basic 1C2G general_essd 100G (Beijing measured ¥116/month)
+      # to change the spec, reference ${rds_class}; the default yaml output uses mysql.n2e.small.1
+      DBInstanceStorage: 100
+      DBInstanceStorageType: "general_essd"
+      # user-facing wording is unified as general_essd (high-performance cloud disk)
+      DBInstanceNetType: "Intranet"
+      VPCId: "${vpc_id}"
+      VSwitchId: "${vswitch_id}"
+      SecurityIPList: "${ecs_private_ip}/32"
+      # only allow access from the ECS intranet
+      PayType: "Prepaid"
+      Period: "Month"
+      UsedTime: "1"
+      DBInstanceDescription: "OPC-Lite-Seed-RDS"
+      Category: "Basic"
+      # Basic = single-node basic edition; standard is the spec series
+    wait_until:
+      product: rds
+      action: DescribeDBInstanceAttribute
+      params:
+        DBInstanceId: "${rds_instance_id}"
+      condition: "Items.DBInstanceAttribute[0].DBInstanceStatus == Running"
+      timeout_seconds: 600
+      poll_interval_seconds: 20
+    output_vars:
+      rds_instance_id: "DBInstanceId"
+    post_actions:
+      # The RDS AddTagsToResource API requires lowercase Tag.1.key/Tag.1.value (different from ecs:TagResources uppercase format)
+      - product: rds
+        action: AddTagsToResource
+        params:
+          RegionId: "${region}"
+          DBInstanceId: "${rds_instance_id}"
+          Tag.1.key: "opc:managed"
+          Tag.1.value: "true"
+      # Create the database account (Normal privilege instead of Super; DBA ops go through DMS)
+      - product: rds
+        action: CreateAccount
+        params:
+          DBInstanceId: "${rds_instance_id}"
+          AccountName: "opc_admin"
+          AccountPassword: "${generated_password}"
+          AccountType: "Normal"
+      # Create the database first, then grant (aligned with lite_growth/lite_traction/pro_steady)
+      - product: rds
+        action: CreateDatabase
+        params:
+          DBInstanceId: "${rds_instance_id}"
+          DBName: "opc_app"
+          CharacterSetName: "utf8mb4"
+      # Grant ReadWrite only (no instance-level management privileges beyond DDL)
+      - product: rds
+        action: GrantAccountPrivilege
+        params:
+          DBInstanceId: "${rds_instance_id}"
+          AccountName: "opc_admin"
+          DBName: "opc_app"
+          AccountPrivilege: "ReadWrite"
+      # Get the connection address
+      - product: rds
+        action: DescribeDBInstanceNetInfo
+        params:
+          DBInstanceId: "${rds_instance_id}"
+        output_vars:
+          rds_connection_string: "DBInstanceNetInfos.DBInstanceNetInfo[0].ConnectionString"
+          rds_port: "DBInstanceNetInfos.DBInstanceNetInfo[0].Port"
+    report: |
+      ✓ 客户档案柜已就绪！
+        连接地址：${rds_connection_string}:${rds_port}
+        用户名：opc_admin
+        密码：${generated_password}
+                ⚠️ 这是密码唯一一次出现的地方，请立刻保存到你信任的密码管理器（系统钥匙串/1Password/Bitwarden）
+                我不会把它写进任何文件，本次对话结束后无法找回；丢失只能去控制台重置
+        权限：Normal 账号 + 仅授 ReadWrite（DBA 操作走 RDS 控制台 DMS）
+        配置：MySQL 8.0 · 1核2G · 100GB 数据存储空间
+        状态：运行中
+      
+      ⚠️ 数据库只能从 ECS 内网访问（安全起见不开公网）
+
+  # ─── Step 4: OSS bucket (three-layer protection) ───
+  - name: "创建储物间（OSS 存储桶 · 三层保护）"
+    type: api
+    product: oss
+    action: PutBucket
+    # `aliyun oss api` is not a valid subcommand; use `aliyun oss <verb>` (ossutil style,
+    # --profile still inherits the RamRoleArn credentials); PublicAccessBlock uses the access-monitor equivalent semantics (a private ACL already blocks anonymous access)
+    params:
+      BucketName: "opc-${random_suffix}"
+      # ⚠️ Bucket name is globally unique; use a random suffix
+      RegionId: "${region}"
+      StorageClass: "Standard"
+      DataRedundancyType: "LRS"
+      # LRS = local redundancy, cheapest
+    cli_command: |
+      aliyun --profile opc oss mb oss://opc-${random_suffix} --acl private --storage-class Standard --redundancy-type LRS
+    output_vars:
+      oss_bucket: "opc-${random_suffix}"
+      oss_endpoint: "oss-${region}.aliyuncs.com"
+    post_actions:
+      # Three-layer protection, all ossutil-style commands
+      - product: oss
+        action: PutBucketEncryption
+        cli_command: |
+          aliyun --profile opc oss bucket-encryption --method put oss://${oss_bucket} --sse-algorithm AES256
+      - product: oss
+        action: PutBucketVersioning
+        cli_command: |
+          aliyun --profile opc oss bucket-versioning --method put oss://${oss_bucket} enabled
+      - product: oss
+        action: PutPublicAccessBlock
+        # ossutil has no put-bucket-public-access-block equivalent yet;
+        # use access-monitor to enable access monitoring; mb already set --acl private, so anonymous public access is blocked
+        cli_command: |
+          aliyun --profile opc oss access-monitor --method put oss://${oss_bucket} Enabled
+      - product: oss
+        action: PutBucketTagging
+        # backfill the opc:managed tag on the OSS bucket via ossutil bucket-tagging
+        cli_command: |
+          aliyun --profile opc oss bucket-tagging --method put oss://${oss_bucket} "opc:managed#true" "opc:sku#lite_seed"
+    report: |
+      ✓ 储物间已开通（三层保护已开启）！
+        Bucket：${oss_bucket}
+        配额：40GB 标准存储（¥9/年）
+        ① 文件加密：上传后自动加密存储（AES-256）
+        ② 版本保留：误删/误改可恢复
+        ③ 阻断公共访问：禁止匿名公开访问，从根上避免数据泄露
+
+  # ─── Step 5: Token Plan (manual) ───
+  - name: "开通 AI 能力（Token Plan 标准版）"
+    type: manual
+    instructions: |
+      请打开百炼控制台开通 Token Plan：
+      👉 https://common-buy.aliyun.com/token-plan
+
+      操作：
+      1. 如果是首次进入百炼，先点「开通服务」
+      2. 左侧菜单找到「Token Plan / 资源包」
+      3. 选择「标准版」（25,000 credits/月，¥198/月）→ 确认订购
+
+      完成后告诉我"好了"。
+    report: "✓ AI 能力已激活（Token Plan 标准版 25k/月）"
+
+  # ─── Step 6: PDS Alibaba Cloud Drive (manual) ───
+  - name: "开通存储空间（阿里云盘企业版 200GB）"
+    type: manual
+    instructions: |
+      请打开阿里云盘企业版购买页：
+      👉 https://common-buy.aliyun.com/?commodityCode=pds_trc_public_cn&regionId=cn-beijing
+
+      页面选择：
+      ① 类型 → 网盘空间
+      ② 用户数 → 5 人
+      ③ 存储空间 → 200GB
+      ④ 购买时长 → 1 月（¥6.63）或 1 年（¥6.63 × 12 = ¥79.6）
+      ⑤ 确认付款
+
+      完成后告诉我"好了"。
+    report: "✓ 存储空间已激活（阿里云盘 200GB）"
+
+  # ─── Step 7: ESA Free (API auto-provision) ───
+  - name: "开通全球加速（ESA 免费版）"
+    type: api
+    product: esa
+    action: PurchaseRatePlan
+    # CLI: aliyun esa purchase-rate-plan --PlanName entranceplan --ChargeType PREPAY --AutoPay true --Period 1 [--force]
+    # --force is decided by the version guard ([cli_meta].esa_native_since), no longer hardcoded
+    params:
+      PlanName: "entranceplan"
+      ChargeType: "PREPAY"
+      AutoPay: true
+      AutoRenew: false  # auto-renew off by default
+      Period: 1
+    output_vars:
+      esa_instance_id: "InstanceId"
+    report: "✓ 全球加速已激活（ESA 免费版，¥0）"
+    fallback_manual: |
+      如果 API 失败：👉 https://esa.console.aliyun.com/commonBuy
+      选最左边「免费版」→ 确认开通。
+
+# ═══════════════════════════════════════
+# Phase 4: summary output template (user-facing output)
+# ═══════════════════════════════════════
+summary_template: |
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  🎉 全部就绪！你的 OPC 完整业务栈已创建完成
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  🏠 AI 助理的家（OpenClaw）
+     登录：去轻量应用服务器控制台 https://swas.console.aliyun.com/
+           找到「OPC-Lite-Seed-OpenClaw」→「应用详情」→「登录 Web UI」按钮
+     IP：${swas_public_ip}（仅供参考，正常通过控制台入口登录更安全）
+
+  📦 业务专用店面（ECS）
+     IP：${ecs_public_ip}
+     登录到服务器：ssh -i ~/.ssh/opc-deploy.pem root@${ecs_public_ip}
+     （这一步是远程登入服务器执行命令；通常由 OpenClaw 帮你操作，你不用自己敲）
+
+  🗄️ 客户档案柜（RDS）
+     连接串：${rds_connection_string}:${rds_port}
+     用户名：opc_admin（Normal 权限 + ReadWrite，密码已在创建时单次告知，未保存到任何文件）
+
+  📦 储物间（OSS · 三层保护）
+     Bucket：${oss_bucket}
+     ✓ 加密 ✓ 版本保留 ✓ 阻断公共访问
+
+  🤖 AI 能力：Token Plan 标准版 25k/月
+  📁 存储空间：阿里云盘 200GB
+  🌐 全球加速：ESA 免费版
+
+  💰 费用合计：¥596.54/月 + OSS ¥9/年
+
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  接下来做什么？
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  打开 OpenClaw → 走 SWAS 控制台「应用详情→登录 Web UI」按钮
+  登录后告诉 AI 助理你的项目，它帮你：
+  - 把代码部署到 ECS
+  - 连接 RDS 数据库
+  - 配置 OSS 存储
+  - 绑定域名 + HTTPS
+
+  📅 续费提醒：本套餐**自动续费已默认关闭**。到期前 7 天阿里云会发短信/站内信提醒你，
+              到时候去 https://billing-renew.console.aliyun.com/ 续费即可（不会沉默扣费）。
+
+  📦 重要数据建议定期备份。
+
+  💡 域名注册：https://wanwang.aliyun.com/
+     中国内地需 ICP 备案（约 7-20 工作日）
+
+  ─── 出事别慌三步卡 ───
+  ① 怀疑账户被人乱用 / AccessKey 泄露 → 禁用 AK：https://ram.console.aliyun.com/users
+  ② 想知道发生了什么 → 操作审计：https://actiontrail.console.aliyun.com/events
+  ③ 拿不准 / 要人帮忙 → 提工单：https://smartservice.console.aliyun.com/service/create-ticket
+
+  ─── 比喻 ↔ 阿里云正式名称 ───
+  | AI 助理的家     | 轻量应用服务器 SWAS                     |
+  | 业务专用店面    | 云服务器 ECS                            |
+  | 客户档案柜      | 云数据库 RDS MySQL                       |
+  | 储物间          | 对象存储 OSS                            |
+  | AI 能力         | 百炼 Token Plan                         |
+  | 存储空间        | 阿里云盘 PDS                            |
+  | 全球加速        | 边缘安全加速 ESA                        |
+  💡 联系阿里云客服时用右边的正式名称沟通会更顺。
+
+# ═══════════════════════════════════════
+# Notes (developer documentation)
+# ═══════════════════════════════════════
+notes:
+  - "SWAS PlanId hardcoded swas.s.c2m4s50b1.linux (Beijing general-purpose); SWAS has no public ListPlans API"
+  - "The OpenClaw image ID is decided by the SKILL.md 'OpenClaw dynamic image lookup' flow (the old 74dab916b0ca4ca29e67988f03a1adc3 = OpenClaw-2026.5.19 has expired; hardcoding it again is forbidden)"
+  - "ECS c9i is compute-type (CPU:memory = 1:2), the Lite default family"
+  - "RDS SecurityIPList only lists the ECS intranet IP (no public access)"
+  - "The OSS bucket name is globally unique and needs a random suffix; the Endpoint/intranet Endpoint stay in the yaml for the program, not shown in the user-facing step report"
+  - "RDS DBInstanceStorageType=general_essd is an API field; user-facing wording is unified as a data-storage space, not exposing ESSD/PL technical terms"
+  - "ECS SystemDisk.Category=cloud_essd / cloud_essd_entry etc. are also kept only in yaml fields; user-facing wording is unified as a system disk with an analogy"
+  - "RDS password should be auto-generated (16 chars, upper+lower+digits+special)"
+  - "ECS pay-by-traffic (InternetChargeType=PayByTraffic), CDT grants 220GB free traffic per month; user-facing wording uses the mobile-data-plan analogy"
+  - "⚠️ PeriodUnit=Month (correct monthly billing form)"
+  - "⚠️ ImageId is centrally resolved by SKILL.md Phase 0.4 and written to state; this yaml only consumes ${state.resources.ecs.image_id} (iron-rule #27)"
+

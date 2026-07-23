@@ -1,0 +1,575 @@
+# OPC Cloud Deploy - pro_steady SKU params
+# Lite (OpenClaw) + ECS c9i 4C8G ×2 + RDS HA 4C8G + OSS 500GB + ALB + ESA standard
+# Use case: steady-state operation, two-to-three hundred concurrent, needs high availability
+
+sku: pro_steady
+version: v1.0.0
+region_default: cn-beijing
+monthly_price: "¥2524.55/月 + ALB LCU 按量≈¥30-50"
+disclaimer: "💡 价格供参考，实际以最终下单为准。ESA medium ¥99/月命中限时优惠 RuleDescId=20980267（限购5个，以下单时活动可用性为准）。"
+
+# ═══════════════════════════════════════
+# Package contents (user-facing output)
+# ═══════════════════════════════════════
+package_contents: |
+  这个套餐包含（高可用业务栈）：
+  ✦ AI 助理的家（轻量应用服务器 + OpenClaw）
+  ✦ 业务店面 × 2 台（ECS 4核8G ×2）—— 一台挂了另一台扛着，业务不停
+  ✦ 分流引导员（ALB 负载均衡）—— 自动把访客分到两台服务器
+  ✦ 客户档案柜（RDS 高可用版 4核8G）—— 数据库主备切换，数据不丢
+  ✦ 大仓库（OSS 500GB）—— 存大量图片/视频/文件
+  ✦ 全球加速（ESA 标准版）—— 全国加速 + 安全防护
+  ✦ AI 能力（Token Plan 标准版）
+  ✦ 存储空间（阿里云盘 500GB）
+
+deploy_creates: |
+  接下来我帮你创建的资源：
+  - 自动创建：轻量 + ECS ×2 + ALB + RDS HA + OSS + VPC 网络
+  - 手动引导：Token Plan + PDS + ESA 标准版
+
+user_summary: |
+  即将为你创建/开通（高可用架构）：
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ✦ AI 助理的家（轻量服务器 + OpenClaw 2核4G + 50GiB 系统盘）     → 自动
+  ✦ 业务店面 × 2 台（ECS 4核8G + 40GiB 系统盘 ×2）         → 自动
+  ✦ 分流引导员（ALB 负载均衡）               → 自动
+  ✦ 客户档案柜（RDS 高可用版 4核8G + 200GB 数据存储空间）    → 自动
+  ✦ 大仓库（OSS 500GB）                      → 自动
+  ✦ AI 能力（Token Plan 标准版）              → 手动
+  ✦ 存储空间（阿里云盘 500GB）                → 手动
+  ✦ 全球加速（ESA 标准版）                    → 手动
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  费用：¥2524.55/月（固定）+ ALB 按量约 ¥30-50/月
+  地域：北京
+
+  ⚠️ Pro 架构资源多、费用高，请确认这是你要的规模。
+  确认开始创建？
+
+# ═══════════════════════════════════════
+# Create steps
+# ═══════════════════════════════════════
+steps:
+
+  # ─── Step 1: SWAS + OpenClaw ───
+  - name: "创建 AI 助理的家（轻量应用服务器 + OpenClaw）"
+    type: api
+    product: swas-open
+    action: CreateInstances
+    params:
+      RegionId: "${region}"
+      ImageId: "${openclaw_image_id}"  # dynamic lookup
+      PlanId: "swas.s.c2m4s50b1.linux"
+      # hardcoded (SWAS has no public ListPlans API)
+      Period: 1
+      AutoRenew: false  # auto-renew off by default
+    wait_until:
+      product: swas-open
+      action: ListInstances
+      params:
+        RegionId: "${region}"
+      condition: "Instances[last].Status == Running"
+      timeout_seconds: 300
+      poll_interval_seconds: 15
+    output_vars:
+      swas_instance_id: "InstanceIds[0]"
+    post_actions:
+      - product: swas-open
+        action: ListInstances
+        params:
+          RegionId: "${region}"
+          InstanceIds: '["${swas_instance_id}"]'
+        output_vars:
+          swas_public_ip: "Instances[0].PublicIpAddress"
+    report: |
+      ✓ AI 助理的家已就绪！
+        公网 IP：${swas_public_ip}
+        登录入口：去轻量应用服务器控制台 https://swas.console.aliyun.com/
+                 → 找到「OPC-Pro-Steady-OpenClaw」→ 点「应用详情」→「登录 Web UI」按钮（用控制台显示的 Token 登录）
+        配置：2核4G · 50GiB 系统盘（类似你电脑的系统盘）· 200Mbps 峰值带宽
+        网络：套餐内含流量，不另收费（类似手机流量套餐）
+      💡 不直接用 IP+8080，更安全
+
+  # ─── Step 2: ECS ×2 ───
+  - name: "创建业务店面（ECS 4核8G × 2 台）"
+    type: api
+    product: ecs
+    action: RunInstances
+    params:
+      RegionId: "${region}"
+      ZoneId: "${zone_id}"
+      InstanceType: "ecs.c9i.xlarge"
+      # c9i.xlarge = 4C8G
+      ImageId: "${state.resources.ecs.image_id}"
+      SecurityGroupId: "${security_group_id}"
+      VSwitchId: "${vswitch_id}"
+      InstanceName: "OPC-Pro-Steady-ECS"
+      HostName: "opc-pro-steady"
+      InstanceChargeType: "PrePaid"
+      Period: 1
+      PeriodUnit: "Month"
+      AutoRenew: false  # auto-renew off by default
+      SystemDisk.Category: "cloud_essd"
+      SystemDisk.Size: 40
+      SystemDisk.PerformanceLevel: "PL0"
+      InternetChargeType: "PayByTraffic"
+      InternetMaxBandwidthOut: 100
+      Amount: 2
+      # ⬆️ key: create 2 instances at once
+      Tag.1.Key: "opc:managed"
+      Tag.1.Value: "true"
+      Tag.2.Key: "opc:sku"
+      Tag.2.Value: "pro_steady"
+    wait_until:
+      product: ecs
+      action: DescribeInstanceStatus
+      params:
+        RegionId: "${region}"
+        InstanceId.1: "${ecs_instance_id_1}"
+        InstanceId.2: "${ecs_instance_id_2}"
+      condition: "all Status == Running"
+      timeout_seconds: 300
+      poll_interval_seconds: 10
+    output_vars:
+      ecs_instance_id_1: "InstanceIdSets.InstanceIdSet[0]"
+      ecs_instance_id_2: "InstanceIdSets.InstanceIdSet[1]"
+    post_actions:
+      # ECS RunInstances --Tag does not persist; must call TagResources after creation to backfill the tags (both instances together)
+      - product: ecs
+        action: TagResources
+        params:
+          RegionId: "${region}"
+          ResourceType: "instance"
+          ResourceId.1: "${ecs_instance_id_1}"
+          ResourceId.2: "${ecs_instance_id_2}"
+          Tag.1.Key: "opc:managed"
+          Tag.1.Value: "true"
+          Tag.2.Key: "opc:sku"
+          Tag.2.Value: "pro_steady"
+      - product: ecs
+        action: DescribeInstances
+        params:
+          RegionId: "${region}"
+          InstanceIds: '["${ecs_instance_id_1}","${ecs_instance_id_2}"]'
+        output_vars:
+          ecs_public_ip_1: "Instances.Instance[0].PublicIpAddress.IpAddress[0]"
+          ecs_public_ip_2: "Instances.Instance[1].PublicIpAddress.IpAddress[0]"
+          ecs_private_ip_1: "Instances.Instance[0].VpcAttributes.PrivateIpAddress.IpAddress[0]"
+          ecs_private_ip_2: "Instances.Instance[1].VpcAttributes.PrivateIpAddress.IpAddress[0]"
+    report: |
+      ✓ 双机店面已就绪！
+        ECS-1：${ecs_public_ip_1}（内网 ${ecs_private_ip_1}）
+        ECS-2：${ecs_public_ip_2}（内网 ${ecs_private_ip_2}）
+        配置：4核8G × 2 台 · 40GiB 系统盘（类似你电脑的系统盘）· 100Mbps 峰值带宽
+        网络：流量按使用量计费，每月送 220GB 免费额度（类似手机流量套餐——超出免费额度才计费）
+
+  # ─── Step 2.5: request an SSL certificate ───
+  # The ALB HTTPS listener needs a certificate ID issued by ACM / Certificate Management Service (CAS).
+  # This step is a manual guide: if the user has a filed domain → the engine calls cas DescribeCertificateList to get an existing cert / or cas CreateCertificateRequest to apply for a free DV cert;
+  # if the user has no domain yet → skip this step, leave ssl_certificate_id empty, and the downstream ALB step auto-degrades to an HTTP 80 direct-forward fallback.
+  - name: "申请 SSL 证书（HTTPS 必备）"
+    type: manual
+    optional: true
+    instructions: |
+      🔐 接下来要给 ALB 配 HTTPS（让用户敲 https://你的域名 能加密访问）。
+      这一步需要一个【已备案域名 + 已申请的免费 DV 证书】。
+
+      请告诉我你属于哪种情况：
+        A. 我已经在「SSL 证书服务」里申请过免费 DV 证书 → 把证书 ID 给我（控制台：https://yundun.console.aliyun.com/?p=cas）
+        B. 我有备案域名但还没证书 → 我帮你申请阿里云免费 DV 证书（约 5-10 分钟签发）
+        C. 我现在还没域名 → 跳过 HTTPS（先用 HTTP 上线，办好域名再回头加 HTTPS）
+
+      注意：选 C 时站点【未加密】，仅适合内测/演示，不建议长期使用。
+    output_vars:
+      ssl_certificate_id: ""  # A/B path fills in the cert ID; C path leaves it empty and the downstream auto-degrades
+      ssl_status: ""           # "ready" | "skipped"
+    report: |
+      ✓ SSL 证书阶段：${ssl_certificate_id ? "已就绪（证书 ID ${ssl_certificate_id}）" : "已跳过（HTTPS 暂未启用）"}
+
+  # ─── Step 3: ALB load balancer ───
+  - name: "创建分流引导员（ALB 负载均衡）"
+    type: api
+    product: alb
+    action: CreateLoadBalancer
+    params:
+      RegionId: "${region}"
+      LoadBalancerName: "OPC-Pro-Steady-ALB"
+      VpcId: "${vpc_id}"
+      AddressType: "Internet"
+      # public-facing ALB
+      LoadBalancerBillingConfig.PayType: "PostPay"
+      # pay-as-you-go (instance fee + LCU elastic fee)
+      ZoneMappings.1.ZoneId: "${zone_id}"
+      ZoneMappings.1.VSwitchId: "${vswitch_id}"
+      # ⚠️ ALB needs at least 2 zones; at execution time query the second zone
+      ZoneMappings.2.ZoneId: "${zone_id_2}"
+      ZoneMappings.2.VSwitchId: "${vswitch_id_2}"
+    wait_until:
+      product: alb
+      action: GetLoadBalancerAttribute
+      params:
+        LoadBalancerId: "${alb_id}"
+      condition: "LoadBalancerStatus == Active"
+      timeout_seconds: 300
+      poll_interval_seconds: 10
+    output_vars:
+      alb_id: "LoadBalancerId"
+    post_actions:
+      # Create the server group (outputs server_group_id for downstream references)
+      # Design note: the ServerGroup backend protocol stays HTTP (not HTTPS).
+      #   Reasons: ① most web frameworks (Nginx/Node/Python) default to port 80 on ECS; doing HTTPS termination at the app layer needs a self-signed cert + encryption performance overhead
+      #            ② ALB→ECS traffic goes over the VPC intranet; VPCs are isolated by default, so sniffing within the same VPC requires first compromising another ECS instance
+      #   Risk: another compromised instance in the same VPC could sniff ALB→backend requests (e.g., cookies/headers), but this does not affect public TLS termination
+      #   Mitigations: (a) security group restricts ECS port 80 to the ALB intranet segment only (not 0.0.0.0/0)
+      #                (b) app-layer sensitive fields (password/token) use pre-termination header encryption or JWT signing
+      #   To also encrypt ALB→ECS: change Protocol below to HTTPS + mount a cert on ECS; assess the performance cost yourself
+      - product: alb
+        action: CreateServerGroup
+        params:
+          RegionId: "${region}"
+          ServerGroupName: "OPC-Pro-SG"
+          VpcId: "${vpc_id}"
+          Protocol: "HTTP"
+          HealthCheckConfig.HealthCheckEnabled: true
+          HealthCheckConfig.HealthCheckPath: "/"
+        output_vars:
+          server_group_id: "ServerGroupId"
+      # Add the two ECS instances to the server group
+      - product: alb
+        action: AddServersToServerGroup
+        params:
+          ServerGroupId: "${server_group_id}"
+          Servers.1.ServerId: "${ecs_instance_id_1}"
+          Servers.1.ServerType: "Ecs"
+          Servers.1.Port: 80
+          Servers.2.ServerId: "${ecs_instance_id_2}"
+          Servers.2.ServerType: "Ecs"
+          Servers.2.Port: 80
+      # Create the HTTP listener (HTTP does not forward business traffic directly; configure a 301 redirect to HTTPS)
+      # Engine execution rules:
+      #   - if the upstream SSL cert step produced ${ssl_certificate_id} → create this 80→443 redirect listener
+      #   - if the user skipped the cert step → forward HTTP 80 directly to the ServerGroup (DefaultActions.Type=ForwardGroup), and note in the report "HTTPS not enabled yet, recommend getting a cert soon"
+      - product: alb
+        action: CreateListener
+        when: "${ssl_certificate_id} != ''"
+        params:
+          LoadBalancerId: "${alb_id}"
+          ListenerProtocol: "HTTP"
+          ListenerPort: 80
+          DefaultActions.1.Type: "Redirect"
+          DefaultActions.1.RedirectConfig.Protocol: "HTTPS"
+          DefaultActions.1.RedirectConfig.Port: "443"
+          DefaultActions.1.RedirectConfig.HttpCode: "HTTP_301"
+      # Fallback when there is no cert: HTTP 80 direct-forward (avoid an unreachable site)
+      - product: alb
+        action: CreateListener
+        when: "${ssl_certificate_id} == ''"
+        params:
+          LoadBalancerId: "${alb_id}"
+          ListenerProtocol: "HTTP"
+          ListenerPort: 80
+          DefaultActions.1.Type: "ForwardGroup"
+          DefaultActions.1.ForwardGroupConfig.ServerGroupTuples.1.ServerGroupId: "${server_group_id}"
+      # Create the HTTPS listener (actual business traffic on 443; only created when a cert exists)
+      - product: alb
+        action: CreateListener
+        when: "${ssl_certificate_id} != ''"
+        params:
+          LoadBalancerId: "${alb_id}"
+          ListenerProtocol: "HTTPS"
+          ListenerPort: 443
+          Certificates.1.CertificateId: "${ssl_certificate_id}"
+          DefaultActions.1.Type: "ForwardGroup"
+          DefaultActions.1.ForwardGroupConfig.ServerGroupTuples.1.ServerGroupId: "${server_group_id}"
+      # Get the ALB DNS
+      - product: alb
+        action: GetLoadBalancerAttribute
+        params:
+          LoadBalancerId: "${alb_id}"
+        output_vars:
+          alb_dns: "DNSName"
+    report: |
+      ✓ 分流引导员已就位！
+        ALB 地址：${alb_dns}
+        HTTPS 监听：${ssl_certificate_id ? "端口 443（实际业务流量；证书 ID ${ssl_certificate_id}）" : "暂未启用（建议尽快办域名+免费证书）"}
+        HTTP 监听：${ssl_certificate_id ? "端口 80（强跳 HTTPS，所有访客自动加密）" : "端口 80（直转后端，未加密——临时模式）"}
+        后端服务器：2 台 ECS 已挂载
+        健康检查：已开启
+      
+      💡 ${ssl_certificate_id ? "访客无论敲不敲 https，最终都走加密通道。" : "⚠️ 当前为无证书临时模式，请尽快通过 SSL 证书服务申请免费 DV 证书后，让我重跑 HTTPS 监听步骤。"}
+         后续绑域名时 CNAME 指向这个 ALB 地址。
+         🔒 SSL 证书走阿里云数字证书服务（CAS · 免费 DV 版），到期前 30 天自动续——不用管。
+         （注意：ALB 监听用的证书来自 CAS，不是 ESA 边缘证书；两者独立，控制台分别在 yundun.console.aliyun.com/?p=cas 与 esa.console.aliyun.com）
+
+  # ─── Step 4: RDS HA ───
+  - name: "创建客户档案柜（RDS 高可用版 4核8G）"
+    type: api
+    product: rds
+    action: CreateDBInstance
+    params:
+      RegionId: "${region}"
+      ZoneId: "${zone_id}"
+      Engine: "MySQL"
+      EngineVersion: "8.0"
+      DBInstanceClass: "mysql.n2.large.2c"
+      # pro_steady default binding: HA 4C8G general_essd 200G (Beijing measured ¥1262/month)
+      DBInstanceStorage: 200
+      DBInstanceStorageType: "general_essd"
+      DBInstanceNetType: "Intranet"
+      VPCId: "${vpc_id}"
+      VSwitchId: "${vswitch_id}"
+      SecurityIPList: "127.0.0.1/32"
+      # aligned with the pro_burst security-group authorization approach (see post_actions)
+      # lock 127.0.0.1/32 at creation; after the security-group authorization in post, ModifySecurityIps clears it
+      PayType: "Prepaid"
+      Period: "Month"
+      UsedTime: "1"
+      DBInstanceDescription: "OPC-Pro-Steady-RDS-HA"
+      Category: "HighAvailability"
+      # ⬆️ key: high-availability edition (primary + standby dual-node)
+    wait_until:
+      product: rds
+      action: DescribeDBInstanceAttribute
+      params:
+        DBInstanceId: "${rds_instance_id}"
+      condition: "Items.DBInstanceAttribute[0].DBInstanceStatus == Running"
+      timeout_seconds: 600
+      poll_interval_seconds: 20
+    output_vars:
+      rds_instance_id: "DBInstanceId"
+    post_actions:
+      # The RDS AddTagsToResource API requires lowercase Tag.1.key/Tag.1.value
+      - product: rds
+        action: AddTagsToResource
+        params:
+          RegionId: "${region}"
+          DBInstanceId: "${rds_instance_id}"
+          Tag.1.key: "opc:managed"
+          Tag.1.value: "true"
+      - product: rds
+        action: CreateAccount
+        params:
+          DBInstanceId: "${rds_instance_id}"
+          AccountName: "opc_admin"
+          AccountPassword: "${generated_password}"
+          AccountType: "Normal"  # least privilege
+      # ─── Add GrantAccountPrivilege, otherwise the account exists but has no read/write on any DB ───
+      # Create the default app database (the app needs at least one DB before startup)
+      - product: rds
+        action: CreateDatabase
+        params:
+          DBInstanceId: "${rds_instance_id}"
+          DBName: "opc_app"
+          CharacterSetName: "utf8mb4"
+          DBDescription: "OPC 业务默认库"
+      # Grant opc_admin ReadWrite on the opc_app database (DBA ops go through the DMS console, not the app layer)
+      - product: rds
+        action: GrantAccountPrivilege
+        params:
+          DBInstanceId: "${rds_instance_id}"
+          AccountName: "opc_admin"
+          DBName: "opc_app"
+          AccountPrivilege: "ReadWrite"
+      # Security-group authorization (aligned with pro_burst)
+      - product: rds
+        action: ModifySecurityGroupConfiguration
+        params:
+          DBInstanceId: "${rds_instance_id}"
+          SecurityGroupId: "${security_group_id}"
+      # After the security-group authorization, clear the IP allowlist (remove the 127.0.0.1/32 placeholder)
+      - product: rds
+        action: ModifySecurityIps
+        params:
+          DBInstanceId: "${rds_instance_id}"
+          SecurityIps: ""
+          ModifyMode: "Cover"
+      - product: rds
+        action: DescribeDBInstanceNetInfo
+        params:
+          DBInstanceId: "${rds_instance_id}"
+        output_vars:
+          rds_connection_string: "DBInstanceNetInfos.DBInstanceNetInfo[0].ConnectionString"
+          rds_port: "DBInstanceNetInfos.DBInstanceNetInfo[0].Port"
+    report: |
+      ✓ 高可用数据库已就绪！
+        连接地址：${rds_connection_string}:${rds_port}
+        默认库：opc_app（utf8mb4 字符集，opc_admin 拥有 ReadWrite 权限）
+        配置：MySQL 8.0 · 高可用版 · 4核8G · 200GB 数据存储空间
+        特点：主备双节点，故障自动切换，数据不丢
+        💡 需要 DBA 级操作（建库/改 schema）→ 走 DMS 控制台（opc_admin 只有 ReadWrite，无 DDL 权限是有意为之）
+
+  # ─── Step 5: OSS 500GB (three-layer protection) ───
+  - name: "创建大仓库（OSS 500GB · 三层保护）"
+    type: api
+    product: oss
+    action: PutBucket
+    # use `aliyun oss <verb>` (ossutil style; --profile still inherits the RamRoleArn credentials)
+    params:
+      BucketName: "opc-${random_suffix}"
+      RegionId: "${region}"
+      StorageClass: "Standard"
+      DataRedundancyType: "LRS"
+    cli_command: |
+      aliyun --profile opc oss mb oss://opc-${random_suffix} --acl private --storage-class Standard --redundancy-type LRS
+    output_vars:
+      oss_bucket: "opc-${random_suffix}"
+      oss_endpoint: "oss-${region}.aliyuncs.com"
+    post_actions:
+      - product: oss
+        action: PutBucketEncryption
+        cli_command: |
+          aliyun --profile opc oss bucket-encryption --method put oss://${oss_bucket} --sse-algorithm AES256
+      - product: oss
+        action: PutBucketVersioning
+        cli_command: |
+          aliyun --profile opc oss bucket-versioning --method put oss://${oss_bucket} enabled
+      - product: oss
+        action: PutPublicAccessBlock
+        # ossutil has no equivalent yet; use access-monitor + the already-set --acl private as the backstop
+        cli_command: |
+          aliyun --profile opc oss access-monitor --method put oss://${oss_bucket} Enabled
+      - product: oss
+        action: PutBucketTagging
+        cli_command: |
+          aliyun --profile opc oss bucket-tagging --method put oss://${oss_bucket} "opc:managed#true" "opc:sku#pro_steady"
+    report: "✓ 大仓库已开通（${oss_bucket}，500GB，¥54/月 · 三层保护：加密+版本+阻断公共访问）"
+
+  # ─── Step 6-8: manual steps ───
+  - name: "开通 AI 能力（Token Plan 标准版）"
+    type: manual
+    instructions: |
+      请打开百炼控制台：👉 https://common-buy.aliyun.com/token-plan
+      选择「标准版」（25,000 credits/月，¥198/月）→ 确认订购。
+      完成后告诉我"好了"。
+    report: "✓ AI 能力已激活"
+
+  - name: "开通存储空间（阿里云盘企业版 500GB）"
+    type: manual
+    instructions: |
+      请打开阿里云盘企业版购买页：
+      👉 https://common-buy.aliyun.com/?commodityCode=pds_trc_public_cn&regionId=cn-beijing
+
+      页面选择：
+      ① 类型 → 网盘空间
+      ② 用户数 → 5 人
+      ③ 存储空间 → 500GB
+      ④ 购买时长 → 1 月（¥16.58）或 1 年（¥16.58 × 12 ≈ ¥199）
+      ⑤ 确认付款
+
+      完成后告诉我"好了"。
+    report: "✓ 存储空间已激活（500GB）"
+
+  - name: "开通全球加速 + 安全防护（ESA 标准版）"
+    type: api
+    product: esa
+    action: PurchaseRatePlan
+    # ESA standard = medium, list price ¥375/month, limited-time promo ¥99/month (RuleDescId=20980267, limit 5)
+    # includes DDoS + WAF + Bot management
+    # CLI: aliyun esa purchase-rate-plan --PlanName medium --ChargeType PREPAY --AutoPay true --Period 1 [--force by version-guard]
+    params:
+      PlanName: "medium"
+      ChargeType: "PREPAY"
+      AutoPay: true
+      AutoRenew: false  # the ¥375/month paid tier must disable auto-renew
+      Period: 1
+    output_vars:
+      esa_instance_id: "InstanceId"
+    report: |
+      ✓ 全球加速+安全防护已激活（ESA 标准版 medium，¥99/月 限时优惠价；以下单时活动可用性为准）
+        实例 ID：${esa_instance_id}
+        包含：全国加速 + DDoS 防护 + WAF + Bot 管理
+        控制台：https://esa.console.aliyun.com/
+    fallback_manual: |
+      如果 API 失败，降级手动：
+      👉 https://esa.console.aliyun.com/commonBuy
+      ⚠️ Pro 选「标准版」（不是免费版！），¥375/月。
+
+  # ─── Step 9: security monitoring baseline ───
+  - name: "开启操作审计 ActionTrail（投递到 OSS 备份桶，留 90 天审计轨迹）"
+    type: api
+    product: actiontrail
+    action: CreateTrail
+    params:
+      Name: "opc-pro-steady-trail"
+      OssBucketName: "${oss_bucket}"
+      OssKeyPrefix: "actiontrail/"
+      EventRW: "All"
+      TrailRegion: "All"
+    output_vars:
+      trail_arn: "TrailARN"
+    report: |
+      ✓ 操作审计已开启
+        投递目标：${oss_bucket}/actiontrail/（受 OSS 三层保护：加密+版本+阻断公共访问）
+        留存：默认 90 天（OSS 桶 Versioning 已开，覆盖写不会丢历史）
+        💡 出事查谁动了什么：去 ActionTrail 控制台或直接 grep OSS 日志
+    fallback_manual: |
+      ActionTrail API 失败 → 控制台手动开：
+      👉 https://actiontrail.console.aliyun.com/
+
+  - name: "开通云安全中心基础版（免费，仅引导）"
+    type: manual
+    optional: true
+    instructions: |
+      云安全中心基础版（免费）会自动给所有 ECS 加上：
+      · 弱密码检测 · 漏洞扫描 · 异常登录告警 · 恶意进程检测
+      
+      请打开 👉 https://yundun.console.aliyun.com/?p=sas
+      首次进入会引导你「免费开通」——点同意即可，全程零费用。
+      
+      ⚠️ 如果想升级到高级版（恶意行为分析、应急响应等），后续按月付费即可，不强制。
+      完成后告诉我"好了"。
+    report: "✓ 云安全中心基础版已开通（免费）"
+
+  - name: "ESA WAF 三条基础防护规则（引导手动配置，需先有备案域名）"
+    type: manual
+    optional: true
+    instructions: |
+      ESA 标准版自带 WAF 引擎，但默认规则较宽松。建议手动加三条基础规则：
+      👉 https://esa.console.aliyun.com/ → 你的站点 → 安全防护 → WAF 自定义规则
+      
+      ① **SQL 注入拦截**：规则类型 SQL_INJECTION，动作 Block，灵敏度 Medium
+      ② **XSS 拦截**：规则类型 XSS，动作 Block，灵敏度 Medium
+      ③ **暴力登录限频**：URL 包含 /login，5 分钟内同 IP > 10 次 → Block 10 分钟
+      
+      没绑域名暂时跳过，绑域名后再回来开。
+      完成后告诉我"好了"或"先跳过"。
+    report: "✓ WAF 基础规则已配置（或暂跳过等绑域名）"
+
+# ═══════════════════════════════════════
+# Phase 4: summary (user-facing output)
+# ═══════════════════════════════════════
+summary_template: |
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  🎉 全部就绪！你的 Pro 高可用架构已创建完成
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  🏠 AI 助理（OpenClaw）：去 https://swas.console.aliyun.com/ → 找到「OPC-Pro-Steady-OpenClaw」→「应用详情」→「登录 Web UI」按钮
+  📦 业务 ECS ×2：
+     #1 ${ecs_public_ip_1}
+     #2 ${ecs_public_ip_2}
+  🔀 负载均衡 ALB：${alb_dns}
+  🗄️ 数据库 RDS HA：${rds_connection_string}:${rds_port}（主备双节点）
+  📦 OSS 500GB：${oss_bucket}
+  🤖 Token Plan 标准版 25k/月
+  📁 阿里云盘 500GB
+  🌐 ESA 标准版（加速+防护）
+
+  💰 费用：¥2524.55/月（固定）+ ALB 按量约 ¥30-50/月
+
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  接下来：
+  1. 打开 OpenClaw（走上面控制台入口）
+  2. 让 AI 助理帮你把代码部署到两台 ECS（它懂双机部署）
+  3. 绑域名时 CNAME 指向 ALB：${alb_dns}
+
+  💡 用户访问你的域名 → ESA 加速 → ALB 分发 → 两台 ECS 任一处理
+     一台 ECS 异常 → ALB 自动切到另一台 → 用户无感知
+
+notes:
+  - "ALB needs VSwitches in at least 2 zones — at execution time additionally query/create a VSwitch in the second zone"
+  - "ALB pay-as-you-go: instance fee ¥0.049/h + LCU ¥0.042/h, roughly ¥35-50/month at OPC scale (instance-fee baseline ≈ ¥35.28/month)"
+  - "RDS HighAvailability = primary+standby dual-node, auto-failover within 30 seconds"
+  - "OSS 500GB is the Pro default (vs Lite 40GB), supports lots of image/video storage"
+  - "ESA standard (¥375/month) is the Pro default — includes DDoS+WAF, a must-have security baseline for public services"
+  - "Pro costs more than Lite for three things: dual-node no-downtime, HA database no-data-loss, ALB auto-distribution"
+  - "ECS SecurityGroupId needs the ALB health-check source IP range allowlisted too — auto-configured after ALB creation"
+

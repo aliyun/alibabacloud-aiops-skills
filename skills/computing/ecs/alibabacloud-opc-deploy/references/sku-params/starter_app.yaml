@@ -1,0 +1,236 @@
+# OPC Cloud Deploy - starter_app SKU params
+# ECS economy-e 2C2G + Token Plan (manual) + PDS (manual) + ESA Free
+# Use case: AI bookkeeping / AI customer service / AI resume polishing — the product calls AI at runtime
+
+sku: starter_app
+version: v1.0.0
+region_default: cn-beijing
+monthly_price: "约 ¥212.88/月"
+annual_promo: "¥99/年（ECS，命中 RuleId=20906709 摊月 ¥8.25）+ Token Plan ¥198/月 + PDS ¥6.63/月 + ESA 免费"
+disclaimer: "💡 价格供参考，实际以最终下单为准。ECS ¥99/年活动以下单时活动可用性为准；询价未命中时由 deploy 切换到 fallback_ecs_config（按流量计费 100M 峰值，约 ¥284.99/年北京），并自动配 CloudMonitor 出流量告警。"
+
+# ───────────────────────────────────────
+# Fallback config used when the price inquiry misses (shared with starter_webui)
+# ───────────────────────────────────────
+fallback_ecs_config:
+  trigger: "enabled when DescribePrice misses RuleId=20906709 (¥99/yr)"
+  instance_type: "ecs.e-c1m1.large"
+  internet_charge_type: "PayByTraffic"
+  internet_max_bandwidth_out: 100               # 100 Mbps peak, billed by actual traffic
+  expected_annual_cost: "approx ¥284.99/yr (measured in Beijing cn-beijing)"
+  required_addons:
+    - "Phase 4 must create a CloudMonitor outbound-traffic alarm (default threshold: 50GB/day)"
+  user_consent_required: true                   # the user must explicitly confirm before continuing
+
+# ═══════════════════════════════════════
+# Package contents (used for the Phase -1.2 bridging explanation; user-facing output)
+# ═══════════════════════════════════════
+package_contents: |
+  这个套餐包含：
+  ✦ 一台「小店面」（服务器 2核2G）—— 你的产品跑在上面
+  ✦ AI 能力（Token Plan 标准版）—— 你的产品调 AI 时消耗的额度
+  ✦ 存储空间（阿里云盘企业版 200GB）—— 产品相关的文件/数据存在这里
+  ✦ 全球加速（ESA 免费版）—— 全国访问都快
+  ✦ 代码部署 —— 靠桌面 AI 助手远程搞定
+
+deploy_creates: |
+  接下来我帮你创建的云资源：服务器（自动）+ ESA 加速（手动确认）。
+  Token Plan 和阿里云盘需要在控制台手动开通（有明确引导）。
+
+desktop_tool_download: "https://qoder.com.cn/qoderwork"
+
+# ═══════════════════════════════════════
+# Plain-language summary shown before user confirmation (user-facing output)
+# ═══════════════════════════════════════
+user_summary: |
+  即将为你创建/开通：
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ✦ 你的「小店面」（服务器 2核2G + 40GiB 系统盘（类似你电脑的系统盘）+ 3Mbps 公网带宽）          → 自动创建
+  ✦ AI 能力（Token Plan 标准版 25k/月）    → 引导你手动开通
+  ✦ 存储空间（阿里云盘 200GB）              → 引导你手动开通
+  ✦ 全球加速（ESA 免费版）                  → 引导你手动开通
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  费用：ECS ¥99/年（活动价摊月 ¥8.25） + Token ¥198/月 + PDS ¥6.63/月 + ESA 免费
+  合计约 ¥212.88/月，北京地域
+  💡 价格供参考，实际以最终下单为准。ECS ¥99/年活动以下单时活动可用性为准。
+  
+  确认开始？
+
+# ═══════════════════════════════════════
+# Create steps (Phase 3 executes them in order)
+# ═══════════════════════════════════════
+steps:
+
+  # ─── Step 1: create the ECS instance (automatic) ───
+  - name: "创建你的小店面（服务器）"
+    type: api
+    product: ecs
+    action: RunInstances
+    params:
+      RegionId: "${region}"
+      ZoneId: "${zone_id}"
+      InstanceType: "ecs.e-c1m1.large"
+      ImageId: "${state.resources.ecs.image_id}"
+      # ⚠️ ImageId is centrally resolved by SKILL.md Phase 0.4 and written to state; this yaml only consumes the state variable (iron-rule #27)
+      SecurityGroupId: "${security_group_id}"
+      VSwitchId: "${vswitch_id}"
+      InstanceName: "OPC-Starter-App"
+      HostName: "opc-starter-app"
+      InstanceChargeType: "PrePaid"
+      Period: 12
+      PeriodUnit: "Month"
+      AutoRenew: false  # auto-renew off by default
+      SystemDisk.Category: "cloud_essd_entry"
+      SystemDisk.Size: 40
+      InternetChargeType: "PayByBandwidth"
+      InternetMaxBandwidthOut: 3
+      Amount: 1
+      Tag.1.Key: "opc:managed"
+      Tag.1.Value: "true"
+      Tag.2.Key: "opc:sku"
+      Tag.2.Value: "starter_app"
+    wait_until:
+      product: ecs
+      action: DescribeInstanceStatus
+      params:
+        RegionId: "${region}"
+        InstanceId.1: "${ecs_instance_id}"
+      condition: "InstanceStatuses.InstanceStatus[0].Status == Running"
+      timeout_seconds: 300
+      poll_interval_seconds: 10
+    output_vars:
+      ecs_instance_id: "InstanceIdSets.InstanceIdSet[0]"
+    post_actions:
+      # ECS RunInstances --Tag does not persist; must call TagResources after creation to backfill the tag
+      - product: ecs
+        action: TagResources
+        params:
+          RegionId: "${region}"
+          ResourceType: "instance"
+          ResourceId.1: "${ecs_instance_id}"
+          Tag.1.Key: "opc:managed"
+          Tag.1.Value: "true"
+          Tag.2.Key: "opc:sku"
+          Tag.2.Value: "starter_app"
+      - product: ecs
+        action: DescribeInstances
+        params:
+          RegionId: "${region}"
+          InstanceIds: '["${ecs_instance_id}"]'
+        output_vars:
+          ecs_public_ip: "Instances.Instance[0].PublicIpAddress.IpAddress[0]"
+          ecs_private_ip: "Instances.Instance[0].VpcAttributes.PrivateIpAddress.IpAddress[0]"
+    report: |
+      ✓ 你的小店面已开门！
+        公网 IP：${ecs_public_ip}
+        配置：2核2G · 40GiB 系统盘（类似你电脑的系统盘）· 3Mbps 公网带宽
+        费用：¥99/年（已按年付）
+        状态：运行中
+
+  # ─── Step 2: Token Plan (manual) ───
+  - name: "开通 AI 能力（Token Plan 标准版）"
+    type: manual
+    instructions: |
+      请打开百炼控制台开通 Token Plan：
+      👉 https://common-buy.aliyun.com/token-plan
+
+      操作：
+      1. 如果是首次进入百炼，先点「开通服务」
+      2. 左侧菜单找到「Token Plan / 资源包」
+      3. 选择「标准版」（25,000 credits/月，¥198/月）→ 确认订购
+      
+      这个额度覆盖百炼平台全部模型（Qwen 全系列、DeepSeek 等）。
+      用量到 80% 时可以升级到高级版（100k/月，¥698）——升档前我会先报新月费让你确认才执行（与铁律 #22 联动）。
+
+      完成后告诉我"好了"。
+    report: "✓ AI 能力已激活（Token Plan 标准版 25k/月）"
+
+  # ─── Step 3: Alibaba Cloud Drive Enterprise PDS (manual) ───
+  - name: "开通存储空间（阿里云盘企业版 200GB）"
+    type: manual
+    instructions: |
+      请打开阿里云盘企业版购买页：
+      👉 https://common-buy.aliyun.com/?commodityCode=pds_trc_public_cn&regionId=cn-beijing
+
+      页面选择：
+      ① 类型 → 网盘空间
+      ② 用户数 → 5 人
+      ③ 存储空间 → 200GB
+      ④ 购买时长 → 1 月（¥6.63）或 1 年（¥6.63 × 12 = ¥79.6）
+      ⑤ 确认付款
+
+      这是你产品的文件/数据存储空间，跟个人网盘类似但是给你的产品用的。
+
+      完成后告诉我"好了"。
+    report: "✓ 存储空间已激活（阿里云盘 200GB）"
+
+  # ─── Step 4: ESA Free (API auto-provision) ───
+  - name: "开通全球加速（ESA 免费版）"
+    type: api
+    product: esa
+    action: PurchaseRatePlan
+    # CLI: aliyun esa purchase-rate-plan --PlanName entranceplan --ChargeType PREPAY --AutoPay true --Period 1 [--force by version-guard]
+    params:
+      PlanName: "entranceplan"
+      ChargeType: "PREPAY"
+      AutoPay: true
+      AutoRenew: false  # aligned with the other yamls
+      Period: 1
+    output_vars:
+      esa_instance_id: "InstanceId"
+    report: "✓ 全球加速已激活（ESA 免费版，¥0）"
+    fallback_manual: |
+      如果 API 失败，降级手动：
+      👉 https://esa.console.aliyun.com/commonBuy
+      选最左边「免费版」→ 确认开通。
+
+# ═══════════════════════════════════════
+# Phase 4: summary output template (user-facing output)
+# ═══════════════════════════════════════
+summary_template: |
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  🎉 全部就绪！你的 OPC 基础设施已创建完成
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  📦 你的小店面（服务器）
+     IP 地址：${ecs_public_ip}
+     控制台：https://ecs.console.aliyun.com/
+
+  🤖 AI 能力（Token Plan 标准版）
+     额度：25,000 credits/月
+     控制台：https://bailian.console.aliyun.com/
+
+  📁 存储空间（阿里云盘 200GB）
+     控制台：https://pds.console.aliyun.com/
+
+  🌐 全球加速（ESA 免费版）
+     控制台：https://esa.console.aliyun.com/
+
+  💰 费用：ECS ¥99/年 + Token ¥198/月 + PDS ¥6.63/月 ≈ ¥212.88/月
+
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+next_steps:
+  has_desktop_tool: |
+    接下来做什么？
+    告诉我（你正在用的这个 AI 助手）："帮我把代码部署到 ${ecs_public_ip}"，我来帮你远程搞定。
+    我会帮你远程部署代码到服务器 → 你的 AI 产品就能被用户访问了。
+
+  no_desktop_tool: |
+    接下来做什么？
+    ① 下载安装 QoderWork CN Pro（你的桌面 AI 助手）：
+       👉 https://qoder.com.cn/qoderwork
+    ② 打开它 → 告诉它："帮我把代码部署到 ${ecs_public_ip}"
+       它会帮你远程部署代码到服务器 → 你的 AI 产品就能被用户访问了。
+
+# ═══════════════════════════════════════
+# Notes (developer documentation)
+# ═══════════════════════════════════════
+notes:
+  - "starter_app vs starter_webui: the only difference is the added Token Plan + PDS (because the product calls AI at runtime)"
+  - "Token Plan first-time subscription has no API; must guide manual enablement"
+  - "PDS (Alibaba Cloud Drive Enterprise) enablement is also manual"
+  - "ECS params are identical to starter_webui (economy-e 2C2G)"
+  - "⚠️ PeriodUnit=Month + Period=12 (correct annual billing form)"
+  - "⚠️ ImageId is centrally resolved by SKILL.md Phase 0.4 and written to state; this yaml only consumes ${state.resources.ecs.image_id} (iron-rule #27)"
+
