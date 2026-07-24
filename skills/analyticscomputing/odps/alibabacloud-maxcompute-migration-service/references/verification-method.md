@@ -6,94 +6,94 @@ This document provides steps to verify the success of MMS migration operations.
 
 ### Step 1: Check Migration Job Status
 
-通过 MaxCompute 控制台验证：
+Verify through the MaxCompute console:
 
-1. 登录 [MaxCompute 控制台](https://maxcompute.console.aliyun.com/)
-2. 选择地域，进入 **数据传输 > 迁移服务 > 迁移作业**
-3. 查看作业状态：
-   - **运行中**: 作业正在执行
-   - **成功**: 作业执行完成
-   - **失败**: 作业执行失败，查看错误信息
+1. Log in to the [MaxCompute console](https://maxcompute.console.aliyun.com/)
+2. Select the region and navigate to **Data Transfer > Migration Service > Migration Jobs**
+3. Check the job status:
+   - **Running**: The job is being executed
+   - **Succeeded**: The job has completed
+   - **Failed**: The job execution failed; review the error message
 
 ### Step 2: Verify Data Count
 
-验证迁移后的数据条数：
+Verify the number of data rows after migration:
 
 ```sql
--- 在 MaxCompute 项目中执行
+-- Execute in the MaxCompute project
 SELECT COUNT(*) FROM <target_table>;
 ```
 
-与源端数据条数对比：
+Compare with the row count on the source side:
 
 ```sql
--- 在源数据源执行（如 Hive）
+-- Execute on the source data source (such as Hive)
 SELECT COUNT(*) FROM <source_table>;
 ```
 
 ### Step 3: Verify Data Sample
 
-抽样验证数据内容：
+Verify data content by sampling:
 
 ```sql
--- 在 MaxCompute 项目中执行
+-- Execute in the MaxCompute project
 SELECT * FROM <target_table> LIMIT 10;
 ```
 
-检查数据格式、字段值是否正确。
+Check whether the data format and field values are correct.
 
 ### Step 4: Verify Partition Data (if applicable)
 
-验证分区数据：
+Verify partition data:
 
 ```sql
--- 查看分区列表
+-- View the partition list
 SHOW PARTITIONS <target_table>;
 
--- 验证分区数据量
+-- Verify the partition data volume
 SELECT COUNT(*) FROM <target_table> WHERE <partition_column> = '<partition_value>';
 ```
 
 ### Step 5: Check Data Validation Results
 
-如开启了数据校验，查看校验结果：
+If data validation is enabled, review the validation results:
 
-1. 进入 **迁移服务 > 迁移作业**
-2. 点击作业名称，查看任务详情
-3. 查看 **任务日志** 中的校验结果
+1. Navigate to **Migration Service > Migration Jobs**
+2. Click the job name to view task details
+3. Review the validation results in the **Task Logs**
 
-校验方法：比对源端和目标端的 `SELECT COUNT(*)` 结果。
+Validation method: Compare the `SELECT COUNT(*)` results of the source and target sides.
 
 ## Verification Commands Summary
 
 | Verification | Command/Method | Expected Result |
 |-------------|----------------|-----------------|
-| 作业状态 | 控制台查看 | 状态为"成功" |
-| 数据条数 | `SELECT COUNT(*)` | 源端与目标端一致 |
-| 数据内容 | `SELECT * LIMIT N` | 数据格式正确 |
-| 分区数据 | `SHOW PARTITIONS` | 分区完整 |
-| 数据校验 | 任务日志 | 校验通过 |
+| Job Status | View in console | Status is "Succeeded" |
+| Data Count | `SELECT COUNT(*)` | Source and target match |
+| Data Content | `SELECT * LIMIT N` | Data format is correct |
+| Partition Data | `SHOW PARTITIONS` | Partitions are complete |
+| Data Validation | Task Logs | Validation passed |
 
 ## Troubleshooting
 
 ### Migration Job Failed
 
-1. 查看错误日志，定位失败原因
-2. 常见问题：
-   - 网络不通：检查网络配置
-   - 权限不足：检查 RAM 权限
-   - 源端不可用：检查数据源状态
-   - 资源不足：检查 MaxCompute CU 资源
+1. Review the error logs to identify the cause of failure
+2. Common issues:
+   - Network unreachable: Check the network configuration
+   - Insufficient permissions: Check the RAM permissions
+   - Source unavailable: Check the data source status
+   - Insufficient resources: Check the MaxCompute CU resources
 
 ### Data Count Mismatch
 
-1. 检查是否有迁移任务失败
-2. 检查分区过滤条件是否正确
-3. 检查源端是否有数据变更
-4. 重新执行数据校验
+1. Check whether any migration tasks failed
+2. Check whether the partition filter conditions are correct
+3. Check whether the source data has changed
+4. Re-run the data validation
 
 ### Data Format Error
 
-1. 检查字段类型映射是否正确
-2. 检查字符编码设置
-3. 检查数据源配置
+1. Check whether the field type mappings are correct
+2. Check the character encoding settings
+3. Check the data source configuration

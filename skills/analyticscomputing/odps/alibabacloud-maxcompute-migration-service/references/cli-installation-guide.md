@@ -2,7 +2,9 @@
 
 Complete guide for installing and configuring Aliyun CLI.
 
-> **Aliyun CLI 3.3.1+**: Supports installing and using all published Alibaba Cloud product plugins. Make sure to upgrade to 3.3.1 or later for full plugin ecosystem coverage.
+> **Aliyun CLI 3.3.3+**: Supports installing and using all published Alibaba Cloud product plugins. Make sure to upgrade to 3.3.3 or later for full plugin ecosystem coverage.
+>
+> Quickest install/update: `/bin/bash -c "$(curl -fsSL https://aliyuncli.alicdn.com/setup.sh)"`, or `aliyun upgrade` (available from CLI >= 3.3.5) to self-update.
 
 ## Installation
 
@@ -14,7 +16,7 @@ brew install aliyun-cli
 # Upgrade to latest
 brew upgrade aliyun-cli
 
-# Verify version (>= 3.3.1)
+# Verify version (>= 3.3.3)
 aliyun version
 ```
 
@@ -89,7 +91,7 @@ aliyun configure set \
   --mode AK \
   --access-key-id <your-access-key-id> \
   --access-key-secret <your-access-key-secret> \
-  --region cn-hangzhou
+  --region <region id>
 ```
 
 **Where to Get Access Keys**
@@ -105,7 +107,7 @@ aliyun configure set \
 ```bash
 export ALIBABA_CLOUD_ACCESS_KEY_ID=your_access_key_id
 export ALIBABA_CLOUD_ACCESS_KEY_SECRET=your_access_key_secret
-export ALIBABA_CLOUD_REGION_ID=cn-hangzhou
+export ALIBABA_CLOUD_REGION_ID=<region id>
 ```
 
 ### Verification
@@ -119,7 +121,7 @@ aliyun ecs describe-regions
 
 ## Plugin Installation
 
-After installing CLI 3.3.1+, enable automatic plugin installation:
+After installing CLI 3.3.3+, enable automatic plugin installation:
 
 ```bash
 aliyun configure set --auto-plugin-install true

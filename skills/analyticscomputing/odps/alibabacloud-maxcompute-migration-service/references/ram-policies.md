@@ -1,41 +1,41 @@
 # RAM Policies for MaxCompute Migration Service (MMS)
 
-本文档详细说明 MMS 所需的权限配置，包括 RAM 权限和 MaxCompute 项目权限。
+This document describes in detail the permission configuration required by MMS, including RAM permissions and MaxCompute project permissions.
 
-## 权限配置概述
+## Permission Configuration Overview
 
-MMS 需要配置三类权限：
+MMS requires three categories of permissions to be configured:
 
-| 权限类型 | 授权对象 | 说明 |
+| Permission Type | Grantee | Description |
 |---------|---------|------|
-| 服务关联角色 | 阿里云账号 | MMS 访问云资源的角色 |
-| RAM 权限 | 执行迁移的 RAM 用户 | MMS 操作权限 |
-| MaxCompute 项目权限 | 服务关联角色 | 数据读写权限 |
+| Service-linked role | Alibaba Cloud account | The role MMS uses to access cloud resources |
+| RAM permissions | The RAM user performing the migration | MMS operation permissions |
+| MaxCompute project permissions | Service-linked role | Data read/write permissions |
 
-## 1. 服务关联角色
+## 1. Service-Linked Role
 
-首次使用 MMS 前，必须创建服务关联角色：
+Before using MMS for the first time, you must create the service-linked role:
 
-**角色名称**：`AliyunServiceRoleForMaxComputeMMS`
+**Role name**: `AliyunServiceRoleForMaxComputeMMS`
 
-**创建方式**：
+**How to create it**:
 
-### 通过 MaxCompute 控制台
-1. 登录 MaxCompute 控制台
-2. 选择 数据传输 > 迁移服务
-3. 点击 新增数据源
-4. 在弹出的对话框中确认创建
+### Via the MaxCompute console
+1. Log in to the MaxCompute console
+2. Go to Data Transmission > Migration Service
+3. Click Add Data Source
+4. Confirm creation in the dialog that appears
 
-### 通过 RAM 控制台
-1. 登录 RAM 控制台 > 身份管理 > 角色
-2. 点击 创建角色 > 创建服务关联角色
-3. 选择信任的云服务：`AliyunServiceRoleForMaxComputeMMS`
+### Via the RAM console
+1. Log in to the RAM console > Identity Management > Roles
+2. Click Create Role > Create Service-Linked Role
+3. Select the trusted cloud service: `AliyunServiceRoleForMaxComputeMMS`
 
-> **注意**：RAM 用户需要 `AliyunRAMFullAccess` 权限才能创建服务关联角色
+> **Note**: The RAM user needs the `AliyunRAMFullAccess` permission to create the service-linked role
 
-## 2. RAM 权限策略（给 RAM 用户）
+## 2. RAM Permission Policies (for the RAM user)
 
-### 2.1 MMS 所有操作权限
+### 2.1 Full MMS Operation Permissions
 
 ```json
 {
@@ -49,7 +49,6 @@ MMS 需要配置三类权限：
         "ram:GetRole",
         "odps:GetMmsDataSource",
         "odps:UpdateMmsDataSource",
-        "odps:DeleteMmsDataSource",
         "odps:CreateMmsFetchMetadataJob",
         "odps:GetMmsFetchMetadataJob",
         "odps:ListMmsFetchMetadataJobLogs",
@@ -62,7 +61,6 @@ MMS 需要配置三类权限：
         "odps:ListMmsJobs",
         "odps:GetMmsJob",
         "odps:CreateMmsJob",
-        "odps:DeleteMmsJob",
         "odps:StartMmsJob",
         "odps:StopMmsJob",
         "odps:RetryMmsJob",
@@ -93,7 +91,7 @@ MMS 需要配置三类权限：
 }
 ```
 
-### 2.2 MMS 源数据管理权限
+### 2.2 MMS Source Data Management Permissions
 
 ```json
 {
@@ -107,7 +105,6 @@ MMS 需要配置三类权限：
         "ram:GetRole",
         "odps:GetMmsDataSource",
         "odps:UpdateMmsDataSource",
-        "odps:DeleteMmsDataSource",
         "odps:CreateMmsFetchMetadataJob",
         "odps:GetMmsFetchMetadataJob",
         "odps:ListMmsFetchMetadataJobLogs",
@@ -132,7 +129,7 @@ MMS 需要配置三类权限：
 }
 ```
 
-### 2.3 MMS 迁移作业管理权限
+### 2.3 MMS Migration Job Management Permissions
 
 ```json
 {
@@ -155,7 +152,6 @@ MMS 需要配置三类权限：
         "odps:ListMmsJobs",
         "odps:GetMmsJob",
         "odps:CreateMmsJob",
-        "odps:DeleteMmsJob",
         "odps:StartMmsJob",
         "odps:StopMmsJob",
         "odps:RetryMmsJob",
@@ -180,56 +176,56 @@ MMS 需要配置三类权限：
 }
 ```
 
-## 3. MaxCompute 项目权限（给服务关联角色）
+## 3. MaxCompute Project Permissions (for the service-linked role)
 
-在目标项目中，需要为服务关联角色授予数据操作权限：
+In the target project, you need to grant data operation permissions to the service-linked role:
 
-### 3.1 添加服务关联角色到项目
+### 3.1 Add the Service-Linked Role to the Project
 
 ```sql
 USE <target_project>;
 ADD USER `RAM$<account_id>:role/AliyunServiceRoleForMaxComputeMMS`;
 ```
 
-### 3.2 粗粒度授权（推荐）
+### 3.2 Coarse-Grained Authorization (Recommended)
 
 ```sql
--- 授予 admin 角色
+-- Grant the admin role
 GRANT admin TO USER `RAM$<account_id>:role/AliyunServiceRoleForMaxComputeMMS`;
 ```
 
-### 3.3 细粒度授权
+### 3.3 Fine-Grained Authorization
 
-**项目级权限：**
+**Project-level permissions:**
 
 ```sql
 GRANT Read,Write,List,CreateTable,CreateInstance,CreateFunction,CreateResource
 ON project <project_name> TO USER `RAM$<account_id>:role/AliyunServiceRoleForMaxComputeMMS`;
 
--- 或授予所有权限
+-- Or grant all permissions
 GRANT ALL ON project <project_name> TO USER `RAM$<account_id>:role/AliyunServiceRoleForMaxComputeMMS`;
 ```
 
-**表级权限：**
+**Table-level permissions:**
 
 ```sql
 GRANT Describe,Select,Alter,Update,Drop,ShowHistory
 ON table <table_name> TO USER `RAM$<account_id>:role/AliyunServiceRoleForMaxComputeMMS`;
 
--- 或授予所有权限
+-- Or grant all permissions
 GRANT All ON table <table_name> TO USER `RAM$<account_id>:role/AliyunServiceRoleForMaxComputeMMS`;
 ```
 
-**实例级权限：**
+**Instance-level permissions:**
 
 ```sql
 GRANT Read,Write ON instance <instance_id>
 TO USER `RAM$<account_id>:role/AliyunServiceRoleForMaxComputeMMS`;
 ```
 
-### 3.4 权限说明
+### 3.4 Permission Reference
 
-| 对象类型 | 支持的权限 |
+| Object Type | Supported Permissions |
 |---------|-----------|
 | Project | Read, Write, List, CreateTable, CreateInstance, CreateFunction, CreateResource, All |
 | Table | Describe, Select, Alter, Update, Drop, ShowHistory, All |
@@ -237,40 +233,40 @@ TO USER `RAM$<account_id>:role/AliyunServiceRoleForMaxComputeMMS`;
 | Resource | Read, Write, Download, Delete |
 | Function | Read, Write, Download, Execute, Delete |
 
-## 4. 快捷授权方案
+## 4. Quick Authorization Options
 
-| 场景 | 推荐方案 |
+| Scenario | Recommended Option |
 |-----|---------|
-| 主账号操作 | 无需额外配置 RAM 权限 |
-| RAM 用户完整 MaxCompute 权限 | 授予 `AliyunMaxComputeFullAccess` |
-| RAM 用户仅 MMS 操作权限 | 使用上述自定义权限策略 |
-| 创建服务关联角色 | RAM 用户需 `AliyunRAMFullAccess` |
+| Operations with the primary account | No additional RAM permission configuration needed |
+| RAM user with full MaxCompute permissions | Grant `AliyunMaxComputeFullAccess` |
+| RAM user with MMS operation permissions only | Use the custom permission policies above |
+| Creating the service-linked role | The RAM user needs `AliyunRAMFullAccess` |
 
-## 5. 通过控制台配置权限
+## 5. Configuring Permissions via the Console
 
-### MaxCompute 控制台配置项目权限
+### Configuring Project Permissions in the MaxCompute Console
 
-1. 登录 MaxCompute 控制台
-2. 选择 管理配置 > 项目管理
-3. 点击目标项目的 管理
-4. 选择 角色权限 页签
-5. 新建角色并配置权限
-6. 在成员管理中添加服务关联角色
+1. Log in to the MaxCompute console
+2. Go to Management Configuration > Project Management
+3. Click Manage for the target project
+4. Select the Role Permissions tab
+5. Create a role and configure its permissions
+6. Add the service-linked role in Member Management
 
-## 6. 权限排查
+## 6. Permission Troubleshooting
 
-### 常见错误
+### Common Errors
 
-| 错误信息 | 原因 | 解决方案 |
+| Error Message | Cause | Solution |
 |---------|------|---------|
-| Forbidden.RAM | RAM 用户缺少 MMS 操作权限 | 添加 MMS 权限策略 |
-| Access Denied | 服务关联角色未授权项目权限 | 在项目中添加用户并授权 |
-| ServiceLinkedRole not found | 服务关联角色未创建 | 创建 AliyunServiceRoleForMaxComputeMMS |
+| Forbidden.RAM | The RAM user lacks MMS operation permissions | Add the MMS permission policy |
+| Access Denied | The service-linked role has not been granted project permissions | Add the user in the project and grant permissions |
+| ServiceLinkedRole not found | The service-linked role has not been created | Create AliyunServiceRoleForMaxComputeMMS |
 
-### 权限检查清单
+### Permission Checklist
 
-- [ ] 服务关联角色已创建
-- [ ] RAM 用户已授予 MMS 操作权限
-- [ ] 服务关联角色已添加到目标项目
-- [ ] 服务关联角色已授予数据操作权限
-- [ ] 目标项目已绑定 Quota 资源
+- [ ] The service-linked role has been created
+- [ ] The RAM user has been granted MMS operation permissions
+- [ ] The service-linked role has been added to the target project
+- [ ] The service-linked role has been granted data operation permissions
+- [ ] The target project has been bound to a Quota resource
