@@ -1,0 +1,538 @@
+# Aliyun CLI Installation & Configuration Guide
+
+Complete guide for installing and configuring Aliyun CLI.
+
+> **Aliyun CLI 3.3.3+**: Supports installing and using all published Alibaba Cloud product plugins. Make sure to upgrade to 3.3.3 or later for full plugin ecosystem coverage.
+
+## Installation
+
+### macOS / Linux (Recommended)
+
+Works on both macOS and Linux, auto-detects architecture. Never pipe remote content directly into a shell — download, review, then execute the local copy:
+
+```bash
+# 1. Download the installer script
+curl -fsSL --connect-timeout 10 --max-time 120 -o aliyun-cli-setup.sh https://aliyuncli.alicdn.com/setup.sh
+
+# 2. Review the script content before running it
+less aliyun-cli-setup.sh
+
+# 3. Execute the reviewed local copy
+bash aliyun-cli-setup.sh
+```
+
+After installation, verify:
+```bash
+aliyun version   # should be >= 3.3.3
+```
+
+### macOS — Homebrew (Alternative)
+
+```bash
+brew install aliyun-cli
+# Upgrade to latest
+brew upgrade aliyun-cli
+```
+
+### Linux — Manual Binary (Alternative)
+
+Use these only if the setup script above is not suitable.
+
+**x86_64**
+
+Download the versioned release archive plus the official checksum file from GitHub Releases, verify integrity, then extract. Check https://github.com/aliyun/aliyun-cli/releases for the latest version tag:
+
+```bash
+# 1. Set the version to install (see the releases page for the latest tag)
+VERSION=3.4.8
+
+# 2. Download the archive and the official SHA256 checksum file
+curl -fsSL --connect-timeout 10 --max-time 120 -O "https://github.com/aliyun/aliyun-cli/releases/download/v${VERSION}/aliyun-cli-linux-${VERSION}-amd64.tgz"
+curl -fsSL --connect-timeout 10 --max-time 120 -O "https://github.com/aliyun/aliyun-cli/releases/download/v${VERSION}/SHASUMS256.txt"
+
+# 3. Verify integrity — must print "OK"; do NOT continue on mismatch
+grep "aliyun-cli-linux-${VERSION}-amd64.tgz" SHASUMS256.txt | shasum -a 256 -c -
+
+# 4. Extract only after verification succeeds
+tar xzf "aliyun-cli-linux-${VERSION}-amd64.tgz"
+
+# 5. Install into a user-owned bin directory — no elevated privileges required
+mkdir -p "$HOME/.local/bin"
+mv aliyun "$HOME/.local/bin/"
+# Ensure $HOME/.local/bin is on your PATH. For a system-wide install, move the
+# binary into a system PATH directory (e.g. /usr/local/bin) with administrator privileges.
+```
+
+**ARM64**
+
+Same verified flow as x86_64, using the arm64 archive:
+
+```bash
+# 1. Set the version to install (see the releases page for the latest tag)
+VERSION=3.4.8
+
+# 2. Download the archive and the official SHA256 checksum file
+curl -fsSL --connect-timeout 10 --max-time 120 -O "https://github.com/aliyun/aliyun-cli/releases/download/v${VERSION}/aliyun-cli-linux-${VERSION}-arm64.tgz"
+curl -fsSL --connect-timeout 10 --max-time 120 -O "https://github.com/aliyun/aliyun-cli/releases/download/v${VERSION}/SHASUMS256.txt"
+
+# 3. Verify integrity — must print "OK"; do NOT continue on mismatch
+grep "aliyun-cli-linux-${VERSION}-arm64.tgz" SHASUMS256.txt | shasum -a 256 -c -
+
+# 4. Extract only after verification succeeds
+tar xzf "aliyun-cli-linux-${VERSION}-arm64.tgz"
+
+# 5. Install into a user-owned bin directory — no elevated privileges required
+mkdir -p "$HOME/.local/bin"
+mv aliyun "$HOME/.local/bin/"
+# Ensure $HOME/.local/bin is on your PATH. For a system-wide install, move the
+# binary into a system PATH directory (e.g. /usr/local/bin) with administrator privileges.
+```
+
+### Windows
+
+**Using Binary**
+1. Download from: https://aliyuncli.alicdn.com/aliyun-cli-windows-latest-amd64.zip
+2. Extract the ZIP file
+3. Add the directory to your PATH environment variable
+4. Open new Command Prompt or PowerShell
+5. Verify: `aliyun version`
+
+**Using PowerShell**
+```powershell
+# Download
+Invoke-WebRequest -Uri "https://aliyuncli.alicdn.com/aliyun-cli-windows-latest-amd64.zip" -OutFile "aliyun-cli.zip"
+
+# Extract
+Expand-Archive -Path aliyun-cli.zip -DestinationPath C:\aliyun-cli
+
+# Add to PATH (requires admin privileges)
+$env:Path += ";C:\aliyun-cli"
+[Environment]::SetEnvironmentVariable("Path", $env:Path, [System.EnvironmentVariableTarget]::Machine)
+
+# Verify
+aliyun version
+```
+
+### Self-Update (CLI >= 3.3.5)
+
+Once the CLI is at version 3.3.5 or newer, routine updates can use the built-in self-update subcommand instead of re-running the install script:
+
+```bash
+aliyun upgrade
+aliyun version
+```
+
+## Configuration
+
+### Quick Start
+
+> **Security Notice:** The examples below show `aliyun configure set` with credential flags for documentation purposes.
+> When using the SSL Certificate Toolkit skill, **NEVER** read, echo, print, or ask for AK/SK values.
+> Instead, configure credentials **outside of the agent session** (in terminal or shell profile),
+> then use `aliyun configure list` to verify. See SKILL.md Authentication section for full rules.
+
+```bash
+aliyun configure set \
+  --mode AK \
+  --access-key-id <your-access-key-id> \
+  --access-key-secret <your-access-key-secret> \
+  --region cn-hangzhou
+```
+
+All `aliyun configure` commands support non-interactive flags, which is the recommended approach —
+it works in scripts, CI/CD pipelines, and agent-driven automation without hanging on stdin prompts.
+
+**Where to Get Access Keys**
+
+1. Log in to Aliyun Console: https://ram.console.aliyun.com/
+2. Navigate to: AccessKey Management
+3. Create a new AccessKey pair
+4. Save the secret immediately — it's only shown once
+
+### Configuration Modes
+
+**OAuth (browser login)** — If the environment can open a web browser (for example a local desktop with a GUI), **prefer OAuth** over storing AccessKey pairs in configuration: credentials are not kept as plaintext AK/SecretKey. Requires Alibaba Cloud CLI **3.0.299** or later and is **not** suitable for headless servers (for example SSH-only Linux without a browser on the same machine).
+
+Run interactively:
+
+```bash
+aliyun configure --profile <your-profile-name> --mode OAuth
+```
+
+Full setup (administrator consent, RAM assignments, site `CN` vs `INTL`) is covered in the official guide: [Configure OAuth authentication for Alibaba Cloud CLI](https://www.alibabacloud.com/help/en/doc-detail/2995960.html).
+
+---
+
+The sections below describe **six** authentication modes that are typically driven with **non-interactive** flags (scripts, CI/CD, automation). Use these when OAuth is not available or when you must supply explicit keys or tokens.
+
+#### 1. AK Mode (Access Key)
+
+Most common mode for personal accounts and scripts.
+
+```bash
+aliyun configure set \
+  --mode AK \
+  --access-key-id <your-access-key-id> \
+  --access-key-secret <your-access-key-secret> \
+  --region cn-hangzhou
+```
+
+Configuration is stored in `~/.aliyun/config.json`:
+
+```json
+{
+  "current": "default",
+  "profiles": [
+    {
+      "name": "default",
+      "mode": "AK",
+      "access_key_id": "<your-access-key-id>",
+      "access_key_secret": "<your-access-key-secret>",
+      "region_id": "cn-hangzhou",
+      "output_format": "json",
+      "language": "en"
+    }
+  ]
+}
+```
+
+#### 2. StsToken Mode (Temporary Credentials)
+
+For short-lived access (tokens expire in 1-12 hours).
+
+```bash
+aliyun configure set \
+  --mode StsToken \
+  --access-key-id <your-access-key-id> \
+  --access-key-secret <your-access-key-secret> \
+  --sts-token <your-sts-token> \
+  --region cn-hangzhou
+```
+
+Use cases: CI/CD pipelines, temporary access for external contractors, cross-account access.
+
+#### 3. RamRoleArn Mode (Assume RAM Role)
+
+Assume a RAM role for elevated or cross-account access.
+
+```bash
+aliyun configure set \
+  --mode RamRoleArn \
+  --access-key-id <your-access-key-id> \
+  --access-key-secret <your-access-key-secret> \
+  --ram-role-arn <your-ram-role-arn> \
+  --role-session-name <your-role-session-name> \
+  --region cn-hangzhou
+```
+
+Use cases: cross-account resource access, temporary elevated privileges, role-based access control.
+
+#### 4. EcsRamRole Mode (ECS Instance RAM Role)
+
+Use the RAM role attached to an ECS instance — no credentials needed.
+
+```bash
+aliyun configure set \
+  --mode EcsRamRole \
+  --ram-role-name <your-ecs-ram-role-name> \
+  --region cn-hangzhou
+```
+
+Requirements: must be running on an ECS instance with a RAM role attached.
+
+Use cases: scripts and automation running on ECS instances.
+
+#### 5. RsaKeyPair Mode (RSA Key Pair)
+
+Use RSA key pair for authentication (generate key pair in Aliyun Console first).
+
+```bash
+aliyun configure set \
+  --mode RsaKeyPair \
+  --private-key <path-to-your-private-key.pem> \
+  --key-pair-name <your-key-pair-name> \
+  --region cn-hangzhou
+```
+
+#### 6. RamRoleArnWithEcs Mode (ECS + RAM Role)
+
+Combine ECS instance role with RAM role assumption for cross-account access from ECS.
+
+```bash
+aliyun configure set \
+  --mode RamRoleArnWithEcs \
+  --ram-role-name <your-ecs-ram-role-name> \
+  --ram-role-arn <your-ram-role-arn> \
+  --role-session-name <your-role-session-name> \
+  --region cn-hangzhou
+```
+
+### Environment Variables
+
+**Highest priority** - overrides config file
+
+**Access Key Mode**
+```bash
+export ALIBABA_CLOUD_ACCESS_KEY_ID=<your-access-key-id>
+export ALIBABA_CLOUD_ACCESS_KEY_SECRET=<your-access-key-secret>
+export ALIBABA_CLOUD_REGION_ID=cn-hangzhou
+```
+
+**STS Token Mode**
+```bash
+export ALIBABA_CLOUD_ACCESS_KEY_ID=<your-access-key-id>
+export ALIBABA_CLOUD_ACCESS_KEY_SECRET=<your-access-key-secret>
+export ALIBABA_CLOUD_SECURITY_TOKEN=<your-sts-token>
+export ALIBABA_CLOUD_REGION_ID=cn-hangzhou
+```
+
+**Use Case**:
+- CI/CD pipelines
+- Docker containers
+- Temporary credential override
+
+### Managing Multiple Profiles
+
+**Create Named Profiles**
+
+```bash
+aliyun configure set --profile projectA \
+  --mode AK \
+  --access-key-id <your-first-access-key-id> \
+  --access-key-secret <your-first-access-key-secret> \
+  --region cn-hangzhou
+
+aliyun configure set --profile projectB \
+  --mode AK \
+  --access-key-id <your-second-access-key-id> \
+  --access-key-secret <your-second-access-key-secret> \
+  --region cn-shanghai
+```
+
+**Use Specific Profile**
+
+```bash
+aliyun ecs describe-instances --profile projectA
+
+export ALIBABA_CLOUD_PROFILE=projectA
+aliyun ecs describe-instances   # Uses projectA
+```
+
+**List and Switch Profiles**
+
+```bash
+aliyun configure list                      # List all profiles
+aliyun configure switch --profile projectA    # Switch default profile
+```
+
+### Credential Priority
+
+Credentials are loaded in this order (first found wins):
+
+1. **Command-line flag**: `--profile <name>`
+2. **Environment variable**: `ALIBABA_CLOUD_PROFILE`
+3. **Environment credentials**: `ALIBABA_CLOUD_ACCESS_KEY_ID`, etc.
+4. **Configuration file**: `~/.aliyun/config.json` (current profile)
+5. **ECS Instance RAM Role**: If running on ECS with attached role
+
+## Verification
+
+### Test Authentication
+
+```bash
+# Basic test - list regions
+aliyun ecs describe-regions
+
+# Expected output: JSON array of regions
+```
+
+**If successful**, you'll see:
+```json
+{
+  "Regions": {
+    "Region": [
+      {
+        "RegionId": "cn-hangzhou",
+        "RegionEndpoint": "ecs.cn-hangzhou.aliyuncs.com",
+        "LocalName": "China East 1 (Hangzhou)"
+      },
+      ...
+    ]
+  },
+  "RequestId": "..."
+}
+```
+
+**If failed**, you'll see error messages:
+- `InvalidAccessKeyId.NotFound` - Wrong Access Key ID
+- `SignatureDoesNotMatch` - Wrong Access Key Secret
+- `InvalidSecurityToken.Expired` - STS token expired (for StsToken mode)
+- `Forbidden.RAM` - Insufficient permissions
+
+### Debug Configuration
+
+```bash
+# Show current configuration
+aliyun configure get
+
+# Test with debug logging
+aliyun ecs describe-regions --log-level debug
+
+# Check credential provider
+aliyun configure get mode
+```
+
+## Security Best Practices
+
+### 1. Use RAM Users (Not Root Account)
+
+Do not use Aliyun root account credentials. Create RAM users with specific permissions.
+
+```bash
+# Create RAM user in console
+# Attach only necessary policies
+# Use RAM user's access keys
+```
+
+### 2. Principle of Least Privilege
+
+Grant only the minimum permissions needed:
+
+```bash
+# Example: Read-only ECS access
+# Attach policy: AliyunECSReadOnlyAccess
+```
+
+### 3. Rotate Access Keys Regularly
+
+```bash
+# Create new access key in RAM Console, then update configuration
+aliyun configure set --access-key-id <your-access-key-id> --access-key-secret <your-access-key-secret>
+# Delete old access key from console
+```
+
+### 4. Use STS Tokens for Temporary Access
+
+```bash
+aliyun configure set --mode StsToken \
+  --access-key-id <your-access-key-id> --access-key-secret <your-access-key-secret> \
+  --sts-token <your-sts-token> --region cn-hangzhou
+```
+
+### 5. Use ECS RAM Roles When Possible
+
+```bash
+aliyun configure set --mode EcsRamRole --ram-role-name <your-ecs-ram-role-name> --region cn-hangzhou
+```
+
+### 6. Never Commit Credentials
+
+```bash
+# Add to .gitignore
+echo "~/.aliyun/config.json" >> .gitignore
+
+# Use environment variables in CI/CD instead
+```
+
+### 7. Secure Config File
+
+```bash
+# Restrict permissions
+chmod 600 ~/.aliyun/config.json
+```
+
+## Troubleshooting
+
+### Issue: Command Not Found
+
+```bash
+# Check installation
+which aliyun
+
+# Check PATH
+echo $PATH
+
+# Reinstall or add to PATH
+```
+
+### Issue: Authentication Failed
+
+```bash
+# Verify configuration
+aliyun configure get
+
+# Test with debug
+aliyun ecs describe-regions --log-level debug
+
+# Check credentials in console
+# Verify access key is active
+```
+
+### Issue: Permission Denied
+
+```bash
+# Error: Forbidden.RAM
+
+# Check RAM user permissions
+# Attach necessary policies in RAM console
+# Example: AliyunECSFullAccess for ECS operations
+```
+
+### Issue: STS Token Expired
+
+```bash
+# Error: InvalidSecurityToken.Expired
+
+# Reconfigure with new token
+aliyun configure set --mode StsToken \
+  --access-key-id <your-access-key-id> --access-key-secret <your-access-key-secret> \
+  --sts-token <your-sts-token> --region cn-hangzhou
+```
+
+### Issue: Wrong Region
+
+```bash
+# Some resources may not exist in the specified region
+
+# Check available regions
+aliyun ecs describe-regions
+
+# Update default region
+aliyun configure set --region cn-shanghai
+```
+
+## Advanced Configuration
+
+### Timeout Settings
+
+```bash
+# Connection timeout
+export ALIBABA_CLOUD_CONNECT_TIMEOUT=30
+
+# Read timeout
+export ALIBABA_CLOUD_READ_TIMEOUT=30
+```
+
+## Next Steps
+
+After installation and configuration:
+
+1. **Install plugins** for services you need (v3.3.3+ supports all published product plugins):
+   ```bash
+   aliyun plugin install --names ecs vpc rds
+
+   # List all available plugins
+   aliyun plugin list-remote
+   ```
+
+2. **Explore commands**:
+   ```bash
+   aliyun ecs --help
+   aliyun fc --help
+   ```
+
+## References
+
+- Official Documentation: https://help.aliyun.com/zh/cli/
+- RAM Console: https://ram.console.aliyun.com/
+- Access Key Management: https://ram.console.aliyun.com/manage/ak
