@@ -1,0 +1,2593 @@
+{
+  "version": "1.0.0",
+  "type": "diagnostic_decision_tree",
+  "description": "ALB Ingress 调谐错误诊断决策树知识库 - 层级化因果诊断",
+  "usage_instruction": "当 skill 匹配到错误报文后，按以下流程使用本知识库:\n1. 通过 regex 匹配错误信息，定位到具体的 error 节点\n2. 遍历该 error 的 causes 数组，按 cause_id 顺序逐一排查\n3. 对每个 cause，执行 diagnostic.commands 中的命令，检查 diagnostic.expected_result 描述的条件\n4. 一旦确认某个 cause 成立，输出该 cause 对应的 solution\n5. 如果 cause 只有一个，跳过诊断步骤直接输出 solution\n6. 如果一个 cause 有多个 solution_options，优先推荐 recommended=true 的方案",
+  "categories": [
+    {
+      "id": "svc_config",
+      "name": "SVC配置异常",
+      "description": "后端 Service 配置导致的调谐失败，包括 Service 类型不兼容、端口不匹配、协议要求等",
+      "errors": [
+        {
+          "id": "CLUSTER_SVC_ENI_MODE",
+          "regex": "cluster service type just support eni mode for alb ingress",
+          "message_template": "cluster service type just support eni mode for alb ingress: Service={namespace}/{svcname}",
+          "severity": "critical",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "Flannel 集群不支持 ClusterIP 类型 Service",
+              "description": "集群的网络插件是 Flannel 时，ALB Ingress 不支持 ClusterIP 类型的 Service，仅支持挂载 NodePort 和 LoadBalancer 类型的 Service。",
+              "diagnostic": {
+                "description": "判断 Service 的 Type 是否为 ClusterIP，以及集群网络插件是否为 Flannel",
+                "commands": [
+                  "kubectl describe svc -n {namespace} {svcname}",
+                  "kubectl get configmap -n kube-system kube-proxy -o yaml | grep mode"
+                ],
+                "expected_result": "Service Type 为 ClusterIP，且集群网络插件为 Flannel"
+              },
+              "solution": {
+                "title": "修改 Service 类型为 NodePort",
+                "resource": "Service",
+                "action": "patch_type",
+                "steps": [
+                  "执行 kubectl edit svc -n {namespace} {svcname}",
+                  "将 spec.type 从 ClusterIP 修改为 NodePort",
+                  "保存后等待 Ingress 自动重新调谐（通常 30-60 秒生效）"
+                ],
+                "yaml_example": "apiVersion: v1\nkind: Service\nmetadata:\n  name: {svcname}\n  namespace: {namespace}\nspec:\n  type: NodePort\n  selector:\n    app: {app_label}\n  ports:\n  - port: 80\n    targetPort: 8080\n    protocol: TCP",
+                "note": "Flannel 集群仅支持 NodePort 和 LoadBalancer 类型 Service。若集群使用 Terway 网络插件，则支持 ClusterIP 类型（通过 ENI 直连模式），参见 cause_id 2。"
+              }
+            },
+            {
+              "cause_id": 2,
+              "summary": "老版本 Terway 集群兼容性使用 ECS 挂载",
+              "description": "部分老版本的 ACK 集群（如 v1.22 及以下），即使使用 Terway 网络插件，为了兼容性会依旧使用 ECS 挂载模式，此时也会报此错误。新版本 Terway 集群支持 ENI 直连模式，可直接挂载 ClusterIP 类型 Service。",
+              "diagnostic": {
+                "description": "查看集群的网络插件是否是 Terway，以及集群版本",
+                "commands": [
+                  "kubectl get ds -n kube-system | grep terway",
+                  "kubectl version --short"
+                ],
+                "expected_result": "集群使用 Terway 网络插件，且集群版本较低（如 v1.22 及以下）"
+              },
+              "solution": {
+                "title": "在 Service 上添加 ENI 后端类型注解",
+                "resource": "Service",
+                "action": "patch_annotation",
+                "steps": [
+                  "在 ALB Ingress 挂载的 Service 上添加注解 service.beta.kubernetes.io/backend-type: \"eni\"",
+                  "手动设置挂载类型为 ENI"
+                ],
+                "yaml_example": "metadata:\n  annotations:\n    service.beta.kubernetes.io/backend-type: \"eni\"",
+                "notes": "仅适用于 Terway 集群且集群版本较低的场景"
+              }
+            }
+          ]
+        },
+        {
+          "id": "BACKEND_NOT_FOUND",
+          "regex": "backend not found: unable to find port \\d+ on service",
+          "message_template": "backend not found: unable to find port {port} on service {namespace}/{svcname}",
+          "severity": "critical",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "Ingress 配置的端口与 Service 的 TargetPort 不一致",
+              "description": "Ingress 中 backend.service.port.number 配置的端口号与 Service 定义的 TargetPort (或 port) 不一致，导致 ALB 无法找到对应的后端端口。",
+              "diagnostic": {
+                "description": "对比 Ingress 中配置的端口号与 Service 的端口配置",
+                "commands": [
+                  "kubectl describe svc -n {namespace} {svcname}",
+                  "kubectl get ingress -n {namespace} {ingress_name} -o yaml"
+                ],
+                "expected_result": "Ingress spec.rules.http.paths.backend.service.port.number 与 Service 的 spec.ports[].port 不一致"
+              },
+              "solution": {
+                "title": "修改 Ingress 的 backend port 与 Service 端口一致",
+                "resource": "Ingress",
+                "action": "patch_path",
+                "steps": [
+                  "通过 kubectl describe svc -n {namespace} {svcname} 查看 Service 的端口配置",
+                  "修改 Ingress 的 spec.rules.http.paths.backend.service.port.number 为 Service 的 spec.ports[].port 值"
+                ],
+                "yaml_example": "spec:\n  rules:\n  - http:\n      paths:\n      - path: /\n        pathType: Prefix\n        backend:\n          service:\n            name: {svcname}\n            port:\n              number: {正确的端口号}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GRPC_TLS_LISTENER_REQUIRED",
+          "regex": "'grpc' backend protocol must be use TLS listener only",
+          "message_template": "'grpc' backend protocol must be use TLS listener only or redirect to",
+          "severity": "warning",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "gRPC 后端协议配置在 HTTP 监听上",
+              "description": "ALB 后端协议设为 gRPC 时，必须在 HTTPS 监听端口上使用，不能配置在 HTTP 监听上。gRPC 协议要求 TLS 加密传输。",
+              "diagnostic": {
+                "description": "检查 Ingress 的 listen-ports 注解和 backend-protocol 注解",
+                "commands": [
+                  "kubectl get ingress -n {namespace} {ingress_name} -o yaml"
+                ],
+                "expected_result": "listen-ports 中配置了 HTTP 端口，同时 backend-protocol 为 grpc"
+              },
+              "solution": {
+                "title": "修改监听端口为 HTTPS",
+                "resource": "Ingress",
+                "action": "patch_annotation",
+                "steps": [
+                  "修改 Ingress 的 listen-ports 注解为 HTTPS 端口",
+                  "确保 AlbConfig 中配置了对应的 HTTPS 监听"
+                ],
+                "yaml_example": "metadata:\n  annotations:\n    alb.ingress.kubernetes.io/listen-ports: '[{\"HTTPS\": 443}]'\n    alb.ingress.kubernetes.io/backend-protocol: \"grpc\""
+              }
+            }
+          ]
+        },
+        {
+          "id": "GRPC_TLS_SPEC_REQUIRED",
+          "regex": "'grpc' backend protocol must be use with TLS listener\\(Ingress\\.Spec\\.TLS\\)",
+          "message_template": "'grpc' backend protocol must be use with TLS listener(Ingress.Spec.TLS)",
+          "severity": "warning",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "gRPC 后端缺少 Ingress spec.tls 配置",
+              "description": "ALB Ingress 指定后端协议为 gRPC 时，必须在 Ingress spec 中配置 tls 字段。listen-ports 注解与 tls 字段有兼容性要求。",
+              "diagnostic": {
+                "description": "检查 Ingress 是否配置了 spec.tls 字段",
+                "commands": [
+                  "kubectl get ingress -n {namespace} {ingress_name} -o yaml"
+                ],
+                "expected_result": "Ingress 的 backend-protocol 为 grpc，但 spec.tls 字段缺失"
+              },
+              "solution": {
+                "title": "在 Ingress spec 中添加 tls 字段",
+                "resource": "Ingress",
+                "action": "patch_tls",
+                "steps": [
+                  "在 Ingress 的 spec 中添加 tls 配置",
+                  "配置 hosts 与 rules.host 一致"
+                ],
+                "yaml_example": "spec:\n  tls:\n  - hosts:\n    - your-domain.com"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ingress_listener",
+      "name": "Ingress监听配置错误",
+      "description": "Ingress 引用的监听端口在 AlbConfig 中不存在或配置异常",
+      "errors": [
+        {
+          "id": "LISTENER_NOT_EXIST",
+          "regex": "listener is not exist in \\S+.*port:\\s*(\\d+).*protocol:\\s*(\\w+)",
+          "message_template": "listener is not exist in {albconfigname}, port: {端口}, protocol: {协议}",
+          "severity": "critical",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "AlbConfig 未定义 Ingress 所需的监听端口",
+              "description": "ALB Ingress Controller v2.11.0+ 不自动创建监听。Ingress 通过 listen-ports 注解或默认方式引用了某个监听端口和协议，但 AlbConfig 中未配置该监听。",
+              "diagnostic": {
+                "description": "对比 Ingress 引用的端口与 AlbConfig 已定义的监听端口",
+                "commands": [
+                  "kubectl get ingress -n {namespace} {ingress_name} -o yaml | grep listen-ports",
+                  "kubectl get albconfig {albconfig_name} -o yaml | grep -A 5 listeners"
+                ],
+                "expected_result": "Ingress 的 listen-ports 注解指定的端口在 AlbConfig 的 spec.listeners 中不存在"
+              },
+              "solution_options": [
+                {
+                  "index": 1,
+                  "title": "在 AlbConfig 添加缺失的监听",
+                  "recommended": true,
+                  "resource": "AlbConfig",
+                  "action": "patch_listeners",
+                  "steps": [
+                    "修改 AlbConfig 的 spec.listeners 数组",
+                    "添加缺失的监听端口和协议配置",
+                    "注意: listeners 是替换式更新，patch 时需包含所有现有监听"
+                  ],
+                  "yaml_example": "spec:\n  listeners:\n  - port: {缺失端口}\n    protocol: {缺失协议}"
+                },
+                {
+                  "index": 2,
+                  "title": "修改 Ingress 的 listen-ports annotation",
+                  "recommended": false,
+                  "resource": "Ingress",
+                  "action": "patch_annotation",
+                  "steps": [
+                    "调整 Ingress 仅关联 AlbConfig 中已存在的监听"
+                  ],
+                  "yaml_example": "metadata:\n  annotations:\n    alb.ingress.kubernetes.io/listen-ports: '[{\"HTTP\":80}]'"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "LISTENER_NOT_FOUND",
+          "regex": "listener not found for \\((\\d+)/(\\w+)\\)",
+          "message_template": "listener not found for ({端口}/{协议}), with ingresses {数量}",
+          "severity": "critical",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "AlbConfig 移除了监听端口但 Ingress 仍然关联",
+              "description": "AlbConfig 移除了对应的监听端口，但仍有 Ingress 关联了这个监听，将会产生此报错，并显示缺失的监听和关联的 Ingress 个数。",
+              "diagnostic": {
+                "description": "检查 AlbConfig 是否最近移除了某个监听端口",
+                "commands": [
+                  "kubectl get albconfig {albconfig_name} -o yaml | grep -A 5 listeners",
+                  "kubectl get ingress --all-namespaces -o yaml | grep listen-ports"
+                ],
+                "expected_result": "AlbConfig 的 listeners 中不包含报错提示的端口/协议，但有 Ingress 引用了该端口"
+              },
+              "solution_options": [
+                {
+                  "index": 1,
+                  "title": "重新添加已移除的监听",
+                  "recommended": true,
+                  "resource": "AlbConfig",
+                  "action": "patch_listeners",
+                  "steps": [
+                    "如果移除了预期外的监听，在 AlbConfig 的 spec.listeners 中重新添加",
+                    "注意: listeners 是替换式更新，patch 时需包含所有现有监听"
+                  ]
+                },
+                {
+                  "index": 2,
+                  "title": "移除关联该监听的所有 Ingress",
+                  "recommended": false,
+                  "resource": "Ingress",
+                  "action": "delete_or_patch",
+                  "steps": [
+                    "如确实需要移除监听，需要先将所有关联该监听的 Ingress 全部移除或修改为其他端口"
+                  ]
+                }
+              ]
+            },
+            {
+              "cause_id": 2,
+              "summary": "ssl-redirect 注解自动引用了 80 端口但 AlbConfig 未定义",
+              "description": "Ingress 配置了 alb.ingress.kubernetes.io/ssl-redirect: \"true\" 重定向注解，会自动在 80 端口创建重定向转发规则（308 重定向到 HTTPS），但 AlbConfig 未定义 HTTP 80 端口监听。",
+              "diagnostic": {
+                "description": "检查 Ingress 是否配置了 ssl-redirect 注解，且 AlbConfig 缺少 80 端口监听",
+                "commands": [
+                  "kubectl get ingress -n {namespace} {ingress_name} -o yaml | grep ssl-redirect",
+                  "kubectl get albconfig {albconfig_name} -o yaml | grep -A 2 'port: 80'"
+                ],
+                "expected_result": "Ingress 有 ssl-redirect: true 注解，且 AlbConfig 未定义 port: 80 / protocol: HTTP 的监听"
+              },
+              "solution": {
+                "title": "在 AlbConfig 中创建 HTTP 80 端口监听",
+                "resource": "AlbConfig",
+                "action": "patch_listeners",
+                "steps": [
+                  "在 AlbConfig 配置文件的 spec.listeners 中添加 HTTP 80 端口监听",
+                  "注意: listeners 是替换式更新，需包含原有的 HTTPS 443 监听"
+                ],
+                "yaml_example": "spec:\n  listeners:\n  - port: 443\n    protocol: HTTPS\n  - port: 80\n    protocol: HTTP"
+              }
+            }
+          ]
+        },
+        {
+          "id": "LISTENER_NOT_FULFILLED",
+          "regex": "Listener is not fulfilled yet:.*\\d+-(HTTP|HTTPS)",
+          "message_template": "Listener is not fulfilled yet: {端口}-{协议}",
+          "severity": "critical",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "AlbConfig YAML 缩进格式错误",
+              "description": "AlbConfig YAML 缩进错误导致字段被错误解析为独立监听。例如 caEnabled、certificates 等字段缩进不正确，被当作新的监听项。",
+              "diagnostic": {
+                "description": "检查 AlbConfig YAML 的缩进格式",
+                "commands": [
+                  "kubectl get albconfig {albconfig_name} -o yaml"
+                ],
+                "expected_result": "listeners 下某些字段（如 caEnabled、certificates）缩进错误，被解析为独立的监听列表项"
+              },
+              "solution": {
+                "title": "修正 AlbConfig YAML 缩进格式",
+                "resource": "AlbConfig",
+                "action": "fix_yaml",
+                "steps": [
+                  "确保 caEnabled、certificates 等字段正确缩进在对应监听下",
+                  "不要作为独立的监听列表项（避免多余的 - 符号）"
+                ]
+              }
+            },
+            {
+              "cause_id": 2,
+              "summary": "监听端口冲突",
+              "description": "同一端口配置了不同协议的监听，例如 443 端口同时配了 HTTPS 和 HTTP。",
+              "diagnostic": {
+                "description": "检查 AlbConfig 的 listeners 中是否有相同端口号的不同协议配置",
+                "commands": [
+                  "kubectl get albconfig {albconfig_name} -o yaml | grep -A 3 'port:'"
+                ],
+                "expected_result": "同一端口号出现在多个监听项中，且协议不同"
+              },
+              "solution": {
+                "title": "移除冲突的监听配置",
+                "resource": "AlbConfig",
+                "action": "patch_listeners",
+                "steps": [
+                  "同一端口不能同时配置不同协议的监听",
+                  "移除冲突的监听配置，保留正确的协议"
+                ]
+              }
+            },
+            {
+              "cause_id": 3,
+              "summary": "HTTPS 监听的默认证书 ID 配置错误",
+              "description": "HTTPS 监听的 certificates 字段中 CertificateId 格式错误或在 SSL 控制台不存在。",
+              "diagnostic": {
+                "description": "检查 HTTPS 监听的 CertificateId 是否有效",
+                "commands": [
+                  "kubectl get albconfig {albconfig_name} -o yaml | grep CertificateId"
+                ],
+                "expected_result": "CertificateId 格式不正确或在 SSL 证书控制台中不存在"
+              },
+              "solution": {
+                "title": "修正 CertificateId",
+                "resource": "AlbConfig",
+                "action": "patch_listeners",
+                "steps": [
+                  "确保 CertificateId 使用 CertIdentifier 格式（如 756****-cn-hangzhou）",
+                  "在 SSL 证书控制台确认证书存在且有效"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "LISTENER_IN_USE",
+          "regex": "listener already in use.*forceOverride",
+          "message_template": "listener already in use, please set forceOverride=true and reconcile",
+          "severity": "warning",
+          "error_config_example": "apiVersion: alibabacloud.com/v1\nkind: AlbConfig\nmetadata:\n  name: reuse-alb\nspec:\n  config:\n    id: alb-4btbc25yvaj381xpbe\n    forceOverride: false      # 错误: 复用ALB实例时需设置为true\n    listenerForceOverride: false\n  listeners:\n    - port: 443\n      protocol: HTTPS\n      certificates:\n      - CertificateId: 14261892-cn-hangzhou\n      - CertificateId: 14897182-cn-hangzhou\n        IsDefault: true",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "复用 ALB 实例的监听被手动创建占用",
+              "description": "复用 ALB 实例时，AlbConfig 指定的监听端口是用户在 ALB 控制台手动创建的，且未配置强制覆盖。",
+              "diagnostic": {
+                "description": "检查 AlbConfig 是否复用了已有 ALB 实例，且监听是在控制台手动创建的",
+                "commands": [
+                  "kubectl get albconfig {albconfig_name} -o yaml | grep 'id:'",
+                  "# 在 ALB 控制台查看该实例的监听来源"
+                ],
+                "expected_result": "AlbConfig spec.config.id 指向了已有 ALB 实例，且实例上有手动创建的监听"
+              },
+              "solution_options": [
+                {
+                  "index": 1,
+                  "title": "在 AlbConfig 中移除用户手动创建的监听端口配置",
+                  "recommended": true,
+                  "resource": "AlbConfig",
+                  "action": "patch_listeners",
+                  "steps": [
+                    "仅在 AlbConfig 中保留需要 Controller 管理的监听",
+                    "手动创建的监听不在 AlbConfig 中声明"
+                  ]
+                },
+                {
+                  "index": 2,
+                  "title": "设置 forceOverride 强制覆盖",
+                  "recommended": false,
+                  "resource": "AlbConfig",
+                  "action": "patch_config",
+                  "steps": [
+                    "在 AlbConfig spec.config 中设置 forceOverride: true",
+                    "注意: 强制覆盖会将控制台手动创建的监听配置替换为 AlbConfig 的配置"
+                  ],
+                  "yaml_example": "spec:\n  config:\n    forceOverride: true"
+                }
+              ]
+            },
+            {
+              "cause_id": 2,
+              "summary": "同一端口配置了不同协议的监听导致冲突",
+              "description": "AlbConfig 中同一端口配置了不同协议的监听（如 443 端口同时配了 HTTPS 和 HTTP），ALB 相同端口只能配置一种协议。",
+              "error_config_example": "spec:\n  listeners:\n    - port: 443\n      protocol: HTTPS\n    - port: 443\n      protocol: HTTP  # 错误: 443端口已配置为HTTPS，不能同时配HTTP",
+              "diagnostic": {
+                "description": "检查 AlbConfig 的 listeners 中是否有相同端口号的不同协议配置",
+                "commands": [
+                  "kubectl get albconfig {albconfig_name} -o yaml | grep -A 3 'port:'"
+                ],
+                "expected_result": "同一端口号出现在多个监听项中，且协议不同"
+              },
+              "solution": {
+                "title": "删除冲突的监听端口配置",
+                "resource": "AlbConfig",
+                "action": "patch_listeners",
+                "steps": [
+                  "找到错误配置的 AlbConfig，删除冲突的监听端口",
+                  "通常 443 为 HTTPS 常用端口，80 为 HTTP 常用端口"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "LISTENER_ID_MANDATORY",
+          "regex": "ListenerID is mandatory for this action",
+          "message_template": "ListenerID is mandatory for this action",
+          "severity": "critical",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "AlbConfig 中 HTTPS 监听的 certificates 字段为空",
+              "description": "AlbConfig 中 HTTPS 监听的 certificates 字段存在但值为空，导致调谐时无法正确获取监听 ID。常见于使用自动发现证书时在 AlbConfig 中误配了空的证书字段。",
+              "diagnostic": {
+                "description": "检查 AlbConfig HTTPS 监听是否有空的 certificates 字段",
+                "commands": [
+                  "kubectl get albconfig {albconfig_name} -o yaml | grep -A 5 certificates"
+                ],
+                "expected_result": "HTTPS 监听下有 certificates 字段但其值为空（certificates: [] 或 certificates:）"
+              },
+              "solution": {
+                "title": "删除 AlbConfig 中空的 certificates 字段",
+                "resource": "AlbConfig",
+                "action": "patch_listeners",
+                "steps": [
+                  "如果使用证书自动发现，AlbConfig 中不需要配置 certificates 字段",
+                  "证书由 Ingress spec.tls 自动发现",
+                  "删除 listeners 中空的 certificates 字段"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "VIP_STATUS_NOT_SUPPORT",
+          "regex": "VipStatusNotSupport",
+          "message_template": "VipStatusNotSupport",
+          "severity": "warning",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "监听未处于稳态，调谐操作过于频繁",
+              "description": "Ingress 更新是全量更新所有转发规则，如果监听下 Ingress 数量较多或操作频繁，上一次调用未完成就执行下一次，会触发此错误。此错误不会永久卡住调谐，会自动重试自愈。",
+              "diagnostic": {
+                "description": "检查是否有频繁的 Ingress 变更操作",
+                "commands": [
+                  "kubectl get events --field-selector reason=SyncError --sort-by=.lastTimestamp"
+                ],
+                "expected_result": "短时间内有大量 Ingress 变更事件"
+              },
+              "solution": {
+                "title": "等待自愈，无需手动干预",
+                "resource": "Ingress",
+                "action": "wait",
+                "steps": [
+                  "此报错会自动重试并自愈，无需手动干预",
+                  "建议适当增大 Ingress 调谐操作的时间间隔",
+                  "避免在短时间内对大量 Ingress 进行批量变更"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "certificate",
+      "name": "证书配置错误",
+      "description": "HTTPS 证书相关的调谐失败，包括证书缺失、过期、格式错误、数量超限等",
+      "errors": [
+        {
+          "id": "HTTPS_EMPTY_CERT",
+          "regex": "empty https listener default certs|listenerPort:\\s*\\d+.*errMsgs.*empty.*https.*listener.*default.*certs",
+          "message_template": "empty https listener default certs",
+          "severity": "critical",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "HTTPS 监听无默认证书",
+              "description": "使用自动发现证书时，仅在 AlbConfig 创建 HTTPS 监听而没有对应的 Ingress 引用该端口并配置 spec.tls，ALB 无法发现证书。诊断时必须向用户说明全部三种修复方式：(1) 在 Ingress spec.tls 配置自动发现（推荐）；(2) 在 AlbConfig listeners 中用 certificates 字段直接指定 CertificateId；(3) v2.18+/v2.19.1+ 可在 AlbConfig listeners 中使用 defaultCertificate 字段。",
+              "diagnostic": {
+                "description": "检查是否有 Ingress 引用该 HTTPS 端口并配置了 spec.tls",
+                "commands": [
+                  "kubectl get albconfig {albconfig_name} -o yaml | grep -A 5 'port: 443'",
+                  "kubectl get ingress --all-namespaces -o yaml | grep -A 10 'tls:'"
+                ],
+                "expected_result": "AlbConfig 有 HTTPS 监听，但没有 Ingress 通过 listen-ports 引用该端口，或 Ingress 未配置 spec.tls"
+              },
+              "solution_options": [
+                {
+                  "index": 1,
+                  "title": "创建 Ingress 引用 HTTPS 端口并配置自动发现证书",
+                  "recommended": true,
+                  "resource": "Ingress",
+                  "action": "patch_tls",
+                  "steps": [
+                    "创建 Ingress 并在 annotations 指定 HTTPS 端口",
+                    "在 spec.tls 配置 hosts 域名（不填 secretName 使用自动发现）"
+                  ],
+                  "yaml_example": "metadata:\n  annotations:\n    alb.ingress.kubernetes.io/listen-ports: '[{\"HTTPS\": 443}]'\nspec:\n  tls:\n  - hosts:\n    - demo.example.com"
+                },
+                {
+                  "index": 2,
+                  "title": "使用 K8s Secret 证书",
+                  "recommended": false,
+                  "resource": "Ingress",
+                  "action": "patch_tls",
+                  "steps": [
+                    "创建 TLS Secret",
+                    "在 Ingress spec.tls 中通过 secretName 引用"
+                  ],
+                  "yaml_example": "spec:\n  tls:\n  - hosts:\n    - demo.example.com\n    secretName: tls-secret"
+                },
+                {
+                  "index": 3,
+                  "title": "在 AlbConfig 中直接指定证书 ID",
+                  "recommended": false,
+                  "resource": "AlbConfig",
+                  "action": "patch_listeners",
+                  "steps": [
+                    "在 AlbConfig 监听中直接绑定 CertificateId"
+                  ],
+                  "yaml_example": "listeners:\n- port: 443\n  protocol: HTTPS\n  certificates:\n  - CertificateId: \"756****-cn-hangzhou\"\n    IsDefault: true"
+                },
+                {
+                  "index": 4,
+                  "title": "使用 defaultCertificate 字段指定默认证书 (v2.18+/v2.19.1+)",
+                  "recommended": false,
+                  "resource": "AlbConfig",
+                  "action": "patch_listeners",
+                  "steps": [
+                    "在 AlbConfig listeners 中添加 defaultCertificate 字段指定证书（v2.18+ 支持）",
+                    "defaultCertificate 优先级高于 certificates.IsDefault"
+                  ],
+                  "yaml_example": "listeners:\n- port: 443\n  protocol: HTTPS\n  defaultCertificate:\n    kind: CertIdentifier\n    certificateId: \"756****-cn-hangzhou\""
+                }
+              ]
+            },
+            {
+              "cause_id": 2,
+              "summary": "AlbConfig 指定证书后自动发现不生效",
+              "description": "AlbConfig listeners 中配置了 certificates 指定证书 ID，同时 Ingress 配置了 tls.hosts 期望自动发现证书。但 AlbConfig 指定证书和自动发现不兼容，配置了 AlbConfig 指定证书后，自动发现不会拉取证书。此时如果 AlbConfig 指定的证书 ID 被删除或过期，HTTPS 监听将无默认证书。",
+              "diagnostic": {
+                "description": "检查 AlbConfig 是否配置了 certificates 且 Ingress 是否使用自动发现",
+                "commands": [
+                  "kubectl get albconfig {albconfig_name} -o yaml | grep -A 10 'certificates'",
+                  "kubectl get ingress -n {namespace} -o yaml | grep -B 2 -A 5 'tls:'"
+                ],
+                "expected_result": "AlbConfig 有 certificates 字段且 Ingress 有 tls.hosts 但无 secretName"
+              },
+              "solution_options": [
+                {
+                  "index": 1,
+                  "title": "更新 AlbConfig 中的证书 ID",
+                  "recommended": true,
+                  "resource": "AlbConfig",
+                  "action": "patch_listeners",
+                  "steps": [
+                    "在 AlbConfig listeners.certificates 中更新为有效的 CertificateId",
+                    "确保 IsDefault: true 的证书在列表第一个位置"
+                  ]
+                },
+                {
+                  "index": 2,
+                  "title": "移除 AlbConfig certificates 改用自动发现",
+                  "recommended": false,
+                  "resource": "AlbConfig",
+                  "action": "patch_listeners",
+                  "steps": [
+                    "删除 AlbConfig listeners 中的 certificates 字段",
+                    "确保 Ingress 配置了 spec.tls.hosts 和对应域名",
+                    "确保 SSL 控制台有该域名的有效证书"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "CERT_NOT_FOUND",
+          "regex": "none certificate found for host",
+          "message_template": "none certificate found for host: {域名}",
+          "severity": "critical",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "数字证书管理服务中没有对应域名的证书",
+              "description": "开启了 TLS 并使用自动发现证书，但数字证书管理服务中没有 spec.tls.hosts 配置域名的可用证书。也可能 spec.tls.hosts 与实际域名不匹配。",
+              "diagnostic": {
+                "description": "检查 SSL 证书控制台是否有对应域名的证书",
+                "commands": [
+                  "kubectl get ingress -n {namespace} {ingress_name} -o yaml | grep -A 5 'tls:'",
+                  "# 登录阿里云 SSL 证书控制台，搜索 spec.tls.hosts 中的域名"
+                ],
+                "expected_result": "SSL 证书管理服务中没有 spec.tls.hosts 对应域名的有效证书"
+              },
+              "solution_options": [
+                {
+                  "index": 1,
+                  "title": "在阿里云数字证书管理服务控制台上传或购买该域名的证书",
+                  "recommended": true,
+                  "resource": "external",
+                  "action": "upload_cert",
+                  "steps": [
+                    "检查 spec.tls.hosts 配置的域名是否正确",
+                    "在 SSL 控制台上传或购买对应域名的证书"
+                  ]
+                },
+                {
+                  "index": 2,
+                  "title": "将证书存入 K8s Secret 并在 Ingress 中引用",
+                  "recommended": false,
+                  "resource": "Ingress",
+                  "action": "patch_tls",
+                  "steps": [
+                    "创建 TLS Secret",
+                    "在 Ingress spec.tls 中通过 secretName 引用"
+                  ],
+                  "notes": "Secret 方式不支持跨命名空间"
+                },
+                {
+                  "index": 3,
+                  "title": "在 AlbConfig listeners 中直接指定 CertificateId",
+                  "recommended": false,
+                  "resource": "AlbConfig",
+                  "action": "patch_listeners",
+                  "skip_condition": "当 AlbConfig 对应 HTTPS 监听已配置 defaultCertificate 或 certificates 字段时，跳过此方案。诊断建议不应改变客户现有的证书使用方式。"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "CERT_EXPIRED",
+          "regex": "Failed to create SSL Certificate.*[证书已经过期|certificate.*expired]",
+          "message_template": "Failed to create SSL Certificate... 证书已经过期",
+          "severity": "critical",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "Secret 中的证书已过期",
+              "description": "Ingress TLS 中 secretName 引用的 Secret 包含的证书已过期。",
+              "diagnostic": {
+                "description": "检查 Secret 中的证书有效期",
+                "commands": [
+                  "kubectl get secret -n {namespace} {secret_name} -o jsonpath='{.data.tls\\.crt}' | base64 -d | openssl x509 -noout -dates"
+                ],
+                "expected_result": "证书 notAfter 日期早于当前时间"
+              },
+              "solution_options": [
+                {
+                  "index": 1,
+                  "title": "更新 Secret 中的证书为有效证书",
+                  "recommended": true,
+                  "resource": "Secret",
+                  "action": "update_secret",
+                  "steps": [
+                    "获取新的有效证书",
+                    "更新 Secret 中的 tls.crt 和 tls.key"
+                  ],
+                  "notes": "有效期需超当前日期至少 1 天"
+                },
+                {
+                  "index": 2,
+                  "title": "删除 secretName 改用自动发现证书",
+                  "recommended": false,
+                  "resource": "Ingress",
+                  "action": "patch_tls",
+                  "steps": [
+                    "删除 Ingress spec.tls 中的 secretName 字段",
+                    "需先在证书中心上传有效证书"
+                  ]
+                },
+                {
+                  "index": 3,
+                  "title": "在 AlbConfig 中直接指定新的 CertificateId",
+                  "recommended": false,
+                  "resource": "AlbConfig",
+                  "action": "patch_listeners"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "CERT_NAME_REPEAT",
+          "regex": "failed to createSSLCertificateWithName.*NameRepeat|名称重复.*请重新输入",
+          "message_template": "failed to createSSLCertificateWithName / 名称重复，请重新输入",
+          "severity": "warning",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "更新 Secret 证书时名称与旧证书冲突",
+              "description": "使用 Secret 证书时，证书过期后重新配置时会复用过期证书的名称同步到 SSL 控制台，导致名称冲突。",
+              "diagnostic": {
+                "description": "检查 SSL 控制台是否存在同名的证书",
+                "commands": [
+                  "kubectl get ingress -n {namespace} {ingress_name} -o yaml | grep secretName",
+                  "# 在 SSL 控制台搜索 secretName 同名证书"
+                ],
+                "expected_result": "SSL 控制台中存在与 secretName 同名的旧证书记录"
+              },
+              "solution_options": [
+                {
+                  "index": 1,
+                  "title": "修改 Ingress 中的 secretName 为新名称",
+                  "recommended": true,
+                  "resource": "Ingress",
+                  "action": "patch_tls",
+                  "steps": [
+                    "更新 Secret 时同时修改 secretName 为新名称",
+                    "避免名称冲突"
+                  ]
+                },
+                {
+                  "index": 2,
+                  "title": "删除 secretName 改用证书自动发现",
+                  "recommended": false,
+                  "resource": "Ingress",
+                  "action": "patch_tls"
+                },
+                {
+                  "index": 3,
+                  "title": "在证书中心删除旧证书后重新上传",
+                  "recommended": false,
+                  "resource": "external",
+                  "action": "delete_and_upload",
+                  "steps": [
+                    "先在证书中心删除旧的过期证书",
+                    "再用相同名称上传新证书"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "CERTS_NOT_VALID",
+          "regex": "Certificates is not valid",
+          "message_template": "Certificates is not valid",
+          "severity": "warning",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "单次调谐关联证书超过 15 张",
+              "description": "单次调谐关联证书超过 15 张且 ALB Ingress Controller 版本不支持分页查询。",
+              "diagnostic": {
+                "description": "检查监听关联的证书数量和 Controller 版本",
+                "commands": [
+                  "kubectl get pods -n kube-system | grep alb",
+                  "# 在 ALB 控制台查看监听关联的证书数量"
+                ],
+                "expected_result": "监听关联的证书数量超过 15 张"
+              },
+              "solution_options": [
+                {
+                  "index": 1,
+                  "title": "升级 ALB Ingress Controller 组件至最新版本",
+                  "recommended": true,
+                  "resource": "addon",
+                  "action": "upgrade_controller",
+                  "steps": [
+                    "在 ACK 控制台升级 ALB Ingress Controller 至最新版本以支持证书分页"
+                  ]
+                },
+                {
+                  "index": 2,
+                  "title": "减少监听关联的证书数量",
+                  "recommended": false,
+                  "resource": "external",
+                  "action": "reduce_certs",
+                  "steps": [
+                    "合并多域名证书或删除不再使用的证书"
+                  ],
+                  "notes": "单个 ALB 实例最多支持 25 个证书"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "CERT_ID_EXPIRED_ALBCONFIG",
+          "regex": "apply failed.*listenerPort.*errMsgs.*certificate IDs have expired",
+          "message_template": "apply failed. listenerPort: {port}. errMsgs: the following certificate IDs have expired: []",
+          "severity": "critical",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "AlbConfig 指定的证书 ID 已过期或在 SSL 控制台找不到",
+              "description": "在 AlbConfig 中通过 CertificateId 指定证书时，指定的证书 ID 已过期（小于 24 小时），或者指定的证书 ID 在 SSL 控制台无法找到。",
+              "diagnostic": {
+                "description": "检查 AlbConfig 中指定的证书 ID 是否有效",
+                "commands": [
+                  "kubectl get albconfig {albconfig_name} -o yaml | grep CertificateId",
+                  "# 在 SSL 证书控制台搜索对应的 CertificateId 确认是否存在且有效"
+                ],
+                "expected_result": "CertificateId 在 SSL 控制台不存在或已过期"
+              },
+              "solution_options": [
+                {
+                  "index": 1,
+                  "title": "检查并更新 AlbConfig 中的 CertificateId",
+                  "recommended": true,
+                  "resource": "AlbConfig",
+                  "action": "patch_listeners",
+                  "steps": [
+                    "先检查 CertificateId 格式是否正确（应为 数字-cn-地域 格式）",
+                    "在 SSL 控制台确认证书是否存在且有效",
+                    "如证书已过期，在 SSL 控制台找到正确的新证书 ID 并更新 AlbConfig"
+                  ]
+                },
+                {
+                  "index": 2,
+                  "title": "改用证书自动发现方式",
+                  "recommended": false,
+                  "resource": "Ingress",
+                  "action": "patch_tls",
+                  "steps": [
+                    "删除 AlbConfig 中的 certificates 配置",
+                    "在 Ingress spec.tls.hosts 中配置域名，使用自动发现证书"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "HTTPS_CERT_CN_EMPTY",
+          "regex": "HttpsCertCommonNameEmpty",
+          "message_template": "HttpsCertCommonNameEmpty",
+          "severity": "critical",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "证书缺少 CN (Common Name) 信息",
+              "description": "在多域名自签证书场景下，CN 不是必填项，证书控制台上传时不校验，但 ALB Controller 调谐时会校验证书的 CN 信息。",
+              "diagnostic": {
+                "description": "检查证书是否携带 CN 信息",
+                "commands": [
+                  "openssl x509 -in xxx.pem -noout -text | grep 'Subject:'"
+                ],
+                "expected_result": "Subject 中缺少 CN 字段"
+              },
+              "solution": {
+                "title": "重新签发包含 CN 信息的证书",
+                "resource": "external",
+                "action": "reissue_cert",
+                "steps": [
+                  "通过 openssl x509 -in xxx.pem -noout -text 查看证书是否携带 CN 信息",
+                  "重新签发带 CN 的证书后上传到 SSL 控制台"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "UNMARSHAL_CERT_ISDEFAULT",
+          "regex": "cannot unmarshal string into Go struct field Certificate.*IsDefault.*bool",
+          "message_template": "json: cannot unmarshal string into Go struct field Certificate.listeners.certificates.IsDefault of type bool",
+          "severity": "warning",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "IsDefault 字段类型错误（字符串而非布尔值）",
+              "description": "AlbConfig 中 certificates 的 IsDefault 字段值被引号包裹成了字符串 \"true\"，但该字段类型要求是布尔值 true。",
+              "diagnostic": {
+                "description": "检查 IsDefault 字段是否带引号",
+                "commands": [
+                  "kubectl get albconfig {albconfig_name} -o yaml | grep IsDefault"
+                ],
+                "expected_result": "IsDefault 的值带有引号，如 IsDefault: \"true\""
+              },
+              "solution": {
+                "title": "移除 IsDefault 值的引号",
+                "resource": "AlbConfig",
+                "action": "fix_yaml",
+                "steps": [
+                  "将 IsDefault: \"true\" 修改为 IsDefault: true（布尔值，不带引号）"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "EXTRA_CERT_UPDATE_FAILED",
+          "regex": "UpdateALBListenerExtraCertificates",
+          "message_template": "UpdateALBListenerExtraCertificates",
+          "severity": "warning",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "AlbConfig 证书配置与 ALB 控制台不一致",
+              "description": "ALB Ingress Controller 升级预检查失败，ALB 控制台的证书配置与 AlbConfig YAML 配置不一致。",
+              "diagnostic": {
+                "description": "对比 AlbConfig 中的证书配置与 ALB 控制台实际配置",
+                "commands": [
+                  "kubectl get albconfig {albconfig_name} -o yaml | grep -A 10 certificates",
+                  "# 在 ALB 控制台查看监听的证书配置"
+                ],
+                "expected_result": "AlbConfig 中的 certificates 配置与 ALB 控制台实际关联的证书不一致"
+              },
+              "solution": {
+                "title": "同步 AlbConfig 配置与控制台一致",
+                "resource": "AlbConfig",
+                "action": "patch_listeners",
+                "steps": [
+                  "执行 kubectl edit albconfig {name} 修改 AlbConfig",
+                  "确保与 ALB 控制台证书配置一致",
+                  "如使用证书自动发现，在 SSL 控制台更新证书后需重新触发调谐"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "CERT_AUTO_DISCOVER_STALE",
+          "severity": "warning",
+          "regex": "dummy_no_event_match_auto_discover_stale_cert",
+          "message_template": "[无调谐报错] 证书已更新但访问仍显示旧证书",
+          "description": "调谐成功(SuccessfullyReconciled)，但用户反馈 HTTPS 访问显示旧证书。通常是自动发现将旧证书关联到扩展证书列表，ALB 证书匹配逻辑(扩展证书 > 默认证书)优先选中旧的扩展证书。",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "自动发现将旧证书重新关联为扩展证书，ALB 优先匹配扩展证书",
+              "description": "用户在 ALB 控制台或数字证书一键部署更新了默认证书为新证书，但 K8s 调谐时自动发现将旧证书关联到扩展证书列表。ALB 匹配逻辑中扩展证书优先级高于默认证书(同为 RSA 时)，导致旧的扩展证书被优先匹配。",
+              "diagnostic": {
+                "description": "检查 AlbConfig status 中 HTTPS 监听是否挂载了多个证书(包括旧证书)，以及 Ingress 是否使用自动发现",
+                "commands": [
+                  "kubectl get albconfig {albconfig_name} -o yaml | grep -A 30 'status:'",
+                  "kubectl get ingress -n {namespace} {ingress_name} -o yaml | grep -A 5 'tls:'"
+                ],
+                "expected_result": "AlbConfig status 中 HTTPS 监听挂载了多个证书(包括旧证书)；Ingress 有 tls.hosts 但无 secretName(自动发现模式)"
+              },
+              "solution_options": [
+                {
+                  "index": 1,
+                  "title": "使用 defaultCertificate 管理默认证书 (v2.18+)",
+                  "recommended": true,
+                  "resource": "AlbConfig",
+                  "action": "patch_listeners",
+                  "steps": [
+                    "在 AlbConfig 中配置 defaultCertificate 指定旧证书或非关联域名证书为默认证书",
+                    "触发调谐后新证书进入扩展证书列表，被 ALB 优先匹配"
+                  ],
+                  "yaml_example": "listeners:\n- port: 443\n  protocol: HTTPS\n  defaultCertificate:\n    kind: CertIdentifier\n    certificateId: <旧证书或非关联域名证书ID>"
+                },
+                {
+                  "index": 2,
+                  "title": "在 ALB 控制台替换默认证书 (低版本)",
+                  "recommended": false,
+                  "steps": [
+                    "登录 ALB 控制台，进入 HTTPS 监听配置",
+                    "将默认证书替换为其他非关联访问域名的证书",
+                    "回到 K8s 侧触发调谐(修改 AlbConfig annotation 等方式)",
+                    "调谐后新证书进入扩展证书列表"
+                  ]
+                },
+                {
+                  "index": 3,
+                  "title": "删除旧证书",
+                  "recommended": false,
+                  "steps": [
+                    "在阿里云数字证书管理控制台删除或吊销旧证书",
+                    "触发调谐让 Controller 清理监听上的旧证书",
+                    "kubectl annotate albconfig {albconfig_name} reconcile-trigger=$(date +%s) --overwrite"
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rule_config",
+      "name": "路径与转发规则错误",
+      "description": "Ingress 路径配置、正则匹配、转发动作等相关错误",
+      "errors": [
+        {
+          "id": "RULE_PATH_ILLEGAL",
+          "regex": "The param of Rules\\.\\d+\\.RuleConditions\\.\\d+\\.PathConfig\\.Values\\.\\d+ is illegal",
+          "message_template": "The param of Rules.X.RuleConditions.X.PathConfig.Values.X is illegal",
+          "severity": "warning",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "路径包含正则字符但 pathType 不是 Prefix",
+              "description": "转发规则中的路径参数包含正则表达式字符（如 (.*)、+、?），但 pathType 未设置为 Prefix。使用正则路径时必须同时满足两个条件：(1) pathType 设为 Prefix（注意：不能用 ImplementationSpecific 或 Exact）；(2) 添加注解 alb.ingress.kubernetes.io/use-regex: 'true'。",
+              "diagnostic": {
+                "description": "检查 Ingress 的 path 和 pathType 配置",
+                "commands": [
+                  "kubectl get ingress -n {namespace} {ingress_name} -o yaml | grep -A 3 'paths:'"
+                ],
+                "expected_result": "path 中包含正则字符（如 (.*)、+、? 等），但 pathType 不是 Prefix"
+              },
+              "solution_options": [
+                {
+                  "index": 1,
+                  "title": "修改 pathType 为 Prefix 并启用正则",
+                  "recommended": true,
+                  "resource": "Ingress",
+                  "action": "patch_path",
+                  "steps": [
+                    "将 pathType: ImplementationSpecific 修改为 pathType: Prefix",
+                    "确保添加 use-regex 注解"
+                  ],
+                  "yaml_example": "metadata:\n  annotations:\n    alb.ingress.kubernetes.io/use-regex: \"true\"\nspec:\n  rules:\n  - http:\n      paths:\n      - path: /something(/|$)(.*)\n        pathType: Prefix"
+                },
+                {
+                  "index": 2,
+                  "title": "移除路径中的正则字符",
+                  "recommended": false,
+                  "resource": "Ingress",
+                  "action": "patch_path",
+                  "steps": [
+                    "如不需要正则匹配，移除路径中的正则字符",
+                    "确保路径以 / 开头"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "PREFIX_PATH_WILDCARD",
+          "regex": "prefix path shouldn't contain wildcards",
+          "message_template": "prefix path shouldn't contain wildcards: {path}",
+          "severity": "warning",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "路径包含通配符但未启用正则注解",
+              "description": "Ingress path 中包含通配符 * (如 /* 或 /alb/(.*)/(.*)/)，但未添加 use-regex 注解。在没有正则注解的情况下，path 不能包含正则符号。",
+              "diagnostic": {
+                "description": "检查 Ingress 的 path 和 use-regex 注解",
+                "commands": [
+                  "kubectl get ingress -n {namespace} {ingress_name} -o yaml"
+                ],
+                "expected_result": "path 中包含通配符 *，且没有 alb.ingress.kubernetes.io/use-regex: true 注解"
+              },
+              "solution_options": [
+                {
+                  "index": 1,
+                  "title": "添加 use-regex 注解启用正则匹配",
+                  "recommended": true,
+                  "resource": "Ingress",
+                  "action": "patch_annotation",
+                  "yaml_example": "metadata:\n  annotations:\n    alb.ingress.kubernetes.io/use-regex: \"true\""
+                },
+                {
+                  "index": 2,
+                  "title": "移除 path 中的通配符",
+                  "recommended": false,
+                  "resource": "Ingress",
+                  "action": "patch_path",
+                  "steps": [
+                    "将 /* 修改为 / 等合法路径"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "REWRITE_QUERY_ILLEGAL",
+          "regex": "The param of Rules\\.\\d+\\.RuleActions\\.\\d+\\.RewriteConfig\\.Query is illegal",
+          "message_template": "The param of Rules.X.RuleActions.X.RewriteConfig.Query is illegal",
+          "severity": "warning",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "Query 字段包含大写字符",
+              "description": "重写配置中 Query 字段不支持大写字符的传参。",
+              "diagnostic": {
+                "description": "检查 Ingress 重写注解中 Query 字段是否包含大写字符",
+                "commands": [
+                  "kubectl get ingress -n {namespace} {ingress_name} -o yaml | grep -i rewrite"
+                ],
+                "expected_result": "rewrite 相关注解中 Query 值包含大写字母"
+              },
+              "solution": {
+                "title": "将 Query 字段的值修改为全小写",
+                "resource": "Ingress",
+                "action": "patch_annotation",
+                "steps": [
+                  "将 \"Query\": \"queryString\" 修改为全小写，如 \"Query\": \"querystring\""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "RULE_ACTIONS_MANDATORY",
+          "regex": "RuleActions is mandatory for this action",
+          "message_template": "RuleActions is mandatory for this action",
+          "severity": "critical",
+          "error_config_example": "apiVersion: networking.k8s.io/v1\nkind: Ingress\nmetadata:\n  name: testforlx\n  annotations:\n    alb.ingress.kubernetes.io/listen-ports: '[{\"HTTP\": 80}]'\nspec:\n  ingressClassName: alb\n  rules:\n  - host: www.example.com\n    http:\n      paths:\n      - path: /*\n        pathType: ImplementationSpecific\n        backend:\n          service:\n            name: ng-svc\n            port:\n              name: use-annotation  # 错误: 应使用 number: 80 而非 name: use-annotation",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "backend 配置了 port.name 但缺少 actions annotation",
+              "description": "转发规则缺少转发动作。通常是因为 Ingress backend 配置了 port.name: use-annotation 但缺少对应的 actions annotation，或者应该使用 port.number 而误用了 port.name。",
+              "diagnostic": {
+                "description": "检查 Ingress backend 的 port 配置",
+                "commands": [
+                  "kubectl get ingress -n {namespace} {ingress_name} -o yaml"
+                ],
+                "expected_result": "backend.service.port.name 为 use-annotation，且没有对应的 actions annotation"
+              },
+              "solution_options": [
+                {
+                  "index": 1,
+                  "title": "修改 backend port 为正确的端口号",
+                  "recommended": true,
+                  "resource": "Ingress",
+                  "action": "patch_path",
+                  "steps": [
+                    "将 port.name: use-annotation 修改为 port.number: 80（或实际端口号）"
+                  ],
+                  "yaml_example": "backend:\n  service:\n    name: my-svc\n    port:\n      number: 80"
+                },
+                {
+                  "index": 2,
+                  "title": "添加 actions annotation 定义转发动作",
+                  "recommended": false,
+                  "resource": "Ingress",
+                  "action": "patch_annotation",
+                  "steps": [
+                    "如果确实需要自定义转发规则，添加对应的 actions annotation"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "SOURCE_IP_VALUES_ILLEGAL",
+          "regex": "SourceIpConfig\\.Values is illegal",
+          "message_template": "The param size Of Rules.X.RuleConditions.X.SourceIpConfig.Values is illegal",
+          "severity": "warning",
+          "error_config_example": "metadata:\n  annotations:\n    alb.ingress.kubernetes.io/conditions.service-name: |\n      [{\"type\": \"SourceIp\", \"sourceIpConfig\": {\"values\": [\n        \"192.168.0.0/16\",\n        \"172.16.0.0/16\",\n        \"10.16.1.0/24\",\n        \"10.16.2.0/24\",\n        \"10.16.3.0/24\",\n        \"10.16.4.0/24\"  # 错误: 共6个SourceIP，超过上限5个\n      ]}}]",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "单条规则 Source IP 条目数超限",
+              "description": "ALB 单条转发规则中 Source IP 条件的 IP 条目数超过限制（上限为 5 个）。",
+              "diagnostic": {
+                "description": "检查 Ingress 的 conditions annotation 中 Source IP 条目数",
+                "commands": [
+                  "kubectl get ingress -n {namespace} {ingress_name} -o yaml | grep conditions"
+                ],
+                "expected_result": "conditions 中 SourceIpConfig.Values 数组超过 5 个元素"
+              },
+              "solution": {
+                "title": "拆分多条 Ingress 减少单条规则的 Source IP 条目",
+                "resource": "Ingress",
+                "action": "split_rules",
+                "steps": [
+                  "将超过 5 个的 Source IP 条件拆分到多条 Ingress 规则中"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "MISMATCH_TLS_HOSTS",
+          "regex": "mismatchTlsHostsIngress",
+          "message_template": "mismatchTlsHostsIngress: [{域名}]",
+          "severity": "warning",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "spec.rules.host 与 spec.tls.hosts 不一致",
+              "description": "Ingress 的 spec.rules.host 与 spec.tls.hosts 配置不一致，导致调谐报错。",
+              "diagnostic": {
+                "description": "对比 Ingress 的 rules.host 和 tls.hosts",
+                "commands": [
+                  "kubectl get ingress -n {namespace} {ingress_name} -o yaml"
+                ],
+                "expected_result": "spec.rules[].host 中的域名与 spec.tls[].hosts 中的域名不一致"
+              },
+              "solution": {
+                "title": "保持 rules.host 和 tls.hosts 一致",
+                "resource": "Ingress",
+                "action": "patch_tls",
+                "steps": [
+                  "修改 spec.tls.hosts 使其包含所有 spec.rules.host 中的域名"
+                ],
+                "yaml_example": "spec:\n  rules:\n  - host: example.com\n    http:\n      paths: [...]\n  tls:\n  - hosts:\n    - example.com"
+              }
+            }
+          ]
+        },
+        {
+          "id": "PROTOCOL_MISMATCH_RATE_LIMIT",
+          "regex": "The Protocol is mismatched for Listener and Rules.*PerIpTrafficLimitConfig",
+          "message_template": "The Protocol is mismatched for Listener and Rules.X.RuleActions.X.PerIpTrafficLimitConfig",
+          "severity": "warning",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "QUIC 监听不支持 IP 粒度限速",
+              "description": "QUIC 监听不支持 IP 粒度的限速 (QPSPerIp)，仅支持全局限速 (QPS)。",
+              "diagnostic": {
+                "description": "检查是否在 QUIC 监听上配置了 QPSPerIp 限速",
+                "commands": [
+                  "kubectl get ingress -n {namespace} {ingress_name} -o yaml | grep -E 'qps|limit'"
+                ],
+                "expected_result": "在 QUIC 监听下配置了 QPSPerIp 限速"
+              },
+              "solution": {
+                "title": "取消 QUIC 监听的 IP 粒度限速配置",
+                "resource": "Ingress",
+                "action": "patch_annotation",
+                "steps": [
+                  "移除 QUIC 监听 YAML 中的 QPSPerIp 配置",
+                  "仅保留全局 QPS 限速"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "server_group",
+      "name": "服务器组错误",
+      "description": "ALB 后端服务器组相关的配置和运行时错误",
+      "errors": [
+        {
+          "id": "SG_NAME_ILLEGAL",
+          "regex": "The param of ServerGroupName is illegal",
+          "message_template": "The param of ServerGroupName is illegal",
+          "severity": "warning",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "服务器组名称格式不正确或过长",
+              "description": "后端服务器组名称由 Namespace + Service 名称 + 端口自动生成，长度需 2-128 字符，以字母或中文开头。",
+              "diagnostic": {
+                "description": "检查 Ingress backend 引用的 Service 名称和 Namespace 的长度",
+                "commands": [
+                  "kubectl get ingress -n {namespace} {ingress_name} -o yaml | grep -A 3 'service:'"
+                ],
+                "expected_result": "Namespace + Service 名称 + 端口组合后超过 128 字符或包含非法字符"
+              },
+              "solution": {
+                "title": "缩短 Service 或 Namespace 名称",
+                "resource": "Service",
+                "action": "rename",
+                "steps": [
+                  "检查 Ingress backend 中引用的 Service 名称和 Namespace 名称",
+                  "缩短名称使组合后不超过 128 字符",
+                  "重新部署"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "SG_IN_USE",
+          "regex": "The specified resource (sgp-\\S+) is in use",
+          "message_template": "The specified resource sgp-xxx is in use",
+          "severity": "warning",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "服务器组被另一个 ALB 实例引用",
+              "description": "ACK 托管的后端服务器组被另一个 ALB 实例引用，导致无法操作。",
+              "diagnostic": {
+                "description": "在 ALB 控制台查找服务器组的引用关系",
+                "commands": [
+                  "# 在 ALB 控制台搜索服务器组 ID，查看关联的 ALB 实例"
+                ],
+                "expected_result": "该服务器组被其他 ALB 实例的转发规则引用"
+              },
+              "solution": {
+                "title": "在 ALB 控制台解除关联",
+                "resource": "external",
+                "action": "unbind_sg",
+                "steps": [
+                  "登录 ALB 控制台找到该服务器组",
+                  "查看并解除其他 ALB 实例对该服务器组的关联"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "SG_DELETE_TIMEOUT",
+          "regex": "failed to delete serverGroup.*timed out waiting for the condition",
+          "message_template": "failed to delete serverGroup: timed out waiting for the condition",
+          "severity": "critical",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "服务器组被其他 ALB 实例引用导致删除超时",
+              "description": "删除 Ingress 时会同步删除其创建的虚拟服务器组，如果该服务器组被其他 ALB 实例引用则无法删除，会阻塞其他 Ingress 的调谐。",
+              "diagnostic": {
+                "description": "从 ALB 日志中查找删除失败的服务器组 ID",
+                "commands": [
+                  "kubectl logs -n kube-system -l app=alb-ingress-controller --tail=100 | grep 'delete serverGroup'"
+                ],
+                "expected_result": "日志中有删除服务器组超时的记录，且该服务器组 ID 在其他 ALB 实例的转发规则中被引用"
+              },
+              "solution": {
+                "title": "查找并解除其他 ALB 实例的引用",
+                "resource": "external",
+                "action": "unbind_sg",
+                "steps": [
+                  "在 ALB 日志中找到删除失败的虚拟服务器组 ID",
+                  "查找该服务器组被哪个 ALB 实例引用",
+                  "找到引用的转发规则并删除或替换"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "INVALID_SG_COOKIE",
+          "regex": "invalid server group Cookie:",
+          "message_template": "invalid server group Cookie:",
+          "severity": "warning",
+          "error_config_example": "metadata:\n  annotations:\n    alb.ingress.kubernetes.io/sticky-session: \"true\"\n    alb.ingress.kubernetes.io/sticky-session-type: \"Server\"\n    alb.ingress.kubernetes.io/cookie-timeout: \"1800\"\n    alb.ingress.kubernetes.io/cookie: \"\"  # 错误: cookie值不允许为空",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "Server 模式会话保持缺少 Cookie 配置",
+              "description": "会话保持类型设为 Server 但未配置 Cookie 值。",
+              "diagnostic": {
+                "description": "检查 Ingress 的 sticky-session 相关注解",
+                "commands": [
+                  "kubectl get ingress -n {namespace} {ingress_name} -o yaml | grep -E 'sticky|cookie'"
+                ],
+                "expected_result": "sticky-session-type 为 Server，但没有 cookie 注解"
+              },
+              "solution_options": [
+                {
+                  "index": 1,
+                  "title": "添加 cookie annotation",
+                  "recommended": true,
+                  "resource": "Ingress",
+                  "action": "patch_annotation",
+                  "yaml_example": "metadata:\n  annotations:\n    alb.ingress.kubernetes.io/sticky-session: \"true\"\n    alb.ingress.kubernetes.io/sticky-session-type: \"Server\"\n    alb.ingress.kubernetes.io/cookie: \"SERVERID\""
+                },
+                {
+                  "index": 2,
+                  "title": "改为 Insert 模式",
+                  "recommended": false,
+                  "resource": "Ingress",
+                  "action": "patch_annotation",
+                  "yaml_example": "metadata:\n  annotations:\n    alb.ingress.kubernetes.io/sticky-session: \"true\"\n    alb.ingress.kubernetes.io/sticky-session-type: \"Insert\"\n    alb.ingress.kubernetes.io/cookie-timeout: \"1800\""
+                },
+                {
+                  "index": 3,
+                  "title": "升级 Controller 组件",
+                  "recommended": false,
+                  "resource": "addon",
+                  "action": "upgrade_controller",
+                  "steps": [
+                    "在 ACK 控制台升级 ALB Ingress Controller 至 v2.15.0-aliyun.1 及以上"
+                  ]
+                }
+              ]
+            },
+            {
+              "cause_id": 2,
+              "summary": "Controller 版本过低不支持自定义 Cookie",
+              "description": "ALB Ingress Controller 版本低于 v2.15.0-aliyun.1，不支持 Server 模式的自定义 Cookie。",
+              "diagnostic": {
+                "description": "检查 ALB Ingress Controller 版本",
+                "commands": [
+                  "kubectl get pods -n kube-system -l app=alb-ingress-controller -o yaml | grep image"
+                ],
+                "expected_result": "Controller 版本低于 v2.15.0-aliyun.1"
+              },
+              "solution": {
+                "title": "升级 ALB Ingress Controller 至 v2.15.0-aliyun.1 及以上",
+                "resource": "addon",
+                "action": "upgrade_controller",
+                "steps": [
+                  "在 ACK 控制台升级 ALB Ingress Controller 组件"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "SERVICE_PORT_TYPE_ERROR",
+          "regex": "cannot unmarshal string into Go struct field.*servicePort.*int",
+          "message_template": "json: cannot unmarshal string into Go struct field ServerGroupTuple.forwardConfig.serverGroups.servicePort of type int",
+          "severity": "warning",
+          "error_config_example": "metadata:\n  annotations:\n    alb.ingress.kubernetes.io/actions.alb-ingress-custome-service: >-\n      [{\"type\":\"ForwardGroup\",\"ForwardConfig\":{\"ServerGroups\":[{\"ServiceName\":\"svc-a\",\"ServicePort\":\n      \"80\",\"Weight\":100}]}}]\n# 错误: \"ServicePort\": \"80\" 中80被引号包裹为字符串，应为整数 \"ServicePort\": 80",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "ServicePort 值为字符串类型而非整数",
+              "description": "自定义转发规则中 ServicePort 的值被引号包裹为字符串类型，但该字段要求是整数类型。常见于通过 ACK 控制台创建自定义转发规则时自动生成的错误格式。",
+              "diagnostic": {
+                "description": "检查 Ingress 的 actions annotation 中 ServicePort 类型",
+                "commands": [
+                  "kubectl get ingress -n {namespace} {ingress_name} -o yaml | grep -A 20 actions"
+                ],
+                "expected_result": "ServicePort 的值带引号，如 \"ServicePort\": \"80\""
+              },
+              "solution": {
+                "title": "删除 ServicePort 值的引号",
+                "resource": "Ingress",
+                "action": "patch_annotation",
+                "steps": [
+                  "将 \"ServicePort\": \"80\" 修改为 \"ServicePort\": 80（去掉引号）"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "SLOW_START_ALG_MISMATCH",
+          "regex": "The (\\w+) and true are mismatched",
+          "message_template": "The {算法} and true are mismatched",
+          "severity": "warning",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "慢启动功能配合了非 wrr 算法",
+              "description": "慢启动功能只能配合 wrr（加权轮询）算法使用。如果指定的调度算法不是 wrr（如 wlc/sch/uch）并开启了慢启动，会报错。",
+              "diagnostic": {
+                "description": "检查 Ingress 的调度算法和慢启动注解",
+                "commands": [
+                  "kubectl get ingress -n {namespace} {ingress_name} -o yaml | grep -E 'scheduler|slow-start'"
+                ],
+                "expected_result": "backend-scheduler 不是 wrr，但 slow-start-enabled 为 true"
+              },
+              "solution": {
+                "title": "将调度算法修改为 wrr",
+                "resource": "Ingress",
+                "action": "patch_annotation",
+                "yaml_example": "metadata:\n  annotations:\n    alb.ingress.kubernetes.io/backend-scheduler: \"wrr\"\n    alb.ingress.kubernetes.io/slow-start-enabled: \"true\"\n    alb.ingress.kubernetes.io/slow-start-duration: \"60\""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "quota_limit",
+      "name": "配额与限流错误",
+      "description": "ALB 资源配额超限或 API 接口流控",
+      "errors": [
+        {
+          "id": "QUOTA_RULES_NUM",
+          "regex": "The quota of alb_quota_loadbalancer_rules_num.*is exceeded",
+          "message_template": "The quota of alb_quota_loadbalancer_rules_num_{edition} is exceeded for resource {alb-id}, usage {n}/{limit}",
+          "severity": "critical",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "ALB 实例转发规则数量超过配额",
+              "description": "ALB 实例的转发规则数量超过配额限制。Controller 在一次调谐中先执行新增操作再执行删除操作，新增的 Ingress 触发配额超限后，后续删除 Ingress 的调谐也会被阻塞。",
+              "diagnostic": {
+                "description": "检查 ALB 实例的转发规则配额使用情况",
+                "commands": [
+                  "kubectl get events --field-selector reason=SyncError | grep quota"
+                ],
+                "expected_result": "报错信息中 usage 接近或超过 limit"
+              },
+              "solution_options": [
+                {
+                  "index": 1,
+                  "title": "在阿里云配额中心申请提升配额",
+                  "recommended": true,
+                  "resource": "external",
+                  "action": "increase_quota"
+                },
+                {
+                  "index": 2,
+                  "title": "合并 Ingress 减少规则数量",
+                  "recommended": false,
+                  "resource": "Ingress",
+                  "action": "optimize",
+                  "steps": [
+                    "通过 conditions annotation 将多条 Ingress 合并为一条自定义转发规则"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "QUOTA_RULE_MATCH_EVAL",
+          "regex": "The quota of alb_quota_rule_matchevaluations_num.*is exceeded",
+          "message_template": "The quota of alb_quota_rule_matchevaluations_num_{edition} is exceeded, usage {n}/{limit}",
+          "severity": "critical",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "单条规则匹配条件数超限",
+              "description": "单条转发规则的匹配条件数量超过配额限制（标准版上限 10 条）。例如在 conditions annotation 中配置了过多的 Host 匹配值。",
+              "diagnostic": {
+                "description": "检查 Ingress 的 conditions annotation 中匹配条件数量",
+                "commands": [
+                  "kubectl get ingress -n {namespace} {ingress_name} -o yaml | grep conditions"
+                ],
+                "expected_result": "单条规则中匹配条件（Host、Path、SourceIp 等）超过 10 个"
+              },
+              "solution_options": [
+                {
+                  "index": 1,
+                  "title": "拆分 Ingress 减少单条规则的匹配条件数",
+                  "recommended": true,
+                  "resource": "Ingress",
+                  "action": "split_rules",
+                  "steps": [
+                    "将一条包含大量匹配条件的 Ingress 拆分为多条 Ingress"
+                  ]
+                },
+                {
+                  "index": 2,
+                  "title": "联系 ALB 值班扩容 quota",
+                  "recommended": false,
+                  "resource": "external",
+                  "action": "increase_quota",
+                  "notes": "过多的匹配条件会影响性能，需评估风险"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "QUOTA_SERVER_ADDED_NUM",
+          "regex": "The quota of alb_quota_server_added_num is exceeded",
+          "message_template": "The quota of alb_quota_server_added_num is exceeded for resource {eni-id}, usage {n}/{limit}",
+          "severity": "critical",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "后端服务器被添加到服务器组的次数超限",
+              "description": "一个后端服务器(IP)被添加到 ALB 服务器组的次数超限。计数方式: ENI 每次被一个 rule 引用计数+1，多个 Ingress 转发规则引用同一个 Service 会导致计数倍增。",
+              "diagnostic": {
+                "description": "检查有多少 Ingress 规则引用了同一个 Service",
+                "commands": [
+                  "kubectl get ingress --all-namespaces -o yaml | grep -c '{svc_name}'"
+                ],
+                "expected_result": "大量 Ingress 规则引用了同一个 Service"
+              },
+              "solution_options": [
+                {
+                  "index": 1,
+                  "title": "在配额中心申请提升 alb_quota_server_added_num 配额",
+                  "recommended": true,
+                  "resource": "external",
+                  "action": "increase_quota"
+                },
+                {
+                  "index": 2,
+                  "title": "合并引用同一 Service 的 Ingress 规则",
+                  "recommended": false,
+                  "resource": "Ingress",
+                  "action": "optimize",
+                  "steps": [
+                    "合并多个引用同一 Service 的 Ingress 规则，减少服务器组引用次数"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "API_FLOW_CONTROL",
+          "regex": "Request was denied due to user flow control",
+          "message_template": "Request was denied due to user flow control",
+          "severity": "warning",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "ALB API 接口流控",
+              "description": "调谐操作过于频繁，触发了 ALB API 接口流控。每次调谐都会 list ALB 实例下所有的 Ingress 进行全量更新。",
+              "diagnostic": {
+                "description": "检查是否有频繁的 Ingress 变更操作",
+                "commands": [
+                  "kubectl get events --sort-by=.lastTimestamp | grep -i 'flow control\\|denied'"
+                ],
+                "expected_result": "短时间内触发了大量调谐操作"
+              },
+              "solution": {
+                "title": "等待流控解除后自动重试",
+                "resource": "Ingress",
+                "action": "wait",
+                "steps": [
+                  "触发流控后不会永久阻塞调谐",
+                  "等待调谐成功事件后再进行下一次操作",
+                  "建议适当降低 Ingress 变更频率"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "network_config",
+      "name": "网络配置错误",
+      "description": "AlbConfig 的 zoneMappings、VSwitch、IPv6 等网络配置错误",
+      "errors": [
+        {
+          "id": "EMPTY_ZONE_MAPPING",
+          "regex": "empty load balancer zone mapping",
+          "message_template": "empty load balancer zone mapping",
+          "severity": "critical",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "交换机不属于集群 VPC",
+              "description": "AlbConfig 中 zoneMappings 配置的交换机 (vSwitch) 不属于 ACK 集群所在的 VPC，ALB 无法创建。",
+              "diagnostic": {
+                "description": "检查 AlbConfig 的 zoneMappings 中交换机是否属于集群 VPC",
+                "commands": [
+                  "kubectl get albconfig {albconfig_name} -o yaml | grep -A 5 zoneMappings"
+                ],
+                "expected_result": "zoneMappings 中的 vSwitchId 不在集群所在 VPC 下"
+              },
+              "solution": {
+                "title": "修改 zoneMappings 为集群 VPC 下的交换机",
+                "resource": "AlbConfig",
+                "action": "patch_zonemappings",
+                "steps": [
+                  "在 VPC 控制台确认交换机属于集群所在的 VPC",
+                  "修正 AlbConfig 配置"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "ZONE_MAPPINGS_SIZE_ILLEGAL",
+          "regex": "The param size of ZoneMappings is illegal",
+          "message_template": "The param size of ZoneMappings is illegal",
+          "severity": "critical",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "可用区数量不满足要求",
+              "description": "AlbConfig 指定的交换机不在相同 VPC 下，或可用区数量不满足 ALB 的最低要求（至少 2 个不同可用区）。",
+              "diagnostic": {
+                "description": "检查 zoneMappings 中的交换机是否属于同一 VPC 且处于不同可用区",
+                "commands": [
+                  "kubectl get albconfig {albconfig_name} -o yaml | grep -A 5 zoneMappings"
+                ],
+                "expected_result": "zoneMappings 只有 1 个交换机，或交换机不在同一 VPC 下"
+              },
+              "solution": {
+                "title": "配置至少 2 个不同可用区的交换机",
+                "resource": "AlbConfig",
+                "action": "patch_zonemappings",
+                "steps": [
+                  "在 VPC 控制台确认两个交换机分别位于不同可用区",
+                  "确保都在集群 VPC 下"
+                ]
+              }
+            },
+            {
+              "cause_id": 2,
+              "summary": "交换机实例 ID 格式不合法",
+              "description": "AlbConfig zoneMappings 中配置的交换机实例 ID 格式不合法。正确的交换机实例 ID 格式为 vsw-xxxx（如 vsw-bp1pvgomal2xbfh3rbml8），非此格式的 ID 会导致报错。",
+              "diagnostic": {
+                "description": "检查 zoneMappings 中 vSwitchId 的格式是否合法",
+                "commands": [
+                  "kubectl get albconfig {albconfig_name} -o yaml | grep vSwitchId"
+                ],
+                "expected_result": "vSwitchId 不符合 vsw-xxx 格式"
+              },
+              "solution": {
+                "title": "修正交换机实例 ID 为合法格式",
+                "resource": "AlbConfig",
+                "action": "patch_zonemappings",
+                "steps": [
+                  "修正 AlbConfig zoneMappings 中的 vSwitchId 为正确格式",
+                  "确保交换机 ID 在集群 VPC 下存在"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "ZONE_ID_DUPLICATED",
+          "regex": "The param of ZoneMappings\\.\\d+\\.ZoneId is duplicated",
+          "message_template": "The param of ZoneMappings.X.ZoneId is duplicated",
+          "severity": "warning",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "zoneMappings 中可用区重复",
+              "description": "AlbConfig 中 zoneMappings 定义了同一可用区的不同交换机，导致可用区重复。ALB 要求至少两个不同可用区。",
+              "diagnostic": {
+                "description": "检查 zoneMappings 中交换机的可用区是否重复",
+                "commands": [
+                  "kubectl get albconfig {albconfig_name} -o yaml | grep -A 3 zoneMappings"
+                ],
+                "expected_result": "两个 vSwitchId 对应的可用区相同"
+              },
+              "solution": {
+                "title": "修改交换机为不同可用区",
+                "resource": "AlbConfig",
+                "action": "patch_zonemappings",
+                "steps": [
+                  "在 VPC 页面选择两个不同可用区的交换机",
+                  "如 vsw1: 可用区A, vsw2: 可用区B"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "VSWITCH_NOT_FOUND",
+          "regex": "The specified resource (vsw-\\S+|VSW\\S*) is not found",
+          "message_template": "The specified resource vsw-xxx is not found",
+          "severity": "critical",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "交换机 ID 不存在",
+              "description": "AlbConfig zoneMappings 中引用的交换机 ID 不存在或不在同一 VPC 内。",
+              "diagnostic": {
+                "description": "在 VPC 控制台确认交换机 ID 是否存在",
+                "commands": [
+                  "kubectl get albconfig {albconfig_name} -o yaml | grep vSwitchId"
+                ],
+                "expected_result": "vSwitchId 在 VPC 控制台中找不到"
+              },
+              "solution": {
+                "title": "修正 zoneMappings 中的 vSwitchId",
+                "resource": "AlbConfig",
+                "action": "patch_zonemappings",
+                "steps": [
+                  "在 VPC 控制台确认交换机 ID 存在且属于集群所在 VPC",
+                  "修正配置"
+                ],
+                "notes": "zoneMappings 创建后需在 ALB 控制台修改或删除重建 AlbConfig"
+              }
+            }
+          ]
+        },
+        {
+          "id": "VSWITCH_NOT_SUPPORT_IPV6",
+          "regex": "VSwitchNotSupportIpv6",
+          "message_template": "The operation is not allowed because of VSwitchNotSupportIpv6",
+          "severity": "critical",
+          "error_config_example": "spec:\n  config:\n    name: dualstackalb\n    addressAllocatedMode: Fixed\n    addressType: Internet\n    ipv6AddressType: Internet\n    addressIpVersion: DualStack  # 指定双栈模式，要求交换机必须开启IPv6\n    zoneMappings:\n    - vSwitchId: vsw-bp1mm7276cwqglxzbhroz  # 如果此交换机未开启IPv6则报错\n    - vSwitchId: vsw-bp1nd89y2zd9v1x6fmq0m",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "交换机未开启 IPv6",
+              "description": "创建双栈 (DualStack) ALB 实例时，指定的交换机未开启 IPv6 功能。",
+              "diagnostic": {
+                "description": "检查交换机是否开启了 IPv6",
+                "commands": [
+                  "kubectl get albconfig {albconfig_name} -o yaml | grep -A 5 zoneMappings",
+                  "# 在 VPC 控制台查看交换机是否开启 IPv6"
+                ],
+                "expected_result": "AlbConfig 配置了 addressType: DualStack 或类似双栈配置，但交换机未开启 IPv6"
+              },
+              "solution": {
+                "title": "在 VPC 控制台开启交换机的 IPv6 功能",
+                "resource": "external",
+                "action": "enable_ipv6",
+                "steps": [
+                  "在 VPC 控制台找到对应交换机",
+                  "开启 IPv6 功能后重新触发调谐"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "alb_instance",
+      "name": "ALB实例错误",
+      "description": "ALB 实例本身的配置和生命周期错误",
+      "errors": [
+        {
+          "id": "ALB_NOT_EXIST",
+          "regex": "The specified resource (alb-\\S+|ALB\\S*) is not found",
+          "message_template": "The specified resource alb-xxx is not found",
+          "severity": "critical",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "AlbConfig 引用的 ALB 实例不存在",
+              "description": "AlbConfig 通过 spec.config.id 引用了一个不存在的 ALB 实例（可能已被手动删除）。",
+              "diagnostic": {
+                "description": "检查 AlbConfig 引用的 ALB 实例 ID 是否在控制台存在",
+                "commands": [
+                  "kubectl get albconfig {albconfig_name} -o yaml | grep 'id:'",
+                  "# 在 ALB 控制台搜索该实例 ID"
+                ],
+                "expected_result": "spec.config.id 指向的 ALB 实例在控制台中不存在"
+              },
+              "solution_options": [
+                {
+                  "index": 1,
+                  "title": "确认实例是否已被误删",
+                  "recommended": true,
+                  "resource": "external",
+                  "action": "check_alb",
+                  "steps": [
+                    "在 ALB 控制台确认该实例是否存在或已被误删"
+                  ]
+                },
+                {
+                  "index": 2,
+                  "title": "清空 id 字段让系统自动创建新实例",
+                  "recommended": false,
+                  "resource": "AlbConfig",
+                  "action": "patch_config",
+                  "steps": [
+                    "清空 AlbConfig 的 spec.config.id 字段",
+                    "系统将自动创建新的 ALB 实例"
+                  ]
+                },
+                {
+                  "index": 3,
+                  "title": "更新 id 为正确的已有 ALB 实例",
+                  "recommended": false,
+                  "resource": "AlbConfig",
+                  "action": "patch_config",
+                  "notes": "仅支持标准版或 WAF 增强版"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "BASIC_EDITION_NOT_SUPPORTED",
+          "regex": "LoadBalancer Edition.*Basic.*can't use for ingress controller",
+          "message_template": "LoadBalancer Edition: Basic can't use for ingress controller",
+          "severity": "critical",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "复用的 ALB 实例是基础版",
+              "description": "复用 ALB 实例时，被复用的 ALB 实例是基础版 (Basic)，但 Ingress Controller 要求标准版或 WAF 增强版。",
+              "diagnostic": {
+                "description": "检查 ALB 实例的版本",
+                "commands": [
+                  "kubectl get albconfig {albconfig_name} -o yaml | grep 'id:'",
+                  "# 在 ALB 控制台查看该实例的版本"
+                ],
+                "expected_result": "ALB 实例版本为 Basic"
+              },
+              "solution": {
+                "title": "在 ALB 控制台将实例升级到标准版",
+                "resource": "external",
+                "action": "upgrade_alb",
+                "steps": [
+                  "在 ALB 控制台找到对应实例",
+                  "升级为标准版后重新触发调谐"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "ORDER_PARAM_INVALID",
+          "regex": "订单配置参数不符合校验条件",
+          "message_template": "订单配置参数不符合校验条件，请重新选配商品！",
+          "severity": "critical",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "ALB on NLB 架构下 addressAllocatedMode 配置错误",
+              "description": "ALB on NLB 架构下新购实例时，addressAllocatedMode 必须配置为 Fixed，不能是 Dynamic。",
+              "diagnostic": {
+                "description": "检查 AlbConfig 的 addressAllocatedMode 配置",
+                "commands": [
+                  "kubectl get albconfig {albconfig_name} -o yaml | grep addressAllocatedMode"
+                ],
+                "expected_result": "addressAllocatedMode 为 Dynamic"
+              },
+              "solution": {
+                "title": "修改 addressAllocatedMode 为 Fixed",
+                "resource": "AlbConfig",
+                "action": "patch_config",
+                "yaml_example": "spec:\n  config:\n    addressAllocatedMode: Fixed"
+              }
+            }
+          ]
+        },
+        {
+          "id": "ALB_DELETED_ON_CONSOLE",
+          "regex": "ALB loadBalancer.*has been deleted on the console",
+          "message_template": "ALB loadBalancer : {alb_id} has been deleted on the console , please delete related albconfig first",
+          "severity": "critical",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "ALB 实例在控制台被手动删除",
+              "description": "AlbConfig 关联的 ALB 实例已在 ALB 控制台被手动删除，但 K8s 中的 AlbConfig 和 Ingress 资源仍然存在，Controller 调谐时发现实例不存在，报此错误。",
+              "diagnostic": {
+                "description": "确认 AlbConfig 关联的 ALB 实例是否已在控制台被删除",
+                "commands": [
+                  "kubectl get albconfig {albconfig_name} -o yaml | grep 'id:'",
+                  "# 在 ALB 控制台搜索该实例 ID，确认是否已被删除"
+                ],
+                "expected_result": "AlbConfig status 中记录的 ALB 实例 ID 在控制台已不存在"
+              },
+              "solution_options": [
+                {
+                  "index": 1,
+                  "title": "删除 AlbConfig 并重建 ALB 实例",
+                  "recommended": true,
+                  "resource": "AlbConfig",
+                  "action": "delete_and_recreate",
+                  "steps": [
+                    "先删除关联的所有 Ingress 资源",
+                    "删除 AlbConfig 资源: kubectl delete albconfig {albconfig_name}",
+                    "如果删除卡住(finalizer)，可编辑去掉 finalizer 后重试",
+                    "重新创建 AlbConfig 和 Ingress"
+                  ]
+                },
+                {
+                  "index": 2,
+                  "title": "移除 AlbConfig 的 finalizer 后删除",
+                  "recommended": false,
+                  "resource": "AlbConfig",
+                  "action": "patch_finalizer",
+                  "steps": [
+                    "kubectl patch albconfig {albconfig_name} -p '{\"metadata\":{\"finalizers\":null}}' --type=merge",
+                    "kubectl delete albconfig {albconfig_name}",
+                    "删除关联的 Ingress 资源",
+                    "重新创建 AlbConfig 和 Ingress"
+                  ],
+                  "notes": "仅在常规删除卡住时使用，移除 finalizer 会跳过清理逻辑"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bindrelation",
+      "name": "绑定关系错误",
+      "description": "IngressClass 与 AlbConfig 的绑定关系、Ingress 的 ingressClassName 等配置错误",
+      "errors": [
+        {
+          "id": "INGRESSCLASS_BINDMISS",
+          "regex": "IngressClass.*not found|ingressClassName.*not match",
+          "message_template": "IngressClass not found",
+          "severity": "warning",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "IngressClass 未正确关联 AlbConfig",
+              "description": "IngressClass 的 spec.parameters.name 未正确关联 AlbConfig 名称。",
+              "diagnostic": {
+                "description": "检查 IngressClass 的 parameters.name 是否指向正确的 AlbConfig",
+                "commands": [
+                  "kubectl get ingressclass -o yaml",
+                  "kubectl get albconfig"
+                ],
+                "expected_result": "IngressClass 的 spec.parameters.name 与 AlbConfig 名称不匹配"
+              },
+              "solution_options": [
+                {
+                  "index": 1,
+                  "title": "修正 IngressClass 的 parameters.name",
+                  "recommended": true,
+                  "resource": "IngressClass",
+                  "action": "patch",
+                  "yaml_example": "apiVersion: networking.k8s.io/v1\nkind: IngressClass\nmetadata:\n  name: alb\nspec:\n  controller: ingress.k8s.alibabacloud.com/alb\n  parameters:\n    apiGroup: alibabacloud.com\n    kind: AlbConfig\n    name: alb"
+                },
+                {
+                  "index": 2,
+                  "title": "修改 Ingress 的 ingressClassName",
+                  "recommended": false,
+                  "resource": "Ingress",
+                  "action": "patch"
+                },
+                {
+                  "index": 3,
+                  "title": "创建新的 IngressClass",
+                  "recommended": false,
+                  "resource": "IngressClass",
+                  "action": "create",
+                  "steps": [
+                    "如果 IngressClass 不存在，创建新的 IngressClass 关联 AlbConfig",
+                    "绑定链路说明：Ingress.spec.ingressClassName → IngressClass.metadata.name，IngressClass.spec.parameters.name → AlbConfig.metadata.name，缺少任何一环都会导致路由不生效"
+                  ],
+                  "yaml_example": "apiVersion: networking.k8s.io/v1\nkind: IngressClass\nmetadata:\n  name: alb\nspec:\n  controller: ingress.k8s.alibabacloud.com/alb\n  parameters:\n    apiGroup: alibabacloud.com\n    kind: AlbConfig\n    name: {albconfig_name}"
+                }
+              ]
+            },
+            {
+              "cause_id": 2,
+              "summary": "Ingress 的 ingressClassName 与已有 IngressClass 不匹配",
+              "description": "Ingress 的 spec.ingressClassName 未匹配已有的任何 IngressClass 名称。",
+              "diagnostic": {
+                "description": "检查 Ingress 的 ingressClassName 与现有 IngressClass",
+                "commands": [
+                  "kubectl get ingress -n {namespace} {ingress_name} -o yaml | grep ingressClassName",
+                  "kubectl get ingressclass"
+                ],
+                "expected_result": "Ingress 的 ingressClassName 值与现有 IngressClass 名称不一致"
+              },
+              "solution": {
+                "title": "修改 Ingress 的 ingressClassName 为已有的 IngressClass 名称",
+                "resource": "Ingress",
+                "action": "patch",
+                "steps": [
+                  "确认集群中有哪些 IngressClass",
+                  "将 Ingress 的 spec.ingressClassName 修改为正确的值"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "albconfig_params",
+      "name": "AlbConfig配置参数错误",
+      "description": "AlbConfig 的标签、ACL、WAF、日志、链路追踪等配置参数错误",
+      "errors": [
+        {
+          "id": "WAF_EDITION_REVERT",
+          "regex": "edition.*Standard.*StandardWithWaf|WAF.*revert",
+          "message_template": "WAF 版本被回退为标准版",
+          "severity": "warning",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "AlbConfig 未显式指定 WAF 增强版",
+              "description": "AlbConfig 未显式指定 edition: StandardWithWaf，Controller 调和时将 WAF 增强版还原为标准版。",
+              "diagnostic": {
+                "description": "检查 AlbConfig 的 edition 配置",
+                "commands": [
+                  "kubectl get albconfig {albconfig_name} -o yaml | grep edition"
+                ],
+                "expected_result": "AlbConfig 中没有 edition 字段或 edition 不是 StandardWithWaf"
+              },
+              "solution": {
+                "title": "在 AlbConfig 中显式设置 edition: StandardWithWaf",
+                "resource": "AlbConfig",
+                "action": "patch_config",
+                "yaml_example": "spec:\n  config:\n    edition: StandardWithWaf"
+              }
+            }
+          ]
+        },
+        {
+          "id": "INVALID_PARAM",
+          "regex": "无效参数，请检查参数输入",
+          "message_template": "无效参数，请检查参数输入",
+          "severity": "warning",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "证书 ID 格式错误",
+              "description": "AlbConfig 中指定证书时使用了错误的 ID 格式。应使用 CertIdentifier（如 756****-cn-hangzhou）而非资源 ID。",
+              "diagnostic": {
+                "description": "检查 AlbConfig 中证书 ID 的格式",
+                "commands": [
+                  "kubectl get albconfig {albconfig_name} -o yaml | grep CertificateId"
+                ],
+                "expected_result": "CertificateId 不是 CertIdentifier 格式（应为 数字-地域 格式）"
+              },
+              "solution": {
+                "title": "修正证书 ID 为 CertIdentifier 格式",
+                "resource": "AlbConfig",
+                "action": "patch_listeners",
+                "steps": [
+                  "检查 AlbConfig listeners 中 certificates 的 CertificateId 字段",
+                  "确保使用 CertIdentifier 格式（如 756****-cn-hangzhou）"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "TAG_KEY_MISSING",
+          "regex": "The param of Tag\\.\\d+\\.TagKey is missing",
+          "message_template": "The param of Tag.X.TagKey is missing",
+          "severity": "warning",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "标签配置中 value 拼写错误或为空",
+              "description": "AlbConfig 监听标签配置中 value 字段拼写错误（如 \"vlaue\" 而非 \"value\"），或 value 值为空。导致标签只传了 key 没有传 value。",
+              "diagnostic": {
+                "description": "检查 AlbConfig 的 tags 配置",
+                "commands": [
+                  "kubectl get albconfig {albconfig_name} -o yaml | grep -A 3 tags"
+                ],
+                "expected_result": "tags 中 value 字段拼写错误（如 vlaue）或值为空"
+              },
+              "solution": {
+                "title": "修正标签配置的拼写和值",
+                "resource": "AlbConfig",
+                "action": "patch_config",
+                "yaml_example": "tags:\n- key: \"mykey\"\n  value: \"myvalue\""
+              }
+            }
+          ]
+        },
+        {
+          "id": "TAG_KEY_ILLEGAL",
+          "regex": "The param of Tag\\.\\d+\\.TagKey is illegal",
+          "message_template": "The param of Tag.X.TagKey is illegal",
+          "severity": "warning",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "创建者标签功能导致 UnTagResources 失败",
+              "description": "用户在资源管理中开启了创建者标签功能，AlbConfig 更新标签时全量替换触发 UnTagResources 接口，该接口不支持 acs/aliyun 开头的标签。",
+              "diagnostic": {
+                "description": "检查是否开启了创建者标签功能",
+                "commands": [
+                  "# 在阿里云资源管理控制台检查是否开启了创建者标签功能",
+                  "kubectl get albconfig {albconfig_name} -o yaml | grep -A 5 tags"
+                ],
+                "expected_result": "资源管理中已开启创建者标签功能，且 ALB 实例上有 acs: 或 aliyun 开头的系统标签"
+              },
+              "solution_options": [
+                {
+                  "index": 1,
+                  "title": "通过 ALB 控制台管理标签",
+                  "recommended": true,
+                  "resource": "external",
+                  "action": "manage_tags",
+                  "steps": [
+                    "删除 AlbConfig 中的 tags 字段配置",
+                    "在 ALB 控制台直接管理标签"
+                  ]
+                },
+                {
+                  "index": 2,
+                  "title": "关闭创建者标签功能",
+                  "recommended": false,
+                  "resource": "external",
+                  "action": "disable_creator_tag",
+                  "steps": [
+                    "在资源管理中关闭创建者标签功能",
+                    "确保标签 key 不以 aliyun/acs: 开头"
+                  ]
+                }
+              ]
+            },
+            {
+              "cause_id": 2,
+              "summary": "标签 key 以 aliyun 或 acs: 开头",
+              "description": "标签 key 以 aliyun 或 acs: 开头，这些前缀是系统保留的，不允许用户自定义。",
+              "diagnostic": {
+                "description": "检查 AlbConfig 的标签 key 前缀",
+                "commands": [
+                  "kubectl get albconfig {albconfig_name} -o yaml | grep -A 3 tags"
+                ],
+                "expected_result": "tags 中的 key 以 aliyun 或 acs: 开头"
+              },
+              "solution": {
+                "title": "修改标签 key 为非保留前缀",
+                "resource": "AlbConfig",
+                "action": "patch_config",
+                "steps": [
+                  "修改标签 key 不以 aliyun/acs: 开头"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "ACL_CIDR_ILLEGAL",
+          "regex": "The param of [\\d./]+ is illegal",
+          "message_template": "The param of {CIDR} is illegal",
+          "severity": "warning",
+          "error_config_example": "listeners:\n    - port: 80\n      protocol: HTTP\n      aclConfig:\n        aclType: White\n        aclEntries:\n          - 140.205.280.0/24  # 错误: 280不是合法的IP段(0-255)\n          - 140.205.11.0/24\n        aclName: \"keepaliveng\"",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "访问控制列表中 CIDR 地址不合法",
+              "description": "AlbConfig 访问控制策略组中配置了不合法的 CIDR 地址。如 140.205.280.0/24 不是合法的网段。",
+              "diagnostic": {
+                "description": "检查 AlbConfig 的 aclEntries 中 CIDR 格式",
+                "commands": [
+                  "kubectl get albconfig {albconfig_name} -o yaml | grep -A 10 aclEntries"
+                ],
+                "expected_result": "aclEntries 中的 IP/CIDR 格式不正确（IP 地址无效或子网掩码不匹配）"
+              },
+              "solution": {
+                "title": "修改为正确的 CIDR 格式",
+                "resource": "AlbConfig",
+                "action": "patch_config",
+                "steps": [
+                  "检查 aclEntries 中的 IP/CIDR 格式是否正确",
+                  "确保 IP 地址有效且子网掩码匹配"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "XFORWARDED_TRUSTED_MISSING",
+          "regex": "XForwardedForConfig\\.XForwardedForClientSourceIpsTrusted is missing",
+          "message_template": "The param of XForwardedForConfig.XForwardedForClientSourceIpsTrusted is missing",
+          "severity": "warning",
+          "error_config_example": "metadata:\n  annotations:\n    alb.ingress.kubernetes.io/actions.svcname: |\n      [{\"type\": \"TrafficLimit\", \"TrafficLimitConfig\": {\"QPS\": \"100\", \"QPSPerIp\": \"20\"}}]\n# 错误: 使用了QPSPerIp限速但未在AlbConfig监听中配置XForwardedForConfig授信列表",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "QPSPerIp 限速缺少授信列表配置",
+              "description": "使用基于客户端源 IP 限速功能 (QPSPerIp) 时，需要在监听上先开启查找真实客户端源 IP 开关并配置授信列表。",
+              "diagnostic": {
+                "description": "检查 AlbConfig 监听中是否配置了 XForwardedForConfig",
+                "commands": [
+                  "kubectl get albconfig {albconfig_name} -o yaml | grep -A 5 XForwardedFor"
+                ],
+                "expected_result": "使用了 QPSPerIp 限速但缺少 XForwardedForConfig 配置"
+              },
+              "solution": {
+                "title": "在 AlbConfig 监听中配置 XForwardedForConfig",
+                "resource": "AlbConfig",
+                "action": "patch_listeners",
+                "yaml_example": "listeners:\n- port: 80\n  protocol: HTTP\n  XForwardedForConfig:\n    XForwardedForClientSourceIpsEnabled: true\n    XForwardedForClientSourceIpsTrusted: 0.0.0.0/0"
+              }
+            }
+          ]
+        },
+        {
+          "id": "XFORWARDED_TRUSTED_IP_ILLEGAL",
+          "regex": "XForwardedForConfig\\.XForwardedForClientSourceIpsTrusted\\.[\\d./]+ is illegal",
+          "message_template": "The param of XForwardedForConfig.XForwardedForClientSourceIpsTrusted.{IP} is illegal",
+          "severity": "warning",
+          "error_config_example": "listeners:\n    - port: 80\n      protocol: HTTPS\n      certificates:\n      - CertificateId: 14261892-cn-hangzhou\n      - CertificateId: 14897182-cn-hangzhou\n        IsDefault: true\n      XForwardedForConfig:\n        XForwardedForClientSourceIpsEnabled: true\n        XForwardedForClientSourceIpsTrusted: 192.168.2.0/16;192.168.2.0/16  # 错误: 192.168.2.0/16不是合法网段，应为192.168.0.0/16",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "授信列表 IP/网段格式错误",
+              "description": "AlbConfig 监听中配置的授信列表 IP/网段格式错误。如 192.168.2.0/16 不是合法的网段（192.168.0.0/16 才是正确的）。",
+              "diagnostic": {
+                "description": "检查授信列表中的 IP/CIDR 格式",
+                "commands": [
+                  "kubectl get albconfig {albconfig_name} -o yaml | grep XForwardedForClientSourceIpsTrusted"
+                ],
+                "expected_result": "授信列表中的 IP 和子网掩码不匹配"
+              },
+              "solution": {
+                "title": "修正授信列表中的 IP/CIDR 格式",
+                "resource": "AlbConfig",
+                "action": "patch_listeners",
+                "steps": [
+                  "检查 XForwardedForClientSourceIpsTrusted 中的 IP/网段格式",
+                  "多个 IP/网段之间通过 \";\" 隔离"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "TRACING_SAMPLE_ILLEGAL",
+          "regex": "AccessLogTracingConfig\\.TracingSample is illegal",
+          "message_template": "The param of AccessLogTracingConfig.TracingSample is illegal",
+          "severity": "warning",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "删除 logConfig 后 tracingSample 传参异常",
+              "description": "监听曾开通过链路追踪功能后删除了 logConfig 配置字段，但 ALB 后端仍然约束 tracingSample 传参必须为 0-10000。",
+              "diagnostic": {
+                "description": "检查 AlbConfig 监听是否缺少 logConfig 字段",
+                "commands": [
+                  "kubectl get albconfig {albconfig_name} -o yaml | grep -A 10 logConfig"
+                ],
+                "expected_result": "监听之前配置过 logConfig 后被删除，现在缺少该字段"
+              },
+              "solution": {
+                "title": "重新添加 logConfig 字段",
+                "resource": "AlbConfig",
+                "action": "patch_listeners",
+                "yaml_example": "listeners:\n- port: 80\n  protocol: HTTP\n  logConfig:\n    accessLogRecordCustomizedHeadersEnabled: false\n    accessLogTracingConfig:\n      tracingEnabled: true\n      tracingSample: 9999\n      tracingType: Zipkin"
+              }
+            }
+          ]
+        },
+        {
+          "id": "UNMARSHAL_BOOL_LOG_CONFIG",
+          "regex": "cannot unmarshal bool into Go struct field.*accessLogTracing",
+          "message_template": "unmarshalling albconfig error: json: cannot unmarshal bool into Go struct field LogConfig.listeners.logConfig.accessLogTracing",
+          "severity": "warning",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "accessLogTracingConfig 字段类型错误",
+              "description": "AlbConfig 中 accessLogTracingConfig 字段被错误地设置为布尔值 true，而该字段应该是一个包含 tracingEnabled、tracingSample、tracingType 的对象。",
+              "diagnostic": {
+                "description": "检查 accessLogTracingConfig 的值类型",
+                "commands": [
+                  "kubectl get albconfig {albconfig_name} -o yaml | grep accessLogTracing"
+                ],
+                "expected_result": "accessLogTracingConfig 的值是 true（布尔值）而非对象"
+              },
+              "solution": {
+                "title": "修正为正确的对象格式",
+                "resource": "AlbConfig",
+                "action": "fix_yaml",
+                "yaml_example": "logConfig:\n  accessLogRecordCustomizedHeadersEnabled: false\n  accessLogTracingConfig:\n    tracingEnabled: true\n    tracingSample: 9999\n    tracingType: Zipkin"
+              }
+            }
+          ]
+        },
+        {
+          "id": "UNMARSHAL_CA_ENABLED",
+          "regex": "cannot unmarshal string into Go struct field.*caEnabled.*bool",
+          "message_template": "unmarshalling albconfig error: json: cannot unmarshal string into Go struct field ListenerSpec.listeners.caEnabled of type bool",
+          "severity": "warning",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "caEnabled 字段拼写或类型错误",
+              "description": "AlbConfig 双向认证配置中 caEnabled 字段的值拼写错误（如 \"flase\" 而非 false），或使用了字符串而非布尔值。",
+              "diagnostic": {
+                "description": "检查 caEnabled 字段的值",
+                "commands": [
+                  "kubectl get albconfig {albconfig_name} -o yaml | grep caEnabled"
+                ],
+                "expected_result": "caEnabled 值为字符串（如 \"flase\"、\"true\"）而非布尔值"
+              },
+              "solution": {
+                "title": "修正 caEnabled 为正确的布尔值",
+                "resource": "AlbConfig",
+                "action": "fix_yaml",
+                "steps": [
+                  "将 caEnabled: \"flase\" 或 caEnabled: flase 修正为 caEnabled: false（布尔值，不带引号）"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "LOGSTORE_CREATE_FAILED",
+          "regex": "failed to create logstore",
+          "message_template": "failed to create logstore",
+          "severity": "warning",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "SLS logStore 仪表盘配额超限",
+              "description": "AlbConfig 创建访问日志失败，通常是 SLS logStore 的仪表盘配额超限导致。",
+              "diagnostic": {
+                "description": "检查 SLS logStore 仪表盘配额",
+                "commands": [
+                  "# 在 SLS 控制台查看仪表盘配额使用情况"
+                ],
+                "expected_result": "SLS logStore 的仪表盘数量达到配额上限"
+              },
+              "solution": {
+                "title": "联系 SLS 研发扩容 logStore 仪表盘 quota",
+                "resource": "external",
+                "action": "increase_quota"
+              }
+            }
+          ]
+        },
+        {
+          "id": "LOGSTORE_UNAUTHORIZED",
+          "regex": "Unauthorized.*account is unauthorized",
+          "message_template": "Unauthorized: account is unauthorized",
+          "severity": "warning",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "logStore 名称未以 alb_ 开头",
+              "description": "AlbConfig 创建访问日志时，logStore 名称未以 \"alb_\" 开头。ALB 调用日志服务接口的鉴权要求 logStore 必须以 \"alb_\" 开头，无法通过 RAM 授权绕过。",
+              "diagnostic": {
+                "description": "检查 AlbConfig 的 logStore 名称",
+                "commands": [
+                  "kubectl get albconfig {albconfig_name} -o yaml | grep logStore"
+                ],
+                "expected_result": "logStore 名称不以 alb_ 开头"
+              },
+              "solution": {
+                "title": "修改 logStore 名称为 alb_ 开头",
+                "resource": "AlbConfig",
+                "action": "patch_config",
+                "yaml_example": "spec:\n  config:\n    accessLogConfig:\n      logProject: \"your-project\"\n      logStore: \"alb_your-logstore\""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "syntax_format",
+      "name": "语法与格式错误",
+      "description": "YAML/JSON 格式错误、中文标点符号、括号不匹配等语法问题",
+      "errors": [
+        {
+          "id": "INVALID_CHAR_CHINESE_PUNCT",
+          "regex": "invalid character.*after object key:value pair",
+          "message_template": "invalid character '\"'/'ï' after object key:value pair",
+          "severity": "warning",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "YAML 中包含中文标点符号",
+              "description": "Ingress YAML 配置中包含中文标点符号（如中文逗号 \"，\" 而非英文逗号 \",\"），导致 JSON 解析失败。",
+              "diagnostic": {
+                "description": "检查 Ingress annotations 中是否有中文标点",
+                "commands": [
+                  "kubectl get ingress -n {namespace} {ingress_name} -o yaml"
+                ],
+                "expected_result": "annotations 中的 JSON 字符串包含中文逗号、中文引号等"
+              },
+              "solution": {
+                "title": "替换中文标点为英文标点",
+                "resource": "Ingress",
+                "action": "fix_yaml",
+                "steps": [
+                  "仔细检查 Ingress annotations 中的 JSON 字符串",
+                  "将中文逗号 \"，\" 替换为英文逗号 \",\"",
+                  "将中文引号替换为英文引号"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "UNEXPECTED_JSON_END",
+          "regex": "unexpected end of JSON input",
+          "message_template": "unexpected end of JSON input",
+          "severity": "warning",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "JSON 格式不完整",
+              "description": "Ingress YAML 配置中 JSON 格式不完整，缺少 \"]\" 或 \"}\" 等闭合符号。注意: ALB 实例串行维护路由规则，一个 Ingress 配置错误会阻塞同一 ALB 实例下所有其他 Ingress 的变更。",
+              "diagnostic": {
+                "description": "检查 Ingress annotations 中 JSON 字符串的括号匹配",
+                "commands": [
+                  "kubectl get ingress -n {namespace} {ingress_name} -o yaml"
+                ],
+                "expected_result": "annotations 中的 JSON 字符串缺少闭合符号（] 或 }）"
+              },
+              "solution": {
+                "title": "修正 JSON 格式，补齐闭合符号",
+                "resource": "Ingress",
+                "action": "fix_yaml",
+                "steps": [
+                  "检查 annotations 中所有 JSON 字符串的括号匹配是否完整",
+                  "如果报错的 Ingress 本身配置正确，需要检查同一 ALB 实例下的其他 Ingress"
+                ],
+                "notes": "同一 ALB 实例下多个 Ingress 串行调谐，一个出错会阻塞所有"
+              }
+            }
+          ]
+        },
+        {
+          "id": "LISTEN_PORTS_JSON_ERROR",
+          "regex": "failed to parse listen-ports configuration.*unexpected end of JSON input",
+          "message_template": "failed to parse listen-ports configuration: unexpected end of JSON input",
+          "severity": "critical",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "listen-ports 注解 JSON 格式不完整",
+              "description": "listen-ports 注解中的 JSON 格式不完整（如少了 \"]\"）。此错误会阻塞同一 ALB 实例下所有 Ingress 的调谐。",
+              "diagnostic": {
+                "description": "检查 Ingress 的 listen-ports 注解格式",
+                "commands": [
+                  "kubectl get ingress --all-namespaces -o yaml | grep listen-ports"
+                ],
+                "expected_result": "listen-ports 注解中 JSON 字符串不完整"
+              },
+              "solution": {
+                "title": "修正 listen-ports 注解的 JSON 格式",
+                "resource": "Ingress",
+                "action": "patch_annotation",
+                "steps": [
+                  "检查同一 ALB 实例下所有 Ingress 的 listen-ports 注解格式"
+                ],
+                "yaml_example": "metadata:\n  annotations:\n    alb.ingress.kubernetes.io/listen-ports: '[{\"HTTP\":80},{\"HTTPS\":443}]'"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "silent_config_ineffective",
+      "name": "配置静默不生效",
+      "description": "Ingress 配置调谐成功无报错，但 ALB 转发规则未按预期生效的场景",
+      "errors": [
+        {
+          "id": "ACTIONS_SVCNAME_MISMATCH",
+          "regex": "dummy_no_event_match_actions_svcname_mismatch",
+          "message_template": "[无调谐报错] actions 注解配置后转发规则未按预期生效",
+          "severity": "warning",
+          "description": "Ingress 调谐成功(SuccessfullyReconciled)，但 ALB 转发规则中未包含 actions 注解定义的自定义动作（如 InsertHeader、TrafficLimit、Redirect 等）。通常原因是 actions.{svcname} 中的 svcname 与 spec.rules.http.paths.backend.service.name 不一致。",
+          "error_config_example": "apiVersion: networking.k8s.io/v1\nkind: Ingress\nmetadata:\n  name: skilltest-004\n  annotations:\n    alb.ingress.kubernetes.io/listen-ports: '[{\"HTTPS\": 443}]'\n    alb.ingress.kubernetes.io/actions.tea-svc: |      # 错误: svcname 为 tea-svc\n      [{\n       \"type\": \"InsertHeader\",\n       \"InsertHeaderConfig\": {\n           \"key\": \"x-frowward-host\",\n           \"value\": \"$http_host\",\n           \"valueType\": \"ReferenceHeader\"\n       }\n      }]\nspec:\n  ingressClassName: alb-skill-test-use-class\n  rules:\n  - host: xff.dometest.top\n    http:\n      paths:\n      - path: /\n        pathType: ImplementationSpecific\n        backend:\n          service:\n            name: ng-svc              # 实际 backend 为 ng-svc，与 actions.tea-svc 不匹配\n            port:\n              number: 80",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "actions 注解的 svcname 与 backend service name 不一致",
+              "description": "注解格式为 alb.ingress.kubernetes.io/actions.{svcname}，其中 {svcname} 必须与 spec.rules.http.paths.backend.service.name 完全一致。不一致时 Controller 无法将 actions 关联到对应的转发规则，注解被静默忽略，不会产生任何 Warning 事件。",
+              "diagnostic": {
+                "description": "提取 Ingress 中所有 actions.* 注解的 svcname 后缀，与 spec.rules 中所有 backend.service.name 对比",
+                "commands": [
+                  "kubectl get ingress -n {namespace} {ingress_name} -o yaml"
+                ],
+                "expected_result": "annotations 中 alb.ingress.kubernetes.io/actions.{X} 的 {X} 与 spec.rules.http.paths.backend.service.name 不一致"
+              },
+              "solution": {
+                "title": "修正 actions 注解的 svcname 使其与 backend service name 一致",
+                "resource": "Ingress",
+                "action": "patch_annotation",
+                "steps": [
+                  "确认 spec.rules.http.paths.backend.service.name 的值（如 ng-svc）",
+                  "将 alb.ingress.kubernetes.io/actions.{错误名称} 重命名为 alb.ingress.kubernetes.io/actions.{正确的service name}",
+                  "等待 Ingress 重新调谐后在 ALB 控制台验证转发规则是否已包含对应动作"
+                ],
+                "yaml_example": "metadata:\n  annotations:\n    alb.ingress.kubernetes.io/actions.ng-svc: |      # 正确: 改为 actions.ng-svc 与 backend 一致\n      [{\n       \"type\": \"InsertHeader\",\n       \"InsertHeaderConfig\": {\n           \"key\": \"x-frowward-host\",\n           \"value\": \"$http_host\",\n           \"valueType\": \"ReferenceHeader\"\n       }\n      }]\nspec:\n  rules:\n  - host: xff.dometest.top\n    http:\n      paths:\n      - path: /\n        pathType: ImplementationSpecific\n        backend:\n          service:\n            name: ng-svc\n            port:\n              number: 80"
+              }
+            }
+          ]
+        },
+        {
+          "id": "CONDITIONS_SVCNAME_MISMATCH",
+          "regex": "dummy_no_event_match_conditions_svcname_mismatch",
+          "message_template": "[无调谐报错] conditions 注解配置后转发条件未按预期生效",
+          "severity": "warning",
+          "description": "Ingress 调谐成功(SuccessfullyReconciled)，但 ALB 转发规则中未包含 conditions 注解定义的自定义条件（如 SourceIp、Header、Cookie 等）。通常原因是 conditions.{svcname} 中的 svcname 与 spec.rules.http.paths.backend.service.name 不一致。",
+          "error_config_example": "apiVersion: networking.k8s.io/v1\nkind: Ingress\nmetadata:\n  name: example-conditions\n  annotations:\n    alb.ingress.kubernetes.io/listen-ports: '[{\"HTTPS\": 443}]'\n    alb.ingress.kubernetes.io/conditions.tea-svc: |      # 错误: svcname 为 tea-svc\n      [{\n       \"type\": \"SourceIp\",\n       \"sourceIpConfig\": {\n           \"values\": [\"192.168.0.0/16\"]\n       }\n      }]\nspec:\n  rules:\n  - host: demo.example.com\n    http:\n      paths:\n      - path: /\n        pathType: ImplementationSpecific\n        backend:\n          service:\n            name: ng-svc              # 实际 backend 为 ng-svc，与 conditions.tea-svc 不匹配\n            port:\n              number: 80",
+          "causes": [
+            {
+              "cause_id": 1,
+              "summary": "conditions 注解的 svcname 与 backend service name 不一致",
+              "description": "注解格式为 alb.ingress.kubernetes.io/conditions.{svcname}，其中 {svcname} 必须与 spec.rules.http.paths.backend.service.name 完全一致。不一致时 Controller 无法将 conditions 关联到对应的转发规则，注解被静默忽略，不会产生任何 Warning 事件。",
+              "diagnostic": {
+                "description": "提取 Ingress 中所有 conditions.* 注解的 svcname 后缀，与 spec.rules 中所有 backend.service.name 对比",
+                "commands": [
+                  "kubectl get ingress -n {namespace} {ingress_name} -o yaml"
+                ],
+                "expected_result": "annotations 中 alb.ingress.kubernetes.io/conditions.{X} 的 {X} 与 spec.rules.http.paths.backend.service.name 不一致"
+              },
+              "solution": {
+                "title": "修正 conditions 注解的 svcname 使其与 backend service name 一致",
+                "resource": "Ingress",
+                "action": "patch_annotation",
+                "steps": [
+                  "确认 spec.rules.http.paths.backend.service.name 的值（如 ng-svc）",
+                  "将 alb.ingress.kubernetes.io/conditions.{错误名称} 重命名为 alb.ingress.kubernetes.io/conditions.{正确的service name}",
+                  "等待 Ingress 重新调谐后在 ALB 控制台验证转发规则是否已包含对应条件"
+                ],
+                "yaml_example": "metadata:\n  annotations:\n    alb.ingress.kubernetes.io/conditions.ng-svc: |      # 正确: 改为 conditions.ng-svc 与 backend 一致\n      [{\n       \"type\": \"SourceIp\",\n       \"sourceIpConfig\": {\n           \"values\": [\"192.168.0.0/16\"]\n       }\n      }]\nspec:\n  rules:\n  - host: demo.example.com\n    http:\n      paths:\n      - path: /\n        pathType: ImplementationSpecific\n        backend:\n          service:\n            name: ng-svc\n            port:\n              number: 80"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "total_categories": 12,
+    "total_errors": 64,
+    "source_documents": [
+      "钉钉文档: alb ingress常见调谐报错",
+      "语雀知识库: ingress常见调谐失败报错 (52篇文档)",
+      "钉钉文档: alb ingress证书更新逻辑说明"
+    ],
+    "last_updated": "2026-04-15",
+    "changelog": [
+      "2026-04-15: 新增 silent_config_ineffective 分类(配置静默不生效)，包含 ACTIONS_SVCNAME_MISMATCH 和 CONDITIONS_SVCNAME_MISMATCH 两个诊断模式; CERT_NOT_FOUND 方案三新增 skip_condition(不改变客户现有证书使用方式)",
+      "2026-04-14: 新增 CERT_AUTO_DISCOVER_STALE 模式(证书更新后仍显示旧证书); HTTPS_EMPTY_CERT 新增原因2(AlbConfig指定证书与自动发现不兼容); 删除 CERT_ORDER_ILLEGAL(错误知识点)",
+      "2026-04-10: 新增 CERT_ID_EXPIRED_ALBCONFIG 模式; 为 RULE_ACTIONS_MANDATORY/INVALID_SG_COOKIE/SERVICE_PORT_TYPE_ERROR/LISTENER_IN_USE/ACL_CIDR_ILLEGAL/VSWITCH_NOT_SUPPORT_IPV6/SOURCE_IP_VALUES_ILLEGAL/XFORWARDED_TRUSTED_MISSING/XFORWARDED_TRUSTED_IP_ILLEGAL 添加 error_config_example; LISTENER_IN_USE 新增原因2(端口协议冲突); ZONE_MAPPINGS_SIZE_ILLEGAL 新增原因2(交换机ID格式非法)"
+    ]
+  }
+}
