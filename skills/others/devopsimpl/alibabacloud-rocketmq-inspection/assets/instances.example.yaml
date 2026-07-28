@@ -1,0 +1,19 @@
+# RocketMQ inspection — instances config template.
+# Usage: cp instances.example.yaml ./instances.yaml, edit, then call:
+#   bash scripts/inspect.sh --config ./instances.yaml
+
+defaults:
+  region: cn-hangzhou
+  window: 1h           # time window: 1h / 6h / 24h / 30m / 2d (s/m/h/d suffix)
+
+instances:
+  - id: rmq-cn-xxxxxxxx
+    version: "5"
+    region: cn-hangzhou
+    # Optional name / note — shown in the report only
+    name: "order-center-prod"
+
+  - id: MQ_INST_123456_BXxxxxxx
+    version: "4"
+    region: cn-shanghai
+    name: "payment-gateway-prod"

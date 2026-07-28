@@ -1,0 +1,113 @@
+# RocketMQ inspection default thresholds.
+# Editing this file does NOT take effect; edit ~/.claude/skills/alibabacloud-rocketmq-inspection/thresholds.yaml
+# The user file is auto-generated from this template on first run of inspect.sh.
+#
+# Each metric has two thresholds: warn (yellow, -5 points) and critical (red, -15 points).
+# Metrics set to null are displayed but not scored.
+# Health score starts at 100, floored at 0; >=80 healthy, 60-79 watch, <60 critical.
+
+instance:
+  # Traffic & TPS (display only)
+  InstanceApiCallTps: null
+  InstanceApiCallTpsMax: null
+  InstanceSendApiCallTps: null
+  InstanceReceiveApiCallTps: null
+  SendMessageCountPerInstance: null
+  ReceiveMessageCountPerInstance: null
+
+  # TPS utilization (80% warn, 95% critical)
+  InstanceTpsUtilization:
+    warn: 80
+    critical: 95
+  InstanceSendTpsUtilization:
+    warn: 80
+    critical: 95
+  InstanceReceiveTpsUtilization:
+    warn: 80
+    critical: 95
+
+  # Client connections (display only)
+  InstanceOnlineClients: null
+  InstanceActiveConnection: null
+  InstanceOnlineClientsUtilization:
+    warn: 80
+    critical: 95
+
+  # Throttling (anything > 0 is noteworthy)
+  ThrottledSendRequestsPerInstance:
+    warn: 1
+    critical: 100
+  ThrottledReceiveRequestsPerInstance:
+    warn: 1
+    critical: 100
+
+  # Public bandwidth
+  InstanceTrafficRX: null
+  InstanceTrafficTX: null
+  InstanceTrafficRXUtilization:
+    warn: 80
+    critical: 95
+  InstanceTrafficTXUtilization:
+    warn: 80
+    critical: 95
+  # Public drop (anything > 0 is suspicious)
+  InstanceDropTrafficRX:
+    warn: 1
+    critical: 1000
+  InstanceDropTrafficTX:
+    warn: 1
+    critical: 1000
+  InstanceInternetFlowoutBandwidth: null
+
+  # Storage (display only)
+  InstanceStorageSize: null
+
+group:
+  ConsumerLag:
+    warn: 10000
+    critical: 100000
+  ConsumerLagLatencyPerGid:
+    warn: 30000      # 30s
+    critical: 300000 # 5min
+  ReadyMessages: null   # typically tracks ConsumerLag; display only
+  ReadyMessageQueueTime:
+    warn: 30000
+    critical: 300000
+  ReceiveMessageCountPerGid: null  # traffic-like, display only
+  SendDLQMessageCountPerGid:
+    warn: 1
+    critical: 50
+  ThrottledReceiveRequestsPerGid:
+    warn: 1
+    critical: 100
+
+topic:
+  SendMessageCountPerTopic: null
+  ReceiveMessageCountPerTopic: null
+  ThrottledSendRequestsPerTopic:
+    warn: 1
+    critical: 100
+
+# Resource quota checks (4.x/5.x caps are hardcoded in render_report.py; warn/critical evaluated by percentage)
+# 4.x: Group cap 1000, Topic has no explicit cap (not evaluated)
+# 5.x: Group cap 5000, Topic cap 5000
+quota:
+  group_count:
+    warn_pct: 80
+    critical_pct: 95
+  topic_count:
+    warn_pct: 80
+    critical_pct: 95
+
+# Region quota: combined 4.x + 5.x instance count per region <= 1000
+region:
+  instance_count:
+    warn_pct: 80
+    critical_pct: 95
+
+# Consumer runtime (sourced from get-consumer-group-lag.totalLag.inflightCount)
+# 5.x doc: in-processing messages per consumer group <= 2500
+consumer_status:
+  inflight_count:
+    warn: 2000
+    critical: 2400
