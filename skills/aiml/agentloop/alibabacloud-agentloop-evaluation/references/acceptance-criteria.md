@@ -87,22 +87,39 @@ spec = {
 }
 ```
 
-## 2. Evaluator type — must be exactly AGENT, LLM, or CODE
+## 2. Evaluator type — create as AGENT or CODE only
 
 #### ✅ CORRECT
 ```python
-{"action": "create", "name": "my-eval", "type": "AGENT", "metric_name": "quality", "biz_version": "v1"}
-{"action": "create", "name": "my-eval", "type": "LLM", "metric_name": "quality", "biz_version": "v1"}
-{"action": "create", "name": "my-eval", "type": "CODE", "metric_name": "quality", "biz_version": "v1"}
+# Genuine StarOps Agent evaluator (standard digital-employee mode): omit agentEvaluatorMode/rawPromptBackend
+{"action": "create", "name": "my-agent-eval", "type": "AGENT", "metric_name": "quality", "biz_version": "v1", "config": {"prompt": "Judge {{input}}"}}
+# LLM-style evaluator (LLM-as-judge)
+{"action": "create", "name": "my-llm-style-eval", "type": "AGENT", "metric_name": "quality", "biz_version": "v1", "config": {"agentEvaluatorMode": "raw_prompt", "rawPromptBackend": "direct_llm", "prompt": "Judge {{input}}"}}
+{"action": "create", "name": "my-code-eval", "type": "CODE", "metric_name": "quality", "biz_version": "v1"}
 ```
 
 #### ❌ INCORRECT
 ```python
 {"action": "create", "type": "agent", ...}    # Wrong: must be uppercase
+{"action": "create", "type": "LLM", ...}      # Wrong for new specs: use AGENT + raw_prompt + direct_llm instead
 {"action": "create", "type": "CUSTOM", ...}   # Wrong: not a supported type
+{"action": "create", "type": "AGENT", "config": {"agentEvaluatorMode": "raw_prompt", "rawPromptBackend": "starops", ...}}  # Wrong for genuine StarOps Agent: raw_prompt+starops is an LLM judge, not standard Agent mode
 ```
 
-## 3. Dataset config — must use exact camelCase keys
+## 3. Custom output fields — use config.outputSchema
+
+#### ✅ CORRECT
+```python
+{"config": {"outputSchema": {"score": {"type": "number", "required": True, "range": [0, 1]}, "explanation": {"type": "string", "required": True}, "risk_level": {"type": "enum", "required": False, "options": ["low", "medium", "high"]}}}}
+{"config": {"outputSchema": {"risk_level": {"type": "enum", "options": ["low", "medium", "high"]}}}}  # Wrapper defaults score/explanation
+```
+
+#### ❌ INCORRECT
+```python
+{"config": {"customFields": {"risk_level": "enum"}}}  # Wrong: custom result fields belong in outputSchema
+```
+
+## 4. Dataset config — must use exact camelCase keys
 
 #### ✅ CORRECT
 ```python
@@ -114,7 +131,7 @@ spec = {
 {"data_type": "dataset", "config": {"dataset_name": "my-dataset"}}  # Wrong: snake_case not converted in config
 ```
 
-## 4. Time window — must include timezone
+## 5. Time window — must include timezone
 
 #### ✅ CORRECT
 ```python
@@ -126,7 +143,7 @@ spec = {
 {"window": {"start": "2026-07-14T09:00:00", "end": "2026-07-14T10:00:00"}}  # Wrong: no timezone
 ```
 
-## 5. Continuous evaluation — requires explicit flag
+## 6. Continuous evaluation — requires explicit flag
 
 #### ✅ CORRECT
 ```bash

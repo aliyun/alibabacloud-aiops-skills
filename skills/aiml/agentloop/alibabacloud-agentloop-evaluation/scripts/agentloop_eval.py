@@ -33,7 +33,26 @@ JSON_FLAGS = {
 }
 SUCCESS_STATES = {"completed", "complete", "succeeded", "success", "finished"}
 FAILURE_STATES = {"failed", "failure", "cancelled", "canceled", "terminated", "error"}
-CREATABLE_EVALUATOR_TYPES = {"LLM", "AGENT", "CODE"}
+CREATABLE_EVALUATOR_TYPES = {"AGENT", "CODE"}
+LEGACY_LLM_EVALUATOR_TYPE = "LLM"
+AGENT_EVALUATOR_MODE_KEY = "agentEvaluatorMode"
+RAW_PROMPT_BACKEND_KEY = "rawPromptBackend"
+RAW_PROMPT_DIRECT_LLM_CONFIG = {
+    AGENT_EVALUATOR_MODE_KEY: "raw_prompt",
+    RAW_PROMPT_BACKEND_KEY: "direct_llm",
+}
+RAW_PROMPT_STAROPS_BACKEND = "starops"
+DEFAULT_OUTPUT_SCHEMA_SCORE = {
+    "type": "number",
+    "required": True,
+    "range": [0, 1],
+    "rule": "0 to 1 evaluation score",
+}
+DEFAULT_OUTPUT_SCHEMA_EXPLANATION = {
+    "type": "string",
+    "required": True,
+    "rule": "Briefly explain the scoring reason",
+}
 MAX_DISCOVERY_PAGES = 100
 
 
@@ -477,6 +496,111 @@ def append_optional(command: list[str], flag: str, value: Any, *, as_json: bool 
     command.extend([flag, compact_json(value) if as_json else cli_value(value)])
 
 
+def normalize_llm_style_evaluator_config(config: Any) -> dict[str, Any]:
+    if config is None:
+        normalized: dict[str, Any] = {}
+    elif isinstance(config, dict):
+        normalized = copy.deepcopy(config)
+    else:
+        raise WorkflowError("LLM-style evaluator config must be an object")
+    for alias in (
+        "agent_evaluator_mode",
+        "raw_prompt_backend",
+        "executionBackend",
+        "execution_backend",
+    ):
+        normalized.pop(alias, None)
+    normalized.update(RAW_PROMPT_DIRECT_LLM_CONFIG)
+    return normalized
+
+
+def ensure_raw_prompt_backend_default(config: Any) -> Any:
+    if not isinstance(config, dict):
+        return config
+    mode = config.get(AGENT_EVALUATOR_MODE_KEY, config.get("agent_evaluator_mode"))
+    if str(mode).strip() != "raw_prompt":
+        return config
+    backend = first_non_empty_config_value(
+        config,
+        RAW_PROMPT_BACKEND_KEY,
+        "raw_prompt_backend",
+        "executionBackend",
+        "execution_backend",
+    )
+    if backend is not None:
+        return config
+    normalized = copy.deepcopy(config)
+    normalized[RAW_PROMPT_BACKEND_KEY] = RAW_PROMPT_STAROPS_BACKEND
+    return normalized
+
+
+def first_non_empty_config_value(config: dict[str, Any], *keys: str) -> Any:
+    for key in keys:
+        value = config.get(key)
+        if value not in (None, ""):
+            return value
+    return None
+
+
+def normalize_output_schema_for_config(config: Any) -> Any:
+    if not isinstance(config, dict):
+        return config
+    output_schema = config.get("outputSchema")
+    if output_schema is None:
+        return config
+    if not isinstance(output_schema, dict):
+        raise WorkflowError("config.outputSchema must be an object")
+
+    normalized = copy.deepcopy(config)
+    normalized_schema = copy.deepcopy(output_schema)
+    normalized_schema["score"] = output_field_with_defaults(
+        normalized_schema.get("score"),
+        DEFAULT_OUTPUT_SCHEMA_SCORE,
+        "config.outputSchema.score",
+    )
+    normalized_schema["explanation"] = output_field_with_defaults(
+        normalized_schema.get("explanation"),
+        DEFAULT_OUTPUT_SCHEMA_EXPLANATION,
+        "config.outputSchema.explanation",
+    )
+    normalized["outputSchema"] = normalized_schema
+    return normalized
+
+
+def output_field_with_defaults(value: Any, defaults: dict[str, Any], field_path: str) -> dict[str, Any]:
+    if value is None:
+        return copy.deepcopy(defaults)
+    if not isinstance(value, dict):
+        raise WorkflowError(f"{field_path} must be an object")
+    normalized = copy.deepcopy(value)
+    for key, default_value in defaults.items():
+        normalized.setdefault(key, copy.deepcopy(default_value))
+    return normalized
+
+
+def normalize_create_evaluator_definition(definition: dict[str, Any]) -> dict[str, Any]:
+    normalized = copy.deepcopy(definition)
+    evaluator_type = str(normalized["type"]).strip()
+    if evaluator_type == LEGACY_LLM_EVALUATOR_TYPE:
+        normalized["type"] = "AGENT"
+        normalized["config"] = normalize_output_schema_for_config(
+            normalize_llm_style_evaluator_config(normalized.get("config"))
+        )
+        return normalized
+    if evaluator_type not in CREATABLE_EVALUATOR_TYPES:
+        raise WorkflowError(
+            f"create evaluator action type must be one of {sorted(CREATABLE_EVALUATOR_TYPES)} "
+            f"(exact uppercase). For LLM-style evaluators, use AGENT with "
+            f"config.agentEvaluatorMode='raw_prompt' and config.rawPromptBackend='direct_llm'; "
+            f"got {evaluator_type!r}"
+        )
+    if evaluator_type == "AGENT":
+        normalized["config"] = ensure_raw_prompt_backend_default(normalized.get("config"))
+    if "config" in normalized:
+        normalized["config"] = normalize_output_schema_for_config(normalized.get("config"))
+    return normalized
+
+
 def build_evaluator_command(
     agent_space: str,
     definition: dict[str, Any],
@@ -494,12 +618,8 @@ def build_evaluator_command(
             ("name", "type", "metric_name", "biz_version"),
             "create evaluator action",
         )
+        definition = normalize_create_evaluator_definition(definition)
         evaluator_type = str(definition["type"]).strip()
-        if evaluator_type not in CREATABLE_EVALUATOR_TYPES:
-            raise WorkflowError(
-                f"create evaluator action type must be one of {sorted(CREATABLE_EVALUATOR_TYPES)} "
-                f"(exact uppercase); got {evaluator_type!r}"
-            )
         command = [
             "aliyun",
             "agentloop",
@@ -526,6 +646,10 @@ def build_evaluator_command(
             "--name",
             str(definition["name"]),
         ]
+
+    if "config" in definition:
+        definition = copy.deepcopy(definition)
+        definition["config"] = normalize_output_schema_for_config(definition.get("config"))
 
     mappings = (
         ("client_token", "--client-token", False),
@@ -588,6 +712,120 @@ def build_task_command(
         append_optional(command, flag, task.get(key), as_json=True)
     add_connection_flags(command, region, endpoint)
     return command
+
+
+def dataset_multi_ref_needs_inline(task: dict[str, Any]) -> bool:
+    """Detect the dataset + multiple-evaluatorRef combination that triggers the
+    backend record-expansion defect.
+
+    When a dataset batch task references two or more custom saved evaluators via
+    ``evaluatorRef``, the AgentLoop backend expands the data-record set by the
+    number of evaluators (rows x evaluators) and then re-scores every expanded
+    record with every evaluator, so each row is evaluated N times per evaluator.
+    Inlining the evaluator definitions (as the web console does) avoids this.
+    """
+    if str(task.get("data_type", "")).lower() != "dataset":
+        return False
+    evaluators = task.get("evaluators") or []
+    if len(evaluators) < 2:
+        return False
+    return any(
+        evaluator.get("evaluatorRef")
+        and not str(evaluator.get("evaluatorRef")).lower().startswith("builtin.")
+        for evaluator in evaluators
+    )
+
+
+def inline_dataset_evaluator_refs(
+    agent_space: str,
+    task: dict[str, Any],
+    region: str | None,
+    endpoint: str | None,
+) -> bool:
+    """Rewrite custom ``evaluatorRef`` entries of a dataset batch task into inline
+    evaluator definitions to dodge the backend record-expansion defect.
+
+    Fetches each referenced saved evaluator with ``get-evaluator`` (which also
+    verifies it exists) and embeds its ``type`` and ``config`` directly into the
+    task's evaluators list, mirroring the console's inline shape. Built-in
+    evaluators and already-inline evaluators are left untouched. Returns ``True``
+    when at least one evaluator was inlined.
+    """
+    if not dataset_multi_ref_needs_inline(task):
+        return False
+
+    print(
+        "WARNING: this dataset batch task references multiple saved evaluators via "
+        "evaluatorRef. That path triggers a backend defect where the data-record set "
+        "is expanded by the evaluator count (rows x evaluators) and every evaluator "
+        "re-scores each expanded record, duplicating evaluations. Auto-inlining the "
+        "referenced evaluator definitions to match the console behaviour and avoid "
+        "the duplication.",
+        file=sys.stderr,
+    )
+
+    inlined: list[dict[str, Any]] = []
+    for evaluator in task.get("evaluators", []):
+        ref = evaluator.get("evaluatorRef")
+        if not ref or str(ref).lower().startswith("builtin."):
+            inlined.append(evaluator)
+            continue
+
+        config = evaluator.get("config")
+        version_value = config.get("version") if isinstance(config, dict) else None
+        version = str(version_value) if version_value not in (None, "") else None
+
+        response = run_json(
+            get_evaluator_command(
+                agent_space, str(ref), region, endpoint, biz_version=version
+            )
+        )
+        definition = response.get("evaluator") if isinstance(response, dict) else None
+        if not isinstance(definition, dict):
+            raise WorkflowError(
+                f"cannot inline evaluator '{ref}': unexpected get-evaluator response"
+            )
+        evaluator_config = definition.get("config")
+        if not isinstance(evaluator_config, dict):
+            raise WorkflowError(
+                f"cannot inline evaluator '{ref}': get-evaluator returned no config"
+            )
+
+        inline_config = copy.deepcopy(evaluator_config)
+        inline_config.pop("version", None)
+        # The console stores config.variables as a plain list of names; convert
+        # the object form returned by get-evaluator to match that known-good shape.
+        variables = inline_config.get("variables")
+        if isinstance(variables, list):
+            names: list[str] = []
+            convertible = True
+            for item in variables:
+                if isinstance(item, dict) and item.get("name"):
+                    names.append(str(item["name"]))
+                elif isinstance(item, str):
+                    names.append(item)
+                else:
+                    convertible = False
+                    break
+            if convertible:
+                inline_config["variables"] = names
+
+        name = str(definition.get("name") or ref)
+        inline_entry: dict[str, Any] = {
+            "name": name,
+            "type": str(definition.get("type") or "AGENT"),
+            "resultName": evaluator.get("resultName") or name,
+            "resultType": evaluator.get("resultType") or "score",
+            "config": inline_config,
+            "variableMapping": evaluator.get("variableMapping") or {},
+        }
+        if evaluator.get("filters") is not None:
+            inline_entry["filters"] = copy.deepcopy(evaluator["filters"])
+        print(f"Inlined saved evaluator '{ref}' to avoid the dataset expansion defect.")
+        inlined.append(inline_entry)
+
+    task["evaluators"] = inlined
+    return True
 
 
 def iter_dicts(value: Any) -> Iterable[dict[str, Any]]:
@@ -948,6 +1186,15 @@ def command_run(args: argparse.Namespace) -> int:
         for command in evaluator_commands:
             run_cli(command + ["--cli-dry-run"])
         run_cli(task_command + ["--cli-dry-run"])
+        if dataset_multi_ref_needs_inline(task):
+            print(
+                "WARNING: this dataset batch task references multiple saved evaluators "
+                "via evaluatorRef, which triggers a backend defect that duplicates each "
+                "evaluation (rows x evaluators). On --execute the referenced evaluators "
+                "will be auto-inlined to avoid the duplication, so the actual request "
+                "will differ from this preview.",
+                file=sys.stderr,
+            )
         print("Preview completed. Re-run with --execute to apply it.")
         return 0
 
@@ -956,6 +1203,13 @@ def command_run(args: argparse.Namespace) -> int:
 
     for command in evaluator_commands:
         run_json(command, echo_output=True)
+
+    # Work around a backend defect: a dataset batch task that references multiple
+    # custom saved evaluators via evaluatorRef gets its data-record set expanded by
+    # the evaluator count, duplicating every evaluation. Inline those evaluators
+    # (this also verifies they exist) and rebuild the task command from the result.
+    if inline_dataset_evaluator_refs(agent_space, task, region, endpoint):
+        task_command = build_task_command(agent_space, task, region, endpoint)
 
     for reference, version in custom_evaluator_references(task["evaluators"]):
         version_suffix = f"@{version}" if version else ""

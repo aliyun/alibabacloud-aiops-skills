@@ -16,28 +16,63 @@ Do not store credentials in this file. The wrapper uses the active Aliyun CLI pr
 
 ## Evaluator actions
 
-Omit this section when reusing built-in or existing evaluators. Each action is explicit:
+Omit this section when reusing built-in or existing evaluators. Each action is explicit.
+
+StarOps Agent evaluator example (genuine digital-employee, standard mode):
+
+To create a real StarOps Agent evaluator, use `type: "AGENT"` and OMIT both `config.agentEvaluatorMode` and `config.rawPromptBackend`. The backend then stores `agentEvaluatorMode=standard` and runs the standard agent flow. Do NOT set `agentEvaluatorMode: "raw_prompt"` here — that turns it into an LLM judge (see the warning below).
 
 ```json
 {
   "evaluator_actions": [
     {
       "action": "create",
-      "name": "answer-correctness",
+      "name": "answer-quality-agent",
       "type": "AGENT",
-      "metric_name": "correctness",
+      "metric_name": "answer_quality",
       "biz_version": "v1",
-      "description": "Judge answer correctness",
+      "description": "Judge answer quality through the StarOps digital-employee Agent",
       "config": {
         "prompt": "Judge {{input}} and {{output}} and return JSON.",
-        "variables": ["input", "output"]
+        "variables": [{"name": "input"}, {"name": "output"}],
+        "outputSchema": {
+          "score": {"type": "number", "required": true, "range": [0, 1], "rule": "0 to 1 score"},
+          "explanation": {"type": "string", "required": true, "rule": "scoring reason"},
+          "risk_level": {"type": "enum", "required": false, "options": ["low", "medium", "high"], "rule": "business risk level"}
+        }
       }
     }
   ]
 }
 ```
 
-The workflow wrapper accepts the API-supported saved-evaluator types `AGENT`, `LLM`, and `CODE`. Preserve the user's requested type and provide the corresponding type-specific `config`; never silently substitute another type.
+Verify after create with `get-evaluator`: a genuine Agent evaluator reports `agentEvaluatorMode: "standard"`; an LLM-style one reports `agentEvaluatorMode: "raw_prompt"`.
+
+LLM-style evaluator example:
+
+```json
+{
+  "evaluator_actions": [
+    {
+      "action": "create",
+      "name": "answer-quality-llm",
+      "type": "AGENT",
+      "metric_name": "answer_quality",
+      "biz_version": "v1",
+      "config": {
+        "agentEvaluatorMode": "raw_prompt",
+        "rawPromptBackend": "direct_llm",
+        "prompt": "Judge {{input}} and {{output}} and return JSON.",
+        "variables": [{"name": "input"}, {"name": "output"}]
+      }
+    }
+  ]
+}
+```
+
+The workflow wrapper sends saved-evaluator create requests only as `AGENT` or `CODE`. The execution behavior is decided by `config.agentEvaluatorMode`, not by `type` alone. For a genuine StarOps Agent evaluator, use `type: "AGENT"` and OMIT `config.agentEvaluatorMode` (and `config.rawPromptBackend`) so the backend stores `agentEvaluatorMode=standard`. For an LLM-style evaluator, author the spec as `type: "AGENT"` with `config.agentEvaluatorMode: "raw_prompt"` and `config.rawPromptBackend: "direct_llm"`; raw `type: "LLM"` is normalized by the wrapper to this AGENT/direct_llm form. WARNING: `agentEvaluatorMode: "raw_prompt"` always executes as a single-shot LLM judge REGARDLESS of `rawPromptBackend` — `rawPromptBackend: "starops"` is still an LLM-style judge (the task layer resolves it as `type=LLM`), NOT a genuine Agent evaluator. The wrapper's `ensure_raw_prompt_backend_default` only injects `starops` when you already set `agentEvaluatorMode: "raw_prompt"`; omitting the mode leaves config untouched and yields standard Agent mode.
+
+Use `config.outputSchema` for custom result fields. When `outputSchema` is present, `score` and `explanation` are required system fields; the wrapper fills defaults if they are omitted. Additional fields are treated as custom outputs and may use `type: string|number|boolean|enum|array`, `required`, `rule`, and optional `range`, `options`, or `items`.
 
 Use `action: update` with `name` and a new `biz_version` to add a version. Use `action: reuse` or omit the action object when no evaluator mutation is needed.
 
@@ -68,6 +103,8 @@ For `data_type: dataset`, set `config.datasetName` or `config.storeName` to the 
 `data_filter.query` is an optional SQL condition without the `WHERE` keyword, for example `category = 'golden'`. The service combines it with any evaluator-level query, applies `samplingRate`, and appends the `maxRecords` limit. Keep `max_records` and a bounded backfill `window` in normal batch workflows.
 
 Map evaluator variables directly to dataset column names. For a dataset with `input`, `output`, and `expected_output` columns, use those exact names rather than `trace.input` or other trace paths. See `examples/batch-dataset-example.json` for a complete specification.
+
+Multiple saved evaluators over a dataset — duplication defect and auto-inline. When a `data_type: dataset` batch task references two or more custom saved evaluators via `evaluatorRef` (the `evaluator_refs` form), the AgentLoop backend expands the data-record set by the number of evaluators (rows × evaluators) and then re-scores every expanded record with every evaluator. The result is that each row is evaluated N times per evaluator (N = evaluator count), and the run reports `run.evaluatorProgress` with a leading `{"evaluatorName": "", "totalCount": rows × evaluators}` expansion marker plus an inflated `successCount`. The web console avoids this by inlining full evaluator definitions into the task (`evaluatorRef: null` with an embedded `config`). To match that safe behaviour, on `--execute` the wrapper automatically detects this dataset + multiple-`evaluatorRef` combination, fetches each referenced saved evaluator with `get-evaluator`, and inlines its `type` and `config` into the task before creation (a `WARNING` is printed and the actual request will differ from the dry-run preview). Built-in (`Builtin.*`) references and single-evaluator tasks are left unchanged. If you author the task with raw inline `evaluators` yourself, or run one evaluator per task, no expansion occurs and no inlining is needed.
 
 ### Simplified evaluator references
 

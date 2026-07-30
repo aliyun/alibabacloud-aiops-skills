@@ -7,7 +7,7 @@
 | AgentLoop | `aliyun agentloop get-agent-space` | Get AgentSpace details and resolve SLS project |
 | AgentLoop | `aliyun agentloop list-evaluators` | List saved or built-in evaluators |
 | AgentLoop | `aliyun agentloop get-evaluator` | Get evaluator details or validate a reference |
-| AgentLoop | `aliyun agentloop create-evaluator` | Create a saved evaluator (AGENT, LLM, or CODE) |
+| AgentLoop | `aliyun agentloop create-evaluator` | Create a saved evaluator (genuine StarOps Agent uses AGENT standard mode by omitting agentEvaluatorMode/rawPromptBackend; LLM-style uses AGENT + raw_prompt/direct_llm; CODE also supported) |
 | AgentLoop | `aliyun agentloop update-evaluator` | Update evaluator metadata or add a version |
 | AgentLoop | `aliyun agentloop delete-evaluator` | Delete an evaluator version or whole evaluator |
 | AgentLoop | `aliyun agentloop list-evaluator-skills` | List skills attached to an evaluator |
