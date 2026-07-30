@@ -1,0 +1,112 @@
+# {{JOB_NAME}} — Alibaba Cloud Flink Deployment Artifacts
+
+For a new project, place this file in the project root. For an existing project, integrate these sections into its established deployment documentation. Replace every `{{...}}` value and remove unused conditional files or rows before delivery. Do not place secret values in the project artifacts.
+
+## Directory Structure
+
+```text
+{{PROJECT_ROOT}}/
+├── README.md
+├── src/
+│   └── {{JOB_CODE}}
+├── scripts/
+│   ├── package_code.sh          # Packages modular job code into the job ZIP
+│   └── build_dependencies.sh    # Builds third-party packages into deps.zip
+├── requirements.txt             # Include only for third-party Python packages
+└── artifacts/
+    ├── {{JOB_ARCHIVE}}          # Include for modular code after packaging
+    └── deps.zip                 # Include only after a successful dependency build
+```
+
+`scripts/package_code.sh` is required only for modular jobs. It packages deployable project code while preserving Python import paths at the ZIP root; it excludes third-party dependencies, environments, caches, tests not used at runtime, and generated artifacts.
+
+`scripts/build_dependencies.sh` is required only when the job uses Python packages that are not pre-installed in VVR. It uses the `quay.io/pypa/manylinux_2_28_x86_64` Docker image to install the pinned packages for the confirmed Python version, then packages the contents of `__pypackages__` as `artifacts/deps.zip`.
+
+Describe any runtime files or JARs that are delivered outside this core tree.
+
+## Confirmed Target
+
+| Item | Value |
+|---|---|
+| Region / workspace / namespace | {{TARGET_LOCATION}} |
+| VVR engine / base Flink / JDK | {{ENGINE_IDENTITY}} |
+| Python version | {{PYTHON_VERSION}} (must be 3.9, 3.10, or 3.11) |
+| CPU architecture | {{CPU_ARCHITECTURE}} |
+| Target glibc baseline | {{TARGET_GLIBC}} |
+| Deployment mode | {{STREAM_OR_BATCH}} |
+| Deployment target | {{RESOURCE_QUEUE_OR_SESSION_CLUSTER}} |
+
+## Build the Upload Artifacts
+
+### Modular code only
+
+Run `bash scripts/package_code.sh src artifacts/{{JOB_ARCHIVE}} {{ENTRY_MODULE}}`, then inspect the archive with `python3 -m zipfile -l artifacts/{{JOB_ARCHIVE}}`.
+
+The archive root must contain the import path for `{{ENTRY_MODULE}}`. Upload this archive as **Python File Path (Python 文件地址)**.
+
+### Third-party Python packages only
+
+Confirm an x86-64 target, a glibc baseline compatible with manylinux 2.28, and the Python version before running:
+
+Run `bash scripts/build_dependencies.sh {{PYTHON_VERSION}} requirements.txt artifacts/deps.zip`, then inspect the archive with `python3 -m zipfile -l artifacts/deps.zip`.
+
+The script uses the `quay.io/pypa/manylinux_2_28_x86_64` Docker image. Upload `artifacts/deps.zip` as **Python Libraries**. Do not claim that `deps.zip` exists unless the Docker build completed successfully.
+
+## Upload Mapping
+
+| Local artifact | Console field | Runtime behavior |
+|---|---|---|
+| `src/{{SINGLE_JOB_FILE}}` or `artifacts/{{JOB_ARCHIVE}}` | Python File Path (Python 文件地址) | Main Python job file or modular code ZIP |
+| `artifacts/deps.zip` | Python Libraries | Added to the Python worker `PYTHONPATH` |
+| {{PYTHON_ARCHIVES}} | Python Archives | Extracted in the Python worker working directory |
+| {{ADDITIONAL_DEPENDENCY_FILES}} | Additional Dependency Files (附加依赖文件) | Available under `/flink/usrlib` |
+
+Upload the applicable resources in **File Management** before creating the deployment.
+
+## Deployment Parameters
+
+| Console field | Value | Notes |
+|---|---|---|
+| Deployment mode (部署模式) | 流模式 | Stream mode is recommended |
+| Deployment name (部署名称) | {{DEPLOYMENT_NAME}} | Confirmed job name |
+| Engine version (引擎版本) | {{ENGINE_VERSION}} | Confirmed VVR version |
+| Python File Path (Python 文件地址) | {{PYTHON_FILE_PATH}} | Uploaded `.py` or code `.zip` |
+| Entry Module | {{ENTRY_MODULE_OR_EMPTY}} | Required for `.zip`; empty for `.py` |
+| Entry Point Main Arguments | {{ENTRY_ARGUMENTS}} | Use `${secret_values.<VARIABLE_NAME>}` references here; keep credential values outside project files |
+| Python Libraries | {{PYTHON_LIBRARIES}} | Third-party wheels or `deps.zip` |
+| Python Archives | {{PYTHON_ARCHIVES}} | Custom environment or data archives |
+| Additional Dependency Files (附加依赖文件) | {{ADDITIONAL_DEPENDENCY_FILES}} | Job files, data files, configuration, or connector JARs |
+
+If this job uses a credential, first add it with the approved variable name under **Security > Variables (安全服务 > 变量管理)**. Then configure `--<argument-name> ${secret_values.<VARIABLE_NAME>}` in **Entry Point Main Arguments**. This expression is valid only in that console field. The Python job parses the selected argument name as a normal entry-point argument; project files record only the argument and variable names.
+
+For Python 3.10 or 3.11 on supported VVR releases, document the confirmed runtime settings:
+
+```yaml
+python.executable: python3.10 (or python3.11)
+python.client.executable: python3.10 (or python3.11)
+```
+
+If connector JARs are attached, document the confirmed `pipeline.classpaths` value here: `{{PIPELINE_CLASSPATHS}}`.
+
+If the user uses or mentions LLM functions (llm.predict or llm.ai_* on DataFrame), guide the user to consider Flink AI Service (Flink AI 服务) for zero-configuration calls to managed models, and include the official documentation link: https://help.aliyun.com/zh/flink/realtime-flink/flink-ai-service.
+
+## Deploy and Start
+
+1. Upload every mapped artifact in File Management.
+2. Open **Operations Center > Job Operations > Deploy Job > Python Job**.
+3. Fill every parameter above and deploy the job.
+4. Review deployment details and target-only checks.
+5. Start the deployment separately when it is approved to go online.
+
+## Verification and Open Checks
+
+- Local checks completed: {{LOCAL_CHECKS}}
+- Target VVR checks: {{TARGET_CHECKS}}
+- Table fallbacks and rationale: {{TABLE_FALLBACKS}}
+- Known limitations and rollback owner: {{LIMITATIONS_AND_OWNER}}
+
+## Official Documentation
+
+- Python job development: https://help.aliyun.com/zh/flink/realtime-flink/user-guide/develop-a-pyflink-job
+- Python dependencies: https://help.aliyun.com/zh/flink/realtime-flink/developer-reference/use-python-dependencies
+- Create a deployment: https://help.aliyun.com/zh/flink/realtime-flink/user-guide/create-a-deployment
