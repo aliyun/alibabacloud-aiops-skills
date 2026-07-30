@@ -1,0 +1,3 @@
+# No external dependencies required.
+# These scripts use Python 3.6+ standard library only:
+# json, re, sys, os, argparse, zipfile, gzip, statistics
