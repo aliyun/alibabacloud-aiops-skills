@@ -1,0 +1,48 @@
+# Scenario matrix
+#
+# Source: loongcollector-oncall/knowledge/base/collection-config/recipes.md (scenario/param matrix).
+# Infer `scenario` from the user's description; if evidence is insufficient, ASK — do not default.
+# machine_identify_type (ip|userdefined) only after the user confirms.
+# This skill assumes the collector is already installed; these matrices drive config.create/onboarding.cloud.
+
+scenarios:
+  host:
+    signals: "ECS/host/server/Windows/Linux; host file path; no container/k8s semantics"
+    required: [region, project, logstore, config_name, log_path, machine_group_name, machine_identify_type, machine_identifiers]
+    recommended: [parse_mode, sample_log, multiline, index_fields, logstore_params]
+    input_hint: input_file
+    extra_checks: "Linux/Win not mixed in a group; user identity file; agent version & heartbeat"
+
+  docker_stdio:
+    signals: "docker stdout/stderr; no k8s semantics"
+    required: [region, project, logstore, config_name, machine_group_name, machine_identify_type, machine_identifiers, container_filters]
+    recommended: [sample_log, parse_mode, index_fields]
+    input_hint: input_container_stdio
+    extra_checks: "json-file log driver; container lifecycle/rotation"
+
+  docker_file:
+    signals: "container file logs / mounted path"
+    required: [region, project, logstore, config_name, log_path, machine_group_name, machine_identify_type, machine_identifiers, container_filters]
+    recommended: [sample_log, parse_mode, index_fields]
+    input_hint: input_file
+
+  k8s_stdio:
+    signals: "k8s/ack/namespace/pod/container; collect stdout"
+    required: [region, project, logstore, config_name, cluster_id, container_filters]
+    recommended: [deployment_mode, sample_log, index_fields]
+    input_hint: input_container_stdio
+    extra_checks: "DaemonSet/Sidecar; aliUid/region/net; node drift for low-replica pods"
+
+  k8s_file:
+    signals: "k8s + container file path / mounted volume"
+    required: [region, project, logstore, config_name, cluster_id, log_path, container_filters]
+    recommended: [deployment_mode, sample_log, index_fields]
+    input_hint: input_file
+
+  k8s_crd:
+    note: "management path (ClusterAliyunPipelineConfig), not a 4th deployment form"
+    detection_only: true                  # CRD write is out of scope; only detect double-write
+    signals: "AliyunPipelineConfig/CRD/GitOps/IaC; kubectl apply"
+
+cross_account_region:
+  note: "cross-account/region needs explicit network type and user identity confirmation; ask before proceeding"

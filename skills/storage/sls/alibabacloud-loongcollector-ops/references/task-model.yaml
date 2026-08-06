@@ -1,0 +1,63 @@
+# Unified task object
+#
+# A machine-parsable object that tracks one capability execution end to end.
+# Source shape: design 5.5 (adapted from VibeOps collection_job.schema.yaml).
+#
+# Constraints:
+#   - scope MUST NOT change silently once execution begins (fresh confirmation required).
+#   - mode=plan MUST NOT call any write command.
+#   - executed_writes MUST correspond 1:1 to successful write tool calls.
+#   - idempotent_skips records verified no-op steps separately; they are not writes.
+#   - each check has id/expected/actual/status/evidence.
+#   - if Lens is unavailable, record the reason and alternative evidence; never drop the status.
+
+request:
+  id: "<session-scoped-id>"            # 32-char lowercase hex session id
+  capability: "config.modify|config.create|onboarding.cloud|machine_group.manage|lens.query|troubleshoot.basic"
+  mode: "execute|plan"
+
+scope:                                  # fixed for the request
+  profile: "<aliyun-cli-profile>"
+  account_id: "<resolved-account>"
+  region: "<region>"
+  project: "<project>"
+  logstore: "<optional>"
+
+source:
+  scenario: "host|docker|k8s"
+  type: "host_file|docker_stdio|docker_file|k8s_stdio|k8s_file"
+  target: {}
+
+collection:
+  machine_group: {}                     # name, identify_type (ip|userdefined), members
+  pipeline: {}                          # inputs/processors/flushers/global
+  index: {}                             # keys + line
+
+observability:
+  lens:
+    status: "auto_discovered|user_provided|console_guided|unavailable"
+    project: "<optional>"
+    logstore: "<optional>"
+    region: "<optional>"
+    topics: []                          # logtail_alarm|logtail_status|loongcollector_metric|logtail_profile|logtail_metric
+  collector_version: "<resolved-or-unknown>"
+
+execution:
+  adapters: ["aliyun_sls", "local_validator"]   # no ssh/kubectl
+  risk_level: "R0|R1|R2|R3|R4"
+  dry_run: "planned|passed|skipped_idempotent|failed"
+  approval: {}                          # level, confirmed, timestamp
+  snapshot: {}                          # pre-write get-* objects + bindings
+
+result:
+  executed_writes: []                   # 1:1 with successful write commands
+  idempotent_skips: []                  # command, verified_via, exact [Idempotent-Skip] note
+  checks: []                            # [{id: U1.., expected, actual, status, evidence}]
+  evidence:
+    heartbeat: {}                       # lastHeartbeatTime, version, status, attempted, error, resource_status
+    binding: {}                         # config_name, machine_group, status, attempted, error, resource_status
+    alarm: {}                           # alarm_type, alarm_message, query_result, time_range, attempted, error, resource_status
+    pipeline: {}                        # topic, data_count, time_range, progress, attempted, error, resource_status
+    collection: {}                      # data_count, time_range, status, reason, attempted, error, resource_status
+  rollback: {}                          # needed, executed, snapshot_ref/inverse
+  status: "planned|succeeded|blocked|failed|rolled_back"

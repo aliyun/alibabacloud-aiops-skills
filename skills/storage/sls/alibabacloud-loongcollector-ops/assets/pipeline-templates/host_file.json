@@ -1,0 +1,29 @@
+{
+  "_template": "host_file",
+  "_description": "Host / ECS file log (single-line JSON body). Source: recipes.md host-json-native-v1. Replace <...> placeholders; render/validate with scripts/ before apply.",
+  "_scenario": "host",
+  "_native_first": true,
+  "configName": "<config_name>",
+  "logSample": "{\"level\":\"INFO\",\"trace_id\":\"abc\",\"msg\":\"ok\"}",
+  "global": { "TopicType": "machine_group_topic" },
+  "inputs": [
+    {
+      "Type": "input_file",
+      "FilePaths": ["/var/log/app/*.log"],
+      "_multiline_hint": "for multi-line (e.g. Java stack): add Multiline{Mode:custom,StartPattern:'^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}',UnmatchedContentTreatment:single_line}"
+    }
+  ],
+  "processors": [
+    {
+      "Type": "processor_parse_json_native",
+      "SourceKey": "content",
+      "KeepingSourceWhenParseFail": true,
+      "RenamedSourceKey": "raw_message"
+    }
+  ],
+  "flushers": [
+    { "Type": "flusher_sls", "Logstore": "<target_logstore>" }
+  ],
+  "_index_hint": "emit index update in the SAME batch for new fields (e.g. status/status_code -> long; level -> text). See references/index-coupling.md.",
+  "_cli": "aliyun sls create-logtail-pipeline-config --project <p> --config-name <config_name> --inputs '<inputs-json>' --processors '<processors-json>' --flushers '<flushers-json>' --global '{\"TopicType\":\"machine_group_topic\"}' --region <r> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-loongcollector-ops/<session-id>"
+}

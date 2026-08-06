@@ -1,0 +1,58 @@
+# Alarm code catalog & handling cards
+#
+# Source: knowledge/base/loongcollector/self-monitoring-metrics.md (alarm_type catalog),
+#         knowledge/troubleshooting/user/collection-playbooks.md (handling cards).
+# Rule: after matching an alarm_type you MUST read alarm_message before concluding.
+#       Unknown codes -> consult official docs, never explain from memory.
+# Reporting cycle: the collector reports errors ~every 10 minutes; "no alarms" must state the window.
+#
+# This skill focuses on no-data and heartbeat. The high-priority cards below are the
+# ones most likely to surface during no-data triage; the fuller delay/duplicate
+# handling belongs to advanced troubleshooting (out of scope).
+
+high_priority_cards:
+  MULTI_CONFIG_MATCH_ALARM:
+    severity: critical
+    meaning: "A file matched by multiple configs; only one takes effect (best and oldest match)."
+    fix_order:                         # fixed order, do NOT reorder or omit labels
+      - "Plan 1 (default/recommended): on the CURRENT target config set input_file.AllowingIncludedByMultiConfigs=true. diff -> confirm -> execute."
+      - "Plan 2: ask the user whether to take the conflicting old config offline (only after confirmation)."
+      - "Plan 3 (only if the user explicitly asks to change paths): path rework."
+    forbidden: "Do NOT default to deleting a config or changing the collection path; writing 'change path' as Plan 1/2 is a violation."
+
+  INVALID_PROCESSOR_TYPE:
+    severity: critical
+    meaning: "Plugin incompatible with collector version."
+    fix_order:
+      - "Read logtail_alarm alarm_message for evidence."
+      - "Read binary/version (list-machines or Lens logtail_status.version)."
+      - "Apply plugin version gate (plugin-version-gates.yaml): major<2 forbids processor_spl and processor_*_native (use 1.x extended chain e.g. processor_json)."
+      - "Config diff -> confirm -> update; SPL goes through a dedicated SPL validator, never hand-written."
+      - "Acceptance."
+
+  DROP_LOG_ALARM:
+    severity: critical
+    meaning: "Reader queue overflow, data dropped, usually caused by sustained delay."
+    fix_order:
+      - "Locate by: read queue -> processing performance -> send network -> quota."
+      - "Do NOT just add shards."
+    note: "In-depth delay handling is out of scope; report the evidence and the single blocking next step."
+
+catalog_reference:                     # frequently seen alarm_type -> next step (read alarm_message first)
+  CATEGORY_CONFIG_ALARM:      { severity: critical, next: "invalid config; combine with alarm_message and invalid-config patterns; diff + rollback if needed" }
+  STAT_LIMIT_ALARM:           { severity: critical, next: "too many files in dir; narrow FilePaths/MaxDirSearchDepth" }
+  DIR_EXCEED_LIMIT_ALARM:     { severity: critical, next: "too many watched dirs; narrow paths or split config" }
+  SEND_QUOTA_EXCEED_ALARM:    { severity: critical, next: "send rate over limit; increase logstore shards (delay path, out of scope)" }
+  REGEX_UNMATCHED_ALARM:      { severity: high,     next: "processor regex miss; check IC-002 self-collection recursion; safe defaults" }
+  PARSE_LOG_FAIL_ALARM:       { severity: warning,  next: "parse failure; review processor config vs sample" }
+  SPLIT_LOG_FAIL_ALARM:       { severity: high,     next: "multiline start regex mismatch; validate against sample" }
+  SKIP_READ_LOG_ALARM:        { severity: warning,  next: "rotated file exceeds TailSizeKB; backfill is out of scope" }
+  REGISTER_INOTIFY_FAIL_ALARM: { severity: high,     next: "inotify register fail; host fs.inotify.max_user_watches (user-run check)" }
+  CONFIG_UPDATE_ALARM:        { severity: high,     next: "config pull/update fail; check network + region" }
+  LOGFILE_PERMINSSION_ALARM:  { severity: high,     next: "file not readable; check file/dir permission (user-run check)" }
+  DISCARD_DATA_ALARM:         { severity: critical, next: "cpu/network flow control drop; raise limits or reduce volume (out of scope)" }
+
+docs:
+  - https://help.aliyun.com/zh/sls/loongcollector-collection-exception-troubleshooting
+  - https://developer.aliyun.com/article/1488818
+  - https://developer.aliyun.com/article/1488817
