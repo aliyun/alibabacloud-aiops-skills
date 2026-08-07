@@ -1,0 +1,2281 @@
+{
+  "built_at": "2026-07-28T06:03:57Z",
+  "source": {
+    "sdk_repo": "dataphin-openapi-sdk (branches v6.0.0/v6.1.0/v6.2.0/v6.3.0)",
+    "sdk_api_namespace": "com.aliyuncs.dataphin_public.model.v20230630",
+    "gateway_meta": "https://api.aliyun.com/meta/v1/products/dataphin-public/versions/2023-06-30/api-docs.json",
+    "cli_plugin": "aliyun-cli-dataphin-public",
+    "note": "channel=cli_command iff API published on public-cloud gateway; cli_command name taken from installed plugin when available, else derived from PascalCase."
+  },
+  "api_version": "2023-06-30",
+  "versions": [
+    "6.0",
+    "6.1",
+    "6.2",
+    "6.3"
+  ],
+  "version_clamp": {
+    "normalize": "major.minor",
+    "above_max": "6.3",
+    "below_min": "6.0"
+  },
+  "counts": {
+    "6.0": 338,
+    "6.1": 342,
+    "6.2": 370,
+    "6.3": 383,
+    "gateway_published": 333,
+    "cli_command_total": 333,
+    "sdk_only_at_max": 50
+  },
+  "apis": [
+    {
+      "name": "AddDataServiceAppMember",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "add-data-service-app-member"
+    },
+    {
+      "name": "AddDataServiceProjectMember",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "add-data-service-project-member"
+    },
+    {
+      "name": "AddProjectMember",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "add-project-member"
+    },
+    {
+      "name": "AddRegisterLineage",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "add-register-lineage"
+    },
+    {
+      "name": "AddTenantMembers",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "add-tenant-members"
+    },
+    {
+      "name": "AddTenantMembersBySourceUser",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "add-tenant-members-by-source-user"
+    },
+    {
+      "name": "AddUserGroupMember",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "add-user-group-member"
+    },
+    {
+      "name": "ApplyDataServiceApi",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "apply-data-service-api"
+    },
+    {
+      "name": "ApplyDataServiceApp",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "apply-data-service-app"
+    },
+    {
+      "name": "AssignQualityRuleOfAllRuleScopeSchedules",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "assign-quality-rule-of-all-rule-scope-schedules"
+    },
+    {
+      "name": "AsyncCheckStreamRawPlan",
+      "min_version": "6.0",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "AsyncGetStreamRawPlan",
+      "min_version": "6.0",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "BatchCreateKgEntity",
+      "min_version": "6.2",
+      "channel": "cli_command",
+      "cli_command": "batch-create-kg-entity"
+    },
+    {
+      "name": "BatchCreateKgRelation",
+      "min_version": "6.2",
+      "channel": "cli_command",
+      "cli_command": "batch-create-kg-relation"
+    },
+    {
+      "name": "CancelTask",
+      "min_version": "6.0",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "CheckComputeSourceConnectivity",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "check-compute-source-connectivity"
+    },
+    {
+      "name": "CheckComputeSourceConnectivityById",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "check-compute-source-connectivity-by-id"
+    },
+    {
+      "name": "CheckDataSourceConnectivity",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "check-data-source-connectivity"
+    },
+    {
+      "name": "CheckDataSourceConnectivityById",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "check-data-source-connectivity-by-id"
+    },
+    {
+      "name": "CheckProjectHasDependency",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "check-project-has-dependency"
+    },
+    {
+      "name": "CheckResourcePermission",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "check-resource-permission"
+    },
+    {
+      "name": "CheckVerificationCodeCorrectForFinance",
+      "min_version": "6.0",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "CloneStreamMetaTable",
+      "min_version": "6.0",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "CloseJdbcConnection",
+      "min_version": "6.0",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "CopyStreamJob",
+      "min_version": "6.0",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "CreateAdHocFile",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "create-ad-hoc-file"
+    },
+    {
+      "name": "CreateBasicProject",
+      "min_version": "6.3",
+      "channel": "cli_command",
+      "cli_command": "create-basic-project"
+    },
+    {
+      "name": "CreateBatchTask",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "create-batch-task"
+    },
+    {
+      "name": "CreateBizEntity",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "create-biz-entity"
+    },
+    {
+      "name": "CreateBizMetric",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "create-biz-metric"
+    },
+    {
+      "name": "CreateBizUnit",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "create-biz-unit"
+    },
+    {
+      "name": "CreateComputeSource",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "create-compute-source"
+    },
+    {
+      "name": "CreateDataDomain",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "create-data-domain"
+    },
+    {
+      "name": "CreateDataServiceApi",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "create-data-service-api"
+    },
+    {
+      "name": "CreateDataServiceApp",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "create-data-service-app"
+    },
+    {
+      "name": "CreateDataServiceAppGroup",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "create-data-service-app-group"
+    },
+    {
+      "name": "CreateDataSource",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "create-data-source"
+    },
+    {
+      "name": "CreateDataset",
+      "min_version": "6.2",
+      "channel": "cli_command",
+      "cli_command": "create-dataset"
+    },
+    {
+      "name": "CreateDevProdProject",
+      "min_version": "6.3",
+      "channel": "cli_command",
+      "cli_command": "create-dev-prod-project"
+    },
+    {
+      "name": "CreateDirectory",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "create-directory"
+    },
+    {
+      "name": "CreateFirstAPI",
+      "min_version": "6.3",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "CreateIfNotExistsBizUnit",
+      "min_version": "6.0",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "CreateJdbcConnection",
+      "min_version": "6.0",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "CreateKgEntity",
+      "min_version": "6.2",
+      "channel": "cli_command",
+      "cli_command": "create-kg-entity"
+    },
+    {
+      "name": "CreateKgRelation",
+      "min_version": "6.2",
+      "channel": "cli_command",
+      "cli_command": "create-kg-relation"
+    },
+    {
+      "name": "CreateNodeSupplement",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "create-node-supplement"
+    },
+    {
+      "name": "CreatePipeline",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "create-pipeline"
+    },
+    {
+      "name": "CreatePipelineByAsync",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "create-pipeline-by-async"
+    },
+    {
+      "name": "CreatePipelineNode",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "create-pipeline-node"
+    },
+    {
+      "name": "CreateResource",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "create-resource"
+    },
+    {
+      "name": "CreateRowPermission",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "create-row-permission"
+    },
+    {
+      "name": "CreateSecurityClassify",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "create-security-classify"
+    },
+    {
+      "name": "CreateSecurityClassifyCatalog",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "create-security-classify-catalog"
+    },
+    {
+      "name": "CreateSecurityIdentifyResult",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "create-security-identify-result"
+    },
+    {
+      "name": "CreateSecurityLevel",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "create-security-level"
+    },
+    {
+      "name": "CreateStandard",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "create-standard"
+    },
+    {
+      "name": "CreateStandardLookupTable",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "create-standard-lookup-table"
+    },
+    {
+      "name": "CreateStandardMapping",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "create-standard-mapping"
+    },
+    {
+      "name": "CreateStandardRelations",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "create-standard-relations"
+    },
+    {
+      "name": "CreateStandardSet",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "create-standard-set"
+    },
+    {
+      "name": "CreateStandardTemplate",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "create-standard-template"
+    },
+    {
+      "name": "CreateStandardWordRoot",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "create-standard-word-root"
+    },
+    {
+      "name": "CreateStreamBatchJobMapping",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "create-stream-batch-job-mapping"
+    },
+    {
+      "name": "CreateStreamMetaTable",
+      "min_version": "6.0",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "CreateTenant",
+      "min_version": "6.0",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "CreateTenantRole",
+      "min_version": "6.0",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "CreateUdf",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "create-udf"
+    },
+    {
+      "name": "CreateUserGroup",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "create-user-group"
+    },
+    {
+      "name": "CreateWorkFlowByJson",
+      "min_version": "6.2",
+      "channel": "cli_command",
+      "cli_command": "create-work-flow-by-json"
+    },
+    {
+      "name": "DeleteAdHocFile",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "delete-ad-hoc-file"
+    },
+    {
+      "name": "DeleteBatchTask",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "delete-batch-task"
+    },
+    {
+      "name": "DeleteBizEntity",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "delete-biz-entity"
+    },
+    {
+      "name": "DeleteBizMetric",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "delete-biz-metric"
+    },
+    {
+      "name": "DeleteBizUnit",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "delete-biz-unit"
+    },
+    {
+      "name": "DeleteComputeSource",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "delete-compute-source"
+    },
+    {
+      "name": "DeleteDataDomain",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "delete-data-domain"
+    },
+    {
+      "name": "DeleteDataServiceApp",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "delete-data-service-app"
+    },
+    {
+      "name": "DeleteDataServiceAppGroup",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "delete-data-service-app-group"
+    },
+    {
+      "name": "DeleteDataSource",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "delete-data-source"
+    },
+    {
+      "name": "DeleteDataset",
+      "min_version": "6.2",
+      "channel": "cli_command",
+      "cli_command": "delete-dataset"
+    },
+    {
+      "name": "DeleteDirectory",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "delete-directory"
+    },
+    {
+      "name": "DeleteKgEntity",
+      "min_version": "6.2",
+      "channel": "cli_command",
+      "cli_command": "delete-kg-entity"
+    },
+    {
+      "name": "DeleteKgRelation",
+      "min_version": "6.2",
+      "channel": "cli_command",
+      "cli_command": "delete-kg-relation"
+    },
+    {
+      "name": "DeleteProject",
+      "min_version": "6.3",
+      "channel": "cli_command",
+      "cli_command": "delete-project"
+    },
+    {
+      "name": "DeleteQualityRules",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "delete-quality-rules"
+    },
+    {
+      "name": "DeleteQualitySchedules",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "delete-quality-schedules"
+    },
+    {
+      "name": "DeleteQualityTemplates",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "delete-quality-templates"
+    },
+    {
+      "name": "DeleteQualityWatches",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "delete-quality-watches"
+    },
+    {
+      "name": "DeleteRegisterLineage",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "delete-register-lineage"
+    },
+    {
+      "name": "DeleteResource",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "delete-resource"
+    },
+    {
+      "name": "DeleteRowPermission",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "delete-row-permission"
+    },
+    {
+      "name": "DeleteSecurityClassify",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "delete-security-classify"
+    },
+    {
+      "name": "DeleteSecurityClassifyCatalog",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "delete-security-classify-catalog"
+    },
+    {
+      "name": "DeleteSecurityIdentifyResults",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "delete-security-identify-results"
+    },
+    {
+      "name": "DeleteSecurityLevel",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "delete-security-level"
+    },
+    {
+      "name": "DeleteStandard",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "delete-standard"
+    },
+    {
+      "name": "DeleteStandardInValidMapping",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "delete-standard-invalid-mapping"
+    },
+    {
+      "name": "DeleteStandardLookupTable",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "delete-standard-lookup-table"
+    },
+    {
+      "name": "DeleteStandardRelations",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "delete-standard-relations"
+    },
+    {
+      "name": "DeleteStandardSet",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "delete-standard-set"
+    },
+    {
+      "name": "DeleteStandardValidMapping",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "delete-standard-valid-mapping"
+    },
+    {
+      "name": "DeleteStandardWordRoot",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "delete-standard-word-root"
+    },
+    {
+      "name": "DeleteTenantBySoft",
+      "min_version": "6.0",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "DeleteUdf",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "delete-udf"
+    },
+    {
+      "name": "DeleteUserGroup",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "delete-user-group"
+    },
+    {
+      "name": "ExecKgCypher",
+      "min_version": "6.2",
+      "channel": "cli_command",
+      "cli_command": "exec-kg-cypher"
+    },
+    {
+      "name": "ExecSqlByJdbc",
+      "min_version": "6.0",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "ExecuteAdHocTask",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "execute-ad-hoc-task"
+    },
+    {
+      "name": "ExecuteManualNode",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "execute-manual-node"
+    },
+    {
+      "name": "ExecuteTriggerNode",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "execute-trigger-node"
+    },
+    {
+      "name": "ExportKgSchema",
+      "min_version": "6.1",
+      "channel": "cli_command",
+      "cli_command": "export-kg-schema"
+    },
+    {
+      "name": "FetchTaskResult",
+      "min_version": "6.0",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "FixData",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "fix-data"
+    },
+    {
+      "name": "GenerateAccessTicket",
+      "min_version": "6.0",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "GetAccountByRowPermissionId",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-account-by-row-permission-id"
+    },
+    {
+      "name": "GetAdHocFile",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-ad-hoc-file"
+    },
+    {
+      "name": "GetAdHocTaskLog",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-ad-hoc-task-log"
+    },
+    {
+      "name": "GetAdHocTaskResult",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-ad-hoc-task-result"
+    },
+    {
+      "name": "GetAlbumById",
+      "min_version": "6.0",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "GetAlbumListByGroupId",
+      "min_version": "6.0",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "GetAlertEvent",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-alert-event"
+    },
+    {
+      "name": "GetAssetAttributes",
+      "min_version": "6.3",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "GetAssetMappingRelations",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-asset-mapping-relations"
+    },
+    {
+      "name": "GetAssetTypeAttributeCodes",
+      "min_version": "6.3",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "GetBatchTaskInfo",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-batch-task-info"
+    },
+    {
+      "name": "GetBatchTaskInfoByVersion",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-batch-task-info-by-version"
+    },
+    {
+      "name": "GetBatchTaskUdfLineages",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-batch-task-udf-lineages"
+    },
+    {
+      "name": "GetBatchTaskVersions",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-batch-task-versions"
+    },
+    {
+      "name": "GetBatchTemplateVersions",
+      "min_version": "6.2",
+      "channel": "cli_command",
+      "cli_command": "get-batch-template-versions"
+    },
+    {
+      "name": "GetBelongAssetMapping",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-belong-asset-mapping"
+    },
+    {
+      "name": "GetBizEntityInfo",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-biz-entity-info"
+    },
+    {
+      "name": "GetBizEntityInfoByVersion",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-biz-entity-info-by-version"
+    },
+    {
+      "name": "GetBizMetricByName",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-biz-metric-by-name"
+    },
+    {
+      "name": "GetBizUnitInfo",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-biz-unit-info"
+    },
+    {
+      "name": "GetCatalogAssetDetails",
+      "min_version": "6.1",
+      "channel": "cli_command",
+      "cli_command": "get-catalog-asset-details"
+    },
+    {
+      "name": "GetCheckConnectivityJobs",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-check-connectivity-jobs"
+    },
+    {
+      "name": "GetClusterQueueInfoByEnv",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-cluster-queue-info-by-env"
+    },
+    {
+      "name": "GetComputeSource",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-compute-source"
+    },
+    {
+      "name": "GetDataAssetsGovernObject",
+      "min_version": "6.3",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "GetDataDomainInfo",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-data-domain-info"
+    },
+    {
+      "name": "GetDataServiceApiCallSummary",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-data-service-api-call-summary"
+    },
+    {
+      "name": "GetDataServiceApiCallTrend",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-data-service-api-call-trend"
+    },
+    {
+      "name": "GetDataServiceApiDocument",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-data-service-api-document"
+    },
+    {
+      "name": "GetDataServiceApiErrorImpact",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-data-service-api-error-impact"
+    },
+    {
+      "name": "GetDataServiceApiGroups",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-data-service-api-groups"
+    },
+    {
+      "name": "GetDataServiceApp",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-data-service-app"
+    },
+    {
+      "name": "GetDataServiceAppAuthorizedUsers",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-data-service-app-authorized-users"
+    },
+    {
+      "name": "GetDataServiceAppGroups",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-data-service-app-groups"
+    },
+    {
+      "name": "GetDataServiceAppMembers",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-data-service-app-members"
+    },
+    {
+      "name": "GetDataServiceAppsByGroupId",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-data-service-apps-by-group-id"
+    },
+    {
+      "name": "GetDataServiceAuthorizedAppsByGroupId",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-data-service-authorized-apps-by-group-id"
+    },
+    {
+      "name": "GetDataServiceAuthorizedProjects",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-data-service-authorized-projects"
+    },
+    {
+      "name": "GetDataServiceMyProjects",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-data-service-my-projects"
+    },
+    {
+      "name": "GetDataServiceProjectAddableUsers",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-data-service-project-addable-users"
+    },
+    {
+      "name": "GetDataSourceByCatalogForJdbc",
+      "min_version": "6.0",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "GetDataSourceDependencies",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-data-source-dependencies"
+    },
+    {
+      "name": "GetDataset",
+      "min_version": "6.2",
+      "channel": "cli_command",
+      "cli_command": "get-dataset"
+    },
+    {
+      "name": "GetDevObjectDependency",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-dev-object-dependency"
+    },
+    {
+      "name": "GetDirectoryTree",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-directory-tree"
+    },
+    {
+      "name": "GetFileStorageCredential",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-file-storage-credential"
+    },
+    {
+      "name": "GetInstanceDownStream",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-instance-down-stream"
+    },
+    {
+      "name": "GetInstanceUpDownStream",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-instance-up-down-stream"
+    },
+    {
+      "name": "GetKgEntity",
+      "min_version": "6.2",
+      "channel": "cli_command",
+      "cli_command": "get-kg-entity"
+    },
+    {
+      "name": "GetKgNeighbor",
+      "min_version": "6.2",
+      "channel": "cli_command",
+      "cli_command": "get-kg-neighbor"
+    },
+    {
+      "name": "GetKgRelation",
+      "min_version": "6.2",
+      "channel": "cli_command",
+      "cli_command": "get-kg-relation"
+    },
+    {
+      "name": "GetKgSchemaPublishResult",
+      "min_version": "6.2",
+      "channel": "cli_command",
+      "cli_command": "get-kg-schema-publish-result"
+    },
+    {
+      "name": "GetLatestSubmitDetail",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-latest-submit-detail"
+    },
+    {
+      "name": "GetMyRoles",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-my-roles"
+    },
+    {
+      "name": "GetMyTenants",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-my-tenants"
+    },
+    {
+      "name": "GetNodeUpDownStream",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-node-up-down-stream"
+    },
+    {
+      "name": "GetOperationRecordById",
+      "min_version": "6.2",
+      "channel": "cli_command",
+      "cli_command": "get-operation-record-by-id"
+    },
+    {
+      "name": "GetOperationRecordDetail",
+      "min_version": "6.2",
+      "channel": "cli_command",
+      "cli_command": "get-operation-record-detail"
+    },
+    {
+      "name": "GetOperationRecordRunCode",
+      "min_version": "6.2",
+      "channel": "cli_command",
+      "cli_command": "get-operation-record-run-code"
+    },
+    {
+      "name": "GetOperationSubmitStatus",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-operation-submit-status"
+    },
+    {
+      "name": "GetPhysicalInstance",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-physical-instance"
+    },
+    {
+      "name": "GetPhysicalInstanceLog",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-physical-instance-log"
+    },
+    {
+      "name": "GetPhysicalNode",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-physical-node"
+    },
+    {
+      "name": "GetPhysicalNodeByOutputName",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-physical-node-by-output-name"
+    },
+    {
+      "name": "GetPhysicalNodeContent",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-physical-node-content"
+    },
+    {
+      "name": "GetPhysicalNodeOperationLog",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-physical-node-operation-log"
+    },
+    {
+      "name": "GetPipelineAsyncResult",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-pipeline-async-result"
+    },
+    {
+      "name": "GetPipelineById",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-pipeline-by-id"
+    },
+    {
+      "name": "GetProject",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-project"
+    },
+    {
+      "name": "GetProjectByName",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-project-by-name"
+    },
+    {
+      "name": "GetProjectProduceUser",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-project-produce-user"
+    },
+    {
+      "name": "GetProjectWhiteLists",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-project-white-lists"
+    },
+    {
+      "name": "GetQualityAlertOfAllRuleScopeByWatchId",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-quality-alert-of-all-rule-scope-by-watch-id"
+    },
+    {
+      "name": "GetQualityRule",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-quality-rule"
+    },
+    {
+      "name": "GetQualityRuleTask",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-quality-rule-task"
+    },
+    {
+      "name": "GetQualityRuleTaskLog",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-quality-rule-task-log"
+    },
+    {
+      "name": "GetQualitySchedule",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-quality-schedule"
+    },
+    {
+      "name": "GetQualitySchedulesByWatchId",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-quality-schedules-by-watch-id"
+    },
+    {
+      "name": "GetQualityTemplate",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-quality-template"
+    },
+    {
+      "name": "GetQualityWatch",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-quality-watch"
+    },
+    {
+      "name": "GetQualityWatchByObjectId",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-quality-watch-by-object-id"
+    },
+    {
+      "name": "GetQualityWatchTask",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-quality-watch-task"
+    },
+    {
+      "name": "GetQualityWatchTaskLog",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-quality-watch-task-log"
+    },
+    {
+      "name": "GetQueueEngineVersionByEnv",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-queue-engine-version-by-env"
+    },
+    {
+      "name": "GetResource",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-resource"
+    },
+    {
+      "name": "GetResourceByVersion",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-resource-by-version"
+    },
+    {
+      "name": "GetRowPermissionByTableGuids",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-row-permission-by-table-guids"
+    },
+    {
+      "name": "GetSecurityClassify",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-security-classify"
+    },
+    {
+      "name": "GetSecurityIdentifyResult",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-security-identify-result"
+    },
+    {
+      "name": "GetSecurityLevel",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-security-level"
+    },
+    {
+      "name": "GetSecuritySecretKey",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-security-secret-key"
+    },
+    {
+      "name": "GetServerVersion",
+      "min_version": "6.0",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "GetSparkLocalClientInfo",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-spark-local-client-info"
+    },
+    {
+      "name": "GetStandard",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-standard"
+    },
+    {
+      "name": "GetStandardLookupTable",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-standard-lookup-table"
+    },
+    {
+      "name": "GetStandardSet",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-standard-set"
+    },
+    {
+      "name": "GetStandardStatistics",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-standard-statistics"
+    },
+    {
+      "name": "GetStandardTemplate",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-standard-template"
+    },
+    {
+      "name": "GetStandardWordRoot",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-standard-word-root"
+    },
+    {
+      "name": "GetStreamJobInfo",
+      "min_version": "6.0",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "GetStreamJobSubmitInfo",
+      "min_version": "6.0",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "GetStreamJobs",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-stream-jobs"
+    },
+    {
+      "name": "GetStreamMetaTableByFileId",
+      "min_version": "6.0",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "GetSupplementDagrun",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-supplement-dagrun"
+    },
+    {
+      "name": "GetSupplementDagrunInstance",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-supplement-dagrun-instance"
+    },
+    {
+      "name": "GetSystemResourceQuotaForFinance",
+      "min_version": "6.0",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "GetTableColumnByTableGuids",
+      "min_version": "6.0",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "GetTableColumnLineageByTaskId",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-table-column-lineage-by-task-id"
+    },
+    {
+      "name": "GetTableColumnLineages",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-table-column-lineages"
+    },
+    {
+      "name": "GetTableColumns",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-table-columns"
+    },
+    {
+      "name": "GetTableLineageByTaskId",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-table-lineage-by-task-id"
+    },
+    {
+      "name": "GetTableLineages",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-table-lineages"
+    },
+    {
+      "name": "GetTenantInitResult",
+      "min_version": "6.0",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "GetTransferInfo",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-transfer-info"
+    },
+    {
+      "name": "GetUdf",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-udf"
+    },
+    {
+      "name": "GetUdfByVersion",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-udf-by-version"
+    },
+    {
+      "name": "GetUserBySourceId",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-user-by-source-id"
+    },
+    {
+      "name": "GetUserBySourceIdForFinance",
+      "min_version": "6.0",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "GetUserGroup",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-user-group"
+    },
+    {
+      "name": "GetUsers",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "get-users"
+    },
+    {
+      "name": "GetValidTenantCount",
+      "min_version": "6.0",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "GrantDataServiceApi",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "grant-data-service-api"
+    },
+    {
+      "name": "GrantResourcePermission",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "grant-resource-permission"
+    },
+    {
+      "name": "ImportKgSchema",
+      "min_version": "6.1",
+      "channel": "cli_command",
+      "cli_command": "import-kg-schema"
+    },
+    {
+      "name": "ListAddableRoles",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "list-addable-roles"
+    },
+    {
+      "name": "ListAddableUsers",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "list-addable-users"
+    },
+    {
+      "name": "ListAlbumGroup",
+      "min_version": "6.0",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "ListAlertEvents",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "list-alert-events"
+    },
+    {
+      "name": "ListAlertNotifications",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "list-alert-notifications"
+    },
+    {
+      "name": "ListApiByApp",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "list-api-by-app"
+    },
+    {
+      "name": "ListAuthorizedDataServiceApiDetails",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "list-authorized-data-service-api-details"
+    },
+    {
+      "name": "ListBatchTemplates",
+      "min_version": "6.2",
+      "channel": "cli_command",
+      "cli_command": "list-batch-templates"
+    },
+    {
+      "name": "ListBizEntities",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "list-biz-entities"
+    },
+    {
+      "name": "ListBizUnits",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "list-biz-units"
+    },
+    {
+      "name": "ListCatalogAssets",
+      "min_version": "6.1",
+      "channel": "cli_command",
+      "cli_command": "list-catalog-assets"
+    },
+    {
+      "name": "ListCatalogTables",
+      "min_version": "6.0",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "ListComputeSources",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "list-compute-sources"
+    },
+    {
+      "name": "ListDataDomains",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "list-data-domains"
+    },
+    {
+      "name": "ListDataServiceApiCallStatistics",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "list-data-service-api-call-statistics"
+    },
+    {
+      "name": "ListDataServiceApiCalls",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "list-data-service-api-calls"
+    },
+    {
+      "name": "ListDataServiceApiImpacts",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "list-data-service-api-impacts"
+    },
+    {
+      "name": "ListDataServiceApps",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "list-data-service-apps"
+    },
+    {
+      "name": "ListDataServiceAuthorizedApps",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "list-data-service-authorized-apps"
+    },
+    {
+      "name": "ListDataServiceMyApiPermissions",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "list-data-service-my-api-permissions"
+    },
+    {
+      "name": "ListDataServiceMyAppPermissions",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "list-data-service-my-app-permissions"
+    },
+    {
+      "name": "ListDataServicePublishedApis",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "list-data-service-published-apis"
+    },
+    {
+      "name": "ListDataSourceWithConfig",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "list-data-source-with-config"
+    },
+    {
+      "name": "ListDatasets",
+      "min_version": "6.2",
+      "channel": "cli_command",
+      "cli_command": "list-datasets"
+    },
+    {
+      "name": "ListFiles",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "list-files"
+    },
+    {
+      "name": "ListGovernObjects",
+      "min_version": "6.3",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "ListInstances",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "list-instances"
+    },
+    {
+      "name": "ListKgEntity",
+      "min_version": "6.2",
+      "channel": "cli_command",
+      "cli_command": "list-kg-entity"
+    },
+    {
+      "name": "ListKgRelation",
+      "min_version": "6.2",
+      "channel": "cli_command",
+      "cli_command": "list-kg-relation"
+    },
+    {
+      "name": "ListNodeDownStream",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "list-node-down-stream"
+    },
+    {
+      "name": "ListNodes",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "list-nodes"
+    },
+    {
+      "name": "ListOperationRecord",
+      "min_version": "6.2",
+      "channel": "cli_command",
+      "cli_command": "list-operation-record"
+    },
+    {
+      "name": "ListProjectMembers",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "list-project-members"
+    },
+    {
+      "name": "ListProjects",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "list-projects"
+    },
+    {
+      "name": "ListPublishRecords",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "list-publish-records"
+    },
+    {
+      "name": "ListQualityRuleTasks",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "list-quality-rule-tasks"
+    },
+    {
+      "name": "ListQualityRules",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "list-quality-rules"
+    },
+    {
+      "name": "ListQualityTemplates",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "list-quality-templates"
+    },
+    {
+      "name": "ListQualityWatchTasks",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "list-quality-watch-tasks"
+    },
+    {
+      "name": "ListQualityWatches",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "list-quality-watches"
+    },
+    {
+      "name": "ListResourcePermissionOperationLog",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "list-resource-permission-operation-log"
+    },
+    {
+      "name": "ListResourcePermissions",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "list-resource-permissions"
+    },
+    {
+      "name": "ListRowPermission",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "list-row-permission"
+    },
+    {
+      "name": "ListRowPermissionByUserId",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "list-row-permission-by-user-id"
+    },
+    {
+      "name": "ListSchemas",
+      "min_version": "6.0",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "ListSecurityIdentifyRecords",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "list-security-identify-records"
+    },
+    {
+      "name": "ListSecurityIdentifyResults",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "list-security-identify-results"
+    },
+    {
+      "name": "ListStandards",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "list-standards"
+    },
+    {
+      "name": "ListSubmitRecords",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "list-submit-records"
+    },
+    {
+      "name": "ListTables",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "list-tables"
+    },
+    {
+      "name": "ListTenantMembers",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "list-tenant-members"
+    },
+    {
+      "name": "ListUserGroupMembers",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "list-user-group-members"
+    },
+    {
+      "name": "ListUserGroups",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "list-user-groups"
+    },
+    {
+      "name": "ListUserProjectsForFinance",
+      "min_version": "6.0",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "OfflineBatchTask",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "offline-batch-task"
+    },
+    {
+      "name": "OfflineBizEntity",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "offline-biz-entity"
+    },
+    {
+      "name": "OfflinePipeline",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "offline-pipeline"
+    },
+    {
+      "name": "OfflinePipelineByAsync",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "offline-pipeline-by-async"
+    },
+    {
+      "name": "OfflineStandard",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "offline-standard"
+    },
+    {
+      "name": "OnlineBizEntity",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "online-biz-entity"
+    },
+    {
+      "name": "OperateInstance",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "operate-instance"
+    },
+    {
+      "name": "ParseBatchTaskDependency",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "parse-batch-task-dependency"
+    },
+    {
+      "name": "PausePhysicalNode",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "pause-physical-node"
+    },
+    {
+      "name": "PublishDataServiceApi",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "publish-data-service-api"
+    },
+    {
+      "name": "PublishKgSchema",
+      "min_version": "6.2",
+      "channel": "cli_command",
+      "cli_command": "publish-kg-schema"
+    },
+    {
+      "name": "PublishObjectList",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "publish-object-list"
+    },
+    {
+      "name": "PublishStandard",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "publish-standard"
+    },
+    {
+      "name": "QueryTaskStatus",
+      "min_version": "6.0",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "ReceiveTenantEventForFinance",
+      "min_version": "6.0",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "RemoveDataServiceAppMember",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "remove-data-service-app-member"
+    },
+    {
+      "name": "RemoveProjectMember",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "remove-project-member"
+    },
+    {
+      "name": "RemoveQualityRuleSchedules",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "remove-quality-rule-schedules"
+    },
+    {
+      "name": "RemoveTenantMember",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "remove-tenant-member"
+    },
+    {
+      "name": "RemoveUserGroupMember",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "remove-user-group-member"
+    },
+    {
+      "name": "ReplaceProjectWhiteLists",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "replace-project-white-lists"
+    },
+    {
+      "name": "ResetDataServiceAppSecret",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "reset-data-service-app-secret"
+    },
+    {
+      "name": "ResumePhysicalNode",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "resume-physical-node"
+    },
+    {
+      "name": "RetryTransferOwnership",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "retry-transfer-ownership"
+    },
+    {
+      "name": "RevokeDataServiceApi",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "revoke-data-service-api"
+    },
+    {
+      "name": "RevokeResourcePermission",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "revoke-resource-permission"
+    },
+    {
+      "name": "SendVerificationCodeForFinance",
+      "min_version": "6.0",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "StopAdHocTask",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "stop-ad-hoc-task"
+    },
+    {
+      "name": "SubmitAssetsOnShelve",
+      "min_version": "6.3",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "SubmitBatchTask",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "submit-batch-task"
+    },
+    {
+      "name": "SubmitQualityRuleTasks",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "submit-quality-rule-tasks"
+    },
+    {
+      "name": "SubmitQualityWatchTasks",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "submit-quality-watch-tasks"
+    },
+    {
+      "name": "SubmitStreamJob",
+      "min_version": "6.0",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "SubmitStreamMetaTable",
+      "min_version": "6.0",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "SyncDepartment",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "sync-department"
+    },
+    {
+      "name": "SyncDepartmentUser",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "sync-department-user"
+    },
+    {
+      "name": "SyncUsersForFinance",
+      "min_version": "6.0",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "TransferOwnershipForAllObject",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "transfer-ownership-for-all-object"
+    },
+    {
+      "name": "UpdateAdHocFile",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "update-ad-hoc-file"
+    },
+    {
+      "name": "UpdateAssetAttributes",
+      "min_version": "6.3",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "UpdateBasicProject",
+      "min_version": "6.3",
+      "channel": "cli_command",
+      "cli_command": "update-basic-project"
+    },
+    {
+      "name": "UpdateBatchTask",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "update-batch-task"
+    },
+    {
+      "name": "UpdateBatchTaskUdfLineages",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "update-batch-task-udf-lineages"
+    },
+    {
+      "name": "UpdateBizEntity",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "update-biz-entity"
+    },
+    {
+      "name": "UpdateBizMetric",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "update-biz-metric"
+    },
+    {
+      "name": "UpdateBizUnit",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "update-biz-unit"
+    },
+    {
+      "name": "UpdateComputeSource",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "update-compute-source"
+    },
+    {
+      "name": "UpdateDataAssetsGovernObjectStatus",
+      "min_version": "6.3",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "UpdateDataDomain",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "update-data-domain"
+    },
+    {
+      "name": "UpdateDataServiceApp",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "update-data-service-app"
+    },
+    {
+      "name": "UpdateDataServiceAppGroup",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "update-data-service-app-group"
+    },
+    {
+      "name": "UpdateDataServiceAppMember",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "update-data-service-app-member"
+    },
+    {
+      "name": "UpdateDataSourceBasicInfo",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "update-data-source-basic-info"
+    },
+    {
+      "name": "UpdateDataSourceConfig",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "update-data-source-config"
+    },
+    {
+      "name": "UpdateDataset",
+      "min_version": "6.2",
+      "channel": "cli_command",
+      "cli_command": "update-dataset"
+    },
+    {
+      "name": "UpdateDevProdProject",
+      "min_version": "6.3",
+      "channel": "cli_command",
+      "cli_command": "update-dev-prod-project"
+    },
+    {
+      "name": "UpdateFileDirectory",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "update-file-directory"
+    },
+    {
+      "name": "UpdateFileName",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "update-file-name"
+    },
+    {
+      "name": "UpdateKgEntity",
+      "min_version": "6.2",
+      "channel": "cli_command",
+      "cli_command": "update-kg-entity"
+    },
+    {
+      "name": "UpdateKgRelation",
+      "min_version": "6.2",
+      "channel": "cli_command",
+      "cli_command": "update-kg-relation"
+    },
+    {
+      "name": "UpdatePipeline",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "update-pipeline"
+    },
+    {
+      "name": "UpdatePipelineByAsync",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "update-pipeline-by-async"
+    },
+    {
+      "name": "UpdateProjectMember",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "update-project-member"
+    },
+    {
+      "name": "UpdateQualityRuleSwitch",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "update-quality-rule-switch"
+    },
+    {
+      "name": "UpdateQualityWatchSwitch",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "update-quality-watch-switch"
+    },
+    {
+      "name": "UpdateResource",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "update-resource"
+    },
+    {
+      "name": "UpdateRowPermission",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "update-row-permission"
+    },
+    {
+      "name": "UpdateSecurityClassify",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "update-security-classify"
+    },
+    {
+      "name": "UpdateSecurityClassifyCatalog",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "update-security-classify-catalog"
+    },
+    {
+      "name": "UpdateSecurityIdentifyResultStatus",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "update-security-identify-result-status"
+    },
+    {
+      "name": "UpdateSecurityLevel",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "update-security-level"
+    },
+    {
+      "name": "UpdateStandard",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "update-standard"
+    },
+    {
+      "name": "UpdateStandardLookupTable",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "update-standard-lookup-table"
+    },
+    {
+      "name": "UpdateStandardMappingToInvalid",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "update-standard-mapping-to-invalid"
+    },
+    {
+      "name": "UpdateStandardSet",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "update-standard-set"
+    },
+    {
+      "name": "UpdateStandardTemplate",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "update-standard-template"
+    },
+    {
+      "name": "UpdateStandardWordRoot",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "update-standard-word-root"
+    },
+    {
+      "name": "UpdateStreamJob",
+      "min_version": "6.0",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "UpdateStreamMetaTable",
+      "min_version": "6.0",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "UpdateStreamRawPlan",
+      "min_version": "6.0",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "UpdateStreamTableColumns",
+      "min_version": "6.0",
+      "channel": "sdk_only"
+    },
+    {
+      "name": "UpdateTenantComputeEngine",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "update-tenant-compute-engine"
+    },
+    {
+      "name": "UpdateTenantMember",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "update-tenant-member"
+    },
+    {
+      "name": "UpdateUdf",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "update-udf"
+    },
+    {
+      "name": "UpdateUserGroup",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "update-user-group"
+    },
+    {
+      "name": "UpdateUserGroupSwitch",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "update-user-group-switch"
+    },
+    {
+      "name": "UpsertQualityRule",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "upsert-quality-rule"
+    },
+    {
+      "name": "UpsertQualitySchedule",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "upsert-quality-schedule"
+    },
+    {
+      "name": "UpsertQualityTemplate",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "upsert-quality-template"
+    },
+    {
+      "name": "UpsertQualityWatch",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "upsert-quality-watch"
+    },
+    {
+      "name": "UpsertQualityWatchAlert",
+      "min_version": "6.0",
+      "channel": "cli_command",
+      "cli_command": "upsert-quality-watch-alert"
+    }
+  ]
+}

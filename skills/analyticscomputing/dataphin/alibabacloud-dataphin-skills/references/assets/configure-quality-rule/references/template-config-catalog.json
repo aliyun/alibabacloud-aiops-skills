@@ -1,0 +1,777 @@
+{
+  "source": {
+    "env": "POC",
+    "tenantId": "300023201",
+    "watchId": "7301431",
+    "templateApi": "/api/quality/rule/querySupportTemplatesOfWatch",
+    "dynamicFormApi": "/api/quality/template/queryTemplateDynamicForm",
+    "validateMetricApi": "/api/quality/rule/listValidateConditionMetrics"
+  },
+  "notes": [
+    "规则配置分为基础配置和模板动态配置两层。",
+    "字段级模板必须配置监控粒度和校验字段 validateField；表级模板只配置表级监控粒度。",
+    "validateConfigItems 中 operator、value、relation 为所有支持校验条件的模板通用；metric 的 options 因模板而异。",
+    "sqlPreSet 为参数配置，一般非必填；T1900 表稳定性校验无 sqlPreSet。",
+    "T1100 字段值域校验枚举写法：formProperties 外层传 valueRangeType=number/text/date/time/custom；同时传 valueRange JSON 字符串，枚举格式为 {\"enumType\":\"in\",\"enumValue\":\"1,2,3,4,5\",\"intervalLeftType\":\">=\",\"intervalLeftValue\":null,\"intervalRightType\":\"<=\",\"intervalRightValue\":null,\"valueRangeType\":\"enum\"}。其中外层 valueRangeType 表示字段值类型，内层 valueRange.valueRangeType=enum 表示范围类型为枚举。"
+  ],
+  "commonValidateConfigItems": [
+    {
+      "name": "operator",
+      "displayName": "比较符",
+      "required": true,
+      "componentType": "SELECTOR",
+      "options": [
+        { "label": "等于", "value": "EQUAL" },
+        { "label": "不等于", "value": "NOT_EQUAL" },
+        { "label": "大于", "value": "LARGER" },
+        { "label": "小于", "value": "SMALLER" },
+        { "label": "大于等于", "value": "LARGE_OR_EQUAL" },
+        { "label": "小于等于", "value": "SMALLER_OR_EQUAL" }
+      ]
+    },
+    { "name": "value", "displayName": "阈值", "required": true, "componentType": "INPUT", "options": [] },
+    {
+      "name": "relation",
+      "displayName": "条件关系",
+      "required": false,
+      "componentType": "RELATION",
+      "options": [
+        { "label": "且", "value": "AND" },
+        { "label": "或", "value": "OR" }
+      ]
+    }
+  ],
+  "commonRuleConfigItems": {
+    "COLUMN": [
+      {
+        "name": "monitoringIntensity",
+        "displayName": "监控粒度",
+        "required": true,
+        "componentType": "SELECTOR",
+        "options": [
+          { "label": "字段", "value": "FIELDS" },
+          { "label": "表", "value": "TABLE" }
+        ]
+      },
+      { "name": "validateField", "displayName": "校验字段", "required": true, "componentType": "FIELD_SELECTOR", "options": [] }
+    ],
+    "TABLE": [
+      {
+        "name": "monitoringIntensity",
+        "displayName": "监控粒度",
+        "required": true,
+        "componentType": "SELECTOR",
+        "options": [
+          { "label": "表", "value": "TABLE" }
+        ]
+      }
+    ]
+  },
+  "templates": [
+    {
+      "templateId": 100,
+      "templateName": "字段空值校验",
+      "templateType": "FIELD_NULL_VALUE_VALIDATE",
+      "catalog": "COMPLETENESS",
+      "catalogName": "完整性",
+      "supportWatchTypes": ["DATASOURCE_TABLE", "TABLE"],
+      "validateObjectType": "COLUMN",
+      "ruleConfigItems": [
+        { "name": "monitoringIntensity", "displayName": "监控粒度", "required": true, "componentType": "SELECTOR", "options": [{ "label": "字段", "value": "FIELDS" }, { "label": "表", "value": "TABLE" }] },
+        { "name": "validateField", "displayName": "校验字段", "required": true, "componentType": "FIELD_SELECTOR", "options": [] },
+        { "name": "sqlPreSet", "displayName": "参数配置", "required": false, "componentType": "TEXTAREA", "options": [] }
+      ],
+      "validateConfigItems": [
+        { "name": "metric", "displayName": "校验指标", "required": true, "componentType": "SELECTOR", "options": [{ "label": "正常行数", "value": "NORMAL_NUMBER", "unit": "" }, { "label": "正常率(%)", "value": "NORMAL_RATE", "unit": "%" }, { "label": "异常行数", "value": "ERROR_NUMBER", "unit": "" }, { "label": "异常率(%)", "value": "ERROR_RATE", "unit": "%" }] },
+        { "ref": "commonValidateConfigItems.operator" },
+        { "ref": "commonValidateConfigItems.value" },
+        { "ref": "commonValidateConfigItems.relation" }
+      ]
+    },
+    {
+      "templateId": 200,
+      "templateName": "字段空字符串校验",
+      "templateType": "FIELD_EMPTY_STRING_VALIDATE",
+      "catalog": "COMPLETENESS",
+      "catalogName": "完整性",
+      "supportWatchTypes": ["DATASOURCE_TABLE", "TABLE"],
+      "validateObjectType": "COLUMN",
+      "ruleConfigItems": [
+        { "name": "monitoringIntensity", "displayName": "监控粒度", "required": true, "componentType": "SELECTOR", "options": [{ "label": "字段", "value": "FIELDS" }, { "label": "表", "value": "TABLE" }] },
+        { "name": "validateField", "displayName": "校验字段", "required": true, "componentType": "FIELD_SELECTOR", "options": [] },
+        { "name": "sqlPreSet", "displayName": "参数配置", "required": false, "componentType": "TEXTAREA", "options": [] }
+      ],
+      "validateConfigItems": [
+        { "name": "metric", "displayName": "校验指标", "required": true, "componentType": "SELECTOR", "options": [{ "label": "正常行数", "value": "NORMAL_NUMBER", "unit": "" }, { "label": "正常率(%)", "value": "NORMAL_RATE", "unit": "%" }, { "label": "异常行数", "value": "ERROR_NUMBER", "unit": "" }, { "label": "异常率(%)", "value": "ERROR_RATE", "unit": "%" }] },
+        { "ref": "commonValidateConfigItems.operator" },
+        { "ref": "commonValidateConfigItems.value" },
+        { "ref": "commonValidateConfigItems.relation" }
+      ]
+    },
+    {
+      "templateId": 300,
+      "templateName": "字段唯一性校验",
+      "templateType": "FIELD_UNIQUE_VALIDATE",
+      "catalog": "UNIQUENESS",
+      "catalogName": "唯一性",
+      "supportWatchTypes": ["DATASOURCE_TABLE", "TABLE"],
+      "validateObjectType": "COLUMN",
+      "ruleConfigItems": [
+        { "name": "monitoringIntensity", "displayName": "监控粒度", "required": true, "componentType": "SELECTOR", "options": [{ "label": "字段", "value": "FIELDS" }, { "label": "表", "value": "TABLE" }] },
+        { "name": "validateField", "displayName": "校验字段", "required": true, "componentType": "FIELD_SELECTOR", "options": [] },
+        { "name": "sqlPreSet", "displayName": "参数配置", "required": false, "componentType": "TEXTAREA", "options": [] }
+      ],
+      "validateConfigItems": [
+        { "name": "metric", "displayName": "校验指标", "required": true, "componentType": "SELECTOR", "options": [{ "label": "正常行数", "value": "NORMAL_NUMBER", "unit": "" }, { "label": "正常率(%)", "value": "NORMAL_RATE", "unit": "%" }, { "label": "异常行数", "value": "ERROR_NUMBER", "unit": "" }, { "label": "异常率(%)", "value": "ERROR_RATE", "unit": "%" }] },
+        { "ref": "commonValidateConfigItems.operator" },
+        { "ref": "commonValidateConfigItems.value" },
+        { "ref": "commonValidateConfigItems.relation" }
+      ]
+    },
+    {
+      "templateId": 400,
+      "templateName": "字段唯一值个数校验",
+      "templateType": "FIELD_GROUP_COUNT_VALIDATE",
+      "catalog": "UNIQUENESS",
+      "catalogName": "唯一性",
+      "supportWatchTypes": ["DATASOURCE_TABLE", "INDEX", "TABLE"],
+      "validateObjectType": "COLUMN",
+      "ruleConfigItems": [
+        { "name": "monitoringIntensity", "displayName": "监控粒度", "required": true, "componentType": "SELECTOR", "options": [{ "label": "字段", "value": "FIELDS" }, { "label": "表", "value": "TABLE" }] },
+        { "name": "validateField", "displayName": "校验字段", "required": true, "componentType": "FIELD_SELECTOR", "options": [] },
+        { "name": "sqlPreSet", "displayName": "参数配置", "required": false, "componentType": "TEXTAREA", "options": [] }
+      ],
+      "validateConfigItems": [
+        { "name": "metric", "displayName": "校验指标", "required": true, "componentType": "SELECTOR", "options": [{ "label": "字段分组个数", "value": "FIELD_GROUP_COUNT", "unit": "" }] },
+        { "ref": "commonValidateConfigItems.operator" },
+        { "ref": "commonValidateConfigItems.value" },
+        { "ref": "commonValidateConfigItems.relation" }
+      ]
+    },
+    {
+      "templateId": 500,
+      "templateName": "字段重复值个数校验",
+      "templateType": "FIELD_DUPLICATE_VALUE_COUNT_VALIDATE",
+      "catalog": "UNIQUENESS",
+      "catalogName": "唯一性",
+      "supportWatchTypes": ["DATASOURCE_TABLE", "INDEX", "TABLE"],
+      "validateObjectType": "COLUMN",
+      "ruleConfigItems": [
+        { "name": "monitoringIntensity", "displayName": "监控粒度", "required": true, "componentType": "SELECTOR", "options": [{ "label": "字段", "value": "FIELDS" }, { "label": "表", "value": "TABLE" }] },
+        { "name": "validateField", "displayName": "校验字段", "required": true, "componentType": "FIELD_SELECTOR", "options": [] },
+        { "name": "sqlPreSet", "displayName": "参数配置", "required": false, "componentType": "TEXTAREA", "options": [] }
+      ],
+      "validateConfigItems": [
+        { "name": "metric", "displayName": "校验指标", "required": true, "componentType": "SELECTOR", "options": [{ "label": "字段重复行数", "value": "FIELD_DUPLICATE_COUNT", "unit": "" }, { "label": "字段重复率(%)", "value": "FIELD_DUPLICATE_RATE", "unit": "%" }] },
+        { "ref": "commonValidateConfigItems.operator" },
+        { "ref": "commonValidateConfigItems.value" },
+        { "ref": "commonValidateConfigItems.relation" }
+      ]
+    },
+    {
+      "templateId": 600,
+      "templateName": "时间函数比较",
+      "templateType": "FUNCTION_TIME_COMPARE",
+      "catalog": "TIMELINESS",
+      "catalogName": "及时性",
+      "supportWatchTypes": ["DATASOURCE_TABLE", "TABLE"],
+      "validateObjectType": "COLUMN",
+      "ruleConfigItems": [
+        { "name": "monitoringIntensity", "displayName": "监控粒度", "required": true, "componentType": "SELECTOR", "options": [{ "label": "字段", "value": "FIELDS" }, { "label": "表", "value": "TABLE" }] },
+        { "name": "validateField", "displayName": "校验字段", "required": true, "componentType": "FIELD_SELECTOR", "options": [] },
+        { "name": "validateItem", "displayName": "校验项", "required": true, "componentType": "TEXT", "options": [] },
+        { "name": "compareItem", "displayName": "比较项", "required": true, "componentType": "TEXT", "options": [] },
+        { "name": "timeTolerance", "displayName": "时间差", "required": true, "componentType": "TIME_TOLERANCE", "description": "必须传 3 元素 JSON 数组作为 Value：[{\"checked\":true,\"operate\":\">\",\"time\":0,\"type\":\"DAY\"},{\"checked\":true,\"operate\":\"<\",\"time\":1,\"type\":\"DAY\"},{\"timeCompareMethod\":\"VALIDATE_SUB_COMPARE\"}]。元素1/2：条件（checked=是否启用，operate=比较符 </<=/==/>=/>，time=数值，type=单位 DAY/HOUR/MINUTE/SECOND）。元素3：比较类型（timeCompareMethod：VALIDATE_SUB_COMPARE=校验字段-比较字段，COMPARE_SUB_VALIDATE=比较字段-校验字段）。默认建议：>0天 且 <1天。字段/表达式必须是 DATE/DATETIME/TIMESTAMP/TIMESTAMP_NTZ 等时间类型；禁止用 id、BIGINT 时间戳、yyyymmdd 数字等非时间类型，否则试跑会报 datediff(BIGINT, BIGINT, STRING) 无匹配重载。注意：传单对象 JSON 或简单字符串会导致后端数据损坏，必须用上述 3 元素数组格式。", "options": [{ "label": "校验字段-比较字段", "value": "VALIDATE_SUB_COMPARE" }, { "label": "比较字段-校验字段", "value": "COMPARE_SUB_VALIDATE" }, { "label": "<", "value": "<" }, { "label": "<=", "value": "<=" }, { "label": "==", "value": "==" }, { "label": ">=", "value": ">=" }, { "label": ">", "value": ">" }, { "label": "天", "value": "d" }, { "label": "时", "value": "h" }, { "label": "分", "value": "m" }, { "label": "秒", "value": "s" }] },
+        { "name": "sqlPreSet", "displayName": "参数配置", "required": false, "componentType": "TEXTAREA", "options": [] }
+      ],
+      "validateConfigItems": [
+        { "name": "metric", "displayName": "校验指标", "required": true, "componentType": "SELECTOR", "options": [{ "label": "正常行数", "value": "NORMAL_NUMBER", "unit": "" }, { "label": "正常率(%)", "value": "NORMAL_RATE", "unit": "%" }, { "label": "异常行数", "value": "ERROR_NUMBER", "unit": "" }, { "label": "异常率(%)", "value": "ERROR_RATE", "unit": "%" }] },
+        { "ref": "commonValidateConfigItems.operator" },
+        { "ref": "commonValidateConfigItems.value" },
+        { "ref": "commonValidateConfigItems.relation" }
+      ]
+    },
+    {
+      "templateId": 700,
+      "templateName": "单表时间字段比较",
+      "templateType": "SINGLE_TABLE_TIME_COMPARE",
+      "catalog": "TIMELINESS",
+      "catalogName": "及时性",
+      "supportWatchTypes": ["DATASOURCE_TABLE", "TABLE"],
+      "validateObjectType": "COLUMN",
+      "ruleConfigItems": [
+        { "name": "monitoringIntensity", "displayName": "监控粒度", "required": true, "componentType": "SELECTOR", "options": [{ "label": "字段", "value": "FIELDS" }, { "label": "表", "value": "TABLE" }] },
+        { "name": "validateField", "displayName": "校验字段", "required": true, "componentType": "FIELD_SELECTOR", "options": [] },
+        { "name": "validateItem", "displayName": "校验项", "required": true, "componentType": "TEXT", "options": [] },
+        { "name": "compareItem", "displayName": "比较项", "required": true, "componentType": "TEXT", "options": [] },
+        { "name": "timeTolerance", "displayName": "时间差", "required": true, "componentType": "TIME_TOLERANCE", "description": "必须传 3 元素 JSON 数组作为 Value：[{\"checked\":true,\"operate\":\">\",\"time\":0,\"type\":\"DAY\"},{\"checked\":true,\"operate\":\"<\",\"time\":1,\"type\":\"DAY\"},{\"timeCompareMethod\":\"VALIDATE_SUB_COMPARE\"}]。元素1/2：条件（checked=是否启用，operate=比较符 </<=/==/>=/>，time=数值，type=单位 DAY/HOUR/MINUTE/SECOND）。元素3：比较类型（timeCompareMethod：VALIDATE_SUB_COMPARE=校验字段-比较字段，COMPARE_SUB_VALIDATE=比较字段-校验字段）。默认建议：>0天 且 <1天。字段/表达式必须是 DATE/DATETIME/TIMESTAMP/TIMESTAMP_NTZ 等时间类型；禁止用 id、BIGINT 时间戳、yyyymmdd 数字等非时间类型，否则试跑会报 datediff(BIGINT, BIGINT, STRING) 无匹配重载。注意：传单对象 JSON 或简单字符串会导致后端数据损坏，必须用上述 3 元素数组格式。", "options": [{ "label": "校验字段-比较字段", "value": "VALIDATE_SUB_COMPARE" }, { "label": "比较字段-校验字段", "value": "COMPARE_SUB_VALIDATE" }, { "label": "<", "value": "<" }, { "label": "<=", "value": "<=" }, { "label": "==", "value": "==" }, { "label": ">=", "value": ">=" }, { "label": ">", "value": ">" }, { "label": "天", "value": "d" }, { "label": "时", "value": "h" }, { "label": "分", "value": "m" }, { "label": "秒", "value": "s" }] },
+        { "name": "sqlPreSet", "displayName": "参数配置", "required": false, "componentType": "TEXTAREA", "options": [] }
+      ],
+      "validateConfigItems": [
+        { "name": "metric", "displayName": "校验指标", "required": true, "componentType": "SELECTOR", "options": [{ "label": "正常行数", "value": "NORMAL_NUMBER", "unit": "" }, { "label": "正常率(%)", "value": "NORMAL_RATE", "unit": "%" }, { "label": "异常行数", "value": "ERROR_NUMBER", "unit": "" }, { "label": "异常率(%)", "value": "ERROR_RATE", "unit": "%" }] },
+        { "ref": "commonValidateConfigItems.operator" },
+        { "ref": "commonValidateConfigItems.value" },
+        { "ref": "commonValidateConfigItems.relation" }
+      ]
+    },
+    {
+      "templateId": 800,
+      "templateName": "两表时间字段比较",
+      "templateType": "DOUBLE_TABLE_TIME_COMPARE",
+      "catalog": "TIMELINESS",
+      "catalogName": "及时性",
+      "supportWatchTypes": ["DATASOURCE_TABLE", "TABLE"],
+      "validateObjectType": "COLUMN",
+      "ruleConfigItems": [
+        { "name": "monitoringIntensity", "displayName": "监控粒度", "required": true, "componentType": "SELECTOR", "options": [{ "label": "字段", "value": "FIELDS" }, { "label": "表", "value": "TABLE" }] },
+        { "name": "validateField", "displayName": "校验字段", "required": true, "componentType": "FIELD_SELECTOR", "options": [] },
+        { "name": "validateItem", "displayName": "校验项", "required": true, "componentType": "TEXT", "options": [] },
+        { "name": "compareItem", "displayName": "比较项", "required": true, "componentType": "TEXT", "options": [] },
+        { "name": "doubleTableCompareTable", "displayName": "选择比较表", "required": true, "componentType": "TABLE_SEARCH_SELECTOR", "description": "界面回显字段名必须是 doubleTableCompareTable；Value 为 JSON 字符串，如 {\"doubleTableCompareTable\":\"basic01.test_table_two_million\",\"doubleTableCompareField\":\"col1\"}。不要用旧字段 doubleCompareTable。", "options": [] },
+        { "name": "doubleTableJoinCondition", "displayName": "关联表达式", "required": true, "componentType": "TEXT", "description": "必须传表达式字符串，不是 {leftField/rightField/operator} JSON。内置数据表参数：T1 为检测表，T2 为比较表；示例：T1.id = T2.id。", "options": [] },
+        { "name": "timeTolerance", "displayName": "时间差", "required": true, "componentType": "TIME_TOLERANCE", "description": "必须传 3 元素 JSON 数组作为 Value：[{\"checked\":true,\"operate\":\">\",\"time\":0,\"type\":\"DAY\"},{\"checked\":true,\"operate\":\"<\",\"time\":1,\"type\":\"DAY\"},{\"timeCompareMethod\":\"VALIDATE_SUB_COMPARE\"}]。元素1/2：条件（checked=是否启用，operate=比较符 </<=/==/>=/>，time=数值，type=单位 DAY/HOUR/MINUTE/SECOND）。元素3：比较类型（timeCompareMethod：VALIDATE_SUB_COMPARE=校验字段-比较字段，COMPARE_SUB_VALIDATE=比较字段-校验字段）。默认建议：>0天 且 <1天。字段/表达式必须是 DATE/DATETIME/TIMESTAMP/TIMESTAMP_NTZ 等时间类型；禁止用 id、BIGINT 时间戳、yyyymmdd 数字等非时间类型，否则试跑会报 datediff(BIGINT, BIGINT, STRING) 无匹配重载。注意：传单对象 JSON 或简单字符串会导致后端数据损坏，必须用上述 3 元素数组格式。", "options": [{ "label": "校验字段-比较字段", "value": "VALIDATE_SUB_COMPARE" }, { "label": "比较字段-校验字段", "value": "COMPARE_SUB_VALIDATE" }, { "label": "<", "value": "<" }, { "label": "<=", "value": "<=" }, { "label": "==", "value": "==" }, { "label": ">=", "value": ">=" }, { "label": ">", "value": ">" }, { "label": "天", "value": "d" }, { "label": "时", "value": "h" }, { "label": "分", "value": "m" }, { "label": "秒", "value": "s" }] },
+        { "name": "sqlPreSet", "displayName": "参数配置", "required": false, "componentType": "TEXTAREA", "options": [] }
+      ],
+      "validateConfigItems": [
+        { "name": "metric", "displayName": "校验指标", "required": true, "componentType": "SELECTOR", "options": [{ "label": "正常行数", "value": "NORMAL_NUMBER", "unit": "" }, { "label": "正常率(%)", "value": "NORMAL_RATE", "unit": "%" }, { "label": "异常行数", "value": "ERROR_NUMBER", "unit": "" }, { "label": "异常率(%)", "value": "ERROR_RATE", "unit": "%" }] },
+        { "ref": "commonValidateConfigItems.operator" },
+        { "ref": "commonValidateConfigItems.value" },
+        { "ref": "commonValidateConfigItems.relation" }
+      ]
+    },
+    {
+      "templateId": 900,
+      "templateName": "字段格式校验",
+      "templateType": "FIELD_FORMAT_VALIDATE",
+      "catalog": "EFFECTIVE",
+      "catalogName": "有效性",
+      "supportWatchTypes": ["DATASOURCE_TABLE", "TABLE"],
+      "validateObjectType": "COLUMN",
+      "ruleConfigItems": [
+        { "name": "monitoringIntensity", "displayName": "监控粒度", "required": true, "componentType": "SELECTOR", "options": [{ "label": "字段", "value": "FIELDS" }, { "label": "表", "value": "TABLE" }] },
+        { "name": "validateField", "displayName": "校验字段", "required": true, "componentType": "FIELD_SELECTOR", "options": [] },
+        { "name": "contentIdentifyMethod", "displayName": "内容识别形式", "required": true, "componentType": "SELECTOR", "options": [{ "label": "识别表达式", "value": "expression" }, { "label": "正则表达式", "value": "regex" }, { "label": "字符串匹配（like）", "value": "like" }, { "label": "开头是", "value": "startWith" }, { "label": "中间是", "value": "middleWith" }, { "label": "结尾是", "value": "endWith" }] },
+        { "name": "contentIdentifyExpression", "displayName": "识别表达式", "required": true, "componentType": "TEXT", "options": [] },
+        { "name": "contentIdentifyRegex", "displayName": "正则表达式", "required": true, "componentType": "REGULAR_SELECTOR", "options": [] },
+        { "name": "contentIdentifyLike", "displayName": "字符串匹配", "required": true, "componentType": "TEXT", "options": [] },
+        { "name": "contentIdentifyStartWith", "displayName": "开头是", "required": true, "componentType": "TEXT", "options": [] },
+        { "name": "contentIdentifyMiddleWith", "displayName": "中间是", "required": true, "componentType": "TEXT", "options": [] },
+        { "name": "contentIdentifyEndWith", "displayName": "结尾是", "required": true, "componentType": "TEXT", "options": [] },
+        { "name": "sqlPreSet", "displayName": "参数配置", "required": false, "componentType": "TEXTAREA", "options": [] }
+      ],
+      "validateConfigItems": [
+        { "name": "metric", "displayName": "校验指标", "required": true, "componentType": "SELECTOR", "options": [{ "label": "正常行数", "value": "NORMAL_NUMBER", "unit": "" }, { "label": "正常率(%)", "value": "NORMAL_RATE", "unit": "%" }, { "label": "异常行数", "value": "ERROR_NUMBER", "unit": "" }, { "label": "异常率(%)", "value": "ERROR_RATE", "unit": "%" }] },
+        { "ref": "commonValidateConfigItems.operator" },
+        { "ref": "commonValidateConfigItems.value" },
+        { "ref": "commonValidateConfigItems.relation" }
+      ]
+    },
+    {
+      "templateId": 1000,
+      "templateName": "字段长度校验",
+      "templateType": "FIELD_LENGTH_VALIDATE",
+      "catalog": "EFFECTIVE",
+      "catalogName": "有效性",
+      "supportWatchTypes": ["DATASOURCE_TABLE", "TABLE"],
+      "validateObjectType": "COLUMN",
+      "ruleConfigItems": [
+        { "name": "monitoringIntensity", "displayName": "监控粒度", "required": true, "componentType": "SELECTOR", "options": [{ "label": "字段", "value": "FIELDS" }, { "label": "表", "value": "TABLE" }] },
+        { "name": "validateField", "displayName": "校验字段", "required": true, "componentType": "FIELD_SELECTOR", "options": [] },
+        { "name": "valueRangeScopeNumber", "displayName": "字段长度", "required": true, "componentType": "TEXT_NUMBER", "options": [] },
+        { "name": "sqlPreSet", "displayName": "参数配置", "required": false, "componentType": "TEXTAREA", "options": [] }
+      ],
+      "validateConfigItems": [
+        { "name": "metric", "displayName": "校验指标", "required": true, "componentType": "SELECTOR", "options": [{ "label": "正常行数", "value": "NORMAL_NUMBER", "unit": "" }, { "label": "正常率(%)", "value": "NORMAL_RATE", "unit": "%" }, { "label": "异常行数", "value": "ERROR_NUMBER", "unit": "" }, { "label": "异常率(%)", "value": "ERROR_RATE", "unit": "%" }] },
+        { "ref": "commonValidateConfigItems.operator" },
+        { "ref": "commonValidateConfigItems.value" },
+        { "ref": "commonValidateConfigItems.relation" }
+      ]
+    },
+    {
+      "templateId": 1100,
+      "templateName": "字段值域校验",
+      "templateType": "FIELD_VALUE_RANGE_VALIDATE",
+      "catalog": "EFFECTIVE",
+      "catalogName": "有效性",
+      "supportWatchTypes": ["DATASOURCE_TABLE", "TABLE"],
+      "validateObjectType": "COLUMN",
+      "ruleConfigItems": [
+        { "name": "monitoringIntensity", "displayName": "监控粒度", "required": true, "componentType": "SELECTOR", "options": [{ "label": "字段", "value": "FIELDS" }, { "label": "表", "value": "TABLE" }] },
+        { "name": "validateField", "displayName": "校验字段", "required": true, "componentType": "FIELD_SELECTOR", "options": [] },
+        { "name": "valueRangeType", "displayName": "值域类型", "required": true, "componentType": "SELECTOR", "options": [{ "label": "文本", "value": "text" }, { "label": "数值", "value": "number" }, { "label": "日期", "value": "date" }, { "label": "时间戳", "value": "time" }, { "label": "自定义", "value": "custom" }] },
+        { "name": "valueRangeScopeText", "displayName": "值域范围", "required": true, "componentType": "TEXT_NUMBER", "options": [] },
+        { "name": "valueRangeScopeNumber", "displayName": "值域范围", "required": true, "componentType": "TEXT_NUMBER", "options": [] },
+        { "name": "valueRangeScopeDate", "displayName": "值域范围", "required": true, "componentType": "DATE_TIME_PICKER", "options": [] },
+        { "name": "valueRangeScopeTime", "displayName": "值域范围", "required": true, "componentType": "TIME_STAMP", "options": [] },
+        { "name": "valueRangeScopeCustom", "displayName": "值域范围", "required": true, "componentType": "CUSTOM_RANGE", "options": [] },
+        { "name": "sqlPreSet", "displayName": "参数配置", "required": false, "componentType": "TEXTAREA", "options": [] }
+      ],
+      "validateConfigItems": [
+        { "name": "metric", "displayName": "校验指标", "required": true, "componentType": "SELECTOR", "options": [{ "label": "正常行数", "value": "NORMAL_NUMBER", "unit": "" }, { "label": "正常率(%)", "value": "NORMAL_RATE", "unit": "%" }, { "label": "异常行数", "value": "ERROR_NUMBER", "unit": "" }, { "label": "异常率(%)", "value": "ERROR_RATE", "unit": "%" }] },
+        { "ref": "commonValidateConfigItems.operator" },
+        { "ref": "commonValidateConfigItems.value" },
+        { "ref": "commonValidateConfigItems.relation" }
+      ]
+    },
+    {
+      "templateId": 1200,
+      "templateName": "码表参照对比",
+      "templateType": "CODE_TABLE_COMPARE",
+      "catalog": "EFFECTIVE",
+      "catalogName": "有效性",
+      "supportWatchTypes": ["DATASOURCE_TABLE", "TABLE"],
+      "validateObjectType": "COLUMN",
+      "ruleConfigItems": [
+        { "name": "monitoringIntensity", "displayName": "监控粒度", "required": true, "componentType": "SELECTOR", "options": [{ "label": "字段", "value": "FIELDS" }, { "label": "表", "value": "TABLE" }] },
+        { "name": "validateField", "displayName": "校验字段", "required": true, "componentType": "FIELD_SELECTOR", "options": [] },
+        { "name": "dataSourceType", "displayName": "数据源类型", "required": true, "componentType": "SELECTOR", "options": [] },
+        { "name": "dataSource", "displayName": "数据源", "required": true, "componentType": "SEARCH_SELECTOR", "options": [] },
+        { "name": "codeTable", "displayName": "码表", "required": true, "componentType": "SEARCH_SELECTOR", "options": [] },
+        { "name": "codeTableReferField", "displayName": "码表参照字段", "required": true, "componentType": "SEARCH_SELECTOR", "options": [] },
+        { "name": "codeTableName", "displayName": "码表名称", "required": false, "componentType": "TEXT", "options": [] },
+        { "name": "filterCondition", "displayName": "码表过滤条件", "required": false, "componentType": "TEXT", "options": [] },
+        { "name": "sqlPreSet", "displayName": "参数配置", "required": false, "componentType": "TEXTAREA", "options": [] }
+      ],
+      "validateConfigItems": [
+        { "name": "metric", "displayName": "校验指标", "required": true, "componentType": "SELECTOR", "options": [{ "label": "正常行数", "value": "NORMAL_NUMBER", "unit": "" }, { "label": "正常率(%)", "value": "NORMAL_RATE", "unit": "%" }, { "label": "异常行数", "value": "ERROR_NUMBER", "unit": "" }, { "label": "异常率(%)", "value": "ERROR_RATE", "unit": "%" }] },
+        { "ref": "commonValidateConfigItems.operator" },
+        { "ref": "commonValidateConfigItems.value" },
+        { "ref": "commonValidateConfigItems.relation" }
+      ]
+    },
+    {
+      "templateId": 1250,
+      "templateName": "数据标准码表参照对比",
+      "templateType": "STANDARD_CODE_TABLE_COMPARE",
+      "catalog": "EFFECTIVE",
+      "catalogName": "有效性",
+      "supportWatchTypes": ["DATASOURCE_TABLE", "TABLE"],
+      "validateObjectType": "COLUMN",
+      "ruleConfigItems": [
+        { "name": "monitoringIntensity", "displayName": "监控粒度", "required": true, "componentType": "SELECTOR", "options": [{ "label": "字段", "value": "FIELDS" }, { "label": "表", "value": "TABLE" }] },
+        { "name": "validateField", "displayName": "校验字段", "required": true, "componentType": "FIELD_SELECTOR", "options": [] },
+        { "name": "standardCodeTable", "displayName": "码表", "required": true, "componentType": "SEARCH_SELECTOR", "options": [] },
+        { "name": "standardCodeTableReferField", "displayName": "码表参照", "required": true, "componentType": "SELECTOR", "options": [{ "label": "代码值", "value": "VALUE" }, { "label": "代码名称", "value": "NAME" }, { "label": "代码英文名", "value": "EN_NAME" }] },
+        { "name": "sqlPreSet", "displayName": "参数配置", "required": false, "componentType": "TEXTAREA", "options": [] }
+      ],
+      "validateConfigItems": [
+        { "name": "metric", "displayName": "校验指标", "required": true, "componentType": "SELECTOR", "options": [{ "label": "正常行数", "value": "NORMAL_NUMBER", "unit": "" }, { "label": "正常率(%)", "value": "NORMAL_RATE", "unit": "%" }, { "label": "异常行数", "value": "ERROR_NUMBER", "unit": "" }, { "label": "异常率(%)", "value": "ERROR_RATE", "unit": "%" }] },
+        { "ref": "commonValidateConfigItems.operator" },
+        { "ref": "commonValidateConfigItems.value" },
+        { "ref": "commonValidateConfigItems.relation" }
+      ]
+    },
+    {
+      "templateId": 1300,
+      "templateName": "单表字段值一致性比较",
+      "templateType": "SINGLE_TABLE_FIELD_VALUE_COMPARE",
+      "catalog": "CONSISTENT",
+      "catalogName": "一致性",
+      "supportWatchTypes": ["DATASOURCE_TABLE", "TABLE"],
+      "validateObjectType": "COLUMN",
+      "ruleConfigItems": [
+        { "name": "monitoringIntensity", "displayName": "监控粒度", "required": true, "componentType": "SELECTOR", "options": [{ "label": "字段", "value": "FIELDS" }, { "label": "表", "value": "TABLE" }] },
+        { "name": "validateField", "displayName": "校验字段", "required": true, "componentType": "FIELD_SELECTOR", "options": [] },
+        { "name": "validateItem", "displayName": "校验项", "required": true, "componentType": "TEXT", "options": [] },
+        { "name": "compareItem", "displayName": "比较项", "required": true, "componentType": "TEXT", "options": [] },
+        { "name": "sqlPreSet", "displayName": "参数配置", "required": false, "componentType": "TEXTAREA", "options": [] }
+      ],
+      "validateConfigItems": [
+        { "name": "metric", "displayName": "校验指标", "required": true, "componentType": "SELECTOR", "options": [{ "label": "正常行数", "value": "NORMAL_NUMBER", "unit": "" }, { "label": "正常率(%)", "value": "NORMAL_RATE", "unit": "%" }, { "label": "异常行数", "value": "ERROR_NUMBER", "unit": "" }, { "label": "异常率(%)", "value": "ERROR_RATE", "unit": "%" }] },
+        { "ref": "commonValidateConfigItems.operator" },
+        { "ref": "commonValidateConfigItems.value" },
+        { "ref": "commonValidateConfigItems.relation" }
+      ]
+    },
+    {
+      "templateId": 1400,
+      "templateName": "单表字段统计值一致性比较",
+      "templateType": "SINGLE_TABLE_FIELD_STATISTICAL_COMPARE",
+      "catalog": "CONSISTENT",
+      "catalogName": "一致性",
+      "supportWatchTypes": ["DATASOURCE_TABLE", "TABLE"],
+      "validateObjectType": "COLUMN",
+      "ruleConfigItems": [
+        { "name": "monitoringIntensity", "displayName": "监控粒度", "required": true, "componentType": "SELECTOR", "options": [{ "label": "字段", "value": "FIELDS" }, { "label": "表", "value": "TABLE" }] },
+        { "name": "validateField", "displayName": "校验字段", "required": true, "componentType": "FIELD_SELECTOR", "options": [] },
+        { "name": "statisticalMethod", "displayName": "统计方式", "required": true, "componentType": "SELECTOR", "options": [{ "label": "字段计数", "value": "FIELD_COUNT" }, { "label": "字段唯一值计数", "value": "FIELD_DISTINCT_COUNT" }, { "label": "字段汇总值", "value": "FIELD_SUM" }, { "label": "字段平均值", "value": "FIELD_AVG" }, { "label": "字段最大值", "value": "FIELD_MAX" }, { "label": "字段最小值", "value": "FIELD_MIN" }, { "label": "字段重复行数", "value": "FIELD_DUPLICATE_COUNT" }, { "label": "字段重复率(%)", "value": "FIELD_DUPLICATE_RATE" }, { "label": "字段分组个数", "value": "FIELD_GROUP_COUNT" }, { "label": "字段空值行数", "value": "FIELD_NULL_COUNT" }, { "label": "字段空值率(%)", "value": "FIELD_NULL_RATE" }] },
+        { "name": "sqlPreSet", "displayName": "参数配置", "required": false, "componentType": "TEXTAREA", "options": [] }
+      ],
+      "validateConfigItems": [
+        { "name": "metric", "displayName": "校验指标", "required": true, "componentType": "SELECTOR", "options": [{ "label": "统计差值", "value": "STATISTICAL_DIFF_VALUE", "unit": "" }, { "label": "统计差异率(%)", "value": "STATISTICAL_DIFF_RATE", "unit": "%" }] },
+        { "ref": "commonValidateConfigItems.operator" },
+        { "ref": "commonValidateConfigItems.value" },
+        { "ref": "commonValidateConfigItems.relation" }
+      ]
+    },
+    {
+      "templateId": 1500,
+      "templateName": "单表字段业务逻辑一致性比较",
+      "templateType": "SINGLE_TABLE_FIELD_EXP_COMPARE",
+      "catalog": "CONSISTENT",
+      "catalogName": "一致性",
+      "supportWatchTypes": ["DATASOURCE_TABLE", "TABLE"],
+      "validateObjectType": "COLUMN",
+      "ruleConfigItems": [
+        { "name": "monitoringIntensity", "displayName": "监控粒度", "required": true, "componentType": "SELECTOR", "options": [{ "label": "字段", "value": "FIELDS" }, { "label": "表", "value": "TABLE" }] },
+        { "name": "validateField", "displayName": "校验字段", "required": true, "componentType": "FIELD_SELECTOR", "options": [] },
+        { "name": "contentIdentifyExpression", "displayName": "识别表达式", "required": true, "componentType": "TEXT", "options": [] },
+        { "name": "sqlPreSet", "displayName": "参数配置", "required": false, "componentType": "TEXTAREA", "options": [] }
+      ],
+      "validateConfigItems": [
+        { "name": "metric", "displayName": "校验指标", "required": true, "componentType": "SELECTOR", "options": [{ "label": "正常行数", "value": "NORMAL_NUMBER", "unit": "" }, { "label": "正常率(%)", "value": "NORMAL_RATE", "unit": "%" }, { "label": "异常行数", "value": "ERROR_NUMBER", "unit": "" }, { "label": "异常率(%)", "value": "ERROR_RATE", "unit": "%" }] },
+        { "ref": "commonValidateConfigItems.operator" },
+        { "ref": "commonValidateConfigItems.value" },
+        { "ref": "commonValidateConfigItems.relation" }
+      ]
+    },
+    {
+      "templateId": 1600,
+      "templateName": "两表字段值一致性比较",
+      "templateType": "DOUBLE_TABLE_FIELD_VALUE_COMPARE",
+      "catalog": "CONSISTENT",
+      "catalogName": "一致性",
+      "supportWatchTypes": ["DATASOURCE_TABLE", "TABLE"],
+      "validateObjectType": "COLUMN",
+      "ruleConfigItems": [
+        { "name": "monitoringIntensity", "displayName": "监控粒度", "required": true, "componentType": "SELECTOR", "options": [{ "label": "字段", "value": "FIELDS" }, { "label": "表", "value": "TABLE" }] },
+        { "name": "validateField", "displayName": "校验字段", "required": true, "componentType": "FIELD_SELECTOR", "options": [] },
+        { "name": "validateItem", "displayName": "校验项", "required": true, "componentType": "TEXT", "options": [] },
+        { "name": "compareItem", "displayName": "比较项", "required": true, "componentType": "TEXT", "options": [] },
+        { "name": "doubleTableCompareTable", "displayName": "选择比较表", "required": true, "componentType": "TABLE_SEARCH_SELECTOR", "description": "界面回显字段名必须是 doubleTableCompareTable；Value 为 JSON 字符串，如 {\"doubleTableCompareTable\":\"basic01.test_table_two_million\",\"doubleTableCompareField\":\"col1\"}。不要用旧字段 doubleCompareTable。", "options": [] },
+        { "name": "doubleTableJoinCondition", "displayName": "关联表达式", "required": true, "componentType": "TEXT", "description": "必须传表达式字符串，不是 {leftField/rightField/operator} JSON。内置数据表参数：T1 为检测表，T2 为比较表；示例：T1.id = T2.id。", "options": [] },
+        { "name": "sqlPreSet", "displayName": "参数配置", "required": false, "componentType": "TEXTAREA", "options": [] }
+      ],
+      "validateConfigItems": [
+        { "name": "metric", "displayName": "校验指标", "required": true, "componentType": "SELECTOR", "options": [{ "label": "正常行数", "value": "NORMAL_NUMBER", "unit": "" }, { "label": "正常率(%)", "value": "NORMAL_RATE", "unit": "%" }, { "label": "异常行数", "value": "ERROR_NUMBER", "unit": "" }, { "label": "异常率(%)", "value": "ERROR_RATE", "unit": "%" }] },
+        { "ref": "commonValidateConfigItems.operator" },
+        { "ref": "commonValidateConfigItems.value" },
+        { "ref": "commonValidateConfigItems.relation" }
+      ]
+    },
+    {
+      "templateId": 1700,
+      "templateName": "两表字段统计值一致性比较",
+      "templateType": "DOUBLE_TABLE_FIELD_STATISTICAL_COMPARE",
+      "catalog": "CONSISTENT",
+      "catalogName": "一致性",
+      "supportWatchTypes": ["DATASOURCE_TABLE", "TABLE"],
+      "validateObjectType": "COLUMN",
+      "ruleConfigItems": [
+        { "name": "monitoringIntensity", "displayName": "监控粒度", "required": true, "componentType": "SELECTOR", "options": [{ "label": "字段", "value": "FIELDS" }, { "label": "表", "value": "TABLE" }] },
+        { "name": "validateField", "displayName": "校验字段", "required": true, "componentType": "FIELD_SELECTOR", "options": [] },
+        { "name": "statisticalMethod", "displayName": "统计方式", "required": true, "componentType": "SELECTOR", "options": [{ "label": "字段计数", "value": "FIELD_COUNT" }, { "label": "字段唯一值计数", "value": "FIELD_DISTINCT_COUNT" }, { "label": "字段汇总值", "value": "FIELD_SUM" }, { "label": "字段平均值", "value": "FIELD_AVG" }, { "label": "字段最大值", "value": "FIELD_MAX" }, { "label": "字段最小值", "value": "FIELD_MIN" }, { "label": "字段重复行数", "value": "FIELD_DUPLICATE_COUNT" }, { "label": "字段重复率(%)", "value": "FIELD_DUPLICATE_RATE" }, { "label": "字段分组个数", "value": "FIELD_GROUP_COUNT" }, { "label": "字段空值行数", "value": "FIELD_NULL_COUNT" }, { "label": "字段空值率(%)", "value": "FIELD_NULL_RATE" }] },
+        { "name": "doubleTableCompareTable", "displayName": "选择比较表", "required": true, "componentType": "TABLE_SEARCH_SELECTOR", "description": "界面回显字段名必须是 doubleTableCompareTable；Value 为 JSON 字符串，如 {\"doubleTableCompareTable\":\"basic01.test_table_two_million\",\"doubleTableCompareField\":\"col1\"}。不要用旧字段 doubleCompareTable。", "options": [] },
+        { "name": "doubleTableJoinCondition", "displayName": "关联表达式", "required": true, "componentType": "TEXT", "description": "必须传表达式字符串，不是 {leftField/rightField/operator} JSON。内置数据表参数：T1 为检测表，T2 为比较表；示例：T1.id = T2.id。", "options": [] },
+        { "name": "sqlPreSet", "displayName": "参数配置", "required": false, "componentType": "TEXTAREA", "options": [] }
+      ],
+      "validateConfigItems": [
+        { "name": "metric", "displayName": "校验指标", "required": true, "componentType": "SELECTOR", "options": [{ "label": "统计差值", "value": "STATISTICAL_DIFF_VALUE", "unit": "" }, { "label": "统计差异率(%)", "value": "STATISTICAL_DIFF_RATE", "unit": "%" }] },
+        { "ref": "commonValidateConfigItems.operator" },
+        { "ref": "commonValidateConfigItems.value" },
+        { "ref": "commonValidateConfigItems.relation" }
+      ]
+    },
+    {
+      "templateId": 1750,
+      "templateName": "跨源两表字段统计值一致性比较",
+      "templateType": "CROSS_DOUBLE_TABLE_FIELD_STATISTICAL_COMPARE",
+      "catalog": "CONSISTENT",
+      "catalogName": "一致性",
+      "supportWatchTypes": ["DATASOURCE_TABLE", "TABLE"],
+      "validateObjectType": "COLUMN",
+      "ruleConfigItems": [
+        { "name": "monitoringIntensity", "displayName": "监控粒度", "required": true, "componentType": "SELECTOR", "options": [{ "label": "字段", "value": "FIELDS" }, { "label": "表", "value": "TABLE" }] },
+        { "name": "validateField", "displayName": "校验字段", "required": true, "componentType": "FIELD_SELECTOR", "options": [] },
+        { "name": "statisticalMethod", "displayName": "统计方式", "required": true, "componentType": "SELECTOR", "options": [{ "label": "字段计数", "value": "FIELD_COUNT" }, { "label": "字段唯一值计数", "value": "FIELD_DISTINCT_COUNT" }, { "label": "字段汇总值", "value": "FIELD_SUM" }, { "label": "字段平均值", "value": "FIELD_AVG" }, { "label": "字段最大值", "value": "FIELD_MAX" }, { "label": "字段最小值", "value": "FIELD_MIN" }, { "label": "字段重复行数", "value": "FIELD_DUPLICATE_COUNT" }, { "label": "字段重复率(%)", "value": "FIELD_DUPLICATE_RATE" }, { "label": "字段分组个数", "value": "FIELD_GROUP_COUNT" }, { "label": "字段空值行数", "value": "FIELD_NULL_COUNT" }, { "label": "字段空值率(%)", "value": "FIELD_NULL_RATE" }] },
+        { "name": "dataSourceType", "displayName": "数据源类型", "required": true, "componentType": "SELECTOR", "options": [] },
+        { "name": "dataSource", "displayName": "数据源", "required": true, "componentType": "SEARCH_SELECTOR", "options": [] },
+        { "name": "doubleTableCompareTable", "displayName": "选择比较表", "required": true, "componentType": "TABLE_SEARCH_SELECTOR", "description": "界面回显字段名必须是 doubleTableCompareTable；Value 为 JSON 字符串，如 {\"doubleTableCompareTable\":\"basic01.test_table_two_million\",\"doubleTableCompareField\":\"col1\"}。不要用旧字段 doubleCompareTable。", "options": [] },
+        { "name": "doubleTableJoinCondition", "displayName": "关联表达式", "required": true, "componentType": "TEXT", "description": "必须传表达式字符串，不是 {leftField/rightField/operator} JSON。内置数据表参数：T1 为检测表，T2 为比较表；示例：T1.id = T2.id。", "options": [] },
+        { "name": "sqlPreSet", "displayName": "参数配置", "required": false, "componentType": "TEXTAREA", "options": [] }
+      ],
+      "validateConfigItems": [
+        { "name": "metric", "displayName": "校验指标", "required": true, "componentType": "SELECTOR", "options": [{ "label": "统计差值", "value": "STATISTICAL_DIFF_VALUE", "unit": "" }, { "label": "统计差异率(%)", "value": "STATISTICAL_DIFF_RATE", "unit": "%" }] },
+        { "ref": "commonValidateConfigItems.operator" },
+        { "ref": "commonValidateConfigItems.value" },
+        { "ref": "commonValidateConfigItems.relation" }
+      ]
+    },
+    {
+      "templateId": 1800,
+      "templateName": "两表字段业务逻辑一致性比较",
+      "templateType": "DOUBLE_TABLE_FIELD_EXP_COMPARE",
+      "catalog": "CONSISTENT",
+      "catalogName": "一致性",
+      "supportWatchTypes": ["DATASOURCE_TABLE", "TABLE"],
+      "validateObjectType": "COLUMN",
+      "ruleConfigItems": [
+        { "name": "monitoringIntensity", "displayName": "监控粒度", "required": true, "componentType": "SELECTOR", "options": [{ "label": "字段", "value": "FIELDS" }, { "label": "表", "value": "TABLE" }] },
+        { "name": "validateField", "displayName": "校验字段", "required": true, "componentType": "FIELD_SELECTOR", "options": [] },
+        { "name": "contentIdentifyExpression", "displayName": "业务逻辑", "required": true, "componentType": "TEXT", "description": "两表业务逻辑必须用 ${T1.字段名}/${T2.字段名} 变量引用实际表字段，不能写裸字段名。T1 为检测表，T2 为比较表，最多支持双表；示例：${T1.total_sales}=${T2.unit_price}*${T2.sales_volume}。表达式中的每个变量还必须实例化：去掉 ${} 后的变量名作为独立 formProperty.Name，实际字段作为 Value，例如 {\"Name\":\"T1.total_sales\",\"Value\":\"total_sales\"}。", "options": [] },
+        { "name": "variableInstantiation", "displayName": "变量实例化", "required": true, "componentType": "DYNAMIC_FIELD_MAPPING", "description": "非真实字段名，而是生成规则时按表达式变量动态展开：每个 ${T1.xxx}/${T2.xxx} 都必须追加一个同名 formProperty（不含 ${}），Value 为实际字段名。示例：${T1.col1} 对应 {\"Name\":\"T1.col1\",\"Value\":\"col1\"}；${T2.col1} 对应 {\"Name\":\"T2.col1\",\"Value\":\"col1\"}。", "options": [] },
+        { "name": "doubleTableCompareTable", "displayName": "选择比较表", "required": true, "componentType": "TABLE_SEARCH_SELECTOR", "description": "界面回显字段名必须是 doubleTableCompareTable；Value 为 JSON 字符串，如 {\"doubleTableCompareTable\":\"basic01.test_table_two_million\",\"doubleTableCompareField\":\"col1\"}。不要用旧字段 doubleCompareTable。", "options": [] },
+        { "name": "joinMethod", "displayName": "关联方式", "required": true, "componentType": "SELECTOR", "description": "两表关联方式，示例值：left join、right join、full join。需与 doubleTableJoinCondition 配合使用。", "options": [{ "label": "left join", "value": "left join" }, { "label": "right join", "value": "right join" }, { "label": "full join", "value": "full join" }] },
+        { "name": "doubleTableJoinCondition", "displayName": "关联表达式", "required": true, "componentType": "TEXT", "description": "必须传表达式字符串，不是 {leftField/rightField/operator} JSON。内置数据表参数：T1 为检测表，T2 为比较表；示例：T1.id = T2.id。", "options": [] },
+        { "name": "sqlPreSet", "displayName": "参数配置", "required": false, "componentType": "TEXTAREA", "options": [] }
+      ],
+      "validateConfigItems": [
+        { "name": "metric", "displayName": "校验指标", "required": true, "componentType": "SELECTOR", "options": [{ "label": "正常行数", "value": "NORMAL_NUMBER", "unit": "" }, { "label": "正常率(%)", "value": "NORMAL_RATE", "unit": "%" }, { "label": "异常行数", "value": "ERROR_NUMBER", "unit": "" }, { "label": "异常率(%)", "value": "ERROR_RATE", "unit": "%" }] },
+        { "ref": "commonValidateConfigItems.operator" },
+        { "ref": "commonValidateConfigItems.value" },
+        { "ref": "commonValidateConfigItems.relation" }
+      ]
+    },
+    {
+      "templateId": 1900,
+      "templateName": "表稳定性校验",
+      "templateType": "TABLE_STABILITY_VALIDATE",
+      "catalog": "STABILITY",
+      "catalogName": "稳定性",
+      "supportWatchTypes": ["DATASOURCE_TABLE", "TABLE"],
+      "validateObjectType": "TABLE",
+      "ruleConfigItems": [
+        { "name": "monitoringIntensity", "displayName": "监控粒度", "required": true, "componentType": "SELECTOR", "options": [{ "label": "表", "value": "TABLE" }] }
+      ],
+      "validateConfigItems": [
+        { "name": "metric", "displayName": "校验指标", "required": true, "componentType": "SELECTOR", "options": [{ "label": "统计值", "value": "STATISTICAL_VALUE", "unit": "" }] },
+        { "ref": "commonValidateConfigItems.operator" },
+        { "ref": "commonValidateConfigItems.value" },
+        { "ref": "commonValidateConfigItems.relation" }
+      ]
+    },
+    {
+      "templateId": 2000,
+      "templateName": "表波动性校验",
+      "templateType": "TABLE_FLUCTUATION_VALIDATE",
+      "catalog": "STABILITY",
+      "catalogName": "稳定性",
+      "supportWatchTypes": ["DATASOURCE_TABLE", "TABLE"],
+      "validateObjectType": "TABLE",
+      "ruleConfigItems": [
+        { "name": "monitoringIntensity", "displayName": "监控粒度", "required": true, "componentType": "SELECTOR", "options": [{ "label": "表", "value": "TABLE" }] },
+        { "name": "sqlPreSet", "displayName": "参数配置", "required": false, "componentType": "TEXTAREA", "options": [] }
+      ],
+      "validateConfigItems": [
+        { "name": "metric", "displayName": "校验指标", "required": true, "componentType": "SELECTOR", "options": [{ "label": "一天波动率(%)", "value": "ONE_DAY_FLUCTUATE", "unit": "%" }, { "label": "七天波动率(%)", "value": "SEVEN_DAY_FLUCTUATE", "unit": "%" }, { "label": "三十天波动率(%)", "value": "THIRTY_DAY_FLUCTUATE", "unit": "%" }, { "label": "七天平均值波动率(%)", "value": "SEVEN_DAYS_AVG_FLUCTUATE", "unit": "%" }, { "label": "三十天平均值波动率(%)", "value": "THIRTY_DAYS_AVG_FLUCTUATE", "unit": "%" }, { "label": "相比当月1号波动率(%)", "value": "FIRST_DAY_OF_MONTH_FLUCTUATE", "unit": "%" }, { "label": "相比上月波动率(%)", "value": "LAST_MONTH_FLUCTUATE", "unit": "%" }, { "label": "相比上年波动率(%)", "value": "LAST_YEAR_FLUCTUATE", "unit": "%" }] },
+        { "ref": "commonValidateConfigItems.operator" },
+        { "ref": "commonValidateConfigItems.value" },
+        { "ref": "commonValidateConfigItems.relation" }
+      ]
+    },
+    {
+      "templateId": 2100,
+      "templateName": "字段稳定性校验",
+      "templateType": "FIELD_STABILITY_VALIDATE",
+      "catalog": "STABILITY",
+      "catalogName": "稳定性",
+      "supportWatchTypes": ["DATASOURCE_TABLE", "INDEX", "TABLE"],
+      "validateObjectType": "COLUMN",
+      "ruleConfigItems": [
+        { "name": "monitoringIntensity", "displayName": "监控粒度", "required": true, "componentType": "SELECTOR", "options": [{ "label": "字段", "value": "FIELDS" }, { "label": "表", "value": "TABLE" }] },
+        { "name": "validateField", "displayName": "校验字段", "required": true, "componentType": "FIELD_SELECTOR", "options": [] },
+        { "name": "statisticalMethod", "displayName": "统计方式", "required": true, "componentType": "SELECTOR", "options": [{ "label": "字段计数", "value": "FIELD_COUNT" }, { "label": "字段唯一值计数", "value": "FIELD_DISTINCT_COUNT" }, { "label": "字段汇总值", "value": "FIELD_SUM" }, { "label": "字段平均值", "value": "FIELD_AVG" }, { "label": "字段最大值", "value": "FIELD_MAX" }, { "label": "字段最小值", "value": "FIELD_MIN" }, { "label": "字段重复行数", "value": "FIELD_DUPLICATE_COUNT" }, { "label": "字段重复率(%)", "value": "FIELD_DUPLICATE_RATE" }, { "label": "字段分组个数", "value": "FIELD_GROUP_COUNT" }, { "label": "字段空值行数", "value": "FIELD_NULL_COUNT" }, { "label": "字段空值率(%)", "value": "FIELD_NULL_RATE" }] },
+        { "name": "dataFilter", "displayName": "数据过滤", "required": false, "componentType": "SWITCH_CODE_EDITOR", "options": [], "description": "数据过滤条件，可配置分区过滤或普通数据过滤，会直接追加到校验SQL中。" },
+        { "name": "sqlPreSet", "displayName": "参数配置", "required": false, "componentType": "TEXTAREA", "options": [] }
+      ],
+      "validateConfigItems": [
+        { "name": "metric", "displayName": "校验指标", "required": true, "componentType": "SELECTOR", "options": [{ "label": "统计值", "value": "STATISTICAL_VALUE", "unit": "" }] },
+        { "ref": "commonValidateConfigItems.operator" },
+        { "ref": "commonValidateConfigItems.value" },
+        { "ref": "commonValidateConfigItems.relation" }
+      ]
+    },
+    {
+      "templateId": 2200,
+      "templateName": "字段波动性校验",
+      "templateType": "FIELD_FLUCTUATION_VALIDATE",
+      "catalog": "STABILITY",
+      "catalogName": "稳定性",
+      "supportWatchTypes": ["DATASOURCE_TABLE", "INDEX", "TABLE"],
+      "validateObjectType": "COLUMN",
+      "ruleConfigItems": [
+        { "name": "monitoringIntensity", "displayName": "监控粒度", "required": true, "componentType": "SELECTOR", "options": [{ "label": "字段", "value": "FIELDS" }, { "label": "表", "value": "TABLE" }] },
+        { "name": "validateField", "displayName": "校验字段", "required": true, "componentType": "FIELD_SELECTOR", "options": [] },
+        { "name": "statisticalMethod", "displayName": "统计方式", "required": true, "componentType": "SELECTOR", "options": [{ "label": "字段计数", "value": "FIELD_COUNT" }, { "label": "字段唯一值计数", "value": "FIELD_DISTINCT_COUNT" }, { "label": "字段汇总值", "value": "FIELD_SUM" }, { "label": "字段平均值", "value": "FIELD_AVG" }, { "label": "字段最大值", "value": "FIELD_MAX" }, { "label": "字段最小值", "value": "FIELD_MIN" }, { "label": "字段重复行数", "value": "FIELD_DUPLICATE_COUNT" }, { "label": "字段重复率(%)", "value": "FIELD_DUPLICATE_RATE" }, { "label": "字段分组个数", "value": "FIELD_GROUP_COUNT" }, { "label": "字段空值行数", "value": "FIELD_NULL_COUNT" }, { "label": "字段空值率(%)", "value": "FIELD_NULL_RATE" }] },
+        { "name": "dataFilter", "displayName": "数据过滤", "required": false, "componentType": "SWITCH_CODE_EDITOR", "options": [], "description": "数据过滤条件，可配置分区过滤或普通数据过滤，会直接追加到校验SQL中。" },
+        { "name": "sqlPreSet", "displayName": "参数配置", "required": false, "componentType": "TEXTAREA", "options": [] }
+      ],
+      "validateConfigItems": [
+        { "name": "metric", "displayName": "校验指标", "required": true, "componentType": "SELECTOR", "options": [{ "label": "一天波动率(%)", "value": "ONE_DAY_FLUCTUATE", "unit": "%" }, { "label": "七天波动率(%)", "value": "SEVEN_DAY_FLUCTUATE", "unit": "%" }, { "label": "三十天波动率(%)", "value": "THIRTY_DAY_FLUCTUATE", "unit": "%" }, { "label": "七天平均值波动率(%)", "value": "SEVEN_DAYS_AVG_FLUCTUATE", "unit": "%" }, { "label": "三十天平均值波动率(%)", "value": "THIRTY_DAYS_AVG_FLUCTUATE", "unit": "%" }, { "label": "相比当月1号波动率(%)", "value": "FIRST_DAY_OF_MONTH_FLUCTUATE", "unit": "%" }, { "label": "相比上月波动率(%)", "value": "LAST_MONTH_FLUCTUATE", "unit": "%" }, { "label": "相比上年波动率(%)", "value": "LAST_YEAR_FLUCTUATE", "unit": "%" }] },
+        { "ref": "commonValidateConfigItems.operator" },
+        { "ref": "commonValidateConfigItems.value" },
+        { "ref": "commonValidateConfigItems.relation" }
+      ]
+    },
+    {
+      "templateId": 2300,
+      "templateName": "自定义统计指标校验",
+      "templateType": "CUSTOM_STATISTICAL_VALIDATE",
+      "catalog": "CUSTOM",
+      "catalogName": "自定义",
+      "supportWatchTypes": ["DATASOURCE_TABLE", "INDEX", "TABLE"],
+      "validateObjectType": "TABLE",
+      "ruleConfigItems": [
+        { "name": "monitoringIntensity", "displayName": "监控粒度", "required": true, "componentType": "SELECTOR", "options": [{ "label": "表", "value": "TABLE" }] },
+        { "name": "customSql", "displayName": "自定义SQL", "required": true, "componentType": "CODE_EDITOR", "options": [] },
+        { "name": "sqlPreSet", "displayName": "参数配置", "required": false, "componentType": "TEXTAREA", "options": [] }
+      ],
+      "validateConfigItems": [
+        { "name": "metric", "displayName": "校验指标", "required": true, "componentType": "SELECTOR", "options": [{ "label": "统计值", "value": "STATISTICAL_VALUE", "unit": "" }, { "label": "一天波动率(%)", "value": "ONE_DAY_FLUCTUATE", "unit": "%" }, { "label": "七天波动率(%)", "value": "SEVEN_DAY_FLUCTUATE", "unit": "%" }, { "label": "三十天波动率(%)", "value": "THIRTY_DAY_FLUCTUATE", "unit": "%" }, { "label": "七天平均值波动率(%)", "value": "SEVEN_DAYS_AVG_FLUCTUATE", "unit": "%" }, { "label": "三十天平均值波动率(%)", "value": "THIRTY_DAYS_AVG_FLUCTUATE", "unit": "%" }, { "label": "相比上月波动率(%)", "value": "LAST_MONTH_FLUCTUATE", "unit": "%" }, { "label": "相比上年波动率(%)", "value": "LAST_YEAR_FLUCTUATE", "unit": "%" }] },
+        { "ref": "commonValidateConfigItems.operator" },
+        { "ref": "commonValidateConfigItems.value" },
+        { "ref": "commonValidateConfigItems.relation" }
+      ]
+    },
+    {
+      "templateId": 2400,
+      "templateName": "自定义数据详情校验",
+      "templateType": "CUSTOM_DATA_DETAILS_VALIDATE",
+      "catalog": "CUSTOM",
+      "catalogName": "自定义",
+      "supportWatchTypes": ["DATASOURCE_TABLE", "TABLE"],
+      "validateObjectType": "TABLE",
+      "ruleConfigItems": [
+        { "name": "monitoringIntensity", "displayName": "监控粒度", "required": true, "componentType": "SELECTOR", "options": [{ "label": "表", "value": "TABLE" }] },
+        { "name": "customTotalNumberSql", "displayName": "总行数SQL", "required": true, "componentType": "CODE_EDITOR", "options": [] },
+        { "name": "customErrorNumberSql", "displayName": "异常行数SQL", "required": true, "componentType": "CODE_EDITOR", "options": [] },
+        { "name": "customErrorDataSql", "displayName": "异常数据SQL（异常归档时填写）", "required": false, "componentType": "CODE_EDITOR", "options": [] },
+        { "name": "sqlPreSet", "displayName": "参数配置", "required": false, "componentType": "TEXTAREA", "options": [] }
+      ],
+      "validateConfigItems": [
+        { "name": "metric", "displayName": "校验指标", "required": true, "componentType": "SELECTOR", "options": [{ "label": "正常行数", "value": "NORMAL_NUMBER", "unit": "" }, { "label": "正常率(%)", "value": "NORMAL_RATE", "unit": "%" }, { "label": "异常行数", "value": "ERROR_NUMBER", "unit": "" }, { "label": "异常率(%)", "value": "ERROR_RATE", "unit": "%" }] },
+        { "ref": "commonValidateConfigItems.operator" },
+        { "ref": "commonValidateConfigItems.value" },
+        { "ref": "commonValidateConfigItems.relation" }
+      ]
+    },
+    {
+      "templateId": 2500,
+      "templateName": "数据源连通性监测",
+      "templateType": "DATASOURCE_AVAILABLE_CHECK",
+      "catalog": "STABILITY",
+      "catalogName": "稳定性",
+      "supportWatchTypes": ["DATASOURCE"],
+      "validateObjectType": "DATASOURCE",
+      "ruleConfigItems": [],
+      "validateConfigItems": [
+        { "name": "metric", "displayName": "校验指标", "required": true, "componentType": "SELECTOR", "options": [{ "label": "数据源连通性", "value": "DATASOURCE_CONNECTIVE", "unit": "" }] },
+        { "ref": "commonValidateConfigItems.operator" },
+        { "ref": "commonValidateConfigItems.value" }
+      ],
+      "notes": [
+        "监控对象类型为 DATASOURCE（数据源级）。formProperties 空数组即可，无字段/表配置。",
+        "校验指标固定 DATASOURCE_CONNECTIVE（数据源连通性），推荐 EQUAL \"true\"（连得上判定通过）；即使传其它指标名，后端会归一化为 DATASOURCE_CONNECTIVE。",
+        "watch 必须建在 PROD 数据源 ID 上；POC 实测 DEV 数据源 ID 建 watch 会被后端强制 env=PROD 产生脏数据，导致 PagedQueryQualityRules 报 DPN.Commons.InternalError。"
+      ]
+    },
+    {
+      "templateId": 2600,
+      "templateName": "表结构异动监测",
+      "templateType": "TABLE_SCHEMA_CHECK",
+      "catalog": "STABILITY",
+      "catalogName": "稳定性",
+      "supportWatchTypes": ["DATASOURCE"],
+      "validateObjectType": "TABLE",
+      "ruleConfigItems": [
+        { "name": "dataSourceTable", "displayName": "选择校验表", "required": true, "componentType": "TABLE_SELECTOR", "options": [], "valueFormat": "目标数据源表完整元数据 JSON 字符串，关键字段：tenantId/tableType=PHYSICAL_TABLE/tableCatalog(schema)/tableId(guid=dp_ds_table.{tenant}.{dataSourceId}.{schema小写}.{table小写})/tableName/tableShortName/tableEnv/dataSourceFrom=DATA_SOURCE/dataSourceType/dataSourceId/partitioned:false" },
+        { "name": "dataSourceTableCatalog", "displayName": "库/Schema", "required": false, "componentType": "INPUT", "options": [] }
+      ],
+      "validateConfigItems": [
+        { "name": "metric", "displayName": "校验指标", "required": true, "componentType": "SELECTOR", "options": [{ "label": "表结构是否变更", "value": "TABLE_SCHEMA_CHANGED", "unit": "" }] },
+        { "ref": "commonValidateConfigItems.operator" },
+        { "ref": "commonValidateConfigItems.value" }
+      ],
+      "notes": [
+        "监控对象类型为 DATASOURCE（数据源级），但必须指定一张目标表（dataSourceTable 必填），不能空配置创建。",
+        "校验指标固定 TABLE_SCHEMA_CHANGED（表结构是否变更），推荐 EQUAL \"false\"（结构未变更判定通过）。",
+        "外部数据源（Oracle 等）表未采集进 catalog 时 SearchCatalogTable 返空；表名/元数据可通过即席查询任务获取，或从该数据源已有 2600 规则的 ValidateObject.Name 反查。"
+      ]
+    },
+    {
+      "templateId": 2700,
+      "templateName": "实时离线对比",
+      "templateType": "REAL_TIME_OFFLINE_COMPARE",
+      "catalog": "CONSISTENT",
+      "catalogName": "一致性",
+      "supportWatchTypes": ["REALTIME_LOGICAL_TABLE"],
+      "validateObjectType": "CHAIN",
+      "ruleConfigItems": [
+        { "name": "validateField", "displayName": "校验字段", "required": true, "componentType": "FIELD_SELECTOR", "options": [] },
+        { "name": "calculateMethod", "displayName": "计算方式", "required": true, "componentType": "SELECTOR", "options": [{ "label": "值", "value": "VALUE" }, { "label": "计数", "value": "COUNT" }, { "label": "去重计数", "value": "DISTINCT" }, { "label": "求和", "value": "SUM" }, { "label": "最大值", "value": "MAX" }, { "label": "最小值", "value": "MIN" }, { "label": "平均值", "value": "AVG" }] },
+        { "name": "valueType", "displayName": "值类型", "required": true, "componentType": "SELECTOR", "options": [{ "label": "单值", "value": "SINGLE_VALUE" }, { "label": "多值", "value": "MULTI_VALUE" }] },
+        { "name": "timeCondition", "displayName": "时间条件", "required": false, "componentType": "TIME_CONDITION", "options": [], "description": "JSON 字符串，格式 {\"fieldName\":\"dt\",\"compareType\":\"EQUAL\",\"compareValue\":\"$${yyyy-MM-dd}\"}，限定实时表取数的时间范围。" },
+        { "name": "timeZone", "displayName": "时区", "required": false, "componentType": "SELECTOR", "options": [], "description": "如 GMT+0、GMT+8。" },
+        { "name": "enableCondition", "displayName": "启用过滤条件", "required": false, "componentType": "SWITCH", "options": [], "description": "\"true\"/\"false\" 字符串。" },
+        { "name": "offlineCompareChain", "displayName": "离线对比链路", "required": true, "componentType": "OFFLINE_CHAIN_EDITOR", "options": [], "description": "JSON 字符串，格式 {\"offlineTable\":{离线表完整元数据},\"offlineSql\":\"离线取数SQL\"}。offlineTable 为选中离线物理表的完整元数据（tenantId/tableType=PHYSICAL_TABLE/tableCatalog/tableId/tableName/tableShortName/tableEnv/dataSourceFrom/dataSourceType/partitioned 等）；offlineSql 必须是针对该离线表编写的取数 SQL（如 SELECT COUNT(*) FROM LD_Dummy_dev.dws_company），其返回值与实时链路统计值做偏离率对比。可参考规则实例 7394638 的配置。" }
+      ],
+      "validateConfigItems": [
+        { "name": "metric", "displayName": "校验指标", "required": true, "componentType": "SELECTOR", "options": [{ "label": "离线链路偏离率(%)", "value": "REALTIME_OFFLINE_CHAIN_DIFF", "unit": "%" }] },
+        { "ref": "commonValidateConfigItems.operator" },
+        { "ref": "commonValidateConfigItems.value" },
+        { "ref": "commonValidateConfigItems.relation" }
+      ],
+      "notes": [
+        "仅适用于实时元表（REALTIME_LOGICAL_TABLE）监控对象，不可用于离线物理表。",
+        "validateObjectType=CHAIN；validateCondition 为嵌套 RELATION 结构：{\"type\":\"RELATION\",\"operator\":\"OR\",\"subConditions\":[{\"type\":\"EXPRESSION\",\"metric\":\"REALTIME_OFFLINE_CHAIN_DIFF\",\"operator\":\"EQUAL\",\"value\":0,\"unit\":\"%\"}]}。",
+        "创建时必须先选择一张离线表，再编写 offlineSql（离线取数 SQL），该 SQL 与所选离线表强相关；可参考规则实例 7394638。"
+      ]
+    },
+    {
+      "templateId": 2800,
+      "templateName": "实时统计值监测",
+      "templateType": "REAL_TIME_STATISTICAL_VALIDATE",
+      "catalog": "STABILITY",
+      "catalogName": "稳定性",
+      "supportWatchTypes": ["REALTIME_LOGICAL_TABLE"],
+      "validateObjectType": "REALTIME",
+      "ruleConfigItems": [
+        { "name": "validateField", "displayName": "校验字段", "required": true, "componentType": "FIELD_SELECTOR", "options": [] },
+        { "name": "calculateMethod", "displayName": "计算方式", "required": true, "componentType": "SELECTOR", "options": [{ "label": "值", "value": "VALUE" }, { "label": "计数", "value": "COUNT" }, { "label": "去重计数", "value": "DISTINCT" }, { "label": "求和", "value": "SUM" }, { "label": "最大值", "value": "MAX" }, { "label": "最小值", "value": "MIN" }, { "label": "平均值", "value": "AVG" }] },
+        { "name": "valueType", "displayName": "值类型", "required": true, "componentType": "SELECTOR", "options": [{ "label": "单值", "value": "SINGLE_VALUE" }, { "label": "多值", "value": "MULTI_VALUE" }] },
+        { "name": "timeCondition", "displayName": "时间条件", "required": false, "componentType": "TIME_CONDITION", "options": [], "description": "JSON 字符串，格式 {\"fieldName\":\"dt\",\"compareType\":\"EQUAL\",\"compareValue\":\"$${yyyy-MM-dd}\"}。" },
+        { "name": "timeZone", "displayName": "时区", "required": false, "componentType": "SELECTOR", "options": [], "description": "如 GMT+0、GMT+8。" },
+        { "name": "enableCondition", "displayName": "启用过滤条件", "required": false, "componentType": "SWITCH", "options": [], "description": "\"true\"/\"false\" 字符串。" }
+      ],
+      "validateConfigItems": [
+        { "name": "metric", "displayName": "校验指标", "required": true, "componentType": "SELECTOR", "options": [{ "label": "实时统计值", "value": "REALTIME_STATISTICAL_VALUE", "unit": "" }, { "label": "实时一天波动值(%)", "value": "REALTIME_ONE_DAY_FLUCTUATE", "unit": "%" }, { "label": "实时七天波动值(%)", "value": "REALTIME_SEVEN_DAY_FLUCTUATE", "unit": "%" }, { "label": "实时三十天波动值(%)", "value": "REALTIME_THIRTY_DAY_FLUCTUATE", "unit": "%" }] },
+        { "ref": "commonValidateConfigItems.operator" },
+        { "ref": "commonValidateConfigItems.value" },
+        { "ref": "commonValidateConfigItems.relation" }
+      ],
+      "notes": [
+        "仅适用于实时元表（REALTIME_LOGICAL_TABLE）监控对象。validateObjectType=REALTIME，无特有 formProperty。",
+        "校验指标 4 选：实时统计值（REALTIME_STATISTICAL_VALUE，无单位）、实时一天/七天/三十天波动值(%)。"
+      ]
+    },
+    {
+      "templateId": 2900,
+      "templateName": "实时多链路对比",
+      "templateType": "REAL_TIME_MULTI_CHAIN_COMPARE",
+      "catalog": "CONSISTENT",
+      "catalogName": "一致性",
+      "supportWatchTypes": ["REALTIME_LOGICAL_TABLE"],
+      "validateObjectType": "REALTIME",
+      "ruleConfigItems": [
+        { "name": "validateField", "displayName": "校验字段", "required": true, "componentType": "FIELD_SELECTOR", "options": [] },
+        { "name": "calculateMethod", "displayName": "计算方式", "required": true, "componentType": "SELECTOR", "options": [{ "label": "值", "value": "VALUE" }, { "label": "计数", "value": "COUNT" }, { "label": "去重计数", "value": "DISTINCT" }, { "label": "求和", "value": "SUM" }, { "label": "最大值", "value": "MAX" }, { "label": "最小值", "value": "MIN" }, { "label": "平均值", "value": "AVG" }] },
+        { "name": "valueType", "displayName": "值类型", "required": true, "componentType": "SELECTOR", "options": [{ "label": "单值", "value": "SINGLE_VALUE" }, { "label": "多值", "value": "MULTI_VALUE" }] },
+        { "name": "timeCondition", "displayName": "时间条件", "required": false, "componentType": "TIME_CONDITION", "options": [], "description": "JSON 字符串，格式 {\"fieldName\":\"dt\",\"compareType\":\"EQUAL\",\"compareValue\":\"$${yyyy-MM-dd}\"}。" },
+        { "name": "timeZone", "displayName": "时区", "required": false, "componentType": "SELECTOR", "options": [], "description": "如 GMT+0、GMT+8。" },
+        { "name": "enableCondition", "displayName": "启用过滤条件", "required": false, "componentType": "SWITCH", "options": [], "description": "\"true\"/\"false\" 字符串。" },
+        { "name": "realTimeCompareChainsCount", "displayName": "对比链路数", "required": true, "componentType": "SELECTOR", "options": [{ "label": "双链路", "value": "DOUBLE_CHAIN" }, { "label": "三链路", "value": "TRIPLE_CHAIN" }], "description": "双链路需 1 张对比实时表，三链路需 2 张；直接决定可用校验指标个数。" },
+        { "name": "realTimeCompareChains", "displayName": "对比链路", "required": true, "componentType": "REALTIME_CHAIN_EDITOR", "options": [], "description": "JSON 数组字符串，每个元素为一张对比实时元表的完整元数据（tableType=REALTIME_LOGICAL_TABLE/tableCatalog/tableId/tableName/dataSourceType=HOLOGRES 等）。双链路传 1 个元素，三链路传 2 个。" }
+      ],
+      "validateConfigItems": [
+        { "name": "metric", "displayName": "校验指标", "required": true, "componentType": "SELECTOR", "options": [{ "label": "链路1偏离率(%)", "value": "REALTIME_COMPARE_CHAIN_1_DIFF", "unit": "%" }, { "label": "链路2偏离率(%)", "value": "REALTIME_COMPARE_CHAIN_2_DIFF", "unit": "%" }], "description": "双链路对比(DOUBLE_CHAIN)只有 REALTIME_COMPARE_CHAIN_1_DIFF 一个指标；三链路对比(TRIPLE_CHAIN)有 REALTIME_COMPARE_CHAIN_1_DIFF + REALTIME_COMPARE_CHAIN_2_DIFF 两个指标。" },
+        { "ref": "commonValidateConfigItems.operator" },
+        { "ref": "commonValidateConfigItems.value" },
+        { "ref": "commonValidateConfigItems.relation" }
+      ],
+      "notes": [
+        "仅适用于实时元表（REALTIME_LOGICAL_TABLE）监控对象。validateObjectType=REALTIME。",
+        "realTimeCompareChainsCount 决定校验指标个数：双链路(DOUBLE_CHAIN)仅 REALTIME_COMPARE_CHAIN_1_DIFF；三链路(TRIPLE_CHAIN)为 REALTIME_COMPARE_CHAIN_1_DIFF + REALTIME_COMPARE_CHAIN_2_DIFF。"
+      ]
+    }
+  ]
+}

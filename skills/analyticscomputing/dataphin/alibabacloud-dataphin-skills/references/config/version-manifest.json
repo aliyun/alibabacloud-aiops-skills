@@ -1,0 +1,189 @@
+{
+  "schema_version": 1,
+  "default_min_version": "6.0",
+  "version_probe": {
+    "api": "GetServerVersion",
+    "channel": "sdk_only",
+    "note": "GetServerVersion 未在网关发布，无 CLI 命令（勿用 aliyun dataphin-public get-server-version）；仅独立部署经泛化调用探测，配方见 references/version-aware-openapi.md §4",
+    "version_field": "Data",
+    "fallback": "ask_user"
+  },
+  "skills": [
+    {
+      "id": "dataplan/create-data-source",
+      "min_version": "6.0"
+    },
+    {
+      "id": "dataplan/check-data-source-connectivity",
+      "min_version": "6.0"
+    },
+    {
+      "id": "dataplan/create-compute-source/create-maxcompute-compute-source",
+      "min_version": "6.0"
+    },
+    {
+      "id": "dataplan/update-compute-source",
+      "min_version": "6.0"
+    },
+    {
+      "id": "dataplan/check-compute-source-connectivity",
+      "min_version": "6.0"
+    },
+    {
+      "id": "dataplan/create-maxcompute-data-source",
+      "min_version": "6.0"
+    },
+    {
+      "id": "dataplan/manage-project-member",
+      "min_version": "6.0"
+    },
+    {
+      "id": "manage/manage-tenant-member",
+      "min_version": "6.0"
+    },
+    {
+      "id": "manage/manage-row-level-permission",
+      "min_version": "6.0"
+    },
+    {
+      "id": "manage/manage-column-permission",
+      "min_version": "6.0"
+    },
+    {
+      "id": "dev/execute-ad-hoc-task",
+      "min_version": "6.0"
+    },
+    {
+      "id": "dev/submit-batch-task",
+      "min_version": "6.0"
+    },
+    {
+      "id": "dev/update-batch-task",
+      "min_version": "6.0"
+    },
+    {
+      "id": "dev/find-tenant-root-node",
+      "min_version": "6.0"
+    },
+    {
+      "id": "dev/get-batch-task-info-by-name",
+      "min_version": "6.0"
+    },
+    {
+      "id": "dev/get-bizdate",
+      "min_version": "6.0"
+    },
+    {
+      "id": "ops/create-node-supplement",
+      "min_version": "6.0"
+    },
+    {
+      "id": "ops/rerun-task-instance",
+      "min_version": "6.0"
+    },
+    {
+      "id": "ops/monitor-task-instance",
+      "min_version": "6.0"
+    },
+    {
+      "id": "ops/pause-task-instance",
+      "min_version": "6.0"
+    },
+    {
+      "id": "pipeline/create-pipeline-task",
+      "min_version": "6.0"
+    },
+    {
+      "id": "pipeline/update-pipeline-task",
+      "min_version": "6.0"
+    },
+    {
+      "id": "assets/create-standard",
+      "min_version": "6.0"
+    },
+    {
+      "id": "assets/update-standard",
+      "min_version": "6.0"
+    },
+    {
+      "id": "assets/manage-data-standard",
+      "min_version": "6.0"
+    },
+    {
+      "id": "assets/configure-quality-rule",
+      "min_version": "6.0"
+    },
+    {
+      "id": "datasecurity/grant-data-source-permission",
+      "min_version": "6.0"
+    },
+    {
+      "id": "datasecurity/manage-data-masking",
+      "min_version": "6.0"
+    },
+    {
+      "id": "dataservice/create-and-publish-api",
+      "min_version": "6.0"
+    },
+    {
+      "id": "dataservice/manage-app-and-bindauth",
+      "min_version": "6.0"
+    },
+    {
+      "id": "dataservice/call-data-service-api",
+      "min_version": "6.0"
+    },
+    {
+      "id": "dataservice/monitor-api-operations",
+      "min_version": "6.0"
+    },
+    {
+      "id": "knowledge-graph/manage-kg-schema",
+      "min_version": "6.0"
+    },
+    {
+      "id": "knowledge-graph/manage-kg-knowledge",
+      "min_version": "6.0"
+    },
+    {
+      "id": "knowledge-graph/query-kg",
+      "min_version": "6.0"
+    },
+    {
+      "id": "unstructured-data/create-dataset",
+      "min_version": "6.2"
+    },
+    {
+      "id": "unstructured-data/update-dataset-schema",
+      "min_version": "6.2"
+    },
+    {
+      "id": "unstructured-data/create-unstructured-workflow",
+      "min_version": "6.2"
+    },
+    {
+      "id": "unstructured-data/update-unstructured-workflow",
+      "min_version": "6.2"
+    },
+    {
+      "id": "dataplan/create-project",
+      "min_version": "6.0"
+    },
+    {
+      "id": "datasecurity/manage-data-classification",
+      "min_version": "6.0"
+    },
+    {
+      "id": "assets/manage-topic-domain",
+      "min_version": "6.0"
+    },
+    {
+      "id": "assets/manage-biz-entity",
+      "min_version": "6.0"
+    },
+    {
+      "id": "assets/manage-biz-metric",
+      "min_version": "6.0"
+    }
+  ]
+}

@@ -1,0 +1,539 @@
+{
+ "pipelineDTO": {
+  "steps": [
+   {
+    "reader": false,
+    "writer": false,
+    "name": "文件基本信息",
+    "x": 300,
+    "y": 100,
+    "id": "b31d7628-19fc-4bf5-ab98-18af3fd9c2b5",
+    "webConfig": {},
+    "type": "normal",
+    "key": "file_basic_info",
+    "pluginConfig": {
+     "neuronInput": {
+      "storageDsId": "<storageDsId：FileStorageConfig.DataSourceId>",
+      "datasetPath": "<ProdPath：FileStorageConfig.ProdPath>",
+      "mountPath": "<MountPath：FileStorageConfig.MountPath>",
+      "datasetName": "<数据集名>",
+      "datasetId": "<datasetId：get-dataset 回读 DatasetDTO.Id>",
+      "datasetType": "HYBRID",
+      "datasetProjectId": 1234567890123456,
+      "datasetVersion": "V1",
+      "datasetVersionId": "<V1 versionId：VersionList[].Id>",
+      "outputSelf": false
+     },
+     "neuronOutput": {
+      "storageDsId": "<storageDsId：FileStorageConfig.DataSourceId>",
+      "datasetPath": "<ProdPath：FileStorageConfig.ProdPath>",
+      "mountPath": "<MountPath：FileStorageConfig.MountPath>",
+      "datasetName": "<数据集名>",
+      "datasetId": "<datasetId：get-dataset 回读 DatasetDTO.Id>",
+      "datasetType": "HYBRID",
+      "datasetProjectId": 1234567890123456,
+      "metadataDsId": "<metadataDsId：MetadataStorageConfig.DataSourceId>",
+      "datasetVersion": "V1",
+      "datasetVersionId": "<V1 versionId：VersionList[].Id>",
+      "datasetTable": "ppt_solution_src",
+      "outputSelf": true,
+      "loadStrategy": "UPSERT",
+      "columnMappings": [
+       {
+        "targetColumn": "file_url",
+        "sourceColumnType": "NEURON",
+        "sourceColumn": "file_url"
+       },
+       {
+        "targetColumn": "file_name",
+        "sourceColumnType": "NEURON",
+        "sourceColumn": "file_name"
+       },
+       {
+        "targetColumn": "file_extension",
+        "sourceColumnType": "NEURON",
+        "sourceColumn": "file_extension"
+       }
+      ]
+     },
+     "setting": {
+      "requiredResource": {
+       "mem": "1024",
+       "cpus": "0.5"
+      },
+      "resourceModifiedByUser": false
+     },
+     "noFlowTimeout": 30,
+     "sqlTimeout": 30,
+     "stepName": "文件基本信息",
+     "name": "文件基本信息",
+     "stepId": "b31d7628-19fc-4bf5-ab98-18af3fd9c2b5",
+     "webPluginKey": "file_basic_info"
+    }
+   },
+   {
+    "reader": false,
+    "writer": false,
+    "name": "PPT按页拆分",
+    "x": 300,
+    "y": 240,
+    "id": "c8a52ba4-0c99-4adf-8604-b095bba2e5d2",
+    "webConfig": {},
+    "type": "document",
+    "key": "ppt_doc_transform",
+    "pluginConfig": {
+     "neuronParameters": {
+      "transitionMode": "pagetoppt"
+     },
+     "neuronInput": {
+      "storageDsId": "<storageDsId：FileStorageConfig.DataSourceId>",
+      "datasetPath": "<ProdPath：FileStorageConfig.ProdPath>",
+      "mountPath": "<MountPath：FileStorageConfig.MountPath>",
+      "datasetName": "<数据集名>",
+      "datasetId": "<datasetId：get-dataset 回读 DatasetDTO.Id>",
+      "datasetType": "HYBRID",
+      "datasetProjectId": 1234567890123456,
+      "metadataDsId": "<metadataDsId：MetadataStorageConfig.DataSourceId>",
+      "datasetVersion": "V1",
+      "datasetVersionId": "<V1 versionId：VersionList[].Id>",
+      "datasetTable": "ppt_solution_src",
+      "outputSelf": false,
+      "filters": [],
+      "inputColumn": [
+       {
+        "sourceColumnName": "file_url",
+        "sourceColumnContentType": "URL",
+        "sourceColumnType": "text",
+        "columnName": "file_url"
+       }
+      ]
+     },
+     "neuronOutput": {
+      "storageDsId": "<storageDsId：FileStorageConfig.DataSourceId>",
+      "datasetPath": "<ProdPath：FileStorageConfig.ProdPath>",
+      "mountPath": "<MountPath：FileStorageConfig.MountPath>",
+      "datasetName": "<数据集名>",
+      "datasetId": "<datasetId：get-dataset 回读 DatasetDTO.Id>",
+      "datasetType": "HYBRID",
+      "datasetProjectId": 1234567890123456,
+      "metadataDsId": "<metadataDsId：MetadataStorageConfig.DataSourceId>",
+      "datasetVersion": "V2",
+      "datasetVersionId": "<V2 versionId：VersionList[].Id>",
+      "datasetTable": "ppt_solution_pages",
+      "outputSelf": false,
+      "loadStrategy": "UPSERT",
+      "outputFilePath": "pages",
+      "columnMappings": [
+       {
+        "targetColumn": "source_file_url",
+        "sourceColumnType": "NEURON",
+        "sourceColumn": "source_file_url"
+       },
+       {
+        "targetColumn": "source_slide_sequence",
+        "sourceColumnType": "NEURON",
+        "sourceColumn": "source_slide_sequence"
+       },
+       {
+        "targetColumn": "generation_file_url",
+        "sourceColumnType": "NEURON",
+        "sourceColumn": "generation_file_url"
+       },
+       {
+        "targetColumn": "generation_file_id",
+        "sourceColumnType": "NEURON",
+        "sourceColumn": "generation_file_id"
+       }
+      ]
+     },
+     "setting": {
+      "requiredResource": {
+       "mem": "2048",
+       "cpus": "1"
+      },
+      "resourceModifiedByUser": false
+     },
+     "noFlowTimeout": 30,
+     "sqlTimeout": 30,
+     "stepName": "PPT按页拆分",
+     "name": "PPT按页拆分",
+     "stepId": "c8a52ba4-0c99-4adf-8604-b095bba2e5d2",
+     "webPluginKey": "ppt_doc_transform"
+    },
+    "distribute": true
+   },
+   {
+    "reader": false,
+    "writer": false,
+    "name": "PPT页级解析",
+    "x": 300,
+    "y": 380,
+    "id": "c46b89af-ed7d-4e46-aa35-7ccd0ae06c7a",
+    "webConfig": {},
+    "type": "document",
+    "key": "ppt_parse",
+    "pluginConfig": {
+     "neuronModel": {
+      "modelSource": "MULTIMODAL",
+      "modelId": "<modelId：解析类视觉模型实例 ID，从实际环境取>",
+      "modelPrompt": "你是解决方案售前专家，正在解读一页解决方案 PPT 中的图表/示意图。请输出：\n1. 判断图像类型（架构图、流程图、数据图表、产品截图、对比表等）\n2. 提取关键信息：方案组件名称、数据指标、流程步骤、产品能力关键词\n3. 如实转录图中关键文字（中英文）\n用中文结构化描述，确保不看原图也能理解该图承载的方案信息。仅返回图像内容描述，不加评价。",
+      "enableOutputMultiColumn": false
+     },
+     "neuronParameters": {
+      "enable_model_refinement": true,
+      "enableOutputPictureUrl": "true",
+      "enable_image_interpretation": true
+     },
+     "neuronInput": {
+      "storageDsId": "<storageDsId：FileStorageConfig.DataSourceId>",
+      "datasetPath": "<ProdPath：FileStorageConfig.ProdPath>",
+      "mountPath": "<MountPath：FileStorageConfig.MountPath>",
+      "datasetName": "<数据集名>",
+      "datasetId": "<datasetId：get-dataset 回读 DatasetDTO.Id>",
+      "datasetType": "HYBRID",
+      "datasetProjectId": 1234567890123456,
+      "metadataDsId": "<metadataDsId：MetadataStorageConfig.DataSourceId>",
+      "datasetVersion": "V2",
+      "datasetVersionId": "<V2 versionId：VersionList[].Id>",
+      "datasetTable": "ppt_solution_pages",
+      "outputSelf": false,
+      "filters": [],
+      "inputColumn": [
+       {
+        "sourceColumnName": "generation_file_url",
+        "sourceColumnContentType": "URL",
+        "sourceColumnType": "text",
+        "columnName": "file_url"
+       }
+      ]
+     },
+     "neuronOutput": {
+      "storageDsId": "<storageDsId：FileStorageConfig.DataSourceId>",
+      "datasetPath": "<ProdPath：FileStorageConfig.ProdPath>",
+      "mountPath": "<MountPath：FileStorageConfig.MountPath>",
+      "datasetName": "<数据集名>",
+      "datasetId": "<datasetId：get-dataset 回读 DatasetDTO.Id>",
+      "datasetType": "HYBRID",
+      "datasetProjectId": 1234567890123456,
+      "metadataDsId": "<metadataDsId：MetadataStorageConfig.DataSourceId>",
+      "datasetVersion": "V2",
+      "datasetVersionId": "<V2 versionId：VersionList[].Id>",
+      "datasetTable": "ppt_solution_pages",
+      "outputSelf": true,
+      "loadStrategy": "UPSERT",
+      "outputFilePath": "parse",
+      "enableOutputPictureUrl": true,
+      "columnMappings": [
+       {
+        "targetColumn": "page_markdown_url",
+        "sourceColumnType": "NEURON",
+        "sourceColumn": "markdown_url"
+       }
+      ]
+     },
+     "setting": {
+      "requiredResource": {
+       "mem": "4096",
+       "cpus": "1"
+      },
+      "resourceModifiedByUser": false
+     },
+     "noFlowTimeout": 30,
+     "sqlTimeout": 30,
+     "stepName": "PPT页级解析",
+     "name": "PPT页级解析",
+     "stepId": "c46b89af-ed7d-4e46-aa35-7ccd0ae06c7a",
+     "webPluginKey": "ppt_parse"
+    },
+    "distribute": true
+   },
+   {
+    "reader": false,
+    "writer": false,
+    "name": "整页落文本(桥接)",
+    "x": 300,
+    "y": 520,
+    "id": "8fc4571c-e479-47cb-821e-f4c843621e83",
+    "webConfig": {},
+    "type": "text",
+    "key": "text_chunking",
+    "pluginConfig": {
+     "neuronParameters": {
+      "splitMode": "fixed",
+      "chunkSize": 30000,
+      "chunkOverlap": 0
+     },
+     "neuronInput": {
+      "storageDsId": "<storageDsId：FileStorageConfig.DataSourceId>",
+      "datasetPath": "<ProdPath：FileStorageConfig.ProdPath>",
+      "mountPath": "<MountPath：FileStorageConfig.MountPath>",
+      "datasetName": "<数据集名>",
+      "datasetId": "<datasetId：get-dataset 回读 DatasetDTO.Id>",
+      "datasetType": "HYBRID",
+      "datasetProjectId": 1234567890123456,
+      "metadataDsId": "<metadataDsId：MetadataStorageConfig.DataSourceId>",
+      "datasetVersion": "V2",
+      "datasetVersionId": "<V2 versionId：VersionList[].Id>",
+      "datasetTable": "ppt_solution_pages",
+      "outputSelf": false,
+      "filters": [
+       "page_markdown_url <> ''"
+      ],
+      "inputColumn": [
+       {
+        "sourceColumnName": "page_markdown_url",
+        "sourceColumnContentType": "URL",
+        "sourceColumnType": "text",
+        "columnName": "file_url"
+       }
+      ]
+     },
+     "neuronOutput": {
+      "storageDsId": "<storageDsId：FileStorageConfig.DataSourceId>",
+      "datasetPath": "<ProdPath：FileStorageConfig.ProdPath>",
+      "mountPath": "<MountPath：FileStorageConfig.MountPath>",
+      "datasetName": "<数据集名>",
+      "datasetId": "<datasetId：get-dataset 回读 DatasetDTO.Id>",
+      "datasetType": "HYBRID",
+      "datasetProjectId": 1234567890123456,
+      "metadataDsId": "<metadataDsId：MetadataStorageConfig.DataSourceId>",
+      "datasetVersion": "V3",
+      "datasetVersionId": "<V3 versionId：VersionList[].Id>",
+      "datasetTable": "ppt_solution_elements",
+      "outputSelf": false,
+      "loadStrategy": "UPSERT",
+      "columnMappings": [
+       {
+        "targetColumn": "chunk_id",
+        "sourceColumnType": "NEURON",
+        "sourceColumn": "chunk_id"
+       },
+       {
+        "targetColumn": "source_file_url",
+        "sourceColumnType": "NEURON",
+        "sourceColumn": "source_file_url"
+       },
+       {
+        "targetColumn": "chunk_sequence",
+        "sourceColumnType": "NEURON",
+        "sourceColumn": "chunk_sequence"
+       },
+       {
+        "targetColumn": "page_content",
+        "sourceColumnType": "NEURON",
+        "sourceColumn": "chunk_content"
+       }
+      ]
+     },
+     "setting": {
+      "requiredResource": {
+       "mem": "2048",
+       "cpus": "1"
+      },
+      "resourceModifiedByUser": false
+     },
+     "noFlowTimeout": 30,
+     "sqlTimeout": 30,
+     "stepName": "整页落文本(桥接)",
+     "name": "整页落文本(桥接)",
+     "stepId": "8fc4571c-e479-47cb-821e-f4c843621e83",
+     "webPluginKey": "text_chunking"
+    },
+    "distribute": true
+   },
+   {
+    "reader": false,
+    "writer": false,
+    "name": "解决方案要素提取",
+    "x": 300,
+    "y": 660,
+    "id": "c33fce97-c995-4319-b63e-8e9bd3739114",
+    "webConfig": {},
+    "type": "text",
+    "key": "llm_inference",
+    "pluginConfig": {
+     "neuronModel": {
+      "modelId": "<modelId：LLM 模型实例 ID，从实际环境取>",
+      "modelPrompt": "你是解决方案专家。输入是一页解决方案 PPT 的 markdown 内容。请提取该页的解决方案要素，严格按 JSON 输出（无该项则置空字符串）：{\"topic\": \"方案主题\", \"pain_points\": \"客户痛点\", \"capabilities\": \"产品能力/技术方案\", \"evidence\": \"案例/数据佐证\", \"summary\": \"一句话摘要\"}。只输出 JSON，不要输出其他内容。",
+      "enableDeepThink": false,
+      "enableOutputMultiColumn": false,
+      "maxTokens": 12800
+     },
+     "neuronInput": {
+      "storageDsId": "<storageDsId：FileStorageConfig.DataSourceId>",
+      "datasetPath": "<ProdPath：FileStorageConfig.ProdPath>",
+      "mountPath": "<MountPath：FileStorageConfig.MountPath>",
+      "datasetName": "<数据集名>",
+      "datasetId": "<datasetId：get-dataset 回读 DatasetDTO.Id>",
+      "datasetType": "HYBRID",
+      "datasetProjectId": 1234567890123456,
+      "metadataDsId": "<metadataDsId：MetadataStorageConfig.DataSourceId>",
+      "datasetVersion": "V3",
+      "datasetVersionId": "<V3 versionId：VersionList[].Id>",
+      "datasetTable": "ppt_solution_elements",
+      "outputSelf": false,
+      "inputColumn": [
+       {
+        "sourceColumnName": "page_content",
+        "sourceColumnContentType": "TEXT",
+        "sourceColumnType": "text",
+        "columnName": "content"
+       }
+      ]
+     },
+     "neuronOutput": {
+      "storageDsId": "<storageDsId：FileStorageConfig.DataSourceId>",
+      "datasetPath": "<ProdPath：FileStorageConfig.ProdPath>",
+      "mountPath": "<MountPath：FileStorageConfig.MountPath>",
+      "datasetName": "<数据集名>",
+      "datasetId": "<datasetId：get-dataset 回读 DatasetDTO.Id>",
+      "datasetType": "HYBRID",
+      "datasetProjectId": 1234567890123456,
+      "metadataDsId": "<metadataDsId：MetadataStorageConfig.DataSourceId>",
+      "datasetVersion": "V3",
+      "datasetVersionId": "<V3 versionId：VersionList[].Id>",
+      "datasetTable": "ppt_solution_elements",
+      "outputSelf": true,
+      "loadStrategy": "UPSERT",
+      "columnMappings": [
+       {
+        "targetColumn": "solution_elements",
+        "sourceColumnType": "NEURON",
+        "sourceColumn": "answer"
+       }
+      ]
+     },
+     "setting": {
+      "requiredResource": {
+       "mem": "2048",
+       "cpus": "0.5"
+      },
+      "variables": {
+       "concurrency": "100"
+      },
+      "resourceModifiedByUser": true
+     },
+     "noFlowTimeout": 30,
+     "sqlTimeout": 30,
+     "stepName": "解决方案要素提取",
+     "name": "解决方案要素提取",
+     "stepId": "c33fce97-c995-4319-b63e-8e9bd3739114",
+     "webPluginKey": "llm_inference"
+    },
+    "distribute": true
+   },
+   {
+    "reader": false,
+    "writer": false,
+    "name": "要素向量化",
+    "x": 300,
+    "y": 800,
+    "id": "f038598a-4c03-4506-8eaf-5c92d64f3929",
+    "webConfig": {},
+    "type": "vector",
+    "key": "text_embedding",
+    "pluginConfig": {
+     "neuronModel": {
+      "modelId": "<modelId：embedding 模型实例 ID，从实际环境取>",
+      "modelName": "text-embedding-v4",
+      "modelCn": "text-embedding-v4",
+      "modelParameters": {
+       "vectorDimension": 1024
+      },
+      "enableOutputMultiColumn": false
+     },
+     "neuronInput": {
+      "storageDsId": "<storageDsId：FileStorageConfig.DataSourceId>",
+      "datasetPath": "<ProdPath：FileStorageConfig.ProdPath>",
+      "mountPath": "<MountPath：FileStorageConfig.MountPath>",
+      "datasetName": "<数据集名>",
+      "datasetId": "<datasetId：get-dataset 回读 DatasetDTO.Id>",
+      "datasetType": "HYBRID",
+      "datasetProjectId": 1234567890123456,
+      "metadataDsId": "<metadataDsId：MetadataStorageConfig.DataSourceId>",
+      "datasetVersion": "V3",
+      "datasetVersionId": "<V3 versionId：VersionList[].Id>",
+      "datasetTable": "ppt_solution_elements",
+      "outputSelf": false,
+      "inputColumn": [
+       {
+        "sourceColumnName": "solution_elements",
+        "sourceColumnContentType": "TEXT",
+        "sourceColumnType": "text",
+        "columnName": "content"
+       }
+      ]
+     },
+     "neuronOutput": {
+      "storageDsId": "<storageDsId：FileStorageConfig.DataSourceId>",
+      "datasetPath": "<ProdPath：FileStorageConfig.ProdPath>",
+      "mountPath": "<MountPath：FileStorageConfig.MountPath>",
+      "datasetName": "<数据集名>",
+      "datasetId": "<datasetId：get-dataset 回读 DatasetDTO.Id>",
+      "datasetType": "HYBRID",
+      "datasetProjectId": 1234567890123456,
+      "metadataDsId": "<metadataDsId：MetadataStorageConfig.DataSourceId>",
+      "datasetVersion": "V3",
+      "datasetVersionId": "<V3 versionId：VersionList[].Id>",
+      "datasetTable": "ppt_solution_elements",
+      "outputSelf": true,
+      "loadStrategy": "UPSERT",
+      "columnMappings": [
+       {
+        "targetColumn": "elements_vector",
+        "sourceColumnType": "NEURON",
+        "sourceColumn": "vector_result"
+       }
+      ]
+     },
+     "setting": {
+      "requiredResource": {
+       "mem": "1024",
+       "cpus": "0.5"
+      },
+      "resourceModifiedByUser": false
+     },
+     "noFlowTimeout": 30,
+     "sqlTimeout": 30,
+     "stepName": "要素向量化",
+     "name": "要素向量化",
+     "stepId": "f038598a-4c03-4506-8eaf-5c92d64f3929",
+     "webPluginKey": "text_embedding"
+    },
+    "distribute": true
+   }
+  ],
+  "hops": [
+   {
+    "hopType": "distribute",
+    "id": "b31d7628-19fc-4bf5-ab98-18af3fd9c2b5-c8a52ba4-0c99-4adf-8604-b095bba2e5d2",
+    "source": "b31d7628-19fc-4bf5-ab98-18af3fd9c2b5",
+    "target": "c8a52ba4-0c99-4adf-8604-b095bba2e5d2"
+   },
+   {
+    "hopType": "distribute",
+    "id": "c8a52ba4-0c99-4adf-8604-b095bba2e5d2-c46b89af-ed7d-4e46-aa35-7ccd0ae06c7a",
+    "source": "c8a52ba4-0c99-4adf-8604-b095bba2e5d2",
+    "target": "c46b89af-ed7d-4e46-aa35-7ccd0ae06c7a"
+   },
+   {
+    "hopType": "distribute",
+    "id": "c46b89af-ed7d-4e46-aa35-7ccd0ae06c7a-8fc4571c-e479-47cb-821e-f4c843621e83",
+    "source": "c46b89af-ed7d-4e46-aa35-7ccd0ae06c7a",
+    "target": "8fc4571c-e479-47cb-821e-f4c843621e83"
+   },
+   {
+    "hopType": "distribute",
+    "id": "8fc4571c-e479-47cb-821e-f4c843621e83-c33fce97-c995-4319-b63e-8e9bd3739114",
+    "source": "8fc4571c-e479-47cb-821e-f4c843621e83",
+    "target": "c33fce97-c995-4319-b63e-8e9bd3739114"
+   },
+   {
+    "hopType": "distribute",
+    "id": "c33fce97-c995-4319-b63e-8e9bd3739114-f038598a-4c03-4506-8eaf-5c92d64f3929",
+    "source": "c33fce97-c995-4319-b63e-8e9bd3739114",
+    "target": "f038598a-4c03-4506-8eaf-5c92d64f3929"
+   }
+  ]
+ }
+}
