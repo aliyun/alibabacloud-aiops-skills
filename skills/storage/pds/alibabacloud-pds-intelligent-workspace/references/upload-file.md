@@ -1,5 +1,7 @@
 # PDS File Upload Guide
 
+> The common upload (into a folder by id, into a cloud path with `--create-missing`, or overwrite) is covered inline in `SKILL.md` — you usually don't need this file. Read on for the full parameter table and edge cases.
+
 **Scenario**: When you have obtained the target drive_id and directory file_id and need to upload files to PDS drive
 **Purpose**: Upload local files to PDS drive (supports enterprise space, team space, personal space)
 
@@ -7,7 +9,7 @@
 
 ## File Upload Command
 
-Use the `aliyun pds upload-file` command to directly upload local files to PDS. This command automatically completes the three steps: create file, upload content, and complete upload.
+Use the `aliyun pds upload-file` command to directly upload local files to PDS. It automatically completes create → upload → complete, and handles rapid (instant) upload and multipart part sizing internally.
 
 ```bash
 aliyun pds upload-file \
@@ -15,10 +17,7 @@ aliyun pds upload-file \
   --local-path <local_file_path> \
   --parent-file-id <parent_file_id> \
   --name <cloud_file_name> \
-  --check-name-mode <auto_rename|ignore|refuse> \
-  --enable-rapid-upload <true|false> \
-  --part-size <part_size> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
+  --check-name-mode <auto_rename|ignore|refuse>
 ```
 
 ---
@@ -29,11 +28,17 @@ aliyun pds upload-file \
 |------|------|------|------|
 | `--drive-id` | string | Yes | Target space ID (obtained from space list) |
 | `--local-path` | string | Yes | Full path to local file |
-| `--parent-file-id` | string | No | Parent directory ID, default is `root` |
+| `--parent-file-id` | string | No | Parent directory ID, default is `root`. Ignored when `--file-id`/`--path` (overwrite) is set. |
+| `--parent-path` | string | No | Cloud **directory** path to upload into (e.g. `/Photos/2026/04`). The command resolves it to `parent_file_id` internally — no need to run `resolve-path` or parse its output. Alternative to `--parent-file-id`. |
+| `--create-missing` | bool | No | When resolving `--parent-path`, create any missing folders along the way. |
 | `--name` | string | No | Cloud file name, defaults to local file name |
-| `--check-name-mode` | string | No | Name conflict handling mode: `ignore` (overwrite), `auto_rename` (auto rename), `refuse` (reject), default is `ignore` |
-| `--enable-rapid-upload` | bool | No | Calculate file SHA-1 for rapid upload attempt, default is `false` |
-| `--part-size` | int | No | Size of each part (bytes), default is 5242880 (5MB) |
+| `--file-id` | string | No | **Overwrite upload**: the `file_id` of an existing file to replace. When set, the command overwrites that file's content in place (a new revision) instead of creating a new file. Omit it for a normal new-file upload. |
+| `--path` | string | No | **Overwrite upload by path**: the cloud path of an existing file to replace. Resolved to its `file_id` internally. Alternative to `--file-id` (do not set both). |
+| `--check-name-mode` | string | No | Name conflict handling mode: `ignore` (allow a same-name file to coexist — does **not** overwrite), `auto_rename` (auto rename, appends a timestamp), `refuse` (reject and return the existing file), default is `ignore`. Only relevant for new-file uploads (no `--file-id`/`--path`). |
+
+Rapid (instant) upload and multipart part sizing are automatic — you do not need to configure them:
+- **Rapid upload** is on by default (SHA-1 is computed to complete instantly if an identical file already exists). Pass `--disable-rapid-upload` only if you explicitly want to skip it.
+- **Part size** is chosen automatically (4MB, or 8MB for files larger than 1GB). Override with `--part-size <bytes>` only in special cases.
 
 ---
 
@@ -46,8 +51,7 @@ Upload to root directory using local file name:
 ```bash
 aliyun pds upload-file \
   --drive-id "100" \
-  --local-path "/path/to/file.jpg" \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
+  --local-path "/path/to/file.jpg"
 ```
 
 ### Specify Directory and File Name
@@ -60,185 +64,79 @@ aliyun pds upload-file \
   --local-path "/path/to/file.jpg" \
   --parent-file-id "root" \
   --name "my-photo.jpg" \
-  --check-name-mode "auto_rename" \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
+  --check-name-mode "auto_rename"
 ```
 
-### Enable Rapid Upload
+### Upload File to a Directory Path
 
-Calculate file SHA-1 for rapid upload attempt (completes instantly if identical file exists in cloud):
-
-```bash
-aliyun pds upload-file \
-  --drive-id "100" \
-  --local-path "/path/to/file.jpg" \
-  --enable-rapid-upload \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
-```
-
-### Large File Multipart Upload
-
-Custom part size (suitable for large file uploads):
-
-```bash
-aliyun pds upload-file \
-  --drive-id "100" \
-  --local-path "/path/to/large-file.zip" \
-  --part-size 10485760 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
-```
-
-### Upload File to Specified Directory
-
-If you want to upload a file to a specified directory in a PDS drive, you need to convert the cloud directory name to the cloud directory `file_id`, and use this `file_id` as the value of the `--parent-file-id` parameter.
-
-For example, to upload a file to the `/Photos/2026/04` directory in a personal space, you need to traverse each level of the path to find the corresponding directory's `file_id`. If a directory does not exist in the cloud, you need to create it first.
-
-#### Step 1: Find or Create Photos Directory
-
-List all directories under the root directory to find the `Photos` directory:
-
-```bash
-aliyun pds list-file \
-  --drive-id <drive_id> \
-  --type folder \
-  --parent-file-id root \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
-```
-
-- **If Photos directory exists**: Note down its `file_id`
-- **If Photos directory does not exist**: Create it first and get the `file_id` from the response:
-
-```bash
-aliyun pds create-file \
-  --drive-id <drive_id> \
-  --parent-file-id root \
-  --name Photos \
-  --check-name-mode refuse \
-  --type folder \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
-```
-
-#### Step 2: Find or Create 2026 Directory
-
-List all directories under the Photos directory to find the `2026` directory:
-
-```bash
-aliyun pds list-file \
-  --drive-id <drive_id> \
-  --type folder \
-  --parent-file-id <Photos_directory_file_id> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
-```
-
-- **If 2026 directory exists**: Note down its `file_id`
-- **If 2026 directory does not exist**: Create it first:
-
-```bash
-aliyun pds create-file \
-  --drive-id <drive_id> \
-  --parent-file-id <Photos_directory_file_id> \
-  --name 2026 \
-  --check-name-mode refuse \
-  --type folder \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
-```
-
-#### Step 3: Find or Create 04 Directory
-
-List all directories under the 2026 directory to find the `04` directory:
-
-```bash
-aliyun pds list-file \
-  --drive-id <drive_id> \
-  --type folder \
-  --parent-file-id <2026_directory_file_id> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
-```
-
-- **If 04 directory exists**: Note down its `file_id`
-- **If 04 directory does not exist**: Create it first:
-
-```bash
-aliyun pds create-file \
-  --drive-id <drive_id> \
-  --parent-file-id <2026_directory_file_id> \
-  --name 04 \
-  --check-name-mode refuse \
-  --type folder \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
-```
-
-#### Step 4: Upload File
-
-After obtaining the `file_id` of the `04` directory, use it as the `--parent-file-id` parameter value to upload the file:
+To upload into a directory path (e.g., `/Photos/2026/04`), just pass `--parent-path` — the command resolves it to `parent_file_id` internally, in **one command** (no `resolve-path`, no JSON parsing, no extra tools). Add `--create-missing true` to create any missing folders along the way:
 
 ```bash
 aliyun pds upload-file \
   --drive-id <drive_id> \
   --local-path "/path/to/file.jpg" \
-  --parent-file-id <04_directory_file_id> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
+  --parent-path "/Photos/2026/04" \
+  --create-missing true
 ```
 
-> **Note:** When executing the `aliyun pds list-file` command, if there are no valid items returned and the `next_marker` is not empty, it means that the query is not complete. Use the `next_marker` as the `--marker` parameter for the next list query until `next_marker` is empty.
+When you already have the directory's `parent_file_id`, pass it to `--parent-file-id` directly instead.
 
-### Upload File to Specified Parent File ID
+### Overwrite an Existing File (Overwrite Upload)
 
-When uploading a file to a specified parent file ID, first verify whether the parent directory with the specified ID exists using the Get File command:
-
-```bash
-aliyun pds get-file \
-  --drive-id "100" \
-  --file-id "1000" \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
-```
-
-**Verification Logic:**
-
-- **If the specified Parent File ID does not exist**: The system will prompt that the parent directory does not exist. Ask the user to confirm again.
-- **If the directory exists**: Take the response file's `parent_file_id` as the new Parent File ID and continue to query through Get File until the `parent_file_id` is `root`, indicating that the top-level directory has been found.
-
-After finding all levels, concatenate them to get the full path of the file in this PDS drive space after upload.
-
-> **Note:** Before uploading, you must query the full path relative to the root directory. Only after that can you proceed with the subsequent upload operations.
-
-**Upload Command:**
-
-After completing the path query, use the following command to upload the file:
+PDS **does** support overwrite upload. Provide the existing file — either its `--file-id`, or its cloud path via `--path` (resolved to the `file_id` internally) — and the command replaces that file's content in place (a new revision) instead of adding a new file. `--parent-file-id` / `--check-name-mode` are not needed.
 
 ```bash
+# Overwrite by known file_id
 aliyun pds upload-file \
-  --drive-id "100" \
-  --local-path "/path/to/file.jpg" \
-  --parent-file-id "1000" \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
+  --drive-id <drive_id> \
+  --local-path "/path/to/new-content.jpg" \
+  --file-id <existing_file_id>
+
+# Overwrite by cloud path (the file must already exist)
+aliyun pds upload-file \
+  --drive-id <drive_id> \
+  --local-path "/path/to/new-content.jpg" \
+  --path "/Photos/2026/04/vacation.jpg"
 ```
 
-**Post-Upload:**
-
-After the upload is completed, inform the user that the file upload was successful and display the full path relative to the root directory. For example:
-
-> The file has been uploaded to the `personal space` (or `team space`) with the full path: `/Photos/2026/04/01/file.jpg`
+**To overwrite, name the target directly — don't fish for it with `--check-name-mode`.** If you know the cloud path, pass `--path` (it resolves to the `file_id` for you); if you already have the `file_id`, pass `--file-id`. Both replace the content in place in **one** command. Do **not** try to force an overwrite by re-uploading with different `--check-name-mode` values (`refuse`→`ignore`→…): `check-name-mode` only governs *new-file* naming and will never overwrite — that path just creates duplicates or wastes round-trips. If you don't yet have the path or id, resolve it once (`resolve-path`, or a `search-file`/`list-file` lookup) and then overwrite by `--file-id`.
 
 ---
 
 ## Output Description
 
-After successful command execution, returns a JSON object with complete file information, main fields include:
+On success the command prints **a single JSON object to stdout** (progress messages go to stderr, so stdout stays clean and parseable). The **rapid-upload** path and the normal **multipart** path return the **same set of fields** — field names are unified (there is always `name`, never `file_name`) and any value the server omits is filled from the upload's local metadata:
 
 - `file_id`: Unique file ID
-- `name`: Cloud file name
-- `size`: File size
-- `created_at`: Creation time
-- `updated_at`: Update time
+- `name`: Cloud file name (always `name`, unified across both paths)
+- `drive_id`: Target drive ID
 - `parent_file_id`: Parent directory ID
+- `size`: File size in bytes
+- `type`: Always `file`
+- `rapid_upload`: `true` if the file was instant-uploaded (already existed in the domain), otherwise `false`
+
+The multipart path additionally surfaces server-only metadata when present, e.g. `created_at`, `updated_at`, `content_hash`, `revision_id`.
+
+Example:
+
+```json
+{
+  "file_id": "66e7...974e",
+  "name": "my-photo.jpg",
+  "drive_id": "100",
+  "parent_file_id": "root",
+  "size": 20480,
+  "type": "file",
+  "rapid_upload": false
+}
+```
 
 ---
 
 ## Notes
 
-1. **Same name file handling**: Recommend using `--check-name-mode auto_rename` to avoid overwriting existing files
-2. **Rapid upload feature**: Enable `--enable-rapid-upload` to complete upload instantly when identical file exists in cloud
-3. **Multipart upload**: Large files are automatically uploaded in parts, adjust part size via `--part-size`
-4. **Network stability**: Ensure stable network when uploading large files to avoid interruptions
+1. **New file vs overwrite**:
+   - **New-file upload** (no `--file-id`): `--check-name-mode` controls same-name handling. `ignore` (the default) lets a new file coexist with an existing same-name file (it does **not** overwrite); `auto_rename` appends a timestamp to keep names unique; `refuse` rejects when a same-name file already exists.
+   - **Overwrite upload** (with `--file-id`): PDS **does** support replacing an existing file's content in place — pass the target file's `--file-id` and the command overwrites it (new revision) rather than creating a new file. See the "Overwrite an Existing File" example above.
+2. **Rapid upload & multipart**: Handled automatically by the command (rapid upload on by default; part size auto-selected, 8MB for files >1GB). No configuration needed.
+3. **Network stability**: Ensure stable network when uploading large files to avoid interruptions

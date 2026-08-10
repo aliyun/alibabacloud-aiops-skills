@@ -1,191 +1,115 @@
-# Alibaba Cloud PDS Visual Similar Search Guide
+# PDS Visual Similar Search Guide
 
-**Scenario**: When you have prepared a local image file or have obtained the drive_id, file_id, revision_id of an image file, and want to perform image search, similar image search, visual similarity search, or multimodal image retrieval
-**Purpose**: Search for similar images in the cloud drive based on user-provided image
+**Scenario**: Find images in a drive that are visually similar to a source image (image search / similar-image search / image-text hybrid retrieval).
 
-## Step 1 [Optional]: Upload Local Image File to Drive System Space
-
-**Prerequisites**
-
-If the user has already provided the image file's drive_id, file_id, revision_id, skip this step
-
-### Step 1.1 Get System Space
-
-Execute the following command to get the domain's system space configuration:
-```bash
-aliyun pds get-domain --domain-id <domain-id> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
-```
-
-Response example:
-```json
-{
-  "domain_id": "bj1093",
-  "system_drive_config": {
-    "enable": true,
-    "drive_id": 1,
-    "resource_parent_file_id_map": {
-      "value-add": "68d2348822056f5eea514146b4ad7183cdb94d2f"
-    }
-  }
-}
-```
-
-Extract the system space ID and upload parent file ID from the response. In the above example, system space ID is 1, and upload parent file ID is `68d2348822056f5eea514146b4ad7183cdb94d2f` (the `value-add` item).
-
-If `enable` in `system_drive_config` is false, or `drive_id` is empty, or `resource_parent_file_id_map` does not contain `value-add`, there is an issue with system space configuration. Please contact PDS technical support for assistance.
-
-### Step 1.2 Upload Local File to Drive System Space
-
-Upload the local file to the drive's system space, where `drive_id` is set to the system space ID obtained in the previous step, `parent_file_id` is set to the upload parent file ID obtained in the previous step, and record the file's `file_id` and `revision_id`.
-
-## Step 2: Construct x-pds-process
-
-If the user searches using a local file, the source file information comes from the file uploaded to the drive in Step 1.2; otherwise, the source file information comes from the drive file information provided by the user.
-
-Must call the existing Python script `scripts/render_visual_similar_search_process.py` to generate `x-pds-process`. The script will output `x-pds-process` to the terminal.
-
-**Parameter Description**
-- `source_domain_id`: Domain where the source image is located
-- `source_file_id`: File ID of the source image
-- `source_drive_id`: Drive ID of the source image
-- `source_revision_id`: Revision ID of the source image
-- `query`: Search semantic text, not required if none
-- `limit`: Maximum number of similar images to return, not required if none
-
-```bash
-python scripts/render_visual_similar_search_process.py \
-  --source_domain_id <SOURCE_DOMAIN_ID> \
-  --source_file_id <SOURCE_FILE_ID> \
-  --source_drive_id <SOURCE_DRIVE_ID> \
-  --source_revision_id <SOURCE_REVISION_ID> \
-  --query <QUERY> \
-  --limit <LIMIT>
-```
+Searching is done in **one CLI call** — `aliyun pds similar-search`. The command renders the `x-pds-process` parameter (source `pds://` schema, semantic query, result type) and validates it locally, then calls the Process API. You do **not** build `x-pds-process` by hand or run any Python script.
 
 ---
 
-## Step 3: Perform Image Search
+## Two distinct resources
 
-**Parameter Description**
-- `search_drive_id`: Drive ID to search in
-- `search_folder_id`: File ID of the folder to search in
+- **Source image** — referenced by `--source-drive-id` plus `--source-path` or `--source-file-id`.
+- **Search scope** — `--drive-id` (whole drive) or `--drive-id` plus `--path` / `--file-id` (a folder).
 
-### Search Entire Drive
+They are independent (the source image need not live in the search scope).
+
+---
+
+## Command
+
 ```bash
-aliyun pds process \
-  --resource-type drive \
-  --drive-id ${SEARCH_DRIVE_ID} \
-  --x-pds-process ${X_PDS_PROCESS} \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
+aliyun pds similar-search \
+  --source-drive-id <SRC_DRIVE_ID> \
+  --source-path <SRC_PATH> \
+  [--source-revision-id <SRC_REVISION_ID>] \
+  --drive-id <SEARCH_DRIVE_ID> \
+  [--path <SEARCH_FOLDER_PATH>] \
+  [--query "<semantic text>"] \
+  [--limit <N>] \
+  [--dry-run true]
 ```
 
-### Search Specific Folder
-```bash
-aliyun pds process \
-  --resource-type file \
-  --drive-id ${SEARCH_DRIVE_ID} \
-  --file-id ${SEARCH_FOLDER_ID} \
-  --x-pds-process ${X_PDS_PROCESS} \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
-```
+| Flag | Description |
+|------|-------------|
+| `--source-drive-id` + `--source-path` / `--source-file-id` | The query image. Provide exactly one path/ID. |
+| `--source-revision-id` | Query image revision. **Optional — auto-fetched (latest) if omitted**, so you do not need a separate `get-file`. Required only with `--dry-run` (that mode does not call the API). |
+| `--drive-id` | Search scope drive. Required unless `--dry-run`. |
+| `--path` / `--file-id` | Restrict search to an existing folder by path or ID. Omit both to search the whole drive. |
+| `--query` | Optional semantic text filter (raw text; CLI wraps and base64-encodes it). |
+| `--limit` | Max results, 1–100. |
+| `--dry-run` | Print the generated process without API calls. Path options are rejected; use source IDs plus `--source-revision-id`, and omit the path search scope. |
+
+> **LOCAL source image = hard stop.** If the user's source image is a LOCAL file (e.g. `~/Downloads/cat.jpg`, a local path, or a locally-attached image), do **not** `upload-file` it and do **not** run `similar-search` — not even as a "first upload it, then search" convenience. Auto-uploading the local image on their behalf is a **failure**. Stop and tell the user to upload the image to their PDS drive themselves (see `references/upload-file.md`), then re-run once they give you its cloud path or `file_id`. Run `similar-search` **only** when the source **the user pointed to** already exists in PDS (they gave its drive/file id, cloud path, or a PDS-side name to resolve). If the user described the image as local, a same-named file that happens to exist in PDS is **NOT** their image — do not `search-file`/`resolve-path` for it, and do not substitute it. Never fabricate a source `file_id`.
+
+---
+
+## Locating the source image (do this efficiently — do NOT enumerate the whole domain)
+
+The source image is almost always named or path-addressed (e.g. "cat3.jpeg in the enterprise space root", "/Photos/cat.png"). Locate it with **one targeted lookup**, then run `similar-search` directly:
+
+1. **If an absolute path is given** → pass it directly as `--source-path`; do not call `resolve-path` first.
+2. **If only a name is given** → identify the one relevant drive first (`aliyun pds list-all-drives`, then pick the space the user named — personal / a specific team / the enterprise space), and run `aliyun pds search-file --drive-id <that_drive> --query 'name match "cat3.jpeg"'` (or `--file-id <root>` + `list-file` for a single named folder). Follow `references/search-file.md` to build the query.
+3. Run `similar-search` with `--source-path` or the found `--source-file-id`. **No `get-file` needed** — the latest source revision is auto-fetched when omitted.
+
+If the named source or search space does not resolve to a non-empty `drive_id`, stop. Never call `search-file`, `list-file`, or `similar-search` with an empty ID.
+
+**Hard rule — never brute-force.** Do **not** loop `list-file` over every drive to find the source. One or two targeted `search-file`/`resolve-path` calls are enough. If those calls turn up nothing:
+
+- **Stop.** Do not fall back to scanning all spaces.
+- Report clearly to the user that the source image (e.g. `cat3.jpeg`) was not found in the space they described, so similar-search cannot run — and, if a log/output file was requested, write that "not found" conclusion into it.
+
+Blindly enumerating every space wastes dozens of calls and minutes for a result an exact-name search already settled — and a missing source is a real answer, not a reason to search harder.
 
 ---
 
 ## Response
 
-**Success Response**:
 ```json
 {
   "similar_files": [
-    {
-      "similarity": 0.95,
-      "domain_id": "bj1093",
-      "drive_id": "2",
-      "file_id": "5d79206586bb5dd69fb34c349282718146c55da7",
-      "name": "similar_image1.jpg",
-      "type": "file",
-      "category": "image",
-      "size": 102400,
-      "created_at": "2019-08-20T06:51:27.292Z",
-      "thumbnail": "https://..."
-    },
-    {
-      "similarity": 0.84,
-      "domain_id": "bj1093",
-      "drive_id": "2",
-      "file_id": "69c0e5c9432208927ca14d1f8af5e897486c6337",
-      "name": "similar_image2.jpg",
-      "type": "file",
-      "category": "image",
-      "size": 102400,
-      "created_at": "2023-08-20T06:51:27.292Z",
-      "thumbnail": "https://..."
-    }
+    { "similarity": 0.95, "drive_id": "2", "file_id": "...", "name": "similar1.jpg", "thumbnail": "https://..." }
   ]
 }
 ```
 
-**Field Description**:
-- `similarity`: Similarity score, range [0, 1], closer to 1 means more similar
-- `drive_id`: Drive where the result file is located (the search scope drive)
-- `file_id`: Similar file ID
-- `name`: File name
-- `thumbnail`: Thumbnail URL
+- The CLI promotes `name`, `file_id`, `drive_id`, and `thumbnail` from the service's nested `file` object onto each `similar_files[]` item while preserving the original nested object. Use these stable top-level fields in `--cli-query`, for example: `similar_files[].{similarity:similarity,name:name,file_id:file_id}`.
+- `similarity`: 0–1, higher = more similar.
+- `limit` is an upper bound; fewer may return (fewer matches, or permission-filtered).
 
 ---
 
-## Error Handling
+## Examples
 
-| HTTP Status | Error Code | Description | Solution |
-|------------|--------|------|---------||
-| 400 | InvalidParameter.xxx | Invalid parameter | Check parameter format and encoding |
-| 400 | OperationNotSupport | Feature not enabled | Contact PDS technical support to enable feature |
-| 403 | ForbiddenNoPermission.xxx | No permission | Check AccessToken permissions |
-
-**Common Errors**:
-
-### 1. Feature Not Enabled
-```json
-{
-  "code": "OperationNotSupport",
-  "message": "This operation is not supported."
-}
+**Search a whole drive, top 20:**
+```bash
+aliyun pds similar-search \
+  --source-drive-id 1 --source-path "/Photos/cat.jpg" \
+  --drive-id 2 --limit 20
 ```
-**Solution**: Contact PDS technical support to enable image search feature.
 
-### 2. Insufficient Permissions
-```json
-{
-  "code": "ForbiddenNoPermission.file",
-  "message": "No Permission to access resource file"
-}
+**Search within a folder, with a semantic filter:**
+```bash
+aliyun pds similar-search \
+  --source-drive-id 1 --source-path "/Photos/cat.jpg" \
+  --drive-id 2 --path "/Albums/Cats" --query "cat" --limit 50
 ```
-**Solution**:
-- Ensure current user has `FILE.LIST` permission on the search space or folder
-- Ensure current user has `FILE.PREVIEW` permission on the source file
+
+**Preview the generated parameter only:**
+```bash
+aliyun pds similar-search \
+  --source-drive-id 1 --source-file-id <SRC> --source-revision-id <REV> --dry-run true
+```
 
 ---
 
-## Best Practices
+## Best practices
+- Prefer image-only retrieval (no `--query`) for best accuracy unless the user explicitly wants image-text hybrid retrieval.
+- `--limit`: quick preview 10–20, regular 50, comprehensive 100 (max).
+- Only similar **image** search is supported (not video/document).
 
-### 1. Set Appropriate limit Parameter
-- Quick preview: `l_10` or `l_20`
-- Regular search: `l_50`
-- Comprehensive search: `l_100` (maximum)
+## Error handling
 
-### 2. Prefer Image-Only Retrieval
-Unless the user explicitly requests image-text hybrid retrieval, prefer using image-only retrieval for better accuracy
-
----
-
-## FAQ
-
-**Q: Why are fewer results returned than expected?**
-limit only indicates the maximum number of results, it does not guarantee that limit images will be returned.
-A: Possible reasons:
-1. Actual number of similar images is less than limit
-2. Some files were filtered due to insufficient permissions
-3. Total number of images in search scope is small
-
-**Q: Can I search for videos or documents?**
-A: Not supported, only similar image search is supported.
+| HTTP | Code | Fix |
+|------|------|-----|
+| 400 | OperationNotSupport | Ask PDS support to enable image search. |
+| 403 | ForbiddenNoPermission.xxx | Need `FILE.LIST` on the search scope and `FILE.PREVIEW` on the source image. |

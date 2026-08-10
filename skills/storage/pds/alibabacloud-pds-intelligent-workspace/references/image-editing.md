@@ -1,431 +1,180 @@
 # PDS Image Editing Guide
 
-**Scenario**: Already obtained drive_id, file_id, revision_id, need to perform image editing operations
+> **Hard rule: ALL image editing MUST be done via `aliyun pds image-process` below. You MUST NOT download the image and process it locally with PIL, Pillow, OpenCV, ImageMagick, or any other Python/library/CLI tool. Local processing bypasses server-side ICC color-space management, EXIF orientation handling, and PDS revision tracking. Even if the visual result looks correct, local processing is a FAILURE.**
 
-**Purpose**: Edit images through the Process interface, including scaling, cropping, rotation, segmentation, removal, watermark and other features, and save the results to PDS
+**Scenario**: You have a source image's `drive_id` plus absolute path or `file_id` (and optionally `revision_id`) and want to edit it and optionally save the result back to PDS.
 
----
-
-## Image Editing Capabilities Overview
-
-PDS image editing capabilities are implemented through `x-pds-process=image/xxx`, supporting basic image processing such as scaling, cropping, rotation, as well as AI image processing such as segmentation and removal.
-
-| Parameter | Description | Reference Link                                                                                                                                   |
-|------|------|----------------------------------------------------------------------------------------------------------------------------------------|
-| resize | Scale image to specified size | [resize documentation](https://help.aliyun.com/zh/oss/user-guide/resize-images-4)       |
-| watermark | Add text or image watermark to image | [watermark documentation](https://help.aliyun.com/zh/oss/user-guide/add-watermarks) |
-| crop | Crop rectangular image of specified size | [crop documentation](https://help.aliyun.com/zh/oss/user-guide/custom-crop)           |
-| quality | Adjust quality of JPEG and WebP format images | [quality documentation](https://help.aliyun.com/zh/oss/user-guide/adjust-image-quality)     |
-| format | Convert image format | [format documentation](https://help.aliyun.com/zh/oss/user-guide/convert-image-formats-2)                                                                        |
-| auto-orient | Auto-rotate images with rotation parameters | [auto-orient documentation](https://help.aliyun.com/zh/oss/user-guide/auto-rotate-4)                                                              |
-| circle | Crop circular image with specified size centered on image | [circle documentation](https://help.aliyun.com/zh/oss/user-guide/circle-crop)                                                                        |
-| indexcrop | Slice image by position on x or y axis, then select one image | [indexcrop documentation](https://help.aliyun.com/zh/oss/user-guide/indexed-slice)                                                                  |
-| rounded-corners | Crop image into rounded rectangle with specified corner radius | [rounded-corners documentation](https://help.aliyun.com/zh/oss/user-guide/rounded-rectangle-4)                                                      |
-| blur | Apply blur effect to image | [blur documentation](https://help.aliyun.com/zh/oss/user-guide/blur)                                                                            |
-| rotate | Rotate image clockwise by specified angle | [rotate documentation](https://help.aliyun.com/zh/oss/user-guide/rotate)                                                                        |
-| interlace | Adjust JPG images to progressive display | [interlace documentation](https://help.aliyun.com/zh/oss/user-guide/gradual-display)                                                                  |
-| bright | Adjust image brightness | [bright documentation](https://help.aliyun.com/zh/oss/user-guide/brightness)                                                                        |
-| sharpen | Sharpen image | [sharpen documentation](https://help.aliyun.com/zh/oss/user-guide/sharpen)                                                                      |
-| contrast | Adjust image contrast | [contrast documentation](https://help.aliyun.com/zh/oss/user-guide/contrast)                                                                    |
-| flip | Flip image | [flip documentation](https://help.aliyun.com/zh/oss/user-guide/flip-image)                                                                            |
-| segment | Perform image segmentation | See below                                                                                                                                    |
-| remove | Perform image removal | See below                                                                                                                                    |
-
-### Basic Image Processing
-
-Basic image processing capabilities are provided by OSS. For detailed parameters and usage of each feature, please refer to the reference links in the overview table.
-
-For image watermarks in watermark processing, the watermark image's pds_schema format is required, i.e., `pds://domains/{domain_id}/drives/{drive_id}/files/{file_id}/revisions/{revision_id}`, which needs to be URL-safe base64 encoded before use.
-
-### Watermark Processing
-
-#### Image Watermark
-
-| Feature | Parameter Format | Description |
-|------|---------|------|
-| **Image Watermark** | `image/watermark,image_{base64(pds_schema)}` | Add image watermark, watermark image must exist in PDS |
-| **Watermark Position** | `image/watermark,image_{...},g_{position}` | Specify watermark position: nw(top-left), north(top-center), ne(top-right), west(left-center), center(center), east(right-center), sw(bottom-left), south(bottom-center), se(bottom-right) |
-| **Watermark Transparency** | `image/watermark,image_{...},t_{transparency}` | Set watermark transparency, 0-100, 100 means completely opaque |
-| **Watermark Ratio** | `image/watermark,image_{...},p_{percent}` | Watermark percentage of original image, 1-100 |
-| **Watermark Horizontal Offset** | `image/watermark,image_{...},x_{offset}` | Watermark horizontal offset distance, unit: pixels |
-| **Watermark Vertical Offset** | `image/watermark,image_{...},y_{offset}` | Watermark vertical offset distance, unit: pixels |
-| **Watermark Tiling** | `image/watermark,image_{...},repeat_1` | Tile watermark across entire image |
-
-
-> **Watermark image pds_schema format**: `pds://domains/{domain_id}/drives/{drive_id}/files/{file_id}/revisions/{revision_id}`
->
-> The pds_schema needs to be URL-safe base64 encoded before use.
-
-### AI Image Processing
-
-| Feature | Parameter Format | Description |
-|------|---------|------|
-| **Auto Segmentation** | `image/segment` | Automatically identify and extract the main subject from the image |
-| **Point-based Segmentation** | `image/segment,points_(x_{x},y_{y})` | Extract subject at specified coordinate point, x is distance from left edge (px), y is distance from top edge (px) |
-| **Rectangle Segmentation** | `image/segment,boxes_(x_{x},y_{y},w_{w},h_{h})` | Extract rectangular area, x,y are starting coordinates, w is width, h is height |
-| **Text-based Segmentation** | `image/segment,prompt_{base64(prompt)}` | Segment based on text description, prompt is text description (e.g., "kitten"), needs base64 encoding |
-| **Point-based Removal** | `image/remove,points_(x_{x},y_{y})` | Remove content at specified coordinate point |
-| **Rectangle Removal** | `image/remove,boxes_(x_{x},y_{y},w_{w},h_{h})` | Remove rectangular area |
-
-### Feature Combination
-
-Multiple image editing capabilities can be combined, separated by `/`, executed from left to right in order:
-
-**Note**: Only the first operation needs the `image/` prefix, subsequent operations can be written directly without the prefix.
-
-```
-image/crop,x_50,y_50,w_200,h_200/resize,w_100/sharpen,90
-image/rotate,90/resize,p_150
-```
+Editing is done in **one CLI call** — `aliyun pds image-process`. The command renders the `x-pds-process` parameter (operation assembly, base64 encoding, `pds://` schema, save-as) and validates every parameter locally, then calls the Process API. You do **not** build `x-pds-process` by hand or run any Python script.
 
 ---
 
-## Core Workflow
-
-### Image Editing and Save-as
-
-Save edited image to specified PDS location.
-
-#### Step 1: Construct x-pds-process parameter and save to variable
-
-**Important**: Since x-pds-process parameter contains base64 encoding (which may include special characters like `=`), parameters must be passed using variables to avoid shell parsing errors from direct hardcoding.
+## Command
 
 ```bash
-# Generate parameter and save to variable
-X_PDS_PROCESS=$(python scripts/render_image_editing_process.py \
-  --operations "image/resize,w_200" \
-  --saveas \
-  --target-domain-id ${TARGET_DOMAIN_ID} \
-  --target-drive-id ${TARGET_DRIVE_ID} \
-  --target-file-id ${TARGET_FILE_ID} \
-  --target-revision-id ${TARGET_REVISION_ID} \
-  --file-name "edited_image.jpg")
+aliyun pds image-process \
+  --drive-id <SOURCE_DRIVE_ID> \
+  --path <SOURCE_PATH> \
+  [--revision-id <SOURCE_REVISION_ID>] \
+  --operations "<op1>" "<op2>" ... \
+  [--save-as true \
+     --target-drive-id <ID> \
+     --target-path <FILE_OR_PARENT_PATH> \
+     [--target-revision-id <ID>] \
+     --file-name <NAME>] \
+  [--dry-run true]
 ```
 
-**Save-as Parameter Description**:
-- `--saveas`: Enable save-as functionality
-- `--target-domain-id`: domain_id of the save-as target (required)
-- `--target-drive-id`: drive_id of the save-as target (required)
-- `--target-file-id`: target file ID or parent folder ID (required)
-- `--target-revision-id`: target version ID (required when overwriting existing file, leave empty when creating new file)
-- `--file-name`: saved file name (required)
+| Flag | Description |
+|------|-------------|
+| `--drive-id` + `--path` / `--file-id` | Source image. Provide exactly one path/ID unless `--dry-run`; paths are resolved internally. |
+| `--revision-id` | Source revision (optional; latest is used if omitted). |
+| `--operations` | One or more operations, executed left to right. Pass each as a separate quoted argument. Do **not** add the `image/` prefix — it is handled for you. |
+| `--save-as` | Persist the edited image to PDS. Requires the `--target-*` flags below. Save-as always uses the current profile's domain (domains are isolated). |
+| `--target-drive-id` | Save-as target drive. |
+| `--target-path` / `--target-file-id` | Target file (overwrite) **or** existing parent folder (new file), by path or ID. |
+| `--target-revision-id` | Set only when overwriting an existing file. |
+| `--file-name` | Saved file name. |
+| `--dry-run` | Print the generated `x-pds-process` without calling the API. Path options are rejected in this mode because resolving them requires API calls; use IDs/revisions for dry-run. |
 
-#### Step 2: Execute save-as request
+**On success (executed)** returns the saved file: `{ "drive_id": ..., "file_id": ..., "revision_id": ... }`.
+
+> Tip: to get the source `revision_id` and image dimensions, use `aliyun pds get-file --drive-id <id> --path "/…/source.png"` (or `--file-id <id>` when already known). The response includes `image_media_metadata.width/height`, and `--path` resolves internally without a separate `resolve-path` call.
+
+### Use paths in the same call
+
+Pass the source as `--path` and an existing save-as parent folder as `--target-path`; `image-process` resolves both internally. Use `get-file --path` first only when dimensions or metadata are needed for operation planning. If the save-as parent folder does not exist, create it once with `resolve-path --create-missing`, then pass the returned ID.
+
+Do **not** resolve the target *file* itself before save-as — it doesn't exist yet, so that lookup is wasted (and errors). Only pass `--target-file-id` = an existing file's id (plus `--target-revision-id`) when you intend to **overwrite** that file.
+
+---
+
+## Watermark shortcut (recommended)
+
+Instead of manually building the watermark operation in `--operations`, use these shortcut parameters:
 
 ```bash
-aliyun pds process \
-  --resource-type file \
-  --drive-id ${SOURCE_DRIVE_ID} \
-  --file-id ${SOURCE_FILE_ID} \
-  --x-pds-process "${X_PDS_PROCESS}" \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
+aliyun pds image-process \
+  --drive-id 1020 --path "/Photos/source.png" \
+  --watermark-path "/Assets/watermark.png" \
+  [--watermark-drive-id <ID>] \
+  [--watermark-revision-id <ID>] \
+  [--watermark-position center|nw|north|ne|west|east|sw|south|se] \
+  --save-as true --target-drive-id 1020 --target-path "/Photos/Edited" \
+  --file-name watermarked.png
 ```
 
-**Success Response** (HTTP 200):
-```json
-{
-  "drive_id": "drive_id of saved file",
-  "file_id": "file_id of saved file",
-  "revision_id": "revision_id of saved file version"
-}
+| Flag | Description |
+|------|-------------|
+| `--watermark-path` / `--watermark-file-id` | Watermark image, by path or ID. Provide one for image watermark. |
+| `--watermark-drive-id` | Watermark image drive ID (defaults to source `--drive-id`). |
+| `--watermark-revision-id` | Watermark image revision ID (auto-fetched if omitted). |
+| `--watermark-position` | Watermark position: `center` (default), `nw`, `north`, `ne`, `west`, `east`, `sw`, `south`, `se`. |
+
+The CLI automatically:
+1. Fetches the watermark image's revision ID if not provided.
+2. Builds the complete `pds://domains/{domain}/drives/{drive}/files/{file}/revisions/{revision}` schema.
+3. Base64-encodes the schema.
+4. Appends the watermark operation to `--operations`.
+
+**Example:**
+```bash
+aliyun pds image-process \
+  --drive-id 1020 --file-id <SOURCE_FILE_ID> \
+  --watermark-file-id <WATERMARK_FILE_ID> \
+  --watermark-position center \
+  --save-as true --target-drive-id 1020 --target-file-id <PARENT_FOLDER_ID> \
+  --file-name watermarked.png
 ```
 
 ---
 
-## Common Scenario Examples
+## Operations quick reference
 
-### Scenario 1: Image Scaling and Save-as
+Compose `--operations` from the operations below. **The CLI validates ranges, enums, required params and coordinates**, so you don't need to memorize limits — an invalid value fails fast with a clear message. Base64 for text/prompt/watermark is handled automatically: **pass raw text** (a raw value must not contain a comma).
 
+| Operation | Syntax | Notes |
+|-----------|--------|-------|
+| resize | `resize,w_200` / `resize,h_200` / `resize,l_200` / `resize,p_50` | `m_` mode: `lfit`(default)/`mfit`/`fill`/`pad`/`fixed`. Enlarging needs `limit_0`. `pad` uses `color_RRGGBB`. |
+| crop | `crop,x_,y_,w_,h_` | `g_` origin: nw/north/ne/west/center/east/sw/south/se/face/auto. |
+| quality | `quality,q_80` (relative) / `quality,Q_90` (absolute) | JPG/WebP only. |
+| format | `format,png` | jpg/jpeg/png/webp/bmp/gif/tiff/heic/avif. |
+| auto-orient | `auto-orient,1` | 0 keep / 1 auto-rotate by EXIF. |
+| rotate | `rotate,90` | Clockwise degrees 0–360. |
+| flip | `flip,0` / `flip,1` / `flip,2` | **0 = vertical, 1 = horizontal**, 2 = both (counter-intuitive). |
+| circle | `circle,r_100` | Radius 1–4096. |
+| rounded-corners | `rounded-corners,r_30` | Radius 1–4096. No GIF. |
+| indexcrop | `indexcrop,x_100,i_0` | Slice by `x_` or `y_`, pick index `i_`. |
+| blur | `blur,r_10,s_10` | r,s 1–50 (required). `g_face`/`g_faces`. |
+| bright | `bright,50` | −100..100. |
+| contrast | `contrast,50` | −100..100. |
+| sharpen | `sharpen,100` | 50–399. |
+| interlace | `interlace,1` | JPG only. |
+| watermark | `watermark,text_hello,g_se,size_30` or `watermark,image_<full_pds_schema>` | Text watermark: pass raw text. Image watermark: pass the **full** `pds://` schema (see below). CLI base64-encodes both. Position `g_`, opacity `t_0..100`, ratio `p_1..100`. |
+| segment | `segment` (auto) / `segment,prompt_kitten` / `segment,points_(x_,y_)` / `segment,boxes_(x_,y_,w_,h_)` | Extract subject; background becomes transparent (save as `.png`). Pass raw prompt text. |
+| remove | `remove,points_(x_,y_)` / `remove,boxes_(x_,y_,w_,h_)` | Remove region; AI fills background. |
+
+Combine freely — operations run left to right, e.g. `"crop,x_50,y_50,w_200,h_200" "resize,w_100" "sharpen,90"`.
+
+---
+
+## Examples
+
+**Resize + sharpen + quality, then save-as (overwrite-safe new file):**
 ```bash
-# Scale to width 200px, height adjusted proportionally, and save-as
-python scripts/render_image_editing_process.py \
-  --operations "image/resize,w_200" \
-  --saveas \
-  --target-domain-id "bj31216" \
-  --target-drive-id "1020" \
-  --target-file-id "parent_folder_id" \
-  --file-name "resized_image.jpg"
-
-# Scale to height 200px, width adjusted proportionally, and save-as
-python scripts/render_image_editing_process.py \
-  --operations "image/resize,h_200" \
-  --saveas \
-  --target-domain-id "bj31216" \
-  --target-drive-id "1020" \
-  --target-file-id "parent_folder_id" \
-  --file-name "resized_image.jpg"
-
-# Limit maximum width and height, and save-as
-python scripts/render_image_editing_process.py \
-  --operations "image/resize,l_200" \
-  --saveas \
-  --target-domain-id "bj31216" \
-  --target-drive-id "1020" \
-  --target-file-id "parent_folder_id" \
-  --file-name "resized_image.jpg"
+aliyun pds image-process \
+  --drive-id 1020 --file-id <SRC_FILE_ID> \
+  --operations "resize,w_400" "sharpen,80" "quality,Q_85" \
+  --save-as true --target-drive-id 1020 --target-file-id <PARENT_FOLDER_ID> \
+  --file-name test_combo.jpg
 ```
 
-### Scenario 2: Image Rotation and Save-as
-
+**Text-based segmentation ("person"), save as PNG:**
 ```bash
-# Rotate 90 degrees and save-as
-python scripts/render_image_editing_process.py \
-  --operations "image/rotate,90" \
-  --saveas \
-  --target-domain-id "bj31216" \
-  --target-drive-id "1020" \
-  --target-file-id "parent_folder_id" \
-  --file-name "rotated_image.jpg"
-
-# Auto-orient (based on EXIF information) and save-as
-python scripts/render_image_editing_process.py \
-  --operations "image/auto-orient,1" \
-  --saveas \
-  --target-domain-id "bj31216" \
-  --target-drive-id "1020" \
-  --target-file-id "parent_folder_id" \
-  --file-name "auto_oriented_image.jpg"
+aliyun pds image-process \
+  --drive-id 1020 --file-id <SRC_FILE_ID> \
+  --operations "segment,prompt_person" \
+  --save-as true --target-drive-id 1020 --target-file-id <PARENT_FOLDER_ID> \
+  --file-name test_segment.png
 ```
 
-### Scenario 3: Auto Segmentation and Save-as
-
+**Remove a rectangular area:**
 ```bash
-# Automatically identify and extract subject, and save-as
-python scripts/render_image_editing_process.py \
-  --operations "image/segment" \
-  --saveas \
-  --target-domain-id "bj31216" \
-  --target-drive-id "1020" \
-  --target-file-id "parent_folder_id" \
-  --file-name "segmented_image.png"
+aliyun pds image-process \
+  --drive-id 1020 --file-id <SRC_FILE_ID> \
+  --operations "remove,boxes_(x_0,y_0,w_50,h_50)" \
+  --save-as true --target-drive-id 1020 --target-file-id <PARENT_FOLDER_ID> \
+  --file-name removed.jpg
 ```
 
-### Scenario 4: Rectangle Segmentation and Save-as
-
+**Preview the generated parameter only:**
 ```bash
-# Extract top-left 100x100 area, and save-as
-python scripts/render_image_editing_process.py \
-  --operations "image/segment,boxes_(x_0,y_0,w_100,h_100)" \
-  --saveas \
-  --target-domain-id "bj31216" \
-  --target-drive-id "1020" \
-  --target-file-id "parent_folder_id" \
-  --file-name "cropped_image.png"
+aliyun pds image-process --operations "resize,w_200" "rotate,45" --dry-run true
+# -> { "x_pds_process": "image/resize,w_200/rotate,45" }
 ```
 
-### Scenario 5: Text-based Segmentation and Save-as
-
+**Text watermark (via operations):**
 ```bash
-# Segment by text description, and save-as
-python scripts/render_image_editing_process.py \
-  --operations "image/segment,prompt_5bCP5aqr" \
-  --saveas \
-  --target-domain-id "bj31216" \
-  --target-drive-id "1020" \
-  --target-file-id "parent_folder_id" \
-  --file-name "segmented_cat.png"
-```
-
-> Note: prompt parameter needs to be base64 encoded first, for example "kitten" in Chinese base64 encodes to "5bCP5aqr"
-
-### Scenario 6: Rectangle Area Removal and Save-as
-
-```bash
-# Remove top-left 50x50 area, and save-as
-python scripts/render_image_editing_process.py \
-  --operations "image/remove,boxes_(x_0,y_0,w_50,h_50)" \
-  --saveas \
-  --target-domain-id "bj31216" \
-  --target-drive-id "1020" \
-  --target-file-id "parent_folder_id" \
-  --file-name "removed_image.jpg"
-```
-
-### Scenario 7: Combined Operations and Save-as
-
-```bash
-# Scale first then rotate, and save-as
-python scripts/render_image_editing_process.py \
-  --operations "image/resize,w_200" "rotate,45" \
-  --saveas \
-  --target-domain-id "bj31216" \
-  --target-drive-id "1020" \
-  --target-file-id "parent_folder_id" \
-  --file-name "processed_image.jpg"
-
-# Scale + sharpen + quality adjustment, and save-as
-python scripts/render_image_editing_process.py \
-  --operations "image/resize,w_200" "sharpen,100" "quality,q_80" \
-  --saveas \
-  --target-domain-id "bj31216" \
-  --target-drive-id "1020" \
-  --target-file-id "parent_folder_id" \
-  --file-name "processed_image.jpg"
-
-```
-
-### Scenario 8: Edit and Save-as
-
-```bash
-# Scale image and save-as to specified location
-python scripts/render_image_editing_process.py \
-  --operations "image/resize,w_200" \
-  --saveas \
-  --target-domain-id "bj31216" \
-  --target-drive-id "1020" \
-  --target-file-id "parent_folder_id_123" \
-  --file-name "resized_image.jpg"
-
-# Overwrite existing file
-python scripts/render_image_editing_process.py \
-  --operations "image/resize,w_200" \
-  --saveas \
-  --target-domain-id "bj31216" \
-  --target-drive-id "1020" \
-  --target-file-id "existing_file_id_456" \
-  --target-revision-id "revision_789" \
-  --file-name "resized_image.jpg"
+aliyun pds image-process \
+  --drive-id 1020 --file-id <SRC_FILE_ID> \
+  --operations "watermark,text_hello,g_se,size_30" \
+  --save-as true --target-drive-id 1020 --target-file-id <PARENT_FOLDER_ID> \
+  --file-name text_watermarked.png
 ```
 
 ---
 
-## Error Handling
+## Error handling
 
-| HTTP Status Code | Error Code | Description | Solution |
-|------------|--------|------|---------|
-| 400 | InvalidParameter.xxx | Invalid parameter | Check parameter format and encoding |
-| 400 | OperationNotSupport | Feature not enabled | Contact PDS technical support to enable feature |
-| 403 | ForbiddenNoPermission.xxx | No permission | Check AccessToken permissions |
+| HTTP | Code | Meaning | Fix |
+|------|------|---------|-----|
+| 400 | InvalidParameter.xxx | Bad parameter | Read the CLI validation message; fix the operation. |
+| 400 | OperationNotSupport | Feature not enabled | Ask PDS support to enable image editing. |
+| 403 | ForbiddenNoPermission.xxx | No permission | Need `DownloadFile` on the source (and watermark) image, `CreateFile` on the save-as target. |
 
-### Common Errors
-
-#### 1. Feature Not Enabled
-
-```json
-{
-  "code": "OperationNotSupport",
-  "message": "This operation is not supported."
-}
-```
-
-**Solution**: Contact PDS technical support to enable image editing functionality.
-
-#### 2. Insufficient Permissions
-
-```json
-{
-  "code": "ForbiddenNoPermission.file",
-  "message": "No Permission to access resource file"
-}
-```
-
-**Solution**:
-- Ensure current user has `DownloadFile` permission for source image
-- Ensure current user has `DownloadFile` permission for watermark image
-- Ensure current user has `CreateFile` permission for save-as target location
-
-#### 3. Invalid Parameter (InvalidParameter.XPdsProcess)
-
-```json
-{
-  "code": "InvalidParameter.XPdsProcess",
-  "message": "The input parameter x-pds-process is not valid."
-}
-```
-
-**Common Causes**:
-- Directly hardcoding x-pds-process parameter in command line, special characters like `=` in base64 encoding are incorrectly parsed by shell
-- Parameter contains invisible characters (such as line breaks)
-
-**Solution**:
-- **Use variable to pass parameter** (recommended):
-  ```bash
-  X_PDS_PROCESS=$(python scripts/render_image_editing_process.py \
-    --operations "image/resize,h_150" \
-    --saveas \
-    --target-domain-id "bj31216" \
-    --target-drive-id "101" \
-    --target-file-id "folder_id" \
-    --file-name "output.png")
-  
-  aliyun pds process \
-    --resource-type file \
-    --drive-id "101" \
-    --file-id "source_file_id" \
-    --x-pds-process "${X_PDS_PROCESS}" \
-    --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
-  ```
-- Ensure there are no extra spaces or line breaks in the parameter
-- Check if base64 encoding is correct
+Local validation errors from `image-process` (e.g. `flip value "3" must be one of 0/1/2`) mean the request was **not** sent — just correct the operation and retry.
 
 ---
 
-## Best Practices
-
-### 1. Operation Order Optimization
-
-Image editing operations are executed from left to right. Arranging operations in optimal order improves processing efficiency:
-- Crop first then scale: reduces data volume for subsequent processing
-- Rotate first then crop: avoids coordinate changes after rotation
-
-### 2. Coordinate Determination
-
-Before using point-based or rectangle operations, it is recommended to obtain image dimensions first to ensure coordinate values are within valid range.
-
-
----
-
-## FAQ
-
-**Q: How to get image dimension information?**
-
-A: You can use `aliyun pds get-file` command to get file information, the returned data includes image width and height information.
-```bash
-aliyun pds get-file \
-  --drive-id <drive_id> \
-  --file-id <file_id> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
-```
-
-response example:
-```json
-{
-  "file_id": "5d79206586bb5dd69fb34c349282718146c55da7",
-  "name": "example.jpg",
-  "image_media_metadata": 
-    {
-      "width": 1920,
-      "height": 1080
-    }
-}
-```
-
-
-**Q: What is the difference between segmentation and removal operations?**
-
-A: 
-- **Segmentation (segment)**: Extract the main subject from the image, background becomes transparent
-- **Removal (remove)**: Remove content from specified area in the image, AI automatically fills the background
-
-**Q: What is the execution order when multiple operations are combined?**
-
-A: Operations are executed from left to right in the order they appear in x-pds-process.
-
-
-**Q: Will save-as operation modify the source file?**
-
-A: No, save-as operation creates a new file, the source file remains unchanged.
-
----
-
-## Image Limitations
-- **Size Limit**: Only supports images within 20MB
-- **Format Limit**: Only supports the following formats
-  - jpg, jpeg, bmp, png, heic, webp, tiff, avif
-
-## Permission Requirements
-- Need `DownloadFile` permission for the image being edited
-- Need `DownloadFile` permission for watermark images
-- Need `CreateFile` permission for save-as target location
-
----
+## Limits
+- Image size ≤ 20 MB; formats: jpg, jpeg, bmp, png, heic, webp, tiff, avif.
+- Save-as never modifies the source file — it always creates/updates the target.

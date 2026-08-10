@@ -1,19 +1,34 @@
 # PDS Aliyun CLI Configuration Guide (Important)
 
 **Scenario**: Required configuration when using aliyun pds cli for the first time
-**Purpose**: Configure domain_id, user_id, and authentication type for aliyun pds cli
+**Purpose**: Verify existing PDS configuration and initialize it with the authentication method selected by the user
 
 ---
 
-**Before executing any PDS operations, you must first configure domain_id, user_id, and authentication type:**
+**Before executing any PDS operations, first verify whether PDS configuration already exists:**
 
-## Step 1: Verify if configuration already exists (only needs to be configured once during initialization)
+## Configuration Check
+
 ```bash
 aliyun pds get-user --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
 ```
-If already configured successfully, it will return the current logged-in user information, and you can skip the subsequent steps.
+If already configured successfully, it will return the current logged-in user information. Reuse that configuration, skip initialization, and continue with the requested PDS operation.
 
-## Step 2: Query domain list using aliyun pds list-domains (skip this step if you already have the domain_id to configure)
+If the initial check returns any other command, network, permission, or authentication error—not a clear indication that PDS configuration is missing or incomplete—report the error, do not begin initialization, and wait for corrected input or user direction.
+
+If the response clearly indicates that PDS configuration is missing or incomplete, ask the user to choose exactly one initialization method before running any branch-specific command:
+
+1. **AK authentication** — use the existing Alibaba Cloud CLI credential to select a domain and a user.
+2. **API Key authentication** — use a PDS domain ID and a user API Key supplied by the user.
+
+Follow only the selected branch. Do not silently fall back to the other authentication method.
+
+## AK Authentication
+
+### Query the domain list
+
+Query the domain list using `aliyun pds list-domains` (skip this step if you already have the `domain_id` to configure):
+
 ```bash
 aliyun pds list-domains --service-code edm --limit 100 --region cn-beijing --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
 ```
@@ -32,7 +47,10 @@ The returned JSON structure is as follows. Extract the domain list from the resp
 ```
 This step requires obtaining the selected domain_id before proceeding to the next step.
 
-## Step 3: Query user list under the domain using aliyun pds list-user (skip this step if you already have the user_id to configure)
+### Query the user list
+
+Query the user list under the domain using `aliyun pds list-user` (skip this step if you already have the `user_id` to configure):
+
 ```bash
 # First configure domain_id with ak authentication type
 aliyun pds config --domain-id <domain_id> --authentication-type ak --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
@@ -59,7 +77,10 @@ The returned JSON structure is as follows. Extract the user list from the respon
 ```
 This step requires obtaining the selected user_id before proceeding to the next step.
 
-## Step 4: Configure domain_id, user_id, and authentication type to aliyun pds cli using aliyun pds config
+### Configure the selected domain and user
+
+Configure `domain_id`, `user_id`, and authentication type for the Aliyun PDS CLI using `aliyun pds config`:
+
 ```bash
 aliyun pds config \
   --domain-id <domain_id> \
@@ -77,20 +98,38 @@ aliyun pds config \
 - No need to pass `--domain-id` parameter for subsequent PDS API calls
 - CLI will automatically use the configured domain_id and user_id
 
-**Verify Configuration**:
-```bash
-
-# Test if configuration is effective, get-user API without parameters returns current logged-in user information in token scenario
-aliyun pds get-user --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
-```
-Extract the current logged-in user information from the returned JSON: domain_id: `domain_id`, user_id: `user_id`, nick_name: `nick_name`.
-
-After successful configuration, notify the user: Current PDS DomainID: <domain_id>, logged-in user: <nick_name>(<user_id>)
-
-
 **Notes**:
 - Domain_id and user_id will be preset in CLI configuration
 - User's token will be preset in Aliyun CLI configuration file
 - After configuring once, no need to repeat configuration for subsequent operations
 
----
+## API Key Authentication
+
+Ask the user for both values if they were not already provided:
+
+- PDS domain ID (`domainID`)
+- User API Key
+
+Do not execute the configuration command until both values are available. Treat the API Key as sensitive: never repeat it in conversational output, status messages, or the final response.
+
+```bash
+aliyun pds config \
+  --domain-id <domain_id> \
+  --authentication-type api_key \
+  --api-key <api_key_value> \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
+```
+
+Do not list domains or users, and do not ask for a user ID in this branch.
+
+## Verify Configuration
+
+After completing the selected initialization branch, verify the configuration:
+
+```bash
+aliyun pds get-user --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
+```
+
+Report `domain_id`, `nick_name`, and `user_id` when returned.
+
+If configuration or verification fails, report the error without exposing the API Key and wait for corrected input or user direction.

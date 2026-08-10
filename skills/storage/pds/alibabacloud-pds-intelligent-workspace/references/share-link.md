@@ -6,8 +6,7 @@ The file sharing feature allows users to create share links for files/folders in
 
 ## Prerequisites
 
-1. PDS configuration is complete (domain_id, user_id, authentication-type). See `references/config.md`.
-2. **A super administrator or drive administrator has enabled the sharing feature**: Admin Console > Security Policy > Share Settings Management > Enable "Share Settings".
+1. **A super administrator or drive administrator has enabled the sharing feature**: Admin Console > Security Policy > Share Settings Management > Enable "Share Settings".
 
 > **Important Notes**:
 > - A maximum of 500 share creations and 500 share accesses are supported per day.
@@ -18,15 +17,15 @@ The file sharing feature allows users to create share links for files/folders in
 
 ## Workflow
 
-### Before Creating a Share: Resolve the Target File
+### Before Creating a Share: Identify the Target File
 
-Creating a share requires first confirming the target drive's `drive_id`. Sharing regular files/folders also requires obtaining the `file_id` of the object to share; when sharing an entire drive, use `--share-all-files true` and do not resolve or pass `--file-id-list`.
+Creating a share requires confirming the target drive's `drive_id`. Known absolute cloud paths can be passed directly with `--paths`; when sharing an entire drive, use `--share-all-files true` without `--paths` or `--file-id-list`.
 
 - If the user has already provided `drive_id` and `file_id`, proceed directly to creating the share.
 - If the user explicitly requests to share an entire drive, first obtain the `drive_id`, then create the share using `--share-all-files true` without passing `--file-id-list`.
 - If the user provides a drive name, file name, or cloud path, resolve in the following order:
   1. Read `references/drive.md` to identify the target drive and obtain the `drive_id`.
-  2. Read `references/search-file.md` to search for the target file/folder by name or path and obtain the `file_id`.
+  2. For a known absolute cloud path, pass it directly to `create-share-link --paths`. For a filename only, follow `references/search-file.md` within the smallest relevant scope.
   3. If multiple candidates are found, present the candidates' paths, types, and update times to the user and ask for confirmation.
   4. If the target file/folder is not found, stop creating the share and inform the user that the target object cannot be located.
 
@@ -34,13 +33,12 @@ Do not guess `file_id` from file names, and do not create a share without confir
 
 ### Creating a Share
 
-After confirming the `drive_id`, choose `--file-id-list` or `--share-all-files true` based on the target type, then create the share link:
+After confirming the `drive_id`, choose `--paths`, `--file-id-list`, or `--share-all-files true`:
 
 ```bash
 aliyun pds create-share-link \
   --drive-id <drive_id> \
-  --file-id-list <file_id_1> <file_id_2> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
+  --paths "/absolute/file" "/absolute/folder"
 ```
 
 **Expiration Time Rules**:
@@ -55,7 +53,7 @@ aliyun pds create-share-link \
 | Parameter | Required | Description |
 |-----------|----------|-------------|
 | `--drive-id` | Yes | Drive ID |
-| `--file-id-list` | Conditionally required | List of file IDs to share (1-100 items); not effective when `share-all-files` is true |
+| `--paths` / `--file-id-list` | Conditionally required | Exactly one list of absolute cloud paths or file IDs (1-100 items); paths are resolved internally; omit for `share-all-files` |
 | `--share-all-files` | No | Whether to share all files in the entire drive |
 | `--share-name` | No | Share name; defaults to the first file name; maximum 128 characters |
 | `--share-pwd` | No | Access password (extraction code), 0-64 bytes; leave empty for password-free access |
@@ -66,8 +64,8 @@ aliyun pds create-share-link \
 | `--preview-limit` | No | Preview count limit; 0 means unlimited |
 | `--download-limit` | No | Download count limit; 0 means unlimited |
 | `--save-limit` | No | Save-to-drive count limit; 0 means unlimited |
-| `--creatable` | No | Whether to allow uploading files to the shared folder; requires specifying `creatable-file-id-list` simultaneously |
-| `--creatable-file-id-list` | No | List of folder IDs that allow uploads |
+| `--creatable` | No | Whether to allow uploading files to the shared folder; requires `--creatable-paths` or `--creatable-file-id-list` |
+| `--creatable-paths` / `--creatable-file-id-list` | No | Absolute folder paths or folder IDs that allow uploads; use one form |
 | `--office-editable` | No | Whether to allow online document editing |
 | `--require-login` | No | Whether to restrict access to logged-in users only |
 | `--description` | No | Share description/message; maximum 1024 characters |
@@ -87,21 +85,19 @@ aliyun pds create-share-link \
 
 **Post-processing Before Returning to User**:
 
-- After creating the share, first check the `share_url` returned by `create-share-link`.
-- If `share_url` is non-empty, return that URL directly to the user by default.
-- If `share_url` is empty, first obtain the `share_id`, `share_pwd`, and `domain_id`, then query whether the current domain has a custom domain configured:
-  ```bash
-  aliyun pds get-domain \
-    --domain-id <domain_id> \
-    --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
-  ```
-- Determine `<share_host>`:
-  - If the `get-domain` response contains a non-empty `endpoints.app_endpoint`, use that value as the custom domain; if the value includes an `http://` or `https://` prefix, strip the protocol prefix first.
-  - If the `endpoints` object does not exist, or `endpoints` does not contain an `app_endpoint` field, or `app_endpoint` is empty, it means no custom domain is configured; use the default domain `<domain_id>.apps.aliyunfile.com`.
-- When `share_url` is empty, assemble and return the share URL according to the following rules:
-  - With a share password: `https://<share_host>/disk/s/<share_id>?pwd=<share_pwd>&domainId=<domain_id>`.
-  - If `<share_pwd>` is empty, do not include the `pwd` parameter: `https://<share_host>/disk/s/<share_id>?domainId=<domain_id>`.
-- `<domain_id>` uses the user-provided or currently configured PDS domain ID; `<share_id>` uses the `share_id` returned from the create-share response; `<share_pwd>` uses the share password set or returned during share creation.
+After creating the share, use `aliyun pds share-url` to build the final share URL. The command reads the domain from the current profile, detects the domain's custom `app_endpoint`, and assembles the URL:
+
+```bash
+aliyun pds share-url \
+  --share-id <share_id_from_response> \
+  --share-pwd "<share_pwd_from_response>" \
+  --share-url "<share_url_from_response>"
+```
+
+- If `--share-url` is non-empty, it is returned verbatim.
+- Otherwise the command looks up the domain's `app_endpoint` (falling back to `{domain}.apps.aliyunfile.com`) and assembles the full URL.
+
+Returns `{ "share_url": "..." }`. Return that URL to the user.
 
 ---
 
@@ -113,8 +109,7 @@ List all shares created by the current user:
 aliyun pds list-share-link \
   --limit 20 \
   --order-by created_at \
-  --order-direction DESC \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
+  --order-direction DESC
 ```
 
 **Parameter Reference**:
@@ -141,8 +136,7 @@ Search share links by conditions (supports fuzzy name search, filtering by statu
 ```bash
 aliyun pds search-share-link \
   --query "share_name_for_fuzzy = '<share_name_keyword>'" \
-  --limit 50 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
+  --limit 50
 ```
 
 **Parameter Reference**:
@@ -157,9 +151,7 @@ aliyun pds search-share-link \
 | `--order-direction` | No | Sort direction |
 | `--return-total-count` | No | Whether to return the total count |
 
-**Pagination Handling**:
-
-If the response contains a non-empty `next_marker`, there is more data on the next page. Continue executing the same `search-share-link` command with the returned `next_marker` as the `--marker` parameter for the next request, until `next_marker` is empty. When counting, filtering, or batch-processing shares, all pages must be traversed first.
+**Pagination Handling**: Same as Listing Shares above — keep passing `next_marker` as `--marker` until empty.
 
 ---
 
@@ -169,8 +161,7 @@ Query detailed information about a share link by share_id:
 
 ```bash
 aliyun pds get-share-link \
-  --share-id <share_id> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
+  --share-id <share_id>
 ```
 
 ---
@@ -182,8 +173,7 @@ Modify permissions, password, expiration, etc. for an existing share. Only pass 
 ```bash
 aliyun pds update-share-link \
   --share-id <share_id> \
-  --<requested-field> <value> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
+  --<requested-field> <value>
 ```
 
 **Parameter Reference**:
@@ -212,8 +202,7 @@ Cancel (delete) a share link:
 
 ```bash
 aliyun pds cancel-share-link \
-  --share-id <share_id> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
+  --share-id <share_id>
 ```
 
 Once cancelled, the share link becomes immediately invalid and recipients can no longer access it.
@@ -228,8 +217,7 @@ View basic information about a share without logging in:
 
 ```bash
 aliyun pds get-share-link-by-anonymous \
-  --share-id <share_id> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
+  --share-id <share_id>
 ```
 
 #### Get Share Token
@@ -240,8 +228,7 @@ Obtain an access token using the share ID and extraction code:
 aliyun pds get-share-link-token \
   --share-id <share_id> \
   --share-pwd <share_pwd> \
-  --expire-sec 7200 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
+  --expire-sec 7200
 ```
 
 | Parameter | Required | Description |
@@ -259,8 +246,7 @@ aliyun pds get-share-link-token \
 ```bash
 aliyun pds create-share-link \
   --drive-id <drive_id> \
-  --file-id-list <file_id> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
+  --file-id-list <file_id>
 ```
 
 ### Create a Password-Protected, 7-Day, Preview-Only Share
@@ -273,8 +259,7 @@ aliyun pds create-share-link \
   --expiration "<current_time_plus_7_days_rfc3339>" \
   --disable-download true \
   --disable-save true \
-  --require-login true \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
+  --require-login true
 ```
 
 ### Create a Share That Allows External Users to Upload Files
@@ -284,8 +269,7 @@ aliyun pds create-share-link \
   --drive-id <drive_id> \
   --file-id-list <folder_id> \
   --creatable true \
-  --creatable-file-id-list <folder_id> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
+  --creatable-file-id-list <folder_id>
 ```
 
 ---
@@ -303,7 +287,6 @@ aliyun pds create-share-link \
 | `aliyun pds get-share-link-by-anonymous` | Anonymously get share information | `--share-id` |
 | `aliyun pds get-share-link-token` | Get share access token | `--share-id` |
 
-**Note**: All commands must include `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace`
 
 ---
 
@@ -331,16 +314,14 @@ aliyun pds create-share-link \
    ```bash
    aliyun pds search-share-link \
      --query "status = 'disabled'" \
-     --limit 100 \
-     --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
+     --limit 100
    ```
 
    For each `share_id` confirmed for cleanup, execute cancel-share:
 
    ```bash
    aliyun pds cancel-share-link \
-     --share-id <share_id> \
-     --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pds-intelligent-workspace
+     --share-id <share_id>
    ```
 
 5. Confirm the file ID is correct before creating a share (use `references/search-file.md` to search for files and obtain the file_id).

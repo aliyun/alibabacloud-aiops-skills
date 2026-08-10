@@ -1,205 +1,144 @@
 # PDS Document and Audio/Video Analysis
 
-**Scenario**: When you have obtained the drive_id, file_id, and revision_id of the file to analyze and need to perform analysis on that file
+**Scenario**: When you need to perform document or audio/video analysis on a PDS file
 **Purpose**: Perform analysis on files and get structured analysis results
+
+> **This is the ONLY correct way to analyze/summarize a PDS file's content.** For any "analyze / summarize / close-read / extract key points / what does it say" request, use `pds analyze` below. **Do NOT** `download-to-local` and then read/parse the file yourself — that produces none of the structured results here and pulls large media into context. Downloading is only for when the user explicitly wants the raw file saved locally.
+>
+> - ✅ "analyze this pdf for me" → `aliyun pds analyze --type doc`.
+> - ❌ "analyze this pdf for me" → download the file, then read it yourself. **Never do this.**
+
+---
+
+## Inputs
+
+`pds analyze` needs `drive_id` and exactly one of `--path` / `--file-id`. An absolute path is resolved internally. `revision_id` is **optional** — if omitted, the command auto-fetches the latest revision, so no separate `get-file` call is needed.
+
 ---
 
 ## Core Workflow
 
-### Flow 1: Submit Analysis Task and Poll for Results
+### Submit Analysis Task and Poll for Results
 
-Use Python script to automatically submit analysis task and poll until processing is complete.
+Use `aliyun pds analyze` to submit the analysis task and poll until processing completes. The command handles retries internally. It automatically selects the best available analysis path on the server, so you always call the same command regardless of domain capabilities.
 
 ```bash
-# Document analysis polling
-python scripts/pds_poll_processor.py \
+# Document analysis — one call prints the readable analysis directly
+aliyun pds analyze \
+  --type doc \
   --drive-id "1" \
-  --file-id "66e7e860a2360204b9414d5c866dd3a20af1974e" \
-  --revision-id "123" \
-  --x-pds-process "doc/analysis" \
-  -o doc_result.json
+  --path "/Docs/report.pdf" \
+  --sum true --kn 10 --qn 10 --chsum true \
+  --format text
 
-# Audio/Video analysis polling
-python scripts/pds_poll_processor.py \
+# Video analysis with feature flags (tr and ppt are video-only)
+aliyun pds analyze \
+  --type video \
   --drive-id "1" \
   --file-id "66e7e860a2360204b9414d5c866dd3a20af1974e" \
-  --revision-id "123" \
-  --x-pds-process "video/analysis" \
-  -o video_result.json
+  --sum true --kn 10 --qn 10 --tr true --ppt true \
+  --format text
+```
+
+Always use stdout. The command's tool result already contains the complete readable analysis; answer directly from it. Do **not** use `--save-to`, and do not save to a text file and then read that file by another tool. Make a **single** analyze call: once you have the stdout result, do not re-run `analyze` a second time with `--save-to` to "keep a copy" — the stdout result IS the deliverable, and a redundant save-to run is treated as a failure when the user only asked to see it in the conversation.
+
+**Do not persist the analysis to any local file.** The stdout result shown in the conversation is the complete deliverable. Beyond avoiding `--save-to` and save-then-read, you **MUST NOT** take the stdout result and write it out with a separate `write_file`/save step — not as a `.md`/`.txt` report, not as a reformatted "analysis report", not as an archived copy. **This applies even if the runtime or task template says "save outputs to <dir>" or "any output files MUST go in <dir>": that generic instruction does not cover analysis results and never overrides the user's "no need to save a local result file / just show it in the conversation" instruction.** Persist the analysis only when the user *explicitly* asks you to save it. (A separately-mandated action/operation log is a different artifact and may be written — but it must not embed the analysis content.)
+
+> **CRITICAL — boolean flags**: Every boolean feature flag below **MUST** carry an explicit value: `--sum true`, `--chsum true`, `--tr true`, etc. A bare `--sum` (without `true`) consumes the next token as its value and causes a parse error like `invalid boolean value: --kn`, wasting an entire retry cycle. Write the value explicitly every time.
+
+**Parameter Description**:
+- `--type`: `doc` (document) or `video` (audio/video).
+- `--drive-id` plus exactly one of `--path` / `--file-id`: the file to analyze. `--revision-id` optional (latest auto-fetched if omitted).
+- `--format`: `text` (readable formatted analysis) or `json` (raw result; the default).
+- **Boolean feature flags (`--sum`, `--chsum`, `--nar`, `--img`, `--lay`, `--tr`, `--ppt`, `--keep-aspect-ratio`) require an explicit value — write `--sum true`, never a bare `--sum`. A bare flag consumes the next token as its value and fails (e.g. `--sum --kn` → `invalid boolean value: --kn`), forcing a retry.**
+- `--sum`: Enable full-text summary (doc and video).
+- `--kn <n>`: Number of keywords (e.g. `--kn 10`) (doc and video).
+- `--qn <n>`: Number of guiding questions (e.g. `--qn 10`) (doc and video).
+- `--chsum`: Enable chapter summaries, first page (doc only).
+- `--chsumm <index>`: Chapter summary pagination — load page starting at `next_marker` (doc only).
+- `--chsuml <size>`: Chapter summary page size (doc only).
+- `--chsumv <token>`: Chapter summary version token from previous response (doc only).
+- `--nar`: Enable paper narration/reading guide (doc only).
+- `--img`: Enable image extraction (doc only). **Emits a long Image List — every extracted image with two long signed URLs — which can bloat the output past the tool's size cap and get it truncated. Only enable when the user explicitly asks for images; do NOT add it to a text-only close-reading/summary request.**
+- `--lay`: Enable layout analysis (doc only). Only enable when the user asks about document layout/structure.
+- `--tr`: Enable dialogue transcript (video only).
+- `--ppt`: Enable PPT extraction (video only).
+- `--extract-ppt <path>`: For `--type video` only — also export detected PPT slides to a PPTX file in the same call.
+- `--keep-aspect-ratio`: With `--extract-ppt`, keep image aspect ratio (default fills the slide).
+- `--lang <locale>`: Output language (doc and video). Supported values: `zh_CN`, `en_US`, `ja_JP`, `ko_KR`, `fr_FR`, `de_DE`, `es_ES`, `it_IT`, `ru_RU`, `pt_PT`, `tr_TR`, `ar_SA`, `hi_IN`, `th_TH`.
+- `--save-to`: Optional local path to save the output (raw JSON in json mode, formatted text in text mode).
+- `--max-attempts`: Optional max polling attempts (default 30).
+
+**Parameter combinations**: A "complete deep analysis" is not a single flag — it requires combining multiple parameters. Scope the flags to what the request actually asks for:
+- Text close-reading / summary / keywords / chapters (the common case): `--sum true --kn 10 --qn 10 --chsum true` (add `--nar true` for a reading guide). Do **NOT** add `--img`/`--lay` here — they add nothing to a textual analysis and `--img` can overflow/truncate the output (see the `--img` note above).
+- Only add `--img true` / `--lay true` when the user explicitly wants extracted images or layout/structure analysis.
+- Full video analysis: `--sum true --kn 10 --qn 10 --tr true --ppt true`
+
+### Format Results
+
+When `--format text` is passed above, the result is already formatted — no separate `format-analysis` step is needed.
+
+If you have a raw JSON file (saved without `--format text`), use `format-analysis` to convert it:
+
+```bash
+aliyun pds format-analysis --type doc --input analysis_result.json --save-to formatted_output.txt
+aliyun pds format-analysis --type video --input analysis_result.json --save-to formatted_output.txt
 ```
 
 **Parameter Description**:
-- `--drive-id`: The space `drive_id` where the analysis file is located
-- `--file-id`: The `file_id` of the file to analyze
-- `--revision-id`: The `revision_id` of the file to analyze
-- `--x-pds-process`: Processing type, `doc/analysis` (document) or `video/analysis` (audio/video). Since analysis is a synchronous API, x-pds-process must be used, not x-pds-async-process
-- `-o`: Save raw JSON result to file (contains signed URLs)
+- `--type`: `doc` or `video`.
+- `--input`: JSON result file path from `pds analyze --save-to`, json mode.
+- `--save-to`: Formatted output file path (optional; prints to stdout if omitted).
 
-#### Document Analysis Result Structure
+### Chapter Summary Lazy Load (Optional)
 
-```json
-{
-  "summary": ["https://bucket/summary.json?sign=xxx"],
-  "chapter_summaries": ["https://bucket/chapter_summaries.json?sign=xxx"],
-  "keywords": ["https://bucket/keywords.json?sign=xxx"],
-  "guiding_questions": ["https://bucket/guiding_questions.json?sign=xxx"],
-  "method_description": ["https://bucket/method_description.json?sign=xxx"],
-  "experiment_description": ["https://bucket/experiment_description.json?sign=xxx"],
-  "conclusion_description": ["https://bucket/conclusion_description.json?sign=xxx"],
-  "images": {
-    "imgs/page_0_img_image_box_770_540_1367_860.png": {
-      "Url": "https://bucket/imgs/page_0_img.png?sign=xxx",
-      "Thumbnail": "https://bucket/imgs/page_0_img_thumbnail.png?sign=xxx"
-    }
-  }
-}
-```
-
-#### Audio/Video Analysis Result Structure
-
-```json
-{
-  "markdown": "https://bucket/markdown.md?sign=xxx",
-  "summary": ["https://bucket/summary.json?sign=xxx"],
-  "chapter_summaries": ["https://bucket/chapter_summary.json?sign=xxx"],
-  "keywords": ["https://bucket/keywords.json?sign=xxx"],
-  "questions": ["https://bucket/questions.json?sign=xxx"],
-  "transcript": ["https://bucket/transcript.json?sign=xxx"],
-  "transcript_summaries": ["https://bucket/transcript_summary.json?sign=xxx"],
-  "transcript_chapter_summaries": ["https://bucket/transcript_chapter_summary.json?sign=xxx"],
-  "ppt_details": ["https://bucket/ppt_details.json?sign=xxx"],
-  "images": {
-    "ppts/video_snapshots_0.jpg": {
-      "Url": "https://bucket/ppts/video_snapshots_0.jpg?sign=xxx",
-      "Thumbnail": "https://bucket/ppts/video_snapshots_0_thumbnail.jpg?sign=xxx"
-    }
-  }
-}
-```
-
-
-### Flow 2: Use Formatter to Get Formatted Results
-
-Analysis results contain multiple signed URLs pointing to different types of analysis files. Use formatting scripts to parse these files and generate readable output.
+If the initial response contained `doc_chapter_summaries_content.next_marker` and `doc_chapter_summaries_content.version`, you can load more chapters:
 
 ```bash
-# Format document results
-python scripts/doc_analysis_formatter.py doc_result.json -o formatted_output.txt
-
-# Format audio/video results
-python scripts/video_analysis_formatter.py video_result.json -o formatted_output.txt
+aliyun pds analyze \
+  --type doc \
+  --drive-id "1" \
+  --file-id "66e7e860a2360204b9414d5c866dd3a20af1974e" \
+  --chsumm <next_marker> --chsumv <version> \
+  --format text
 ```
 
-**Parameter Description**:
-- `input_file`: JSON result file path from analysis API (output from Flow 1)
-- `-o`: Formatted output file path (optional, outputs to console if not specified)
-
-#### Formatted Output Example
-
-The formatting script automatically downloads all files pointed to by signed URLs and generates readable output according to preset templates:
-
-````
-
-==================================================
-📄 【Full Summary】
-==================================================
-
-{Summary text content}
-
-🖼️ Image: {ImagePath} (Page {PageNumber})
-
-==================================================
-🏷️ 【Keywords】
-==================================================
-#{Keyword 1} | #{Keyword 2} | #{Keyword 3} | ...
-
-==================================================
-📚 【Chapter Summaries】
-==================================================
-
-▶️ {Chapter Title}
-----------------------------------------
-  {Chapter Content}
-
-  🖼️ Image: {ImagePath}
-
-▶️ {Next Chapter Title}
-----------------------------------------
-  ...
-
-==================================================
-❓ 【Guiding Questions】
-==================================================
-
-Q1: {Question 1}
-A1: {Answer 1}
-
-Q2: {Question 2}
-A2: {Answer 2}
-````
-
-Audio/video will also include dialogue transcripts and PPT extraction information.
+Use the `next_marker` and `version` values from the previous `doc_chapter_summaries_content` response. Repeat until `next_marker` is absent.
 
 ---
 
-### Flow 3: Extract PPT from Video
+### Extract PPT from Video (one call)
 
-If the analyzed video contains PPT, you can extract PPT from the results and generate a PPTX file.
-
-#### Prerequisites
-
-1. Video contains PPT content
-2. Analysis results contain `ppt_details` field
-3. Install Python PPT processing library
+If a video contains PPT, generate a PPTX — one slide per detected PPT shot, in order, with page/timestamp notes — in the same `analyze` call:
 
 ```bash
-pip install python-pptx requests
+aliyun pds analyze \
+  --type video \
+  --drive-id 1 \
+  --file-id <file_id> \
+  --extract-ppt slides.pptx
 ```
 
-#### Usage
+- `--extract-ppt <path>`: run the analysis and, in the same call, write the PPTX. Only valid with `--type video`.
+- `--keep-aspect-ratio`: preserve image proportions (default fills the slide).
 
-Extract PPT from video analysis results and generate PPTX file:
+**On success** returns: `{ "output": "...", "slides": <n>, "skipped": <n> }` (`skipped` counts pages whose image was missing or failed to download).
 
-```bash
-python scripts/ppt_extraction.py video_result.json -o extracted_ppt.pptx
-```
+---
 
-**Parameter Description**:
-- `input_file`: JSON result file path from video analysis API
-- `-o`: Output PPTX file path (default: extracted_ppt.pptx)
-- `--keep-aspect-ratio`: Maintain image aspect ratio (default fills entire slide)
-- `--validate`: Validate PPTX file after generation
+### Common Issues
 
-
-
-##### Checklist
-
-- [ ] PPTX file can be opened with PowerPoint/WPS/LibreOffice
-- [ ] Slide count matches page count in `ppt_details`
-- [ ] Each page image is clear, no stretching or distortion
-- [ ] Page order matches appearance order in video
-- [ ] (Optional) Notes contain timestamp information
-
-##### Auto Validation
-
-```bash
-python scripts/ppt_extraction.py video_result.json --validate
-```
-
-#### Common Issues
-
-##### 1. Feature Not Enabled
+##### 1. MultimodalAnalysisNotEnabled
 ```json
 {
-  "code": "OperationNotSupport",
-  "message": "This operation is not supported."
+  "code": "MultimodalAnalysisNotEnabled",
+  "message": "Multimodal analysis not enabled."
 }
 ```
-**Solution**: Contact PDS technical support to enable analysis feature.
-
+**Solution**: The analysis feature is not enabled for this domain. Contact PDS technical support.
 
 ##### 2. Signed URL Expired
 
 **Cause:** Download took too long, signed URL has expired.
 
-**Solution:** Re-request analysis results, or download all images immediately after getting results.
+**Solution:** Re-request analysis results.
