@@ -39,16 +39,55 @@ Each layer focuses on **the most important information** and guides the user to 
 
 ## Prerequisites
 
-> **Pre-check: Aliyun CLI >= 3.3.0 required**
-> Run `aliyun version` to verify. If not installed or version too low,
-> see [references/cli-installation-guide.md](references/cli-installation-guide.md) for installation instructions.
-> Then **[MUST]** run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+> **Pre-check: Aliyun CLI >= 3.3.3 required**
+> Run `aliyun version` to verify >= 3.3.3. If not installed or version too low,
+> use a package manager or the pinned, SHA256-verified packages in
+> [references/cli-installation-guide.md](references/cli-installation-guide.md).
+> Do not pipe a remotely downloaded installation script directly into a shell.
+>
+> Then [MUST] run `aliyun plugin update` to ensure that any existing plugins on your local machine are always up-to-date.
+>
+> **[MUST]** run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
 
 ```bash
-aliyun version                                    # >= 3.3.0
+aliyun version                                    # >= 3.3.3
 aliyun configure set --auto-plugin-install true   # Enable auto plugin install
 python3 --version                                 # Python 3.x
 ```
+
+## Observability
+
+Every Alibaba Cloud API invocation made by this skill must include the complete
+User-Agent template:
+
+`--user-agent AlibabaCloud-Agent-Skills/{SKILL_NAME}/{session-id}`
+
+For this skill, `{SKILL_NAME}` is
+`alibabacloud-governance-evaluation-report`, so the concrete form is:
+
+`--user-agent AlibabaCloud-Agent-Skills/alibabacloud-governance-evaluation-report/{session-id}`
+
+Session ID rules:
+
+1. Generate a new session ID once per session (one skill invocation) with
+   `uuid.uuid4().hex`. It must be a 32-char hex UUID v4 value: exactly 32
+   lowercase hexadecimal characters with no hyphens.
+2. Reuse the same session ID for every Alibaba Cloud API call in that invocation,
+   including direct CLI commands, helper-script calls, pagination, and retries.
+3. Do not regenerate the session ID between related calls. Generate a new session
+   ID only when a new skill invocation begins.
+4. Set `ALIBABA_CLOUD_AGENT_SESSION_ID` to that 32-char hex session ID before running
+   `governance_query.py`. The script validates and reuses the supplied UUID; when
+   the variable is absent, it generates one 32-char hex UUID v4 per process and
+   reuses it.
+5. Never derive a session ID from account IDs, credentials, user data, or other
+   sensitive values.
+
+Before running `governance_query.py`, tell the user that it invokes the local
+`aliyun` executable with their current CLI credentials and sends read-only
+queries to Alibaba Cloud Governance Center. The script enforces a read-only
+command allowlist, validates all dynamic arguments, and prints the resolved
+executable and API action to stderr before each call.
 
 ## Authentication
 
@@ -57,6 +96,7 @@ Configure CLI authentication (OAuth recommended):
 ```bash
 # OAuth mode (recommended)
 aliyun configure --mode OAuth
+```
 
 ## RAM Policy
 
@@ -87,10 +127,11 @@ Verify setup before use:
 ```bash
 # Test CLI connection
 aliyun governance list-evaluation-results \
-  --user-agent AlibabaCloud-Agent-Skills \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-governance-evaluation-report/{session-id} \
   --cli-query "Results.TotalScore"
 
 # Test script
+export ALIBABA_CLOUD_AGENT_SESSION_ID="{session-id}"
 python3 scripts/governance_query.py overview
 ```
 
@@ -165,11 +206,11 @@ python3 scripts/governance_query.py pillar -c <Category> [options]
 | `-r, --risk` | Filter by actual risk level (comma-separated) |
 
 **Category values**:
-- `Security` — 安全
-- `Reliability` — 稳定
-- `CostOptimization` — 成本
-- `OperationalExcellence` — 效率
-- `Performance` — 性能
+- `Security` — security and access controls
+- `Reliability` — reliability and resilience
+- `CostOptimization` — cost optimization
+- `OperationalExcellence` — operational efficiency
+- `Performance` — performance efficiency
 
 **Level values**: `Critical`, `High`, `Medium`, `Suggestion`
 
@@ -177,10 +218,10 @@ python3 scripts/governance_query.py pillar -c <Category> [options]
 
 **Examples**:
 ```bash
-# 安全支柱所有风险项
+# All risky items in the Security pillar
 python3 scripts/governance_query.py pillar -c Security --risky
 
-# 仅严重和高优先级的错误/警告
+# Only Critical/High-priority Error and Warning items
 python3 scripts/governance_query.py pillar -c Security -l Critical,High -r Error,Warning --risky
 ```
 
@@ -211,10 +252,10 @@ python3 scripts/governance_query.py detail --keyword <search-term>
 
 **Examples**:
 ```bash
-# 按 ID 查询
+# Query by ID
 python3 scripts/governance_query.py detail --id apbxftkv5c
 
-# 按关键字搜索
+# Search by keyword
 python3 scripts/governance_query.py detail --keyword "MFA"
 ```
 
@@ -244,10 +285,10 @@ python3 scripts/governance_query.py resources --id <metric-id>
 
 **Examples**:
 ```bash
-# 查询未启用 MFA 的 RAM 用户列表
+# List RAM users without MFA enabled
 python3 scripts/governance_query.py resources --id apbxftkv5c
 
-# 查询开放高危端口的安全组
+# List security groups that expose high-risk ports
 python3 scripts/governance_query.py resources --id a9g6pv7r5b
 ```
 
@@ -266,14 +307,14 @@ python3 scripts/governance_query.py resources --id a9g6pv7r5b
 
 | User says... | Use mode | Command | Report format |
 |--------------|----------|---------|---------------|
-| "查查我的账号安全吗" / "成熟度得分" / "分析下治理检测结果" | `overview` | `overview` | [overview](references/report-format-overview.md) |
-| "有哪些高风险项" / "看下所有高风险" | `overview` | `overview -r Error` | [overview](references/report-format-overview.md) |
-| "中风险以上的问题" | `overview` | `overview -r Error,Warning` | [overview](references/report-format-overview.md) |
-| "安全方面有哪些问题" / "XX支柱的风险" | `pillar` | `pillar -c Security --risky` | [pillar](references/report-format-pillar.md) |
-| "网络安全相关的检测项" / "数据库风险" | `pillar` + keyword filter | `pillar -c Security --risky` then filter by keyword | [pillar](references/report-format-pillar.md) |
-| "高优先级的问题" | `pillar` | `pillar -c Security -l Critical,High --risky` | [pillar](references/report-format-pillar.md) |
-| "MFA怎么修" / "XX检测项详情" | `detail` | `detail --keyword "MFA"` | [detail](references/report-format-detail.md) |
-| "哪些用户没开MFA" / "不合规资源有哪些" | `detail` + `resources` | `detail --id xxx` then `resources --id xxx` | [detail](references/report-format-detail.md) |
+| "Is my account secure?" / "What is my maturity score?" / "Analyze my governance results" | `overview` | `overview` | [overview](references/report-format-overview.md) |
+| "What high-risk items are there?" / "Show all high risks" | `overview` | `overview -r Error` | [overview](references/report-format-overview.md) |
+| "Show issues at medium risk or above" | `overview` | `overview -r Error,Warning` | [overview](references/report-format-overview.md) |
+| "What security issues exist?" / "Risks in a specific pillar" | `pillar` | `pillar -c Security --risky` | [pillar](references/report-format-pillar.md) |
+| "Network security checks" / "Database risks" | `pillar` + keyword filter | `pillar -c Security --risky` then filter by keyword | [pillar](references/report-format-pillar.md) |
+| "Show high-priority issues" | `pillar` | `pillar -c Security -l Critical,High --risky` | [pillar](references/report-format-pillar.md) |
+| "How do I fix MFA?" / "Show check-item details" | `detail` | `detail --keyword "MFA"` | [detail](references/report-format-detail.md) |
+| "Which users do not have MFA?" / "What resources are non-compliant?" | `detail` + `resources` | `detail --id xxx` then `resources --id xxx` | [detail](references/report-format-detail.md) |
 
 **Default**: If user doesn't specify pillar or check item, use `overview`.
 
@@ -283,7 +324,7 @@ python3 scripts/governance_query.py resources --id a9g6pv7r5b
 
 | Field | Values | Note |
 |-------|--------|------|
-| `Risk` | `Error`(高风险) > `Warning`(中风险) > `Suggestion`(低风险) > `None`(合规) | Actual detected risk |
+| `Risk` | `Error` (high) > `Warning` (medium) > `Suggestion` (low) > `None` (compliant) | Actual detected risk |
 | `RecommendationLevel` | `Critical` > `High` > `Medium` > `Suggestion` | Recommended priority |
 | `Status` | `Finished` / `NotApplicable` / `Failed` | Check execution status |
 | `Compliance` | 0.0 - 1.0 | 1.0 = fully compliant |

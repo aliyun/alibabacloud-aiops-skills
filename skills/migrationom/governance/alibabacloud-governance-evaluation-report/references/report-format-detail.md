@@ -1,68 +1,72 @@
-# 报告格式：单项检测详情分析报告
+# Report Format: Individual Check-Item Analysis
 
-**适用场景**：
+**Use cases**:
 
-- 用户询问某个具体检测项的详情，如"MFA 那个检测项是什么情况""apbxftkv5c 这个检测项帮我看看"
-- 用户询问某个检测项的修复方法，如"MFA 怎么修""如何修复高危端口暴露的问题"
-- 用户查看某个检测项的不合规资源列表，如"哪些用户没开 MFA""哪些安全组开放了高危端口"
+- The user asks about one specific check item, such as an MFA check or a check
+  identified by ID.
+- The user asks how to remediate a check item, such as MFA enforcement or
+  exposure of high-risk ports.
+- The user asks for the non-compliant resources associated with a check item.
 
-**数据来源**：
+**Data sources**:
 
-- 检测项详情：`detail --id <metric-id>` 或 `detail --keyword <keyword>` 模式输出的 JSON
-- 不合规资源：`resources --id <metric-id>` 模式输出的 JSON（按需获取）
+- Check-item details: JSON output from `detail --id <metric-id>` or
+  `detail --keyword <keyword>`.
+- Non-compliant resources: JSON output from `resources --id <metric-id>`,
+  retrieved only when needed.
 
 ---
 
-## 格式模板
+## Format Template
 
-### 仅查看检测项详情（不含资源列表）
+### Check-Item Details Without a Resource List
 
 ```markdown
-## 检测项详情：{DisplayName}
+## Check-Item Details: {DisplayName}
 
-| 属性 | 值 |
+| Attribute | Value |
 | --- | --- |
-| 检测项 ID | `{Id}` |
-| 所属支柱 | {CategoryCN} |
-| 优先级 | {RecommendationLevelCN} |
-| 当前状态 | {Risk → 高风险/中风险/低风险/合规} |
-| 合规率 | {Compliance*100:.0f}% |
-| 不合规资源数 | {NonCompliant, if available, otherwise "N/A"} |
-| 修复后预计提分 | +{PotentialScoreIncrease:.1f} 分 {if available, otherwise omit this row} |
+| Check Item ID | `{Id}` |
+| Pillar | {CategoryCN} |
+| Priority | {RecommendationLevelCN} |
+| Current Status | {Risk mapped to High / Medium / Low / Compliant} |
+| Compliance Rate | {Compliance*100:.0f}% |
+| Non-Compliant Resources | {NonCompliant, if available, otherwise "N/A"} |
+| Potential Score Increase | +{PotentialScoreIncrease:.1f} {if available, otherwise omit this row} |
 
-### 检测说明
+### Check Description
 
-{Description — the full description of what this check item evaluates}
+{Description: the full description of what this check item evaluates.}
 
-### 当前风险分析
+### Current Risk Analysis
 
 {Agent analyzes:
 - Why this check item is in its current risk state
 - What the compliance rate means in practical terms
-- Potential impact of non-compliance (security, cost, stability implications)
+- Potential impact of non-compliance on security, cost, or stability
 }
 
-### 修复方案
+### Remediation
 
-{Parse Remediation array and present each remediation option.
+{Parse the Remediation array and present each remediation option.
 For each remediation:}
 
-#### 方案{N}：{RemediationType → "手动修复"/"分析修复"/"快速修复"}
+#### Option {N}: {RemediationType mapped to "Manual Remediation", "Assisted Analysis", or "Quick Remediation"}
 
-{For each step in Steps:}
+{For each entry in Steps:}
 
 **{Classification, if present}**
 
-{Description — what this step does}
+{Description: what this step does.}
 
 {If Suggestion is present:}
-> 建议：{Suggestion}
+> Recommendation: {Suggestion}
 
 {If CostDescription is present:}
-> 费用说明：{CostDescription}
+> Cost: {CostDescription}
 
 {If Notice is present:}
-> 注意：{Notice}
+> Notice: {Notice}
 
 {If Guidance is present, for each guidance entry:}
 
@@ -73,82 +77,98 @@ For each remediation:}
 {If ButtonRef is present:}
 [{ButtonName}]({ButtonRef})
 
-{End of steps}
-{Repeat for each remediation option}
+{End of steps.}
+{Repeat for each remediation option.}
 ```
 
-### 含不合规资源列表
+### Check-Item Details With a Resource List
 
-当用户明确要求查看不合规资源，或 Agent 判断列出具体资源有助于用户理解问题时，在上述报告末尾追加资源列表部分。
+When the user explicitly asks for non-compliant resources, or when listing
+specific resources materially improves the explanation, append the resource
+section below to the preceding report.
 
-需要额外调用 `resources --id <metric-id>` 获取资源数据。
+Call `resources --id <metric-id>` to retrieve the resource data.
 
 ```markdown
-### 不合规资源列表
+### Non-Compliant Resources
 
-共 {TotalCount} 个不合规资源：
+Total: {TotalCount} non-compliant resources
 
-| 资源 ID | 资源名称 | 资源类型 | 地域 | 关键属性 |
+| Resource ID | Resource Name | Resource Type | Region | Key Properties |
 | --- | --- | --- | --- | --- |
-| {ResourceId} | {ResourceName, or "-"} | {ResourceType} | {RegionId} | {Agent: pick 1-2 most relevant properties from Properties} |
+| {ResourceId} | {ResourceName, or "-"} | {ResourceType} | {RegionId} | {Agent: select the one or two most relevant values from Properties} |
 | ... | ... | ... | ... | ... |
 
-{If TotalCount > displayed count:}
-> 仅展示前 {N} 条，共 {TotalCount} 条。可通过增加 `--max-results` 查看更多。
+{If TotalCount is greater than the displayed count:}
+> Showing the first {N} of {TotalCount} resources. Increase `--max-results` to
+> retrieve more.
 
-### 处置建议
+### Remediation Advice
 
-{Agent generates specific remediation advice based on the actual non-compliant resources:
-- Group similar resources if applicable (e.g., "以下 5 个 RAM 用户均未启用 MFA")
-- Provide concrete next steps for remediation
-- Highlight any resources that need prioritized attention (e.g., root account, production resources)
+{Agent generates advice based on the actual non-compliant resources:
+- Group similar resources when applicable, such as five RAM users without MFA
+- Provide concrete next steps
+- Highlight resources that need priority attention, such as a root account or
+  production resources
 }
 
 ---
 
-### 相关检测项
+### Related Check Items
 
-{Agent looks through the pillar data (from the same overview/pillar query results already cached)
-and picks 2-5 related check items that share the same Category or are topically related.
-Only include items that have risk (Risk != "None"). If no related risky items, omit this section.}
+{Agent uses pillar data already cached from the same overview or pillar query
+and selects two to five related check items in the same Category or topic.
+Include only risky items where Risk is not "None". Omit this section when no
+related risky items exist.}
 
-该检测项所属的{CategoryCN}支柱下，还有以下相关风险项值得关注：
+Other risky items in the {CategoryCN} pillar:
 
-| 检测项 | 风险等级 | 合规率 |
+| Check Item | Risk Level | Compliance Rate |
 | --- | --- | --- |
 | {DisplayName} | {RiskCN} | {Compliance*100:.0f}% |
 | ... | ... | ... |
 
 ---
 
-如需进一步了解，可以告诉我：
+To explore further, you can ask:
 
-- 想查看上述某个相关检测项的详情，如"**{pick a related DisplayName} 的详细情况**"
-- 想查看该检测项的不合规资源，如"**{current DisplayName} 有哪些不合规资源**" {only if resource list was not already shown}
-- 想查看{CategoryCN}支柱的整体情况，如"**分析下{CategoryCN}支柱的所有检测项**"
+- For a related item: "**Show details for {a related DisplayName}.**"
+- For affected resources: "**Which resources are non-compliant for {current DisplayName}?**" {only if the resource list was not already shown}
+- For the complete pillar: "**Analyze all checks in the {CategoryCN} pillar.**"
 ```
 
 ---
 
-## 格式规则
+## Formatting Rules
 
-- **禁止使用任何 emoji**，全文保持专业语气
-- 检测项属性表使用竖排 key-value 布局，不使用横排表格
-- "当前状态"字段将 Risk 枚举值翻译为中文：`Error` → 高风险，`Warning` → 中风险，`Suggestion` → 低风险，`None` → 合规
-- 修复方案部分忠实呈现 API 返回的 Remediation 数据，不要编造修复步骤
-- 如 Remediation 数据中包含控制台链接（ButtonRef），保留为 markdown 链接格式
-- 不合规资源列表中的"关键属性"列：从 Properties 中挑选最能说明问题的 1-2 个属性（如 `MFAEnabled: false`）
-- 若资源数量较多（>20），建议只展示前 20 条并提示总数
-- 当 `detail --keyword` 匹配到多条结果时，先展示匹配列表让用户选择，不要自动展开所有详情
+- Write the final report in the user's language. Localize headings and fixed
+  labels when appropriate, while keeping API field values and command
+  parameters exact.
+- **Do not use emoji**; maintain a professional tone throughout.
+- Use a vertical key-value table for check-item attributes.
+- Map `Risk` values as follows: `Error` to high risk, `Warning` to medium risk,
+  `Suggestion` to low risk, and `None` to compliant.
+- Present the API's `Remediation` data faithfully and do not invent steps.
+- Preserve console URLs from `ButtonRef` as Markdown links.
+- In the Key Properties column, select the one or two `Properties` values that
+  best explain the issue, such as `MFAEnabled: false`.
+- When more than 20 resources exist, show the first 20 and state the total.
+- When `detail --keyword` returns multiple matches, show the match list and ask
+  the user to select one instead of expanding every item.
 
-## 后续引导规则
+## Follow-up Guidance Rules
 
-- 报告末尾必须附带后续引导，帮助用户继续探索
-- 引导内容必须**基于报告中的实际数据**，从报告中挑选具体的检测项名、支柱名填入引导模板
-- 引导以列表形式呈现，提供 2-3 个方向，每个方向用加粗标出建议的提问语句
-- 引导方向应根据当前上下文灵活选择：
-  - 若当前报告未含资源列表，可引导查看不合规资源
-  - 若已含资源列表，可引导查看所属支柱整体情况或回到概览
-  - 若有相关检测项，优先引导查看某个相关检测项的详情
-- "相关检测项"部分：从同支柱下挑选有风险的检测项（排除当前项），优先选择同主题或高风险的项；若同支柱下无其他风险项则省略该部分
-- 禁止使用 emoji
+- Always end the report with follow-up guidance that helps the user continue
+  exploring.
+- Base guidance on actual report data and insert real check-item and pillar
+  names into suggested questions.
+- Offer two or three directions as a list and bold the suggested questions.
+- Adapt directions to the context:
+  - If no resource list is shown, offer to list non-compliant resources.
+  - If resources are already shown, offer a pillar-level analysis or a return
+    to the overview.
+  - If related risky items exist, prioritize a specific related item.
+- In Related Check Items, select risky items from the same pillar, excluding
+  the current item. Prefer topically related or higher-risk items and omit the
+  section when none exist.
+- Do not use emoji.

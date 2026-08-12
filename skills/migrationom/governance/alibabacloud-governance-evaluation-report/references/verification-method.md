@@ -1,10 +1,18 @@
 # Verification Methods
 
+Use one 32-char hex UUID v4 value for `{session-id}` throughout a verification
+run: exactly 32 lowercase hexadecimal characters with no hyphens. Reuse that
+value in every direct CLI command and export it for all helper-script calls:
+
+```bash
+export ALIBABA_CLOUD_AGENT_SESSION_ID="{session-id}"
+```
+
 ## Step 1: Verify CLI Installation
 
 ```bash
 aliyun version
-# Expected: version >= 3.3.0
+# Expected: version >= 3.3.3
 ```
 
 ## Step 2: Verify Governance Plugin
@@ -23,7 +31,7 @@ aliyun plugin install --names governance
 
 ```bash
 aliyun governance list-evaluation-results \
-  --user-agent AlibabaCloud-Agent-Skills \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-governance-evaluation-report/{session-id} \
   --cli-query "Results.TotalScore"
 ```
 
@@ -40,7 +48,7 @@ aliyun governance list-evaluation-results \
 
 ```bash
 aliyun governance list-evaluation-metadata \
-  --user-agent AlibabaCloud-Agent-Skills \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-governance-evaluation-report/{session-id} \
   --cli-query "EvaluationMetadata | length(@)"
 ```
 

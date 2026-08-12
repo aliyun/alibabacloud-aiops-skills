@@ -57,7 +57,7 @@ aliyun governance list-evaluation-metric-details --metric-id abc  # Wrong - shou
 
 #### ✅ CORRECT: Include user-agent
 ```bash
-aliyun governance list-evaluation-results --user-agent AlibabaCloud-Agent-Skills
+aliyun governance list-evaluation-results --user-agent AlibabaCloud-Agent-Skills/alibabacloud-governance-evaluation-report/{session-id}
 ```
 
 #### ❌ INCORRECT: Missing user-agent
@@ -112,7 +112,7 @@ python3 scripts/governance_query.py pillar -c CostOptimization
 #### ❌ INCORRECT: Invalid category names
 ```bash
 python3 scripts/governance_query.py pillar -c security  # Wrong - case sensitive
-python3 scripts/governance_query.py pillar -c 安全  # Wrong - use English name
+python3 scripts/governance_query.py pillar -c LocalizedSecurity  # Wrong - use a valid category name
 python3 scripts/governance_query.py pillar -c Cost  # Wrong - full name is CostOptimization
 ```
 
@@ -155,7 +155,7 @@ Expected JSON structure:
   "TotalScore": 0.85,
   "EvaluationTime": "2024-01-15T10:30:00Z",
   "Category": "Security",
-  "CategoryCN": "安全",
+  "CategoryCN": "<localized security label>",
   "MatchedCount": 10,
   "Items": [...]
 }
@@ -170,7 +170,7 @@ Expected JSON structure:
   "DisplayName": "...",
   "Description": "...",
   "Category": "Security",
-  "CategoryCN": "安全",
+  "CategoryCN": "<localized security label>",
   "RecommendationLevel": "Critical",
   "Status": "Finished",
   "Risk": "Error",

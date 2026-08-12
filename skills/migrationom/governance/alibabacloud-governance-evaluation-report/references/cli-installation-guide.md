@@ -2,9 +2,13 @@
 
 Complete guide for installing and configuring Aliyun CLI.
 
-> **Aliyun CLI 3.3.0+**: Supports installing and using all published Alibaba Cloud product plugins. Make sure to upgrade to 3.3.0 or later for full plugin ecosystem coverage.
+> **Aliyun CLI 3.3.3+**: Supports installing and using all published Alibaba Cloud product plugins. Make sure to upgrade to 3.3.3 or later for full plugin ecosystem coverage.
 
 ## Installation
+
+Prefer a package manager because it verifies package integrity as part of the
+installation workflow. If a package manager is unavailable, use a version-pinned
+release and verify its SHA256 digest **before** extracting or executing it.
 
 ### macOS
 
@@ -14,87 +18,128 @@ brew install aliyun-cli
 # Upgrade to latest
 brew upgrade aliyun-cli
 
-# Verify version (>= 3.3.0)
+# Verify version (>= 3.3.3)
 aliyun version
 ```
 
-**Using Binary**
+**Using a verified binary (fallback)**
+
+The example below pins Aliyun CLI `3.4.8`. When updating the version, copy the new
+digest from the official [GitHub release page](https://github.com/aliyun/aliyun-cli/releases)
+and update `EXPECTED_SHA256` at the same time. Never reuse a digest from a different
+version or architecture.
+
 ```bash
-# Download
-wget https://aliyuncli.alicdn.com/aliyun-cli-macosx-latest-amd64.tgz
+VERSION="3.4.8"
+ARCHIVE="aliyun-cli-macosx-${VERSION}-universal.tgz"
+EXPECTED_SHA256="ec3b300f6aca79b8317d1cbcd051fefd77f75ab9b5ec1afc7b54f113b29d512b"
+DOWNLOAD_URL="https://github.com/aliyun/aliyun-cli/releases/download/v${VERSION}/${ARCHIVE}"
 
-# Extract
-tar -xzf aliyun-cli-macosx-latest-amd64.tgz
+# Require HTTPS, download the pinned archive, and verify it before extraction.
+curl --proto '=https' --tlsv1.2 --fail --location \
+  --output "${ARCHIVE}" "${DOWNLOAD_URL}"
+printf '%s  %s\n' "${EXPECTED_SHA256}" "${ARCHIVE}" | shasum -a 256 --check -
+tar -xzf "${ARCHIVE}"
 
-# Move to PATH
-sudo mv aliyun /usr/local/bin/
+# Install for the current user; no administrator privileges are required.
+install -d "${HOME}/.local/bin"
+install -m 0755 aliyun "${HOME}/.local/bin/aliyun"
+export PATH="${HOME}/.local/bin:${PATH}"
 
-# Verify
 aliyun version
 ```
+
+To persist the user-local installation, add
+`export PATH="${HOME}/.local/bin:${PATH}"` to your shell profile.
 
 ### Linux
 
-**Debian/Ubuntu**
+The same verified installation works on Debian, Ubuntu, CentOS, and RHEL. The
+architecture check below rejects unsupported values instead of downloading an
+unrelated executable.
+
 ```bash
-# Download
-wget https://aliyuncli.alicdn.com/aliyun-cli-linux-latest-amd64.tgz
+VERSION="3.4.8"
+case "$(uname -m)" in
+  x86_64|amd64)
+    ARCH="amd64"
+    EXPECTED_SHA256="359419867fb8e850f327745315a312f1ec9749e64ec8747cc8b09f67d6df4868"
+    ;;
+  aarch64|arm64)
+    ARCH="arm64"
+    EXPECTED_SHA256="a8b22c72c1984e0ef4db441ab1e7f1720a03553fae79cff9fb113806229e7876"
+    ;;
+  *)
+    echo "Unsupported architecture: $(uname -m)" >&2
+    exit 1
+    ;;
+esac
 
-# Extract and install
-tar -xzf aliyun-cli-linux-latest-amd64.tgz
-sudo mv aliyun /usr/local/bin/
+ARCHIVE="aliyun-cli-linux-${VERSION}-${ARCH}.tgz"
+DOWNLOAD_URL="https://github.com/aliyun/aliyun-cli/releases/download/v${VERSION}/${ARCHIVE}"
 
-# Verify
+curl --proto '=https' --tlsv1.2 --fail --location \
+  --output "${ARCHIVE}" "${DOWNLOAD_URL}"
+printf '%s  %s\n' "${EXPECTED_SHA256}" "${ARCHIVE}" | sha256sum --check -
+tar -xzf "${ARCHIVE}"
+
+install -d "${HOME}/.local/bin"
+install -m 0755 aliyun "${HOME}/.local/bin/aliyun"
+export PATH="${HOME}/.local/bin:${PATH}"
+
 aliyun version
 ```
 
-**CentOS/RHEL**
+To persist the user-local installation, add
+`export PATH="${HOME}/.local/bin:${PATH}"` to your shell profile.
+
+**Optional system-wide installation**
+
+Installing into `/usr/local/bin` changes a system-owned directory and therefore
+requires administrator privileges. Only do this after the SHA256 check succeeds
+and after confirming the destination:
+
 ```bash
-# Download
-wget https://aliyuncli.alicdn.com/aliyun-cli-linux-latest-amd64.tgz
-
-# Extract and install
-tar -xzf aliyun-cli-linux-latest-amd64.tgz
-sudo mv aliyun /usr/local/bin/
-
-# Verify
-aliyun version
-```
-
-**ARM64 Architecture**
-```bash
-# Download ARM64 version
-wget https://aliyuncli.alicdn.com/aliyun-cli-linux-latest-arm64.tgz
-
-# Extract and install
-tar -xzf aliyun-cli-linux-latest-arm64.tgz
-sudo mv aliyun /usr/local/bin/
+sudo install -m 0755 aliyun /usr/local/bin/aliyun
 ```
 
 ### Windows
 
-**Using Binary**
-1. Download from: https://aliyuncli.alicdn.com/aliyun-cli-windows-latest-amd64.zip
-2. Extract the ZIP file
-3. Add the directory to your PATH environment variable
-4. Open new Command Prompt or PowerShell
-5. Verify: `aliyun version`
+**Using a verified binary with PowerShell**
 
-**Using PowerShell**
 ```powershell
-# Download
-Invoke-WebRequest -Uri "https://aliyuncli.alicdn.com/aliyun-cli-windows-latest-amd64.zip" -OutFile "aliyun-cli.zip"
+$Version = "3.4.8"
+$Archive = "aliyun-cli-windows-$Version-amd64.zip"
+$ExpectedSha256 = "5c53b104defcc968cdc53b43e07790861d7196d3f52ab7fef2f4a7ae7e258825"
+$DownloadUrl = "https://github.com/aliyun/aliyun-cli/releases/download/v$Version/$Archive"
 
-# Extract
-Expand-Archive -Path aliyun-cli.zip -DestinationPath C:\aliyun-cli
+Invoke-WebRequest -Uri $DownloadUrl -OutFile $Archive
+$ActualSha256 = (Get-FileHash -Algorithm SHA256 -Path $Archive).Hash.ToLowerInvariant()
+if ($ActualSha256 -ne $ExpectedSha256) {
+    Remove-Item -LiteralPath $Archive
+    throw "SHA256 verification failed; the archive was deleted."
+}
 
-# Add to PATH (requires admin privileges)
-$env:Path += ";C:\aliyun-cli"
-[Environment]::SetEnvironmentVariable("Path", $env:Path, [System.EnvironmentVariableTarget]::Machine)
+$InstallDir = Join-Path $HOME "bin\aliyun-cli"
+Expand-Archive -Path $Archive -DestinationPath $InstallDir -Force
 
-# Verify
+# Update only the current user's PATH; administrator privileges are not required.
+$UserPath = [Environment]::GetEnvironmentVariable("Path", [System.EnvironmentVariableTarget]::User)
+if (($UserPath -split ";") -notcontains $InstallDir) {
+    $NewUserPath = (@($UserPath, $InstallDir) | Where-Object { $_ }) -join ";"
+    [Environment]::SetEnvironmentVariable(
+        "Path",
+        $NewUserPath,
+        [System.EnvironmentVariableTarget]::User
+    )
+}
+$env:Path = "$InstallDir;$env:Path"
+
 aliyun version
 ```
+
+Changing the machine-wide PATH requires administrator privileges and is not needed
+for a per-user installation.
 
 ## Configuration
 
@@ -316,7 +361,7 @@ aliyun ecs describe-regions
       {
         "RegionId": "cn-hangzhou",
         "RegionEndpoint": "ecs.cn-hangzhou.aliyuncs.com",
-        "LocalName": "华东 1（杭州）"
+        "LocalName": "<localized region name>"
       },
       ...
     ]

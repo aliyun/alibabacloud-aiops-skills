@@ -19,7 +19,7 @@ Query all check item metadata.
 
 ```bash
 aliyun governance list-evaluation-metadata \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-governance-evaluation-report/{session-id}
 ```
 
 **Response fields:**
@@ -36,7 +36,7 @@ Query governance check results.
 
 ```bash
 aliyun governance list-evaluation-results \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-governance-evaluation-report/{session-id}
 ```
 
 **Response fields:**
@@ -56,7 +56,7 @@ Query non-compliant resources for a specific check item.
 aliyun governance list-evaluation-metric-details \
   --id <metric-id> \
   --max-results 50 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-governance-evaluation-report/{session-id}
 ```
 
 **Parameters:**
@@ -80,7 +80,7 @@ Trigger a new governance check.
 
 ```bash
 aliyun governance run-evaluation \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-governance-evaluation-report/{session-id}
 ```
 
 ## References

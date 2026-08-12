@@ -11,9 +11,12 @@
 import argparse
 import json
 import os
+import re
+import shutil
 import subprocess
 import sys
 import time
+import uuid
 from collections import Counter
 
 CATEGORIES = [
@@ -38,19 +41,164 @@ RISK_CN = {
 
 CACHE_DIR = os.path.expanduser("~/.governance_cache")
 METADATA_CACHE_TTL = 86400
+SKILL_NAME = "alibabacloud-governance-evaluation-report"
+USER_AGENT_PREFIX = f"AlibabaCloud-Agent-Skills/{SKILL_NAME}"
+SESSION_ID_ENV_VAR = "ALIBABA_CLOUD_AGENT_SESSION_ID"
+SESSION_ID_PATTERN = re.compile(r"^[0-9a-f]{32}$")
+_SESSION_ID = None
+READ_ONLY_API_COMMANDS = frozenset({
+    "list-evaluation-metadata",
+    "list-evaluation-results",
+    "list-evaluation-metric-details",
+})
+METRIC_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$")
+MAX_API_TIMEOUT = 300
+MAX_RESULTS_PER_PAGE = 100
+MAX_NEXT_TOKEN_LENGTH = 4096
+
+
+class ApiCallError(RuntimeError):
+    """Raised when a validated Aliyun CLI API call fails."""
+
+
+def _validate_session_id(session_id):
+    if not isinstance(session_id, str) or not SESSION_ID_PATTERN.fullmatch(
+        session_id
+    ):
+        raise ValueError(
+            f"{SESSION_ID_ENV_VAR} must be a 32-char hex UUID v4"
+        )
+    try:
+        parsed = uuid.UUID(hex=session_id)
+    except ValueError as exc:
+        raise ValueError(
+            f"{SESSION_ID_ENV_VAR} must be a 32-char hex UUID v4"
+        ) from exc
+    if parsed.version != 4:
+        raise ValueError(
+            f"{SESSION_ID_ENV_VAR} must be a 32-char hex UUID v4"
+        )
+    return parsed.hex
+
+
+def get_session_id():
+    """Return one 32-char hex UUID v4 shared by all calls in this process."""
+    global _SESSION_ID
+    if _SESSION_ID is None:
+        configured = os.environ.get(SESSION_ID_ENV_VAR)
+        _SESSION_ID = (
+            _validate_session_id(configured)
+            if configured
+            else uuid.uuid4().hex
+        )
+    return _SESSION_ID
+
+
+def get_user_agent():
+    """Build the required observable User-Agent for this skill invocation."""
+    return f"{USER_AGENT_PREFIX}/{get_session_id()}"
+
+
+def _validate_positive_int(name, value, maximum):
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError(f"{name} 必须是整数")
+    if not 1 <= value <= maximum:
+        raise ValueError(f"{name} 必须在 1 到 {maximum} 之间")
+
+
+def _validate_metric_id(metric_id):
+    if not isinstance(metric_id, str) or not METRIC_ID_PATTERN.fullmatch(metric_id):
+        raise ValueError(
+            "检测项 Id 格式无效，仅允许 1-128 位字母、数字、下划线和连字符"
+        )
+
+
+def _validate_next_token(next_token):
+    if not isinstance(next_token, str):
+        raise ValueError("分页令牌必须是字符串")
+    if not next_token or len(next_token) > MAX_NEXT_TOKEN_LENGTH:
+        raise ValueError(f"分页令牌长度必须在 1 到 {MAX_NEXT_TOKEN_LENGTH} 之间")
+    if any(ord(char) < 32 or ord(char) == 127 for char in next_token):
+        raise ValueError("分页令牌不能包含控制字符")
+
+
+def _resolve_aliyun_cli():
+    executable = shutil.which("aliyun")
+    if not executable:
+        raise ApiCallError("未找到 aliyun CLI，请先按安装指南完成安装")
+
+    executable = os.path.realpath(executable)
+    if not os.path.isabs(executable):
+        raise ApiCallError("aliyun CLI 必须解析为绝对路径")
+    if not os.path.isfile(executable) or not os.access(executable, os.X_OK):
+        raise ApiCallError(f"aliyun CLI 不存在或不可执行: {executable}")
+    return executable
+
+
+def _build_api_command(command, metric_id=None, max_results=None, next_token=None):
+    if command not in READ_ONLY_API_COMMANDS:
+        raise ValueError(f"不允许调用治理 API: {command!r}")
+
+    detail_args_supplied = any(
+        value is not None for value in (metric_id, max_results, next_token)
+    )
+    if command != "list-evaluation-metric-details" and detail_args_supplied:
+        raise ValueError(f"{command} 不接受资源明细参数")
+
+    detail_args = []
+    if command == "list-evaluation-metric-details":
+        _validate_metric_id(metric_id)
+        _validate_positive_int(
+            "max_results",
+            max_results,
+            MAX_RESULTS_PER_PAGE,
+        )
+        detail_args.extend(["--id", metric_id, "--max-results", str(max_results)])
+        if next_token is not None:
+            _validate_next_token(next_token)
+            detail_args.extend(["--next-token", next_token])
+
+    cmd = [_resolve_aliyun_cli(), "governance", command]
+    cmd.extend(detail_args)
+    cmd.extend(["--user-agent", get_user_agent()])
+    return cmd
+
+
+def _run_api(command, timeout=60, metric_id=None, max_results=None, next_token=None):
+    _validate_positive_int("timeout", timeout, MAX_API_TIMEOUT)
+    cmd = _build_api_command(command, metric_id, max_results, next_token)
+    print(
+        "[安全提示] 即将通过本机 Aliyun CLI 调用阿里云治理中心只读 API "
+        f"`governance {command}`。该请求会使用当前 CLI 凭证访问阿里云；"
+        f"可执行文件: {cmd[0]}",
+        file=sys.stderr,
+    )
+
+    try:
+        proc = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            shell=False,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        raise ApiCallError(f"API 调用超时 (>{timeout}s): governance {command}")
+    if proc.returncode != 0:
+        raise ApiCallError(f"API 调用失败: {proc.stderr.strip()}")
+    try:
+        return json.loads(proc.stdout)
+    except json.JSONDecodeError as exc:
+        raise ApiCallError(f"API 返回了无效 JSON: {exc.msg}") from exc
 
 
 def call_api(command, timeout=60):
-    cmd = ["aliyun", "governance", command, "--user-agent", "AlibabaCloud-Agent-Skills"]
     try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
-    except subprocess.TimeoutExpired:
-        print(f"API 调用超时 (>{timeout}s): {' '.join(cmd)}", file=sys.stderr)
+        return _run_api(command, timeout=timeout)
+    except (ApiCallError, ValueError) as exc:
+        print(str(exc), file=sys.stderr)
         sys.exit(1)
-    if proc.returncode != 0:
-        print(f"API 调用失败: {proc.stderr.strip()}", file=sys.stderr)
-        sys.exit(1)
-    return json.loads(proc.stdout)
 
 
 def load_metadata(refresh=False):
@@ -299,29 +447,35 @@ def cmd_detail(meta_idx, result_idx, metric_id=None, keyword=None):
 
 def cmd_resources(metric_id, max_results=50, timeout=60, max_pages=100):
     """Query non-compliant resources for a specific check item."""
+    try:
+        _validate_metric_id(metric_id)
+        _validate_positive_int(
+            "max_results",
+            max_results,
+            MAX_RESULTS_PER_PAGE,
+        )
+        _validate_positive_int("timeout", timeout, MAX_API_TIMEOUT)
+        _validate_positive_int("max_pages", max_pages, 1000)
+    except ValueError as exc:
+        return {"error": str(exc)}
+
     all_resources = []
     next_token = None
     page_count = 0
     
     while page_count < max_pages:
         page_count += 1
-        cmd = [
-            "aliyun", "governance", "list-evaluation-metric-details",
-            "--id", metric_id,
-            "--max-results", str(max_results),
-            "--user-agent", "AlibabaCloud-Agent-Skills"
-        ]
-        if next_token:
-            cmd.extend(["--next-token", next_token])
-        
         try:
-            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
-        except subprocess.TimeoutExpired:
-            return {"error": f"API 调用超时 (>{timeout}s): {' '.join(cmd)}"}
-        if proc.returncode != 0:
-            return {"error": f"API 调用失败: {proc.stderr.strip()}"}
-        
-        data = json.loads(proc.stdout)
+            data = _run_api(
+                "list-evaluation-metric-details",
+                timeout=timeout,
+                metric_id=metric_id,
+                max_results=max_results,
+                next_token=next_token,
+            )
+        except (ApiCallError, ValueError) as exc:
+            return {"error": str(exc)}
+
         resources = data.get("Resources", [])
         all_resources.extend(resources)
         
@@ -381,19 +535,22 @@ def main():
     p_resources.add_argument("--max-results", type=int, default=50, help="每页最大数量")
 
     args = parser.parse_args()
-    meta_idx, result_idx, summary = load_data(args.refresh)
 
-    if args.mode == "overview":
-        result = cmd_overview(meta_idx, result_idx, summary, args.risk)
-    elif args.mode == "pillar":
-        result = cmd_pillar(meta_idx, result_idx, summary,
-                            args.category, args.level, args.risk, args.risky_only)
-    elif args.mode == "detail":
-        if not args.metric_id and not args.keyword:
-            parser.error("请指定 --id 或 --keyword")
-        result = cmd_detail(meta_idx, result_idx, args.metric_id, args.keyword)
-    elif args.mode == "resources":
+    if args.mode == "resources":
+        # Resource queries do not need the metadata/result prefetch. Validate their
+        # user-controlled arguments before any external process is launched.
         result = cmd_resources(args.metric_id, args.max_results)
+    else:
+        meta_idx, result_idx, summary = load_data(args.refresh)
+        if args.mode == "overview":
+            result = cmd_overview(meta_idx, result_idx, summary, args.risk)
+        elif args.mode == "pillar":
+            result = cmd_pillar(meta_idx, result_idx, summary,
+                                args.category, args.level, args.risk, args.risky_only)
+        elif args.mode == "detail":
+            if not args.metric_id and not args.keyword:
+                parser.error("请指定 --id 或 --keyword")
+            result = cmd_detail(meta_idx, result_idx, args.metric_id, args.keyword)
 
     json.dump(result, sys.stdout, ensure_ascii=False, indent=2)
     sys.stdout.write("\n")
