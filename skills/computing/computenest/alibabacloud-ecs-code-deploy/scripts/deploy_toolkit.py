@@ -30,10 +30,17 @@ import argparse
 import base64
 import json
 import os
+import platform
 import re
 import subprocess
 import sys
+import tempfile
 import time
+
+
+# True on native Windows (cmd/PowerShell). Used to switch install commands,
+# executable names (aliyun.exe), venv layout (Scripts/) and PATH handling.
+IS_WINDOWS = os.name == "nt"
 
 
 # ============================================================
@@ -44,7 +51,7 @@ def run_cmd(cmd, capture=True, stream=False, env_override=None, timeout=None):
     """Run a shell command, return (exit_code, stdout, stderr)."""
     env = env_override or os.environ.copy()
     if stream:
-        tmp = os.path.join("/tmp", f"deploy_toolkit_{os.getpid()}.log")
+        tmp = os.path.join(tempfile.gettempdir(), f"deploy_toolkit_{os.getpid()}.log")
         with open(tmp, "w") as f:
             proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env)
             output_lines = []
@@ -138,35 +145,85 @@ def version_gte(ver, required):
 # Subcommand: check
 # ============================================================
 
+def _aliyun_bin_name():
+    """Executable name of the aliyun CLI (Windows appends .exe)."""
+    return "aliyun.exe" if IS_WINDOWS else "aliyun"
+
+
+def _detect_arch():
+    """Return 'arm64' or 'amd64' for the current machine, cross-platform.
+
+    os.uname() is unavailable on Windows, so fall back to platform.machine()
+    and the PROCESSOR_ARCHITECTURE env var.
+    """
+    machine = ""
+    if hasattr(os, "uname"):
+        machine = os.uname().machine.lower()
+    if not machine:
+        machine = (platform.machine() or os.environ.get("PROCESSOR_ARCHITECTURE", "")).lower()
+    return "arm64" if machine in ("arm64", "aarch64") else "amd64"
+
+
 def _detect_aliyun_paths():
     """Return list of all `aliyun` binaries on PATH (in PATH order).
 
     Used to surface multi-binary conflicts (e.g. brew /opt/homebrew/bin/aliyun
     shadowing a fresh /usr/local/bin/aliyun on macOS Apple Silicon, which is
     the typical reason an "upgrade succeeded" appears to revert in the next
-    shell session).
+    shell session). On Windows the binary is aliyun.exe (also probe .cmd/.bat
+    shims created by scoop/choco).
     """
     paths = []
+    candidates = [_aliyun_bin_name()]
+    if IS_WINDOWS:
+        candidates += ["aliyun.cmd", "aliyun.bat"]
     for d in os.environ.get("PATH", "").split(os.pathsep):
-        cand = os.path.join(d, "aliyun")
-        if os.path.isfile(cand) and os.access(cand, os.X_OK) and cand not in paths:
-            paths.append(cand)
+        for name in candidates:
+            cand = os.path.join(d, name)
+            if os.path.isfile(cand) and cand not in paths:
+                if IS_WINDOWS or os.access(cand, os.X_OK):
+                    paths.append(cand)
     return paths
+
+
+def _windows_install_cmd(dest=r"$env:USERPROFILE\bin"):
+    """Build a PowerShell script that installs aliyun CLI on Windows.
+
+    Downloads the official Windows zip, extracts aliyun.exe into a user-writable
+    dir (default %USERPROFILE%\\bin) and persists that dir onto the User PATH.
+    No admin rights / sudo required. Returned as a multi-line PowerShell snippet
+    meant to be pasted into a PowerShell session verbatim.
+    """
+    arch = _detect_arch()
+    url = f"https://aliyun-cli.oss-cn-hangzhou.aliyuncs.com/aliyun-cli-windows-latest-{arch}.zip"
+    return "\n".join([
+        f'$u = "{url}"',
+        '$zip = "$env:TEMP\\aliyun-cli.zip"',
+        f'$dest = "{dest}"',
+        'Invoke-WebRequest -Uri $u -OutFile $zip',
+        'New-Item -ItemType Directory -Force -Path $dest | Out-Null',
+        'Expand-Archive -Path $zip -DestinationPath $dest -Force',
+        '$userPath = [Environment]::GetEnvironmentVariable("PATH","User")',
+        'if ($userPath -notlike "*$dest*") { [Environment]::SetEnvironmentVariable("PATH", "$dest;$userPath", "User") }',
+        '$env:PATH = "$dest;$env:PATH"',
+        'aliyun version',
+    ])
 
 
 def _arch_install_cmd(target_dir):
     """Build the platform/arch-specific aliyun CLI install command.
 
     target_dir: where to extract the binary (e.g. /usr/local/bin or ~/bin).
-    Returns (cmd_string, needs_sudo).
+    Returns (cmd_string, needs_sudo). On Windows returns the PowerShell script
+    (needs_sudo is always False there).
     """
+    if IS_WINDOWS:
+        return _windows_install_cmd(), False
+    arch = _detect_arch()
     plat = sys.platform
-    machine = os.uname().machine.lower() if hasattr(os, "uname") else ""
     if plat == "darwin":
-        arch = "arm64" if machine in ("arm64", "aarch64") else "amd64"
         url = f"https://aliyun-cli.oss-cn-hangzhou.aliyuncs.com/aliyun-cli-macosx-latest-{arch}.tgz"
     else:
-        arch = "arm64" if machine in ("arm64", "aarch64") else "amd64"
         url = f"https://aliyun-cli.oss-cn-hangzhou.aliyuncs.com/aliyun-cli-linux-latest-{arch}.tgz"
     needs_sudo = target_dir.startswith("/usr/") or target_dir.startswith("/opt/")
     sudo = "sudo " if needs_sudo else ""
@@ -185,11 +242,25 @@ def _has_brew_aliyun():
     return any(line.strip() in ("aliyun-cli", "aliyun") for line in out.splitlines())
 
 
+def _print_windows_install_guidance(action_label, current_ver=""):
+    """Windows-specific install/upgrade guidance (PowerShell, no sudo/brew)."""
+    ps = _windows_install_cmd()
+    print(f"   → AGENT: DO NOT stop. This is Windows. ASK the user: 'Do you agree to {action_label} aliyun CLI into %USERPROFILE%\\bin and add it to the User PATH (no admin rights required)?' After consent, run the PowerShell script below, then re-run check.")
+    print(f"   → Recommended {action_label} steps (run in PowerShell):")
+    for line in ps.splitlines():
+        print(f"     {line}")
+    print("   → Package-manager alternative (if Scoop/Chocolatey is installed): `scoop install aliyun-cli`  or  `choco install aliyun-cli -y`.")
+    print("   → After install/upgrade you MUST open a NEW terminal so the updated User PATH takes effect, then run `aliyun version` and re-run check.")
+
+
 def _print_install_guidance(action_label, current_ver=""):
     """Print install/upgrade guidance with PATH-conflict awareness.
 
     action_label: 'install' or 'upgrade', used in the prompt to the user.
     """
+    if IS_WINDOWS:
+        _print_windows_install_guidance(action_label, current_ver)
+        return
     paths = _detect_aliyun_paths()
     brew_managed = _has_brew_aliyun()
 
@@ -221,6 +292,15 @@ def _print_install_guidance(action_label, current_ver=""):
     print(f"     echo 'export PATH=\"$HOME/bin:$PATH\"' >> ~/.zshrc   # bash users edit ~/.bashrc")
     print(f"     hash -r   # or under zsh: rehash; makes the current session pick up the new version immediately")
     print(f"   → After install/upgrade, you MUST run `which -a aliyun` and `aliyun version` to double-check the effective path and version, then re-run check.")
+
+
+def _extract_json(text):
+    """Parse the first JSON object from CLI output, skipping any leading hint
+    lines (e.g. AI-mode notice) the plugin CLI may print before the payload."""
+    idx = text.find("{")
+    if idx < 0:
+        raise ValueError("no JSON object found in output")
+    return json.loads(text[idx:])
 
 
 def cmd_check(_args):
@@ -264,7 +344,10 @@ def cmd_check(_args):
     venv_dir = os.path.expanduser("~/.aliyun/appmanager-venv")
     required_app = "1.1.1"
     if os.path.isdir(venv_dir):
-        venv_python = os.path.join(venv_dir, "bin", "python")
+        if IS_WINDOWS:
+            venv_python = os.path.join(venv_dir, "Scripts", "python.exe")
+        else:
+            venv_python = os.path.join(venv_dir, "bin", "python")
         code, stdout, _ = run_cmd([venv_python, "-c",
             "from importlib.metadata import version; print(version('appmanager-cli'))"])
         app_ver = stdout.strip() if code == 0 else ""
@@ -292,15 +375,9 @@ def cmd_check(_args):
             p = next((x for x in profiles if x.get("name") == current), {})
             ak = p.get("access_key_id", "")
             region = p.get("region_id", "")
+            mode = p.get("mode", "AK")
             if ak:
-                # Mask AK: show only the prefix tag (4 chars) + last 4 chars, redact middle.
-                # This avoids leaking enough characters for reconnaissance while still
-                # letting the user identify which key is in use.
-                if len(ak) >= 12:
-                    masked = f"{ak[:4]}***{ak[-4:]}"
-                else:
-                    masked = "***"
-                print(f"✅ credentials: profile={current} region={region} ak={masked}")
+                print(f"✅ credentials: profile={current} mode={mode} region={region}")
             else:
                 print("❌ credentials: config.json exists but no valid AK found")
                 print("   → SA-2.12: configure credentials via the default credential chain (do NOT paste AK/SK to the agent).")
@@ -373,11 +450,15 @@ def cmd_price(args):
     if code != 0 or not last_event or last_event.get("type") == "error":
         msg = (last_event or {}).get("error") or stderr or "unknown error"
         print(f"❌ Price query failed: {msg}")
-        print("\nPossible causes:")
-        print("  1. Alibaba Cloud credentials are invalid or expired")
-        print("  2. config.yaml parameters are incomplete")
-        print("  3. Network connectivity issue")
-        print("\nSuggestion: verify credentials and retry")
+        print("\nPossible causes and fixes:")
+        print("  1. Credentials invalid/expired -> run `aliyun sts get-caller-identity` to verify;")
+        print("     if it fails, re-configure credentials (OAuth preferred, see references/init-and-credentials.md)")
+        print("  2. config.yaml incomplete (missing regionId / ecsInstanceType) -> re-run")
+        print("     `aliyun appmanager init --non-interactive ...` with --region, or fix .appmanager/config.yaml")
+        print("  3. Instance type unavailable in the chosen region -> change common.deployment.ecsInstanceType")
+        print("     or pick another region, then retry")
+        print("  4. Network/connectivity issue -> retry later; check proxy settings if behind a corporate proxy")
+        print("\nAfter fixing the cause above, re-run: deploy_toolkit.py price --config " + config_path)
         sys.exit(1)
 
     result = last_event
@@ -765,12 +846,13 @@ def cmd_verify(args):
     # Resolve public IP
     ecs_public_ip = ""
     if instance_id:
-        code, stdout, _ = run_cmd(["aliyun", "ecs", "DescribeInstances",
-                                   "--RegionId", region,
-                                   "--InstanceIds", json.dumps([instance_id])])
+        code, stdout, _ = run_cmd(["aliyun", "ecs", "describe-instances",
+                                   "--biz-region-id", region,
+                                   "--region", region,
+                                   "--instance-ids", json.dumps([instance_id])])
         if code == 0:
             try:
-                d = json.loads(stdout)
+                d = _extract_json(stdout)
                 inst = d["Instances"]["Instance"][0]
                 ips = inst.get("PublicIpAddress", {}).get("IpAddress", [])
                 if ips:
@@ -791,21 +873,22 @@ def cmd_verify(args):
 
     if instance_id:
         print("--- Step 3: Trying Cloud Assistant to fetch /root/app.log ---")
-        code, stdout, _ = run_cmd(["aliyun", "ecs", "RunCommand",
-                                   "--RegionId", region,
-                                   "--Type", "RunShellScript",
-                                   "--CommandContent", "cat /root/app.log 2>/dev/null || echo 'LOG_FILE_NOT_FOUND'",
-                                   "--InstanceId.1", instance_id,
-                                   "--Timeout", "30"])
+        code, stdout, stderr = run_cmd(["aliyun", "ecs", "run-command",
+                                   "--biz-region-id", region,
+                                   "--region", region,
+                                   "--type", "RunShellScript",
+                                   "--command-content", "cat /root/app.log 2>/dev/null || echo 'LOG_FILE_NOT_FOUND'",
+                                   "--instance-id", instance_id,
+                                   "--timeout", "30"])
         invoke_id = ""
         if code == 0:
             try:
-                invoke_id = json.loads(stdout).get("InvokeId", "")
+                invoke_id = _extract_json(stdout).get("InvokeId", "")
             except Exception:
                 pass
 
         if not invoke_id:
-            print(f"   Cloud Assistant raw response: {stdout}\n")
+            print(f"   Cloud Assistant raw response: {stdout or stderr}\n")
             # Cloud Assistant failed — show fallback
             ssh_target = ecs_public_ip or "<ECS_IP>"
             print("⚠️  Unable to fetch the ECS application log via Cloud Assistant")
@@ -813,8 +896,10 @@ def cmd_verify(args):
             print(f"\n   ▶ Fallback: SSH manually to inspect the log")
             print(f"     ssh root@{ssh_target} 'tail -100 /root/app.log'\n")
 
-            # HTTP port probe fallback
-            cfg = auto_read_config()
+            # In-instance loopback probe (no outbound network from local machine).
+            # We ask the user-owned ECS itself (same Alibaba Cloud account) to curl 127.0.0.1
+            # via the ECS Cloud Assistant OpenAPI; the local script never opens any TCP
+            # connection to a public address.
             try:
                 import yaml
                 with open(".appmanager/config.yaml") as f:
@@ -822,30 +907,62 @@ def cmd_verify(args):
                 app_port = str(c.get("common", {}).get("deployment", {}).get("port", ""))
             except Exception:
                 app_port = ""
-            if ecs_public_ip and app_port:
-                print(f"   ▶ Trying HTTP port probe ({ecs_public_ip}:{app_port})...")
-                hcode, hout, _ = run_cmd(["curl", "-s", "-o", "/dev/null", "-w", "%{http_code}",
-                                          "--connect-timeout", "8", "--max-time", "10",
-                                          f"http://{ecs_public_ip}:{app_port}/"])
-                http_code = hout.strip() if hcode == 0 else "000"
-                print(f"   HTTP response code: {http_code}")
+            if instance_id and app_port:
+                print(f"   ▶ Asking the ECS instance to self-probe loopback port {app_port} (no local outbound network)...")
+                probe_cmd = (
+                    f"curl -s -o /dev/null -w '%{{http_code}}' "
+                    f"--connect-timeout 8 --max-time 10 http://127.0.0.1:{app_port}/ || echo 000"
+                )
+                pcode, pout, _ = run_cmd(["aliyun", "ecs", "run-command",
+                                          "--biz-region-id", region,
+                                          "--region", region,
+                                          "--type", "RunShellScript",
+                                          "--command-content", probe_cmd,
+                                          "--instance-id", instance_id,
+                                          "--timeout", "30"])
+                probe_invoke = ""
+                if pcode == 0:
+                    try:
+                        probe_invoke = _extract_json(pout).get("InvokeId", "")
+                    except Exception:
+                        pass
+                http_code = "000"
+                if probe_invoke:
+                    time.sleep(8)
+                    rc, ro, _ = run_cmd(["aliyun", "ecs", "describe-invocation-results",
+                                         "--biz-region-id", region, "--region", region,
+                                         "--invoke-id", probe_invoke])
+                    if rc == 0:
+                        try:
+                            rd = _extract_json(ro)
+                            rs = rd.get("Invocation", {}).get("InvocationResults", {}).get("InvocationResult", [])
+                            if rs:
+                                rout = rs[0].get("Output", "")
+                                if rout:
+                                    decoded = base64.b64decode(rout).decode("utf-8", errors="replace").strip()
+                                    if decoded:
+                                        http_code = decoded.splitlines()[-1].strip() or "000"
+                        except Exception:
+                            pass
+                print(f"   Loopback HTTP response code: {http_code}")
                 if http_code not in ("000", "502", "503"):
-                    app_log = f"HTTP_CHECK_PASSED: port {app_port} responded with HTTP {http_code}"
+                    app_log = f"HTTP_CHECK_PASSED: loopback port {app_port} responded with HTTP {http_code}"
                     log_source = "http_check"
-                    print(f"   ✅ Port {app_port} responded — the application is running!")
+                    print(f"   ✅ Loopback port {app_port} responded — the application is running!")
                 else:
-                    print(f"   ⚠️  Port {app_port} did not respond (HTTP {http_code})")
-                    print("      Possible causes: ① the app is still installing/building  ② the security group has not opened the port  ③ the app failed to start")
+                    print(f"   ⚠️  Loopback port {app_port} did not respond (HTTP {http_code})")
+                    print("      Possible causes: ① the app is still installing/building  ② the app failed to start  ③ the app is bound to a non-loopback interface")
                 print()
         else:
             print(f"InvokeId: {invoke_id} — waiting 10s for execution...")
             time.sleep(10)
-            code2, stdout2, _ = run_cmd(["aliyun", "ecs", "DescribeInvocationResults",
-                                         "--RegionId", region, "--InvokeId", invoke_id])
+            code2, stdout2, _ = run_cmd(["aliyun", "ecs", "describe-invocation-results",
+                                         "--biz-region-id", region, "--region", region,
+                                         "--invoke-id", invoke_id])
             fetched_log = ""
             if code2 == 0:
                 try:
-                    data2 = json.loads(stdout2)
+                    data2 = _extract_json(stdout2)
                     results = data2.get("Invocation", {}).get("InvocationResults", {}).get("InvocationResult", [])
                     if results:
                         output = results[0].get("Output", "")
@@ -908,7 +1025,7 @@ def cmd_verify(args):
     print("  Then take action:")
     print("    - App running → proceed to output final results")
     print("    - App failed  → fix common.scripts.start in config.yaml, re-deploy, re-verify")
-    print("    - Needs setup → inform user of required manual steps (e.g. openclaw setup)")
+    print("    - Needs setup → inform user of required manual steps (e.g. environment setup)")
     print("=== END_AGENT_ANALYZE_REQUIRED ===")
     sys.exit(0)
 

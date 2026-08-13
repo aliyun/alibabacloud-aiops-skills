@@ -1,32 +1,46 @@
 # Init & Credentials Reference
 
-## AI-Mode Configuration (MANDATORY after CLI install)
+## Observability: User-Agent Injection (MANDATORY before any CLI call)
 
-> **⛔ MUST configure AI-Mode**: Agent MUST ensure AI-Mode is properly configured before running any `aliyun appmanager` commands. All subsequent `aliyun` CLI calls automatically carry the configured User-Agent header — no per-command `--user-agent` flag needed.
+> **⛔ Every `aliyun` CLI call MUST carry this skill's User-Agent** so all API requests are traceable in cloud-side logs. Export the UA env var ONCE at session start, before any `aliyun` / `deploy_toolkit.py` invocation.
 
-```bash
-# 1. Enable AI-Mode (MUST — enables User-Agent tracking in all API calls)
-aliyun configure ai-mode enable
+**Full UA template:**
 
-# 2. Set User-Agent for skill traceability (MUST — identifies this skill in API logs)
-aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-code-deploy"
-
-# 3. Update plugins to latest (ensures appmanager subcommand is available)
-aliyun plugin update
-
-# 4. Verify AI-Mode status
-aliyun configure ai-mode show
-# Expected: enabled=true, user-agent=AlibabaCloud-Agent-Skills/alibabacloud-ecs-code-deploy
+```
+AlibabaCloud-Agent-Skills/alibabacloud-ecs-code-deploy/{session-id}
 ```
 
-**Disable AI-Mode** (when troubleshooting or if explicitly required):
+**session-id unified rules:**
+- Generate ONCE per agent session: `SESSION_ID=$(uuidgen | tr '[:upper:]' '[:lower:]')` — lowercase UUID (any lowercase-hex random token ≥ 16 chars is equivalent).
+- Reuse the SAME session-id for ALL CLI calls within the session — NEVER regenerate per command, otherwise one deployment scatters into untraceable fragments.
+
+**Injection method (modern — env var):**
 
 ```bash
-# Disable AI-Mode (stops sending User-Agent header; re-enable with 'enable' above)
-aliyun configure ai-mode disable
+# Run ONCE per session (persistent shell); or prefix each command with the same literal value
+export SESSION_ID=$(uuidgen | tr '[:upper:]' '[:lower:]')
+export ALIBABA_CLOUD_USER_AGENT="AlibabaCloud-Agent-Skills/alibabacloud-ecs-code-deploy/${SESSION_ID}"
 ```
 
-> `deploy_toolkit.py check` already handles AI-Mode enable + set-user-agent internally. The above is only needed for manual fallback scenarios.
+> ⛔ The legacy `aliyun configure ai-mode enable / set-user-agent / show / disable` mechanism is DEPRECATED — do NOT use it. Do NOT combine `ALIBABA_CLOUD_USER_AGENT` with ai-mode or per-command env prefixes for the same skill token: the CLI stacks these sources and produces duplicate UAs. Set the env var ONCE per session and leave it.
+
+---
+
+## CLI Install/Upgrade Method Priority
+
+> Avoid the "repeated upgrade" pitfall: `/usr/local/bin/` is often shadowed by earlier PATH entries like `/opt/homebrew/bin`.
+
+**On Linux/macOS (Unix):**
+1. brew-managed (`check` prints "managed by Homebrew") -> `brew upgrade aliyun-cli`; do NOT overwrite `/usr/local/bin/` again.
+2. sudo available -> overwrite into `/usr/local/bin/`, then verify: `hash -r && which -a aliyun && aliyun version`.
+3. No sudo -> install to `~/bin/`, ask user to approve appending `export PATH="$HOME/bin:$PATH"` to `~/.zshrc` / `~/.bashrc`.
+
+**On Windows (PowerShell)** — no `brew`/`sudo`/`.zshrc`; `check` auto-detects `os.name == "nt"` and prints PowerShell guidance:
+1. Scoop/Chocolatey managed -> `scoop update aliyun-cli` or `choco upgrade aliyun-cli -y`.
+2. Otherwise download the official zip and extract into `%USERPROFILE%\bin` (no admin rights), then persist the **User** PATH via `[Environment]::SetEnvironmentVariable("PATH", "$dest;$userPath", "User")` (full snippet in the "Windows (PowerShell) install" section below).
+3. After install/upgrade, open a **NEW** terminal so the updated User PATH takes effect, then re-run check.
+
+After install/upgrade, ALWAYS rerun `deploy_toolkit.py check` to confirm. On Unix, if `which -a aliyun` still shows the old binary first, fix PATH order — DO NOT repeat the same overwrite.
 
 ---
 
@@ -34,7 +48,9 @@ aliyun configure ai-mode disable
 
 **Version requirements**: aliyun CLI >= 3.3.19, appmanager-cli >= 1.1.1
 
-> **⚠️ Privilege requirement**: The install commands below extract to `/usr/local/bin/`, which requires elevated privileges (`sudo` on Linux/macOS for non-root users). If running as a non-root user, prepend `sudo` to the `tar` step. Alternatively, extract to a user-writable directory in `$PATH` (e.g., `~/.local/bin`).
+> **🪟 Windows users**: The `curl | sudo tar xz`, `brew`, `~/.zshrc`/`~/.bashrc` PATH and `~/.aliyun/appmanager-venv/bin/python` snippets in this section are **Unix-only (Linux/macOS)**. On native Windows (cmd/PowerShell), skip them and jump to the **"Windows (PowerShell) install"** subsection below. `deploy_toolkit.py check` auto-detects the platform (`os.name == "nt"`) and already prints the correct Windows PowerShell guidance — the manual steps here are only for when the toolkit script is unavailable.
+
+> **⚠️ Privilege requirement (Unix)**: The install commands below extract to `/usr/local/bin/`, which requires elevated privileges (`sudo` on Linux/macOS for non-root users). If running as a non-root user, prepend `sudo` to the `tar` step. Alternatively, extract to a user-writable directory in `$PATH` (e.g., `~/.local/bin`). On Windows there is no `sudo`; install into `%USERPROFILE%\bin` (no admin rights needed) — see the Windows subsection.
 > **⚠️ Supply chain note**: The downloads come from Alibaba Cloud's official OSS bucket over HTTPS. For higher assurance, verify the binary's SHA256 checksum against the version listed at https://help.aliyun.com/document_detail/121541.html before adding to `$PATH`.
 
 > **⚠️ PATH conflict pitfall (MUST READ)**: On macOS Apple Silicon, `/opt/homebrew/bin` is ahead of `/usr/local/bin` by default. If brew already installed `aliyun-cli`, extracting a fresh build into `/usr/local/bin/` will be shadowed by the brew-installed older version. Symptom: "the upgrade looks successful right after install, but the next shell session reverts to the old version -> repeated upgrades". Before AND after any install/upgrade, run `which -a aliyun` to list **all** matching binaries on PATH and confirm the one resolved by `aliyun version` is the new one.
@@ -86,6 +102,39 @@ aliyun version                       # MUST be >= 3.3.19
 #   - otherwise, manually `rm` the old binary, or fix PATH order in ~/.zshrc
 ```
 
+### Windows (PowerShell) install
+
+> On native Windows there is no `curl | sudo tar` / `brew` / `.zshrc`. Use PowerShell to download the official Windows zip, extract into `%USERPROFILE%\bin`, and persist the **User** PATH (no admin rights required). Pick amd64 or arm64 to match your CPU.
+
+```powershell
+# 1. Check current version (skip install if >= 3.3.19)
+aliyun version 2>$null
+
+# 2. Download + extract the official Windows build into %USERPROFILE%\bin
+$u    = "https://aliyun-cli.oss-cn-hangzhou.aliyuncs.com/aliyun-cli-windows-latest-amd64.zip"  # arm64: replace amd64 -> arm64
+$zip  = "$env:TEMP\aliyun-cli.zip"
+$dest = "$env:USERPROFILE\bin"
+Invoke-WebRequest -Uri $u -OutFile $zip
+New-Item -ItemType Directory -Force -Path $dest | Out-Null
+Expand-Archive -Path $zip -DestinationPath $dest -Force
+
+# 3. Persist PATH at the User scope (survives new terminals; no admin needed)
+$userPath = [Environment]::GetEnvironmentVariable("PATH","User")
+if ($userPath -notlike "*$dest*") { [Environment]::SetEnvironmentVariable("PATH", "$dest;$userPath", "User") }
+$env:PATH = "$dest;$env:PATH"   # take effect in the current session immediately
+
+# 4. Verify (open a NEW terminal so the persisted User PATH is picked up)
+aliyun version   # MUST be >= 3.3.19
+```
+
+> **Package-manager alternative** (if Scoop or Chocolatey is installed): `scoop install aliyun-cli`  or  `choco install aliyun-cli -y`.
+>
+> **appmanager-cli venv on Windows**: the self-managed venv lives at `%USERPROFILE%\.aliyun\appmanager-venv`, and its interpreter is `Scripts\python.exe` (NOT `bin/python`). To check the version:
+> ```powershell
+> & "$env:USERPROFILE\.aliyun\appmanager-venv\Scripts\python.exe" -c "from importlib.metadata import version; print(version('appmanager-cli'))"
+> ```
+> If it is `< 1.1.1` or fails, delete the folder `%USERPROFILE%\.aliyun\appmanager-venv` (it auto-recreates on the next `aliyun appmanager` run).
+
 ---
 
 ## Configure Credentials
@@ -106,7 +155,7 @@ aliyun version                       # MUST be >= 3.3.19
 
 The Agent only needs ONE of the sources below to be in place:
 
-1. **OAuth** (RECOMMENDED — most secure and convenient) — user runs interactive OAuth setup in their own terminal:
+1. **OAuth** (RECOMMENDED — most secure and convenient) — the Agent **may run the login command directly**. Before executing, warn the user (verbatim): “⚠️ About to run the OAuth login command. It will open a browser authorization page. **Please complete the authorization in the browser** — otherwise the command keeps blocking and the Agent gets stuck at this step.” Then run:
    ```bash
    aliyun configure --mode OAuth --profile oauth
    ```
@@ -136,7 +185,7 @@ The Agent MUST present these self-service options to the user **verbatim** and w
 
 > No usable credentials were detected. Please configure them yourself in your own terminal **using one of the methods below** (do NOT paste the AccessKey into this chat or any file):
 >
-> - **Method A · OAuth** (RECOMMENDED — most secure and convenient, no long-term secret storage):
+> - **Method A · OAuth** (RECOMMENDED — most secure and convenient, no long-term secret storage). The Agent may run this directly after warning the user to authorize in the browser (otherwise the command blocks and the Agent gets stuck):
 >   `aliyun configure --mode OAuth --profile oauth`
 >   (This opens a browser authorization link, then prompts for region like `cn-hangzhou` and language like `zh`)
 > - **Method B · ECS RAM Role** (recommended on Alibaba Cloud ECS; no AK/SK):
@@ -145,8 +194,9 @@ The Agent MUST present these self-service options to the user **verbatim** and w
 >   `export ALIBABA_CLOUD_ACCESS_KEY_ID=...`
 >   `export ALIBABA_CLOUD_ACCESS_KEY_SECRET=...`
 >   (For temporary credentials also set `export ALIBABA_CLOUD_SECURITY_TOKEN=...`)
-> - **Method D · Interactive `aliyun configure`** (credentials only land in local `~/.aliyun/config.json`):
->   `aliyun configure --profile <name> --mode AK` (enter values **at the terminal prompt**, not in this chat)
+> - **Method D · AccessKey one-liner** (a single command — fill in your own AK/SK and run it **in your own terminal**; credentials only land in local `~/.aliyun/config.json`):
+>   `aliyun configure set --profile default --mode AK --access-key-id <your-access-key-id> --access-key-secret <your-access-key-secret> --region cn-hangzhou`
+>   (Replace `cn-hangzhou` with the target region. Do NOT paste real AK/SK into this chat — run the command yourself.)
 >
 > When done, reply "ready" and I will rerun `aliyun sts get-caller-identity` to verify. **You will never need to paste any AK/SK value into this conversation.**
 
@@ -211,6 +261,30 @@ aliyun appmanager init --non-interactive \
 ```
 
 > **Note**: `--port` is optional for App type — omit it for background services that don't listen on HTTP. App type does NOT need `--api-key`. Agent type REQUIRES `--api-key` for the AI model runtime. Agent type does NOT use `--port`. `--ecs existing --instance-id` is only needed when user chooses to deploy to an existing ECS instance.
+
+### Listing existing ECS instances before `--ecs existing`
+
+When the user chooses existing ECS, query the account's 10 most-recently-created instances **in the chosen region** and present them for selection (also support manual instance ID entry):
+
+```bash
+# aliyun CLI outputs JSON by default for OpenAPI calls — do NOT add `--output json`
+# Plugin mode: lowercase-hyphenated command + kebab-case params.
+# ⚠️ Region param is --biz-region-id; ALSO pass --region <REGION> to override the
+#    endpoint (otherwise the profile's default region endpoint rejects the call
+#    with InvalidOperation.NotSupportedEndpoint).
+# ⚠️ Use --profile <DEPLOY_PROFILE> (same account as deployment); if omitted, the CLI
+#    falls back to its default profile, which may point to a different account.
+aliyun ecs describe-instances --biz-region-id <REGION> --region <REGION> --page-size 100 --profile <DEPLOY_PROFILE> \
+  | jq -r '.Instances.Instance | sort_by(.CreationTime) | reverse | .[:10] | .[]
+      | "\(.InstanceId)\t\(.InstanceName)\t\(.Status)\t\(.CreationTime)\t\(.PublicIpAddress.IpAddress[0] // "-")"'
+```
+
+- Present as a numbered list (InstanceId / Name / Status / CreationTime / PublicIP); user picks by number OR types an instance ID manually.
+- **⚠️ Profile must match deployment**: use the same `--profile` (same account) as the deploy step; otherwise the CLI falls back to its default profile, which may point to a different account/site and return zero / wrong instances. `aliyun configure list` shows the available profiles.
+- `jq` unavailable → fall back to `aliyun ecs describe-instances --biz-region-id <REGION> --region <REGION> --page-size 10 --profile <DEPLOY_PROFILE> --output cols=InstanceId,InstanceName,Status,CreationTime 'rows=Instances.Instance[]'` (quote `rows=...[]` so the shell does not glob the `[]`; ordering not guaranteed).
+- **⚠️ Plugin prerequisite**: `ecs describe-instances` requires the `aliyun-cli-ecs` plugin. If the CLI prompts "Plugin ... not installed", enable auto-install ONCE: `aliyun configure set --auto-plugin-install true` (or `aliyun plugin install --name ecs`). Without this, non-interactive scripts hang on the prompt.
+- Zero instances in region → tell the user, then ask for a manual ID or switch to New ECS.
+- Pass the chosen ID to `aliyun appmanager init ... --ecs existing --instance-id <ID>`.
 
 ### JSON mode (full config passthrough)
 

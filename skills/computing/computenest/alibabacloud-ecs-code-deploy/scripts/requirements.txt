@@ -1,1 +1,4 @@
-PyYAML==6.0.2
+# Do NOT pin to 6.0.2: it requires Python >=3.8, while bare ECS may ship an
+# older system python3 (e.g. 3.6) where pip finds no matching wheel and the
+# deploy start script aborts. >=6.0.1 lets pip pick a compatible build.
+PyYAML>=6.0.1

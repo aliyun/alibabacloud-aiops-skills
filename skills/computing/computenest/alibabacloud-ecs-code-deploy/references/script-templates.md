@@ -1,5 +1,40 @@
 # Script Templates & Language Reference
 
+## Project Analysis: Language Detection, Files to Read & Entry Points
+
+### Language Detection Rules
+
+| Indicator Files | Language |
+|-----------------|----------|
+| `package.json` / `*.js` / `*.ts` | Node.js |
+| `requirements.txt` / `pyproject.toml` / `*.py` | Python |
+| `pom.xml` / `build.gradle` / `*.java` | Java |
+| `go.mod` / `*.go` | Go |
+| `composer.json` / `*.php` | PHP |
+| `docker-compose.yml` / `Dockerfile` | Docker |
+
+### Files to Read (MUST read content, not just detect presence)
+
+| Language | Must Read | Why |
+|----------|-----------|-----|
+| Python | `pyproject.toml`, `requirements.txt` | Entry point, deps |
+| Node.js | `package.json` | `scripts.start`, `main` field |
+| Java | `pom.xml` or `build.gradle` | JAR name |
+| Go | `go.mod` | Module → binary name |
+| PHP | `composer.json` | Framework detection |
+| Docker | `docker-compose.yml` / `Dockerfile` | Services, ports |
+
+### Entry Point Detection Order
+
+- **Python**: `[project.scripts]` in pyproject.toml → `main.py` → `app.py` → `manage.py`
+- **Node.js**: `scripts.start` → `main` field → `index.js` → `server.js`
+- **Java**: `find ... -name "*.jar" | head -1` → `java -jar`
+- **Go**: Pre-compiled binary: `find ... -type f -perm /111`
+- **PHP**: `composer install --no-dev` → `php artisan serve` or `php -S`
+- **Docker Compose**: `docker compose up -d` / `docker compose down`
+
+---
+
 ## Start Script Template (Generic)
 
 > Replace `{app_name}` with the actual `--name` value used in `init`. Replace `{INSTALL_RUNTIME}`, `{INSTALL_DEPS}`, `{START_CMD}` with language-specific commands from the Language Reference Table below.

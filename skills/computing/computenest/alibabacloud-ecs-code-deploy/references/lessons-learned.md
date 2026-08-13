@@ -46,18 +46,18 @@ Do not manually edit below this line unless correcting an inaccuracy.)
   - Round 1: `Error: Unable to access jarfile *.jar` (default `java -jar *.jar` finds no JAR in the cloned source tree).
   - Round 2 (if Agent retries with `gradle bootJar`): `ReleaseFailed` or `ReleaseCancelled` after the 15-minute deploy budget elapses; `gradle clean bootJar` typically OOM's or runs >15 min on 2 vCPU + 4 GiB RAM.
 - **Root Cause**: 2C4G is too small to build large Java projects in the deploy window.
-- **Fix**: Skip source build. Replace `common.scripts.start` with:
+- **Fix**: Skip source build. Replace `common.scripts.start` with the pattern below. NOTE: `<app>.jar` and `<version>` are placeholders — substitute the target project's own release artifact name and version (validated concrete example: halo project, `<app>` = `halo`, `<version>` = `2.20.12`):
   ```yaml
   common:
     scripts:
       start: |
         : > /root/app.log
         mkdir -p /root && cd /root
-        if [ ! -f halo.jar ]; then
-          curl -fSL "https://github.com/halo-dev/halo/releases/download/v2.20.12/halo-2.20.12.jar" -o /root/halo.jar
+        if [ ! -f <app>.jar ]; then
+          curl -fSL "https://github.com/<owner>/<repo>/releases/download/v<version>/<app>-<version>.jar" -o /root/<app>.jar
         fi
-        pkill -f 'halo.jar' || true
-        nohup java -Xmx384m -jar /root/halo.jar --server.port=8090 >> /root/app.log 2>&1 &
+        pkill -f '<app>.jar' || true
+        nohup java -Xmx384m -jar /root/<app>.jar --server.port=8090 >> /root/app.log 2>&1 &
   ```
   Always set `-Xmx` ≤ 384 m (heap > 50 % of 4 GiB triggers OOM-killer when paired with the JVM's other memory regions).
 - **Affected Projects**: #1 halo (validated Round 3 SUCCESS); also recommended for #81 spring-petclinic, #85 stirling-pdf.
