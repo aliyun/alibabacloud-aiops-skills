@@ -1,0 +1,7 @@
+# Dependent API list
+# Example structure:
+# - gatewayType: "pop"
+#   popCode: "ecs"
+#   popVersion: "2014-05-26"
+#   apiName: "RunInstance"
+[]
