@@ -55,6 +55,13 @@ if ! command -v jq >/dev/null 2>&1; then
     exit 2
 fi
 
+# Observability: reuse the caller's session id so every call in the session
+# shares one User-Agent (see SKILL.md "Observability"). Generate one only when
+# the caller exported nothing.
+if [ -z "${SKILL_SESSION_ID:-}" ]; then
+    SKILL_SESSION_ID=$(uuidgen | tr -d '-' | tr 'A-F' 'a-f')
+fi
+
 echo "Polling task $TASK_ID in $REGION every ${INTERVAL}s (timeout ${TIMEOUT}s)..." >&2
 
 START=$(date +%s)
@@ -66,11 +73,13 @@ while :; do
 
     if [ "$ELAPSED" -ge "$TIMEOUT" ]; then
         echo "Timeout after ${ELAPSED}s — task still not terminal." >&2
-        aliyun cs describe-task-info --task-id "$TASK_ID" --region "$REGION" || true
+        aliyun cs describe-task-info --task-id "$TASK_ID" --region "$REGION" \
+            --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ack-cli/${SKILL_SESSION_ID}" || true
         exit 1
     fi
 
-    RESP=$(aliyun cs describe-task-info --task-id "$TASK_ID" --region "$REGION" 2>/dev/null || echo '{}')
+    RESP=$(aliyun cs describe-task-info --task-id "$TASK_ID" --region "$REGION" \
+        --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ack-cli/${SKILL_SESSION_ID}" 2>/dev/null || echo '{}')
     STATE=$(echo "$RESP" | jq -r '.state // "unknown"')
     STAGE=$(echo "$RESP" | jq -r '.current_stage // ""')
 

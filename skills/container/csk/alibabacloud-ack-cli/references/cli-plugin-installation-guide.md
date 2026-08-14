@@ -107,7 +107,7 @@ Priority: command-line flag > env var > config file > built-in default.
 aliyun configure set --profile prod    --mode AK --access-key-id ... --access-key-secret ... --region cn-hangzhou
 aliyun configure set --profile staging --mode AK --access-key-id ... --access-key-secret ... --region cn-shanghai
 
-aliyun cs describe-clusters-for-region --profile prod --biz-region-id cn-hangzhou
+aliyun cs describe-clusters-for-region --profile prod --biz-region-id cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ack-cli/{session-id}
 aliyun configure switch --profile prod
 ```
 
@@ -144,6 +144,7 @@ One command exercises CLI + plugin + auth:
 
 ```bash
 aliyun cs describe-clusters-for-region --biz-region-id cn-hangzhou \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ack-cli/{session-id} \
   --output cols=cluster_id,name,state rows='clusters[]'
 ```
 

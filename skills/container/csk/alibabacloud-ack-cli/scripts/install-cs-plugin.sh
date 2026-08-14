@@ -55,4 +55,4 @@ fi
 
 echo
 echo "Next: verify auth + plugin work end-to-end with"
-echo "  aliyun cs describe-clusters-for-region --biz-region-id cn-hangzhou"
+echo "  aliyun cs describe-clusters-for-region --biz-region-id cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ack-cli/{session-id}"

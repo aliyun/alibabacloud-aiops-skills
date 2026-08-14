@@ -42,33 +42,34 @@ span all regions.
 ```bash
 # ✅ List clusters in a specific region (use this most of the time)
 #    Note the *business* parameter --biz-region-id (required), not the global --region.
-aliyun cs describe-clusters-for-region --biz-region-id cn-hangzhou
+aliyun cs describe-clusters-for-region --biz-region-id cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ack-cli/{session-id}
 
 # Tabular summary of running clusters only
 aliyun cs describe-clusters-for-region --biz-region-id cn-hangzhou \
   --cli-query "clusters[?state=='running'].{id:cluster_id,name:name,version:current_version,size:size}" \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ack-cli/{session-id} \
   --output table
 
 # Recent operation plans (auto-upgrade, AutoMode, CVE auto-fix) for the region
-aliyun cs list-operation-plans-for-region --biz-region-id cn-hangzhou
+aliyun cs list-operation-plans-for-region --biz-region-id cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ack-cli/{session-id}
 
 # Cluster events for the region (audit-friendly view)
-aliyun cs describe-events-for-region --biz-region-id cn-hangzhou
+aliyun cs describe-events-for-region --biz-region-id cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ack-cli/{session-id}
 
 # Cross-region aggregate (legacy fallback — only when you truly need every region)
-aliyun cs describe-clusters-v1
+aliyun cs describe-clusters-v1 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ack-cli/{session-id}
 
 # Drill into one cluster
-aliyun cs describe-cluster-detail --cluster-id ce914461c0fb4901ae8908be4a10a7a1 --region cn-hangzhou
+aliyun cs describe-cluster-detail --cluster-id ce914461c0fb4901ae8908be4a10a7a1 --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ack-cli/{session-id}
 
 # What addons are installed (versions, status)
-aliyun cs list-cluster-addon-instances --cluster-id <cid> --region <region>
+aliyun cs list-cluster-addon-instances --cluster-id <cid> --region <region> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ack-cli/{session-id}
 
 # What addons are AVAILABLE for this cluster (with config_schema!)
-aliyun cs list-addons --cluster-id <cid> --region <region>
+aliyun cs list-addons --cluster-id <cid> --region <region> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ack-cli/{session-id}
 
 # Detail for one specific addon (config_schema, supported versions, etc.)
-aliyun cs describe-addon --cluster-id <cid> --addon-name <name> --region <region>
+aliyun cs describe-addon --cluster-id <cid> --addon-name <name> --region <region> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ack-cli/{session-id}
 ```
 
 `list-addons` is the single most useful read command for addon work — its
@@ -83,6 +84,7 @@ aliyun cs describe-cluster-user-kubeconfig \
   --cluster-id <cid> \
   --region <region> \
   --private-ip-address false \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ack-cli/{session-id} \
   | jq -r '.config' > ~/.kube/ack-<cid>.yaml
 
 # Private-endpoint kubeconfig (works inside the cluster's VPC)
@@ -90,6 +92,7 @@ aliyun cs describe-cluster-user-kubeconfig \
   --cluster-id <cid> \
   --region <region> \
   --private-ip-address true \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ack-cli/{session-id} \
   | jq -r '.config' > ~/.kube/ack-<cid>-internal.yaml
 
 export KUBECONFIG=~/.kube/ack-<cid>.yaml
@@ -109,12 +112,13 @@ Tips:
 
 ```bash
 # Inventory
-aliyun cs describe-cluster-node-pools --cluster-id <cid> --region <region>
+aliyun cs describe-cluster-node-pools --cluster-id <cid> --region <region> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ack-cli/{session-id}
 
 # One node pool's details (full spec, scaling config, status)
 aliyun cs describe-cluster-node-pool-detail \
   --cluster-id <cid> \
   --region <region> \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ack-cli/{session-id} \
   --nodepool-id <npid>
 
 # Resize to an absolute desired count: modify-cluster-node-pool with
@@ -124,6 +128,7 @@ aliyun cs modify-cluster-node-pool \
   --cluster-id <cid> \
   --region <region> \
   --nodepool-id <npid> \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ack-cli/{session-id} \
   --scaling-group desired_size=5
 
 # Upgrade node pool to a specific kubelet/runtime version
@@ -133,6 +138,7 @@ aliyun cs upgrade-cluster-nodepool \
   --nodepool-id <npid> \
   --kubernetes-version 1.30.1-aliyun.1 \
   --runtime-version 1.6.28 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ack-cli/{session-id} \
   --image-id aliyun_3_x64_20G_alibase_20240819.vhd
 ```
 
@@ -151,6 +157,7 @@ aliyun cs create-cluster-node-pool \
   --cluster-id <cid> \
   --region <region> \
   --nodepool-info '{"name":"workers-2","type":"ess"}' \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ack-cli/{session-id} \
   --scaling-group '{
     "instance_types": ["ecs.g7.xlarge", "ecs.g7.large"],
     "vswitch_ids":   ["vsw-bp1xxx", "vsw-bp1yyy"],
@@ -189,6 +196,7 @@ ADDONS_BODY=$(jq -nc '
 aliyun cs install-cluster-addons \
   --cluster-id <cid> \
   --region <region> \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ack-cli/{session-id} \
   --body "$ADDONS_BODY"
 ```
 
@@ -207,6 +215,7 @@ Without `jq`, you'd hand-write something like:
 aliyun cs upgrade-cluster-addons \
   --cluster-id <cid> \
   --region <region> \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ack-cli/{session-id} \
   --body '[{"component_name":"logtail-ds","next_version":"1.8.0"}]'
 ```
 
@@ -216,6 +225,7 @@ aliyun cs upgrade-cluster-addons \
 aliyun cs un-install-cluster-addons \
   --cluster-id <cid> \
   --region <region> \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ack-cli/{session-id} \
   --body '[{"name":"logtail-ds","cleanup_cloud_resources":false}]'
 ```
 
@@ -230,6 +240,7 @@ aliyun cs un-install-cluster-addons \
 # full list of upgradable versions plus release/expiry metadata, query the
 # version metadata API directly:
 CURRENT=$(aliyun cs describe-cluster-detail --cluster-id <cid> --region <region> \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ack-cli/{session-id} \
   --cli-query 'current_version' --output text)
 
 aliyun cs describe-kubernetes-version-metadata \
@@ -237,6 +248,7 @@ aliyun cs describe-kubernetes-version-metadata \
   --biz-region <region> \
   --kubernetes-version "$CURRENT" \
   --query-upgradable-version true \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ack-cli/{session-id} \
   --cli-query "[].{version:version,release:release_date,expire:expiration_date,upgradable:upgradable_versions}"
 
 # Kick off control-plane upgrade — returns task_id for tracking and control.
@@ -246,14 +258,15 @@ RESP=$(aliyun cs upgrade-cluster \
   --cluster-id <cid> \
   --region <region> \
   --next-version 1.30.1-aliyun.1 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ack-cli/{session-id} \
   --master-only true)
 
 UPGRADE_TID=$(echo "$RESP" | jq -r '.task_id')
 
 # Mid-upgrade control via task APIs:
-aliyun cs pause-task  --task-id "$UPGRADE_TID" --region <region>
-aliyun cs resume-task --task-id "$UPGRADE_TID" --region <region>
-aliyun cs cancel-task --task-id "$UPGRADE_TID" --region <region>
+aliyun cs pause-task  --task-id "$UPGRADE_TID" --region <region> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ack-cli/{session-id}
+aliyun cs resume-task --task-id "$UPGRADE_TID" --region <region> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ack-cli/{session-id}
+aliyun cs cancel-task --task-id "$UPGRADE_TID" --region <region> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ack-cli/{session-id}
 ```
 
 Cluster upgrade is async. Track the `task_id` from `upgrade-cluster`, and
@@ -295,18 +308,21 @@ aliyun cs modify-cluster \
   --cluster-id <cid> \
   --region <region> \
   --cluster-name my-prod-cluster \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ack-cli/{session-id} \
   --deletion-protection true
 
 # Move cluster into a different resource group
 aliyun cs modify-cluster \
   --cluster-id <cid> \
   --region <region> \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ack-cli/{session-id} \
   --resource-group-id rg-xxx
 
 # Configure a maintenance window (Pro managed clusters only)
 aliyun cs modify-cluster \
   --cluster-id <cid> \
   --region <region> \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ack-cli/{session-id} \
   --maintenance-window '{"enable":true,"maintenance_time":"01:00:00Z","duration":"3h","weekly_period":"Tuesday,Saturday"}'
 
 # Bind a public EIP to API Server
@@ -314,6 +330,7 @@ aliyun cs modify-cluster \
   --cluster-id <cid> \
   --region <region> \
   --api-server-eip true \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ack-cli/{session-id} \
   --api-server-eip-id eip-bp1xxx
 ```
 
@@ -339,6 +356,7 @@ aliyun cs delete-cluster \
   --cluster-id <cid> \
   --region <region> \
   --keep-slb false \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ack-cli/{session-id} \
   --retain-resources '[]'
 ```
 
@@ -358,6 +376,7 @@ RESP=$(aliyun cs create-cluster \
   --cluster-spec ack.pro.small \
   --auto-mode '{"enable":true}' \
   --name my-ack-cluster \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ack-cli/{session-id} \
   --kubernetes-version 1.30.1-aliyun.1)
 
 CID=$(echo "$RESP" | jq -r '.cluster_id')
@@ -369,6 +388,7 @@ echo "Cluster $CID, task $TID — waiting..."
 
 # 3. Fetch kubeconfig (cluster lives in cn-beijing per the create-cluster call)
 aliyun cs describe-cluster-user-kubeconfig --cluster-id "$CID" --region cn-beijing \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ack-cli/{session-id} \
   | jq -r '.config' > ~/.kube/ack-$CID.yaml
 export KUBECONFIG=~/.kube/ack-$CID.yaml
 kubectl get nodes

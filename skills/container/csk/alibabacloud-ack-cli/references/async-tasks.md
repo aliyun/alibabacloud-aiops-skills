@@ -56,7 +56,7 @@ Keep all three:
 ## Polling: `describe-task-info`
 
 ```bash
-aliyun cs describe-task-info --task-id T-69ce1022aa09ae010300000b --region cn-hangzhou
+aliyun cs describe-task-info --task-id T-69ce1022aa09ae010300000b --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ack-cli/{session-id}
 ```
 
 Pass `--region` matching the cluster's region. Task IDs are region-scoped,
