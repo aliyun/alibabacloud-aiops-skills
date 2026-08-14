@@ -200,7 +200,7 @@ Use the following commands to check current user permissions:
 aliyun configure list
 
 # Test job list permission
-aliyun pai-dlc list-jobs --region cn-hangzhou --page-size 1 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
+aliyun pai-dlc list-jobs --region cn-hangzhou --page-size 1 --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job/${SESSION_ID}
 
 # If Forbidden.RAM error is returned, insufficient permissions
 ```

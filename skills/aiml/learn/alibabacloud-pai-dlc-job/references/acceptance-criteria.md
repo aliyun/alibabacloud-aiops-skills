@@ -8,7 +8,7 @@
 > `aliyun pai-dlc <command>`). These are fragments for mismatch detection,
 > not complete executable commands. The Section 4 "User-Agent" rule (and the
 > SKILL.md core workflow) require every API-invoking command to end with
-> `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job`; full executable examples carry it.
+> `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job/${SESSION_ID}`; full executable examples carry it.
 
 ---
 
@@ -88,7 +88,7 @@ INCORRECT (CamelCase or underscore)
 
 CORRECT
 ```bash
-aliyun pai-dlc list-jobs --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
+aliyun pai-dlc list-jobs --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job/${SESSION_ID}
 ```
 
 INCORRECT
@@ -199,7 +199,7 @@ aliyun pai-dlc create-job \
   --job-type PyTorchJob \
   --job-specs '[{"Type":"Worker","PodCount":1,"Image":"registry.cn-hangzhou.aliyuncs.com/pai-dlc/pytorch-training:1.12-gpu-py38-cu113-ubuntu20.04","EcsSpec":"ecs.gn6i-c4g1.xlarge"}]' \
   --user-command "python train.py" \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job/${SESSION_ID}
 ```
 
 CORRECT - ResourceConfig (Dedicated Resource Group)
@@ -211,7 +211,7 @@ aliyun pai-dlc create-job \
   --job-type PyTorchJob \
   --job-specs '[{"Type":"Worker","PodCount":1,"Image":"registry.cn-hangzhou.aliyuncs.com/pai-dlc/pytorch-training:1.12-gpu-py38-cu113-ubuntu20.04","ResourceConfig":{"CPU":"4","Memory":"16Gi","GPU":"1","GPUType":"NVIDIA-V100"}}]' \
   --user-command "python train.py" \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job/${SESSION_ID}
 ```
 
 ## List Jobs
@@ -223,7 +223,7 @@ aliyun pai-dlc list-jobs \
   --status Running \
   --page-number 1 \
   --page-size 20 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job/${SESSION_ID}
 ```
 
 ## Get Logs
@@ -235,7 +235,7 @@ aliyun pai-dlc get-pod-logs \
   --job-id dlc12345678 \
   --pod-id dlc12345678-worker-0 \
   --max-lines 500 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job/${SESSION_ID}
 ```
 
 ## Stop Job
@@ -246,7 +246,7 @@ CORRECT
 aliyun pai-dlc stop-job \
   --region cn-hangzhou \
   --job-id dlc12345678 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job/${SESSION_ID}
 ```
 
 ---
@@ -254,7 +254,7 @@ aliyun pai-dlc stop-job \
 # Testing Checklist
 
 - [ ] All commands use plugin mode format (lowercase with hyphens)
-- [ ] All commands include `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job`
+- [ ] All commands include `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job/${SESSION_ID}`
 - [ ] No hardcoded user-specific parameters (RegionId, JobId, etc. need user confirmation)
 - [ ] Credential operations only use `aliyun configure list` for checking
 - [ ] JobSpecs use correct JSON array format

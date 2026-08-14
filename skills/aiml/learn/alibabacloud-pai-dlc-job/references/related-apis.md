@@ -9,7 +9,7 @@
 > `--help` on the subcommand. This document never duplicates `--help` output.
 >
 > Every API-invoking call MUST include
-> `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job`. Client-side
+> `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job/${SESSION_ID}`. Client-side
 > helpers (`version` / `configure` / `plugin` / `--help`) do not invoke remote
 > APIs and do not need the flag.
 

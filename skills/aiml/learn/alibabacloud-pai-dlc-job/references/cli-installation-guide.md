@@ -2,7 +2,7 @@
 
 Complete guide for installing and configuring Aliyun CLI.
 
-> **Aliyun CLI 3.3.4+**: Supports installing and using all published Alibaba Cloud product plugins **and `ai-mode` subcommand**. Make sure to upgrade to 3.3.4 or later for full functionality.
+> **Aliyun CLI 3.3.1+**: Supports installing and using all published Alibaba Cloud product plugins. Make sure to upgrade to 3.3.1 or later for full functionality.
 
 ## Installation
 
@@ -96,43 +96,22 @@ $env:Path += ";C:\aliyun-cli"
 aliyun version
 ```
 
-## AI Mode Configuration
+## User-Agent for Skill Calls (session-id)
 
-> Available since Aliyun CLI **3.3.4+**. Enables AI agent mode for API calls with a custom User-Agent header.
+> Do NOT use the deprecated `aliyun configure ai-mode` to set the User-Agent.
+> Instead, pass `--user-agent` explicitly on every API-invoking command using
+> the unified session-id template. See the `Observability` section in `SKILL.md`
+> for the full rules.
 
 ```bash
-# Enable AI mode
-aliyun configure ai-mode enable
+# Generate the session-id ONCE per skill session, then reuse it everywhere
+SESSION_ID=$(uuidgen | tr 'A-Z' 'a-z')
+export SESSION_ID
 
-# Set custom User-Agent segment (e.g., for Skill-based calls)
-aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job"
-
-# Show current AI mode config
-aliyun configure ai-mode show
-# Output example:
-# {
-#   "enabled": true,
-#   "user_agent": "AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job",
-#   "effective_user_agent": "AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job",
-#   "request_user_agent_suffix": "AlibabaCloud-AI-Mode/enabled AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job",
-#   "config_file": "/Users/jiajindou/.aliyun/ai-mode.json"
-# }
-
-# Disable AI mode after session
-aliyun configure ai-mode disable
+# Every API-invoking command appends the templated User-Agent:
+aliyun pai-dlc list-jobs --region cn-hangzhou --page-size 1 \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job/${SESSION_ID}
 ```
-
-### AI Mode Subcommands
-
-| Command | Description |
-|---------|------------|
-| `show` | Display current AI mode configuration |
-| `enable` | Turn on AI mode |
-| `disable` | Turn off AI mode |
-| `set-user-agent` | Set custom User-Agent segment for AI mode |
-| `reset-user-agent` | Clear custom User-Agent segment (use default when AI mode is on) |
-| `set-ossutil` | Set ossutil JSON for cli_ai_ossutil |
-| `reset-ossutil` | Clear ossutil / cli_ai_ossutil blob |
 
 ## Configuration
 

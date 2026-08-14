@@ -31,7 +31,7 @@ otherwise the API returns `200 OK` while silently dropping the change.
 aliyun pai-dlc get-job \
   --region <region> --job-id <job-id> \
   --cli-query '{Status: Status, ResourceId: ResourceId}' \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job/${SESSION_ID}
 ```
 
 Proceed **only if both** hold:
@@ -53,7 +53,7 @@ checkpoints. **Never call `stop-job` without explicit user confirmation.**
 aliyun pai-dlc get-job \
   --region <region> --job-id <job-id> \
   --cli-query '{Status: Status, Name: DisplayName}' \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job/${SESSION_ID}
 ```
 
 ### Step 2 — Confirm with the user
@@ -72,12 +72,12 @@ Do NOT proceed without an explicit `yes`.
 
 ```bash
 aliyun pai-dlc stop-job --region <region> --job-id <job-id> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job/${SESSION_ID}
 
 # Verify (expected: "Stopped")
 aliyun pai-dlc get-job --region <region> --job-id <job-id> \
   --cli-query "Status" \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job/${SESSION_ID}
 ```
 
 ## 4. `get-web-terminal`
@@ -87,11 +87,11 @@ Requires the Pod to be alive; the URL is short-lived. Typical pattern:
 ```bash
 POD_ID=$(aliyun pai-dlc get-job --region <region> --job-id <job-id> \
   --cli-query "Pods[0].PodId" \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job)
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job/${SESSION_ID})
 
 aliyun pai-dlc get-web-terminal --region <region> --job-id <job-id> \
   --pod-id "$POD_ID" \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job/${SESSION_ID}
 ```
 
 ## 5. `get-token` — Read-Only Sharing

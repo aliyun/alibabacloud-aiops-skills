@@ -6,7 +6,7 @@ flows**, not parameter docs — for flag-level details run
 lines live in [related-apis.md](related-apis.md) (single source of truth).
 
 Every API call MUST include
-`--user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job`. Replace
+`--user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job/${SESSION_ID}`. Replace
 `<region>` / `<job-id>` / `<pod-id>` / `<workspace-id>` placeholders before
 running.
 
@@ -24,7 +24,7 @@ JOB_ID=$(aliyun pai-dlc create-job \
   --job-type PyTorchJob \
   --job-specs '[{"Type":"Worker","PodCount":1,"Image":"<ImageUri>","EcsSpec":"ecs.gn6i-c4g1.xlarge"}]' \
   --user-command "python -c 'print(123)'" \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job/${SESSION_ID} \
   --cli-query "JobId")
 ```
 
@@ -35,21 +35,21 @@ JOB_ID=$(aliyun pai-dlc create-job \
 
 ```bash
 aliyun pai-dlc list-jobs --region <region> --status Running --page-size 10 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job/${SESSION_ID}
 
 aliyun pai-dlc get-job --region <region> --job-id <job-id> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job/${SESSION_ID}
 
 aliyun pai-dlc get-pod-logs --region <region> --job-id <job-id> --pod-id <pod-id> \
   --max-lines 100 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job/${SESSION_ID}
 
 aliyun pai-dlc get-job-events --region <region> --job-id <job-id> \
   --max-events-num 50 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job/${SESSION_ID}
 
 aliyun pai-dlc get-pod-events --region <region> --job-id <job-id> --pod-id <pod-id> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job/${SESSION_ID}
 ```
 
 **Expect:** all return non-empty data once the job is past `EnvPreparing`.
@@ -60,11 +60,11 @@ Logs contain stdout/stderr; events sorted by time.
 ```bash
 # Priority update (pre-check status & quota first; see SKILL.md §7.8)
 aliyun pai-dlc update-job --region <region> --job-id <job-id> --priority 5 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job/${SESSION_ID}
 
 # Stop (HIGH-RISK — follow pre-check + user-confirmation protocol in SKILL.md §7.8)
 aliyun pai-dlc stop-job --region <region> --job-id <job-id> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job/${SESSION_ID}
 ```
 
 ### 1.4 Health Check (only when `Settings.EnableSanityCheck=true`)
@@ -72,11 +72,11 @@ aliyun pai-dlc stop-job --region <region> --job-id <job-id> \
 ```bash
 aliyun pai-dlc list-job-sanity-check-results \
   --region <region> --job-id <job-id> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job/${SESSION_ID}
 
 aliyun pai-dlc get-job-sanity-check-result \
   --region <region> --job-id <job-id> --sanity-check-number 1 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job/${SESSION_ID}
 ```
 
 ### 1.5 Debug Helpers
@@ -84,11 +84,11 @@ aliyun pai-dlc get-job-sanity-check-result \
 ```bash
 # Verbose logging
 aliyun pai-dlc <cmd> --region <region> --log-level=debug \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job/${SESSION_ID}
 
 # Dry-run (no API call)
 aliyun pai-dlc <cmd> --region <region> --cli-dry-run \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job/${SESSION_ID}
 ```
 
 ---
@@ -110,22 +110,22 @@ aliyun aiworkspace --help >/dev/null 2>&1 \
 ```bash
 WORKSPACE_ID=$(aliyun aiworkspace list-workspaces \
   --region <region> --page-size 20 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job/${SESSION_ID} \
   --cli-query 'Workspaces[0].WorkspaceId')
 
 IMAGE_URI=$(aliyun aiworkspace list-images \
   --region <region> --workspace-id $WORKSPACE_ID --page-size 20 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job/${SESSION_ID} \
   --cli-query 'Images[0].ImageUri')
 
 DATASET_ID=$(aliyun aiworkspace list-datasets \
   --region <region> --workspace-id $WORKSPACE_ID --page-size 20 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job/${SESSION_ID} \
   --cli-query 'Datasets[0].DatasetId')
 
 CODE_SOURCE_ID=$(aliyun aiworkspace list-code-sources \
   --region <region> --workspace-id $WORKSPACE_ID --page-size 20 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job/${SESSION_ID} \
   --cli-query 'CodeSources[0].CodeSourceId')
 ```
 
@@ -158,7 +158,7 @@ JOB_ID=$(aliyun pai-dlc create-job \
   --data-sources "[{\"DataSourceId\":\"$DATASET_ID\",\"MountPath\":\"/mnt/data\"}]" \
   --code-source "{\"CodeSourceId\":\"$CODE_SOURCE_ID\",\"MountPath\":\"/mnt/code\"}" \
   --user-command "python -c 'print(123)'" \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job/${SESSION_ID} \
   --cli-query 'JobId')
 ```
 
@@ -166,7 +166,7 @@ JOB_ID=$(aliyun pai-dlc create-job \
 
 ```bash
 aliyun pai-dlc get-job --region <region> --job-id $JOB_ID \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job \
+  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-pai-dlc-job/${SESSION_ID} \
   --cli-query '{Status:Status,WorkspaceId:WorkspaceId,ResourceId:ResourceId}'
 ```
 
