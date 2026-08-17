@@ -1,0 +1,5 @@
+# No SDK dependencies required.
+# All API calls use aliyun CLI or pure HTTP with HMAC-SHA1 signing.
+#
+# Optional (for config.yaml support):
+# pyyaml>=6.0,<7.0
