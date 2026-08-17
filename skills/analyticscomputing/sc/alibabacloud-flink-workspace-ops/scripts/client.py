@@ -24,6 +24,20 @@ _CLIENT_CACHE: dict = {}
 DEFAULT_USER_AGENT = "AlibabaCloud-Agent-Skills/alibabacloud-flink-workspace-ops"
 
 
+def build_user_agent() -> str:
+    """Return the User-Agent string for API observability.
+
+    Appends the per-session ID from the SKILL_SESSION_ID environment variable
+    (32-char lowercase hex, generated once per session by the agent) so that
+    CLI/SDK calls share a consistent session identifier. Falls back to the
+    bare skill UA when the variable is absent or empty.
+    """
+    session_id = os.environ.get("SKILL_SESSION_ID", "").strip()
+    if session_id:
+        return f"{DEFAULT_USER_AGENT}/{session_id}"
+    return DEFAULT_USER_AGENT
+
+
 def get_client(region_id: str):
     """Return a cached Ververica API client for *region_id*.
 
@@ -71,7 +85,7 @@ def get_client(region_id: str):
     config = Config(
         credential=credential,
         endpoint=f"ververica.{region_id}.aliyuncs.com",
-        user_agent=DEFAULT_USER_AGENT,
+        user_agent=build_user_agent(),
     )
     client = Client(config)
     _CLIENT_CACHE[region_id] = client
@@ -81,15 +95,18 @@ def get_client(region_id: str):
 def runtime_options():
     """Return a new ``RuntimeOptions`` instance with explicit timeout configuration.
 
-    Timeout defaults (can be overridden via environment variables):
-    - connect_timeout: 10 seconds (FLINK_SDK_CONNECT_TIMEOUT)
-    - read_timeout: 60 seconds (FLINK_SDK_READ_TIMEOUT)
+    Note: the Tea/Darabonba SDK core interprets these values in **milliseconds**
+    (they are divided by 1000 before being passed to the HTTP layer).
+
+    Timeout defaults (can be overridden via environment variables, in milliseconds):
+    - connect_timeout: 10000 ms (FLINK_SDK_CONNECT_TIMEOUT)
+    - read_timeout: 60000 ms (FLINK_SDK_READ_TIMEOUT)
     """
     from alibabacloud_tea_util.models import RuntimeOptions
 
-    # Allow environment variable override for timeout settings
-    connect_timeout = int(os.environ.get("FLINK_SDK_CONNECT_TIMEOUT", "10"))
-    read_timeout = int(os.environ.get("FLINK_SDK_READ_TIMEOUT", "60"))
+    # Allow environment variable override for timeout settings (milliseconds)
+    connect_timeout = int(os.environ.get("FLINK_SDK_CONNECT_TIMEOUT", "10000"))
+    read_timeout = int(os.environ.get("FLINK_SDK_READ_TIMEOUT", "60000"))
 
     return RuntimeOptions(
         connect_timeout=connect_timeout,

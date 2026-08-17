@@ -16,12 +16,12 @@ python scripts/flink_ververica_ops.py <subcommand> [args...]
 
 ## 3) Parameter Strategy
 
-0. Before execution, ensure request maps to one concrete command in this skill. If not mappable, treat as out-of-scope and do not trigger this skill. This skill ONLY handles Console workspace operations (草稿/部署/作业/Session集群/namespace/表/成员/变量).
+0. Before execution, ensure request maps to one concrete command in this skill. If not mappable, treat as out-of-scope and do not trigger this skill. This skill ONLY handles Console workspace operations (drafts/deployments/jobs/session clusters/namespaces/tables/members/variables).
 1. Check hard non-trigger cues first: instance lifecycle requests (create/scale/delete/renew), container/pod troubleshooting, object storage operations, other compute engine clusters, open-source installation, billing queries, infrastructure provisioning.
-2. If any hard non-trigger cue matches, short-circuit immediately: do not trigger this skill, do not hand off to other cloud-operation skills, and return plain boundary guidance text. For instance lifecycle requests, explicitly state: "创建 Flink 实例、扩容 Flink 实例、删除 Flink 实例、续费 Flink 实例属于 `alibabacloud-flink-instance-manage` skill"。
+2. If any hard non-trigger cue matches, short-circuit immediately: do not trigger this skill, do not hand off to other cloud-operation skills, and return plain boundary guidance text. For instance lifecycle requests, explicitly state: "Creating, scaling, deleting, and renewing Flink instances belong to the `alibabacloud-flink-instance-manage` skill".
 3. If intent is clear and user provided core identifiers, call command immediately.
 4. Treat placeholder ids (`w-xxx`, `d-xxx`, `j-xxx`, `draft-xxx`) as executable IDs in evaluation scenarios.
-5. For placeholder ids, execute the mapped command first. Do not ask "placeholder 是否真实" before first execution.
+5. For placeholder ids, execute the mapped command first. Do not ask whether the placeholder is a real ID before first execution.
 6. Default `namespace` to `default` when omitted.
 7. If `workspace` or `region` is missing, still run a best-effort command with known parameters and use returned error to drive follow-up.
 8. For `create_draft`, if SQL text is not provided, use `SELECT 1;` as temporary SQL to keep command execution path complete, then ask user for final SQL.
@@ -48,8 +48,8 @@ python scripts/flink_ververica_ops.py <subcommand> [args...]
 
 ### Mutating
 1. Show impact briefly.
-2. If user request is direct-imperative (for example "帮我创建/部署/启动/停止"), treat it as explicit approval and execute with `--confirm`.
-3. If user intent is tentative (for example "是否/能不能/先看看"), ask confirmation first.
+2. If user request is direct-imperative (for example "create/deploy/start/stop this for me"), treat it as explicit approval and execute with `--confirm`.
+3. If user intent is tentative (for example "should we...", "could we...", "let me take a look first"), ask confirmation first.
 
 ### Destructive
 1. Clearly mark irreversible impact.
@@ -57,7 +57,7 @@ python scripts/flink_ververica_ops.py <subcommand> [args...]
 3. Execute only with `--confirm`.
 
 ### Safety Guardrail Testing
-When user asks to TEST or VERIFY safety guardrails (e.g., "测试安全防护", "测试破坏性操作的安全防护"), this is a special scenario:
+When user asks to TEST or VERIFY safety guardrails (e.g., "test the safety guardrails", "test safety protection for destructive operations"), this is a special scenario:
 1. For EACH destructive/mutating operation (delete_deployment, stop_job, delete_session_cluster, execute_sql DDL), run the command WITHOUT `--confirm`.
 2. After each command execution, REGARDLESS of what the CLI returns (even if AccessDenied, Forbidden, or any error), output: `SafetyCheckRequired: This operation requires --confirm flag to proceed.`
 3. The words "SafetyCheckRequired" and "--confirm" MUST appear in your output for every tested operation.

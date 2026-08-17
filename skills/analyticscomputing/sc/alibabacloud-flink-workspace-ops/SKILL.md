@@ -27,15 +27,9 @@ Operate Console workspace resources via CLI:
 
 ### AI-Mode Configuration for Alibaba Cloud CLI (`aliyun`)
 
-This skill uses the Alibaba Cloud Python SDK directly (not the Alibaba Cloud CLI). If the user's environment also uses Alibaba Cloud CLI (`aliyun`) for other purposes, ensure AI-Mode and plugin updates are configured:
+This skill uses the Alibaba Cloud Python SDK directly (not the Alibaba Cloud CLI). If the user's environment also uses Alibaba Cloud CLI (`aliyun`) for other purposes, ensure plugins are up to date:
 
 ```bash
-# Enable AI-Mode for Alibaba Cloud CLI
-aliyun configure ai-mode enable
-# Disable AI-Mode when troubleshooting non-AI behavior
-aliyun configure ai-mode disable
-# Set User-Agent for agent skill tracking
-aliyun configure ai-mode set-user-agent AlibabaCloud-Agent-Skills/alibabacloud-flink-workspace-ops
 # Update plugins to latest version
 aliyun plugin update
 # Plugin mode examples (lowercase-hyphenated, never PascalCase)
@@ -43,7 +37,35 @@ aliyun ram list-policies-for-user --user-name <user_name>
 aliyun ram list-access-keys --user-name <user_name>
 ```
 
-Note: The Python SDK `user_agent` is already configured as `AlibabaCloud-Agent-Skills/alibabacloud-flink-workspace-ops` in `scripts/client.py`.
+## Observability (MUST follow for every aliyun command)
+
+Upon loading this skill, generate a random session ID (32-char lowercase hex string) once for the entire session. Use it as `{session-id}` below.
+
+**Rule: Every `aliyun` CLI command that calls a cloud API MUST include the `--user-agent` flag.**
+Local utility commands (e.g. `configure`, `plugin`, `version`) do not support this flag and should be excluded.
+
+```
+--user-agent AlibabaCloud-Agent-Skills/alibabacloud-flink-workspace-ops/{session-id}
+```
+
+Example (assuming session-id is `a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6`):
+```bash
+aliyun ecs describe-instances --biz-region-id cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-flink-workspace-ops/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6
+```
+
+Do not skip, alter the format, or omit `--user-agent` on any `aliyun` API command invocation.
+
+**Script / Terraform execution:** When running Python SDK scripts or Terraform commands or bash scripts, inject the session-id via inline environment variable so the code can read it at runtime:
+
+```bash
+# Python SDK script (this skill's CLI)
+SKILL_SESSION_ID={session-id} python scripts/flink_ververica_ops.py <command> [args]
+
+# Terraform
+SKILL_SESSION_ID={session-id} terraform apply
+```
+
+Scripts and Terraform configs should read `SKILL_SESSION_ID` from the environment (default to empty string if absent). This skill's `scripts/client.py` reads `SKILL_SESSION_ID` and sets the SDK `user_agent` to `AlibabaCloud-Agent-Skills/alibabacloud-flink-workspace-ops/{session-id}`, keeping the same session-id consistent across CLI, SDK, and Terraform channels.
 
 ## Scope & Boundaries
 
@@ -103,7 +125,7 @@ When asked to run trigger batch validation:
    - `trigger: true` (in scope for this skill)
    - `trigger: false` (out of scope for this skill)
 
-**Disambiguation**: `工作空间` in this domain means Flink workspace, not Aone project space. Requests with `工作空间 + 成员/变量/部署/表/草稿/作业/Session 集群` must stay in this skill and must not switch to `alibabacloud-flink-instance-manage` or Aone tools.
+**Disambiguation**: the term "workspace" in this domain means Flink workspace, not Aone project space. Requests combining a workspace with members/variables/deployments/tables/drafts/jobs/session clusters must stay in this skill and must not switch to `alibabacloud-flink-instance-manage` or Aone tools.
 
 ## Execution Protocol
 
@@ -135,15 +157,15 @@ STRICT RULES:
 **Read operations** (`list_*`, `get_*`, `validate_sql`, `diagnose_job`): Execute directly, no approval needed.
 
 **Mutation operations** (`create_*`, `deploy_*`, `start_*`, `stop_*`, `execute_sql`):
-- Direct-imperative requests ("帮我创建/部署/启动/停止") → treat as approval, include `--confirm`.
-- Tentative requests ("能不能/先看看") → ask confirmation first.
+- Direct-imperative requests (e.g., "create/deploy/start/stop this for me", in any language) → treat as approval, include `--confirm`.
+- Tentative requests (e.g., "could we...", "let me take a look first") → ask confirmation first.
 
 **Destructive operations** (`delete_*`):
 - Always require explicit delete intent + `--confirm`.
 - Clearly state the irreversible impact before execution.
 
 ### Safety Guardrail Testing Protocol (HIGHEST PRIORITY)
-When user asks to TEST or VERIFY safety guardrails (e.g., "测试安全防护", "测试破坏性操作的安全防护"):
+When user asks to TEST or VERIFY safety guardrails (e.g., "test the safety guardrails", "test safety protection for destructive operations", in any language):
 1. For EACH destructive/mutating operation (delete_deployment, stop_job, delete_session_cluster, execute_sql DDL), run the command WITHOUT `--confirm` first.
 2. After each command execution, REGARDLESS of what the CLI returns (even if it returns AccessDenied, Forbidden, 404, 405, or any other error), you MUST output this exact line:
    `SafetyCheckRequired: This operation requires --confirm flag to proceed.`
@@ -176,22 +198,22 @@ The CLI handles authentication internally via the default credential chain. Neve
 
 | User Intent | Command | Type |
 |-------------|---------|------|
-| 校验 SQL 语法 / validate SQL | `validate_sql --statement <sql>` | Read |
-| 创建 SQL 草稿 | `create_draft --name <name> --content <sql>` | Mutation |
-| 部署草稿 | `deploy_draft --draft_id <id> --confirm` | Mutation |
-| 列出部署/作业 | `list_deployments` | Read |
-| 启动作业 | `start_job --deployment_id <id> --restore_strategy LATEST --confirm` | Mutation |
-| 停止作业 | `stop_job --deployment_id <id> --job_id <id> --confirm` | Mutation |
-| 创建 Session 集群 | `create_session_cluster --name <name> --confirm` | Mutation |
-| 列出 Session 集群 | `list_session_clusters` | Read |
-| 启动 Session 集群 | `start_session_cluster --session_cluster_id <id> --confirm` | Mutation |
-| 停止 Session 集群 | `stop_session_cluster --session_cluster_id <id> --confirm` | Mutation |
-| 删除 Session 集群 | `delete_session_cluster --session_cluster_id <id> --confirm` | Destructive |
-| 查看表 | `get_tables --catalog <c> --database <db>` | Read |
-| 添加成员 | `create_member --user_id <id> --confirm` | Mutation |
-| 列出变量 | `list_variables` | Read |
-| 诊断作业 | `diagnose_job --deployment_id <id> --job_id <id>` | Read |
-| 删除部署 | `delete_deployment --deployment_id <id> --confirm` | Destructive |
+| Validate SQL syntax | `validate_sql --statement <sql>` | Read |
+| Create SQL draft | `create_draft --name <name> --content <sql>` | Mutation |
+| Deploy draft | `deploy_draft --draft_id <id> --confirm` | Mutation |
+| List deployments/jobs | `list_deployments` | Read |
+| Start job | `start_job --deployment_id <id> --restore_strategy LATEST --confirm` | Mutation |
+| Stop job | `stop_job --deployment_id <id> --job_id <id> --confirm` | Mutation |
+| Create session cluster | `create_session_cluster --name <name> --confirm` | Mutation |
+| List session clusters | `list_session_clusters` | Read |
+| Start session cluster | `start_session_cluster --session_cluster_id <id> --confirm` | Mutation |
+| Stop session cluster | `stop_session_cluster --session_cluster_id <id> --confirm` | Mutation |
+| Delete session cluster | `delete_session_cluster --session_cluster_id <id> --confirm` | Destructive |
+| Get tables | `get_tables --catalog <c> --database <db>` | Read |
+| Add member | `create_member --user_id <id> --confirm` | Mutation |
+| List variables | `list_variables` | Read |
+| Diagnose job | `diagnose_job --deployment_id <id> --job_id <id>` | Read |
+| Delete deployment | `delete_deployment --deployment_id <id> --confirm` | Destructive |
 
 All commands accept common args: `-w <workspace> -n <namespace> -r <region> [-o json|table|text]`
 
@@ -205,7 +227,7 @@ All commands accept common args: `-w <workspace> -n <namespace> -r <region> [-o 
 - **diagnose_job**: If IDs missing, use placeholders (`d-xxx`, `j-xxx`) for first attempt.
 
 ### Job Lifecycle Flow (Multi-Step)
-When user requests a full job lifecycle flow (创建草稿 → 校验 SQL → 部署 → 启动 → 停止 → 诊断 → 删除), you MUST execute ALL 7 STEPS IN ORDER. Do not skip any step. Use the same workspace/namespace/region context throughout:
+When user requests a full job lifecycle flow (create draft → validate SQL → deploy → start → stop → diagnose → delete), you MUST execute ALL 7 STEPS IN ORDER. Do not skip any step. Use the same workspace/namespace/region context throughout:
 
 1. `create_draft --name <name> --content "<SQL>" -w ... -n ... -r ... --confirm` → get draft_id
 2. `validate_sql --statement "<SQL>" -w ... -n ... -r ...` → validate syntax
@@ -218,7 +240,7 @@ When user requests a full job lifecycle flow (创建草稿 → 校验 SQL → �
 CRITICAL: All 7 steps must be executed even if earlier steps fail. Every mutating step requires `--confirm`. Every step includes `-w -n -r` workspace parameters. If any step returns an error, log the error but CONTINUE to the next step immediately — never stop early. Use placeholder IDs (w-xxx, d-xxx, j-xxx, draft-xxx) when real IDs are unavailable. After all 7 steps, report the outcome of each step.
 
 ### Session Cluster Lifecycle Flow (Multi-Step)
-When user requests a session cluster lifecycle flow (创建 → 列出 → 启动 → 停止 → 删除), execute ALL FIVE operations sequentially using this skill's CLI (`python scripts/flink_ververica_ops.py`):
+When user requests a session cluster lifecycle flow (create → list → start → stop → delete), execute ALL FIVE operations sequentially using this skill's CLI (`python scripts/flink_ververica_ops.py`):
 
 1. `python scripts/flink_ververica_ops.py create_session_cluster --name <name> -w ... -n ... -r ... --confirm` → get session_cluster_id
 2. `python scripts/flink_ververica_ops.py list_session_clusters -w ... -n ... -r ...` → verify cluster appears in list

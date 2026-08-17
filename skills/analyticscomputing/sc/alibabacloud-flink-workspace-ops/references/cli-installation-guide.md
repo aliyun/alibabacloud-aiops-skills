@@ -27,7 +27,7 @@ The alibabacloud-flink-workspace-ops skill requires Python and pip to be install
 ## Required Dependencies
 
 The project requires the following Python packages:
-- alibabacloud-ververica20220718>=1.0.0
+- alibabacloud-ververica20220718>=1.13.0
 - alibabacloud-tea-openapi>=0.4.3
 - alibabacloud-tea-util>=0.3.14
 
