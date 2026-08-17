@@ -1,6 +1,6 @@
 # Alibaba Cloud CLI Installation Guide
 
-> Source: [如何安装、初始化配置和使用云效 CLI](https://help.aliyun.com/zh/yunxiao/developer-reference/how-to-install-initialize-and-use-the-apsara-devops-cli)
+> Source: [How to install, initialize and use the Yunxiao CLI](https://help.aliyun.com/zh/yunxiao/developer-reference/how-to-install-initialize-and-use-the-apsara-devops-cli)
 
 ## 1. Installation by OS
 

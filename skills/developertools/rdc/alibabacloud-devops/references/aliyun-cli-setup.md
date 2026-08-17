@@ -27,21 +27,23 @@ Generate a token at the Yunxiao console. See [Obtain Personal Access Token](http
 | Environment Variable | Description | Required (Central) | Required (Region) |
 | --- | --- | --- | --- |
 | `ALIBABA_CLOUD_YUNXIAO_ACCESS_TOKEN` | Yunxiao Personal Access Token | Yes | Yes |
-| `ALIBABA_CLOUD_YUNXIAO_API_BASE_URL` | API base URL | No | Yes |
+| `ALIBABA_CLOUD_YUNXIAO_API_BASE_URL` | API base URL | No (defaults to `openapi-rdc.aliyuncs.com`) | Yes |
 | `ALIBABA_CLOUD_YUNXIAO_ORGANIZATION_ID` | Organization ID | Yes | No |
 
-**Region site:**
-
-```bash
-export ALIBABA_CLOUD_YUNXIAO_ACCESS_TOKEN=<your-personal-access-token>
-export ALIBABA_CLOUD_YUNXIAO_API_BASE_URL=<your-api-base-url>
-```
-
-**Central site:**
+**Central site (default) — token + organization ID:**
 
 ```bash
 export ALIBABA_CLOUD_YUNXIAO_ACCESS_TOKEN=<your-personal-access-token>
 export ALIBABA_CLOUD_YUNXIAO_ORGANIZATION_ID=<your-organization-id>
+```
+
+> Do not set an API base URL for the central site — the default access point is used.
+
+**Region site — token + region API base URL:**
+
+```bash
+export ALIBABA_CLOUD_YUNXIAO_ACCESS_TOKEN=<your-personal-access-token>
+export ALIBABA_CLOUD_YUNXIAO_API_BASE_URL=<your-region-api-base-url>
 ```
 
 ### Method B: Command-Line Parameters
@@ -49,16 +51,8 @@ export ALIBABA_CLOUD_YUNXIAO_ORGANIZATION_ID=<your-organization-id>
 | Parameter | Description | Required (Central) | Required (Region) |
 | --- | --- | --- | --- |
 | `--yunxiao-access-token` | Yunxiao Personal Access Token | Yes | Yes |
-| `--api-base-url` | API base URL | No | Yes |
+| `--api-base-url` | API base URL | No (default access point) | Yes |
 | `--organization-id` | Organization ID | Yes | No |
-
-**Region site:**
-
-```bash
-aliyun devops <command> \
-  --api-base-url=<your-api-base-url> \
-  --yunxiao-access-token=<your-personal-access-token>
-```
 
 **Central site:**
 
@@ -68,13 +62,23 @@ aliyun devops <command> \
   --organization-id=<your-organization-id>
 ```
 
+**Region site:**
+
+```bash
+aliyun devops <command> \
+  --api-base-url=<your-region-api-base-url> \
+  --yunxiao-access-token=<your-personal-access-token>
+```
+
 ## 3. API Base URL (Central vs Region)
 
-| Dimension | Central Site | Region Site |
+| Dimension | Central Site (default) | Region Site |
 |-----------|-------------|-------------|
 | API base URL | `openapi-rdc.aliyuncs.com` (default, no config needed) | Instance-specific URL from Yunxiao console |
 | Organization parameter | `--organization-id` | Not required (derived from base URL) |
-| API base URL config | Not required | Required (`--api-base-url` or `ALIBABA_CLOUD_YUNXIAO_API_BASE_URL`) |
+| API base URL config | Not required — never ask the user for it | Required (`--api-base-url` or `ALIBABA_CLOUD_YUNXIAO_API_BASE_URL`) |
+
+Site type detection: `ALIBABA_CLOUD_YUNXIAO_API_BASE_URL` set → region site; not set → central site.
 
 For Region site API base URL, see [Service Access Point](https://help.aliyun.com/zh/yunxiao/developer-reference/service-access-point-domain).
 
@@ -86,6 +90,14 @@ aliyun devops --help >/dev/null 2>&1 && echo "cli ready" || echo "cli not availa
 
 # Check version
 aliyun devops version
+```
+
+### Plugin auto-install (required before the first business command)
+
+`devops` subcommands are provided by the `aliyun-cli-devops` plugin, which is not bundled with a fresh CLI install. Without the setting below, the first `aliyun devops <business-command>` prints `Do you want to install it? [Y/n]:` and blocks until the command times out:
+
+```bash
+aliyun configure set --auto-plugin-install true
 ```
 
 ## 5. CLI Command Prefix to Product Mapping
@@ -192,7 +204,9 @@ aliyun devops flow-get-flow-tag-group --id 603 \
 | Issue | Cause | Solution |
 |-------|-------|----------|
 | Authentication failed | Token expired or invalid | Regenerate the token |
+| First devops command hangs then times out | `aliyun-cli-devops` plugin not installed, CLI waits on an interactive install prompt | Run `aliyun configure set --auto-plugin-install true` before the first business command |
+| Time-range filter returns odd results | `--execute-start-time` / `--execute-end-time` were given in seconds | These parameters are millisecond epoch values (13 digits); multiply seconds by 1000 |
 | No permission | Insufficient token scopes | Check and update token scopes |
 | API error | Wrong parameters | Check parameter names via `aliyun devops <command> --help` |
 | Region site fails | Missing API base URL | Set `ALIBABA_CLOUD_YUNXIAO_API_BASE_URL` or use `--api-base-url` |
-| Central site fails | Missing organization ID | Set `ALIBABA_CLOUD_YUNXIAO_ORGANIZATION_ID` or use `--organization-id` |
+| Central site fails | Missing organization ID | Set `ALIBABA_CLOUD_YUNXIAO_ORGANIZATION_ID` or use `--organization-id` (look it up via `aliyun devops base-get-user-by-token`) |

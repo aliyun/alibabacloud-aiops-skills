@@ -6,7 +6,7 @@ After each write operation completes, use query tools to read back the target re
 
 | Write Operation (CLI / MCP) | Read-back Tool (CLI / MCP) | Verification Fields |
 |-----------------------------|---------------------------|---------------------|
-| `flow-create-pipeline` (MCP: `create_pipeline_from_description`) | `flow-get-pipeline` (MCP: `get_pipeline`) | `id` exists, `name` matches |
+| `flow-create-pipeline` (MCP: `create_pipeline_from_description`) | `flow-get-pipeline` (MCP: `get_pipeline`) or `flow-list-pipelines --pipeline-name` | `id` exists, `name` matches. Note: `flow-create-pipeline` prints only a bare integer pipeline ID on success — treat that as success, not as malformed output |
 | `flow-update-pipeline` (MCP: `update_pipeline`) | `flow-get-pipeline` (MCP: `get_pipeline`) | Changed fields match input parameters |
 | `flow-create-pipeline-run` (MCP: `create_pipeline_run`) | `flow-get-latest-pipeline-run` (MCP: `get_latest_pipeline_run`) | `status ∈ {INIT, RUNNING, SUCCESS}`, not `FAIL/CANCELED` |
 | `flow-execute-pipeline-job-run` (MCP: `execute_pipeline_job_run`) | `flow-get-pipeline-job-run-log` (MCP: `get_pipeline_job_run_log`) | Log contains latest output |
@@ -14,13 +14,13 @@ After each write operation completes, use query tools to read back the target re
 | `codeup-delete-branch` (MCP: `delete_branch`) | `codeup-list-branches` (MCP: `list_branches`) | Target branch is not in the returned list |
 | `codeup-create-file` / `codeup-update-file` (MCP: `create_file` / `update_file`) | `codeup-get-file-blobs` (MCP: `get_file_blobs`) | Content matches expected value |
 | `codeup-create-change-request` (MCP: `create_change_request`) | `codeup-get-change-request` (MCP: `get_change_request`) | `state == OPENED`, `sourceBranch/targetBranch` match |
-| `codeup-create-change-request-comment` (MCP: `create_change_request_comment`) | `codeup-list-merge-request-comments` (MCP: `list_change_request_comments`) | New comment appears in the list |
+| `codeup-create-change-request-comment` (MCP: `create_change_request_comment`) | `codeup-list-merge-request-comments` (MCP: `list_change_request_comments`) | New comment appears in the list. Prerequisite: fetch the patchset biz id via `codeup-list-change-request-patch-sets` — `--patchset-biz-id`, `--draft` and `--resolved` are all required, and omitting any of them fails client-side before the request is sent |
 | `projex-create-sprint` (MCP: `create_sprint`) | `projex-get-sprint` (MCP: `get_sprint`) | Date range and name match |
 | `projex-update-sprint` (MCP: `update_sprint`) | `projex-get-sprint` (MCP: `get_sprint`) | Changed fields have taken effect |
 | `projex-create-workitem` (MCP: `create_work_item`) | `projex-get-workitem` (MCP: `get_work_item`) | `subject` matches, `workitemTypeId` is correct |
 | `projex-update-workitem` (MCP: `update_work_item`) | `projex-get-workitem` (MCP: `get_work_item`) | Changed fields have taken effect |
 | `projex-create-version` (MCP: `create_version`) | `projex-list-versions` (MCP: `list_versions`) | New version appears |
-| `test-hub-create-testcase` (MCP: `create_testcase`) | `test-hub-get-testcase` (MCP: `get_testcase`) | Test case title and directory match |
+| `test-hub-create-testcase` (MCP: `create_testcase`) | `test-hub-get-testcase` (MCP: `get_testcase`) | Test case title and directory match. Note the flag inversion on the CLI: `--id` is the **test case** and the library goes in `--test-repo-id` (the create command uses `--id` for the library) |
 | `test-hub-update-test-result` (MCP: `update_test_result`) | `test-hub-get-test-result-list` (MCP: `get_test_result_list`) | The `result` for the specified case has been updated |
 | `app-stack-create-application` (MCP: `create_application`) | `app-stack-get-application` (MCP: `get_application`) | Application exists, basic attributes match |
 | `app-stack-create-app-orchestration` (MCP: `create_app_orchestration`) | `app-stack-get-app-orchestration` (MCP: `get_app_orchestration`) | Orchestration exists, content matches |
@@ -74,7 +74,8 @@ The following fields may not match the written value when read back, which are k
 | Operation (CLI / MCP) | Affected Field | Behavior |
 |----------------------|---------------|----------|
 | `projex-create-workitem` (MCP: `create_work_item`) with `sprintId` | Sprint association | `projex-get-workitem` (MCP: `get_work_item`) read-back may show the sprint field as empty, but the association actually exists |
-| `test-hub-create-testcase` (MCP: `create_testcase`) with `priority` | Priority | `test-hub-get-testcase` (MCP: `get_testcase`) read-back may show `customFieldValues` as an empty array, with priority not persisted |
+| `test-hub-create-testcase` (MCP: `create_testcase`) with `priority` | Priority | Read-back is **shape-shifted, not lost**: the write payload is a map (`{"tc.priority": "<option id>"}`) while `test-hub-get-testcase` (MCP: `get_testcase`) returns an *array* of field descriptors (`[{"fieldId":"tc.priority","values":[{"displayValue":"P1",...}]}]`). Priority does persist — assert on `values[].displayValue` instead of expecting the map back |
+| `test-hub-create-testcase` (MCP: `create_testcase`) with `testSteps` | Steps / expected result | Also shape-shifted: written as `content[{step, expected}]`, returned as `stepContent` / `expectedResult` RICHTEXT strings with `content: null`. Do **not** feed the read-back shape into a subsequent create — a payload lacking `content[]` fails with `500 unknown exception` |
 
 ## Final Report Format
 

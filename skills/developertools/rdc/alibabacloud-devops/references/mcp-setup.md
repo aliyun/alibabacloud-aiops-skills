@@ -26,13 +26,14 @@ The IDE/Agent launches the MCP Server directly as a subprocess. This is the simp
       "command": "npx",
       "args": ["-y", "alibabacloud-devops-mcp-server@0.3.38"],
       "env": {
-        "YUNXIAO_ACCESS_TOKEN": "<YOUR_TOKEN>",
-        "YUNXIAO_API_BASE_URL": "https://openapi-rdc.aliyuncs.com"
+        "YUNXIAO_ACCESS_TOKEN": "<YOUR_TOKEN>"
       }
     }
   }
 }
 ```
+
+> Central site needs the token only — `YUNXIAO_API_BASE_URL` defaults to `https://openapi-rdc.aliyuncs.com`. For a region site, add `"YUNXIAO_API_BASE_URL": "<your-region-api-base-url>"` to `env`.
 
 ## Mode 2: Docker
 
@@ -46,17 +47,17 @@ Suitable for scenarios requiring a unified image, offline intranet environments,
       "args": [
         "run", "-i", "--rm",
         "-e", "YUNXIAO_ACCESS_TOKEN",
-        "-e", "YUNXIAO_API_BASE_URL",
         "build-steps-public-registry.cn-beijing.cr.aliyuncs.com/build-steps/alibabacloud-devops-mcp-server:latest"
       ],
       "env": {
-        "YUNXIAO_ACCESS_TOKEN": "<YOUR_TOKEN>",
-        "YUNXIAO_API_BASE_URL": "https://openapi-rdc.aliyuncs.com"
+        "YUNXIAO_ACCESS_TOKEN": "<YOUR_TOKEN>"
       }
     }
   }
 }
 ```
+
+> For a region site, also pass `"-e", "YUNXIAO_API_BASE_URL"` in `args` and set it in `env`.
 
 ## Mode 3: SSE
 
@@ -85,7 +86,7 @@ MCP_TRANSPORT=sse PORT=3000 \
 | Variable | Required | Description | Example |
 |----------|----------|-------------|---------|
 | `YUNXIAO_ACCESS_TOKEN` | Yes | Yunxiao personal access token | `pt-xxx` |
-| `YUNXIAO_API_BASE_URL` | No | OpenAPI base URL | `https://openapi-rdc.aliyuncs.com` |
+| `YUNXIAO_API_BASE_URL` | No | OpenAPI base URL — omit for the central site (defaults to `https://openapi-rdc.aliyuncs.com`); set only for a region site | `https://openapi-rdc.aliyuncs.com` |
 | `MCP_TRANSPORT` | No | Transport mode (set to `sse` for SSE mode) | `sse` |
 | `PORT` | No | Port for SSE mode | `3000` |
 | `DEVOPS_TOOLSETS` | No | Enabled toolsets (comma-separated) | `code-management,pipeline-management` |

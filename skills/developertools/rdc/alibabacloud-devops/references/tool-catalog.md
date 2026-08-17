@@ -10,7 +10,7 @@ This document covers the Alibaba Cloud CLI command set and the MCP toolset separ
 
 Cloud DevOps CLI authenticates via Personal Access Token. Configure via environment variables (recommended) or command-line parameters:
 
-- Central site: `--organization-id <ID>` + `--yunxiao-access-token <token>` (or set `ALIBABA_CLOUD_YUNXIAO_ORGANIZATION_ID` and `ALIBABA_CLOUD_YUNXIAO_ACCESS_TOKEN` env vars)
+- Central site (default): `--organization-id <ID>` + `--yunxiao-access-token <token>` (or set `ALIBABA_CLOUD_YUNXIAO_ORGANIZATION_ID` and `ALIBABA_CLOUD_YUNXIAO_ACCESS_TOKEN` env vars). No API base URL needed — the default access point is used.
 - Regional site: `--api-base-url <url>` + `--yunxiao-access-token <token>` (or set `ALIBABA_CLOUD_YUNXIAO_API_BASE_URL` and `ALIBABA_CLOUD_YUNXIAO_ACCESS_TOKEN` env vars)
 
 ### Command Discovery

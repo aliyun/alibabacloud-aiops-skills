@@ -73,37 +73,48 @@ Cloud DevOps (Yunxiao) uses **Personal Access Token** for authentication, not AK
 [ -n "$ALIBABA_CLOUD_YUNXIAO_ACCESS_TOKEN" ] && echo "token configured" || echo "token missing"
 ```
 
-If token is missing, guide user to configure. Provide **both** site types and let user choose based on their organization:
+If token is missing, guide user to configure based on their site type:
 
-**Central site:**
+**Central site (default) — token + organization ID:**
 ```bash
 export ALIBABA_CLOUD_YUNXIAO_ACCESS_TOKEN=<your-personal-access-token>
 export ALIBABA_CLOUD_YUNXIAO_ORGANIZATION_ID=<your-organization-id>
 ```
 
-**Region site:**
+**Region site — token + region API base URL:**
 ```bash
 export ALIBABA_CLOUD_YUNXIAO_ACCESS_TOKEN=<your-personal-access-token>
-export ALIBABA_CLOUD_YUNXIAO_API_BASE_URL=<your-api-base-url>
+export ALIBABA_CLOUD_YUNXIAO_API_BASE_URL=<your-region-api-base-url>
 ```
+
+> **[MUST] Never ask the user for an API base URL on the central site** — it defaults to `openapi-rdc.aliyuncs.com` (for both the CLI and the MCP Server). The base URL is a region-site-only setting.
 
 Recommend adding these to the user's shell profile (`~/.bashrc`, `~/.zshrc`, etc.) for persistence.
 
 **3b. Detect site type:**
 
-After token is confirmed, detect which site type is configured:
+After token is confirmed, detect the site type:
 ```bash
-[ -n "$ALIBABA_CLOUD_YUNXIAO_ORGANIZATION_ID" ] && echo "central site" || echo "not central"
-[ -n "$ALIBABA_CLOUD_YUNXIAO_API_BASE_URL" ] && echo "region site" || echo "not region"
+[ -n "$ALIBABA_CLOUD_YUNXIAO_API_BASE_URL" ] && echo "region site" || echo "central site (default)"
+[ -n "$ALIBABA_CLOUD_YUNXIAO_ORGANIZATION_ID" ] && echo "org id configured" || echo "org id missing"
 ```
 
-- `ALIBABA_CLOUD_YUNXIAO_ORGANIZATION_ID` set → **Central site**: subsequent CLI calls use `--organization-id`
 - `ALIBABA_CLOUD_YUNXIAO_API_BASE_URL` set → **Region site**: subsequent CLI calls do **NOT** use `--organization-id`; the API base URL is read from the environment variable automatically
-- Neither set → STOP, guide user to configure one of the above
+- Not set → **Central site (default)**: subsequent CLI calls use `--organization-id`; if the org id is missing, guide user to set `ALIBABA_CLOUD_YUNXIAO_ORGANIZATION_ID` (it can be looked up via `aliyun devops base-get-user-by-token`)
 
 > **[MUST]** Remember the detected site type. All subsequent CLI calls in this session must use the corresponding parameter pattern. **CLI parameters use kebab-case** (e.g., `--organization-id`), not camelCase (`--organizationId`).
 
-> **CLI ready** — If Steps 1–3 all pass, CLI channel is ready. **Skip Section 2.2 entirely** and proceed to Section 3.
+**Step 4: [MUST] Disable the interactive plugin-install prompt**
+
+The `devops` commands live in the `aliyun-cli-devops` plugin, which is **not** bundled with a fresh CLI install. The first `aliyun devops <business-command>` therefore prompts `Do you want to install it? [Y/n]:` and **blocks until the command times out**. Run this once per session, before any business command:
+
+```bash
+aliyun configure set --auto-plugin-install true
+```
+
+> Skipping this step wastes the whole timeout budget of your first business call.
+
+> **CLI ready** — If Steps 1–4 all pass, CLI channel is ready. **Skip Section 2.2 entirely** and proceed to Section 3.
 
 ### 2.2 Fallback Channel Setup (ONLY when CLI is unavailable)
 
@@ -148,13 +159,14 @@ See [references/mcp-setup.md](references/mcp-setup.md) for three connection mode
       "command": "npx",
       "args": ["-y", "alibabacloud-devops-mcp-server@0.3.38"],
       "env": {
-        "YUNXIAO_ACCESS_TOKEN": "<YOUR_TOKEN>",
-        "YUNXIAO_API_BASE_URL": "https://openapi-rdc.aliyuncs.com"
+        "YUNXIAO_ACCESS_TOKEN": "<YOUR_TOKEN>"
       }
     }
   }
 }
 ```
+
+> Central site needs the token only — `YUNXIAO_API_BASE_URL` defaults to `https://openapi-rdc.aliyuncs.com`. Add it to `env` only for a region site.
 
 ---
 
@@ -266,7 +278,7 @@ After determining the target product, **must** consult the Yunxiao documentation
 **Region Site Routing (mandatory):** When the user specifies a Yunxiao instance address or token differing from current MCP config:
 - MUST prompt user to update MCP Server config (`YUNXIAO_API_BASE_URL` / `YUNXIAO_ACCESS_TOKEN`)
 - MUST NOT bypass MCP Server via mcporter — mcporter is only for when MCP Server is absent
-- URL with Region keywords (e.g., `cn-shanghai`) → Region edition; `openapi-rdc.aliyuncs.com` or unspecified → Central (default)
+- URL with Region keywords (e.g., `cn-shanghai`) → Region edition; `openapi-rdc.aliyuncs.com` or unspecified → Central (default, no base URL config needed)
 
 **Method A: Alibaba Cloud CLI**
 
@@ -317,7 +329,7 @@ npx -y mcporter@0.11.1 list --stdio "npx -y alibabacloud-devops-mcp-server@0.3.3
    - Method B: Check platform tool registry
    - Method C: `npx -y mcporter@0.11.1 list --stdio "npx -y alibabacloud-devops-mcp-server@0.3.38" --schema 2>&1 | grep -A 30 'function <tool_name>'`
    - If schema returns a different tool name, use the schema's version
-   - For Testhub: call `test-hub-get-testcase-field-config` (MCP: `get_testcase_field_config`) first
+   - For Testhub: call `test-hub-get-testcase-field-config` (MCP: `get_testcase_field_config`) first — it reports which fields are required (`assignedTo` is) and yields the per-library **option IDs** that `customFieldValues` must carry (e.g. `{"tc.priority": "<P1 option id>"}`; sending the label `"P1"` fails with `400 字段【优先级】所填值无效`). `testSteps` must carry a `content[]` array — a payload using only `stepContent` / `expectedResult` (which is the *read-back* shape) fails with `500 unknown exception`. See [references/common-scenarios.md](references/common-scenarios.md) Scenario 6.
    - For Projex: call `projex-list-workitem-types` (MCP: `list_work_item_types`) first — never use hardcoded type IDs
 
 Full tool catalog: [references/tool-catalog.md](references/tool-catalog.md). Scenario examples: [references/common-scenarios.md](references/common-scenarios.md).
@@ -381,8 +393,8 @@ aliyun devops <command> --<param1> <value1> \
 
 1. **Read before write**: `get_*` before `update_*` / `delete_*` to confirm current state
 2. **Pagination**: List APIs paginate by default; pass `page` / `perPage` for large lists
-3. **YAML first**: Pipeline creation: `flow-create-pipeline` (MCP provides higher-level helpers: `generate_pipeline_yaml` → `create_pipeline_from_description`)
-4. **Smart search**: `flow-list-pipelines` with timestamp parameters (MCP provides `smart_list_pipelines` supporting natural-language time ranges)
+3. **YAML first**: Pipeline creation goes through `flow-create-pipeline --name --content` (YAML is mandatory). Before composing the YAML, collect the three organization-specific values that are **always** rejected if guessed — the repository's `httpUrlToRepo` (never `webUrl`), the Codeup service connection `uuid` (query with the lowercase filter `--service-connection-type codeup`; `Codeup` reproducibly returns an empty list, which is not proof the connection is missing), and a `runsOn.group` harvested from an existing pipeline (**no API lists build clusters**, and `public/<region>` often does not exist). The Codeup credential is a nested `certificate` object, not a bare `serviceConnection` key, and a build-only pipeline must omit `ArtifactUpload`. MCP's `create_pipeline_from_description` builds its YAML internally and **cannot be corrected** — on any `yaml校验失败` / `服务连接[...]不存在` error, stop retrying it and switch to the CLI path. Verified template and preflight steps: [references/common-scenarios.md](references/common-scenarios.md) Scenario 1.
+4. **Smart search**: `flow-list-pipelines` with timestamp parameters — `--execute-start-time` / `--execute-end-time` / `--create-start-time` / `--create-end-time` take **millisecond** epoch values (13 digits, e.g. `$(($(date +%s) * 1000))`). Passing seconds (10 digits) is **not** rejected by the API; it silently filters against 1970 and returns misleading results, so always multiply by 1000 and sanity-check the digit count. (MCP provides `smart_list_pipelines` supporting natural-language time ranges.)
 5. **Read-only first**: When uncertain, use `list_*` / `search_*` / `get_*`
 6. **Fail fast**: Two consecutive same-parameter failures → change approach. Report: methods tried, errors, root cause, next steps
 7. **Budget discipline**: Plan critical path first; debugging ≤3 steps; near limit (≤2 remaining) → stop and report
@@ -396,12 +408,12 @@ Full examples: [references/common-scenarios.md](references/common-scenarios.md).
 
 | Scenario | Product | Key CLI commands | Key MCP tools |
 |----------|---------|-----------------|---------------|
-| Create Java build pipeline | Flow | `codeup-list-repositories` → `flow-create-pipeline` → `flow-get-pipeline` | `list_repositories` → `create_pipeline_from_description` → `get_pipeline` |
-| Create MR with review comment | Codeup | `codeup-get-repository` → `codeup-create-change-request` → `codeup-create-change-request-comment` | `get_repository` → `create_change_request` → `create_change_request_comment` |
+| Create Java build pipeline | Flow | `codeup-get-repository` (clone URL) → `flow-list-service-connections --service-connection-type codeup` (uuid; lowercase value, `Codeup` returns `[]`) → `flow-get-pipeline` (harvest `runsOn`) → `flow-create-pipeline` → `flow-list-pipelines` | `get_repository` → `list_service_connections` → `get_pipeline` → `create_pipeline_from_description` (falls back to CLI on YAML validation failure) |
+| Create MR with review comment | Codeup | `codeup-get-repository` → `codeup-create-change-request` → `codeup-list-change-request-patch-sets` → `codeup-create-change-request-comment` | `get_repository` → `create_change_request` → `list_change_request_patch_sets` → `create_change_request_comment` |
 | Create sprint and add requirement | Projex | `projex-search-projects` → `projex-create-sprint` → `projex-create-workitem` | `search_projects` → `create_sprint` → `create_work_item` |
-| Run pipeline and view logs | Flow | `flow-get-pipeline` → `flow-create-pipeline-run` → `flow-get-pipeline-run` → `flow-get-pipeline-job-run-log` | `get_pipeline` → `create_pipeline_run` → `get_pipeline_run` → `get_pipeline_job_run_log` |
+| Run pipeline and view logs | Flow | `flow-get-pipeline` → `flow-create-pipeline-run` (branch goes in `--params '{"branchModeBranchs":"<branch>"}'`; there is no `--branch` flag) → `flow-get-pipeline-run --pipeline-run-id` → `flow-get-pipeline-job-run-log --job-id <stages[].stageInfo.jobs[].id>` | `get_pipeline` → `create_pipeline_run` → `get_pipeline_run` → `get_pipeline_job_run_log` |
 | Batch query artifacts | Packages | `packages-list-repositories` → `packages-list-artifacts` | `list_package_repositories` → `list_artifacts` |
-| Create test cases | Testhub | `test-hub-list-directories` → `test-hub-create-testcase` → `test-hub-search-testcases` | `list_testcase_directories` → `create_testcase` → `search_testcases` |
+| Create test cases | Testhub | `test-hub-get-testcase-field-config` (required fields + option IDs) → `test-hub-list-directories` → `test-hub-create-testcase` → `test-hub-search-testcases` | `get_testcase_field_config` → `list_testcase_directories` → `create_testcase` → `search_testcases` |
 | Application release workflow | AppStack | `app-stack-list-all-release-workflows` → `app-stack-execute-change-request-release-stage` | `list_app_release_workflows` → `execute_app_release_stage` |
 
 ---
