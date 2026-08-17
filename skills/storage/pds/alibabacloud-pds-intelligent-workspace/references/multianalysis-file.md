@@ -3,10 +3,25 @@
 **Scenario**: When you need to perform document or audio/video analysis on a PDS file
 **Purpose**: Perform analysis on files and get structured analysis results
 
-> **This is the ONLY correct way to analyze/summarize a PDS file's content.** For any "analyze / summarize / close-read / extract key points / what does it say" request, use `pds analyze` below. **Do NOT** `download-to-local` and then read/parse the file yourself — that produces none of the structured results here and pulls large media into context. Downloading is only for when the user explicitly wants the raw file saved locally.
+> **For every format `pds analyze` supports, this is the ONLY correct way to analyze/summarize a PDS file's content.** For any "analyze / summarize / close-read / extract key points / what does it say" request on a **supported document extension** (`pdf`, `ppt`, `pptx`, `doc`, `docx`) or on audio/video, use `pds analyze` below. **Do NOT** `download-to-local` and then read/parse the file yourself — that produces none of the structured results here and pulls large media into context. Downloading is only for when the user explicitly wants the raw file saved locally, or as the documented fallback for an **unsupported** document extension (see the next section).
 >
 > - ✅ "analyze this pdf for me" → `aliyun pds analyze --type doc`.
 > - ❌ "analyze this pdf for me" → download the file, then read it yourself. **Never do this.**
+
+---
+
+## Document format gate (check before `--type doc`)
+
+Server-side document analysis only accepts these extensions: **`pdf`, `ppt`, `pptx`, `doc`, `docx`** (case-insensitive). Before running `--type doc`, read the extension off the file name you already have (from the user's path, the `resolve-path` / `search-file` / conversation-scope result) — do **not** make an extra `get-file` call just to learn it.
+
+1. **Extension in the supported set** → `aliyun pds analyze --type doc` (the rest of this file). The hard rule holds: never download-and-read these yourself.
+2. **Audio / video extension** → `aliyun pds analyze --type video`. Never route media into the local-read fallback below — it pulls large binaries into context and yields no transcript.
+3. **Any other document-ish extension** (e.g. `txt`, `md`, `csv`, `tsv`, `json`, `xml`, `html`, `xls`, `xlsx`, `epub`, source code) → `pds analyze` cannot handle it. Fall back to a **local read**:
+   - `aliyun pds download-to-local --drive-id <id> --path "/…"|--file-id <id> --save-to <local_tmp_path>` (see `references/download-file.md`),
+   - then read that local file with your own file-reading tool and produce the analysis yourself.
+   - Tell the user in one clause why the route changed (extension not supported by server-side document analysis), and treat the downloaded copy as a **temporary working file**, not as "I saved the file for you".
+   - The output rules below still apply: answer in the conversation and do **not** write the analysis to any local file.
+4. **No extension, or an extension you cannot classify** → do not guess and do not blind-download (it may be a multi-GB binary). Ask the user what the file is / how they want it handled.
 
 ---
 

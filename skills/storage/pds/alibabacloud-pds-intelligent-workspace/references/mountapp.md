@@ -17,6 +17,8 @@ The following sections describe the download, installation, startup, and mountin
 ## Prerequisites
 Before installing mount app, verify that aliyun-cli and PDS plugin are installed and configured correctly
 
+⚠️ **Authentication requirement**: mount app **MUST use AK Authentication**. Before any mount app operation, verify the PDS configuration was initialized via the AK branch in `references/config.md`. If the current configuration uses API Key authentication, stop and inform the user that mount app only supports AK authentication — do not proceed with download, installation, or mounting.
+
 ---
 
 ## Workflow
