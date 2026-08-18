@@ -1,13 +1,43 @@
 # RAM Policy Reference
 
-> Required RAM Actions for AgentLoop application onboarding workflows.
-> Derived from OpenAPI calls issued by `aliyun cms2`, `aliyun sts`, and `aliyun cs`
-> during APM / AI observability onboarding. API granularity only - **no `*`
-> wildcard in Action lists**.
+> Skill-wide entry point for the RAM permissions of `alibabacloud-agentloop-management`
+> (`domain: aiops`). This skill spans five domains and each one calls a different
+> cloud surface, so the required actions are declared per domain. API granularity
+> only - **no `*` wildcard in Action lists** anywhere in this skill.
 >
 > Replace `<accountId>` with the target Alibaba Cloud account ID.
 
-## Scope of This Skill
+## Domain Index
+
+Read the row that matches the domain being executed. The onboarding domain's actions
+are declared in this file (sections 1-5 below); the other four are declared in the
+per-domain files.
+
+| # | Domain | Cloud surface | Action prefixes | Declaration |
+|---|--------|---------------|-----------------|-------------|
+| 1 | Application onboarding (APM & AI observability) | CMS 2024-03-30, STS, Container Service | `cms:`, `sts:`, `cs:` | Sections 1-5 of this file |
+| 2 | Evaluation | AgentLoop 2026-05-20, SLS | `agentloop:`, `log:` | [evaluation/ram-policies.md](evaluation/ram-policies.md) |
+| 3 | Dataset | AgentLoop 2026-05-20 | `agentloop:` | [dataset/ram-policies.md](dataset/ram-policies.md) |
+| 4 | Experience (recall & store management) | AgentLoop SearchContext and ContextStore | `agentloop:` | [experience/ram-policies.md](experience/ram-policies.md) |
+| 5 | Pipeline | AgentLoop 2026-05-20 | `agentloop:` | [pipeline/ram-policies.md](pipeline/ram-policies.md) |
+
+Cross-domain notes:
+
+- Do not merge all five domains into one policy by default. Grant only the domains
+  the identity actually executes.
+- Destructive actions are excluded from the default least-privilege templates.
+  `agentloop:DeleteDataset`, `agentloop:DeleteContextStore`, and the Pipeline
+  delete/terminate actions must be granted deliberately and scoped to a named
+  resource ARN where the target is known.
+- Experience recall in API Key mode is authenticated by the receiving ContextStore
+  service, not by RAM; it consumes no RAM action. See the experience declaration.
+- `kubectl` operations run against the cluster API server and do **not** consume
+  Alibaba Cloud RAM Actions. The caller must hold valid cluster RBAC permissions
+  separately.
+
+---
+
+## Onboarding Domain Scope
 
 AgentLoop application onboarding uses the CMS OpenAPI (2024-03-30) via `aliyun cms2`.
 Only `agentloop-{32-char-code}` workspaces are in scope.
@@ -19,9 +49,8 @@ Only `agentloop-{32-char-code}` workspaces are in scope.
 | STS | `GetCallerIdentity` | Resolve AccountId for diagnostics |
 | Container Service | `DescribeClusters`, `DescribeClusterUserKubeconfig`, `InstallClusterAddons` | ACK/ACS cluster discovery, kubeconfig, ack-onepilot install |
 
-> `kubectl` operations run against the cluster API server and do **not** consume
-> Alibaba Cloud RAM Actions. The caller must hold valid cluster RBAC permissions
-> separately.
+Sections 1-5 below and the minimal authorization examples at the end of this file
+all belong to the onboarding domain.
 
 ---
 
@@ -85,7 +114,7 @@ Used for ECS/host OpenTelemetry and AI framework addon template fetch.
 
 ---
 
-## Minimal Authorization Examples
+## Minimal Authorization Examples (onboarding domain)
 
 ### Read-only (diagnostics / verification)
 

@@ -1,6 +1,6 @@
 # AI Observability Module
 
-> Global conventions (credentials, Observability / User-Agent, output format, error codes, command prefix) - see [../SKILL.md](../SKILL.md).
+> Global conventions (credentials, Observability / User-Agent, output format, error codes, command prefix) - see [onboarding.md](onboarding.md).
 > RAM permissions - see [ram-policies.md](ram-policies.md).
 > Run `aliyun cms2 apm <subcommand> --help` for full flag lists and examples.
 
@@ -31,7 +31,7 @@ Follow the same Two-Phase Execution Protocol as [apm.md - Execution Safety Proto
 **Operations that do NOT require confirmation** (execute directly):
 - Read-only commands: `get`, `list`, `--help`
 - AgentLoop platform resource creation: `apm configuration create`, `apm service create`
-- Retrieving credentials: `apm configuration get`
+- Retrieving credentials: `apm configuration get` (the returned LicenseKey must stay redacted - see [onboarding.md - Credential Output Redaction](onboarding.md#credential-output-redaction))
 - Fetching addon templates: `integration addon get`
 
 **Operations that REQUIRE confirmation** (must use Two-Phase Protocol):
@@ -107,14 +107,25 @@ aliyun cms2 apm configuration create --workspace {workspace} --region {regionId}
 ### Step 3 - Get Credentials
 
 ```bash
-aliyun cms2 apm configuration get --workspace {workspace} --region {regionId} -o json
+# LicenseKey goes straight into an env var - never onto a printed line
+export ARMS_LICENSE_KEY="$(aliyun cms2 apm configuration get --workspace {workspace} --region {regionId} -o json | jq -r '.data.entryPointInfo.authToken')"
+
+# Non-sensitive fields for the report
+aliyun cms2 apm configuration get --workspace {workspace} --region {regionId} -o json \
+ | jq '{status: .data.status,
+ licenseKeyObtained: (.data.entryPointInfo.authToken | length > 0),
+ publicDomain: .data.entryPointInfo.publicDomain,
+ privateDomain: .data.entryPointInfo.privateDomain,
+ project: .data.entryPointInfo.project}'
 ```
 
 Extract from response:
-- `entryPointInfo.authToken` -> `{LicenseKey}`
+- `entryPointInfo.authToken` -> `$ARMS_LICENSE_KEY` (**never printed** - report only whether it was obtained)
 - `entryPointInfo.publicDomain` -> `{publicEndpoint}`
 - `entryPointInfo.privateDomain` -> `{vpcEndpoint}`
 - `entryPointInfo.project` -> `{project}`
+
+> **Mandatory**: every artifact produced afterwards - probe configuration snippets, credential summaries, execution reports, and files written under `outputs/` - references `$ARMS_LICENSE_KEY` instead of the token value, and never dumps the raw `apm configuration get` JSON. Full rules: [onboarding.md - Credential Output Redaction](onboarding.md#credential-output-redaction).
 
 ### Step 4 - Register Application Service
 
@@ -170,7 +181,7 @@ aliyun cms2 integration addon get --addon-name {addonName} --env-type Client -o 
 | Template Variable | Value Source |
 |-------------------|--------------|
 | `{{region}}` | `{regionId}` |
-| `{{LicenseKey}}` | `entryPointInfo.authToken` |
+| `{{LicenseKey}}` | `entryPointInfo.authToken` - render as `$ARMS_LICENSE_KEY`, never as the literal token |
 | `{{workspace}}` / `{{$context$.workspace}}` | `{workspace}` |
 | `{{Project}}` | `entryPointInfo.project` |
 | `{{PubDomain}}` / `{{PubAddr}}` | `entryPointInfo.publicDomain` |
@@ -187,7 +198,7 @@ aliyun cms2 integration addon get --addon-name {addonName} --env-type Client -o 
  - If schema and template disagree on allowed values, **schema wins**.
  - Only ask for parameters that are actually referenced by the selected template branch.
 
-5. Present rendered steps to user.
+5. Present rendered steps to user, with the LicenseKey still expressed as `$ARMS_LICENSE_KEY`.
 
 ### Step 6 - Post-Onboarding Verification
 
@@ -204,6 +215,7 @@ aliyun cms2 apm service list --workspace {workspace} --service-name {appName} --
 ### Dify
 
 - Dify >= 1.6.0 has built-in OTel tracing. Configure LicenseKey and Endpoint in Dify console > Monitoring > Trace application performance > AgentLoop. No agent installation is required.
+- The Dify console needs a human to paste the LicenseKey: tell the user which field to fill and where to copy the value from (`apm configuration get` output in their own shell, or the AgentLoop console) - never echo the value for them.
 - Only the `opentelemetry` protocol is supported. Fetch configuration parameters from the addon template and enter them in the Dify console.
 - No `aliyun-instrument` or other agent installation step is required.
 
@@ -217,7 +229,7 @@ aliyun cms2 apm service list --workspace {workspace} --service-name {appName} --
 ### OpenClaw / CoPaw / Hermes
 
 - Each framework provides a dedicated installer script (`curl -fsSL ... | bash`) that installs the corresponding observability plugin.
-- Pass parameters via `--x-arms-license-key`, `--serviceName`, and `--endpoint`.
+- Pass parameters via `--x-arms-license-key "$ARMS_LICENSE_KEY"`, `--serviceName`, and `--endpoint`; keep the token in the environment variable rather than inlining it in the installer command.
 - Only the `opentelemetry` protocol is supported. Render output from the addon template.
 
 ### LangChain/LangGraph / DashScope / AgentScope / OpenAI

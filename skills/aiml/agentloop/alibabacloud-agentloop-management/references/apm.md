@@ -1,6 +1,6 @@
 # Application Monitoring (APM) Module
 
-> Global conventions (credentials, Observability / User-Agent, output format, error codes, command prefix) - see [../SKILL.md](../SKILL.md).
+> Global conventions (credentials, Observability / User-Agent, output format, error codes, command prefix) - see [onboarding.md](onboarding.md).
 > RAM permissions - see [ram-policies.md](ram-policies.md).
 > Run `aliyun cms2 apm <subcommand> --help` for full flag lists and examples.
 
@@ -156,7 +156,7 @@ aliyun cms2 apm configuration get --workspace {workspace} --region {regionId} -o
  "success": true,
  "data": {
  "entryPointInfo": {
- "authToken": "awy7aw18hz@2694ecf80a44b70",
+ "authToken": "<LicenseKey - never echo this value, see Credential Handling below>",
  "privateDomain": "proj-xtrace-d1265ec453407aba9ef476c91f84542d-cn-hangzhou.cn-hangzhou-intranet.log.aliyuncs.com",
  "project": "proj-xtrace-d1265ec453407aba9ef476c91f84542d-cn-hangzhou",
  "publicDomain": "proj-xtrace-d1265ec453407aba9ef476c91f84542d-cn-hangzhou.cn-hangzhou.log.aliyuncs.com"
@@ -189,12 +189,12 @@ Extract these variables for subsequent steps:
 
 | Field Path | Variable | Description |
 |-----------|----------|-------------|
-| `entryPointInfo.authToken` | **LicenseKey** | Agent authentication token (sensitive) |
+| `entryPointInfo.authToken` | **LicenseKey** | Agent authentication token (**sensitive - never print**) |
 | `entryPointInfo.publicDomain` | **publicEndpoint** | Public network data reporting endpoint |
 | `entryPointInfo.privateDomain` | **vpcEndpoint** | VPC internal data reporting endpoint |
 | `entryPointInfo.project` | **project** | SLS project name, used in OTel header `x-arms-project` |
 
-> **Security**: `authToken` is a credential for data reporting. Remind the user not to log or expose it.
+> **Credential Handling (mandatory)**: `authToken` is a data-reporting credential. Capture it into `ARMS_LICENSE_KEY` instead of printing it, never dump the raw `apm configuration get` JSON, and report only `LicenseKey: obtained (injected via ARMS_LICENSE_KEY)`. Full rules and the extraction recipe: [onboarding.md - Credential Output Redaction](onboarding.md#credential-output-redaction).
 
 ### Step 4 - Register Application Service
 
@@ -242,7 +242,7 @@ Where `service.json`:
 
 ### Step 5 - Generate Configuration Output
 
-Route to the appropriate section below based on `language` + `method`, substitute the credential variables, and present to user for manual application.
+Route to the appropriate section below based on `language` + `method`, substitute the non-sensitive variables, and present to user for manual application. The LicenseKey stays an indirection - emit `$ARMS_LICENSE_KEY`, or leave `{LicenseKey}` unsubstituted in static config files and let the user fill it in ([Credential Output Redaction](onboarding.md#credential-output-redaction)).
 
 > **K8s users**: After generating configuration, proceed to [Step 6 - K8s Deployment Modification](#k8s-deployment-modification-step-6) to apply changes to the cluster.
 
@@ -281,7 +281,8 @@ export OTEL_RESOURCE_ATTRIBUTES=service.name={appName},acs.cms.workspace={worksp
 export OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
 export OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=https://{endpoint}/opentelemetry/v1/traces
 export OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=https://{endpoint}/opentelemetry/v1/metrics
-export OTEL_EXPORTER_OTLP_HEADERS="x-arms-license-key={LicenseKey},x-arms-project={project},x-cms-workspace={workspace}"
+# ARMS_LICENSE_KEY is exported from apm configuration get (see onboarding.md); never inline the token
+export OTEL_EXPORTER_OTLP_HEADERS="x-arms-license-key=$ARMS_LICENSE_KEY,x-arms-project={project},x-cms-workspace={workspace}"
 export OTEL_LOGS_EXPORTER=none
 ```
 
@@ -291,7 +292,8 @@ export OTEL_SERVICE_NAME={appName}
 export OTEL_RESOURCE_ATTRIBUTES=service.name={appName},acs.cms.workspace={workspace},service.version={version},deployment.environment={env}
 export OTEL_EXPORTER_OTLP_PROTOCOL=grpc
 export OTEL_EXPORTER_OTLP_ENDPOINT=https://{endpoint}:10010
-export OTEL_EXPORTER_OTLP_HEADERS="x-arms-license-key={LicenseKey},x-arms-project={project},x-cms-workspace={workspace}"
+# ARMS_LICENSE_KEY is exported from apm configuration get (see onboarding.md); never inline the token
+export OTEL_EXPORTER_OTLP_HEADERS="x-arms-license-key=$ARMS_LICENSE_KEY,x-arms-project={project},x-cms-workspace={workspace}"
 export OTEL_LOGS_EXPORTER=none
 ```
 
@@ -366,7 +368,7 @@ aliyun cms2 integration addon get --addon-name {addonName} --env-type Client -o 
 | Template Variable | Value Source |
 |-------------------|--------------|
 | `{{region}}` | `{regionId}` |
-| `{{LicenseKey}}` | `entryPointInfo.authToken` |
+| `{{LicenseKey}}` | `entryPointInfo.authToken` - render as `$ARMS_LICENSE_KEY`, never as the literal token |
 | `{{workspace}}` / `{{$context$.workspace}}` | `{workspace}` |
 | `{{Project}}` | `entryPointInfo.project` |
 | `{{PubDomain}}` / `{{PubAddr}}` | `entryPointInfo.publicDomain` |
@@ -401,8 +403,9 @@ unzip AliyunJavaAgent.zip -d /opt/
 
 **Spring Boot / JAR**:
 ```bash
+# ARMS_LICENSE_KEY is exported from apm configuration get (see onboarding.md); never inline the token
 java -javaagent:/opt/AliyunJavaAgent/aliyun-java-agent.jar \
- -Darms.licenseKey={LicenseKey} \
+ -Darms.licenseKey="$ARMS_LICENSE_KEY" \
  -Darms.appName={appName} \
  -Darms.workspace={workspace} \
  -jar app.jar
@@ -410,10 +413,10 @@ java -javaagent:/opt/AliyunJavaAgent/aliyun-java-agent.jar \
 
 **Tomcat** - add to `{TOMCAT_HOME}/bin/setenv.sh`:
 ```bash
-JAVA_OPTS="$JAVA_OPTS -javaagent:/opt/AliyunJavaAgent/aliyun-java-agent.jar -Darms.licenseKey={LicenseKey} -Darms.appName={appName} -Darms.workspace={workspace}"
+JAVA_OPTS="$JAVA_OPTS -javaagent:/opt/AliyunJavaAgent/aliyun-java-agent.jar -Darms.licenseKey=$ARMS_LICENSE_KEY -Darms.appName={appName} -Darms.workspace={workspace}"
 ```
 
-**Jetty** - add to `{JETTY_HOME}/start.ini`:
+**Jetty** - add to `{JETTY_HOME}/start.ini` (`start.ini` is not shell-expanded, so leave the placeholder and let the user paste their own LicenseKey):
 ```
 --exec
 -javaagent:/opt/AliyunJavaAgent/aliyun-java-agent.jar
@@ -559,7 +562,8 @@ aliyun-bootstrap -a install
 export ARMS_APP_NAME={appName}
 export ARMS_WORKSPACE={workspace}
 export ARMS_REGION_ID={regionId}
-export ARMS_LICENSE_KEY={LicenseKey}
+# Capture the LicenseKey without printing it (see onboarding.md#credential-output-redaction)
+export ARMS_LICENSE_KEY="$(aliyun cms2 apm configuration get --workspace {workspace} --region {regionId} -o json | jq -r '.data.entryPointInfo.authToken')"
 
 aliyun-instrument python app.py
 ```
@@ -574,8 +578,9 @@ aliyun-instrument python app.py
 ```dockerfile
 ENV ARMS_APP_NAME={appName}
 ENV ARMS_REGION_ID={regionId}
-ENV ARMS_LICENSE_KEY={LicenseKey}
 ENV ARMS_WORKSPACE={workspace}
+# Do NOT bake the LicenseKey into the image; inject it at runtime:
+#   docker run -e ARMS_LICENSE_KEY="$ARMS_LICENSE_KEY" ...
 RUN pip3 install aliyun-bootstrap && ARMS_REGION_ID={regionId} aliyun-bootstrap -a install
 CMD ["aliyun-instrument", "python", "app.py"]
 ```
@@ -636,7 +641,7 @@ npm install @loongsuite/cms_node_sdk
 
 **CommonJS mode**:
 ```bash
-export ARMS_LICENSE={LicenseKey}
+export ARMS_LICENSE="$ARMS_LICENSE_KEY" # exported from apm configuration get; never inline the token
 export CMS_SERVICE_NAME={appName}
 export ARMS_REGION_ID={regionId}
 export ARMS_WORKSPACE={workspace}
@@ -645,7 +650,7 @@ node -r @loongsuite/cms_node_sdk/register app.js
 
 **ESModule mode**:
 ```bash
-export ARMS_LICENSE={LicenseKey}
+export ARMS_LICENSE="$ARMS_LICENSE_KEY" # exported from apm configuration get; never inline the token
 export CMS_SERVICE_NAME={appName}
 export ARMS_REGION_ID={regionId}
 export ARMS_WORKSPACE={workspace}
@@ -662,7 +667,7 @@ const { NodeSDK } = require('@loongsuite/cms_node_sdk');
 
 const sdk = new NodeSDK({
  serviceName: "{appName}",
- licenseKey: "{LicenseKey}",
+ licenseKey: process.env.ARMS_LICENSE_KEY,
  regionId: "{regionId}",
  workspace: "{workspace}",
 });
@@ -677,7 +682,7 @@ import { NodeSDK } from '@loongsuite/cms_node_sdk';
 
 const sdk = new NodeSDK({
  serviceName: "{appName}",
- licenseKey: "{LicenseKey}",
+ licenseKey: process.env.ARMS_LICENSE_KEY,
  regionId: "{regionId}",
  workspace: "{workspace}",
 });
@@ -849,7 +854,7 @@ aliyun cs un-install-cluster-addons --cluster-id {clusterId} --biz-body name=ack
 |-------|-------|--------|
 | `ServiceObservability not exists` (404) | APM not initialized for this workspace | Run `apm configuration create` first |
 | `The workspace does not belong to you` (401) | Workspace not owned by current account, or wrong workspace provided | Ask user to confirm the `agentloop-` AgentLoop workspace name; verify AccountId via `aliyun sts get-caller-identity` |
-| `CredentialNotConfigured` | Missing AK/SK | Run `aliyun configure` to set up the default credential profile (see [../SKILL.md - Credentials](../SKILL.md#credentials)) |
+| `CredentialNotConfigured` | Missing AK/SK | Run `aliyun configure` to set up the default credential profile (see [onboarding.md - Credentials](onboarding.md#credentials)) |
 | `--body and stdin are mutually exclusive` | Shell stdin conflict with `--body` | Append `< /dev/null` to the command, or use `--body @file.json` |
 
 ---

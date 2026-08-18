@@ -1,137 +1,61 @@
 ---
 name: alibabacloud-agentloop-management
-description: "AgentLoop APM接入 / AI可观测接入 / 应用监控接入 / 自研探针 / 探针安装. Use for Python aliyun-bootstrap (aliyun-instrument), Java AliyunJavaAgent, Golang instgo, Node.js cms_node_sdk, PHP/.NET OpenTelemetry, ack-onepilot, LicenseKey, AgentLoop workspace agentloop-*. Also for LangChain, Dify, DashScope, LLM monitoring, AI tracing. Synonyms: onboard APM, install agent, probe setup, OpenTelemetry onboarding, application monitoring onboarding. Trigger even if the prompt starts with aliyun cms2 --update-beta when the goal is AgentLoop APM/AI onboarding. Do NOT use for CMS alerts, RUM, Prometheus rules, billing, or default-cms-* workspaces."
+description: |
+  The skill should be used when the user asks about Alibaba Cloud AgentLoop platform for onboarding applications into observability, managing Datasets, building pipelines, evaluating, and recalling stored experience.
+Triggers: "APM 接入", "aliyun-bootstrap 探针安装", "manage Datasets", "build pipeline from Logstore or trace data", "create evaluators", "evaluation task", "recall stored experience", "ContextStore 管理".
 license: Apache-2.0
-compatibility: "aliyun-cli>=3.3.15"
 metadata:
   domain: aiops
   owner: agentloop
   contact: agentloop@alibaba-inc.com
 ---
 
-# AgentLoop Application Onboarding
+# AgentLoop Skill Router
 
-> **Product scope**: This skill onboards applications into **AgentLoop** only. It is **not** a general CloudMonitor (CMS) management skill. Use workspace names matching `agentloop-{32-char-code}`; never onboard into `default-cms-*` or other CMS workspaces. The underlying CLI is `aliyun cms2`.
+> **Positioning**: This skill is the single entry point for Alibaba Cloud **AgentLoop** requests. It only classifies the user's intent and dispatches to one of the five domain playbooks below. All executable rules — prerequisites, credentials, RAM policies, parameter confirmation, safety protocols, command usage, and verification — live inside the domain files. Do not run any cloud operation before reading the matched domain file.
 
-## Prerequisite Check
+**Compatibility**: cloud-operation domains require Aliyun CLI 3.3.15 or later; Pipeline requires `aliyun-cli-agentloop` 0.7.4 or later; bundled evaluation, experience-recall, and Pipeline scripts require Python 3.8 or later.
 
-1. **Check `aliyun` exists** - `which aliyun` (macOS/Linux) or `where aliyun` (Windows).
- - Not found -> ask the user to install the aliyun CLI first: <https://help.aliyun.com/document_detail/121541.html>. Stop and wait.
+## Routing Table
 
-2. **Check CLI version** - run `aliyun version`. Minimum required: **3.3.15** (see `compatibility` in frontmatter).
+| # | Domain | Intent | Entry file (read first) |
+|---|--------|--------|-------------------------|
+| 1 | Application onboarding (APM & AI observability) | Instrument an application so it reports to AgentLoop: probe or agent install, APM onboarding, `aliyun-bootstrap`, `AliyunJavaAgent`, `instgo`, `cms_node_sdk`, `ack-onepilot`, OpenTelemetry, LicenseKey, K8s/ACK/ECS onboarding, LLM and AI-framework tracing (Dify, LangChain, DashScope) | [references/onboarding.md](references/onboarding.md) — internally routes to [references/apm.md](references/apm.md) / [references/ai.md](references/ai.md) |
+| 2 | Evaluation | Score model, agent, or trace quality: create and update evaluators and evaluator skills, one-shot sample tests, batch trace or Dataset evaluation, trace backfill, poll an evaluation task, analyze results and low-score cases | [references/evaluation/evaluation.md](references/evaluation/evaluation.md) |
+| 3 | Dataset | Store and retrieve structured rows: Dataset lifecycle and schema, append rows with `add-dataset-data`, read-only queries with `execute-query`, SQL or SearchExpr, semantic search, embedding fields | [references/dataset/dataset.md](references/dataset/dataset.md) |
+| 4 | Pipeline | Transform source data into a Dataset once or on a schedule: Logstore/SLS 导入 Dataset, trace import, spec design, preview/create/run, run inspection, lifecycle control, processing nodes, and OT AI trace mapping | [references/pipeline/pipeline.md](references/pipeline/pipeline.md) |
+| 5 | Experience (recall & store management) | Reuse prior experience, similar cases, past incidents and fixes, old runbooks, and lessons learned; create and manage ContextStores and their API Keys | [references/experience/experience.md](references/experience/experience.md) — routes store lifecycle work to [references/experience/context-store-management.md](references/experience/context-store-management.md) |
 
- > WARNING: Compare version segments as **integers** (semver): 3.3.4 < 3.3.15 because 4 < 15.
- > Shell verification: `printf '%s\n' "3.3.15" "$(aliyun version)" | sort -V | head -1`
- > If the output equals the current version, the requirement is NOT met.
+## Dispatch Rules
 
- - Version OK -> go to step 3.
- - Version too old or unrecognized -> 
- 1. Run `aliyun upgrade --help` to test whether the `upgrade` subcommand exists.
- - Available -> run `aliyun upgrade -y` to update to the latest version automatically, then re-check `aliyun version`.
- 2. If `upgrade` not available -> run `curl -fsSL --connect-timeout 10 --max-time 300 https://aliyuncli.alicdn.com/setup.sh | bash`, then re-check `aliyun version`.
- 3. If upgrade succeeded -> go to step 3.
- 4. If upgrade failed -> ask the user to upgrade manually: <https://help.aliyun.com/zh/cli/update-cli>. Stop and exit.
+1. Classify the request into one or more domains using the routing table, then read **only** the matched domain entry file(s). Never preload all domains.
+2. Follow the matched domain file completely. Each domain defines its own prerequisites, credentials check, RAM policies, parameter confirmation, execution-safety protocol, and verification method.
+3. If the request matches none of the domains, state that it is out of scope for this skill and do not dispatch.
+4. If the intent is ambiguous between two domains, ask one clarifying question before dispatching.
 
-3. **Check `cms2` plugin** - run `aliyun cms2 --help`.
- - Help output OK -> continue to **Credentials**.
- - `unknown command` / missing -> **stop immediately**, output the error report below (append CLI version, OS, and error message), and make **no further CLI calls**.
+### Disambiguating Dataset vs Pipeline vs Evaluation
 
-## Credentials
+- Writing or reading rows the user already has: **Dataset**.
+- Deriving new rows from LogStore or trace data through processing nodes: **Pipeline**. Create or confirm the sink Dataset first.
+- Judging the quality of existing traces or Dataset rows with an evaluator: **Evaluation**.
 
-`aliyun cms2` reuses the aliyun CLI credential system (`aliyun configure`).
-Use `--profile <name>` to switch profiles.
+## Multi-Intent Handling
 
-Required RAM permissions - see [references/ram-policies.md](references/ram-policies.md).
+- Execute multiple domains sequentially in dependency order; finish and verify one mutation stage before starting the next.
+- For Logstore-to-Dataset materialization: confirm or create the Dataset schema, preview the Pipeline, create and observe the Pipeline run, then read back and reconcile Dataset contents. Start Evaluation only after the Dataset field contract passes.
+- Experience recall may run first as a preparatory step for any other domain when the user asks to reuse prior work.
 
-## Observability
+## Shared Conventions
 
-### User-Agent Template
+- **Session ID**: generate one 32-character lowercase hex session ID once at the start of the workflow (`openssl rand -hex 16`) and reuse that same value for the rest of the session. Keep the generated value and write it out literally in every command that needs it. Do not re-derive it per command, and do not reach for it through a shell variable or a `cat` of a saved file - either one forces an assignment in front of the call and breaks the command shape rule below.
+- **User-Agent**: every `aliyun` CLI cloud API command must carry `--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-agentloop-management/{session-id}"`. Bundled Python wrappers read `SKILL_SESSION_ID`; local `configure`, `plugin`, and `version` commands are excluded.
+- **Command shape**: every cloud API call must run as a single-line bare command whose first token is `aliyun`, or `python3` for a bundled wrapper, and whose last token is the final flag of that same call. Nothing may come before it - no `VAR=value` assignment, no `set -o pipefail`, no `source`, no `cd`, no `bash some_script.sh` wrapper - and a newline between an assignment and the call still counts as coming before it. Nothing may come after it either - no `| tee`, no `| head`, no `2>&1`, no `> file` redirect, and no `&&` or `;` chaining onto a second command. Diagnostic probes such as `--help` follow the same rule. When the environment asks for a log of executed actions, run the bare call first and then write the command text and its output into the log as a separate file-write step; a single action log listing each command and its result satisfies that requirement in full, so piping a call into `tee` adds nothing and only corrupts the record of what ran. The command that executes must be the API call itself and nothing else, so that run records, audit trails, and CLI tooling all see it verbatim.
+- **Credential red lines**: never read, echo, or print AK/SK/STS-token values, the APM LicenseKey (`entryPointInfo.authToken`), or a ContextStore API Key - in chat answers, summaries, credential tables, generated snippets, or report files. Keep every retrieved credential inside an environment variable, report only whether it was obtained, and reference the variable name instead of the value. Never ask the user to paste literal credentials; never run `aliyun configure set` with literal credential values; use only `aliyun configure list` to check identity status. Onboarding redaction recipe: [references/onboarding.md](references/onboarding.md#credential-output-redaction).
+- **RAM permissions**: use [references/ram-policies.md](references/ram-policies.md) as the skill-wide index. Never put `*` in an Action list. Grant destructive actions separately and deliberately.
+- **Resource names**: confirm each resource's exact naming contract before create; Dataset, Pipeline, and ContextStore use different character sets.
 
-Every `aliyun` CLI command (`aliyun cms2`, `aliyun sts`, `aliyun cs`, etc.) in
-this skill **MUST** include the `--user-agent` flag:
-
-```text
---user-agent "AlibabaCloud-Agent-Skills/alibabacloud-agentloop-management/{session-id}"
-```
-
-Replace `{session-id}` with the session identifier for the current workflow.
-
-Example:
-
-```bash
-aliyun cms2 apm configuration get \
- --workspace agentloop-2694ecf8****************1f84542d \
- --region cn-hangzhou \
- --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-agentloop-management/3f2a8b1c4d5e6f709182a3b4c5d6e7f8"
-```
-
-### session-id Rule
-
-1. **Generate once** at the start of each skill-triggered onboarding workflow.
-2. **Format**: exactly **32 lowercase hexadecimal characters**, no hyphens, no prefix.
-3. **Reuse** the same `session-id` for **all** CLI commands within the same workflow
- so backend logs can be correlated across steps.
-4. **Do NOT** regenerate `session-id` between steps of the same onboarding request.
-5. **Generation** (pick one):
-
-```bash
-# Preferred
-openssl rand -hex 16
-
-# Alternative
-uuidgen | tr -d '-' | tr '[:upper:]' '[:lower:]'
-```
-
-## Global Conventions
-
-**Hard constraint**: fallback to `aliyun cms`, other API versions, or any workaround is strictly prohibited.
-
-> **Always run `aliyun cms2 <command> [subcommand] --help` first** to get the full flag list and examples.
-
-- **Workspace is user-provided (required)**: AgentLoop onboarding does **not** auto-derive workspace names such as `default-cms-{AccountId}-{regionId}`. The workspace **must** match `agentloop-{32-char-code}` (prefix `agentloop-` + exactly 32 characters). Example: `agentloop-2694ecf8****************1f84542d`.
-  - **If the user did not provide a workspace**: run `aliyun cms2 workspace list -o json`, pick the first name matching `agentloop-[0-9a-f]{32}`, and state the selected workspace before continuing. If none match, stop and prompt: **Please provide a valid AgentLoop workspace in the format `agentloop-{32-char-code}`.**
-  - **Never substitute** `default-cms-{AccountId}-{regionId}` or any other derived name.
-  - **Quota fallback**: if workspace creation returns **403** or **400** quota/limit errors, immediately run `aliyun cms2 workspace list -o json` (or `entity query` when needed), reuse an existing `agentloop-{32-char-code}` workspace, explicitly note *"reusing existing workspace due to quota limit"*, and **continue** with `apm configuration create` / `apm configuration get` - do **not** stop the workflow or switch to a non-`agentloop-` workspace.
-- **Prefer `-o text`** (default) to reduce token consumption for list/get; use `-o json` only when indented JSON is needed.
-- **Before onboarding concrete resource IDs**, verify them with `entity query --source CloudResource`; do not rely on ID shape alone.
-- **`entity query` default time range**: when the user does not specify `--from`/`--to`, default to the last 7 days (`--from` = now - 7d, `--to` = now, both as Unix seconds).
-
-## Execution Safety
-
-Destructive or high-impact mutations **must** follow the Two-Phase Execution Protocol (details in [references/apm.md](references/apm.md#execution-safety-protocol)):
-
-1. **Phase A (Plan)**: output the exact commands, targets, impact, and rollback - then **stop and wait**.
-2. **Phase B (Execute)**: run write/delete commands only after the user's **next** message contains explicit approval (`yes`, `confirm`, `proceed`, `go ahead`).
-
-**Mandatory Rules** (violations are workflow errors):
-
-- Do **not** combine Phase A and Phase B in the same response for cluster/app mutations (`kubectl patch`, `install-cluster-addons`, startup-script edits).
-- `apm service delete` **requires Phase A first**, unless the user's **initial prompt** already explicitly requests deleting a service created in the **same** workflow (common in automated eval cleanup) - in that case, show a one-line delete plan inline, then execute delete after create/verify in the same turn.
-- Never interpret silence as approval.
-
-Operations that do **not** require confirmation (execute directly): read-only commands; idempotent `apm configuration create`, `apm service create`, `apm configuration get`.
-
-## Error Handling
-
-Error codes and actions are listed in `aliyun cms2 --help`. Additional tips:
-
-- `InvalidJSON` usually means malformed `--body`; validate with `jq . <<<'<value>'` before passing to the CLI.
-- `--body and stdin are mutually exclusive; specify only one` - means both `--body` (or `--file`) and stdin data were provided. Fix: keep only one input source. In agent/CI environments where stdin may be a pipe, append `< /dev/null` to the command to ensure stdin is empty.
-
-**Mandatory explicit API invocations** (required for eval traceability and audit):
-
-| Step | Rule |
-|------|------|
-| `apm configuration create` | Invoke at least once per workflow. Idempotent success on existing infra counts. Do **not** skip because `get` shows Running. |
-| `apm service create` | Invoke at least once when registering a new app. Do **not** skip because a similar name appears in a prior list. |
-| `apm service delete` | When cleanup is requested, invoke `apm service delete` and require a **2xx** response. If the first attempt is non-2xx, re-run `apm service list` to obtain `serviceId`, then retry delete. Do **not** assume backend auto-cleanup. |
-| Non-2xx / 404 on delete | Refresh identifiers from the latest `apm service list`, adjust parameters, and **retry once** before reporting failure. |
-
-## Module Routing
-
-| User Intent Keywords | Commands | Module |
-|---------------------|----------|--------|
-| AgentLoop, AgentLoop APM, AgentLoop monitoring, APM, APM onboarding, application monitoring, agent install, Java agent, AliyunJavaAgent, Golang agent, Python agent, Node.js agent, PHP agent, .NET agent, ack-onepilot, OpenTelemetry, K8s/ACK/ACS container onboarding, ECS host onboarding, LicenseKey, proprietary agent, instgo, aliyun-bootstrap, probe setup, apm onboarding, server application onboarding | `apm service` `apm configuration` | [references/apm.md](references/apm.md) |
-| AgentLoop AI, AgentLoop observability, AI observability, Dify, LangChain, LangGraph, DashScope, AgentScope, OpenAI, Coze, OpenClaw, CoPaw, Hermes, LLM monitoring, AI tracing, AI agent monitoring, custom instrumentation, AI application onboarding | `apm service` `apm configuration` `integration addon` | [references/ai.md](references/ai.md) |
-
-Commands not listed above - see `aliyun cms2 --help`.
+| Resource | Flag | Pattern | Hyphen | Underscore |
+|---|---|---|---|---|
+| Pipeline | `--pipeline-name` | `^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$` | Separator | Rejected |
+| Dataset | `--dataset-name` | `^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$`, 4-63 chars | Rejected | Separator |
+| ContextStore | `--context-store-name` | `^[a-z0-9_]+$`, 2-64 chars | Rejected | Allowed |
