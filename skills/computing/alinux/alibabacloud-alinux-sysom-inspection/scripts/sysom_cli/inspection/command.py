@@ -60,7 +60,7 @@ DEFAULT_INSPECTION_ITEMS = [
     "sysom:metric:tid_usage",
 ]
 REPORT_TEMPLATE_FILE = Path(__file__).resolve().parents[3] / "references" / "report-template.md"
-REPORT_OUTPUT_DIR = Path("inspection-reports")
+REPORT_OUTPUT_DIR = Path(__file__).resolve().parents[3] / "inspection-reports"
 
 
 def _load_report_template() -> str:
