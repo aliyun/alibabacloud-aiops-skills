@@ -33,12 +33,17 @@ fluctuation, jitter, or intermittent network degradation.
 Stop when the envelope names the fault point, affected interface/path or flow
 scope, evidence strength, and safe remediation or next action.
 
-## Java Memory
+## Java Analysis
 
-Use `sysom-osops memory javamem` when the user explicitly reports Java heap, GC,
-JVM memory, or Java process memory symptoms. If the symptom is only "memory high"
-and Java is not explicit, start with `sysom-osops memory classify` so SysOM can
-decide whether Java is the dominant route.
+Java application diagnostics use a dedicated domain with three sub-types.
+Route Java symptoms to `sysom-osops java analyze --type <gc|memory|cpu>`:
+
+- **GC** (pause, frequent Full GC, low throughput) → `--type gc`
+- **Memory** (OOM, heap leak, native leak) → `--type memory`
+- **CPU hotspot** (high thread CPU, slow response) → `--type cpu --pid <PID>`
+
+For symptom-to-type mapping and parameter guidance, read
+[references/java/README.md](java/README.md).
 
 ## Cross-Domain Hints
 

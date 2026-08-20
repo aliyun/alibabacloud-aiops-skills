@@ -31,6 +31,8 @@ from ECS metadata. For diagnosing another instance, use both flags together.
 | `memory filecache` | `--top` | Limit number of cached files in the report |
 | `memory filecache` | `--sample-rate` | Adjust sampling rate when a full sample is too expensive |
 | `memory javamem` | `--pod` | Scope Java analysis to a pod when the user provides it |
+| `memory javamem` | `--pid` | Target Java PID when known (required for profiling follow-up) |
+| `memory javamem` | `--duration` | Profiling duration in **minutes** (`0` = snapshot only; common `3`/`5`/`10`, max `10`). See `references/java/memory/profiling-playbook.md` |
 | `memory memgraph` | `--pod` | Scope memory landscape to a pod when the user provides it |
 | `memory memgraph` | `--verbose` | Request a broader memory breakdown when needed |
 | `memory memgraph` | `--enable-socket` | Include socket buffer and socket holder attribution when socket pressure is visible |

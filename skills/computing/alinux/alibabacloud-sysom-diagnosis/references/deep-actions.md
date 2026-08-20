@@ -16,7 +16,7 @@ for cross-instance diagnosis or when auto-detection fails.
 | `sysom-osops memory filecache` | Remote | File/page cache is the dominant unresolved entity and file/holder attribution is missing |
 | `sysom-osops memory shmem` | Remote | shmem, tmpfs, memfd, or SysV shared memory holder attribution is missing |
 | `sysom-osops memory memleak` | Remote | Kernel-hidden growth (vmalloc/page-allocator/slab/percpu) is the dominant unresolved entity and the leaking call point/function/module is missing after memgraph closed only to a candidate (`--type slab\|page\|vmalloc\|percpu`, default vmalloc) |
-| `sysom-osops memory javamem` | Remote | Java heap or GC memory issue is explicit |
+| `sysom-osops memory javamem` | Remote | **DEPRECATED** — Use `sysom-osops java analyze --type memory` instead (see Java section below) |
 | `sysom-osops memory memcgoffline` | Remote | Cgroup ownership-transition evidence is visible in SysOM output and original ownership, residue/refcount, or cleanup order needs attribution |
 
 ## IO
@@ -39,6 +39,21 @@ for cross-instance diagnosis or when auto-detection fails.
 |---------|------|----------|
 | `sysom-osops net packetdrop` | Remote | Packet loss, retransmits, drops, connection resets, or timeout symptoms are primary |
 | `sysom-osops net netjitter` | Remote | Latency fluctuation, jitter, or intermittent connectivity degradation is primary |
+
+## Java
+
+Route by symptom through the unified `sysom-osops java analyze` entry point. See `references/java/README.md` for details.
+
+| Command | Scenario |
+|---------|----------|
+| `sysom-osops java analyze --type gc` | GC pause analysis, frequent GC, throughput diagnosis |
+| `sysom-osops java analyze --type gc --duration 120` | Extend collection duration (default 60 seconds) |
+| `sysom-osops java analyze --type memory` | Java heap/non-heap memory diagnosis (equivalent to memory javamem) |
+| `sysom-osops java analyze --type memory --pid <PID> --duration 5` | Continuous collection of a specific process for 5 minutes |
+| `sysom-osops java analyze --type cpu --pid <PID>` | CPU hotspot flame graph analysis (pid optional; if omitted, returns the Java process candidate list first) |
+
+> Note: `--type cpu` locates the target by `--pid` only and **does not support `--pod`**; if `--pid` is omitted it returns the candidate list first. `--pid` is also optional for `memory` and `gc`.
+> duration units: gc = seconds (default 60), memory = minutes (0 = snapshot mode).
 
 ## Common Notes
 

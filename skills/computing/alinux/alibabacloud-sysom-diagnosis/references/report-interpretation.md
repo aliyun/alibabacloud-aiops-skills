@@ -68,3 +68,15 @@ Final answers should include:
 If a required entity is missing because the command failed or returned partial
 evidence, say which entity is unknown and run one focused follow-up only if it is
 needed to answer the user's symptom.
+
+## Java memory deep interpretation
+
+For `memory javamem` envelopes (snapshot and profiling), use the dedicated
+reference set under `references/java/`:
+
+- Index and read triggers: `references/java/README.md` and
+  `references/java/memory/memory-guide.md`
+- Terms, envelope templates, profiling wait/empty stacks, decision tree, and
+  case narratives live under `references/java/memory/`—do not duplicate long
+  Java guidance in this file.
+

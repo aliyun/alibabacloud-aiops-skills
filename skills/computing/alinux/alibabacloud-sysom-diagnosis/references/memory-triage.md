@@ -69,7 +69,7 @@ alone.
 | shared-memory object, holder, cgroup, service, or cleanup target | `sysom-osops memory shmem` |
 | cgroup ownership transition, original owner, refcount or residue, current holder, or cleanup order | `sysom-osops memory memcgoffline` |
 | kernel-hidden growth (vmalloc/page-allocator/slab/percpu) where memgraph only closes to a candidate and the leaking call point/function/module is missing | `sysom-osops memory memleak` |
-| Java heap or GC memory entity | `sysom-osops memory javamem` |
+| Java heap or GC memory entity | **Route to Java domain**: `sysom-osops java analyze --type memory` — see `references/java/README.md` |
 
 Preserve the cleanup order reported by SysOM. If SysOM separates original owner,
 current holder, affected resource, and cgroup reference release, keep those
