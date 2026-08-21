@@ -1,0 +1,103 @@
+# Plugin & version gates
+#
+# Source: loongcollector-oncall/knowledge/base/loongcollector/versions-and-limits.md
+#         (+ collection-config/invalid-config-patterns.md, collection-playbooks.md).
+#
+# Version is decided by the collector binary major version, resolved from the
+# `aliyun sls list-machines` output field `.machines[].binary` (see version_source below).
+# Rule: resolve the version BEFORE choosing plugins. If unknown, treat as blocked and ask;
+# never assume 3.x. Native > extended priority when both satisfy the requirement.
+
+version_source:
+  command: "aliyun sls list-machines --project <p> --machine-group <g> --region <r> --user-agent <ua>"
+  field: "machines[].binary"        # take the major version
+  on_unknown: "block; ask user for collector version; do not assume"
+
+plugin_families:
+  native:   "C++ processors (processor_parse_regex_native, processor_parse_json_native, ...). Lower CPU/mem."
+  extended: "Go processors (processor_json, processor_regex, processor_filter_regex, ...)."
+  spl:      "SPL processor (processor_spl). Cannot coexist with native or extended."
+
+# --- Processing-chain composition gates (by collector major version) ---
+chain_gates:
+  lt_2_0:                           # < 2.0 (excludes 2.0)
+    mix_native_and_extended: forbidden
+    native_scope: "text logs only"
+    first_processor_must_be_one_of:
+      - regex_parse
+      - delimiter_parse
+      - json_parse
+      - nginx_parse
+      - apache_parse
+      - iis_parse
+    after_first_processor_allow:
+      time_parse: 1
+      filter: 1
+      desensitize: "multiple"
+    spl: forbidden
+  eq_2_0:                           # = 2.0
+    extended_after_all_native: required   # extended may only appear AFTER all native processors
+    spl: "available; cannot coexist with native/extended"
+  ge_3_0:                           # >= 3.x
+    native: "fully supported"
+    spl: "supported; cannot coexist with native/extended"
+
+# --- Binary-version processor gates (from collection-playbooks.md) ---
+binary_processor_gates:
+  major_lt_2:
+    forbid: [processor_spl, "processor_*_native"]
+    use_instead: "1.x extended chain (e.g. processor_json, processor_regex)"
+  major_eq_2:
+    spl: "available"
+    on_spl_syntax_unsupported: "if SPL validated, suggest upgrading LoongCollector >= 3.3.4"
+  major_ge_3:
+    native: "fully supported"
+    input_agentsight: ">= 3.3.9 on Linux host (kernel >=5.10)"
+
+# --- Capacity / send-rate limits ---
+capacity:
+  complex_plugins_above_5mbps: "avoid heavy plugin combos when raw >5 MB/s; do simple extended + downstream data transformation"
+  extended_cpu_cost: "extended plugins raise CPU notably; check resource bottleneck first on latency/restart"
+  send_rate_default:
+    lt_3_0: {public_cloud: "20 MB/s", enterprise: "25 MB/s"}
+    ge_3_0: "25 MB/s (unified)"
+
+# --- High-precision (nanosecond) time ---
+high_precision_time:
+  enable: '{ "EnableTimestampNanosecond": true }'   # config advanced param
+  requires: "extract high-precision timestamp via delimiter/JSON/regex plugin"
+  supported: "Logtail >= 1.8.0 on Linux only"
+  unsupported: "Windows"
+
+# --- Control-plane version differences relevant to config authoring ---
+control_plane_diffs:
+  VC-001_container_recursion_depth:
+    ge_2_0: "MaxRecursionDepth default 0 (10 if path contains /**/)"
+    lt_2_0: "MaxRecursionDepth default 100"
+    risk: "cross-version migration changes collection scope (miss/over-collect)"
+  VC-002_priority:
+    ge_3_0: "Priority supported (0-2; use 1/2 for business configs)"
+    lt_3_0: "Priority ignored"
+  VC-003_container_filter_regex:
+    ge_3_2_6: "ContainerFilters use regex_search (partial match); unanchored regex may match more containers"
+    lt_3_2_6: "ContainerFilters use regex_match (full match); usually needs ^...$ anchoring"
+    risk: "upgrading past 3.2.6 with unanchored regex widens collection scope"
+
+# --- AgentSight (input_agentsight) ---
+input_agentsight:
+  min_version: "3.3.9"
+  plugin_doc_min_version: "3.3.4"
+  kernel: "Linux >= 5.10"
+  os: Linux
+  scenario: host_agentsight
+  not: "OBI / OTLP Metrics/Traces / container stdio"
+  probe_config_empty: "collector injects 9 cmdline + 7 HTTPS builtins (code in AgentsightManager.cpp)"
+  https_attach_only: "Https decides which processes get the SSL probe; it does not filter reported traffic"
+  mask: "optional processor_spl only; mode=buildin (not builtin)"
+  raw_https_fallback: "inner main after 2026-08-12; default false; libagentsight>=0.9.0; unmasked body"
+
+usage:
+  - "Resolve collector major version first; pick native-first chain that satisfies the version gate."
+  - "Reject configs that violate mix/order gates BEFORE apply (see scripts/validate_pipeline.py)."
+  - "Emit version-diff findings as: diff ID + matched version + impact + fix suggestion."
+  - "input_agentsight: Linux host, kernel >=5.10, collector >=3.3.9."

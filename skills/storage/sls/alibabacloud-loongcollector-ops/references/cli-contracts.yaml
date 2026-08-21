@@ -1,0 +1,182 @@
+# aliyun sls command contracts (verified against aliyun CLI 3.4.6 + plugin aliyun-cli-sls 0.7.0)
+#
+# status legend:
+#   confirmed   : subcommand + params verified via `aliyun sls <cmd> --help`
+#   cli_gap     : no direct plugin subcommand; use documented fallback
+#   product_gap : no public SLS OpenAPI/CLI; use degradation path
+#
+# Rules for all write commands:
+#   - After explicit business approval, run `--cli-dry-run` and the actual write as separate direct commands.
+#   - Exception: when get/list proves the desired state already matches, skip both calls and emit the exact Idempotent-Skip record.
+#   - Coupled config/index: run both dry-runs first, then both actual writes back-to-back with nothing between them.
+#   - Get before Update; Update is overwrite semantics — carry unchanged fields back.
+#   - Get/list before Create/Apply; an Idempotent-Skip plus verification counts as successful completion.
+#   - Every cloud tool invocation contains exactly one direct, literal `aliyun sls ...` command.
+#   - Every cloud-API command carries: --region <r> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-loongcollector-ops/<session-id>
+#   - JSON list/object params passed as single-quoted JSON, e.g. --inputs '[{"Type":"input_file",...}]'
+#   - list output default is JSON; parse only declared fields; use --cli-query <jmespath> to project.
+
+meta:
+  cli_min_version: "3.3.3"
+  cli_verified_version: "3.4.6"
+  plugin: "aliyun-cli-sls"
+  plugin_verified_version: "0.7.0"
+  api_version: "2020-12-30"
+  dry_run_flag: "--cli-dry-run"
+  global_flags: ["--region", "--endpoint", "--cli-query", "--pager/--all-pages", "-q/--quiet", "--user-agent"]
+  error_recovery:
+    max_retries_after_initial_attempt: 3
+    parameter: "[Error: parameter] 400 ParameterInvalid -> preserve requestID, fix invalid parameter only, retry same API -> [RECOVERED: parameter_fixed]"
+    throttling: "[Error: throttling] 429/WriteQuotaExceed -> preserve requestID, bounded exponential backoff, retry identical command -> [RECOVERED: throttling_retry]"
+    internal: "[Error: internal] 500/InternalServerError -> preserve requestID, retry identical atomic command -> [RECOVERED: internal_retry]"
+    permission: "[Error: permission] 401/403 Unauthorized/AccessDenied -> report missing Action/requestID; ask once and end the turn; retry only after the user explicitly confirms authorization, otherwise [BLOCKED: PERMISSION_REQUIRED]"
+  infrastructure_failure: "if the CLI fails below the API layer, retry the identical atomic command once, then report the raw output; never fabricate the expected response"
+  idempotent_skip: "[Idempotent-Skip] <create/apply-command> skipped; verified via <get/list-command> that state matches expectation."
+
+project:
+  create_project:
+    status: confirmed
+    required: [--project-name, --description]
+    optional: [--data-redundancy-type, --recycle-bin-enabled, --resource-group-id]
+  get_project:
+    status: confirmed
+    required: [--project]        # verify param name via `aliyun sls get-project --help`
+  list_project:
+    status: confirmed
+    optional: [--project-name, --size, --offset]
+    note: "subcommand is singular: list-project"
+  update_project:
+    status: confirmed
+    pre: "get-project first, carry description/attributes back"
+  delete_project:
+    status: confirmed
+    risk: R4
+
+logstore:
+  create_log_store:
+    status: confirmed
+    required: [--project, --logstore-name, --shard-count, --ttl]
+    optional: [--auto-split, --max-split-shard, --append-meta, --enable-tracking, --hot-ttl,
+               --infrequent-access-ttl, --telemetry-type, --enable-modify, --encrypt-conf, --resource-group-id]
+  get_log_store:
+    status: confirmed
+    required: [--project, --logstore]
+  list_log_stores:
+    status: confirmed
+    note: "subcommand is plural: list-log-stores"
+  update_log_store:
+    status: confirmed
+    required: [--project, --logstore, --logstore-name, --ttl]
+    pre: "get-log-store first; preserve ttl/shardCount/type/append-meta"
+    note: "CLI quirk (aliyun-cli-sls 0.7.0): update-log-store requires BOTH --logstore and --logstore-name with the same value (create uses only --logstore-name; get/delete use only --logstore). Preserve full params; omitting fields may reset to default."
+  delete_log_store:
+    status: confirmed
+    risk: R4
+
+index:
+  create_index:
+    status: confirmed
+    required: [--project, --logstore]
+    optional: [--keys, --line, --max-text-len, --scan-index, --log-reduce]
+    note: "--keys is field-index JSON; --line is full-text index object and uses chn=true (includeChinese is invalid). Call get-index first; use create only on IndexConfigNotExist, otherwise update-index."
+  get_index:
+    status: confirmed
+    required: [--project, --logstore]
+  update_index:
+    status: confirmed
+    pre: "get-index first; full overwrite — merge new keys with existing"
+  delete_index:
+    status: confirmed
+    risk: R3
+
+machine_group:
+  create_machine_group:
+    status: confirmed
+    required: [--project, --group-name, --machine-identify-type, --machine-list]
+    optional: [--group-attribute, --group-type]
+    note: "--machine-identify-type: ip | userdefined ; --machine-list takes SPACE-SEPARATED values (e.g. --machine-list 192.168.0.1 10.0.0.2), NOT a JSON array — a JSON string gets double-encoded and the collector never matches"
+  get_machine_group:
+    status: confirmed
+    required: [--project, --machine-group]      # verify exact param via --help
+  list_machine_group:
+    status: confirmed
+    note: "subcommand is singular: list-machine-group"
+  update_machine_group:
+    status: confirmed
+    pre: "get-machine-group first; overwrite semantics (see incremental_member note)"
+  delete_machine_group:
+    status: confirmed
+    risk: R4
+  list_machines:
+    status: confirmed          # CLI-001 CLOSED
+    required: [--project, --machine-group]
+    optional: [--offset, --size]     # size default 100, max 500
+    returns: "machines[] with identity, lastHeartbeatTime, and binary (collector version, e.g. 3.3.4)"
+  member_update:
+    status: confirmed          # CLI-003
+    method: "get-machine-group -> merge machine-list -> update-machine-group (full-object overwrite). Re-read before write to guard concurrency."
+    note: "This full-object update is the standard method; update-machine-group-machine is intentionally not used (incomplete)."
+
+pipeline_config:
+  mandatory_mapping:
+    rule: "Use only get/list/create/update/delete-logtail-pipeline-config with --config-name (list uses --project and optional --logstore-name). Never use classic get/list/update-config as Pipeline aliases or use --config. If the object has inputDetail/outputDetail instead of inputs/processors/flushers, stop as classic-config unsupported."
+  create_logtail_pipeline_config:
+    status: confirmed
+    required: [--project, --config-name, --inputs, --flushers]
+    optional: [--processors, --aggregators, --global, --log-sample]
+    note: "inputs: exactly 1; flushers: exactly 1 flusher_sls; native and extended plugins cannot be mixed"
+  get_logtail_pipeline_config:
+    status: confirmed
+    required: [--project, --config-name]
+  list_logtail_pipeline_config:
+    status: confirmed
+    note: "subcommand is singular: list-logtail-pipeline-config"
+  update_logtail_pipeline_config:
+    status: confirmed
+    pre: "get-logtail-pipeline-config first; carry full inputs/processors/flushers/global back"
+  delete_logtail_pipeline_config:
+    status: confirmed
+    risk: R4
+
+binding:
+  mandatory_mapping:
+    rule: "group->configs is get-applied-configs --machine-group; config->groups is get-applied-machine-groups --config-name. Never invent get-machine-group-applied-configs or get-config-applied-machine-groups."
+  apply_config_to_machine_group:
+    status: confirmed
+    required: [--project, --machine-group, --config-name]
+    post: "read binding back via get-applied-configs / get-applied-machine-groups"
+  remove_config_from_machine_group:
+    status: confirmed
+    required: [--project, --machine-group, --config-name]
+    risk: R3
+  get_applied_configs:
+    status: confirmed
+    note: "configs applied to a machine group (machine-group snapshot)"
+  get_applied_machine_groups:
+    status: confirmed          # CLI-002 CLOSED
+    required: [--project, --config-name]
+
+query:
+  get_logs_v2:
+    status: confirmed
+    required: [--project, --logstore, --from, --to]   # --from/--to are UNIX seconds (int)
+    optional: [--query, --line, --offset, --reverse, --power-sql, --forward, --highlight]
+    note: "use for business logstore AND SLS Lens run logs; check meta.progress for completeness; never use deprecated get-logs"
+  get_logging:
+    status: confirmed          # CLI-004
+    required: [--project]
+    returns: "loggingProject (Lens/service-log project) + loggingDetails[] {type, logstore}"
+    note: "type logtail_status|logtail_profile|logtail_alarm -> Lens run-log logstore (typically internal-diagnostic_log); type operation_log -> operation-record logstore (internal-operation_log)"
+
+version_discovery:
+  status: confirmed          # CLI-007
+  chain:
+    - "config or machine group known: list-machines --project <p> --machine-group <g> -> machines[].binary is the collector version (a config maps to its bound group via get-applied-machine-groups)"
+    - "only an IP known: SLS Lens logtail_status.version (get-logs-v2 on the Lens logstore)"
+    - "user-provided version"
+  rule: "If version still cannot be confirmed, do NOT generate configs that depend on version gates; ask the user."
+
+lens_entry_discovery:
+  status: confirmed          # CLI-004
+  method: "get-logging --project <business-project> -> loggingProject is the Lens project; the loggingDetails[] entry whose type is logtail_status/logtail_profile/logtail_alarm gives the Lens logstore (typically internal-diagnostic_log)."
+  fallback: "if get-logging is unavailable/denied/LoggingNotExist and Lens evidence is required, ask once and wait for user-provided lens_project/logstore; verify it, then query via get-logs-v2. Never STAROps/console-private/UID-guessed entries."

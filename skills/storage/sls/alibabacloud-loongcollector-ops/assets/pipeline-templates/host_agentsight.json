@@ -1,0 +1,29 @@
+{
+  "_template": "host_agentsight",
+  "_description": "Agentloop host eBPF AgentSight (input_agentsight). Names are product-fixed. Empty ProbeConfig uses collector built-in cmdline/HTTPS lists. Not OBI/OTLP. Source: Agentloop eBPF Runtime confirm-access (obviz-integration) + loongcollector docs/cn/plugins/input/native/input_agentsight.md.",
+  "_scenario": "host_agentsight",
+  "_protocol_id": "loongcollector-runtime",
+  "_product_log": "agentloop.ebpf_event",
+  "_native_first": true,
+  "_not_obi": true,
+  "configName": "runtime-ebpf-agentsight-config",
+  "logSample": "",
+  "global": {},
+  "aggregators": [],
+  "inputs": [
+    {
+      "Type": "input_agentsight",
+      "ProbeConfig": {}
+    }
+  ],
+  "processors": [],
+  "flushers": [
+    { "Type": "flusher_sls", "Logstore": "ebpf-event" }
+  ],
+  "_lock_hint": "If this config already exists, treat as success and do NOT overwrite. Bind to the user-selected machine group only when get-applied-configs does not already list it.",
+  "_probe_hint": "Omit ProbeConfig keys to keep collector defaults (9 cmdline + 7 HTTPS hosts from AgentsightManager.cpp). Filling a list replaces that list entirely. Https only attaches processes; it does not filter reported traffic. See references/input-agentsight.md.",
+  "_mask_hint": "Default processors is []. Data masking is NOT ProbeConfig: set desensitize=true to append the fixed processor_spl (mode=buildin, not builtin). Script is not user-editable.",
+  "_version_hint": "Requires LoongCollector >= 3.3.9 and Linux kernel >= 5.10 (SLS help). Resolve machines[].binary before apply. Do not set RawHttpsFallback on this default template.",
+  "_index_hint": "Pilot EnableProductLog for agentloop.ebpf_event creates ebpf-event (+ index). This template does not create ProductLog or indexes. Do not rename dotted gen_ai.* fields.",
+  "_cli": "aliyun sls create-logtail-pipeline-config --project <p> --config-name runtime-ebpf-agentsight-config --inputs '[{\"Type\":\"input_agentsight\",\"ProbeConfig\":{}}]' --flushers '[{\"Type\":\"flusher_sls\",\"Logstore\":\"ebpf-event\"}]' --global '{}' --region <r> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-loongcollector-ops/<session-id>"
+}

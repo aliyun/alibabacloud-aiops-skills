@@ -1,0 +1,98 @@
+# SLS Lens run-log SQL library
+#
+# Channel: aliyun sls get-logs-v2 --project <lens_project> --logstore <lens_logstore>
+#          --from <unix_sec> --to <unix_sec> --query "<sql>"
+#          --region <lens_region> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-loongcollector-ops/<session-id>
+# Hard constraints (see sls-lens-contracts.md): no `select *`; fields from allowlist;
+# JSON subfields via json_extract_scalar; logtail_alarm filters by project first, never config_name in where;
+# after an alarm_type match always output alarm_message; check meta.progress.
+# Field semantics: knowledge/base/loongcollector/self-monitoring-metrics.md.
+
+alarm:
+  alarm_by_project:                # default entry
+    topic: logtail_alarm
+    sql: >
+      __topic__:logtail_alarm and project:<project>
+      | select __time__,project,logstore,source_ip,alarm_type,alarm_message,version,config_name
+        order by __time__ desc limit 50
+  alarm_by_project_logstore:       # only when project-level volume is large
+    topic: logtail_alarm
+    sql: >
+      __topic__:logtail_alarm and project:<project> and logstore:<logstore>
+      | select __time__,project,logstore,source_ip,alarm_type,alarm_message,version,config_name
+        order by __time__ desc limit 50
+  alarm_group_by_config:           # config_name only in select/group by, never where
+    topic: logtail_alarm
+    sql: >
+      __topic__:logtail_alarm and project:<project>
+      | select split_part(config_name,'$',2) as pipeline, alarm_type, count(1) as cnt
+        group by pipeline, alarm_type order by cnt desc limit 50
+
+status:
+  status_instance_overview:
+    topic: logtail_status
+    sql: >
+      __topic__:logtail_status and instance_id:'<instance_id>'
+      | select __time__,instance_id,ip,project,status,cpu,memory,version,user_defined_id,detail_metric limit 20
+  status_detail_metric_json:
+    topic: logtail_status
+    sql: >
+      __topic__:logtail_status and project:<project>
+      | select __time__,instance_id,ip,version,
+        json_extract_scalar(detail_metric,'$.config_count') as config_count,
+        json_extract_scalar(detail_metric,'$.send_bytes_ps') as send_bytes_ps,
+        json_extract_scalar(detail_metric,'$.send_tps') as send_tps limit 20
+  status_file_server_json:
+    topic: logtail_status
+    sql: >
+      __topic__:logtail_status and project:<project>
+      | select __time__,instance_id,ip,
+        json_extract_scalar(file_server,'$.active_readers_total') as active_readers_total,
+        json_extract_scalar(file_server,'$.watched_dirs_total') as watched_dirs_total,
+        json_extract_scalar(file_server,'$.last_run_time') as file_server_last_run_time limit 20
+  status_flusher_json:
+    topic: logtail_status
+    sql: >
+      __topic__:logtail_status and project:<project>
+      | select __time__,instance_id,ip,
+        json_extract_scalar(flusher_runner,'$.out_items_total') as flusher_out_items_total,
+        json_extract_scalar(flusher_runner,'$.waiting_items_total') as flusher_waiting_items_total,
+        json_extract_scalar(http_sink,'$.out_successful_items_total') as sink_success_total,
+        json_extract_scalar(http_sink,'$.out_failed_items_total') as sink_failed_total limit 20
+
+pipeline_3x:                        # loongcollector_metric, collector major version >= 3
+  pipeline_by_project:
+    topic: loongcollector_metric
+    sql: >
+      __topic__:loongcollector_metric and project:<project>
+      | select __time__,project,config_name,source_ip,send_bytes,flusher_errors_total,
+        processor_errors_total,flusher_total_package_time_ms,
+        json_extract_scalar(labels,'$.logstore') as labels_logstore,
+        json_extract_scalar(labels,'$.pipeline_name') as labels_pipeline_name limit 20
+  pipeline_by_formatted_config:     # only path allowed to filter by config_name
+    topic: loongcollector_metric
+    sql: >
+      __topic__:loongcollector_metric and project:<project>
+        and config_name:"##1.0##<project>$<config>"
+      | select __time__,project,config_name,source_ip,send_bytes,flusher_errors_total,
+        processor_errors_total,flusher_total_package_time_ms limit 20
+
+pipeline_legacy:                    # logtail_profile / logtail_metric, versions 1.x/2.x
+  profile_by_project:
+    topic: logtail_profile
+    sql: >
+      __topic__:logtail_profile and project:<project>
+      | select __time__,project,logstore,config_name,source_ip,succeed_lines,parse_failures,send_quota_error
+        order by __time__ desc limit 50
+  metric_plugin_by_ip:
+    topic: logtail_metric
+    sql: >
+      __topic__:logtail_metric and source_ip:'<source_ip>'
+      | select __time__,source_ip,"label.config_name","label.plugin_name",
+        "value.proc_in_records_total","value.proc_out_records_total","value.proc_parse_error_total" limit 50
+
+business_logstore:                  # acceptance on the user's business logstore
+  data_arrival_check:
+    sql: '* | select __time__ order by __time__ desc limit 5'    # any new data in window
+  field_presence_check:             # verify specific parsed fields (never select *)
+    sql: '* | select __time__, <field1>, <field2> limit 5'

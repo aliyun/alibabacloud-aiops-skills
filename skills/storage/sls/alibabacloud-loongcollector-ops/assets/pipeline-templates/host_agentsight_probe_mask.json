@@ -1,0 +1,38 @@
+{
+  "_template": "host_agentsight_probe_mask",
+  "_description": "Agentloop AgentSight with probe lists filled and data masking on. Same fixed names as host_agentsight.json. Use only when the user supplied whitelist/blacklist/domains and confirmed desensitize.",
+  "_scenario": "host_agentsight",
+  "_protocol_id": "loongcollector-runtime",
+  "_product_log": "agentloop.ebpf_event",
+  "_example_only": true,
+  "configName": "runtime-ebpf-agentsight-config",
+  "logSample": "",
+  "global": {},
+  "aggregators": [],
+  "inputs": [
+    {
+      "Type": "input_agentsight",
+      "ProbeConfig": {
+        "CmdlineWhitelist": [
+          { "AgentType": "claude-code", "Args": ["claude"] },
+          { "AgentType": "openclaw", "Args": ["openclaw", "node"] }
+        ],
+        "CmdlineBlacklist": [["ssh", "scp"]],
+        "Https": ["api.openai.com", "api.anthropic.com"],
+        "Http": [":443"]
+      }
+    }
+  ],
+  "processors": [
+    {
+      "Type": "processor_spl",
+      "TimeoutMilliSeconds": 1000,
+      "Script": "* | extend \"gen_ai.input.messages\" = mask(\"gen_ai.input.messages\",'[{\"mode\":\"buildin\",\"types\":[\"IP_ADDRESS\",\"EMAIL\",\"LANDLINE_PHONE\",\"CREDIT_CARD\",\"PHONE\",\"IDCARD\"],\"maskType\":\"placeholder\"}]') | extend \"gen_ai.output.messages\" = mask(\"gen_ai.output.messages\",'[{\"mode\":\"buildin\",\"types\":[\"IP_ADDRESS\",\"EMAIL\",\"LANDLINE_PHONE\",\"CREDIT_CARD\",\"PHONE\",\"IDCARD\"],\"maskType\":\"placeholder\"}]')"
+    }
+  ],
+  "flushers": [
+    { "Type": "flusher_sls", "Logstore": "ebpf-event" }
+  ],
+  "_mask_note": "SPL mask mode is the literal string buildin (not builtin). Do not change types or maskType. processor_spl cannot mix with native/extended processors.",
+  "_cli": "aliyun sls create-logtail-pipeline-config --project <p> --config-name runtime-ebpf-agentsight-config --inputs '<inputs-json>' --processors '<processors-json>' --flushers '[{\"Type\":\"flusher_sls\",\"Logstore\":\"ebpf-event\"}]' --global '{}' --region <r> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-loongcollector-ops/<session-id>"
+}

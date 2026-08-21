@@ -1,0 +1,33 @@
+{
+  "_template": "docker_stdio",
+  "_description": "Pure Docker stdout/stderr (no k8s). Source: recipes.md docker-stdout-json-v1. Replace <...>; render/validate before apply.",
+  "_scenario": "docker_stdio",
+  "_native_first": true,
+  "configName": "<config_name>",
+  "logSample": "{\"level\":\"INFO\",\"msg\":\"ok\"}",
+  "global": { "TopicType": "machine_group_topic" },
+  "inputs": [
+    {
+      "Type": "input_container_stdio",
+      "IgnoringStdout": false,
+      "IgnoringStderr": true,
+      "ContainerFilters": {
+        "IncludeContainerLabel": { "app": "<container_label_value>" }
+      }
+    }
+  ],
+  "processors": [
+    {
+      "Type": "processor_parse_json_native",
+      "SourceKey": "content",
+      "KeepingSourceWhenParseFail": true,
+      "RenamedSourceKey": "raw_message"
+    }
+  ],
+  "flushers": [
+    { "Type": "flusher_sls", "Logstore": "<target_logstore>" }
+  ],
+  "_container_filter_hint": "ContainerFilters regex is regex_search (partial match) on collector >=3.2.6; anchor with ^...$ if you need exact match (VC-003). Requires json-file log driver.",
+  "_index_hint": "container fields (_pod_name_ / _namespace_ / _container_name_) plus parsed fields need index in the SAME batch (index-coupling.md).",
+  "_cli": "aliyun sls create-logtail-pipeline-config --project <p> --config-name <config_name> --inputs '<inputs-json>' --processors '<processors-json>' --flushers '<flushers-json>' --global '{\"TopicType\":\"machine_group_topic\"}' --region <r> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-loongcollector-ops/<session-id>"
+}

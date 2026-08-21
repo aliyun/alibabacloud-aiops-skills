@@ -1,0 +1,35 @@
+{
+  "_template": "k8s_stdio",
+  "_description": "K8s (ACK) DaemonSet stdout, filtered by namespace/pod/label. Source: recipes.md k8s-stdout-json-filtered-v1. Replace <...>; render/validate before apply.",
+  "_scenario": "k8s_stdio",
+  "_native_first": true,
+  "configName": "<config_name>",
+  "logSample": "{\"level\":\"INFO\",\"msg\":\"ok\"}",
+  "global": { "TopicType": "machine_group_topic" },
+  "inputs": [
+    {
+      "Type": "input_container_stdio",
+      "IgnoringStdout": false,
+      "IgnoringStderr": true,
+      "ContainerFilters": {
+        "K8sNamespaceRegex": "^(prod|default)$",
+        "K8sPodRegex": "^(api|worker)-.*",
+        "IncludeK8sLabel": { "app": "^(order|payment)$" }
+      }
+    }
+  ],
+  "processors": [
+    {
+      "Type": "processor_parse_json_native",
+      "SourceKey": "content",
+      "KeepingSourceWhenParseFail": true
+    }
+  ],
+  "flushers": [
+    { "Type": "flusher_sls", "Logstore": "<target_logstore>" }
+  ],
+  "_k8s_hint": "DaemonSet vs Sidecar; confirm aliUid/region/net. ContainerFilters regex is regex_search (partial) on >=3.2.6 (VC-003). Low-replica pods may drift across nodes.",
+  "_crd_hint": "If the cluster manages configs via ClusterAliyunPipelineConfig (CRD), do NOT double-write via API — this skill only detects ownership; CRD write is out of scope.",
+  "_index_hint": "emit index update in the SAME batch for new fields (index-coupling.md).",
+  "_cli": "aliyun sls create-logtail-pipeline-config --project <p> --config-name <config_name> --inputs '<inputs-json>' --processors '<processors-json>' --flushers '<flushers-json>' --global '{\"TopicType\":\"machine_group_topic\"}' --region <r> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-loongcollector-ops/<session-id>"
+}
