@@ -1,0 +1,11 @@
+# Mining Attack Diagnosis — CLI-only edition
+#
+# API access goes through the aliyun CLI (see _cli.py).
+# There are NO Python package dependencies and NO Alibaba Cloud product SDK
+# dependencies. Data source is Security Center (SAS) only; the skill is
+# strictly READ-ONLY.
+#
+# Runtime requirements:
+#   - Python 3.9+ (standard library: subprocess, json, hashlib, hmac, re, ...)
+#   - aliyun CLI 3.x — https://help.aliyun.com/document_detail/121541.html
+#                       macOS: brew install aliyun-cli ; then: aliyun configure
