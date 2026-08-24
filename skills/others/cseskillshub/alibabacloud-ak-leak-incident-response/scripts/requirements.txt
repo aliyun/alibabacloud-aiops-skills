@@ -1,0 +1,22 @@
+# AK Leak Incident Response — dual-backend edition (CLI-first, HTTP-fallback)
+#
+# API access is routed through one of two backends at runtime (see _cli.py):
+#   1. aliyun CLI (preferred) — used automatically when the `aliyun` binary is
+#      on PATH. Needs NO Python packages; auth via ~/.aliyun/config.json.
+#   2. Direct signed HTTPS (fallback) — used when the CLI is absent. Needs the
+#      `requests` package below, and credentials from env vars or
+#      ~/.aliyun/config.json.
+#
+# There are NO Alibaba Cloud product SDK dependencies.
+#
+# Runtime requirements:
+#   - Python 3.9+ (standard library: subprocess, json, hashlib, hmac, ...)
+#   - aliyun CLI 3.x   (recommended) — https://help.aliyun.com/document_detail/121541.html
+#                       macOS: brew install aliyun-cli ; then: aliyun configure
+#   - requests         (only used by the HTTP fallback backend)
+#
+# Auto-install: if the CLI is absent and `requests` is missing, the skill can
+# install it on demand ONLY when you opt in via `export AK_LEAK_AUTO_INSTALL=1`
+# (default OFF, so nothing is installed silently).
+
+requests>=2.20.0,<3.0.0
