@@ -66,7 +66,7 @@ Run the following command to verify the current user has the required permission
 
 ```bash
 # Test query permission using aliyun CLI
-aliyun sddp DescribeRiskRules --region cn-zhangjiakou --CurrentPage 1 --PageSize 1
+aliyun sddp describe-risk-rules --region-id cn-zhangjiakou --current-page 1 --page-size 1 --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dsc-audit/${SKILL_SESSION_ID}"
 ```
 
 If results are returned instead of a permission error, the query permission is granted.

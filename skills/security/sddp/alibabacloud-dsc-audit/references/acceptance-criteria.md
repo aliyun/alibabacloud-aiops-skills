@@ -280,3 +280,159 @@ for item in items:
     print(f"Rule Name: {item.get('RuleName')}")
     # Missing RiskId, user cannot perform handling operations
 ```
+
+---
+
+## Handling Gate Validation
+
+### 1. Missing RiskId Requires HITL Confirmation
+
+#### ✅ CORRECT
+
+```text
+User: "Handle the database dump risks."
+Agent:
+1. Runs scripts/query_risk.py to list unprocessed risks.
+2. Shows candidate RiskId values.
+3. Asks the user to choose the exact RiskId before handling.
+4. Does not run scripts/handle_risk.py until the user confirms the target.
+```
+
+#### ❌ INCORRECT
+
+```text
+# Error: Handling without a user-confirmed target
+python3 scripts/handle_risk.py 75110196 "Handled database dump risks"
+```
+
+### 2. Missing HandleDetail Requires HITL Confirmation
+
+#### ✅ CORRECT
+
+```text
+User: "Handle RiskId 88234567."
+Agent: "Please provide the HandleDetail/handling description to record for this risk event."
+```
+
+```text
+User: "RiskId 88234567 has already been confirmed and does not need follow-up."
+Agent: "Please provide the exact text to record as HandleDetail. Vague handling intent such as already confirmed or no need to follow up is not enough unless that exact text should be recorded."
+```
+
+#### ❌ INCORRECT
+
+```text
+# Error: Inventing HandleDetail
+python3 scripts/handle_risk.py 88234567 "Confirmed handled"
+```
+
+```text
+# Error: treating vague handling intent as HandleDetail
+python3 scripts/handle_risk.py 88234567 "already confirmed and does not need follow-up"
+```
+
+### 3. Invalid RiskId Format Is Rejected Before Execution
+
+#### ✅ CORRECT
+
+```text
+User provides RiskId=-100.
+Agent rejects the input and asks for a positive integer RiskId.
+Agent does not call scripts/handle_risk.py or PreHandleAuditRisk.
+```
+
+#### ❌ INCORRECT
+
+```bash
+# Error: negative RiskId must not be passed into execution
+python3 scripts/handle_risk.py -100 "False positive"
+```
+
+### 4. Digits-Only Out-of-Range RiskId Uses Script Local Validation
+
+#### ✅ CORRECT
+
+```bash
+python3 scripts/handle_risk.py 0 "Test handling"
+# Expected: local parameter validation fails before any PreHandleAuditRisk call.
+```
+
+#### ❌ INCORRECT
+
+```python
+# Error: calling the handling API after RiskId=0 validation fails
+handle_audit_risk(0, "Test handling")
+```
+
+### 5. Unsafe HandleDetail Is Rejected
+
+#### ✅ CORRECT
+
+```text
+User provides HandleDetail="DROP TABLE users; -- audit test".
+Agent or scripts/handle_risk.py rejects the value as unsafe and asks for normal audit text.
+PreHandleAuditRisk is not called.
+```
+
+#### ❌ INCORRECT
+
+```python
+# Error: bypassing local validation with direct API construction
+queries = {
+    "RiskId": 75110196,
+    "HandleInfoList.1.HandleType": "Manual",
+    "HandleInfoList.1.HandleContent": "{\"HandleMethod\": 0, \"HandleDetail\": \"DROP TABLE users; -- audit test\"}"
+}
+client.call_api(params, request, runtime)
+```
+
+### 6. Successful One-Shot Handling Uses the Bundled Script
+
+#### ✅ CORRECT
+
+```bash
+python3 scripts/handle_risk.py 75110196 "Security team confirmed normal DBA backup, close this alert."
+```
+
+#### ❌ INCORRECT
+
+```python
+# Error: direct SDK calls bypass scripts/handle_risk.py safety gates
+handle_audit_risk(75110196, "Security team confirmed normal DBA backup, close this alert.")
+```
+
+### 7. Handling Scope Stays on the Confirmed Risk
+
+#### ✅ CORRECT
+
+```text
+If the user asks to handle RiskId 75110196, only that RiskId is passed to scripts/handle_risk.py.
+If scripts/handle_risk.py reports the risk is not handleable, the script or agent queries the current unprocessed risk list, shows available RiskId values, and asks the user to choose a new target before retrying.
+```
+
+#### ❌ INCORRECT
+
+```text
+# Error: substituting or broadening scope
+RiskId 75110196 was not found, so the agent handles a different returned RiskId.
+```
+
+### 8. Missing Target Risk Shows Current Choices
+
+#### ✅ CORRECT
+
+```text
+scripts/handle_risk.py reports:
+No handleable risk event found: RiskId=999999999
+Current unprocessed risk events available for selection:
+Risk ID: 75110196
+Risk ID: 88234567
+Please choose one RiskId from the current unprocessed list and retry handling.
+```
+
+#### ❌ INCORRECT
+
+```text
+# Error: no current choices shown to the user
+No handleable risk event found: RiskId=999999999
+```
