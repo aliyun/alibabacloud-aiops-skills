@@ -90,7 +90,7 @@ Structured fields (sku / price / scope_declaration / fallback_ecs_config / image
 
 #### If starter_webui (A2: display-type migration)
 
-```
+```text
 【诊断】
 你的 [product form]（展示类/名片类）已经在 [platform] 跑着，[slow from China/want compliance/want to migrate to Alibaba Cloud]。
 
@@ -101,7 +101,7 @@ Structured fields (sku / price / scope_declaration / fallback_ecs_config / image
 A. **让我帮你下单** —— 你说一声，我直接帮你创建好（推荐，省得自己点）
 B. **自己去页面买** —— 打开 https://opc.aliyun.com/products
    → 选「OPC Starter 套餐 - 网络名片版」卡片
-   → 如果你已经在用 Cursor/Codex 等桌面 AI 工具，可去掉默认勾选的 QoderWork（¥59/月）
+   → 把默认勾选的 QoderWork（¥59/月）去掉——那是桌面软件，不属于云资源，需要的话你自己单独下载订阅
    → 确认付款
 
 💡 价格供参考，实际以最终下单为准。ECS ¥99/年如果没命中（比如你之前已经享过同类优惠），
@@ -110,19 +110,18 @@ B. **自己去页面买** —— 打开 https://opc.aliyun.com/products
 为什么是它：
 - 展示类产品不需要 AI 额度
 - ECS 经济型e ¥99/年长期优惠（续费同价）最经济
-- QoderWork CN Pro 帮你迁移部署，不用敲命令
 - ESA 免费版标配解决国内访问速度
 
 【你会拿到什么】
 - 你的「小店面」（ECS 经济型e 2核2G）
-- 你的「AI 装修师」（QoderWork CN Pro）
 - 全球加速（ESA 免费版）
 
 [domain + ICP filing prompt]
+[desktop assistant line — per a1-zero-start Step 2's runtime inference: either "靠你现在这个桌面 AI 助手就能迁" or the QoderWork CN Pro download guide (¥59/月，自付，不含在套餐里)]
 
 【怎么迁过来（3 步）】
 1. **购买页确认付款** → 约 2 分钟服务器就绪
-2. **打开 QWCN Pro → 让它帮你把代码从旧平台搬过来 + 部署**
+2. **让桌面 AI 助手接手** → 让它把代码从旧平台搬过来 + 部署
 3. **域名 DNS 切换** → 旧平台保留几天兜底
 
 迁移期注意点：
@@ -137,7 +136,7 @@ B. **自己去页面买** —— 打开 https://opc.aliyun.com/products
 
 #### If starter_app (A2: AI-calling app migration)
 
-```
+```text
 【诊断】
 你的 [product form] 已经在 [external platform] 跑着，产品调 AI（[specific AI usage]），想迁到阿里云。
 
@@ -148,25 +147,24 @@ B. **自己去页面买** —— 打开 https://opc.aliyun.com/products
 A. **让我帮你下单** —— 你说一声，我直接帮你创建好（推荐，省得自己点）
 B. **自己去页面买** —— 打开 https://opc.aliyun.com/products
    → 选「OPC Starter 套餐 - AI 应用版」卡片
-   → 默认勾选项已对齐推荐配置（含 QoderWork CN Pro），保持默认即可
+   → 把默认勾选的 QoderWork（¥59/月）去掉——那是桌面软件，不属于云资源，需要的话你自己单独下载订阅
    → 确认付款
 
 💡 价格供参考，实际以最终下单为准。ECS ¥99/年活动以下单时活动可用性为准。
 
 为什么是它：
 - 产品调 AI → Token Plan 提供调用额度
-- QoderWork CN Pro 帮你迁移部署
 - 阿里云盘 200GB 存 AI 相关资料
 
 【你会拿到什么】
 - 你的「小店面」（ECS 经济型e 2核2G）
-- 你的「AI 装修师」（QoderWork CN Pro）
 - 你的「AI 店员工时包」（Token Plan 标准版 25k/月）
 - 你的「文件柜」（阿里云盘 200GB）
 - 全球加速（ESA 免费版）
 
 [Token Plan upgrade advice]
 [domain + ICP filing prompt]
+[desktop assistant line — per a1-zero-start Step 2's runtime inference: either "靠你现在这个桌面 AI 助手就能迁" or the QoderWork CN Pro download guide (¥59/月，自付，不含在套餐里)]
 
 【怎么迁过来（3 步）】
 1. **购买页确认付款** → 全部就绪
@@ -187,7 +185,7 @@ B. **自己去页面买** —— 打开 https://opc.aliyun.com/products
 
 #### If lite (A2 migration version)
 
-```
+```text
 【诊断】
 你的 [product form] 已经在 [external origin] 跑起来、[有种子用户/在获客]，[pain point]——按同时访问规模落在 [SKU tier name]。
 
@@ -243,7 +241,7 @@ B. **自己去页面买** —— 打开 https://opc.aliyun.com/products
 
 #### If pro — A2 migration version
 
-```
+```text
 【诊断】
 你的 [product form] 已经在 [external origin] 跑着，同时访问超两百人，[steady/has burst spikes]。
 

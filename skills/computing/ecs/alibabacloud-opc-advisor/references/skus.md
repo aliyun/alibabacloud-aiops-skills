@@ -41,8 +41,8 @@ After completing the conversation decision, the advisor outputs exactly one of 7
 | `pds-200g` | Alibaba Cloud Drive Enterprise (PDS) | 200GB | **¥6.63/mo** |
 | `pds-500g` | Alibaba Cloud Drive Enterprise (PDS) | 500GB | **¥16.58/mo** |
 | `oss-40g` | OSS Standard LRS | 40GB | **¥9/yr** |
-| `oss-500g` | OSS Standard LRS | 500GB | ¥60/mo or **¥119/yr** (one-time purchase) |
-| `qwcn-pro` | QoderWork CN Pro Desktop | 2000 credits/mo | **¥59/mo** |
+| `oss-500g` | OSS Standard LRS (local redundant, Beijing) | 500GB | **¥54/mo** or **¥119/yr** (one-time) — monthly and annual are different orders, keep the unit label inline in any quote |
+| `qwcn-pro` | QoderWork CN Pro Desktop | 2000 credits/mo | **¥59/mo — self-purchased, NOT in any package quote** (desktop software, not a cloud resource; user downloads it at `https://qoder.com.cn/qoderwork`) |
 
 ### Network & Security
 
@@ -114,13 +114,14 @@ image:
 |---|---|---|
 | **Positioning** | Portfolio / personal page / showcase | AI accounting / chatbot / language tutor |
 | **Trigger** | Product does NOT call AI | Product calls AI |
-| **Included products** | `ecs-e-starter` + `qwcn-pro` + `esa-free` | `ecs-e-starter` + `qwcn-pro` + `esa-free` + `token-standard` + `pds-200g` |
-| **Monthly price** | **¥99/yr** (≈¥8.25/mo) + ¥59/mo | **≈¥212.88/mo** (incl. ECS ¥99/yr amortized) |
-| **Fallback price** | ¥284.99/yr (≈¥23.75/mo) + ¥59/mo | **≈¥228/mo** |
+| **Included products** | `ecs-e-starter` + `esa-free` | `ecs-e-starter` + `esa-free` + `token-standard` + `pds-200g` |
+| **Monthly price** | **¥99/yr** (≈¥8.25/mo) | **≈¥212.88/mo** (incl. ECS ¥99/yr amortized) |
+| **Fallback price** | ¥284.99/yr (≈¥23.75/mo) | **≈¥228/mo** |
 | **Purchase page card** | OPC Starter - Web Presence | OPC Starter - AI App |
 
 **Starter notes:**
-- If user already has a desktop AI assistant → can skip `qwcn-pro` (-¥59/mo)
+- **`qwcn-pro` is NOT part of the package quote.** It is desktop software, not a cloud resource — deploy cannot provision it and it is not in the CLI capability matrix. The user downloads and pays for it themselves (`https://qoder.com.cn/qoderwork`), separately from the OPC package. Never add ¥59/mo to a Starter quote, and never list `qwcn-pro` among the products deploy will create. (This also fixes an older inconsistency where starter_webui added ¥59 but starter_app did not.)
+- Whether the user needs to download it at all is **inferred, never asked** — see a1-zero-start Step 2.
 - Fallback is auto-triggered by deploy pricing check; advisor does not differentiate
 
 ### Lite (three tiers, by business load)

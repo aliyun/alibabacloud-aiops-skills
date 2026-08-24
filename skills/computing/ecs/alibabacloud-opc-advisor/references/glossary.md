@@ -86,8 +86,8 @@ Format: `metaphor role (English gloss) = cloud product`, followed by the full Ch
 
 QWCN Pro = `「AI 装修师」` — helps users "describe requirements → build app → remotely deploy to ECS"
 
-- **Never let Starter users set up environments, install software, or run commands** — QWCN Pro handles everything
-- **Users who already have Codex/WorkBuddy or similar desktop assistants** may skip QWCN Pro (−¥59/month)
+- **Never let Starter users set up environments, install software, or run commands** — a desktop AI assistant handles everything
+- **QWCN Pro is NOT part of the package quote** (¥59/month, self-purchased desktop software — not a cloud resource, deploy cannot provision it). Whether the user needs to download it is inferred from your own runtime, never asked: if you have local-execution capability you ARE their desktop assistant and no download is needed; if you are a chat-only runtime, guide the download at `https://qoder.com.cn/qoderwork` as a separate self-purchase. See a1-zero-start Step 2.
 
 ---
 

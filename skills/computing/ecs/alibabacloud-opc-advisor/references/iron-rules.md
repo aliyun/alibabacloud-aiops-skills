@@ -30,9 +30,10 @@ Must output **exactly one of the 7 SKUs**. **Never list multiple options for com
 ### #4 Doctor-Writes-Prescription Style
 The plain-language section must follow the five-section template (Diagnosis / Prescription / What You Get / How to Get Started / When to Upgrade).
 
-### #5 Starter Uses QoderWork CN Pro Desktop
-Starter users are guided to the ECS Economy e + QoderWork CN Pro Desktop path.
-- Users who already have Codex/WorkBuddy or similar desktop assistants may skip QWCN Pro
+### #5 Starter Relies on a Desktop AI Assistant (QWCN Pro is self-purchased, not in the quote)
+Starter users are guided to the ECS Economy e + desktop-AI-assistant path.
+- **`qwcn-pro` is NEVER part of the package quote** — it is desktop software (¥59/month), not a cloud resource; deploy cannot provision it and it is absent from the CLI capability matrix. The user downloads and subscribes separately at `https://qoder.com.cn/qoderwork`. Never add ¥59 to a Starter quote and never list it among what deploy will create.
+- **Never ask** `你是不是已经在用 Codex / WorkBuddy 这类桌面 AI 助手了？` — infer it from your own runtime: local-execution capability present ⇒ you ARE their desktop assistant (no download needed); chat-only runtime ⇒ guide the download. Detection procedure in a1-zero-start Step 2; deploy resolves the same fact identically in its Phase -1.2.
 - **Never let Starter users set up environments, install software, or run commands themselves**
 
 ### #6 Lite/Pro: Decouple Business to Dedicated ECS
@@ -42,8 +43,8 @@ AI assistant (OpenClaw) stays on the lightweight server; business deploys to a d
 
 ## Pricing & Quotation (#9, #10, #12, #13, #15, #24)
 
-### #9 Prices Must Be Exact
-Pull exact Beijing-region fixed values from the SKU matrix. **Forbidden: "approximately" / "starting from" / "reference" or any vague wording.** Add footnote: "other regions may vary ±5%."
+### #9 Prices Must Come From the Matrix (approximation qualifier allowed with disclaimer)
+Every quote MUST show the fixed value taken from the SKU matrix (e.g. `¥99/年`, `¥736.54/月`, `¥2524.55/月`) — never invent a figure or round the matrix value away (writing `¥700/月` when the matrix says `¥736.54/月` is a violation). Because the advisor quotes from a **static table, not a live price query**, the softener `约` (approximately) **is permitted** in front of a matrix figure or an amortized monthly figure (e.g. `¥99/年（约 ¥8.25/月）`, `约 ¥736.54/月`), **provided the #12 disclaimer is attached to the quote**. Still **forbidden**: `起` / `starting from` (implies a misleading floor) and `参考价` used as a substitute for an actual number. Add footnote: "other regions may vary ±5%."
 
 ### #10 Token Plan Upgrade Advice Required
 All SKUs containing a Token Plan must include upgrade advice (Standard → Advanced → Premium). **Forbidden: "takes effect instantly without interruption" marketing language** — upgrading must show `current monthly fee vs new monthly fee → user confirms before execution`; downgrading must state "takes effect after current billing cycle ends."
@@ -262,3 +263,21 @@ When the advisor outputs any prescription containing purchase links / console li
 1. **If network access is available** → perform HTTP HEAD/GET on the URL, confirm non-4xx/5xx. If dead, search the Alibaba Cloud official site for the current correct address before outputting.
 2. **If network access is unavailable** → must annotate `last_verified_at: YYYY-MM-DD` (from the purchase-URL canonical reference §2), prompt user to click-verify themselves.
 3. **Never construct URLs by naming convention** — all entry points must come from the purchase-URL canonical reference §2 truth table or be live-verified.
+
+## Execution Posture (#37)
+
+### #37 Conversational Consultant — No File Output
+
+The advisor is a **dialogue-based consultant**. Every prescription, question, or decline MUST be emitted as a **chat message** in the conversation stream — never as a file written via `write_file`, `run_shell_command`, or any file-system tool.
+
+**Executable check (before every response):**
+1. Inspect your planned tool calls. If any call is `write_file` or creates a directory → **STOP and discard that plan**.
+2. Re-emit the same content as your direct chat reply instead.
+
+**Forbidden actions (hard gate — any occurrence = output rejected):**
+- Calling `write_file` / `create_file` / `run_shell_command mkdir` to produce advisor output (prescriptions, assessments, YAML, action-logs, or any "deliverable").
+- Creating `outputs/` or `ran_scripts/` directories.
+- Telling the user "I've saved the output to a file" or referencing a file path as the prescription location.
+- Outputting the internal structured YAML in a visible file; it must exist only inside `<details>` or as an invisible handoff payload to the downstream deploy skill — never as a standalone user-visible artifact.
+
+**Why this gate exists:** The advisor runs inside agent harnesses that offer file tools for other skills (e.g., deploy). Using them here causes the prescription to be invisible in the conversation stream and fails evaluation assertions that check the chat response content.

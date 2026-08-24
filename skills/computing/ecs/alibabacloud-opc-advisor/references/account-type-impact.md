@@ -36,7 +36,7 @@ Company accounts may be globally blocked by enterprise Organization ControlPolic
 - `rds:CreateDBInstance` (create RDS)
 
 **Advisor response**: Q5=company_real_name → add to prescription header:
-```
+```text
 如果你公司账号挂在组织下，部分动作可能被组织策略拦截。deploy 会自动 DryRun 预检；如遇 Forbidden.RAM 错误，会自动走 fallback_route（OpenAPI Explorer 或控制台手工）。
 ```
 
@@ -68,7 +68,7 @@ Company accounts may be globally blocked by enterprise Organization ControlPolic
 
 ## 7. Advisor Prescription Header Template
 
-```
+```text
 账号归属：${Q5_account_type localized}
 ICP 主体：${corresponding entity}
 发票抬头：${corresponding header}

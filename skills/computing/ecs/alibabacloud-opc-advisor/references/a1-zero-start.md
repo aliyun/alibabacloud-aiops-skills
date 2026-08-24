@@ -36,11 +36,35 @@ Ask whether the product heavily calls AI (AI chat / image generation / translati
 
 > 💡 If deploy-side pricing doesn't qualify for ¥99 (may have used similar promotion before), deploy auto-fallback to ECS Economy e + 40G ESSD Entry + pay-by-traffic + 100 Mbps peak at ¥284.99/year (Beijing), with an outbound-traffic alarm — advisor no longer asks user promotion history.
 
-Follow-up confirmation — ask whether they already use Codex / WorkBuddy or similar desktop AI assistants; if yes, can skip QWCN Pro (−¥59). Sample wording (zh-CN):
+Desktop AI assistant — **infer from your own runtime, never ask** (aligned with Q6's "ask only if
+ambiguous" discipline, and with deploy's Phase -1.2 / iron-rule #10 which resolves the same fact):
+
+`qwcn-pro` is **never part of the package quote** — it is desktop software, not a cloud resource, so deploy
+cannot provision it and the user buys it themselves. The only question is whether they already have an
+equivalent tool, and that is decided by **self-introspection, not by asking the user**:
 
 ```text
-你是不是已经在用 Codex / WorkBuddy 等桌面 AI 助手了？
+Do I have a local-execution capability (a Bash / terminal / file-write tool that acts on the user's machine)?
+  YES → I AM a desktop AI assistant. The user demonstrably already has one.
+        → No download needed. Mention it in one line, do not dwell:
+          「代码部署靠你现在用的这个桌面 AI 助手就能搞定，不用额外买工具。」
+  NO  → I am a chat-only runtime (web page, no local shell). I must NOT assume the user has a desktop tool.
+        → Guide the download as a SEPARATE self-purchase, outside the package:
+          「套餐开好之后，代码部署需要一个能远程操作服务器的桌面 AI 助手。
+           推荐 QoderWork CN Pro（¥59/月，你自己下载订阅，不含在套餐里）：
+           👉 https://qoder.com.cn/qoderwork
+           先开套餐也行，回头再装。」
 ```
+
+Both branches quote the SAME package price — the ¥59 never enters the OPC quote either way. Never ask the
+user this question:
+
+```text
+你是不是已经在用 Codex / WorkBuddy 这类桌面 AI 助手了？
+```
+
+In the YES branch the answer is your own runtime, and in the NO branch asking does not help — you guide the
+download regardless.
 
 ### Step 3: Lite Simultaneous-Users Bijection
 
@@ -82,7 +106,7 @@ Structured fields (sku / price / scope_declaration / fallback_ecs_config / image
 A. **让我帮你下单** —— 你说一声，我直接帮你创建好（推荐，省得自己点）
 B. **自己去页面买** —— 打开 https://opc.aliyun.com/products
    → 选「OPC Starter 套餐 - 网络名片版」卡片
-   → 如果你已经在用 Cursor/Codex 等桌面 AI 工具，可去掉默认勾选的 QoderWork（¥59/月）
+   → 把默认勾选的 QoderWork（¥59/月）去掉——那是桌面软件，不属于云资源，需要的话你自己单独下载订阅
    → 确认付款
 
 💡 价格供参考，实际以最终下单为准。ECS ¥99/年如果没命中（比如你之前已经享过同类优惠），
@@ -91,18 +115,17 @@ B. **自己去页面买** —— 打开 https://opc.aliyun.com/products
 为什么是它：
 - 展示类产品不需要 AI 调用额度——不多花这笔钱
 - ECS 经济型e ¥99/年长期优惠（续费同价），最经济的入门选择
-- QoderWork CN Pro 桌面端帮你做应用 + 一键部署到服务器，不用敲命令
 
 【你会拿到什么】
 - 你的「小店面」（ECS 经济型e 2核2G）：产品跑在上面，随时在线
-- 你的「AI 装修师」（QoderWork CN Pro）：帮你做产品 + 远程部署
 - 全球加速（ESA 免费版）：国内外访问都快
 
 [domain prompt]
+[desktop assistant line — per Step 2's runtime inference: either "靠你现在这个桌面 AI 助手就能部署" or the QoderWork CN Pro download guide (¥59/月，自付，不含在套餐里)]
 
 【怎么搞起来（2 步）】
 1. **购买页确认付款** → 约 2 分钟服务器就绪
-2. **打开 QoderWork CN Pro → 告诉它你想做什么** → 它帮你做好 + 部署上线
+2. **让桌面 AI 助手接手** → 告诉它你想做什么 + 服务器 IP，它帮你做好 + 部署上线
 
 【什么时候该升级】
 - 产品开始有用户量（几十人持续用） + 需要独立数据库 → 升 lite_seed（¥596.54/月，去 ECS/RDS 控制台升配，或跟我说一声我帮你判断）
@@ -124,29 +147,28 @@ B. **自己去页面买** —— 打开 https://opc.aliyun.com/products
 A. **让我帮你下单** —— 你说一声，我直接帮你创建好（推荐，省得自己点）
 B. **自己去页面买** —— 打开 https://opc.aliyun.com/products
    → 选「OPC Starter 套餐 - AI 应用版」卡片
-   → 默认勾选项已对齐推荐配置（含 QoderWork CN Pro），保持默认即可
+   → 把默认勾选的 QoderWork（¥59/月）去掉——那是桌面软件，不属于云资源，需要的话你自己单独下载订阅
    → 确认付款
 
 💡 价格供参考，实际以最终下单为准。ECS ¥99/年活动以下单时活动可用性为准。
 
 为什么是它：
 - 产品调 AI → 需要 Token Plan 提供 AI 调用额度
-- QoderWork CN Pro 帮你做应用 + 远程部署，不用敲命令
 - 阿里云盘 200GB 存你和 AI 相关的文件资料
 
 【你会拿到什么】
 - 你的「小店面」（ECS 经济型e 2核2G）：产品跑在上面，随时在线
-- 你的「AI 装修师」（QoderWork CN Pro）：帮你做产品 + 远程部署
 - 你的「AI 店员工时包」（Token Plan 标准版）：每月 25,000 次 AI 调用额度
 - 你的「文件柜」（阿里云盘 200GB）
 - 全球加速（ESA 免费版）
 
 [Token Plan upgrade advice]
 [domain prompt]
+[desktop assistant line — per Step 2's runtime inference: either "靠你现在这个桌面 AI 助手就能部署" or the QoderWork CN Pro download guide (¥59/月，自付，不含在套餐里)]
 
 【怎么搞起来（2 步）】
 1. **购买页确认付款** → 约 2 分钟全部就绪
-2. **打开 QoderWork CN Pro → 告诉它你想做什么** → 它帮你做好 + 部署上线 + 配好 AI 调用
+2. **让桌面 AI 助手接手** → 告诉它你想做什么 + 服务器 IP，它帮你做好 + 部署上线 + 配好 AI 调用
 
 【什么时候该升级】
 - Token Plan 25k/月不够 → 控制台一键升高级版（100k，¥698/月，升档前先报新月费你确认才执行）

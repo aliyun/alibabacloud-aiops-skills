@@ -110,7 +110,7 @@
 
 ## 2. Confusable-Term Reverse-Lookup Index (for lint)
 
-```
+```text
 Confusable Term              → Required disambiguation fragment
 "阿里云盘" (Aliyun Drive)    → "PDS 企业版" or "pds_trc_public_cn" or "不是个人版 aliyundrive"
 "OSS"                        → "对象存储" or "API" or "bucket"

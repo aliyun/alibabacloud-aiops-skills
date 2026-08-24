@@ -6,12 +6,12 @@
 - [ ] Does **c9i / g9i / r9i** or any ECS series name appear? (Never allowed — only say specs like "ECS 2-core 4 GB")
 - [ ] Does it **list multiple SKUs for the user to choose from**? (Must give exactly one precise recommendation)
 - [ ] Are prices taken as exact values from the SKU matrix, or made up from memory? (Must take fixed values from the table)
-- [ ] **Are prices qualified with "approximately" / "starting from" / "reference"?** (Forbidden — must quote exact amounts)
+- [ ] **Are prices `起` / `starting from`, or is `参考价` used to replace an actual number?** (Forbidden. `约` IS allowed in front of a matrix/amortized figure as long as the exact matrix value and the #12 disclaimer are both present — see iron-rule #9)
 - [ ] **Does every SKU quotation include the `「💡 价格供参考，实际以最终下单为准」` disclaimer?** (Iron Rule #12)
 - [ ] **Do promotional prices (e.g., ECS ¥99/year, ESA medium ¥99) add "subject to promotion availability at time of order"?**
 - [ ] **Does the prescription section include A/B dual-path closing?** (Iron Rule #14: A = let me place the order / B = self-service at opc.aliyun.com/products)
 - [ ] **Does Path B give the exact card name?** (4 main cards: `网络名片版` / `AI 应用版` / Lite / Pro)
-- [ ] **Does Path B mention which default checkboxes to keep/remove?** (e.g., starter_webui: "if using Cursor, uncheck the default QoderWork ¥59/month")
+- [ ] **Does Path B mention which default checkboxes to keep/remove?** (e.g., starter_webui: "uncheck the default QoderWork ¥59/month — self-purchased desktop software, not part of the package")
 - [ ] **Does user-facing copy expose internal terms like "deploy tool" or "deploy agent"?** (Iron Rule #14: forbidden)
 - [ ] **Has domain pricing been stripped of hardcoded values?** (Unified: "prices vary by suffix")
 - [ ] **Does the upgrade prompt point to console/assisted path, not purchase page?** (Cross-tier upgrades go through ECS/RDS console, not re-purchasing)
@@ -45,7 +45,7 @@
 
 ## Starter Specific Checklist
 
-- [ ] **Starter: Q6 (AI) is inferred from keywords (chat/bookkeeping/resume = text AI → `starter_app`; no AI signal → `starter_webui`); the deprecated "have you used promotions before" question is NOT asked (deploy-side pricing handles it). Only ask one question if AI usage is genuinely ambiguous — otherwise 0 blocking questions for starter.**
+- [ ] **Starter: Q6 (AI) is inferred from keywords (chat/bookkeeping/resume = text AI → `starter_app`; no AI signal → `starter_webui`; image/video/media or knowledge-base retrieval → Q6=Yes, `starter_*` forbidden per sku-sizing-questionnaire §3); the deprecated "have you used promotions before" question is NOT asked (deploy-side pricing handles it). Only ask one question if AI usage is genuinely ambiguous — otherwise 0 blocking questions for starter.**
 - [ ] **starter_webui default recommends ECS Economy e + QWCN Pro + ESA Free?**
 - [ ] starter_webui disclaimer section uses unified wording? (`「ECS ¥99/年如果没命中，我会自动给你切到按流量计费的备选配置 ¥284.99/年（北京），同时帮你装一个出流量告警防过冲」` — never expose deploy tool names)
 - [ ] starter_webui Path B mentions "self-service page only has the ¥99/year option; ¥284.99/year pay-by-traffic fallback is auto-applied by deploy" limitation? (Only when user asks or clarification needed; normally Path B does not proactively state this — Path A handles it)
@@ -53,7 +53,9 @@
 - [ ] **starter_app includes Token Plan Standard + PDS 200 GB?** (product calls AI)
 - [ ] **Does NOT recommend OpenClaw / SWAS to Starter users (unless deploy-side pricing activates fallback)?**
 - [ ] **Does NOT recommend OSS static hosting to Starter?** (starter_static path deprecated)
-- [ ] For users with Codex/WorkBuddy etc., does Path B clearly state "can uncheck the default QoderWork ¥59/month"?
+- [ ] **Does Path B tell the user to UNCHECK the default QoderWork (¥59/month) unconditionally?** `qwcn-pro` is self-purchased desktop software, never a quoted package component — the instruction must not be conditioned on "if you already use Codex/WorkBuddy".
+- [ ] **Was the desktop-assistant question NOT asked?** Never ask `你是不是已经在用 Codex / WorkBuddy…`; it must be inferred from the runtime (local-execution capability ⇒ you ARE their desktop assistant; chat-only runtime ⇒ guide the download as a self-purchase). See a1-zero-start Step 2 / iron-rule #5.
+- [ ] **Is `qwcn-pro` absent from the quoted price and from the "what you get" list?** (¥59 must never be added to a Starter total.)
 
 ## ECS Sizing Checklist (Lite/Pro)
 
@@ -81,7 +83,7 @@
 - [ ] **Did NOT use "branch store offloading traffic from main store" or similar wrong metaphors?**
 - [ ] **Did NOT list multiple SKUs / multiple plans for user comparison?**
 - [ ] **Did NOT fabricate prices (must take exact values from the SKU matrix)?**
-- [ ] **Did NOT use "approximately" / "starting from" vague pricing words?**
+- [ ] **Did NOT use `起` / `starting from` or `参考价`-as-substitute?** (`约` is allowed with the exact figure + #12 disclaimer present — iron-rule #9)
 - [ ] **Did NOT omit the `「💡 价格供参考，实际以最终下单为准」` disclaimer?**
 - [ ] **Did NOT force a SKU beyond OPC scope?** (Local model running/GPU/50+ person company → output boundary notice)
 - [ ] **Did NOT write lite_growth ECS as 4-core 8 GB?** (growth ECS = 2-core 4 GB; only RDS upgrades)

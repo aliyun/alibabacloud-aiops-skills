@@ -44,7 +44,7 @@
 
 | Everyday-Life Anchor (instantly understandable) | Peak-Minute Users | Map to SKU | ECS | RDS |
 |-------------------------------------------------|-------------------|------------|-----|-----|
-| WeChat Moments likes / small group simultaneously active | ≤15 | **lite_seed** | `ecs-c9i-2c4g` | `rds-1c2g` |
+| WeChat Moments likes / small group simultaneously active | ≤15 | **lite_seed** (when Q-userdata=Yes); **starter_webui/starter_app** (when Q-userdata=No) — see sku-sizing-questionnaire §2 for full logic | `ecs-c9i-2c4g` (lite) / `ecs-e` (starter) | `rds-1c2g` (lite) / none (starter) |
 | Xiaohongshu viral post — hottest minute | 15–80 | **lite_growth** | `ecs-c9i-2c4g` | `rds-2c4g` |
 | Top influencer livestream — first minute | 80–200 | **lite_traction** | `ecs-c9i-4c8g` | `rds-4c8g` |
 | 200+ steady | 200+ | **pro_steady** | `ecs-c9i-4c8g` ×2 | `rds-4c8g-ha` |

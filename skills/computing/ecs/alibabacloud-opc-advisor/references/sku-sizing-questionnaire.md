@@ -42,9 +42,9 @@ Inputs: Q-scale (asked or inferred) + Q-userdata (asked or inferred) + Q6_vlm (i
 | Trigger (Q-scale + Q-userdata + inferred Q6/Q4) | Recommend SKU | Forbidden |
 |---|---|---|
 | Q-scale ≤15 + Q-userdata=No + Q6=No (no AI, personal use/portfolio) | `starter_webui` (+ ICP guidance if Q4=Yes) | starter_app (Token Plan wasted) |
-| Q-scale ≤15 + Q-userdata=No + product calls text AI (chat/bookkeeping/resume, no VLM) | `starter_app` | — |
+| Q-scale ≤15 + Q-userdata=No + product calls text AI (chat/bookkeeping/resume — no VLM, no knowledge-base retrieval) | `starter_app` | — |
 | Q-userdata=Yes (registration/payment OR upload) | Floor ≥ `lite_seed` (RDS for accounts + OSS for uploads) + 38-item hardening checklist | starter_* (no independent RDS/OSS) |
-| Q-scale = 5-15 (no VLM, no user-data) | `lite_seed` | starter_* (insufficient resources) |
+| Q-userdata=Yes + Q-scale ≤15 (smallest PII-capable tier — has independent RDS) | `lite_seed` | starter_* (no independent RDS) |
 | Q-scale = 15-80 (no VLM) | `lite_growth` | starter_*, lite_seed |
 | Q6=Yes (VLM keyword hit: recognition/detection/generation) | Floor `lite_growth` (per iron-rule #32) | starter_*, lite_seed (VLM needs more than seed) |
 | Q-scale = 80-200 | `lite_traction` | starter_*/lite_seed/lite_growth |
@@ -62,15 +62,17 @@ Inputs: Q-scale (asked or inferred) + Q-userdata (asked or inferred) + Q6_vlm (i
 
 If any of the following keywords appear in the user's description → default Q6=Yes → starter_* forbidden:
 
-```
+```text
 赛事 / 直播 / 视频 / 录播 / 短视频 / 流媒体 / 直播带货
 图像识别 / 图片识别 / 图像分类 / 目标检测 / OCR / 人脸识别 / 商品识别 / 植物识别 / 动物识别
 可视化 / 大屏 / Dashboard / 数据看板 / BI 报表
 战报 / 解说 / 字幕生成 / 摘要生成 / 总结生成 / 标签生成
-聊天机器人 / 智能客服 / 知识问答 / RAG / 向量检索 / Embedding
+知识问答 / RAG / 向量检索 / Embedding
 AI 绘画 / 文生图 / 图生图 / SD / Midjourney / 视频生成
 推荐 / 算法 / 排序 / 模型推理 / GPU 推理 / 大模型
 ```
+
+**Plain conversational text AI is NOT a Q6 hit.** A chatbot / customer-service bot / language tutor that only calls a text LLM (no image or video, no knowledge-base retrieval) stays `starter_app` per §2 — `starter_app` is positioned for exactly this (see the SKU matrix: "AI accounting / chatbot / language tutor"). Q6 turns Yes only when the product processes images/video/media, or needs retrieval infrastructure (knowledge base / vector store / embeddings), which `starter_app` cannot host.
 
 ## 4. UGC Public-Site Deep Inquiry (when Q-userdata=Yes)
 
