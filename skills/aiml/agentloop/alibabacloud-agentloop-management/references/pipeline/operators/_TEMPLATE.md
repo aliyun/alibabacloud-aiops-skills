@@ -51,7 +51,7 @@
 |-----------|------|----------|---------|-------------|
 | `-field` | Field | **Yes** | - | {Description of the primary operand field} |
 | {`-param`} | {Type} | {Yes/No} | {default} | {Description} |
-| `as` | Field | No | {default} | {Output column name — an instruction primitive, without the `-` prefix} |
+| `as` | Field | No | {default} | {Output column name - an instruction primitive, without the `-` prefix} |
 
 > {Guidance on parameter usage or selection, when threshold-style parameters exist}
 > **Parameter categories**: names with a `-` prefix are ordinary parameters
@@ -68,7 +68,7 @@
 
 | Column | Type | Source | Description |
 |--------|------|--------|-------------|
-| All input columns | — | Input | Every upstream column passes through |
+| All input columns | - | Input | Every upstream column passes through |
 | `__{prefix}_{col}` | {type} | Derived | {Semantic description} |
 
 > **`Source` enum values**: `Input` (an upstream data column passing through) and
@@ -77,10 +77,10 @@
 
 **Input-to-output relationship**:
 
-{M:N constraint} — {one sentence describing how the row count changes}.
+{M:N constraint} - {one sentence describing how the row count changes}.
 
-> Common patterns: `M:N (M ≥ N)` for dedup/filter · `M:N (M = N)` for 1:1
-> transformation/labeling · `M:N (M ≤ N)` for expansion/augmentation
+> Common patterns: `M:N (M >= N)` for dedup/filter ; `M:N (M = N)` for 1:1
+> transformation/labeling ; `M:N (M <= N)` for expansion/augmentation
 
 ## Effect preview
 
@@ -92,7 +92,7 @@
 | {sample data row 2} |
 | {sample data row 3} |
 
-**After** ({M} rows) — `| {operator-name} -field=<column> {params}`:
+**After** ({M} rows) - `| {operator-name} -field=<column> {params}`:
 
 | {col1} | {col2} | {col3} | {derived column} |
 |--------|--------|--------|------------------|

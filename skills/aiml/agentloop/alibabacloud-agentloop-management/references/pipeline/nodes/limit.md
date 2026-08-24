@@ -42,11 +42,11 @@ Common uses:
 
 | Column | Type | Source | Description |
 |--------|------|--------|-------------|
-| All input columns | — | Pass-through | The column structure is unchanged; only the row count is limited |
+| All input columns | - | Pass-through | The column structure is unchanged; only the row count is limited |
 
 **Row-count change**:
 
-M → N (M ≥ N) — rows are truncated only, `N = min(M, n)`.
+M -> N (M >= N) - rows are truncated only, `N = min(M, n)`.
 
 ## Examples
 

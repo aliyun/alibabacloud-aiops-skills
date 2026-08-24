@@ -44,11 +44,11 @@ functions can be combined into complex conditions.
 
 | Column | Type | Source | Description |
 |--------|------|--------|-------------|
-| All input columns | — | Input | The column structure is unchanged; only rows are filtered |
+| All input columns | - | Input | The column structure is unchanged; only rows are filtered |
 
 **Input-to-output relationship**:
 
-M:N (M ≥ N) — only rows where the expression is `true` survive, so the output row
+M:N (M >= N) - only rows where the expression is `true` survive, so the output row
 count is at most the input row count.
 
 ## Examples

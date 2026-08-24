@@ -49,11 +49,11 @@ functions can be used.
 
 | Column | Type | Source | Description |
 |--------|------|--------|-------------|
-| All input columns | — | Pass-through | The column structure is unchanged; only rows are filtered |
+| All input columns | - | Pass-through | The column structure is unchanged; only rows are filtered |
 
 **Row-count change**:
 
-M → N (M ≥ N) — the output row count is at most the input row count.
+M -> N (M >= N) - the output row count is at most the input row count.
 
 ## Examples
 

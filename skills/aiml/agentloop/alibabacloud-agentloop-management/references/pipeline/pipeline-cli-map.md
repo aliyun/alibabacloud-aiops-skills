@@ -171,7 +171,7 @@ used by internal generators such as `xiaolan-pipeline-gen`) are NOT the CLI
 | source body | `parameters.query` | `logstore.{project,logstore,query}` |
 | `where` node param | `condition` | `filter` |
 | `executePolicy.mode` | `incremental` + batchSize/timeRange | spec `run_once` / `scheduled`; wrapper emits `runOnce` / `scheduled` |
-| `sink` | `type: dataset` with no body | spec `dataset.{agent_space,name}` → wrapper emits `dataset.{agentSpace,dataset}` |
+| `sink` | `type: dataset` with no body | spec `dataset.{agent_space,name}` -> wrapper emits `dataset.{agentSpace,dataset}` |
 | time unit | mixed | Unix seconds or timezone ISO-8601; milliseconds rejected |
 
 Node-type notes when porting backend templates:

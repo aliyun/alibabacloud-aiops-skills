@@ -36,11 +36,11 @@ which makes it one of the lightest volume-reduction operators.
 
 | Column | Type | Source | Description |
 |--------|------|--------|-------------|
-| All input columns | — | Input | Every upstream column passes through; only the row count is limited |
+| All input columns | - | Input | Every upstream column passes through; only the row count is limited |
 
 **Input-to-output relationship**:
 
-M:N (M ≥ N) — `N = min(M, count)`.
+M:N (M >= N) - `N = min(M, count)`.
 
 ## Examples
 
@@ -96,5 +96,5 @@ None (only the SQL `LIMIT` syntax).
 |------|----------|
 | `<count>` is missing | Parameter validation fails |
 | `<count>` is not an integer | Parameter validation fails |
-| `<count>` ≤ 0 | Parameter validation fails |
+| `<count>` <= 0 | Parameter validation fails |
 | The input is empty | An empty result set is returned normally |

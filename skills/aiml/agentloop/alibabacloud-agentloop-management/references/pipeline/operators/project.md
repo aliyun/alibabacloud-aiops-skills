@@ -51,7 +51,7 @@ under its original name.
 
 **Input-to-output relationship**:
 
-M:N (M = N) — the row count does not change; only columns are selected and renamed.
+M:N (M = N) - the row count does not change; only columns are selected and renamed.
 
 ## Examples
 

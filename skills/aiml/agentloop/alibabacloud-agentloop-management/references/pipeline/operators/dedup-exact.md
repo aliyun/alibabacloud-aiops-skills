@@ -46,14 +46,14 @@ duplicates.
 
 | Column | Type | Source | Description |
 |--------|------|--------|-------------|
-| All input columns | — | Input | Every upstream column passes through |
+| All input columns | - | Input | Every upstream column passes through |
 | `__dedup_hash` | bigint | Derived | The text fingerprint, identifying text uniqueness |
 | `__dedup_weight` | integer | Derived | Text length, the basis for the dedup weight (the longest text in a group wins) |
 | `__dedup_rnk` | integer | Derived | Rank within the group (always 1 after deduplication, marking the row as the group's best pick) |
 
 **Input-to-output relationship**:
 
-M:N (M ≥ N) — records sharing a fingerprint collapse into one row (the longest text
+M:N (M >= N) - records sharing a fingerprint collapse into one row (the longest text
 in each group), so the output row count is less than or equal to the input row count.
 
 ## Effect preview
@@ -62,19 +62,19 @@ in each group), so the output row count is less than or equal to the input row c
 
 | question | input | output |
 |----------|-------|--------|
-| What is machine learning? | Please explain | Machine learning is a branch of artificial intelligence… |
-| What is machine learning? | Please explain in detail | Machine learning (ML) trains models from data… |
-| How do I learn Python? | Getting-started guide | Start with the official tutorial… |
-| What is deep learning? | In brief | Deep learning is a subset of machine learning… |
-| How do I learn Python? | For beginners | Learn the basic syntax first… |
+| What is machine learning? | Please explain | Machine learning is a branch of artificial intelligence... |
+| What is machine learning? | Please explain in detail | Machine learning (ML) trains models from data... |
+| How do I learn Python? | Getting-started guide | Start with the official tutorial... |
+| What is deep learning? | In brief | Deep learning is a subset of machine learning... |
+| How do I learn Python? | For beginners | Learn the basic syntax first... |
 
-**After** (3 rows) — `| dedup-exact -field=question`:
+**After** (3 rows) - `| dedup-exact -field=question`:
 
 | question | input | output | __dedup_hash | __dedup_weight | __dedup_rnk |
 |----------|-------|--------|-------------|---------------|-------------|
-| What is machine learning? | Please explain in detail | Machine learning (ML) trains models from data… | 8832749102 | 25 | 1 |
-| How do I learn Python? | Getting-started guide | Start with the official tutorial… | 5561023847 | 22 | 1 |
-| What is deep learning? | In brief | Deep learning is a subset of machine learning… | 3347891256 | 22 | 1 |
+| What is machine learning? | Please explain in detail | Machine learning (ML) trains models from data... | 8832749102 | 25 | 1 |
+| How do I learn Python? | Getting-started guide | Start with the official tutorial... | 5561023847 | 22 | 1 |
+| What is deep learning? | In brief | Deep learning is a subset of machine learning... | 3347891256 | 22 | 1 |
 
 > Both groups of records with an identical `question` keep a single row (the one with
 > the longest text), so the output goes from 5 rows to 3. The derived columns
@@ -234,10 +234,10 @@ SELECT * FROM _exact_dedup
 
 | Signature | Description |
 |-----------|-------------|
-| `prompt_simhash(text) → bigint` | Compute the SimHash fingerprint of the text |
-| `simhash_dedup(sh_array, weight_array, threshold) → array(bigint)` | In-batch SimHash dedup, returning the surviving fingerprints (used in global mode) |
-| `simhash_dedup_with_dataset(sh_array, workspace, dataset, threshold) → array(bigint)` | Cross-batch SimHash dedup (used in global mode) |
-| `simhash_dataset_upsert(sh_array, workspace, dataset) → void` | Write fingerprints into the Dataset (used in global mode) |
+| `prompt_simhash(text) -> bigint` | Compute the SimHash fingerprint of the text |
+| `simhash_dedup(sh_array, weight_array, threshold) -> array(bigint)` | In-batch SimHash dedup, returning the surviving fingerprints (used in global mode) |
+| `simhash_dedup_with_dataset(sh_array, workspace, dataset, threshold) -> array(bigint)` | Cross-batch SimHash dedup (used in global mode) |
+| `simhash_dataset_upsert(sh_array, workspace, dataset) -> void` | Write fingerprints into the Dataset (used in global mode) |
 
 ## Edge cases
 

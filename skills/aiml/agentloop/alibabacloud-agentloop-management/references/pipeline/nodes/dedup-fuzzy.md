@@ -68,14 +68,14 @@ text.
 
 | Column | Type | Source | Description |
 |--------|------|--------|-------------|
-| Columns controlled by `output` | — | Pass-through / added | `*` keeps every column (including derived ones); when set, only the listed columns are emitted |
+| Columns controlled by `output` | - | Pass-through / added | `*` keeps every column (including derived ones); when set, only the listed columns are emitted |
 | `__dedup_hash` | bigint | Added | Text fingerprint |
 | `__dedup_weight` | integer | Added | Text length |
 | `__dedup_rnk` | integer | Added | Rank within the cluster (always 1 after dedup) |
 
 **Row-count change**:
 
-M → N (M ≥ N) — similar texts are grouped into one cluster and one row survives
+M -> N (M >= N) - similar texts are grouped into one cluster and one row survives
 per cluster, so the output row count is at most the input row count.
 
 ## Effect preview
@@ -84,22 +84,22 @@ per cluster, so the output row count is at most the input row count.
 
 | question | input | output |
 |----------|-------|--------|
-| What is machine learning? | Please explain | Machine learning is… |
-| What is machine learning, exactly? | Explain in detail | Machine Learning (ML) is… |
-| How do I learn Python? | Getting started | Start with the official tutorial… |
-| How can I learn Python? | Guide | Learn the basic syntax first… |
-| What is deep learning? | In brief | Deep learning is a subset of machine learning… |
+| What is machine learning? | Please explain | Machine learning is... |
+| What is machine learning, exactly? | Explain in detail | Machine Learning (ML) is... |
+| How do I learn Python? | Getting started | Start with the official tutorial... |
+| How can I learn Python? | Guide | Learn the basic syntax first... |
+| What is deep learning? | In brief | Deep learning is a subset of machine learning... |
 
-**After** (3 rows) — `field = "question"`, `threshold = "3"`:
+**After** (3 rows) - `field = "question"`, `threshold = "3"`:
 
 | question | input | output | __dedup_hash | __dedup_weight | __dedup_rnk |
 |----------|-------|--------|-------------|---------------|-------------|
-| What is machine learning, exactly? | Explain in detail | Machine Learning (ML) is… | 8832749102 | 34 | 1 |
-| How do I learn Python? | Getting started | Start with the official tutorial… | 5561023847 | 22 | 1 |
-| What is deep learning? | In brief | Deep learning is a subset of machine learning… | 3347891256 | 22 | 1 |
+| What is machine learning, exactly? | Explain in detail | Machine Learning (ML) is... | 8832749102 | 34 | 1 |
+| How do I learn Python? | Getting started | Start with the official tutorial... | 5561023847 | 22 | 1 |
+| What is deep learning? | In brief | Deep learning is a subset of machine learning... | 3347891256 | 22 | 1 |
 
 > The two machine-learning questions are highly similar (fingerprint distance
-> ≤ 3), so they form one cluster and the longest one survives; the two Python
+> <= 3), so they form one cluster and the longest one survives; the two Python
 > questions behave the same way. 5 rows become 3.
 
 ## Examples
@@ -168,7 +168,7 @@ Global dedup across batches, comparing approximately against the Dataset history
 **Recommended usage**:
 - **Use it after `dedup-exact`**: strip the fully identical rows first so that
   near dedup handles only the small differences, which reduces SimHash work
-- Recommended pipeline order: `dedup-exact` → `dedup-fuzzy` → `dedup-semantic`
+- Recommended pipeline order: `dedup-exact` -> `dedup-fuzzy` -> `dedup-semantic`
 - The default threshold `"3"` suits most text-dedup scenarios; a smaller value is
   stricter
 
@@ -185,7 +185,7 @@ Global dedup across batches, comparing approximately against the Dataset history
 |------|----------|
 | `field` is missing | Validation fails |
 | `threshold` is negative or non-numeric | Validation fails |
-| `threshold` is too large (≥ 64) | Every record falls into one cluster and only one row survives |
+| `threshold` is too large (>= 64) | Every record falls into one cluster and only one row survives |
 | `global` is `true` but `workspace` or `dataset` is missing | Validation fails |
 | The `field` value is NULL | The row is excluded from dedup and from the output |
 | The input is empty | An empty result set is returned normally |

@@ -110,7 +110,7 @@ aliyun agentloop list-context-store-api-keys \
 
 ## Recall Endpoint Format
 
-The SearchContext endpoint of a store — the value for `AGENTLOOP_RECALL_ENDPOINT` in `recall.env` (AK/SK mode) — follows the ROA path used by the service:
+The SearchContext endpoint of a store - the value for `AGENTLOOP_RECALL_ENDPOINT` in `recall.env` (AK/SK mode) - follows the ROA path used by the service:
 
 ```text
 https://agentloop.<region_id>.aliyuncs.com/agentspace/<agent_space_name>/contextstore/<store_name>/context/search

@@ -56,12 +56,12 @@ Each record is computed independently and the row count does not change.
 
 | Column | Type | Source | Description |
 |--------|------|--------|-------------|
-| All input columns | — | Pass-through | Every upstream column is kept |
+| All input columns | - | Pass-through | Every upstream column is kept |
 | Every key in `parameters` | Determined by the expression | Added or overwritten | A column of the same name is overwritten; a new name is appended |
 
 **Row-count change**:
 
-M → N (M = N) — the row count does not change; each row is computed
+M -> N (M = N) - the row count does not change; each row is computed
 independently.
 
 ## Examples
@@ -117,7 +117,7 @@ Adds the two derived columns `summary` and `q_len`.
 }
 ```
 
-Map, transform, filter — the basic composition pattern.
+Map, transform, filter - the basic composition pattern.
 
 ## Notes
 

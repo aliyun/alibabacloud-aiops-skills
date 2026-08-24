@@ -41,7 +41,7 @@ Each record is embedded independently, so the input and output row counts match 
 > | Model | Dimensions | Description |
 > |-------|------------|-------------|
 > | `embedding-multilang-v3` | 1024 | **Default**; multilingual, suitable for general use |
-> | `text-embedding-v3` | — | Optional alternative model, configured on demand |
+> | `text-embedding-v3` | - | Optional alternative model, configured on demand |
 
 ## Input and output
 
@@ -54,12 +54,12 @@ Each record is embedded independently, so the input and output row counts match 
 
 | Column | Type | Source | Description |
 |--------|------|--------|-------------|
-| All input columns | — | Input | Every upstream column passes through |
+| All input columns | - | Input | Every upstream column passes through |
 | `{{as}}` | array(double) | Derived | The text embedding vector |
 
 **Input-to-output relationship**:
 
-M:N (M = N) — a 1:1 transformation; each row is embedded independently and no rows
+M:N (M = N) - a 1:1 transformation; each row is embedded independently and no rows
 are added or dropped.
 
 > **Note**: rows whose `-field` value is NULL are filtered out and do not appear in
@@ -71,19 +71,19 @@ are added or dropped.
 
 | question | input | output |
 |----------|-------|--------|
-| What is machine learning? | Please explain | Machine learning is… |
-| How do I learn Python? | Getting started | Start with the official tutorial… |
-| What is deep learning? | In brief | Deep learning is… |
+| What is machine learning? | Please explain | Machine learning is... |
+| How do I learn Python? | Getting started | Start with the official tutorial... |
+| What is deep learning? | In brief | Deep learning is... |
 
-**After** (3 rows) — `| embedding -field=question`:
+**After** (3 rows) - `| embedding -field=question`:
 
 | question | input | output | question_embedding |
 |----------|-------|--------|--------------------|
-| What is machine learning? | Please explain | Machine learning is… | [0.12, -0.34, 0.56, …] (1024 dims) |
-| How do I learn Python? | Getting started | Start with the official tutorial… | [0.78, 0.23, -0.11, …] (1024 dims) |
-| What is deep learning? | In brief | Deep learning is… | [-0.45, 0.67, 0.89, …] (1024 dims) |
+| What is machine learning? | Please explain | Machine learning is... | [0.12, -0.34, 0.56, ...] (1024 dims) |
+| How do I learn Python? | Getting started | Start with the official tutorial... | [0.78, 0.23, -0.11, ...] (1024 dims) |
+| What is deep learning? | In brief | Deep learning is... | [-0.45, 0.67, 0.89, ...] (1024 dims) |
 
-> The row count is unchanged (3 → 3) and every row gains a `question_embedding`
+> The row count is unchanged (3 -> 3) and every row gains a `question_embedding`
 > vector column (the default name is the field name plus `_embedding`). Downstream
 > operators such as `semantic-cluster` and `dedup-semantic` can consume the vector
 > directly.
@@ -107,7 +107,7 @@ automatically.
   | embedding -field=content -model='text-embedding-v3' as content_vec
 ```
 
-### Example 3: pipeline composition (dedup → embedding)
+### Example 3: pipeline composition (dedup -> embedding)
 
 ```
 * | project question,input,output
@@ -185,7 +185,7 @@ SELECT * FROM _emb_data
 
 | Signature | Description |
 |-----------|-------------|
-| `embedding(text, model) → array(double)` | Generate a text embedding vector with the given model (remote function) |
+| `embedding(text, model) -> array(double)` | Generate a text embedding vector with the given model (remote function) |
 
 ## Edge cases
 

@@ -98,9 +98,9 @@ Use synthetic values when raw traces may be sensitive:
 
 | Input shape | Expected `question` | Raw fields |
 | --- | --- | --- |
-| `<system_reminder>...</system_reminder><game_cases>...</game_cases>\n\n我的位置在哪里` | `我的位置在哪里` | `input` and `output` remain present and unchanged. |
-| `prefix <userQuery>如何建造塔防关卡？</userQuery> suffix` | `如何建造塔防关卡？` | `input` and `output` remain present and unchanged. |
-| `把天空改成诡异氛围` | `把天空改成诡异氛围` | `input` and `output` remain present and unchanged. |
+| `<system_reminder>...</system_reminder><game_cases>...</game_cases>\n\nWhere am I?` | `Where am I?` | `input` and `output` remain present and unchanged. |
+| `prefix <userQuery>How do I build a tower-defense level?</userQuery> suffix` | `How do I build a tower-defense level?` | `input` and `output` remain present and unchanged. |
+| `Make the sky feel eerie.` | `Make the sky feel eerie.` | `input` and `output` remain present and unchanged. |
 | Wrappers only, no user text | filtered by `where` | Source exclusion is counted and explained. |
 
 If wrapper formats can be nested, reordered, malformed, or contain multiple user messages, do not assume this expression is complete. Add cases, preview them, version the transform, and preserve raw input for later correction.

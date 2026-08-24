@@ -14,7 +14,7 @@ llm-call, and others) expect each row to be one complete sample instance.
 into a single wide-table sample row by the grouping key the user specifies (session_id,
 trace_id, and so on). Three families of built-in functions (selection, computation, and
 composition) cover everything from simple value picking to complex structural
-aggregation, and the operator is tolerant of broken data — missing fields become NULL
+aggregation, and the operator is tolerant of broken data - missing fields become NULL
 instead of errors.
 
 `make-instance` is the **first step** of a Pipeline data flow: it assembles discrete
@@ -23,7 +23,7 @@ runtime events into sample rows so the row-level operators that follow (`dedup`,
 
 **Use cases**:
 
-- Building row-level samples from AI agent runtime logs (event level → sample level)
+- Building row-level samples from AI agent runtime logs (event level -> sample level)
 - Reshaping OpenTelemetry trace span data into a wide table
 - Aggregating at several granularities (span, trace, session, user)
 - Serving as the first operator of a data-cleaning or evaluation Pipeline, preparing the
@@ -35,7 +35,7 @@ runtime events into sample rows so the row-level operators that follow (`dedup`,
 |-----------|----------------------|-----------------------------------|----------------------------------|
 | **Nature** | Builds an OT trace tree | Builds a semantic conversation skeleton | Assembles discrete log events into complete samples |
 | **Dependencies** | Strictly depends on OT parent-child relationships | LLM / GPU semantic processing | **Pure CPU, no external dependencies** |
-| **Robustness** | Low — a broken trace makes it useless | Medium — tolerant, but depends on semantic understanding | **High — very robust, missing data raises no error** |
+| **Robustness** | Low - a broken trace makes it useless | Medium - tolerant, but depends on semantic understanding | **High - very robust, missing data raises no error** |
 | **Input requirements** | Standard OT span data | An event stream plus specific field conventions | **Any log data with a custom grouping key** |
 | **Output format** | A trace tree (nested JSON) | Conversation skeleton plus a profile JSONB | **A flat wide-table row (one row per sample)** |
 | **Compute cost** | Heavy (tree building, CPU) | Heavy (LLM/function calling, GPU) | **Light (GROUP BY plus aggregation, CPU)** |
@@ -59,7 +59,7 @@ explicit function call.
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
 | Column definitions | `alias=func(args)` | **Yes** | - | A comma-separated list of column definitions, at least one |
-| `by` | Fields | **Yes** | - | Grouping keys, comma-separated — an instruction primitive, without the `-` prefix |
+| `by` | Fields | **Yes** | - | Grouping keys, comma-separated - an instruction primitive, without the `-` prefix |
 
 > **Instruction primitive**: `by` is an SPL instruction primitive. It carries **no `-`
 > prefix**, is separated from its value by a space, and **must come after every column
@@ -74,23 +74,23 @@ needs of data assembly:
 
 | Family | Nature | Problem solved | Typical use | Available functions |
 |--------|--------|----------------|-------------|---------------------|
-| **Selection** | N rows → 1 value | Keep one representative value out of the group's rows | Semantic fields such as question, output, model | ★`any` ★`first` ★`last` `max` `min` `max_by` `min_by` |
-| **Computation** | N rows → 1 number | Summarize numeric values across the group | Summing token usage, latency analysis, call counting | `sum` `avg` `count` `count_if` `bool_or` `bool_and` |
-| **Composition** | N rows → 1 structure | Keep and pack several values from the group | Tool-call chains, event sequences, structured detail | ★`array` ★`array_distinct` ★`join` ★`json_pack` `histogram` `map_agg` |
+| **Selection** | N rows -> 1 value | Keep one representative value out of the group's rows | Semantic fields such as question, output, model | [built-in]`any` [built-in]`first` [built-in]`last` `max` `min` `max_by` `min_by` |
+| **Computation** | N rows -> 1 number | Summarize numeric values across the group | Summing token usage, latency analysis, call counting | `sum` `avg` `count` `count_if` `bool_or` `bool_and` |
+| **Composition** | N rows -> 1 structure | Keep and pack several values from the group | Tool-call chains, event sequences, structured detail | [built-in]`array` [built-in]`array_distinct` [built-in]`join` [built-in]`json_pack` `histogram` `map_agg` |
 
-> ★ = built-in syntactic sugar that the API layer expands into a SQL aggregate
+> [built-in] = built-in syntactic sugar that the API layer expands into a SQL aggregate
 > expression; the rest are standard SQL aggregate functions passed through unchanged.
 
 **Function overview**
 
 | Family | Function | Usage | Description | Example | Result |
 |--------|----------|-------|-------------|---------|--------|
-| **Selection** | ★ `any` | `any(col)` | Any non-empty value in the group | `model=any(model)` | `qwen-max` |
-| | ★ `any` | `any(col, 'empty')` | The same, with the second argument naming the string treated as empty (default `''`) | `status=any(status, 'N/A')` | `success` |
-| | ★ `first` | `first(col)` | The earliest non-empty value by `__time__` | `question=first(question)` | `Analyze the error logs of the last 7 days…` |
-| | ★ `first` | `first(col, order_col)` | The earliest non-empty value by the given column | `q=first(question, startTime)` | The same as above |
-| | ★ `last` | `last(col)` | The latest non-empty value by `__time__` | `answer=last(output)` | `Found 42 errors in total…` |
-| | ★ `last` | `last(col, order_col)` | The latest non-empty value by the given column | `a=last(output, endTime)` | The same as above |
+| **Selection** | [built-in] `any` | `any(col)` | Any non-empty value in the group | `model=any(model)` | `qwen-max` |
+| | [built-in] `any` | `any(col, 'empty')` | The same, with the second argument naming the string treated as empty (default `''`) | `status=any(status, 'N/A')` | `success` |
+| | [built-in] `first` | `first(col)` | The earliest non-empty value by `__time__` | `question=first(question)` | `Analyze the error logs of the last 7 days...` |
+| | [built-in] `first` | `first(col, order_col)` | The earliest non-empty value by the given column | `q=first(question, startTime)` | The same as above |
+| | [built-in] `last` | `last(col)` | The latest non-empty value by `__time__` | `answer=last(output)` | `Found 42 errors in total...` |
+| | [built-in] `last` | `last(col, order_col)` | The latest non-empty value by the given column | `a=last(output, endTime)` | The same as above |
 | | `max` | `max(col)` | The maximum | `max_lat=max(latency_ms)` | `14000` |
 | | `min` | `min(col)` | The minimum | `min_lat=min(latency_ms)` | `1850` |
 | | `max_by` | `max_by(col, ord)` | col where ord is largest | `m=max_by(model, __time__)` | `qwen-max` |
@@ -101,11 +101,11 @@ needs of data assembly:
 | | `count_if` | `count_if(condition)` | Conditional count | `errs=count_if(success='false')` | `0` |
 | | `bool_or` | `bool_or(condition)` | Whether any row in the group satisfies the condition | `has_err=bool_or(success='false')` | `false` |
 | | `bool_and` | `bool_and(condition)` | Whether every row in the group satisfies the condition | `all_ok=bool_and(success='true')` | `true` |
-| **Composition** | ★ `array` | `array(col)` | Collect a JSON array in time order, dropping empties | `evts=array(event_type)` | `["user_query","tool_call",…]` |
-| | ★ `array_distinct` | `array_distinct(col)` | Collect a deduplicated JSON array, dropping empties | `tools=array_distinct(tool_name)` | `["search_logs","analyze_pattern"]` |
-| | ★ `join` | `join(col, 'sep')` | Concatenate text in time order, dropping empties | `chain=join(tool_name,' → ')` | `search_logs → analyze_pattern → …` |
-| | ★ `json_pack` | `json_pack(c1, c2, ...)` | Assemble several fields into a JSON object | `info=json_pack(name, args)` | `[{"name":"search_logs","args":…},…]` |
-| | `histogram` | `histogram(col)` | Value-frequency distribution (a MAP) | `dist=histogram(event_type)` | `{"tool_call":2,"tool_result":2,…}` |
+| **Composition** | [built-in] `array` | `array(col)` | Collect a JSON array in time order, dropping empties | `evts=array(event_type)` | `["user_query","tool_call",...]` |
+| | [built-in] `array_distinct` | `array_distinct(col)` | Collect a deduplicated JSON array, dropping empties | `tools=array_distinct(tool_name)` | `["search_logs","analyze_pattern"]` |
+| | [built-in] `join` | `join(col, 'sep')` | Concatenate text in time order, dropping empties | `chain=join(tool_name,' -> ')` | `search_logs -> analyze_pattern -> ...` |
+| | [built-in] `json_pack` | `json_pack(c1, c2, ...)` | Assemble several fields into a JSON object | `info=json_pack(name, args)` | `[{"name":"search_logs","args":...},...]` |
+| | `histogram` | `histogram(col)` | Value-frequency distribution (a MAP) | `dist=histogram(event_type)` | `{"tool_call":2,"tool_result":2,...}` |
 | | `map_agg` | `map_agg(key, val)` | Aggregate into a MAP by key | `tok=map_agg(model, tokens)` | `{"qwen-max":8280}` |
 
 > These three families cover the vast majority of scenarios. Advanced users can also
@@ -125,7 +125,7 @@ needs of data assembly:
 
 | Column | Type | Source | Description |
 |--------|------|--------|-------------|
-| The columns named by `by` | — | Input | The grouping keys, passed through |
+| The columns named by `by` | - | Input | The grouping keys, passed through |
 | Each alias in the column definitions | Determined by the function | Derived | The aggregation result column |
 
 > `make-instance` **does not pass through** original columns other than the grouping
@@ -133,7 +133,7 @@ needs of data assembly:
 
 **Input-to-output relationship**:
 
-M:N (M ≥ N) — M raw events aggregate into N sample instances. Events sharing a group
+M:N (M >= N) - M raw events aggregate into N sample instances. Events sharing a group
 collapse into one row, so the output row count equals the number of groups.
 
 ## Effect preview
@@ -141,10 +141,10 @@ collapse into one row, so the output row count equals the number of groups.
 ### Scenario: an AIOps agent handling one user request
 
 The user asks the agent to "analyze the error logs of the last 7 days and suggest
-optimizations". The agent goes through four stages — **thinking → calling search_logs →
-calling analyze_pattern → producing a conclusion** — and emits 10 discrete event logs.
+optimizations". The agent goes through four stages - **thinking -> calling search_logs ->
+calling analyze_pattern -> producing a conclusion** - and emits 10 discrete event logs.
 
-### Raw data (narrow table, 10 rows × 13 columns)
+### Raw data (narrow table, 10 rows x 13 columns)
 
 | # | __time__ | session_id | trace_id | event_type | question | output | model | tool_name | tool_args | tool_success | latency_ms | token_input | token_output |
 |---|----------|------------|----------|------------|----------|--------|-------|-----------|-----------|--------------|------------|-------------|--------------|
@@ -156,7 +156,7 @@ calling analyze_pattern → producing a conclusion** — and emits 10 discrete e
 | 6 | 10:00:07 | sess_a1 | trc_7f01 | tool_call | | | qwen-max | analyze_pattern | {"error_type":"NullPointer"} | | | 180 | 50 |
 | 7 | 10:00:10 | sess_a1 | trc_7f01 | tool_result | | {"root_cause":"missing null check","fix":"use Optional"} | | analyze_pattern | | true | 3200 | | |
 | 8 | 10:00:12 | sess_a1 | trc_7f01 | llm_request | | | qwen-max | | | | | 2800 | 520 |
-| 9 | 10:00:15 | sess_a1 | trc_7f01 | assistant | | 42 errors in the last 7 days; NullPointerException accounts for 66.7%; wrap the value in Optional… | qwen-max | | | | | 3200 | 680 |
+| 9 | 10:00:15 | sess_a1 | trc_7f01 | assistant | | 42 errors in the last 7 days; NullPointerException accounts for 66.7%; wrap the value in Optional... | qwen-max | | | | | 3200 | 680 |
 | 10 | 10:00:15 | sess_a1 | trc_7f01 | completion | | | qwen-max | | | | 14000 | | |
 
 > Data characteristics: only row 1 has a `question`; `output` is spread across rows 5,
@@ -179,39 +179,39 @@ calling analyze_pattern → producing a conclusion** — and emits 10 discrete e
     err_tools=count_if(tool_success = 'false'),
     tools=array_distinct(tool_name),
     events=array(event_type),
-    tool_chain=join(tool_name, ' → '),
+    tool_chain=join(tool_name, ' -> '),
     tool_detail=json_pack(tool_name, tool_args, tool_success)
     by session_id,trace_id
 ```
 
-### After (wide table, 1 row × 16 columns)
+### After (wide table, 1 row x 16 columns)
 
-10 narrow rows **→** 1 wide row. Compared with the raw data above, every column is
+10 narrow rows **->** 1 wide row. Compared with the raw data above, every column is
 aggregated from those 10 rows by the function it names:
 
 | session_id | trace_id | question | answer | model | max_latency | total_input | total_output | avg_latency | llm_calls | tool_count | err_tools | tools | events | tool_chain | tool_detail |
 |------------|----------|----------|--------|-------|-------------|-------------|--------------|-------------|-----------|------------|-----------|-------|--------|------------|-------------|
-| sess_a1 | trc_7f01 | Analyze the error logs of the last 7 days and suggest optimizations | 42 errors in the last 7 days; NullPointerException accounts for 66.7%; wrap the value in Optional… | qwen-max | 14000 | 8280 | 1435 | 6350.0 | 6 | 4 | 0 | ["search_logs","analyze_pattern"] | ["user_query","system_prompt","llm_request","tool_call","tool_result",…] | search_logs → search_logs → analyze_pattern → analyze_pattern | [{"tool_name":"search_logs","tool_args":…,"tool_success":"true"},…] |
+| sess_a1 | trc_7f01 | Analyze the error logs of the last 7 days and suggest optimizations | 42 errors in the last 7 days; NullPointerException accounts for 66.7%; wrap the value in Optional... | qwen-max | 14000 | 8280 | 1435 | 6350.0 | 6 | 4 | 0 | ["search_logs","analyze_pattern"] | ["user_query","system_prompt","llm_request","tool_call","tool_result",...] | search_logs -> search_logs -> analyze_pattern -> analyze_pattern | [{"tool_name":"search_logs","tool_args":...,"tool_success":"true"},...] |
 
 Aggregation logic per column:
 
 | Column | Family | Function | Where the data comes from |
 |--------|--------|----------|---------------------------|
-| session_id | Grouping key | — | Passed through |
-| trace_id | Grouping key | — | Passed through |
+| session_id | Grouping key | - | Passed through |
+| trace_id | Grouping key | - | Passed through |
 | question | Selection | `first(question)` | Only row 1 has a value; takes the earliest non-empty value |
-| answer | Selection | `last(output)` | Rows 5, 7, and 9 have values; takes the latest — the assistant output in row 9 |
+| answer | Selection | `last(output)` | Rows 5, 7, and 9 have values; takes the latest - the assistant output in row 9 |
 | model | Selection | `any(model)` | Rows 3, 4, 6, 8, 9, and 10 have values; takes any non-empty one |
-| max_latency | Selection | `max(latency_ms)` | Only rows 5, 7, and 10 have values; takes the maximum — 14000 |
+| max_latency | Selection | `max(latency_ms)` | Only rows 5, 7, and 10 have values; takes the maximum - 14000 |
 | total_input | Computation | `sum(token_input)` | 320+1580+200+180+2800+3200 = 8280 |
 | total_output | Computation | `sum(token_output)` | 120+65+50+520+680 = 1435 |
 | avg_latency | Computation | `avg(latency_ms)` | (1850+3200+14000)/3 = 6350.0 |
 | llm_calls | Computation | `count(model)` | Rows with a non-empty model = 6 |
 | tool_count | Computation | `count(tool_name)` | Rows with a non-empty tool_name = 4 |
-| err_tools | Computation | `count_if(tool_success='false')` | No failed tool calls → 0 |
-| tools | Composition | `array_distinct(tool_name)` | 4 calls deduplicated → 2 tools |
+| err_tools | Computation | `count_if(tool_success='false')` | No failed tool calls -> 0 |
+| tools | Composition | `array_distinct(tool_name)` | 4 calls deduplicated -> 2 tools |
 | events | Composition | `array(event_type)` | Collects all 10 event types in time order |
-| tool_chain | Composition | `join(tool_name, ' → ')` | 4 calls concatenated in time order |
+| tool_chain | Composition | `join(tool_name, ' -> ')` | 4 calls concatenated in time order |
 | tool_detail | Composition | `json_pack(tool_name, tool_args, tool_success)` | Each row's tool name, arguments, and result assembled into a JSON object |
 
 > The whole process is **pure CPU** with no LLM or GPU dependency. Missing fields become
@@ -241,7 +241,7 @@ Aggregation logic per column:
     total_tokens=sum(token_input),
     tool_count=count(tool_name),
     tools=array_distinct(tool_name),
-    tool_chain=join(tool_name, ' → ')
+    tool_chain=join(tool_name, ' -> ')
     by session_id,trace_id
 ```
 
@@ -265,7 +265,7 @@ Aggregation logic per column:
       total_input=sum(input_tokens),
       total_output=sum(output_tokens),
       tools=array_distinct(tool_name),
-      tool_chain=join(tool_name, ' → ')
+      tool_chain=join(tool_name, ' -> ')
       by session_id,traceId
   | where question IS NOT NULL AND length(question) > 0
   | dedup-exact -field=question
@@ -306,7 +306,7 @@ Aggregation logic per column:
     by user_id
 ```
 
-### Example 5: OT trace in practice — 28 spans → 1 wide row → a consolidated full text
+### Example 5: OT trace in practice - 28 spans -> 1 wide row -> a consolidated full text
 
 A real scenario: an AI agent (an AIOps assistant) handles the user request "filter the
 logs containing /family/member/viewMember" and emits 28 OT spans covering AGENT, LLM,
@@ -316,17 +316,17 @@ TOOL, EXTERNAL, and other kinds:
 session_id = thread-tb9msq-kfbqdenu0nyj
 traceId    = 6cdc842e34e8a9c9a6f433d24ce2b06a
 
-[AGENT]  orchestration:session         — input: the user's original question, output: the final answer
-[AGENT]  base_agent:run:sql_generation — an agent subtask
-[LLM]    llm:qwen-flash                — 721/11 tokens
-[LLM]    llm:qwen3-coder-plus x3       — 11837/262, 11899/188, 18433/448 tokens
-[TOOL]   tool:Think                    — the reasoning step
-[TOOL]   tool:QuerySLSLogs             — a tool call querying the logs
-[EXTERNAL] x8                          — GetThread, UpdateThread, GetIndex, and so on
-[Other]  controlplane, HTTP, ...       — infrastructure spans
+[AGENT]  orchestration:session         - input: the user's original question, output: the final answer
+[AGENT]  base_agent:run:sql_generation - an agent subtask
+[LLM]    llm:qwen-flash                - 721/11 tokens
+[LLM]    llm:qwen3-coder-plus x3       - 11837/262, 11899/188, 18433/448 tokens
+[TOOL]   tool:Think                    - the reasoning step
+[TOOL]   tool:QuerySLSLogs             - a tool call querying the logs
+[EXTERNAL] x8                          - GetThread, UpdateThread, GetIndex, and so on
+[Other]  controlplane, HTTP, ...       - infrastructure spans
 ```
 
-**Step 1: field extraction → event filtering → data assembly** (28 rows → 1 wide row)
+**Step 1: field extraction -> event filtering -> data assembly** (28 rows -> 1 wide row)
 
 ```
 * | where event_type IN ('user_query','system_prompt','tool_call','tool_result','assistant_content','completion')
@@ -354,12 +354,12 @@ traceId    = 6cdc842e34e8a9c9a6f433d24ce2b06a
       e2e_latency=max(dur_ms),
       models=array_distinct(model),
       tools=array_distinct(tool_name),
-      tool_chain=join(tool_name, ' → '),
+      tool_chain=join(tool_name, ' -> '),
       process=array_join(array_agg(
           case
               when span_kind = 'LLM'   then concat('[LLM] ', model, ' (', coalesce(input_tokens,'?'), '/', coalesce(output_tokens,'?'), ' tokens, ', cast(dur_ms as varchar), 'ms)')
               when span_kind = 'TOOL'  then concat('[Tool] ', tool_name, '(', substr(coalesce(tool_args,''), 1, 60), ')')
-              when span_kind = 'AGENT' then concat('[Agent] ', substr(coalesce(agent_id,''), 1, 50), ' → ', substr(coalesce(output_value,''), 1, 80))
+              when span_kind = 'AGENT' then concat('[Agent] ', substr(coalesce(agent_id,''), 1, 50), ' -> ', substr(coalesce(output_value,''), 1, 80))
               else null
           end
           order by startTime
@@ -367,7 +367,7 @@ traceId    = 6cdc842e34e8a9c9a6f433d24ce2b06a
       by session_id,traceId
 ```
 
-**28 rows → 1 wide row of output**:
+**28 rows -> 1 wide row of output**:
 
 | Column | Family | Value |
 |--------|--------|-------|
@@ -383,27 +383,27 @@ traceId    = 6cdc842e34e8a9c9a6f433d24ce2b06a
 | e2e_latency | Computation | `21015` |
 | models | Composition | `["qwen-flash","qwen3-coder-plus"]` |
 | tools | Composition | `["Think","QuerySLSLogs"]` |
-| tool_chain | Composition | `Think → QuerySLSLogs` |
+| tool_chain | Composition | `Think -> QuerySLSLogs` |
 | process | Composition | *(shown below)* |
 
 **The `process` column** (the complete processing trace, multi-line text):
 
 ```
-[Agent] blueprint.vibeops.system.vibeops_main@v1.1.0 → filter the records whose request_uri contains /family/member/viewMember...
+[Agent] blueprint.vibeops.system.vibeops_main@v1.1.0 -> filter the records whose request_uri contains /family/member/viewMember...
 [LLM] qwen-flash (721/11 tokens, 362ms)
 [LLM] qwen3-coder-plus (11837/262 tokens, 5425ms)
 [Tool] Think({"thought":"the user wants to filter request_uri values containing \"/family/member/viewMembe)
 [LLM] qwen3-coder-plus (11899/188 tokens, 4289ms)
 [Tool] QuerySLSLogs({"logstore":"hapi-gw-access-log","project":"hapi-prod","quer)
 [LLM] qwen3-coder-plus (18433/448 tokens, 7790ms)
-[Agent] agent.sls.sql.sql_generation@v1.0.0 → I can see the query results...
-[Agent] blueprint.vibeops.system.vibeops_main@v1.1.0 → I can see the query results...
+[Agent] agent.sls.sql.sql_generation@v1.0.0 -> I can see the query results...
+[Agent] blueprint.vibeops.system.vibeops_main@v1.1.0 -> I can see the query results...
 ```
 
 > The `process` column is built from standard SQL aggregate expressions (CASE plus
 > array_agg plus array_join), demonstrating how advanced users can compose SQL freely.
 
-**Step 2: wide table → consolidated full text** (1 row → 1 row, a column transformation)
+**Step 2: wide table -> consolidated full text** (1 row -> 1 row, a column transformation)
 
 Append an `extend` after `make-instance` to merge question, process, and answer into a
 `full_text` column:
@@ -428,14 +428,14 @@ client_ip:23.55.36.85
 ...
 
 ## Processing trace
-[Agent] blueprint.vibeops.system.vibeops_main@v1.1.0 → filter the records whose request_uri contains /family/member/viewMember...
+[Agent] blueprint.vibeops.system.vibeops_main@v1.1.0 -> filter the records whose request_uri contains /family/member/viewMember...
 [LLM] qwen-flash (721/11 tokens, 362ms)
 [LLM] qwen3-coder-plus (11837/262 tokens, 5425ms)
 [Tool] Think({"thought":"the user wants to filter request_uri values containing "/family/member/viewMembe)
 [LLM] qwen3-coder-plus (11899/188 tokens, 4289ms)
 [Tool] QuerySLSLogs({"logstore":"hapi-gw-access-log","project":"hapi-prod","quer)
 [LLM] qwen3-coder-plus (18433/448 tokens, 7790ms)
-[Agent] agent.sls.sql.sql_generation@v1.0.0 → I can see the query results...
+[Agent] agent.sls.sql.sql_generation@v1.0.0 -> I can see the query results...
 
 ## Final output
 I can see the query results, which show the request records whose path contains `/family/member/viewMember`.
@@ -444,7 +444,7 @@ Here is the query that filters those records: ...
 
 > **How the two steps divide responsibility**: step 1 (`extend` plus `where` plus
 > `make-instance`) handles field extraction, event filtering, and data assembly (28 rows
-> → 1 row); step 2 (`extend`) handles the row-level column transformation, merging
+> -> 1 row); step 2 (`extend`) handles the row-level column transformation, merging
 > several columns into `full_text` so a downstream `llm-call` can evaluate the whole
 > thing. The entire process is pure CPU with no LLM or GPU dependency.
 
@@ -510,8 +510,8 @@ string translation. Only one level of nesting is supported (`any(join(...))` is 
 > **Current stage (workaround)**: SLS stats mode does not yet support
 > `ARRAY_AGG(col ORDER BY field) FILTER(WHERE ...)`. When `order_by` is given, the
 > translator uses the workaround
-> `concat(cast(order_by as varchar), chr(31), col)` → `array_agg` → `filter` →
-> `array_sort` → `transform` (stripping the prefix) → `array_join`; when it is absent,
+> `concat(cast(order_by as varchar), chr(31), col)` -> `array_agg` -> `filter` ->
+> `array_sort` -> `transform` (stripping the prefix) -> `array_join`; when it is absent,
 > the backward-compatible lambda-filter form is kept.
 >
 > **Future plan**: once SLS stats mode supports

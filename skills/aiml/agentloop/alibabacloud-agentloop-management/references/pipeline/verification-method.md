@@ -139,7 +139,7 @@ Expected relationship:
 target_count = source_selected_count - explained_filtered_count - explained_failed_count
 ```
 
-Classify every unexpected empty or missing value rather than collapsing it into “Pipeline lost data”:
+Classify every unexpected empty or missing value rather than collapsing it into "Pipeline lost data":
 
 | Classification | Meaning |
 | --- | --- |
@@ -189,4 +189,4 @@ Report:
 - whether downstream consumer smoke tests passed;
 - unresolved evidence gaps.
 
-Never report “import correct” from a successful status or row count alone. If source access, output completeness, or lineage is unavailable, use `insufficient_evidence` and state the missing oracle.
+Never report "import correct" from a successful status or row count alone. If source access, output completeness, or lineage is unavailable, use `insufficient_evidence` and state the missing oracle.

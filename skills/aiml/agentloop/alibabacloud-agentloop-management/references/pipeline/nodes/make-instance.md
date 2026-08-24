@@ -17,7 +17,7 @@ expressions for advanced needs.
 
 **Use cases**:
 
-- Build row-level samples from AI Agent runtime logs (event level → sample level)
+- Build row-level samples from AI Agent runtime logs (event level -> sample level)
 - Reshape OpenTelemetry trace span data into a wide table
 - Aggregate at various granularities (span, trace, session, or user)
 - Serve as the first Pipeline node, preparing the input for downstream dedup,
@@ -38,7 +38,7 @@ expressions for advanced needs.
     "total_output": "sum(token_output)",
     "tool_count": "count(tool_name)",
     "tools": "array_distinct(tool_name)",
-    "tool_chain": "join(tool_name, ' → ')",
+    "tool_chain": "join(tool_name, ' -> ')",
     "tool_info": "json_pack(tool_name, tool_args, tool_success)",
     "by": "session_id,trace_id"
   }
@@ -62,23 +62,23 @@ expressions for advanced needs.
 
 | Family | Essence | Problem solved | Typical use | Available functions |
 |--------|---------|----------------|-------------|---------------------|
-| **Value selection** | N rows → 1 value | Many rows per group, keep one representative value | Semantic fields such as question, output, model | ★`any` ★`first` ★`last` `max` `min` `max_by` `min_by` |
-| **Computation** | N rows → 1 number | Numeric values per group that need a summary | Token-usage totals, latency analysis, call counts | `sum` `avg` `count` `count_if` `bool_or` `bool_and` |
-| **Combination** | N rows → 1 structure | Many values per group that must be kept and packed | Tool-call chains, event sequences, structured detail | ★`array` ★`array_distinct` ★`join` ★`json_pack` `histogram` `map_agg` |
+| **Value selection** | N rows -> 1 value | Many rows per group, keep one representative value | Semantic fields such as question, output, model | [built-in]`any` [built-in]`first` [built-in]`last` `max` `min` `max_by` `min_by` |
+| **Computation** | N rows -> 1 number | Numeric values per group that need a summary | Token-usage totals, latency analysis, call counts | `sum` `avg` `count` `count_if` `bool_or` `bool_and` |
+| **Combination** | N rows -> 1 structure | Many values per group that must be kept and packed | Tool-call chains, event sequences, structured detail | [built-in]`array` [built-in]`array_distinct` [built-in]`join` [built-in]`json_pack` `histogram` `map_agg` |
 
-> ★ = built-in syntactic sugar, expanded automatically into a SQL aggregate
+> [built-in] = built-in syntactic sugar, expanded automatically into a SQL aggregate
 > expression; the rest are standard SQL aggregate functions passed through as-is.
 
 **Function quick reference**
 
 | Family | Function | Usage | Description | Example | Result |
 |--------|----------|-------|-------------|---------|--------|
-| **Value selection** | ★ `any` | `any(col)` | Any non-empty value in the group | `model=any(model)` | `qwen-max` |
-| | ★ `any` | `any(col, 'empty-marker')` | Same, with the second argument naming the string treated as empty (default `''`) | `status=any(status, 'N/A')` | `success` |
-| | ★ `first` | `first(col)` | Earliest non-empty value by `__time__` | `question=first(question)` | `Analyze the error logs of the last 7 days…` |
-| | ★ `first` | `first(col, order_col)` | Earliest non-empty value by the given column | `q=first(question, startTime)` | Same as above |
-| | ★ `last` | `last(col)` | Latest non-empty value by `__time__` | `answer=last(output)` | `Found 42 errors in total…` |
-| | ★ `last` | `last(col, order_col)` | Latest non-empty value by the given column | `a=last(output, endTime)` | Same as above |
+| **Value selection** | [built-in] `any` | `any(col)` | Any non-empty value in the group | `model=any(model)` | `qwen-max` |
+| | [built-in] `any` | `any(col, 'empty-marker')` | Same, with the second argument naming the string treated as empty (default `''`) | `status=any(status, 'N/A')` | `success` |
+| | [built-in] `first` | `first(col)` | Earliest non-empty value by `__time__` | `question=first(question)` | `Analyze the error logs of the last 7 days...` |
+| | [built-in] `first` | `first(col, order_col)` | Earliest non-empty value by the given column | `q=first(question, startTime)` | Same as above |
+| | [built-in] `last` | `last(col)` | Latest non-empty value by `__time__` | `answer=last(output)` | `Found 42 errors in total...` |
+| | [built-in] `last` | `last(col, order_col)` | Latest non-empty value by the given column | `a=last(output, endTime)` | Same as above |
 | | `max` | `max(col)` | Maximum value | `max_lat=max(latency_ms)` | `14000` |
 | | `min` | `min(col)` | Minimum value | `min_lat=min(latency_ms)` | `1850` |
 | | `max_by` | `max_by(col, ord)` | `col` where `ord` is greatest | `m=max_by(model, __time__)` | `qwen-max` |
@@ -89,11 +89,11 @@ expressions for advanced needs.
 | | `count_if` | `count_if(condition)` | Conditional count | `errs=count_if(success='false')` | `0` |
 | | `bool_or` | `bool_or(condition)` | Whether any row in the group satisfies the condition | `has_err=bool_or(success='false')` | `false` |
 | | `bool_and` | `bool_and(condition)` | Whether every row in the group satisfies the condition | `all_ok=bool_and(success='true')` | `true` |
-| **Combination** | ★ `array` | `array(col [, order_by])` | Collect into a JSON array, dropping empties; an order field can be given | `evts=array(event_type)` | `["user_query","tool_call",…]` |
-| | ★ `array_distinct` | `array_distinct(col [, order_by])` | Collect into a deduplicated JSON array, dropping empties; an order field can be given | `tools=array_distinct(tool_name)` | `["search_logs","analyze_pattern"]` |
-| | ★ `join` | `join(col, sep [, order_by])` | Concatenate text, dropping empties; an order field can be given | `chain=join(tool_name,' → ')` | `search_logs → analyze_pattern → …` |
-| | ★ `json_pack` | `json_pack(c1, c2, ...)` | Pack several fields into a JSON object | `info=json_pack(name, args)` | `[{"name":"search_logs","args":…},…]` |
-| | `histogram` | `histogram(col)` | Value-frequency distribution (a MAP) | `dist=histogram(event_type)` | `{"tool_call":2,"tool_result":2,…}` |
+| **Combination** | [built-in] `array` | `array(col [, order_by])` | Collect into a JSON array, dropping empties; an order field can be given | `evts=array(event_type)` | `["user_query","tool_call",...]` |
+| | [built-in] `array_distinct` | `array_distinct(col [, order_by])` | Collect into a deduplicated JSON array, dropping empties; an order field can be given | `tools=array_distinct(tool_name)` | `["search_logs","analyze_pattern"]` |
+| | [built-in] `join` | `join(col, sep [, order_by])` | Concatenate text, dropping empties; an order field can be given | `chain=join(tool_name,' -> ')` | `search_logs -> analyze_pattern -> ...` |
+| | [built-in] `json_pack` | `json_pack(c1, c2, ...)` | Pack several fields into a JSON object | `info=json_pack(name, args)` | `[{"name":"search_logs","args":...},...]` |
+| | `histogram` | `histogram(col)` | Value-frequency distribution (a MAP) | `dist=histogram(event_type)` | `{"tool_call":2,"tool_result":2,...}` |
 | | `map_agg` | `map_agg(key, val)` | Aggregate into a MAP keyed by `key` | `tok=map_agg(model, tokens)` | `{"qwen-max":8280}` |
 
 > These three families cover the vast majority of scenarios. Advanced users can
@@ -119,10 +119,10 @@ Concatenates every non-empty value in the group with a separator.
 > expression is passed through to the SLS query engine, which validates it.
 
 Examples:
-- `join(tool_name, ' → ')` — concatenate in the default order
-- `join(tool_name, ' → ', __time__)` — concatenate in ascending time order
-- `join(tool_name, ' → ', coalesce(startTime, 0))` — order by an expression
-- `join(tool_name, ' → ', cast(startTime as bigint))` — order after a cast
+- `join(tool_name, ' -> ')` - concatenate in the default order
+- `join(tool_name, ' -> ', __time__)` - concatenate in ascending time order
+- `join(tool_name, ' -> ', coalesce(startTime, 0))` - order by an expression
+- `join(tool_name, ' -> ', cast(startTime as bigint))` - order after a cast
 
 #### array(col [, order_by])
 
@@ -134,9 +134,9 @@ Collects every non-empty value in the group into an array.
 | order_by | No | Sort key: a field name or any SQL expression; when set, array elements are ordered ascending by this key |
 
 Examples:
-- `array(event_type)` — collect into an array
-- `array(event_type, startTime)` — order by time
-- `array(event_type, startTime + duration)` — order by an arithmetic expression
+- `array(event_type)` - collect into an array
+- `array(event_type, startTime)` - order by time
+- `array(event_type, startTime + duration)` - order by an arithmetic expression
 
 #### array_distinct(col [, order_by])
 
@@ -148,9 +148,9 @@ Collects every distinct non-empty value in the group into an array.
 | order_by | No | Sort key: a field name or any SQL expression; when set, array elements are ordered ascending by this key |
 
 Examples:
-- `array_distinct(tool_name)` — collect distinct values
-- `array_distinct(tool_name, __time__)` — order by time, then deduplicate
-- `array_distinct(tool_name, cast(startTime as bigint))` — order by an expression, then deduplicate
+- `array_distinct(tool_name)` - collect distinct values
+- `array_distinct(tool_name, __time__)` - order by time, then deduplicate
+- `array_distinct(tool_name, cast(startTime as bigint))` - order by an expression, then deduplicate
 
 ## Input and output
 
@@ -164,7 +164,7 @@ Examples:
 
 | Column | Type | Source | Description |
 |--------|------|--------|-------------|
-| Columns named by `by` | — | Pass-through | The grouping keys |
+| Columns named by `by` | - | Pass-through | The grouping keys |
 | Every key in the column definitions | Determined by the function | Added | The aggregation result column |
 
 > `make-instance` does not pass through raw columns other than the grouping keys.
@@ -172,7 +172,7 @@ Examples:
 
 **Row-count change**:
 
-M → N (M ≥ N) — many event rows collapse into one row per group, so the output row
+M -> N (M >= N) - many event rows collapse into one row per group, so the output row
 count equals the number of groups.
 
 ## Effect preview
@@ -193,7 +193,7 @@ discrete events:
 | 6 | 10:00:07 | sess_a1 | trc_7f01 | tool_call | | | qwen-max | analyze_pattern | {"error_type":"NullPointer"} | | | 180 | 50 |
 | 7 | 10:00:10 | sess_a1 | trc_7f01 | tool_result | | {"root_cause":"missing null check","fix":"use Optional"} | | analyze_pattern | | true | 3200 | | |
 | 8 | 10:00:12 | sess_a1 | trc_7f01 | llm_request | | | qwen-max | | | | | 2800 | 520 |
-| 9 | 10:00:15 | sess_a1 | trc_7f01 | assistant | | 42 errors in the last 7 days; NullPointerException accounts for 66.7%; wrap with Optional… | qwen-max | | | | | 3200 | 680 |
+| 9 | 10:00:15 | sess_a1 | trc_7f01 | assistant | | 42 errors in the last 7 days; NullPointerException accounts for 66.7%; wrap with Optional... | qwen-max | | | | | 3200 | 680 |
 | 10 | 10:00:15 | sess_a1 | trc_7f01 | completion | | | qwen-max | | | | 14000 | | |
 
 > Data characteristics: `question` has a value only on row 1, `output` is spread
@@ -219,7 +219,7 @@ discrete events:
     "err_tools": "count_if(tool_success = 'false')",
     "tools": "array_distinct(tool_name)",
     "events": "array(event_type)",
-    "tool_chain": "join(tool_name, ' → ')",
+    "tool_chain": "join(tool_name, ' -> ')",
     "tool_detail": "json_pack(tool_name, tool_args, tool_success)",
     "by": "session_id,trace_id"
   }
@@ -233,14 +233,14 @@ aggregated from the 10 rows by the function given:
 
 | session_id | trace_id | question | answer | model | max_latency | total_input | total_output | avg_latency | llm_calls | tool_count | err_tools | tools | events | tool_chain | tool_detail |
 |------------|----------|----------|--------|-------|-------------|-------------|--------------|-------------|-----------|------------|-----------|-------|--------|------------|-------------|
-| sess_a1 | trc_7f01 | Analyze the error logs of the last 7 days and suggest improvements | 42 errors in the last 7 days; NullPointerException accounts for 66.7%; wrap with Optional… | qwen-max | 14000 | 8280 | 1435 | 6350.0 | 6 | 4 | 0 | ["search_logs","analyze_pattern"] | ["user_query","system_prompt","llm_request","tool_call","tool_result",…] | search_logs → search_logs → analyze_pattern → analyze_pattern | [{"tool_name":"search_logs","tool_args":…,"tool_success":"true"},…] |
+| sess_a1 | trc_7f01 | Analyze the error logs of the last 7 days and suggest improvements | 42 errors in the last 7 days; NullPointerException accounts for 66.7%; wrap with Optional... | qwen-max | 14000 | 8280 | 1435 | 6350.0 | 6 | 4 | 0 | ["search_logs","analyze_pattern"] | ["user_query","system_prompt","llm_request","tool_call","tool_result",...] | search_logs -> search_logs -> analyze_pattern -> analyze_pattern | [{"tool_name":"search_logs","tool_args":...,"tool_success":"true"},...] |
 
 Aggregation logic per column:
 
 | Column | Family | Function | Data source |
 |--------|--------|----------|-------------|
-| session_id | Grouping key | — | Grouping key passed through |
-| trace_id | Grouping key | — | Grouping key passed through |
+| session_id | Grouping key | - | Grouping key passed through |
+| trace_id | Grouping key | - | Grouping key passed through |
 | question | Value selection | `first(question)` | Only row 1 has a value; takes the earliest non-empty value |
 | answer | Value selection | `last(output)` | Rows 5, 7, and 9 have values; takes the latest, the assistant output on row 9 |
 | model | Value selection | `any(model)` | Rows 3, 4, 6, 8, 9, and 10 have values; takes any non-empty one |
@@ -253,7 +253,7 @@ Aggregation logic per column:
 | err_tools | Computation | `count_if(tool_success='false')` | No failed tool call, so 0 |
 | tools | Combination | `array_distinct(tool_name)` | 4 calls deduplicated into 2 tools |
 | events | Combination | `array(event_type)` | Collects all 10 event types in time order |
-| tool_chain | Combination | `join(tool_name, ' → ')` | The 4 calls concatenated in time order |
+| tool_chain | Combination | `join(tool_name, ' -> ')` | The 4 calls concatenated in time order |
 | tool_detail | Combination | `json_pack(tool_name, tool_args, tool_success)` | Each row's tool name, arguments, and result packed into a JSON object |
 
 > 10 discrete events become 1 complete sample instance, exercising all three
@@ -294,13 +294,13 @@ Aggregates at trace granularity, taking any non-empty value per column.
     "total_tokens": "sum(token_input)",
     "tool_count": "count(tool_name)",
     "tools": "array_distinct(tool_name)",
-    "tool_chain": "join(tool_name, ' → ')",
+    "tool_chain": "join(tool_name, ' -> ')",
     "by": "session_id,trace_id"
   }
 }
 ```
 
-### Example 3: complete pipeline (instance building → cleaning → sampling → AI evaluation), filtering to the valid event types before assembly
+### Example 3: complete pipeline (instance building -> cleaning -> sampling -> AI evaluation), filtering to the valid event types before assembly
 
 ```json
 {
@@ -335,7 +335,7 @@ Aggregates at trace granularity, taking any non-empty value per column.
         "model": "last(model)",
         "total_tokens": "sum(input_tokens)",
         "tools": "array_distinct(tool_name)",
-        "tool_chain": "join(tool_name, ' → ')",
+        "tool_chain": "join(tool_name, ' -> ')",
         "by": "session_id,traceId"
       }
     },
@@ -349,10 +349,10 @@ Aggregates at trace granularity, taking any non-empty value per column.
 }
 ```
 
-### Example 4: OT trace in practice — two-step conversion plus full-text merge
+### Example 4: OT trace in practice - two-step conversion plus full-text merge
 
-A real scenario: 28 OT spans (AGENT, LLM, TOOL, EXTERNAL, and so on) → filter the
-irrelevant events → assemble into 1 wide row → merge into a `full_text` column for
+A real scenario: 28 OT spans (AGENT, LLM, TOOL, EXTERNAL, and so on) -> filter the
+irrelevant events -> assemble into 1 wide row -> merge into a `full_text` column for
 downstream AI evaluation.
 
 ```json
@@ -391,7 +391,7 @@ downstream AI evaluation.
         "e2e_latency": "max(dur_ms)",
         "models": "array_distinct(model)",
         "tools": "array_distinct(tool_name)",
-        "tool_chain": "join(tool_name, ' → ')",
+        "tool_chain": "join(tool_name, ' -> ')",
         "by": "session_id,traceId"
       }
     },
@@ -408,7 +408,7 @@ downstream AI evaluation.
 ```
 
 > The first step (`extend` + `where` + `make-instance`) handles field extraction,
-> event filtering, and assembly (28 rows → 1 row); the second step (`extend`)
+> event filtering, and assembly (28 rows -> 1 row); the second step (`extend`)
 > merges question and answer into `full_text` so that `llm-call` can evaluate the
 > whole thing. The entire process is pure CPU.
 

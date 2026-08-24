@@ -43,7 +43,7 @@ Each record is measured independently, so the input and output row counts match 
 
 | Column | Type | Source | Description |
 |--------|------|--------|-------------|
-| All input columns | — | Input | Every upstream column passes through |
+| All input columns | - | Input | Every upstream column passes through |
 | `{{as}}` | json | Derived | The document-statistics JSON containing the metrics defined below |
 
 **Metrics (structure inside the JSON)**:
@@ -58,7 +58,7 @@ Each record is measured independently, so the input and output row counts match 
 
 **Input-to-output relationship**:
 
-M:N (M = N) — a 1:1 transformation; each row is measured independently and no rows
+M:N (M = N) - a 1:1 transformation; each row is measured independently and no rows
 are added or dropped.
 
 ## Effect preview
@@ -71,15 +71,15 @@ are added or dropped.
 | How do I learn Python? Any getting-started resources? | Getting started | Start with the official tutorial then build a project |
 | AI | In brief | Artificial intelligence |
 
-**After** (3 rows) — `| doc-stats -field=question`:
+**After** (3 rows) - `| doc-stats -field=question`:
 
 | question | input | output | __doc_stats |
 |----------|-------|--------|-------------|
-| What is machine learning? | Please explain | Machine learning is… | `{"doc_len_char":25,"doc_len_words":4,"line_counts":1}` |
-| How do I learn Python? Any getting-started resources? | Getting started | Start with… | `{"doc_len_char":52,"doc_len_words":8,"line_counts":1}` |
+| What is machine learning? | Please explain | Machine learning is... | `{"doc_len_char":25,"doc_len_words":4,"line_counts":1}` |
+| How do I learn Python? Any getting-started resources? | Getting started | Start with... | `{"doc_len_char":52,"doc_len_words":8,"line_counts":1}` |
 | AI | In brief | Artificial intelligence | `{"doc_len_char":2,"doc_len_words":1,"line_counts":1}` |
 
-> The row count is unchanged (3 → 3) and every row gains a `__doc_stats` JSON
+> The row count is unchanged (3 -> 3) and every row gains a `__doc_stats` JSON
 > column. Combine it with
 > `where json_extract_scalar(__doc_stats, '$.doc_len_char') > 5` to filter text that
 > is too short.
@@ -102,7 +102,7 @@ Measures the `question` field and writes the result to `__doc_stats`.
   | doc-stats -field=question as question_stats
 ```
 
-### Example 3: pipeline composition (dedup → sample → AI → statistics)
+### Example 3: pipeline composition (dedup -> sample -> AI -> statistics)
 
 ```
 * | project question,input,output
@@ -142,7 +142,7 @@ Compute the statistics, then drop text that is too short.
 - **JSON output format**: the metrics are aggregated into a single JSON column
   rather than split into several independent derived columns. The benefits are
   (1) no column explosion, since one JSON column carries every metric; (2) the shape
-  matches the `stats` field of the Dataset model; (3) extensibility — a new metric
+  matches the `stats` field of the Dataset model; (3) extensibility - a new metric
   only adds a key to the JSON without changing the output column structure.
 - **Extensibility**: more metrics can be added later (distinct word count, average
   word length, special-character ratio, language detection, and so on) with no
@@ -188,10 +188,10 @@ SELECT * FROM _doc_stats
 
 | Signature | Description |
 |-----------|-------------|
-| `length(text) → bigint` | Character count of a string (built-in SQL function) |
-| `split(text, delimiter) → array(varchar)` | Split a string on a delimiter (built-in SQL function) |
-| `cardinality(array) → bigint` | Number of elements in an array (built-in SQL function) |
-| `chr(code) → varchar` | The character for a Unicode code point; `chr(10)` is a newline (built-in SQL function) |
+| `length(text) -> bigint` | Character count of a string (built-in SQL function) |
+| `split(text, delimiter) -> array(varchar)` | Split a string on a delimiter (built-in SQL function) |
+| `cardinality(array) -> bigint` | Number of elements in an array (built-in SQL function) |
+| `chr(code) -> varchar` | The character for a Unicode code point; `chr(10)` is a newline (built-in SQL function) |
 
 ## Edge cases
 

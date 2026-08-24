@@ -66,14 +66,14 @@ diversity.
 
 | Column | Type | Source | Description |
 |--------|------|--------|-------------|
-| Columns controlled by `output` | — | Pass-through | `*` keeps every column; when set, only the listed columns are emitted |
+| Columns controlled by `output` | - | Pass-through | `*` keeps every column; when set, only the listed columns are emitted |
 
 > This node produces no derived columns; it only drops rows. `output` controls the
 > node's final output columns.
 
 **Row-count change**:
 
-M → N (M ≥ N) — the sampled output row count is at most the input row count.
+M -> N (M >= N) - the sampled output row count is at most the input row count.
 
 ## Effect preview
 
@@ -81,20 +81,20 @@ M → N (M ≥ N) — the sampled output row count is at most the input row coun
 
 | question | output | __cluster_id |
 |----------|--------|-------------|
-| What is machine learning? | Machine learning is… | 0 |
-| What types of machine learning exist? | Supervised / unsupervised / reinforcement… | 0 |
-| How do I learn Python? | Start with the official tutorial… | 1 |
-| Which Python libraries are there? | NumPy, Pandas… | 1 |
-| What is deep learning? | Deep learning is… | 2 |
-| What is a neural network? | A neural network has several layers… | 2 |
+| What is machine learning? | Machine learning is... | 0 |
+| What types of machine learning exist? | Supervised / unsupervised / reinforcement... | 0 |
+| How do I learn Python? | Start with the official tutorial... | 1 |
+| Which Python libraries are there? | NumPy, Pandas... | 1 |
+| What is deep learning? | Deep learning is... | 2 |
+| What is a neural network? | A neural network has several layers... | 2 |
 
-**After** (3 rows) — `n = 1`, `by = "__cluster_id"`:
+**After** (3 rows) - `n = 1`, `by = "__cluster_id"`:
 
 | question | output | __cluster_id |
 |----------|--------|-------------|
-| What types of machine learning exist? | Supervised / unsupervised / reinforcement… | 0 |
-| How do I learn Python? | Start with the official tutorial… | 1 |
-| What is deep learning? | Deep learning is… | 2 |
+| What types of machine learning exist? | Supervised / unsupervised / reinforcement... | 0 |
+| How do I learn Python? | Start with the official tutorial... | 1 |
+| What is deep learning? | Deep learning is... | 2 |
 
 > One random row per cluster, so 6 rows become 3. This node produces no derived
 > columns; it only drops rows.
@@ -167,10 +167,10 @@ M → N (M ≥ N) — the sampled output row count is at most the input row coun
 ## Notes
 
 **Recommended usage**:
-- **Use it before LLM processing** — downsampling first keeps AI invocation cost
+- **Use it before LLM processing** - downsampling first keeps AI invocation cost
   under control
 - Combine it with `semantic-cluster` for diversity sampling:
-  `semantic-cluster` → `sample` (grouping by `by = "__cluster_id"`)
+  `semantic-cluster` -> `sample` (grouping by `by = "__cluster_id"`)
 - `ratio` fits "keep a percentage" scenarios and `n` fits "fixed count"
   scenarios; the two are mutually exclusive
 
@@ -188,7 +188,7 @@ M → N (M ≥ N) — the sampled output row count is at most the input row coun
 | Neither `ratio` nor `n` is set | Validation fails |
 | Both `ratio` and `n` are set | Validation fails |
 | `ratio` falls outside (0, 1] | Validation fails |
-| `n` ≤ 0 | Validation fails |
+| `n` <= 0 | Validation fails |
 | A column named by `by` does not exist | Runtime error |
 | `n` is greater than the row count | All rows are returned |
 | The input is empty | An empty result set is returned normally |

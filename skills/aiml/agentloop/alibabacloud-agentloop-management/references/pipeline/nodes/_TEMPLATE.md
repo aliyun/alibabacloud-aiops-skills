@@ -84,7 +84,7 @@
 
 | Column | Type | Source | Description |
 |--------|------|--------|-------------|
-| Columns controlled by `output` | — | Pass-through / added | `output=*` keeps every column (including derived ones); when set, only the listed columns are emitted |
+| Columns controlled by `output` | - | Pass-through / added | `output=*` keeps every column (including derived ones); when set, only the listed columns are emitted |
 | `{derived column}` | {type} | Added | {semantics} |
 
 > **`output` semantics**: controls the node's final output columns, so derived
@@ -92,7 +92,7 @@
 
 **Row-count change**:
 
-{Describe the M → N relationship}
+{Describe the M -> N relationship}
 
 ## Effect preview
 
@@ -104,7 +104,7 @@
 | {sample row 2} |
 | {sample row 3} |
 
-**After** ({M} rows) — `{parameter description}`:
+**After** ({M} rows) - `{parameter description}`:
 
 | {col1} | {col2} | {col3} | {derived column} |
 |--------|--------|--------|------------------|

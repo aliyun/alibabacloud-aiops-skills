@@ -62,12 +62,12 @@ cluster first, then sample within each cluster.
 
 | Column | Type | Source | Description |
 |--------|------|--------|-------------|
-| Columns controlled by `output` | — | Pass-through / added | `*` keeps every column (including derived ones); when set, only the listed columns are emitted |
+| Columns controlled by `output` | - | Pass-through / added | `*` keeps every column (including derived ones); when set, only the listed columns are emitted |
 | `__cluster_id` | bigint | Added | Cluster number (starting at 0) |
 
 **Row-count change**:
 
-M → N (M = N) — a 1:1 transformation that adds a cluster label without adding or
+M -> N (M = N) - a 1:1 transformation that adds a cluster label without adding or
 dropping rows.
 
 ## Effect preview
@@ -76,25 +76,25 @@ dropping rows.
 
 | question | __dedup_emb |
 |----------|------------|
-| What is machine learning? | [0.12, -0.34, …] |
-| What types of machine learning exist? | [0.15, -0.30, …] |
-| How do I learn Python? | [0.78, 0.23, …] |
-| Which Python libraries are there? | [0.75, 0.20, …] |
-| What is deep learning? | [-0.11, 0.45, …] |
-| What is a neural network? | [-0.09, 0.42, …] |
+| What is machine learning? | [0.12, -0.34, ...] |
+| What types of machine learning exist? | [0.15, -0.30, ...] |
+| How do I learn Python? | [0.78, 0.23, ...] |
+| Which Python libraries are there? | [0.75, 0.20, ...] |
+| What is deep learning? | [-0.11, 0.45, ...] |
+| What is a neural network? | [-0.09, 0.42, ...] |
 
-**After** (6 rows) — `field = "__dedup_emb"`, `n = 3`:
+**After** (6 rows) - `field = "__dedup_emb"`, `n = 3`:
 
 | question | __dedup_emb | __cluster_id |
 |----------|------------|-------------|
-| What is machine learning? | [0.12, -0.34, …] | 0 |
-| What types of machine learning exist? | [0.15, -0.30, …] | 0 |
-| How do I learn Python? | [0.78, 0.23, …] | 1 |
-| Which Python libraries are there? | [0.75, 0.20, …] | 1 |
-| What is deep learning? | [-0.11, 0.45, …] | 2 |
-| What is a neural network? | [-0.09, 0.42, …] | 2 |
+| What is machine learning? | [0.12, -0.34, ...] | 0 |
+| What types of machine learning exist? | [0.15, -0.30, ...] | 0 |
+| How do I learn Python? | [0.78, 0.23, ...] | 1 |
+| Which Python libraries are there? | [0.75, 0.20, ...] | 1 |
+| What is deep learning? | [-0.11, 0.45, ...] | 2 |
+| What is a neural network? | [-0.09, 0.42, ...] | 2 |
 
-> The row count is unchanged (6 → 6) and every row gains a `__cluster_id`.
+> The row count is unchanged (6 -> 6) and every row gains a `__cluster_id`.
 > Semantically close records land in the same cluster. Downstream, a `sample` node
 > with `by = "__cluster_id"` can take one row per cluster for diversity sampling.
 
@@ -150,9 +150,9 @@ embedding computation.
 ## Notes
 
 **Recommended usage**:
-- **Combine it with `sample` for diversity sampling** — cluster first, then sample
+- **Combine it with `sample` for diversity sampling** - cluster first, then sample
   per cluster to get both downsampling and semantic diversity
-- Typical pipeline: `dedup-semantic` → `semantic-cluster` → `sample` (reusing
+- Typical pipeline: `dedup-semantic` -> `semantic-cluster` -> `sample` (reusing
   `__dedup_emb` directly)
 - Pick `n` from the data scale: 5-10 for hundreds of rows, 50-100 for thousands,
   100-500 for tens of thousands
@@ -170,7 +170,7 @@ embedding computation.
 | Case | Behavior |
 |------|----------|
 | `field` is missing | Validation fails |
-| `n` is missing or ≤ 0 | Validation fails |
+| `n` is missing or <= 0 | Validation fails |
 | `field` is not array(double) | Runtime error |
 | `n` is greater than the row count | Handled by the engine; the effective cap is the row count |
 | The embedding dimensions are inconsistent | Runtime error |

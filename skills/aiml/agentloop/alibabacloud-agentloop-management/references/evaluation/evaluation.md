@@ -13,9 +13,9 @@ Use the bundled wrapper to convert a compact JSON specification into the require
 ## Installation
 
 **Pre-check: Aliyun CLI >= 3.3.3 required**
-> [MUST] Verify: `aliyun version` — must be >= 3.3.3.
+> [MUST] Verify: `aliyun version` - must be >= 3.3.3.
 > - **First install or major upgrade:** Download, review, then execute the [setup script](cli-installation-guide.md#first-time-install-or-major-upgrade). Avoid `curl | bash` piping.
-> - **Routine update (CLI >= 3.3.5):** `aliyun upgrade` — prefer this built-in self-update over re-running the install script.
+> - **Routine update (CLI >= 3.3.5):** `aliyun upgrade` - prefer this built-in self-update over re-running the install script.
 > - See [references/evaluation/cli-installation-guide.md](cli-installation-guide.md) for full installation instructions.
 
 **Pre-check: Aliyun CLI plugin update required**
@@ -37,7 +37,7 @@ aliyun plugin install --name aliyun-cli-sls
 
 ## Script Dependencies
 
-The bundled Python scripts in `scripts/evaluation/` use **only the Python 3.8+ standard library** — no external packages are required. See [scripts/evaluation/requirements.txt](../../scripts/evaluation/requirements.txt) for the full declaration.
+The bundled Python scripts in `scripts/evaluation/` use **only the Python 3.8+ standard library** - no external packages are required. See [scripts/evaluation/requirements.txt](../../scripts/evaluation/requirements.txt) for the full declaration.
 
 ## Environment Variables
 
@@ -78,21 +78,21 @@ This skill requires AgentLoop and SLS permissions. See [references/evaluation/ra
 
 ## Parameter Confirmation
 
-> **IMPORTANT: Parameter Confirmation** — Before executing any command or API call,
+> **IMPORTANT: Parameter Confirmation** - Before executing any command or API call,
 > ALL user-customizable parameters (e.g., AgentSpace name, Region, evaluator names,
 > task names, dataset names, time windows, thresholds, etc.) MUST be confirmed with the
 > user. Do NOT assume or use default values without explicit user approval.
 
 | Parameter Name | Required/Optional | Description | Default Value |
 |---|---|---|---|
-| `agent_space` | Required | Target AgentSpace name | — |
-| `region` | Optional | Aliyun endpoint-selection region | — |
+| `agent_space` | Required | Target AgentSpace name | - |
+| `region` | Optional | Aliyun endpoint-selection region | - |
 | `task.name` | Optional | Evaluation task name | Auto-generated |
 | `task.mode` | Optional | `oneshot` or `batch` | Inferred from data_filter |
 | `task.data_type` | Optional | `trace` or `dataset` | `trace` |
-| `data_filter.max_records` | Required (batch) | Maximum records to evaluate | — |
-| `window.start` | Required (batch) | Backfill start time (timezone-bearing ISO-8601) | — |
-| `window.end` | Required (batch) | Backfill end time (timezone-bearing ISO-8601) | — |
+| `data_filter.max_records` | Required (batch) | Maximum records to evaluate | - |
+| `window.start` | Required (batch) | Backfill start time (timezone-bearing ISO-8601) | - |
+| `window.end` | Required (batch) | Backfill end time (timezone-bearing ISO-8601) | - |
 | `threshold` | Optional | Low-score threshold for analysis | `0.5` |
 | `max_cases` | Optional | Maximum low-score cases to return | `50` |
 
@@ -122,14 +122,14 @@ explicit user approval:
 
 ### Three-step confirmation protocol
 
-1. **Preview (dry-run)** — Always run without `--execute` first. Show the user
+1. **Preview (dry-run)** - Always run without `--execute` first. Show the user
    the exact commands and JSON payloads that will be sent to the cloud API.
 
    ```bash
    python3 "$SKILL_DIR/scripts/evaluation/agentloop_eval.py" run --spec /path/to/evaluation.json
    ```
 
-2. **Confirm** — Present the rendered preview to the user and explicitly ask for
+2. **Confirm** - Present the rendered preview to the user and explicitly ask for
    approval. Quote the key parameters (AgentSpace, evaluator names, task name,
    data scope, estimated records, cost implications). Wait for a clear
    affirmative response before proceeding.
@@ -137,7 +137,7 @@ explicit user approval:
    > Do NOT assume that running `run` without `--execute` implies intent to
    > execute. Do NOT proceed to execution based on silence or ambiguity.
 
-3. **Execute** — Only after receiving explicit confirmation, add `--execute` and
+3. **Execute** - Only after receiving explicit confirmation, add `--execute` and
    any required override flags (`--allow-unbounded`, `--allow-continuous`):
 
    ```bash
@@ -182,7 +182,7 @@ SKILL_SESSION_ID={session-id} python3 "$SKILL_DIR/scripts/evaluation/analyze_eva
 - Use a one-shot task with `dataFilter.provided` to test an evaluator against one supplied sample.
 - Use a batch trace task with a bounded time window and `maxRecords` to evaluate observed traces.
 - Use a batch dataset task for an existing AgentLoop dataset. Start from [references/evaluation/examples/batch-dataset-example.json](examples/batch-dataset-example.json) and map evaluator variables directly to dataset columns.
-- Dataset task with multiple saved evaluators: referencing two or more custom saved evaluators via `evaluatorRef`/`evaluator_refs` triggers a backend defect that expands the data-record set by the evaluator count (rows × evaluators) and re-scores every expanded record with every evaluator, so each row is evaluated N times per evaluator. On `--execute` the wrapper auto-detects this and inlines the referenced evaluator definitions (fetched via `get-evaluator`) into the task to match the safe console behaviour; it prints a `WARNING` and the sent request differs from the dry-run preview. Built-in refs and single-evaluator tasks are untouched. See [references/evaluation/spec-format.md](spec-format.md) (Dataset batches) for details.
+- Dataset task with multiple saved evaluators: referencing two or more custom saved evaluators via `evaluatorRef`/`evaluator_refs` triggers a backend defect that expands the data-record set by the evaluator count (rows x evaluators) and re-scores every expanded record with every evaluator, so each row is evaluated N times per evaluator. On `--execute` the wrapper auto-detects this and inlines the referenced evaluator definitions (fetched via `get-evaluator`) into the task to match the safe console behaviour; it prints a `WARNING` and the sent request differs from the dry-run preview. Built-in refs and single-evaluator tasks are untouched. See [references/evaluation/spec-format.md](spec-format.md) (Dataset batches) for details.
 - Use result analysis to inspect evaluation quality and low-score cases from the fixed `evaluation_detail` SLS Logstore.
 - Use `discover` or `status` for read-only inspection.
 - Add `evaluator_actions` only when the user asks to create or update saved evaluators. Use only `AGENT` or `CODE` as saved-evaluator create types.
@@ -235,7 +235,7 @@ Read [references/evaluation/spec-format.md](spec-format.md) whenever composing o
 
    If the specification enables continuous evaluation, add `--allow-continuous` only after the user explicitly accepts the ongoing cost. Use the flag for both preview and execution.
 
-6. Inspect the rendered preview. Present the key parameters (AgentSpace, evaluator names, task name, data scope, estimated records, cost implications) to the user and obtain explicit confirmation before proceeding. Only add `--execute` after the user approves the preview — even if the user initially requested execution, the preview must be shown and confirmed first:
+6. Inspect the rendered preview. Present the key parameters (AgentSpace, evaluator names, task name, data scope, estimated records, cost implications) to the user and obtain explicit confirmation before proceeding. Only add `--execute` after the user approves the preview - even if the user initially requested execution, the preview must be shown and confirmed first:
 
    ```bash
    python3 "$SKILL_DIR/scripts/evaluation/agentloop_eval.py" run \

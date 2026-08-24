@@ -74,12 +74,12 @@ message creates its own Thread, which is not reused after the conversation ends.
 
 | Column | Type | Source | Description |
 |--------|------|--------|-------------|
-| All input columns | — | Input | Every upstream column passes through |
+| All input columns | - | Input | Every upstream column passes through |
 | `{{as}}` | varchar | Derived | The plain-text reply from the digital-employee conversation; NULL when the conversation fails |
 
 **Input-to-output relationship**:
 
-M:N (M = N) — a 1:1 scalar transformation; each row triggers one digital-employee
+M:N (M = N) - a 1:1 scalar transformation; each row triggers one digital-employee
 conversation and no rows are added or dropped.
 
 ## Effect preview
@@ -92,15 +92,15 @@ conversation and no rows are added or dropped.
 | db-server-02 | disk_io | warning |
 | app-server-03 | memory | critical |
 
-**After** (3 rows) — `| agentic-call -prompt='Analyze why the {{metric_name}} metric of {{host_name}} is abnormal' -fields=host_name,metric_name -employee='skill_bench_analysis' as analysis`:
+**After** (3 rows) - `| agentic-call -prompt='Analyze why the {{metric_name}} metric of {{host_name}} is abnormal' -fields=host_name,metric_name -employee='skill_bench_analysis' as analysis`:
 
 | host_name | metric_name | alert_level | analysis |
 |-----------|-------------|-------------|----------|
-| web-server-01 | cpu_usage | critical | CPU usage on web-server-01 has stayed above 95%; the root cause is… |
-| db-server-02 | disk_io | warning | Disk IO on db-server-02 shows intermittent spikes; check… |
-| app-server-03 | memory | critical | Memory usage on app-server-03 has reached 98%, suggesting a memory leak… |
+| web-server-01 | cpu_usage | critical | CPU usage on web-server-01 has stayed above 95%; the root cause is... |
+| db-server-02 | disk_io | warning | Disk IO on db-server-02 shows intermittent spikes; check... |
+| app-server-03 | memory | critical | Memory usage on app-server-03 has reached 98%, suggesting a memory leak... |
 
-> The row count is unchanged (3 → 3) and every row gains an `analysis` column holding
+> The row count is unchanged (3 -> 3) and every row gains an `analysis` column holding
 > the digital employee's conversation reply.
 
 ## Examples
@@ -147,7 +147,7 @@ questions.
 
 References a pre-registered prompt template for the analysis.
 
-### Example 4: pipeline composition (sampling → agent analysis)
+### Example 4: pipeline composition (sampling -> agent analysis)
 
 ```
 * | project host_name, metric_name, alert_level, metric_value
@@ -227,7 +227,7 @@ The SPL command:
 | agentic-call -prompt='Analyze why the {{metric_name}} metric of {{host_name}} is abnormal' -fields=host_name,metric_name -employee='skill_bench_analysis' -skill='sop' as analysis
 ```
 
-↓ the engine expands it to:
+v the engine expands it to:
 
 ```sql
 set session enable_remote_functions = true;
@@ -254,7 +254,7 @@ The SPL command:
 | agentic-call -prompt='@analysis/alert_diagnosis.md' -fields=host_name,metric_name -employee='skill_bench_analysis' as diagnosis
 ```
 
-↓ the engine expands it to:
+v the engine expands it to:
 
 ```sql
 set session enable_remote_functions = true;
@@ -305,16 +305,16 @@ SELECT * FROM _agentic_
 > **params JSON construction**:
 > The engine builds the `params` JSON string from the `-employee` and `-skill`
 > parameters:
-> - `-employee='skill_bench_analysis'` alone → `'{"employee_name": "skill_bench_analysis"}'`
-> - `-employee='skill_bench_analysis' -skill='sop'` → `'{"employee_name": "skill_bench_analysis", "skill": "sop"}'`
+> - `-employee='skill_bench_analysis'` alone -> `'{"employee_name": "skill_bench_analysis"}'`
+> - `-employee='skill_bench_analysis' -skill='sop'` -> `'{"employee_name": "skill_bench_analysis", "skill": "sop"}'`
 
 ## Template variables
 
 | Template variable | Parameter | Default | Description |
 |-------------------|-----------|---------|-------------|
 | `{{prompt_text}}` | `-prompt` | - | Inline text is passed straight through; a named-template reference (`@<path>`) is translated by the engine into `sls://builtin_prompt/<path>` |
-| `{{placeholders}}` | Generated from `-fields` | - | The placeholder-name array. For example `-fields=host_name,metric_name` → `'{{host_name}}', '{{metric_name}}'` |
-| `{{fields}}` | Generated from `-fields` | - | The column-reference array (double-quoted identifiers). For example `-fields=host_name,metric_name` → `"host_name", "metric_name"` |
+| `{{placeholders}}` | Generated from `-fields` | - | The placeholder-name array. For example `-fields=host_name,metric_name` -> `'{{host_name}}', '{{metric_name}}'` |
+| `{{fields}}` | Generated from `-fields` | - | The column-reference array (double-quoted identifiers). For example `-fields=host_name,metric_name` -> `"host_name", "metric_name"` |
 | `{{params_json}}` | Built from `-employee` and `-skill` | - | The digital-employee configuration JSON string |
 | `{{as}}` | `as` | `__agentic_result` | Output column name |
 | `##sourceTable##` | Resolved by the engine | - | The upstream CTE name or base query table |
@@ -324,7 +324,7 @@ SELECT * FROM _agentic_
 
 | Signature | Description |
 |-----------|-------------|
-| `agentic_call(template, placeholders, columns, params) → varchar` | Start one conversation with a digital employee (remote function). `template` is inline template text or an `sls://` reference path, `placeholders` is an `ARRAY[varchar]` of placeholder names, `columns` is an `ARRAY[varchar]` of the matching column values, and `params` is the JSON configuration string |
+| `agentic_call(template, placeholders, columns, params) -> varchar` | Start one conversation with a digital employee (remote function). `template` is inline template text or an `sls://` reference path, `placeholders` is an `ARRAY[varchar]` of placeholder names, `columns` is an `ARRAY[varchar]` of the matching column values, and `params` is the JSON configuration string |
 
 ## Edge cases
 

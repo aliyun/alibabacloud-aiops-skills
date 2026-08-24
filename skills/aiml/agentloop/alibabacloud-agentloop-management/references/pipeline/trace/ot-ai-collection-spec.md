@@ -245,8 +245,8 @@ naming formats are acceptable in special cases.
 | `gen_ai.usage.total_tokens` | Total tokens used | integer | `300` | Recommended | Alibaba Cloud extension |
 | `gen_ai.usage.cache_creation.input_tokens` | Tokens written into the provider cache [7] | integer | `25` | Recommended |  |
 | `gen_ai.usage.cache_read.input_tokens` | Tokens read from the provider cache [8] | integer | `50` | Recommended |  |
-| `gen_ai.input.messages` | Model input content [9] | string | `[{"role": "user", "parts": [{"type": "text", "content": "Weather in Paris?"}]}, {"role": "assistant", "parts": [{"type": "tool_call", "id": "call_VSPygqKTWdrhaFErNvMV18Yl", "name":"get_weather", "arguments":{"location":"Paris"}}]}, {"role": "tool", "parts": [{"type": "tool_call_response", "id":" call_VSPygqKTWdrhaFErNvMV18Yl", "result":"rainy, 57°F"}]}]` | Opt-In |  |
-| `gen_ai.output.messages` | Model output content [10] | string | `[{"role":"assistant","parts":[{"type":"text","content":"The weather in Paris is currently rainy with a temperature of 57°F."}],"finish_reason":"stop"}]` | Opt-In |  |
+| `gen_ai.input.messages` | Model input content [9] | string | `[{"role": "user", "parts": [{"type": "text", "content": "Weather in Paris?"}]}, {"role": "assistant", "parts": [{"type": "tool_call", "id": "call_VSPygqKTWdrhaFErNvMV18Yl", "name":"get_weather", "arguments":{"location":"Paris"}}]}, {"role": "tool", "parts": [{"type": "tool_call_response", "id":" call_VSPygqKTWdrhaFErNvMV18Yl", "result":"rainy, 57 deg F"}]}]` | Opt-In |  |
+| `gen_ai.output.messages` | Model output content [10] | string | `[{"role":"assistant","parts":[{"type":"text","content":"The weather in Paris is currently rainy with a temperature of 57 deg F."}],"finish_reason":"stop"}]` | Opt-In |  |
 | `gen_ai.system_instructions` | System prompt content [11] | string | `[{"type": "text", "content": "You are a helpful assistant"}]` | Opt-In |  |
 | `gen_ai.tool.definitions` | Tool definition list [12] | string | `[{"type":"function","name":"get_current_weather","description": "Get the current weather in a given location","parameters":{"type":"object","properties":{"location":{"type":"string","description":"The city and state, e.g. San Francisco, CA"},"unit": {"type":"string","enum":["celsius","fahrenheit"]}},"required":["location","unit"]}}]` | Opt-In |  |
 | `gen_ai.latency.time_in_model_prefill` | LLM prefill time, in nanoseconds | integer | `1000` | Recommended | Alibaba Cloud extension; collected only for inference engines |
@@ -360,7 +360,7 @@ maturity:
    corresponding attributes (`gen_ai.system_instructions`,
    `gen_ai.input.messages`, `gen_ai.output.messages`). This suits environments
    where telemetry volume is manageable, where no privacy regulation applies, or
-   where telemetry storage already meets the relevant requirements — for example
+   where telemetry storage already meets the relevant requirements - for example
    pre-production.
 
 3. Store the content externally and record a reference on the span. This is the
@@ -535,8 +535,8 @@ naming formats are acceptable in special cases.
 | `gen_ai.usage.total_tokens` | Total tokens used | integer | `300` | Recommended | Extension; not present in the OTel spec |
 | `gen_ai.usage.cache_creation.input_tokens` | Tokens written into the provider cache [5] | integer | `25` | Recommended |  |
 | `gen_ai.usage.cache_read.input_tokens` | Tokens read from the provider cache [6] | integer | `50` | Recommended |  |
-| `gen_ai.input.messages` | Model input content [7] | string | `[{"role": "user", "parts": [{"type": "text", "content": "Weather in Paris?"}]}, {"role": "assistant", "parts": [{"type": "tool_call", "id": "call_VSPygqKTWdrhaFErNvMV18Yl", "name":"get_weather", "arguments":{"location":"Paris"}}]}, {"role": "tool", "parts": [{"type": "tool_call_response", "id":" call_VSPygqKTWdrhaFErNvMV18Yl", "result":"rainy, 57°F"}]}]` | Opt-In |  |
-| `gen_ai.output.messages` | Model output content [8] | string | `[{"role":"assistant","parts":[{"type":"text","content":"The weather in Paris is currently rainy with a temperature of 57°F."}],"finish_reason":"stop"}]` | Opt-In |  |
+| `gen_ai.input.messages` | Model input content [7] | string | `[{"role": "user", "parts": [{"type": "text", "content": "Weather in Paris?"}]}, {"role": "assistant", "parts": [{"type": "tool_call", "id": "call_VSPygqKTWdrhaFErNvMV18Yl", "name":"get_weather", "arguments":{"location":"Paris"}}]}, {"role": "tool", "parts": [{"type": "tool_call_response", "id":" call_VSPygqKTWdrhaFErNvMV18Yl", "result":"rainy, 57 deg F"}]}]` | Opt-In |  |
+| `gen_ai.output.messages` | Model output content [8] | string | `[{"role":"assistant","parts":[{"type":"text","content":"The weather in Paris is currently rainy with a temperature of 57 deg F."}],"finish_reason":"stop"}]` | Opt-In |  |
 | `gen_ai.system_instructions` | System prompt content [9] | string | `[{"type": "text", "content": "You are a helpful assistant"}]` | Opt-In |  |
 | `gen_ai.tool.definitions` | Tool definition list [10] | string | `[{"type":"function","name":"get_current_weather","description": "Get the current weather in a given location","parameters":{"type":"object","properties":{"location":{"type":"string","description":"The city and state, e.g. San Francisco, CA"},"unit": {"type":"string","enum":["celsius","fahrenheit"]}},"required":["location","unit"]}}]` | Opt-In |  |
 | `gen_ai.response.time_to_first_token` | Agent time to first token | integer | `1000000` | Recommended | Not supported by the OTel community yet |
@@ -635,8 +635,8 @@ for this span type, so `gen_ai.operation.name` may still change.
 | `gen_ai.operation.name` | Second-level operation type | string | `enter` | Recommended |  |
 | `gen_ai.session.id` | Session ID | string | `ddde34343-f93a-4477-33333-sdfsdaf` | Conditionally Required | Alibaba Cloud extension |
 | `gen_ai.user.id` | End-user identifier of the application | string | `u-lK8JddD` | Conditionally Required | Alibaba Cloud extension |
-| `gen_ai.input.messages` | Model input content [2] | string | `[{"role": "user", "parts": [{"type": "text", "content": "Weather in Paris?"}]}, {"role": "assistant", "parts": [{"type": "tool_call", "id": "call_VSPygqKTWdrhaFErNvMV18Yl", "name":"get_weather", "arguments":{"location":"Paris"}}]}, {"role": "tool", "parts": [{"type": "tool_call_response", "id":" call_VSPygqKTWdrhaFErNvMV18Yl", "result":"rainy, 57°F"}]}]` | Opt-In |  |
-| `gen_ai.output.messages` | Model output content [3] | string | `[{"role":"assistant","parts":[{"type":"text","content":"The weather in Paris is currently rainy with a temperature of 57°F."}],"finish_reason":"stop"}]` | Opt-In |  |
+| `gen_ai.input.messages` | Model input content [2] | string | `[{"role": "user", "parts": [{"type": "text", "content": "Weather in Paris?"}]}, {"role": "assistant", "parts": [{"type": "tool_call", "id": "call_VSPygqKTWdrhaFErNvMV18Yl", "name":"get_weather", "arguments":{"location":"Paris"}}]}, {"role": "tool", "parts": [{"type": "tool_call_response", "id":" call_VSPygqKTWdrhaFErNvMV18Yl", "result":"rainy, 57 deg F"}]}]` | Opt-In |  |
+| `gen_ai.output.messages` | Model output content [3] | string | `[{"role":"assistant","parts":[{"type":"text","content":"The weather in Paris is currently rainy with a temperature of 57 deg F."}],"finish_reason":"stop"}]` | Opt-In |  |
 | `gen_ai.response.time_to_first_token` | Time to first token in streaming responses [4] | integer | `1000000` | Recommended | Alibaba Cloud extension |
 
 **[1] `gen_ai.span.kind`**: a dedicated LLM spanKind enum. In an Entry span the

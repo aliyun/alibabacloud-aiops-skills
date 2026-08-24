@@ -11,7 +11,7 @@ input and output row counts match (a 1:1 transformation). The current default
 algorithm is KMeans.
 
 Clustering itself does not filter data; it only adds a grouping marker. It is commonly
-combined with the downstream `sample` operator to achieve "diversity sampling" — cluster
+combined with the downstream `sample` operator to achieve "diversity sampling" - cluster
 first, then sample within each cluster. It can also be used on its own for data
 distribution analysis and semantic grouping.
 
@@ -58,12 +58,12 @@ distribution analysis and semantic grouping.
 
 | Column | Type | Source | Description |
 |--------|------|--------|-------------|
-| All input columns | — | Input | Every upstream column passes through |
+| All input columns | - | Input | Every upstream column passes through |
 | `__cluster_id` | bigint | Derived | Cluster number (zero-based) |
 
 **Input-to-output relationship**:
 
-M:N (M = N) — a 1:1 transformation; each row gains a cluster marker and no rows are
+M:N (M = N) - a 1:1 transformation; each row gains a cluster marker and no rows are
 added or dropped.
 
 ## Effect preview
@@ -72,25 +72,25 @@ added or dropped.
 
 | question | __dedup_emb |
 |----------|------------|
-| What is machine learning? | [0.12, -0.34, …] |
-| What types of machine learning are there? | [0.15, -0.30, …] |
-| How do I learn Python? | [0.78, 0.23, …] |
-| Which Python libraries are available? | [0.75, 0.20, …] |
-| What is deep learning? | [-0.11, 0.45, …] |
-| What is a neural network? | [-0.09, 0.42, …] |
+| What is machine learning? | [0.12, -0.34, ...] |
+| What types of machine learning are there? | [0.15, -0.30, ...] |
+| How do I learn Python? | [0.78, 0.23, ...] |
+| Which Python libraries are available? | [0.75, 0.20, ...] |
+| What is deep learning? | [-0.11, 0.45, ...] |
+| What is a neural network? | [-0.09, 0.42, ...] |
 
-**After** (6 rows) — `| semantic-cluster -field=__dedup_emb -n=3`:
+**After** (6 rows) - `| semantic-cluster -field=__dedup_emb -n=3`:
 
 | question | __dedup_emb | __cluster_id |
 |----------|------------|-------------|
-| What is machine learning? | [0.12, -0.34, …] | 0 |
-| What types of machine learning are there? | [0.15, -0.30, …] | 0 |
-| How do I learn Python? | [0.78, 0.23, …] | 1 |
-| Which Python libraries are available? | [0.75, 0.20, …] | 1 |
-| What is deep learning? | [-0.11, 0.45, …] | 2 |
-| What is a neural network? | [-0.09, 0.42, …] | 2 |
+| What is machine learning? | [0.12, -0.34, ...] | 0 |
+| What types of machine learning are there? | [0.15, -0.30, ...] | 0 |
+| How do I learn Python? | [0.78, 0.23, ...] | 1 |
+| Which Python libraries are available? | [0.75, 0.20, ...] | 1 |
+| What is deep learning? | [-0.11, 0.45, ...] | 2 |
+| What is a neural network? | [-0.09, 0.42, ...] | 2 |
 
-> The row count is unchanged (6 → 6) and every row gains a `__cluster_id`.
+> The row count is unchanged (6 -> 6) and every row gains a `__cluster_id`.
 > Semantically close records are assigned to the same cluster. Follow up with
 > `sample -n=1 by __cluster_id` to take one row per cluster for diversity sampling.
 
@@ -118,7 +118,7 @@ Clusters into 100 clusters and takes one row per cluster, producing roughly 100
 diverse representative samples. Equivalent to the L5 cluster-sampling logic of the
 original pipeline.
 
-### Example 3: three-stage dedup → clustering → sampling
+### Example 3: three-stage dedup -> clustering -> sampling
 
 ```
 * | project question,input,output
@@ -170,7 +170,7 @@ Adds only the cluster labels, for observing the semantic distribution of the dat
 - **`-n` is required**: the user states the cluster count explicitly, which avoids the
   cognitive load of an implicit computation. If the right cluster count is unclear,
   consult the guidance table or use the rule of thumb
-  `ceil(row count × desired sampling rate)`.
+  `ceil(row count x desired sampling rate)`.
 - **Internal column**: `__cl_rid` is an internal synthetic row ID; it exists in the
   output as an implementation byproduct and is not a formal derived column. The engine
   may strip it during post-processing.
@@ -229,7 +229,7 @@ SELECT * FROM _cl_output
 
 | Signature | Description |
 |-----------|-------------|
-| `cluster(emb_array, algorithm, params_json) → ROW(assignments array(integer), ...)` | The clustering function, currently using KMeans. `n_clusters` inside `params_json` sets the cluster count |
+| `cluster(emb_array, algorithm, params_json) -> ROW(assignments array(integer), ...)` | The clustering function, currently using KMeans. `n_clusters` inside `params_json` sets the cluster count |
 
 ## Edge cases
 
@@ -240,5 +240,5 @@ SELECT * FROM _cl_output
 | The input is empty (0 rows) | An empty result set is returned normally |
 | The input has only 1 row | One cluster with one record, `__cluster_id = 0` |
 | `-n` exceeds the row count | Handled by the `cluster` function, usually capped at the row count or reported as an error |
-| `-n` ≤ 0 | The engine raises a parameter-validation error |
+| `-n` <= 0 | The engine raises a parameter-validation error |
 | The embedding dimensions are inconsistent | The `cluster` function raises an error about mismatched vector dimensions |

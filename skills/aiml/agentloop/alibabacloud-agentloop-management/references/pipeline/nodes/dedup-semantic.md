@@ -73,7 +73,7 @@ stage for building a high-quality dataset.
 
 | Column | Type | Source | Description |
 |--------|------|--------|-------------|
-| Columns named by `output` | — | Pass-through | `*` keeps every raw input column |
+| Columns named by `output` | - | Pass-through | `*` keeps every raw input column |
 | `__dedup_emb` | array(double) | Added | The text embedding vector (reusable by a downstream clustering node) |
 | `__dedup_rid` | bigint | Added | In-batch row identifier (internal use) |
 
@@ -82,7 +82,7 @@ stage for building a high-quality dataset.
 
 **Row-count change**:
 
-M → N (M ≥ N) — semantically similar records form one cluster and one row survives
+M -> N (M >= N) - semantically similar records form one cluster and one row survives
 per cluster, so the output row count is at most the input row count.
 
 ## Effect preview
@@ -91,19 +91,19 @@ per cluster, so the output row count is at most the input row count.
 
 | question | input | output |
 |----------|-------|--------|
-| What is machine learning? | Please explain | Machine learning is… |
-| What is the definition of machine learning? | Overview | ML trains models from data… |
-| How do I get started with Python programming? | Guide | Start with the official tutorial… |
-| How can a complete beginner learn Python? | Getting started | Learn the basic syntax first… |
-| What is deep learning? | In brief | Deep learning is a subset of machine learning… |
+| What is machine learning? | Please explain | Machine learning is... |
+| What is the definition of machine learning? | Overview | ML trains models from data... |
+| How do I get started with Python programming? | Guide | Start with the official tutorial... |
+| How can a complete beginner learn Python? | Getting started | Learn the basic syntax first... |
+| What is deep learning? | In brief | Deep learning is a subset of machine learning... |
 
-**After** (3 rows) — `field = "question"`, `threshold = "0.1"`:
+**After** (3 rows) - `field = "question"`, `threshold = "0.1"`:
 
 | question | input | output | __dedup_emb | __dedup_rid |
 |----------|-------|--------|------------|------------|
-| What is machine learning? | Please explain | Machine learning is… | [0.12, -0.34, …] | 1 |
-| How do I get started with Python programming? | Guide | Start with the official tutorial… | [0.56, 0.78, …] | 3 |
-| What is deep learning? | In brief | Deep learning is a subset of machine learning… | [-0.11, 0.45, …] | 5 |
+| What is machine learning? | Please explain | Machine learning is... | [0.12, -0.34, ...] | 1 |
+| How do I get started with Python programming? | Guide | Start with the official tutorial... | [0.56, 0.78, ...] | 3 |
+| What is deep learning? | In brief | Deep learning is a subset of machine learning... | [-0.11, 0.45, ...] | 5 |
 
 > The two machine-learning questions are semantically equivalent (vector distance
 > < 0.1), so they form one cluster and one row survives; the two Python questions
@@ -156,7 +156,7 @@ Semantic dedup across batches, compared against the Dataset's historical vectors
 }
 ```
 
-Exact → fuzzy → semantic, dedup stage by stage.
+Exact -> fuzzy -> semantic, dedup stage by stage.
 
 ### Example 4: custom model
 
@@ -179,10 +179,10 @@ Exact → fuzzy → semantic, dedup stage by stage.
 ## Notes
 
 **Recommended usage**:
-- **Strongly prefer running it after `dedup-exact` and `dedup-fuzzy`** — semantic
+- **Strongly prefer running it after `dedup-exact` and `dedup-fuzzy`** - semantic
   dedup computes embeddings (GPU inference), so the earlier dedup stages cut both
   the workload and the cost substantially
-- Recommended pipeline order: `dedup-exact` → `dedup-fuzzy` → `dedup-semantic`
+- Recommended pipeline order: `dedup-exact` -> `dedup-fuzzy` -> `dedup-semantic`
   (three-stage dedup)
 - The default threshold `"0.1"` suits most scenarios; a smaller value is stricter
 
@@ -191,7 +191,7 @@ Exact → fuzzy → semantic, dedup stage by stage.
   `semantic-cluster` node, avoiding a second embedding computation
 - Global dedup suits incremental ingestion and requires the Dataset to have a
   vector index enabled
-- There is no need to call `embedding` before `dedup-semantic` — this node already
+- There is no need to call `embedding` before `dedup-semantic` - this node already
   generates embeddings internally
 
 **Edge cases**:

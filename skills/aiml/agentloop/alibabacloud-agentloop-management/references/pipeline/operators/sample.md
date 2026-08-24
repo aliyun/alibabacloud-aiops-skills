@@ -13,7 +13,7 @@ Randomly samples the input data in one of two modes:
    samples a given proportion (`-ratio`) or number (`-n`) of records within each group
 
 It is commonly combined with the upstream `semantic-cluster` operator to achieve
-"diversity sampling" — cluster first, then sample per cluster, so downsampling keeps
+"diversity sampling" - cluster first, then sample per cluster, so downsampling keeps
 semantic diversity.
 
 **Use cases**:
@@ -58,20 +58,20 @@ semantic diversity.
 
 | Column | Type | Source | Description |
 |--------|------|--------|-------------|
-| All input columns | — | Input | Every upstream column passes through |
+| All input columns | - | Input | Every upstream column passes through |
 
 > This operator adds no derived columns; it only filters rows.
 
 **Input-to-output relationship**:
 
-M:N (M ≥ N) — after random sampling the output row count is less than or equal to the
+M:N (M >= N) - after random sampling the output row count is less than or equal to the
 input row count.
 
 Exact output size:
-- Global with `-ratio`: N = ceil(M × ratio)
+- Global with `-ratio`: N = ceil(M x ratio)
 - Global with `-n`: N = min(n, M)
-- Grouped with `-n`: N = Σ min(n, rows in group)
-- Grouped with `-ratio`: N = Σ ceil(rows in group × ratio)
+- Grouped with `-n`: N = sum min(n, rows in group)
+- Grouped with `-ratio`: N = sum ceil(rows in group x ratio)
 
 ## Effect preview
 
@@ -79,20 +79,20 @@ Exact output size:
 
 | question | output | __cluster_id |
 |----------|--------|-------------|
-| What is machine learning? | Machine learning is… | 0 |
-| What types of machine learning are there? | Supervised / unsupervised / reinforcement… | 0 |
-| How do I learn Python? | Start with the official tutorial… | 1 |
-| Which Python libraries are available? | NumPy, Pandas… | 1 |
-| What is deep learning? | Deep learning is… | 2 |
-| What is a neural network? | A neural network has several layers… | 2 |
+| What is machine learning? | Machine learning is... | 0 |
+| What types of machine learning are there? | Supervised / unsupervised / reinforcement... | 0 |
+| How do I learn Python? | Start with the official tutorial... | 1 |
+| Which Python libraries are available? | NumPy, Pandas... | 1 |
+| What is deep learning? | Deep learning is... | 2 |
+| What is a neural network? | A neural network has several layers... | 2 |
 
-**After** (3 rows) — `| sample -n=1 by __cluster_id`:
+**After** (3 rows) - `| sample -n=1 by __cluster_id`:
 
 | question | output | __cluster_id |
 |----------|--------|-------------|
-| What types of machine learning are there? | Supervised / unsupervised / reinforcement… | 0 |
-| How do I learn Python? | Start with the official tutorial… | 1 |
-| What is deep learning? | Deep learning is… | 2 |
+| What types of machine learning are there? | Supervised / unsupervised / reinforcement... | 0 |
+| How do I learn Python? | Start with the official tutorial... | 1 |
+| What is deep learning? | Deep learning is... | 2 |
 
 > One random row per cluster, so 6 rows become 3. The operator adds no derived
 > columns; it only filters rows. Because the selection is random, each run may return
@@ -159,7 +159,7 @@ Groups by the `(category, difficulty)` combination and takes 10 rows per group.
   | llm-call -prompt='@eval/prompt.md' -fields=question,output as eval
 ```
 
-Three-stage deduplication → clustering → grouped sampling → AI evaluation.
+Three-stage deduplication -> clustering -> grouped sampling -> AI evaluation.
 
 ---
 
@@ -183,8 +183,8 @@ Three-stage deduplication → clustering → grouped sampling → AI evaluation.
 - **Stratified-sampling note for the future**: `sample` is currently positioned as
   "uniform random sampling", where `-ratio` applies the same rate to all data or all
   groups. A possible future requirement is applying different sampling rates per
-  stratum based on a weight column (for example a frequency column `cnt`) —
-  downsampling frequent strata and oversampling rare ones — so that each stratum
+  stratum based on a weight column (for example a frequency column `cnt`) -
+  downsampling frequent strata and oversampling rare ones - so that each stratum
   represents the population proportionally. Expressing "bucketing rules plus
   differentiated rates" as parameters is fairly complex, so it is better implemented as
   a separate operator (such as `sample-stratified`) or by precomputing bucket labels
@@ -265,9 +265,9 @@ WHERE __sp_rn <= cast(ceil(__sp_group_total * {{ratio}}) as bigint)
 
 | Signature | Used by | Description |
 |-----------|---------|-------------|
-| `rand() → double` | All modes | Generates a random number in [0, 1), used by `ORDER BY rand()` for random ordering (built-in SQL) |
-| `row_number() OVER ([PARTITION BY col] ORDER BY rand()) → bigint` | All modes | Window function producing a randomly ordered row number (built-in SQL) |
-| `count(*) OVER ([PARTITION BY col]) → bigint` | `-ratio` modes | Window function computing the total or per-group row count (built-in SQL) |
+| `rand() -> double` | All modes | Generates a random number in [0, 1), used by `ORDER BY rand()` for random ordering (built-in SQL) |
+| `row_number() OVER ([PARTITION BY col] ORDER BY rand()) -> bigint` | All modes | Window function producing a randomly ordered row number (built-in SQL) |
+| `count(*) OVER ([PARTITION BY col]) -> bigint` | `-ratio` modes | Window function computing the total or per-group row count (built-in SQL) |
 
 ## Edge cases
 
@@ -276,7 +276,7 @@ WHERE __sp_rn <= cast(ceil(__sp_group_total * {{ratio}}) as bigint)
 | Neither `-ratio` nor `-n` is given | The engine raises a parameter-validation error asking for at least one of them |
 | Both `-ratio` and `-n` are given | The engine raises a parameter-validation error noting that they are mutually exclusive |
 | `-ratio` falls outside (0, 1] | The engine raises a parameter-validation error |
-| `-n` ≤ 0 | The engine raises a parameter-validation error |
+| `-n` <= 0 | The engine raises a parameter-validation error |
 | A column named by `by` does not exist | The engine raises a parameter-validation error |
 | The input is empty (0 rows) | An empty result set is returned normally |
 | `-n` exceeds the row count (global) | All rows are returned |

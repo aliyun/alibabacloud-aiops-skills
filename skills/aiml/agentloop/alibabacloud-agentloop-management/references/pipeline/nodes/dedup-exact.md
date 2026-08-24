@@ -55,14 +55,14 @@ large amounts of fully duplicated data quickly.
 
 | Column | Type | Source | Description |
 |--------|------|--------|-------------|
-| Columns controlled by `output` | — | Pass-through / added | `*` keeps every column (including derived ones); when set, only the listed columns are emitted |
+| Columns controlled by `output` | - | Pass-through / added | `*` keeps every column (including derived ones); when set, only the listed columns are emitted |
 | `__dedup_hash` | bigint | Added | Text fingerprint used to identify text uniqueness |
 | `__dedup_weight` | integer | Added | Text length; dedup keeps the longest text |
 | `__dedup_rnk` | integer | Added | Rank within the group (always 1 after dedup) |
 
 **Row-count change**:
 
-M → N (M ≥ N) — fully identical texts collapse into one row, so the output row
+M -> N (M >= N) - fully identical texts collapse into one row, so the output row
 count is at most the input row count.
 
 ## Effect preview
@@ -71,19 +71,19 @@ count is at most the input row count.
 
 | question | input | output |
 |----------|-------|--------|
-| What is machine learning? | Please explain | Machine learning is a branch of AI… |
-| What is machine learning? | Please explain in detail | Machine learning (ML) trains models from data… |
-| How do I learn Python? | Getting-started guide | Start with the official tutorial… |
-| What is deep learning? | In brief | Deep learning is a subset of machine learning… |
-| How do I learn Python? | Beginner | Learn the basic syntax first… |
+| What is machine learning? | Please explain | Machine learning is a branch of AI... |
+| What is machine learning? | Please explain in detail | Machine learning (ML) trains models from data... |
+| How do I learn Python? | Getting-started guide | Start with the official tutorial... |
+| What is deep learning? | In brief | Deep learning is a subset of machine learning... |
+| How do I learn Python? | Beginner | Learn the basic syntax first... |
 
-**After** (3 rows) — `field = "question"`:
+**After** (3 rows) - `field = "question"`:
 
 | question | input | output | __dedup_hash | __dedup_weight | __dedup_rnk |
 |----------|-------|--------|-------------|---------------|-------------|
-| What is machine learning? | Please explain in detail | Machine learning (ML) trains models from data… | 8832749102 | 25 | 1 |
-| How do I learn Python? | Getting-started guide | Start with the official tutorial… | 5561023847 | 22 | 1 |
-| What is deep learning? | In brief | Deep learning is a subset of machine learning… | 3347891256 | 22 | 1 |
+| What is machine learning? | Please explain in detail | Machine learning (ML) trains models from data... | 8832749102 | 25 | 1 |
+| How do I learn Python? | Getting-started guide | Start with the official tutorial... | 5561023847 | 22 | 1 |
+| What is deep learning? | In brief | Deep learning is a subset of machine learning... | 3347891256 | 22 | 1 |
 
 > Each of the two identical-`question` groups keeps one row (the longest text),
 > so 5 rows become 3. When `output` is unset (the default `*`), every column is
@@ -161,7 +161,7 @@ slightly different ones.
 **Recommended usage**:
 - Exact dedup is the cheapest, so **use it as the first step of the dedup
   pipeline**: strip the exact duplicates before fuzzy or semantic dedup
-- Recommended pipeline order: `dedup-exact` → `dedup-fuzzy` → `dedup-semantic`,
+- Recommended pipeline order: `dedup-exact` -> `dedup-fuzzy` -> `dedup-semantic`,
   converging the volume stage by stage
 - Global dedup (`global = true`) suits incremental ingestion, keeping the Dataset
   free of duplicates
@@ -190,5 +190,5 @@ slightly different ones.
 | Node | Relationship |
 |------|--------------|
 | `dedup-fuzzy` | Follow exact dedup with fuzzy dedup to converge the data stage by stage |
-| `dedup-semantic` | The three-stage exact → fuzzy → semantic dedup pipeline |
+| `dedup-semantic` | The three-stage exact -> fuzzy -> semantic dedup pipeline |
 | `project` | Normally used after `project` so that the `field` column is ready |

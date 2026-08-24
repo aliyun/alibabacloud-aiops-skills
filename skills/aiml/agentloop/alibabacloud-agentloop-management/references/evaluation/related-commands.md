@@ -1,4 +1,4 @@
-# Related CLI Commands — AgentLoop Evaluation
+# Related CLI Commands - AgentLoop Evaluation
 
 ## AgentLoop plugin commands
 

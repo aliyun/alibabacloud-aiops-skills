@@ -30,7 +30,7 @@ configuration.
   data from the original records
 - **AI filtering**: let the LLM judge data quality, then filter with a downstream
   `where`
-- **General tasks**: summarization, classification, entity extraction — any AI task a
+- **General tasks**: summarization, classification, entity extraction - any AI task a
   prompt can define
 
 ## Syntax
@@ -45,7 +45,7 @@ configuration.
 |-----------|------|----------|---------|-------------|
 | `-prompt` | String | **Yes** | - | The prompt template, using `{{column}}` as placeholders. Accepts inline text or an `@<path>` reference to a registered template (such as `@eval/requirement_understanding_v1.md`) |
 | `-fields` | FieldList | **Yes** | - | The input columns used for rendering, comma-separated. Every column must have a matching `{{column}}` placeholder in `-prompt` |
-| `-format` | Enum | No | `raw` | Output parsing format:<br>• `raw` → varchar — on success the raw LLM text, on failure an error description<br>• `json` → json — valid JSON is returned as is; invalid JSON becomes `{"__raw":"..."}`; a failed call becomes `{"__error":"..."}` |
+| `-format` | Enum | No | `raw` | Output parsing format:<br>- `raw` -> varchar - on success the raw LLM text, on failure an error description<br>- `json` -> json - valid JSON is returned as is; invalid JSON becomes `{"__raw":"..."}`; a failed call becomes `{"__error":"..."}` |
 | `-model` | String | No | `qwen-turbo` | LLM model identifier, such as `qwen-turbo` or `qwen-plus` |
 | `as` | Field | No | `__llm_result` | Output column name (an instruction primitive, without the `-` prefix) |
 
@@ -74,12 +74,12 @@ configuration.
 
 | Column | Type | Source | Description |
 |--------|------|--------|-------------|
-| All input columns | — | Input | Every upstream column passes through |
-| `{{as}}` | Determined by `-format` | Derived | `-format=raw` → varchar (the raw LLM text or an error description); `-format=json` → json (always valid JSON) |
+| All input columns | - | Input | Every upstream column passes through |
+| `{{as}}` | Determined by `-format` | Derived | `-format=raw` -> varchar (the raw LLM text or an error description); `-format=json` -> json (always valid JSON) |
 
 **Input-to-output relationship**:
 
-M:N (M = N) — a 1:1 scalar transformation; each row calls the LLM independently and no
+M:N (M = N) - a 1:1 scalar transformation; each row calls the LLM independently and no
 rows are added or dropped.
 
 ## Effect preview
@@ -92,25 +92,25 @@ rows are added or dropped.
 | How do I learn Python? | Start with the official tutorial, then build a project |
 | 1+1=? | 2 |
 
-**After** (3 rows) — `| llm-call -prompt='Rate the answer quality. Question: {{question}} Answer: {{output}} Output JSON: {"score":n} Output pure JSON only.' -fields=question,output -format=json as eval`:
+**After** (3 rows) - `| llm-call -prompt='Rate the answer quality. Question: {{question}} Answer: {{output}} Output JSON: {"score":n} Output pure JSON only.' -fields=question,output -format=json as eval`:
 
 | question | output | eval |
 |----------|--------|------|
-| What is machine learning? | Machine learning is an important branch… | `{"score":4,"reason":"accurate but not detailed enough"}` |
-| How do I learn Python? | Start with the official tutorial… | `{"score":5,"reason":"specific and practical advice"}` |
+| What is machine learning? | Machine learning is an important branch... | `{"score":4,"reason":"accurate but not detailed enough"}` |
+| How do I learn Python? | Start with the official tutorial... | `{"score":5,"reason":"specific and practical advice"}` |
 | 1+1=? | 2 | `{"score":3,"reason":"correct but too terse"}` |
 
-> The row count is unchanged (3 → 3) and every row gains an `eval` column
+> The row count is unchanged (3 -> 3) and every row gains an `eval` column
 > (`format=json` guarantees valid JSON). Use
 > `json_extract(eval, '$.score')` to pull the score out and `where` to filter
 > low-scoring rows.
 
 > **How downstream consumes the output**:
 >
-> `format=raw` — use the `{{as}}` column directly; its value is the LLM output text
+> `format=raw` - use the `{{as}}` column directly; its value is the LLM output text
 > (or an error description when the call fails).
 >
-> `format=json` — the `{{as}}` column has type `json` and is **always valid**; access
+> `format=json` - the `{{as}}` column has type `json` and is **always valid**; access
 > the result with `json_extract`:
 >
 > ```sql
@@ -164,7 +164,7 @@ References a pre-registered prompt template and annotates with the `qwen-plus` m
 With no `-format` (the default is `raw`), the translation lands in the `translation`
 column.
 
-### Example 4: pipeline composition (dedup → sample → evaluate → annotate → expand)
+### Example 4: pipeline composition (dedup -> sample -> evaluate -> annotate -> expand)
 
 ```
 * | project question,input,output
@@ -178,7 +178,7 @@ column.
   | llm-call -prompt='@synthetic/prompt.md' -fields=question,input,output -format=json as synthetic
 ```
 
-Three-stage deduplication → cluster sampling → three LLM calls (evaluation,
+Three-stage deduplication -> cluster sampling -> three LLM calls (evaluation,
 annotation, expansion). The same operator serves different business logic through
 different prompts.
 
@@ -326,9 +326,9 @@ FROM _llm_raw
 ```
 
 > `{{as}}` has type `json` and is **always valid JSON**:
-> - LLM success with valid JSON → returned as is, for example `{"score":4,"reason":"..."}`
-> - LLM success with invalid JSON (markdown, free text, and so on) → `{"__raw":"raw text..."}`
-> - LLM call failure → `{"__error":"timeout"}`
+> - LLM success with valid JSON -> returned as is, for example `{"score":4,"reason":"..."}`
+> - LLM success with invalid JSON (markdown, free text, and so on) -> `{"__raw":"raw text..."}`
+> - LLM call failure -> `{"__error":"timeout"}`
 >
 > **Engine implementation note**: the final SELECT passes non-derived columns through
 > with `##otherColumns##` plus the `{{as}}` derived column, excluding the intermediate
@@ -364,7 +364,7 @@ The SPL command:
 | llm-call -prompt='@eval/requirement_understanding_v1.md' -fields=question,input,output -format=json -model='qwen-turbo-latest' as eval
 ```
 
-↓ the engine expands it to:
+v the engine expands it to:
 
 ```sql
 set session enable_remote_functions = true;
@@ -429,7 +429,7 @@ json_extract(eval, '$["format_compliance"].reason')          -- returns "clear s
 > ```
 >
 > **Validation rules**: before rendering, the engine checks consistency in both
-> directions —
+> directions -
 > - every `{{column}}` in the prompt must be declared in `-fields`
 > - every column in `-fields` must appear in the prompt as `{{column}}`
 
@@ -438,8 +438,8 @@ json_extract(eval, '$["format_compliance"].reason')          -- returns "clear s
 | Template variable | Parameter | Default | Description |
 |-------------------|-----------|---------|-------------|
 | `{{prompt_text}}` | `-prompt` | - | Inline text is passed straight through; a named-template reference (`@<path>`) is translated by the engine into `sls://builtin_prompt/<path>` |
-| `{{placeholders}}` | Generated from `-fields` | - | The placeholder-name array. For example `-fields=question,output` → `'{{question}}', '{{output}}'` |
-| `{{fields}}` | Generated from `-fields` | - | The column-reference array (double-quoted identifiers). For example `-fields=question,output` → `"question", "output"` |
+| `{{placeholders}}` | Generated from `-fields` | - | The placeholder-name array. For example `-fields=question,output` -> `'{{question}}', '{{output}}'` |
+| `{{fields}}` | Generated from `-fields` | - | The column-reference array (double-quoted identifiers). For example `-fields=question,output` -> `"question", "output"` |
 | `{{model}}` | `-model` | System default | The LLM model identifier. When absent, the engine uses the system default model |
 | `{{as}}` | `as` | `__llm_result` | Output column name |
 | `##sourceTable##` | Resolved by the engine | - | The upstream CTE name or base query table |
@@ -449,8 +449,8 @@ json_extract(eval, '$["format_compliance"].reason')          -- returns "clear s
 
 | Signature | Description |
 |-----------|-------------|
-| `ai_gen_with_template(template, placeholders, columns, model) → ROW(result varchar, error_msg varchar)` | Call the LLM to generate text (remote function). `template` is inline template text or an `sls://` reference path, `placeholders` is an `ARRAY[varchar]` of placeholder names, `columns` is an `ARRAY[varchar]` of the matching column values, and `model` is the model identifier |
-| `json_parse(str) → json` | Parse a JSON string (built-in SQL). Combined with `try()` to validate the output when `format=json` |
+| `ai_gen_with_template(template, placeholders, columns, model) -> ROW(result varchar, error_msg varchar)` | Call the LLM to generate text (remote function). `template` is inline template text or an `sls://` reference path, `placeholders` is an `ARRAY[varchar]` of placeholder names, `columns` is an `ARRAY[varchar]` of the matching column values, and `model` is the model identifier |
+| `json_parse(str) -> json` | Parse a JSON string (built-in SQL). Combined with `try()` to validate the output when `format=json` |
 
 ## Edge cases
 

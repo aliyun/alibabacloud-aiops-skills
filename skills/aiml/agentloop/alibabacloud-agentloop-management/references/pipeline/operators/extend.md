@@ -50,12 +50,12 @@ Each record is computed independently and the row count does not change.
 
 | Column | Type | Source | Description |
 |--------|------|--------|-------------|
-| All input columns | — | Input | Every upstream column passes through |
+| All input columns | - | Input | Every upstream column passes through |
 | Every declared target column | Determined by the expression | Added or overwritten | A column of the same name is overwritten; a new name is appended |
 
 **Input-to-output relationship**:
 
-M:N (M = N) — the row count does not change and each row is computed
+M:N (M = N) - the row count does not change and each row is computed
 independently; the column count stays the same or grows.
 
 ## Examples
@@ -87,7 +87,7 @@ A single `extend` adds both the `summary` and `q_len` derived columns.
   | where length(question) > 10
 ```
 
-Map, transform, filter — the basic composition pattern.
+Map, transform, filter - the basic composition pattern.
 
 ---
 

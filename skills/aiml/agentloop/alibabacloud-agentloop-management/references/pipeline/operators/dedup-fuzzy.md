@@ -61,14 +61,14 @@ differences, and other small variations.
 
 | Column | Type | Source | Description |
 |--------|------|--------|-------------|
-| All input columns | — | Input | Every upstream column passes through |
+| All input columns | - | Input | Every upstream column passes through |
 | `__dedup_hash` | bigint | Derived | The text fingerprint, identifying text uniqueness |
 | `__dedup_weight` | integer | Derived | Text length, the basis for the dedup weight (the longest text in a cluster wins) |
 | `__dedup_rnk` | integer | Derived | Rank within the cluster (always 1 after deduplication, marking the row as the cluster's best pick) |
 
 **Input-to-output relationship**:
 
-M:N (M ≥ N) — records whose Hamming distance is within the threshold form one
+M:N (M >= N) - records whose Hamming distance is within the threshold form one
 cluster and collapse into a single row (the longest text in each cluster), so the
 output row count is less than or equal to the input row count.
 
@@ -78,19 +78,19 @@ output row count is less than or equal to the input row count.
 
 | question | input | output |
 |----------|-------|--------|
-| What is machine learning? | Please explain | Machine learning is… |
-| What is machine learning?? | Please explain in detail | Machine learning (Machine Learning) is… |
-| How do I learn Python? | Getting started | Start with the official tutorial… |
-| How can I learn Python? | Guide | Learn the basic syntax first… |
-| What is deep learning? | In brief | Deep learning is a subset of machine learning… |
+| What is machine learning? | Please explain | Machine learning is... |
+| What is machine learning?? | Please explain in detail | Machine learning (Machine Learning) is... |
+| How do I learn Python? | Getting started | Start with the official tutorial... |
+| How can I learn Python? | Guide | Learn the basic syntax first... |
+| What is deep learning? | In brief | Deep learning is a subset of machine learning... |
 
-**After** (3 rows) — `| dedup-fuzzy -field=question -threshold='3'`:
+**After** (3 rows) - `| dedup-fuzzy -field=question -threshold='3'`:
 
 | question | input | output | __dedup_hash | __dedup_weight | __dedup_rnk |
 |----------|-------|--------|-------------|---------------|-------------|
-| What is machine learning?? | Please explain in detail | Machine learning (Machine Learning) is… | 8832749102 | 26 | 1 |
-| How do I learn Python? | Getting started | Start with the official tutorial… | 5561023847 | 22 | 1 |
-| What is deep learning? | In brief | Deep learning is a subset of machine learning… | 3347891256 | 22 | 1 |
+| What is machine learning?? | Please explain in detail | Machine learning (Machine Learning) is... | 8832749102 | 26 | 1 |
+| How do I learn Python? | Getting started | Start with the official tutorial... | 5561023847 | 22 | 1 |
+| What is deep learning? | In brief | Deep learning is a subset of machine learning... | 3347891256 | 22 | 1 |
 
 > The two machine-learning questions have a fingerprint Hamming distance within 3, so
 > they form one cluster and the longest text survives; the two Python questions behave
@@ -273,10 +273,10 @@ SELECT * FROM _fuzzy_dedup
 
 | Signature | Description |
 |-----------|-------------|
-| `prompt_simhash(text) → bigint` | Compute the SimHash fingerprint of the text |
-| `simhash_dedup(sh_array, weight_array, threshold) → array(bigint)` | Fuzzy in-batch dedup; clusters by Hamming distance and returns the surviving fingerprints |
-| `simhash_dedup_with_dataset(sh_array, workspace, dataset, threshold) → array(bigint)` | Cross-batch fuzzy dedup (global mode) |
-| `simhash_dataset_upsert(sh_array, workspace, dataset) → void` | Write fingerprints into the Dataset (global mode) |
+| `prompt_simhash(text) -> bigint` | Compute the SimHash fingerprint of the text |
+| `simhash_dedup(sh_array, weight_array, threshold) -> array(bigint)` | Fuzzy in-batch dedup; clusters by Hamming distance and returns the surviving fingerprints |
+| `simhash_dedup_with_dataset(sh_array, workspace, dataset, threshold) -> array(bigint)` | Cross-batch fuzzy dedup (global mode) |
+| `simhash_dataset_upsert(sh_array, workspace, dataset) -> void` | Write fingerprints into the Dataset (global mode) |
 
 ## Edge cases
 
@@ -286,7 +286,7 @@ SELECT * FROM _fuzzy_dedup
 | The `-field` value is NULL | Filtered by the `WHERE` clause; NULL rows take no part in deduplication and do not appear in the output |
 | The input is empty (0 rows) | An empty result set is returned normally |
 | `-threshold` is negative or not a number | The engine raises a parameter-validation error |
-| `-threshold` is too large (≥ 64) | Every record falls into one cluster and only one row survives; the engine may emit a warning |
+| `-threshold` is too large (>= 64) | Every record falls into one cluster and only one row survives; the engine may emit a warning |
 | Several rows share a fingerprint and have the same text length | `row_number()` picks one non-deterministically |
 | `-global` is set but `-workspace` or `-dataset` is missing | The engine raises a parameter-validation error |
 | The Dataset does not exist or is unreachable | The engine raises a runtime error |

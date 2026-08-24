@@ -91,12 +91,12 @@ existing columns and never changes the row count.
 
 | Column | Type | Source | Description |
 |--------|------|--------|-------------|
-| Columns controlled by `output` | — | Pass-through / added | `*` keeps every column (including derived ones); when set, only the listed columns are emitted |
+| Columns controlled by `output` | - | Pass-through / added | `*` keeps every column (including derived ones); when set, only the listed columns are emitted |
 | `{as}` | varchar | Added | The plain-text reply from the digital employee; NULL when the conversation fails |
 
 **Row-count change**:
 
-M → N (M = N) — a 1:1 transformation; one digital-employee conversation is
+M -> N (M = N) - a 1:1 transformation; one digital-employee conversation is
 triggered per row and no rows are added or dropped.
 
 ## Effect preview
@@ -109,16 +109,16 @@ triggered per row and no rows are added or dropped.
 | db-server-02 | disk_io | warning |
 | app-server-03 | memory | critical |
 
-**After** (3 rows) — `employee = "skill_bench_analysis"`,
-`prompt = "Analyze…"`, `fields = "host_name,metric_name"`, `as = "analysis"`:
+**After** (3 rows) - `employee = "skill_bench_analysis"`,
+`prompt = "Analyze..."`, `fields = "host_name,metric_name"`, `as = "analysis"`:
 
 | host_name | metric_name | alert_level | analysis |
 |-----------|-------------|-------------|----------|
-| web-server-01 | cpu_usage | critical | CPU usage on web-server-01 stayed above 95%; the root cause is… |
-| db-server-02 | disk_io | warning | db-server-02 shows intermittent disk-IO spikes; check… |
-| app-server-03 | memory | critical | Memory usage on app-server-03 reached 98%, with a memory-leak risk… |
+| web-server-01 | cpu_usage | critical | CPU usage on web-server-01 stayed above 95%; the root cause is... |
+| db-server-02 | disk_io | warning | db-server-02 shows intermittent disk-IO spikes; check... |
+| app-server-03 | memory | critical | Memory usage on app-server-03 reached 98%, with a memory-leak risk... |
 
-> The row count is unchanged (3 → 3) and every row gains an `analysis` column
+> The row count is unchanged (3 -> 3) and every row gains an `analysis` column
 > holding the digital employee's reply text.
 
 ## Examples
@@ -176,7 +176,7 @@ questions.
 
 Analyzes using a pre-registered prompt template.
 
-### Example 4: complete pipeline (filter → sample → agent analysis)
+### Example 4: complete pipeline (filter -> sample -> agent analysis)
 
 ```json
 {
@@ -195,11 +195,11 @@ employee analyze them one by one.
 ## Notes
 
 **Recommended usage**:
-- **Strongly prefer running it after filtering and sampling** — a digital-employee
+- **Strongly prefer running it after filtering and sampling** - a digital-employee
   call is slower than a plain LLM call (multi-step reasoning and knowledge
   retrieval) and is billed per invocation, so reducing the volume first cuts cost
   substantially
-- Recommended pipeline order: filter → sample → `agentic-call`
+- Recommended pipeline order: filter -> sample -> `agentic-call`
 - Each row's message opens its own conversation thread, so contexts stay isolated
 
 **Best practices**:

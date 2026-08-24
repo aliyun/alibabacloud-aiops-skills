@@ -48,7 +48,7 @@ Do not write a script; induce the structure straight from the sample:
 - The value distribution of `attributes.gen_ai.span.kind` (commonly `ENTRY`,
   `LLM`, `TOOL`, `AGENT`; the full vocabulary is in
   `references/pipeline/trace/ot-ai-collection-spec.md`)
-- Span count per trace, the parent/child chain (`parentSpanId` → `spanId`), and
+- Span count per trace, the parent/child chain (`parentSpanId` -> `spanId`), and
   the service name `servicename`
 - The time relationship between multiple LLM calls inside one trace (this decides
   whether time-ordered aggregation is needed)
@@ -89,13 +89,13 @@ The typical chain from OT-AI trace to a QA/sample Dataset (identical to the live
 `eval-test` pipeline):
 
 ```
-where(kind_filter) → extend(preprocess) → make-instance(assemble)
-  → where(trace_match) → extend(derive) → where(filter_valid) → project(output)
+where(kind_filter) -> extend(preprocess) -> make-instance(assemble)
+  -> where(trace_match) -> extend(derive) -> where(filter_valid) -> project(output)
 ```
 
 Key point: **do not use a `sort` node for ordering** (this skill does not support
 sort). Preserve order inside `make-instance` with `join(col, sep, startTime)` or
-`first(col, startTime)` instead — see
+`first(col, startTime)` instead - see
 `references/pipeline/operators/make-instance.md`.
 
 ---
@@ -158,7 +158,7 @@ Here `entry_question`, `agent_question`, and `llm_question` are extracted by
 recipe A under their own span kinds, and
 `span_kind_list=array("attributes.gen_ai.span.kind")` is produced by the
 make-instance aggregation. When the message index is uncertain, use a nested
-CASE WHEN inside recipe A to try `$[4]` → `$[3]` → ... → `$[0]` for
+CASE WHEN inside recipe A to try `$[4]` -> `$[3]` -> ... -> `$[0]` for
 `role='user'`.
 
 ---

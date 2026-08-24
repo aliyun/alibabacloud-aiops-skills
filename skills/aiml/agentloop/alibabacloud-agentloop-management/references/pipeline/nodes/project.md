@@ -64,7 +64,7 @@ defined by `project`, decoupled from the raw column names.
 
 **Row-count change**:
 
-M → N (M = N) — the row count does not change; only columns are selected and
+M -> N (M = N) - the row count does not change; only columns are selected and
 renamed.
 
 ## Examples

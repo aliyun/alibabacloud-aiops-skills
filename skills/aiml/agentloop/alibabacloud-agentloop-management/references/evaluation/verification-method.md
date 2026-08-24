@@ -1,4 +1,4 @@
-# Verification Method — AgentLoop Evaluation
+# Verification Method - AgentLoop Evaluation
 
 ## 1. Verify CLI and plugin installation
 

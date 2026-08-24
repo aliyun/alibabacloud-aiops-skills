@@ -52,12 +52,12 @@ Each record is embedded independently and the row count does not change.
 
 | Column | Type | Source | Description |
 |--------|------|--------|-------------|
-| Columns controlled by `output` | — | Pass-through / added | `*` keeps every column (including derived ones); when set, only the listed columns are emitted |
+| Columns controlled by `output` | - | Pass-through / added | `*` keeps every column (including derived ones); when set, only the listed columns are emitted |
 | `{as}` | array(double) | Added | The text embedding vector |
 
 **Row-count change**:
 
-M → N (M = N) — a 1:1 transformation that neither adds nor drops rows.
+M -> N (M = N) - a 1:1 transformation that neither adds nor drops rows.
 
 > **Note**: rows whose `field` value is NULL are dropped.
 
@@ -67,19 +67,19 @@ M → N (M = N) — a 1:1 transformation that neither adds nor drops rows.
 
 | question | input | output |
 |----------|-------|--------|
-| What is machine learning? | Please explain | Machine learning is… |
-| How do I learn Python? | Getting started | Start with the official tutorial… |
-| What is deep learning? | In brief | Deep learning is… |
+| What is machine learning? | Please explain | Machine learning is... |
+| How do I learn Python? | Getting started | Start with the official tutorial... |
+| What is deep learning? | In brief | Deep learning is... |
 
-**After** (3 rows) — `field = "question"`:
+**After** (3 rows) - `field = "question"`:
 
 | question | input | output | question_embedding |
 |----------|-------|--------|--------------------|
-| What is machine learning? | Please explain | Machine learning is… | [0.12, -0.34, 0.56, …] |
-| How do I learn Python? | Getting started | Start with the official tutorial… | [0.78, 0.23, -0.11, …] |
-| What is deep learning? | In brief | Deep learning is… | [-0.45, 0.67, 0.89, …] |
+| What is machine learning? | Please explain | Machine learning is... | [0.12, -0.34, 0.56, ...] |
+| How do I learn Python? | Getting started | Start with the official tutorial... | [0.78, 0.23, -0.11, ...] |
+| What is deep learning? | In brief | Deep learning is... | [-0.45, 0.67, 0.89, ...] |
 
-> The row count is unchanged (3 → 3) and every row gains an embedding vector
+> The row count is unchanged (3 -> 3) and every row gains an embedding vector
 > column. The column is named `{field}_embedding` by default and can be renamed
 > with the `as` parameter.
 
@@ -144,7 +144,7 @@ One call handles one field; chain nodes to cover several fields.
 ## Notes
 
 **Recommended usage**:
-- **Use it after dedup or sampling** — embedding generation is a remote GPU
+- **Use it after dedup or sampling** - embedding generation is a remote GPU
   inference call, so reducing the volume first cuts cost significantly
 - If an upstream `dedup-semantic` already ran, reuse its `__dedup_emb` derived
   column instead of calling `embedding` again

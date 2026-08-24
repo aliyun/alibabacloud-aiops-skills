@@ -62,7 +62,7 @@ the fine-grained deduplication stage for building high-quality datasets.
 
 | Column | Type | Source | Description |
 |--------|------|--------|-------------|
-| All input columns | — | Input | Every upstream column passes through |
+| All input columns | - | Input | Every upstream column passes through |
 | `__dedup_emb` | array(double) | Derived | The text embedding vector (downstream operators such as clustering and sampling can reuse it directly) |
 | `__dedup_rid` | bigint | Derived | In-batch row identifier (generated inside the operator, used to join deduplication results back) |
 
@@ -71,7 +71,7 @@ the fine-grained deduplication stage for building high-quality datasets.
 
 **Input-to-output relationship**:
 
-M:N (M ≥ N) — records whose vector distance is within the threshold form one cluster
+M:N (M >= N) - records whose vector distance is within the threshold form one cluster
 and collapse into a single row (a representative record), so the output row count is
 less than or equal to the input row count.
 
@@ -81,19 +81,19 @@ less than or equal to the input row count.
 
 | question | input | output |
 |----------|-------|--------|
-| What is machine learning? | Please explain | Machine learning is… |
-| What is the definition of machine learning? | Overview | ML trains models from data… |
-| How do I get started with Python programming? | Guide | Start with the official tutorial… |
-| How can a complete beginner learn Python? | Getting started | Learn the basic syntax first… |
-| What is deep learning? | In brief | Deep learning is a subset of machine learning… |
+| What is machine learning? | Please explain | Machine learning is... |
+| What is the definition of machine learning? | Overview | ML trains models from data... |
+| How do I get started with Python programming? | Guide | Start with the official tutorial... |
+| How can a complete beginner learn Python? | Getting started | Learn the basic syntax first... |
+| What is deep learning? | In brief | Deep learning is a subset of machine learning... |
 
-**After** (3 rows) — `| dedup-semantic -field=question -threshold='0.1'`:
+**After** (3 rows) - `| dedup-semantic -field=question -threshold='0.1'`:
 
 | question | input | output | __dedup_emb | __dedup_rid |
 |----------|-------|--------|------------|------------|
-| What is machine learning? | Please explain | Machine learning is… | [0.12, -0.34, …] | 1 |
-| How do I get started with Python programming? | Guide | Start with the official tutorial… | [0.56, 0.78, …] | 3 |
-| What is deep learning? | In brief | Deep learning is a subset of machine learning… | [-0.11, 0.45, …] | 5 |
+| What is machine learning? | Please explain | Machine learning is... | [0.12, -0.34, ...] | 1 |
+| How do I get started with Python programming? | Guide | Start with the official tutorial... | [0.56, 0.78, ...] | 3 |
+| What is deep learning? | In brief | Deep learning is a subset of machine learning... | [-0.11, 0.45, ...] | 5 |
 
 > The two machine-learning questions are semantically equivalent (vector distance
 > below 0.1) and form one cluster; the two Python questions behave the same way. The
@@ -137,7 +137,7 @@ for a continuously running data Pipeline.
   | dedup-semantic -field=question -threshold='0.1' -global -workspace='my-ws' -dataset='my-ds'
 ```
 
-Exact, then fuzzy, then semantic — deduplicating stage by stage, equivalent to the
+Exact, then fuzzy, then semantic - deduplicating stage by stage, equivalent to the
 full L1 through L5 deduplication logic of the original CTE pipeline.
 
 ---
@@ -166,14 +166,14 @@ full L1 through L5 deduplication logic of the original CTE pipeline.
 - **Embedding cost**: embedding generation is compute-intensive, so run it after exact
   and fuzzy deduplication to reduce how much data has to be embedded.
 - **Global mode**: a single `semhash_dedup_with_dataset` call performs three things at
-  once — in-batch deduplication, cross-batch comparison, and the Dataset write. The
+  once - in-batch deduplication, cross-batch comparison, and the Dataset write. The
   function stores embedding vectors rather than IDs internally, so the synthetic ID
   does not affect the cross-batch logic.
 - **In-batch mode (interim solution)**: the `semhash_dedup` function is not
   implemented yet, so in-batch vector deduplication currently uses a pure-SQL `NOT
   EXISTS` pattern. The logic: a record is dropped if another record is semantically
-  similar (`cosine_similarity ≥ 1 − threshold`) and has a smaller `__dedup_rid` — that
-  is, each similar cluster keeps the row with the smallest rid. Complexity is O(N²),
+  similar (`cosine_similarity >= 1 - threshold`) and has a smaller `__dedup_rid` - that
+  is, each similar cluster keeps the row with the smallest rid. Complexity is O(N^2),
   which suits small batches that have already passed exact and fuzzy deduplication.
   Switch back to the function call once `semhash_dedup` ships.
 
@@ -277,10 +277,10 @@ SELECT * FROM _sem_dedup
 
 | Signature | Description |
 |-----------|-------------|
-| `embedding(text, model) → array(double)` | Generate a text embedding vector |
-| `cosine_similarity(vec1, vec2) → double` | Cosine similarity of two vectors (used by the interim in-batch solution) |
-| `semhash_dedup(emb_array, id_array, threshold) → array(varchar)` | In-batch semantic dedup, returning the surviving record IDs (**not implemented yet**; replaces the `NOT EXISTS` approach once it ships) |
-| `semhash_dedup_with_dataset(emb_array, id_array, workspace, dataset, column, threshold) → array(varchar)` | Cross-batch semantic dedup, including the automatic Dataset write |
+| `embedding(text, model) -> array(double)` | Generate a text embedding vector |
+| `cosine_similarity(vec1, vec2) -> double` | Cosine similarity of two vectors (used by the interim in-batch solution) |
+| `semhash_dedup(emb_array, id_array, threshold) -> array(varchar)` | In-batch semantic dedup, returning the surviving record IDs (**not implemented yet**; replaces the `NOT EXISTS` approach once it ships) |
+| `semhash_dedup_with_dataset(emb_array, id_array, workspace, dataset, column, threshold) -> array(varchar)` | Cross-batch semantic dedup, including the automatic Dataset write |
 
 ## Edge cases
 
@@ -292,4 +292,4 @@ SELECT * FROM _sem_dedup
 | `-threshold` falls outside [0, 1] | The engine raises a parameter-validation error |
 | The embedding model is unavailable | The engine raises a runtime error asking you to check the model name |
 | `-global` is set but `-workspace` or `-dataset` is missing | The engine raises a parameter-validation error |
-| The `semhash_dedup` function is not implemented yet | In-batch mode uses the pure-SQL `NOT EXISTS` plus `cosine_similarity` approach (O(N²)); run exact and fuzzy deduplication first to reduce the data volume |
+| The `semhash_dedup` function is not implemented yet | In-batch mode uses the pure-SQL `NOT EXISTS` plus `cosine_similarity` approach (O(N^2)); run exact and fuzzy deduplication first to reduce the data volume |

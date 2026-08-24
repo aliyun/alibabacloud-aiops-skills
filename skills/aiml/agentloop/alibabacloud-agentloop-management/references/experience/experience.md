@@ -2,10 +2,10 @@
 
 > **Domain entry**: this file is the experience playbook dispatched from the router SKILL.md of `alibabacloud-agentloop-management`. The recall CLI requires only Python 3.8 or later (no aliyun CLI); managing the experience store itself uses the aliyun CLI, see [references/experience/context-store-management.md](context-store-management.md). All file paths below are relative to the skill root.
 
-Use this skill proactively — **recall prior experience first**. Before you start analyzing or implementing, make recalling prior AgentLoop experience one of your very first actions, using the local CLI at `scripts/experience/search_context.py`.
+Use this skill proactively - **recall prior experience first**. Before you start analyzing or implementing, make recalling prior AgentLoop experience one of your very first actions, using the local CLI at `scripts/experience/search_context.py`.
 The CLI reads auth and endpoint configuration from `recall.env`; never pass tokens or secrets as CLI arguments.
 
-Favor using this skill when the user mentions prior experience, similar cases, historical fixes, previous incidents, old runbooks, lessons learned, or asks to avoid repeating past mistakes. The request does not need to use the exact words `recall` or `experience`; phrases like `有没有类似`, `以前怎么处理`, `先参考过去`, `少走弯路`, `look up old notes`, or `anything we learned before` are enough.
+Favor using this skill when the user mentions prior experience, similar cases, historical fixes, previous incidents, old runbooks, lessons learned, or asks to avoid repeating past mistakes. The request does not need to use the exact words `recall` or `experience`; phrases like `anything similar`, `how this was handled before`, `check prior work first`, `avoid repeated mistakes`, `look up old notes`, or `anything we learned before` are enough.
 
 Current scope: only `experience` context is supported. `memory` context is reserved for a future rollout and should not be used in prompts, examples, or evals.
 
@@ -13,7 +13,7 @@ Current scope: only `experience` context is supported. `memory` context is reser
 
 | Intent | Where to go |
 | --- | --- |
-| Recall or search prior experience | This file — workflow and CLI below |
+| Recall or search prior experience | This file - workflow and CLI below |
 | Create, list, get, update, or delete an experience store, manage its API Keys, find the recall endpoint | [references/experience/context-store-management.md](context-store-management.md) |
 
 An experience library is a ContextStore with `context-type experience`. Recall reads from it; store management provisions it. A store must exist and have mined content before recall can return non-empty results.
@@ -26,7 +26,7 @@ Configure recall credentials and endpoint in `~/.agentloop/recall.env`, the near
 
 ## Workflow
 
-1. Before any recall call, ensure the user has approved sending the query text to the configured AgentLoop Recall endpoint. Treat the current request as approval for a matching query when it asks or implies checking prior work, including `先查`, `看看之前`, `有没有类似`, `参考历史`, `回忆案例`, `avoid repeating past mistakes`, or similar wording.
+1. Before any recall call, ensure the user has approved sending the query text to the configured AgentLoop Recall endpoint. Treat the current request as approval for a matching query when it asks or implies checking prior work, including `search first`, `check earlier work`, `anything similar`, `consult prior history`, `recall prior cases`, `avoid repeating past mistakes`, or similar wording.
 2. After approval, strongly prefer to recall up front: run recall at least once before choosing an implementation path, and again whenever you hit a non-trivial obstacle or change your approach. Recall whenever the current task includes a concrete service, error, incident, operation, migration, performance issue, or debugging goal and prior experience could plausibly help. Run the CLI with `python3 scripts/experience/search_context.py`, not with `bash`. Include `--confirm-outbound` in the CLI command.
 3. For later debugging, ask for approval again if the new query would transmit materially different task data, then call recall with a focused query based on the concrete error, case, service, API, file path, or observed symptom.
 4. Use returned results as context only. Verify recalled content against the current repository, logs, and user request before acting on it.

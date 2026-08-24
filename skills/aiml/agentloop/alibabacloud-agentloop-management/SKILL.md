@@ -2,7 +2,6 @@
 name: alibabacloud-agentloop-management
 description: |
   The skill should be used when the user asks about Alibaba Cloud AgentLoop platform for onboarding applications into observability, managing Datasets, building pipelines, evaluating, and recalling stored experience.
-Triggers: "APM 接入", "aliyun-bootstrap 探针安装", "manage Datasets", "build pipeline from Logstore or trace data", "create evaluators", "evaluation task", "recall stored experience", "ContextStore 管理".
 license: Apache-2.0
 metadata:
   domain: aiops
@@ -12,7 +11,7 @@ metadata:
 
 # AgentLoop Skill Router
 
-> **Positioning**: This skill is the single entry point for Alibaba Cloud **AgentLoop** requests. It only classifies the user's intent and dispatches to one of the five domain playbooks below. All executable rules — prerequisites, credentials, RAM policies, parameter confirmation, safety protocols, command usage, and verification — live inside the domain files. Do not run any cloud operation before reading the matched domain file.
+> **Positioning**: This skill is the single entry point for Alibaba Cloud **AgentLoop** requests. It only classifies the user's intent and dispatches to one of the five domain playbooks below. All executable rules - prerequisites, credentials, RAM policies, parameter confirmation, safety protocols, command usage, and verification - live inside the domain files. Do not run any cloud operation before reading the matched domain file.
 
 **Compatibility**: cloud-operation domains require Aliyun CLI 3.3.15 or later; Pipeline requires `aliyun-cli-agentloop` 0.7.4 or later; bundled evaluation, experience-recall, and Pipeline scripts require Python 3.8 or later.
 
@@ -20,11 +19,11 @@ metadata:
 
 | # | Domain | Intent | Entry file (read first) |
 |---|--------|--------|-------------------------|
-| 1 | Application onboarding (APM & AI observability) | Instrument an application so it reports to AgentLoop: probe or agent install, APM onboarding, `aliyun-bootstrap`, `AliyunJavaAgent`, `instgo`, `cms_node_sdk`, `ack-onepilot`, OpenTelemetry, LicenseKey, K8s/ACK/ECS onboarding, LLM and AI-framework tracing (Dify, LangChain, DashScope) | [references/onboarding.md](references/onboarding.md) — internally routes to [references/apm.md](references/apm.md) / [references/ai.md](references/ai.md) |
+| 1 | Application onboarding (APM & AI observability) | Instrument an application so it reports to AgentLoop: probe or agent install, APM onboarding, `aliyun-bootstrap`, `AliyunJavaAgent`, `instgo`, `cms_node_sdk`, `ack-onepilot`, OpenTelemetry, LicenseKey, K8s/ACK/ECS onboarding, LLM and AI-framework tracing (Dify, LangChain, DashScope) | [references/onboarding.md](references/onboarding.md) - internally routes to [references/apm.md](references/apm.md) / [references/ai.md](references/ai.md) |
 | 2 | Evaluation | Score model, agent, or trace quality: create and update evaluators and evaluator skills, one-shot sample tests, batch trace or Dataset evaluation, trace backfill, poll an evaluation task, analyze results and low-score cases | [references/evaluation/evaluation.md](references/evaluation/evaluation.md) |
 | 3 | Dataset | Store and retrieve structured rows: Dataset lifecycle and schema, append rows with `add-dataset-data`, read-only queries with `execute-query`, SQL or SearchExpr, semantic search, embedding fields | [references/dataset/dataset.md](references/dataset/dataset.md) |
-| 4 | Pipeline | Transform source data into a Dataset once or on a schedule: Logstore/SLS 导入 Dataset, trace import, spec design, preview/create/run, run inspection, lifecycle control, processing nodes, and OT AI trace mapping | [references/pipeline/pipeline.md](references/pipeline/pipeline.md) |
-| 5 | Experience (recall & store management) | Reuse prior experience, similar cases, past incidents and fixes, old runbooks, and lessons learned; create and manage ContextStores and their API Keys | [references/experience/experience.md](references/experience/experience.md) — routes store lifecycle work to [references/experience/context-store-management.md](references/experience/context-store-management.md) |
+| 4 | Pipeline | Transform source data into a Dataset once or on a schedule: import Logstore/SLS data into a Dataset, import traces, design specs, preview/create/run, inspect runs, control the lifecycle, configure processing nodes, and map OT AI traces | [references/pipeline/pipeline.md](references/pipeline/pipeline.md) |
+| 5 | Experience (recall & store management) | Reuse prior experience, similar cases, past incidents and fixes, old runbooks, and lessons learned; create and manage ContextStores and their API Keys | [references/experience/experience.md](references/experience/experience.md) - routes store lifecycle work to [references/experience/context-store-management.md](references/experience/context-store-management.md) |
 
 ## Dispatch Rules
 

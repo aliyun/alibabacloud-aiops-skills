@@ -302,8 +302,8 @@ mandatory:
 2. Analyze span-kind distribution, parent/child links, and per-kind `gen_ai.*`
    attributes directly from the sample. Note truncation and NULL rates. Confirm
    the derived understanding with the user before moving on.
-3. Derive a target field-mapping table (target column → type → source span kind
-   → extraction expression). Compose nodes with the OT-AI SPL recipes
+3. Derive a target field-mapping table (target column -> type -> source span kind
+   -> extraction expression). Compose nodes with the OT-AI SPL recipes
    (per-span-kind CASE WHEN preprocess, nested `json_extract_scalar`,
    multi-source fallback). Use CLI casing throughout; `where` uses `filter`,
    not `condition`.

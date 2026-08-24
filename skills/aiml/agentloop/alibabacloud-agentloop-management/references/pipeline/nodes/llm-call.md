@@ -89,7 +89,7 @@ existing columns and never changes the row count.
 
 | Column | Type | Source | Description |
 |--------|------|--------|-------------|
-| Columns controlled by `output` | — | Pass-through / added | `*` keeps every column (including derived ones); when set, only the listed columns are emitted |
+| Columns controlled by `output` | - | Pass-through / added | `*` keeps every column (including derived ones); when set, only the listed columns are emitted |
 | `{as}` | varchar or json | Added | `format=raw` yields varchar; `format=json` yields json (always valid JSON) |
 
 **`format=json` output guarantee**:
@@ -109,7 +109,7 @@ existing columns and never changes the row count.
 
 **Row-count change**:
 
-M → N (M = N) — a 1:1 transformation; the LLM is called once per row and no rows
+M -> N (M = N) - a 1:1 transformation; the LLM is called once per row and no rows
 are added or dropped.
 
 ## Effect preview
@@ -122,16 +122,16 @@ are added or dropped.
 | How do I learn Python? | Start with the official tutorial, then build projects |
 | 1+1=? | 2 |
 
-**After** (3 rows) — `prompt = "Please evaluate…"`, `fields = "question,output"`,
+**After** (3 rows) - `prompt = "Please evaluate..."`, `fields = "question,output"`,
 `format = "json"`, `as = "eval"`:
 
 | question | output | eval |
 |----------|--------|------|
-| What is machine learning? | Machine learning is… | `{"score":4,"reason":"accurate but not detailed enough"}` |
-| How do I learn Python? | Start with the official tutorial… | `{"score":5,"reason":"specific and practical advice"}` |
+| What is machine learning? | Machine learning is... | `{"score":4,"reason":"accurate but not detailed enough"}` |
+| How do I learn Python? | Start with the official tutorial... | `{"score":5,"reason":"specific and practical advice"}` |
 | 1+1=? | 2 | `{"score":3,"reason":"correct but far too short"}` |
 
-> The row count is unchanged (3 → 3) and every row gains an `eval` column.
+> The row count is unchanged (3 -> 3) and every row gains an `eval` column.
 > `format = "json"` guarantees the output is always valid JSON. Combine it with the
 > `where` node to filter by score.
 
@@ -189,7 +189,7 @@ References a pre-registered prompt template and runs it on `qwen-plus`.
 `format` is omitted (defaulting to `raw`) and the translation lands in the
 `translation` column.
 
-### Example 4: complete pipeline (dedup → sample → evaluate + label)
+### Example 4: complete pipeline (dedup -> sample -> evaluate + label)
 
 ```json
 {
@@ -205,15 +205,15 @@ References a pre-registered prompt template and runs it on `qwen-plus`.
 }
 ```
 
-Three-stage dedup → cluster sampling → two LLM calls (evaluation and labeling).
+Three-stage dedup -> cluster sampling -> two LLM calls (evaluation and labeling).
 
 ## Notes
 
 **Recommended usage**:
-- **Strongly prefer running it after dedup and sampling** — LLM calls are slow
+- **Strongly prefer running it after dedup and sampling** - LLM calls are slow
   (usually seconds per row) and billed per token, so reducing the volume first can
   cut cost by more than 90%
-- Recommended pipeline order: dedup → cluster sampling → `llm-call`
+- Recommended pipeline order: dedup -> cluster sampling -> `llm-call`
 - The same `llm-call` node covers evaluation, labeling, synthesis, and filtering
   simply by changing the prompt
 

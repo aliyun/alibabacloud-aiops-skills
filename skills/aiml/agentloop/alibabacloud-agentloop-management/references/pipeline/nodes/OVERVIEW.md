@@ -1,4 +1,4 @@
-> **🔗 Reference navigation** | Current: API Node definitions (primary external reference)
+> **Link: Reference navigation** | Current: API Node definitions (primary external reference)
 > | [SPL operator specs (internal semantic reference, never surfaced)](../operators/)
 
 # Pipeline Node Overview
@@ -14,45 +14,45 @@
 
 | Node | Function |
 |------|----------|
-| [`project`](project.md) | Field selection — select and rename fields from the raw data, declaring the Pipeline input schema |
-| [`extend`](extend.md) | Field extension — compute new columns or overwrite existing ones with expressions (all built-in functions are available) |
-| [`where`](where.md) | Filtering — keep rows that satisfy a condition expression |
-| [`limit`](limit.md) | Row limit — cap the number of output records, equivalent to SQL LIMIT |
+| [`project`](project.md) | Field selection - select and rename fields from the raw data, declaring the Pipeline input schema |
+| [`extend`](extend.md) | Field extension - compute new columns or overwrite existing ones with expressions (all built-in functions are available) |
+| [`where`](where.md) | Filtering - keep rows that satisfy a condition expression |
+| [`limit`](limit.md) | Row limit - cap the number of output records, equivalent to SQL LIMIT |
 
 ### Data assembly
 
 | Node | Function |
 |------|----------|
-| [`make-instance`](make-instance.md) | Instance building — aggregate discrete events by a grouping key into a row-level wide sample table (pure CPU) |
+| [`make-instance`](make-instance.md) | Instance building - aggregate discrete events by a grouping key into a row-level wide sample table (pure CPU) |
 
 ### Data cleaning
 
 | Node | Function |
 |------|----------|
-| [`dedup-exact`](dedup-exact.md) | Exact dedup — keep only one record among fully identical texts |
-| [`dedup-fuzzy`](dedup-fuzzy.md) | Near dedup — treat highly similar texts (minimal literal difference) as duplicates |
-| [`dedup-semantic`](dedup-semantic.md) | Semantic dedup — treat differently worded but equivalent texts as duplicates |
+| [`dedup-exact`](dedup-exact.md) | Exact dedup - keep only one record among fully identical texts |
+| [`dedup-fuzzy`](dedup-fuzzy.md) | Near dedup - treat highly similar texts (minimal literal difference) as duplicates |
+| [`dedup-semantic`](dedup-semantic.md) | Semantic dedup - treat differently worded but equivalent texts as duplicates |
 
 ### Feature computation
 
 | Node | Function |
 |------|----------|
-| [`embedding`](embedding.md) | Vector generation — produce an embedding vector for a text field |
-| [`doc-stats`](doc-stats.md) | Document statistics — compute character, word, and line counts and similar metrics |
+| [`embedding`](embedding.md) | Vector generation - produce an embedding vector for a text field |
+| [`doc-stats`](doc-stats.md) | Document statistics - compute character, word, and line counts and similar metrics |
 
 ### Data sampling
 
 | Node | Function |
 |------|----------|
-| [`semantic-cluster`](semantic-cluster.md) | Semantic clustering — assign a cluster ID to each row from its embedding vector |
-| [`sample`](sample.md) | Random sampling — sample by ratio or fixed count, optionally per group |
+| [`semantic-cluster`](semantic-cluster.md) | Semantic clustering - assign a cluster ID to each row from its embedding vector |
+| [`sample`](sample.md) | Random sampling - sample by ratio or fixed count, optionally per group |
 
 ### AI processing
 
 | Node | Function |
 |------|----------|
-| [`llm-call`](llm-call.md) | LLM invocation — template rendering, model inference, and output parsing for evaluation, labeling, and synthesis |
-| [`agentic-call`](agentic-call.md) | Agent invocation — call a digital employee for an intelligent conversation, covering SOP analysis, knowledge Q&A, and data insight |
+| [`llm-call`](llm-call.md) | LLM invocation - template rendering, model inference, and output parsing for evaluation, labeling, and synthesis |
+| [`agentic-call`](agentic-call.md) | Agent invocation - call a digital employee for an intelligent conversation, covering SOP analysis, knowledge Q&A, and data insight |
 
 ---
 
@@ -82,7 +82,7 @@ string, JSON, or regular-expression handling, then filter by condition.
 }
 ```
 
-### Scenario 2: three-stage dedup (exact → fuzzy → semantic)
+### Scenario 2: three-stage dedup (exact -> fuzzy -> semantic)
 
 Dedup stage by stage. Compute cost rises while row count falls, so putting exact
 dedup first sharply reduces the work of the later nodes.
@@ -98,7 +98,7 @@ dedup first sharply reduces the work of the later nodes.
 }
 ```
 
-### Scenario 3: diversity sampling (dedup → cluster → per-group sample)
+### Scenario 3: diversity sampling (dedup -> cluster -> per-group sample)
 
 After semantic dedup, cluster on the generated vector column and sample within
 each cluster to guarantee semantic diversity.
@@ -116,7 +116,7 @@ each cluster to guarantee semantic diversity.
 }
 ```
 
-### Scenario 4: complete AI pipeline (dedup → sample → evaluate + label)
+### Scenario 4: complete AI pipeline (dedup -> sample -> evaluate + label)
 
 ```json
 {
@@ -141,37 +141,37 @@ each cluster to guarantee semantic diversity.
 
 ```
 Raw data (event level, N rows per sample)
-  │
-  ▼
-┌─────────────────────────────────────────────┐
-│  project / extend / where                   │  select, extend, filter fields
-└──────────────────┬──────────────────────────┘
-                   │
-    ┌──────────────▼──────────────┐
-    │   Data assembly (aggregate) │
-    │  make-instance              │  many rows → one row
-    └──────────────┬──────────────┘
-                   │  from here on, one row = one complete sample
-    ┌──────────────▼──────────────┐
-    │    Data cleaning (dedup)    │
-    │  dedup-exact                │
-    │  dedup-fuzzy                │  row count falls
-    │  dedup-semantic             │  ↓
-    └──────────────┬──────────────┘
-                   │
-    ┌──────────────▼──────────────┐
-    │   Data sampling (reduce)    │
-    │  semantic-cluster → sample  │  row count falls
-    └──────────────┬──────────────┘
-                   │
-    ┌──────────────▼──────────────┐
-    │  AI processing (add columns)│
-    │  llm-call (eval/label/synth)│  row count unchanged
-    │  agentic-call (agent)       │
-    │  doc-stats (statistics)     │
-    └──────────────┬──────────────┘
-                   │
-                   ▼
+  |
+  v
++---------------------------------------------+
+|  project / extend / where                   |  select, extend, filter fields
++------------------+--------------------------+
+                   |
+    +--------------v--------------+
+    |   Data assembly (aggregate) |
+    |  make-instance              |  many rows -> one row
+    +--------------+--------------+
+                   |  from here on, one row = one complete sample
+    +--------------v--------------+
+    |    Data cleaning (dedup)    |
+    |  dedup-exact                |
+    |  dedup-fuzzy                |  row count falls
+    |  dedup-semantic             |  v
+    +--------------+--------------+
+                   |
+    +--------------v--------------+
+    |   Data sampling (reduce)    |
+    |  semantic-cluster -> sample  |  row count falls
+    +--------------+--------------+
+                   |
+    +--------------v--------------+
+    |  AI processing (add columns)|
+    |  llm-call (eval/label/synth)|  row count unchanged
+    |  agentic-call (agent)       |
+    |  doc-stats (statistics)     |
+    +--------------+--------------+
+                   |
+                   v
             Output Dataset
 ```
 
@@ -182,6 +182,6 @@ Raw data (event level, N rows per sample)
 | **Schema first** | Start the Pipeline with `project` to select fields and `extend` to derive fields, declaring one consistent set of field names |
 | **Assemble early** | Aggregate discrete event data into row-level samples with `make-instance` before any further processing |
 | **Reduce before enrich** | Dedup and sample first (fewer rows), then run AI processing (more columns). LLM calls are expensive, so always run them after the volume has come down |
-| **Coarse to fine** | Dedup order: exact → fuzzy → semantic. Compute cost rises along the way, but the earlier stages have already cut the data down |
+| **Coarse to fine** | Dedup order: exact -> fuzzy -> semantic. Compute cost rises along the way, but the earlier stages have already cut the data down |
 | **Reuse derived columns** | Derived columns produced upstream (such as `__dedup_emb` and `__cluster_id`) can be referenced directly downstream without recomputation |
 | **Node atomicity** | Every node has one responsibility: clustering only labels the cluster ID, sampling only drops rows, AI only adds columns. Compose the Pipeline to express complex logic |

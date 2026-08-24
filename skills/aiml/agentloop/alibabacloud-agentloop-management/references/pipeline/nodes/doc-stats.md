@@ -50,7 +50,7 @@ Each record is computed independently and the row count does not change.
 
 | Column | Type | Source | Description |
 |--------|------|--------|-------------|
-| Columns named by `output` | — | Pass-through | `*` keeps every raw input column |
+| Columns named by `output` | - | Pass-through | `*` keeps every raw input column |
 | `{as}` | json | Added | The document-statistics JSON |
 
 **Metrics (structure inside the JSON)**:
@@ -65,7 +65,7 @@ Each record is computed independently and the row count does not change.
 
 **Row-count change**:
 
-M → N (M = N) — a 1:1 transformation that neither adds nor drops rows.
+M -> N (M = N) - a 1:1 transformation that neither adds nor drops rows.
 
 ## Effect preview
 
@@ -77,15 +77,15 @@ M → N (M = N) — a 1:1 transformation that neither adds nor drops rows.
 | How do I learn Python? Any getting-started resources? | Getting started | Start with the official tutorial then build a project |
 | AI | In brief | Artificial intelligence |
 
-**After** (3 rows) — `field = "question"`:
+**After** (3 rows) - `field = "question"`:
 
 | question | input | output | __doc_stats |
 |----------|-------|--------|-------------|
-| What is machine learning? | Please explain | Machine learning is… | `{"doc_len_char":25,"doc_len_words":4,"line_counts":1}` |
-| How do I learn Python? Any… | Getting started | Start with… | `{"doc_len_char":52,"doc_len_words":8,"line_counts":1}` |
+| What is machine learning? | Please explain | Machine learning is... | `{"doc_len_char":25,"doc_len_words":4,"line_counts":1}` |
+| How do I learn Python? Any... | Getting started | Start with... | `{"doc_len_char":52,"doc_len_words":8,"line_counts":1}` |
 | AI | In brief | Artificial intelligence | `{"doc_len_char":2,"doc_len_words":1,"line_counts":1}` |
 
-> The row count is unchanged (3 → 3) and every row gains a statistics JSON column.
+> The row count is unchanged (3 -> 3) and every row gains a statistics JSON column.
 > Combine it with the `where` node to filter text that is too short or too long by
 > character count.
 

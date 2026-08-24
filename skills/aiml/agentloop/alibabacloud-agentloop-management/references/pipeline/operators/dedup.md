@@ -35,15 +35,15 @@ Every operator supports two run modes:
 
 ### Option comparison
 
-| Dimension | Option A: one operator with a mode parameter | Option B: three separate operators ✅ recommended |
+| Dimension | Option A: one operator with a mode parameter | Option B: three separate operators [OK] recommended |
 |-----------|--------------------------------------------|------------------------------------------------|
-| **Atomicity** | ❌ One operator carries three behaviors, violating single responsibility | ✅ Each operator has one clear responsibility |
-| **Composability** | ❌ Combined modes need mutual-exclusion validation inside, raising complexity | ✅ Freely composed in the pipeline, orchestrated as the user needs |
-| **UI rendering** | ❌ The configuration panel needs conditional show/hide, complicating interaction | ✅ Each drag-and-drop node has a clean configuration (3 to 6 parameters) |
-| **Parameter simplicity** | ❌ Parameter explosion (around 15), heavy cognitive load | ✅ Few parameters per operator, each with clear semantics |
-| **Learning cost** | ⚠️ Learned in one pass, but the parameter documentation is long | ✅ Progressive learning, used as needed |
-| **Independent testing** | ❌ Needs mocks for the different mode combinations | ✅ Each operator's behavior is verified independently |
-| **SPL consistency** | ❌ Conflicts with the SPL "one instruction, one capability" philosophy | ✅ Fully aligned with the SPL design philosophy |
+| **Atomicity** | [NO] One operator carries three behaviors, violating single responsibility | [OK] Each operator has one clear responsibility |
+| **Composability** | [NO] Combined modes need mutual-exclusion validation inside, raising complexity | [OK] Freely composed in the pipeline, orchestrated as the user needs |
+| **UI rendering** | [NO] The configuration panel needs conditional show/hide, complicating interaction | [OK] Each drag-and-drop node has a clean configuration (3 to 6 parameters) |
+| **Parameter simplicity** | [NO] Parameter explosion (around 15), heavy cognitive load | [OK] Few parameters per operator, each with clear semantics |
+| **Learning cost** | [CAUTION] Learned in one pass, but the parameter documentation is long | [OK] Progressive learning, used as needed |
+| **Independent testing** | [NO] Needs mocks for the different mode combinations | [OK] Each operator's behavior is verified independently |
+| **SPL consistency** | [NO] Conflicts with the SPL "one instruction, one capability" philosophy | [OK] Fully aligned with the SPL design philosophy |
 
 ### Recommended option
 

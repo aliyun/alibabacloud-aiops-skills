@@ -7,66 +7,66 @@
 
 # Correct CLI Command Patterns
 
-## 1. Product — verify product name exists
+## 1. Product - verify product name exists
 
-#### ✅ CORRECT
+#### [OK] CORRECT
 ```bash
 aliyun agentloop list-evaluators --agent-space <space>
 ```
 
-#### ❌ INCORRECT
+#### [NO] INCORRECT
 ```bash
 aliyun AgentLoop ListEvaluators --agent-space <space>   # Wrong: API mode, not plugin mode
 aliyun agentloop listevaluators --agent-space <space>   # Wrong: missing hyphen
 ```
 
-## 2. Command — verify action exists under the product
+## 2. Command - verify action exists under the product
 
-#### ✅ CORRECT
+#### [OK] CORRECT
 ```bash
 aliyun agentloop create-evaluation-task --agent-space <space> --task-name <name> --task-mode batch --data-type trace --data-filter '{}' --evaluators '[]'
 ```
 
-#### ❌ INCORRECT
+#### [NO] INCORRECT
 ```bash
 aliyun agentloop CreateEvaluationTask ...   # Wrong: PascalCase, not plugin mode
 aliyun agentloop create-evaluation-task ...  # Correct format (for reference)
 ```
 
-## 3. Parameters — verify each parameter name exists
+## 3. Parameters - verify each parameter name exists
 
-#### ✅ CORRECT
+#### [OK] CORRECT
 ```bash
 aliyun agentloop get-evaluator --agent-space <space> --name <evaluator-name> --biz-version v1
 ```
 
-#### ❌ INCORRECT
+#### [NO] INCORRECT
 ```bash
 aliyun agentloop get-evaluator --agentspace <space> ...      # Wrong: missing hyphen
 aliyun agentloop get-evaluator --agent-space <space> --version v1  # Wrong: should be --biz-version
 ```
 
-## 4. JSON parameters — use compact JSON for complex flags
+## 4. JSON parameters - use compact JSON for complex flags
 
-#### ✅ CORRECT
+#### [OK] CORRECT
 ```bash
 aliyun agentloop create-evaluation-task \
   --data-filter '{"maxRecords":100}' \
   --evaluators '[{"evaluatorRef":"Builtin.agent_correctness"}]'
 ```
 
-#### ❌ INCORRECT
+#### [NO] INCORRECT
 ```bash
 aliyun agentloop create-evaluation-task \
   --data-filter maxRecords=100 \          # Wrong: must be JSON
   --evaluators Builtin.agent_correctness   # Wrong: must be JSON array
 ```
 
-## 5. Batch bounds — never invent the window or the record cap
+## 5. Batch bounds - never invent the window or the record cap
 
 A batch task decides how much customer data gets scanned and billed, so its bounds are the user's call. When the request does not carry both a timezone-bearing time window and `dataFilter.maxRecords`, stop and ask for the missing values before building the spec, and say why a batch task must be bounded. Reusing a window from other tasks in the same AgentSpace, or falling back to a default range such as the last 7 days, is not consent.
 
-#### ✅ CORRECT
+#### [OK] CORRECT
 
 Ask first, then build the spec from the values the user supplies:
 
@@ -77,7 +77,7 @@ Your batch trace evaluation still needs two bounds I should not pick for you:
 Batch tasks scan and bill by volume, so an unbounded run can read far more than you expect.
 ```
 
-#### ❌ INCORRECT
+#### [NO] INCORRECT
 ```bash
 aliyun agentloop create-evaluation-task 
   --data-filter '{"maxRecords":1000}'             # Wrong: cap chosen for the user
@@ -90,9 +90,9 @@ python3 scripts/evaluation/agentloop_eval.py run --spec evaluation.json --execut
 
 # Correct Python Wrapper Patterns
 
-## 1. Spec file loading — must be a JSON object
+## 1. Spec file loading - must be a JSON object
 
-#### ✅ CORRECT
+#### [OK] CORRECT
 ```python
 spec = {
     "agent_space": "my-space",
@@ -105,7 +105,7 @@ spec = {
 }
 ```
 
-#### ❌ INCORRECT
+#### [NO] INCORRECT
 ```python
 spec = {
     "agentSpace": "my-space",  # Wrong: use snake_case in spec, wrapper converts
@@ -113,9 +113,9 @@ spec = {
 }
 ```
 
-## 2. Evaluator type — create as AGENT or CODE only
+## 2. Evaluator type - create as AGENT or CODE only
 
-#### ✅ CORRECT
+#### [OK] CORRECT
 ```python
 # Genuine StarOps Agent evaluator (standard digital-employee mode): omit agentEvaluatorMode
 {"action": "create", "name": "my-agent-eval", "type": "AGENT", "metric_name": "quality", "biz_version": "v1", "config": {"prompt": "Judge {{input}}"}}
@@ -124,7 +124,7 @@ spec = {
 {"action": "create", "name": "my-code-eval", "type": "CODE", "metric_name": "quality", "biz_version": "v1"}
 ```
 
-#### ❌ INCORRECT
+#### [NO] INCORRECT
 ```python
 {"action": "create", "type": "agent", ...}    # Wrong: must be uppercase
 {"action": "create", "type": "LLM", ...}      # Wrong for new specs: use AGENT + agentEvaluatorMode=raw_prompt instead
@@ -132,51 +132,51 @@ spec = {
 {"action": "create", "type": "AGENT", "config": {"rawPromptBackend": "direct_llm", ...}}  # Wrong: rawPromptBackend is no longer part of the contract and is stripped
 ```
 
-## 3. Custom output fields — use config.outputSchema
+## 3. Custom output fields - use config.outputSchema
 
-#### ✅ CORRECT
+#### [OK] CORRECT
 ```python
 {"config": {"outputSchema": {"score": {"type": "number", "required": True, "range": [0, 1]}, "explanation": {"type": "string", "required": True}, "risk_level": {"type": "enum", "required": False, "options": ["low", "medium", "high"]}}}}
 {"config": {"outputSchema": {"risk_level": {"type": "enum", "options": ["low", "medium", "high"]}}}}  # Wrapper defaults score/explanation
 ```
 
-#### ❌ INCORRECT
+#### [NO] INCORRECT
 ```python
 {"config": {"customFields": {"risk_level": "enum"}}}  # Wrong: custom result fields belong in outputSchema
 ```
 
-## 4. Dataset config — must use exact camelCase keys
+## 4. Dataset config - must use exact camelCase keys
 
-#### ✅ CORRECT
+#### [OK] CORRECT
 ```python
 {"data_type": "dataset", "config": {"datasetName": "my-dataset"}}
 ```
 
-#### ❌ INCORRECT
+#### [NO] INCORRECT
 ```python
 {"data_type": "dataset", "config": {"dataset_name": "my-dataset"}}  # Wrong: snake_case not converted in config
 ```
 
-## 5. Time window — must include timezone
+## 5. Time window - must include timezone
 
-#### ✅ CORRECT
+#### [OK] CORRECT
 ```python
 {"window": {"start": "2026-07-14T09:00:00+08:00", "end": "2026-07-14T10:00:00+08:00"}}
 ```
 
-#### ❌ INCORRECT
+#### [NO] INCORRECT
 ```python
 {"window": {"start": "2026-07-14T09:00:00", "end": "2026-07-14T10:00:00"}}  # Wrong: no timezone
 ```
 
-## 6. Continuous evaluation — requires explicit flag
+## 6. Continuous evaluation - requires explicit flag
 
-#### ✅ CORRECT
+#### [OK] CORRECT
 ```bash
 python3 scripts/evaluation/agentloop_eval.py run --spec continuous.json --allow-continuous --execute
 ```
 
-#### ❌ INCORRECT
+#### [NO] INCORRECT
 ```bash
 python3 scripts/evaluation/agentloop_eval.py run --spec continuous.json --execute
 # Error: continuous evaluation requires --allow-continuous after explicit cost approval
