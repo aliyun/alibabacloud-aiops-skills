@@ -7,6 +7,7 @@ Using the RDS Copilot skill requires the following RAM permissions:
 | Action | Resource | Description |
 |--------|----------|-------------|
 | `rdsai:ChatMessages` | `*` | Call RDS AI Assistant dialogue API |
+| `rdsai:GetChatModel` | `*` | Query models available for ChatMessages |
 
 ## Custom Policy
 
@@ -19,7 +20,8 @@ Create a custom RAM policy to grant RDS Copilot access:
     {
       "Effect": "Allow",
       "Action": [
-        "rdsai:ChatMessages"
+        "rdsai:ChatMessages",
+        "rdsai:GetChatModel"
       ],
       "Resource": "*"
     }
@@ -44,7 +46,8 @@ If you need RDS Copilot to execute RDS operations mentioned in query recommendat
     {
       "Effect": "Allow",
       "Action": [
-        "rdsai:ChatMessages"
+        "rdsai:ChatMessages",
+        "rdsai:GetChatModel"
       ],
       "Resource": "*"
     },

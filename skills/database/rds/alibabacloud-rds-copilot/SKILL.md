@@ -61,7 +61,7 @@ If any gate fails:
 
 **[MUST] CLI User-Agent** — Every `aliyun rdsai chat-messages` invocation must include a per-command `--user-agent` value in this format:
 `AlibabaCloud-Agent-Skills/alibabacloud-rds-copilot/{session-id}`.
-See the Observability section for session-id generation rules. Do not pass `--user-agent` to system commands such as `aliyun configure`, `aliyun plugin`, `aliyun version`, or install/upgrade commands.
+See the Observability section for session-id generation rules. The auxiliary `aliyun rdsai get-chat-model` command, when used, follows the same User-Agent rule. Do not pass `--user-agent` to system commands such as `aliyun configure`, `aliyun plugin`, `aliyun version`, or install/upgrade commands.
 
 ### macOS Installation
 
@@ -133,7 +133,7 @@ aliyun configure set \
 ```bash
 aliyun rdsai chat-messages \
   --query '<query content>' \
-  --inputs RegionId=cn-hangzhou Language=zh-CN Timezone=Asia/Shanghai [CustomAgentId=<custom agent ID>] \
+  --inputs RegionId=cn-hangzhou Language=zh-CN Timezone=Asia/Shanghai [CustomAgentId=<custom agent ID>] [EnableThinking=<true|false>] [ThinkEffort=<default|high|low>] [ModelId=<model ID>] \
   --event-mode separate \
   --endpoint rdsai.aliyuncs.com \
   --user-agent 'AlibabaCloud-Agent-Skills/alibabacloud-rds-copilot/{session-id}' \
@@ -153,6 +153,9 @@ aliyun rdsai chat-messages \
 | `--inputs Language=` | Optional | Language | `zh-CN` |
 | `--inputs Timezone=` | Optional | Timezone | `Asia/Shanghai` |
 | `--inputs CustomAgentId=` | Optional | Custom Agent ID | None |
+| `--inputs EnableThinking=` | Optional | Deep thinking mode switch: `true` (enabled) or `false` (disabled) | None |
+| `--inputs ThinkEffort=` | Optional | Thinking depth: `default` (auto), `high` (deeper reasoning), `low` (faster responses); supported values are model-specific, see `ThinkingLevels` in the `get-chat-model` response | None |
+| `--inputs ModelId=` | Optional | Model ID for the response model; when explicitly set, [MUST] verify it with the auxiliary `aliyun rdsai get-chat-model` command before calling `chat-messages` — never rely on a memorized or hardcoded model list | None |
 | `--event-mode` | Optional | Event mode | `separate` |
 | `--endpoint` | Required | API endpoint | `rdsai.aliyuncs.com` |
 | `--conversation-id` | Optional | Conversation ID for multi-turn dialogue | None |
@@ -168,7 +171,8 @@ This skill requires the following RAM permissions. See [references/ram-policies.
 
 | Permission | Description |
 |------------|-------------|
-| `rdsai:ChatMessages` | Call RDS AI Assistant API |
+| `rdsai:ChatMessages` | Call RDS AI Assistant dialogue API |
+| `rdsai:GetChatModel` | Auxiliary: query available chat models when explicitly setting ModelId |
 
 ---
 
@@ -272,11 +276,30 @@ Collect necessary parameters (use default values if not specified):
 - `Language`: Language (default `zh-CN`)
 - `Timezone`: Timezone (default `Asia/Shanghai`)
 - `CustomAgentId`: Custom Agent ID (optional)
+- `EnableThinking`: Deep thinking mode switch, `true` or `false` (optional; omit unless the user asks for deep thinking or a quick answer)
+- `ThinkEffort`: Thinking depth (optional; `default` auto, `high` deeper reasoning for complex diagnosis/optimization, `low` faster responses; the values each model supports are returned in `ThinkingLevels` by `get-chat-model`)
+- `ModelId`: Model ID (optional; use only when the user explicitly specifies a model). When explicitly set, [MUST] first call the auxiliary GetChatModel API and confirm the ID appears in `Data[].ModelId` before calling ChatMessages — this applies to every user-specified model ID, including well-known ones such as `qwen3.8-max`; never skip the check or rely on a memorized/hardcoded model list. Omitting `ModelId` needs no lookup: the service then uses the model marked `Default=true` in the GetChatModel response. Forward compatibility: new model IDs appear in the GetChatModel response automatically once the API supports them — verify them with GetChatModel, then pass them through; no skill configuration or code change is required
 - `--conversation-id`: Conversation ID for multi-turn dialogue (optional)
+
+`GetChatModel` is an auxiliary check of the main call flow: ChatMessages itself works without it, but the check becomes **[MUST] before** `aliyun rdsai chat-messages` whenever any of the following holds:
+
+1. The user explicitly specifies a model ID — any model ID, including well-known ones such as `qwen3.8-max`. Verify that the ID appears in `Data[].ModelId`. Never skip this check because you believe the model is already supported; never rely on a memorized or hardcoded model list.
+2. The user asks which models are available.
+3. The user requests deep thinking or a specific thinking depth (`EnableThinking`/`ThinkEffort`) — supported `ThinkEffort` values are model-specific and must be read from `ThinkingLevels` in the `get-chat-model` response.
+
+Only when none of the above holds (no model specified, no model-list question, no thinking-depth request) may you skip `get-chat-model`:
+
+```bash
+aliyun rdsai get-chat-model \
+  --endpoint rdsai.aliyuncs.com \
+  --user-agent 'AlibabaCloud-Agent-Skills/alibabacloud-rds-copilot/{session-id}'
+```
+
+The response `Data` array lists every currently supported model with `ModelId`, `Default`, `ThinkingLevels`, `Features`, and `ContextWindow`. If the user's model ID is not in `Data[].ModelId`, show the available models and ask the user to pick one.
 
 ### 2. Construct Command and Call CLI
 
-Only run this step after the environment readiness preflight succeeds. Always include `RegionId`; if the user does not provide a region, use `cn-hangzhou`.
+Only run this step after the environment readiness preflight succeeds, and — when the user specified a model ID or thinking depth — only after the mandatory `aliyun rdsai get-chat-model` verification succeeded. Always include `RegionId`; if the user does not provide a region, use `cn-hangzhou`.
 Before the first business API call, generate one session-id using the Observability rules below and reuse it for all `aliyun rdsai chat-messages` calls in this RDS Copilot task.
 
 ```bash
@@ -320,6 +343,21 @@ aliyun rdsai chat-messages \
   --event-mode separate \
   --endpoint rdsai.aliyuncs.com \
   --user-agent 'AlibabaCloud-Agent-Skills/alibabacloud-rds-copilot/{session-id}'
+
+# Deep thinking mode with explicit model and thinking depth (optional parameters)
+# [MUST] The user explicitly sets ModelId and thinking depth, so first verify the model with get-chat-model,
+# for EVERY user-specified model ID (including well-known ones such as qwen3.8-max), then call chat-messages;
+# to switch models, re-verify with get-chat-model and change only the ModelId value
+aliyun rdsai get-chat-model \
+  --endpoint rdsai.aliyuncs.com \
+  --user-agent 'AlibabaCloud-Agent-Skills/alibabacloud-rds-copilot/{session-id}'
+
+aliyun rdsai chat-messages \
+  --query 'Diagnose slow SQL on the instance and provide an optimization plan. Instance is in Hangzhou region.' \
+  --inputs RegionId=cn-hangzhou Language=zh-CN Timezone=Asia/Shanghai EnableThinking=true ThinkEffort=high ModelId=qwen3.8-max \
+  --event-mode separate \
+  --endpoint rdsai.aliyuncs.com \
+  --user-agent 'AlibabaCloud-Agent-Skills/alibabacloud-rds-copilot/{session-id}'
 ```
 
 ### 3. Parse Results and Follow-up Processing
@@ -329,6 +367,12 @@ aliyun rdsai chat-messages \
   - Activation page: https://rdsnext.console.aliyun.com/rdsCopilotProfessional/cn-hangzhou
   - Operation guide: https://help.aliyun.com/zh/rds/apsaradb-rds-for-mysql/manage-rds-colipot-professional-edition
   - According to the operation guide, create RDS AI Assistant Professional Edition from the RDS console by choosing **RDS AI Assistant > Professional Edition** and clicking **Activate Now**. After activation succeeds, retry the failed call with the enabled account.
+- When the response fails with another error code, map it to user-facing guidance before retrying:
+  - `ContentModeration` (HTTP 451): the request contains non-compliant content; ask the user to rephrase the query.
+  - `InvalidParameter` (HTTP 400): one or more parameters are invalid; check the `--inputs` values such as `EnableThinking`, `ThinkEffort`, and `ModelId`, fix them, then retry. If an unsupported `ModelId` is the cause, run `aliyun rdsai get-chat-model` to fetch the current supported models, guide the user to pick one from the list, or contact technical support to confirm the latest supported models.
+  - `UserNotFound` (HTTP 404): the user does not exist; verify the CLI credential configuration and the account.
+  - `TooManyRequests` (HTTP 429): the maximum concurrent request threshold is exceeded; wait before retrying, or suggest purchasing an AI capacity pack to raise the concurrency limit.
+  - `MoQuotaExceeded` (HTTP 429): the MO token quota of the routed Standard instance is exhausted and the request is rate limited; wait for quota recovery or suggest purchasing a capacity pack.
 - Explain RDS Copilot's response to the user in natural language
 - If the response contains SQL or operational steps, assess risks and warn:
   - Avoid executing high-risk statements directly in production (e.g., large table `DELETE` / `UPDATE` / schema changes)
@@ -339,7 +383,7 @@ aliyun rdsai chat-messages \
 
 ## Observability
 
-Generate one `session-id` per RDS Copilot task/session before the first business API call. The `session-id` must be a 32-character lowercase hexadecimal string, generated once and reused for every `aliyun rdsai chat-messages` command in the same task, including multi-turn follow-ups.
+Generate one `session-id` per RDS Copilot task/session before the first business API call. The `session-id` must be a 32-character lowercase hexadecimal string, generated once and reused for every `aliyun rdsai chat-messages` command in the same task, including multi-turn follow-ups. The auxiliary `aliyun rdsai get-chat-model` command, when used, reuses the same `session-id`.
 
 Recommended generation methods:
 
@@ -416,6 +460,7 @@ See [references/related-apis.md](references/related-apis.md) for details.
 | Product | API Action | CLI Command | Description |
 |---------|------------|-------------|-------------|
 | RdsAi | ChatMessages | `aliyun rdsai chat-messages` | RDS AI Assistant dialogue API |
+| RdsAi | GetChatModel | `aliyun rdsai get-chat-model` | Auxiliary: query available chat models when explicitly setting ModelId |
 
 ---
 
