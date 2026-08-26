@@ -1,0 +1,16 @@
+# LB Health Check Diagnosis — CLI-only edition
+#
+# API access goes through the aliyun CLI in plugin mode (see _cli.py).
+# There are NO Python package dependencies and NO Alibaba Cloud product SDK
+# dependencies. Products touched: SLB (CLB) / ALB / NLB / VPC. All calls
+# are strictly READ-ONLY (Describe* / List* / Get*).
+#
+# Runtime requirements:
+#   - Python 3.9+ (standard library: subprocess, json, re, uuid, ...)
+#   - aliyun CLI 3.4+ — https://help.aliyun.com/document_detail/121541.html
+#                       macOS: brew install aliyun-cli ; then: aliyun configure
+#   - aliyun CLI product plugins:
+#       aliyun plugin install --names aliyun-cli-slb
+#       aliyun plugin install --names aliyun-cli-alb
+#       aliyun plugin install --names aliyun-cli-nlb
+#       aliyun plugin install --names aliyun-cli-vpc
