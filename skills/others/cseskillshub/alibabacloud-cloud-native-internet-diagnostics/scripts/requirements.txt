@@ -1,0 +1,10 @@
+# Zero third-party dependencies.
+# All scripts use only the Python standard library plus the `aliyun` CLI
+# (invoked via subprocess). Cloud API access goes through the aliyun CLI
+# default credential chain; no Python SDK is required.
+#
+# Runtime requirement: Python 3.8+ and `aliyun` CLI version 3.3.3 or newer on
+# PATH (configure it once with: aliyun configure). Upgrade an older CLI with
+# `brew upgrade aliyun-cli` or the latest release binary from
+# https://github.com/aliyun/aliyun-cli/releases, then confirm with
+# `aliyun version`.
