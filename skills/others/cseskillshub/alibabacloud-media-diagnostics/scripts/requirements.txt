@@ -1,0 +1,4 @@
+# No pip dependencies required.
+# All scripts use the Python standard library only, plus the external
+# command-line tool ffprobe (from FFmpeg) for media probing.
+# mediainfo is an optional enrichment tool.
