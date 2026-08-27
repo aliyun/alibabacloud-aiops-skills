@@ -107,7 +107,7 @@ Three rule types. `datasourceConfig.type` ↔ `queryConfig.type` ↔ `conditionC
 
 ## Type 1: Prometheus
 
-**Required user input** (AskUser): `workspace` + `instanceId` (Prometheus instance / cluster_id).
+**Required user input** (AskUser): `region` + `workspace` + `instanceId` (Prometheus instance / cluster_id).
 
 ```json
 "datasourceConfig": {"type": "PROMETHEUS", "instanceId": "<id>", "regionId": "<region>"},
@@ -160,7 +160,7 @@ Severity zh-CN mapping (used inside `message`): `CRITICAL` → 严重 / `ERROR` 
 
 ## Type 2: APM
 
-**Required user input** (AskUser): `workspace` + `serviceId` (APM service ID).
+**Required user input** (AskUser): `region` + `workspace` + `serviceId` (APM service ID).
 
 `datasourceConfig` does not carry `instanceId`; `regionId` is optional:
 
@@ -272,7 +272,7 @@ Severity zh-CN mapping (used inside `message`): `CRITICAL` → 严重 / `ERROR` 
 
 ## Type 3: UModel
 
-**Required user input** (AskUser): `workspace` + entity info (domain / type / cluster_id).
+**Required user input** (AskUser): `region` + `workspace` + entity info (domain / type / cluster_id).
 
 ```json
 "datasourceConfig": {"type": "UMODEL"},
@@ -318,9 +318,11 @@ Severity zh-CN mapping (used inside `message`): `CRITICAL` → 严重 / `ERROR` 
 
 | Type | Required params (must AskUser) |
 |------|-------------------------------|
-| Prometheus | `workspace` + `instanceId` |
-| APM | `workspace` + `serviceId` |
-| UModel | `workspace` + entity (domain / type / cluster_id) |
+| Prometheus | `region` + `workspace` + `instanceId` |
+| APM | `region` + `workspace` + `serviceId` |
+| UModel | `region` + `workspace` + entity (domain / type / cluster_id) |
+
+Lock the region first — the workspace and the datasource are both region-scoped — and take it only from the sources allowed by [Required AskUser Params](#required-askuser-params).
 
 ### Step 2 — Build query
 
@@ -406,7 +408,9 @@ CMS 2.0 only uses `ManageAlertRules` (create / update / delete) + `QueryAlertRul
 
 ### Required AskUser Params
 
-`workspace` / `instanceId` (Prom) / `serviceId` (APM) must come from AskUser. Do not auto-construct or guess.
+`region` / `workspace` / `instanceId` (Prom) / `serviceId` (APM) must come from AskUser. Do not auto-construct or guess.
+
+`region` and `regionId` additionally fall under the [Region Confirmation Gate](../SKILL.md#region-confirmation-gate-hard-requirement) — which also rules out the `cn-hangzhou` that the examples in this file use.
 
 ### POP Gateway Known Limit
 
