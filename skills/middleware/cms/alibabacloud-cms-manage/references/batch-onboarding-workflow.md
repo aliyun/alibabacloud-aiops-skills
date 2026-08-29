@@ -100,7 +100,14 @@ Analysis written out between tool calls is a user-visible channel, not private s
 
 ## Step 1: Confirm the onboarding region and entity scope (user interaction)
 
-The region and entity scope are confirmed **before** any un-onboarded resource list is produced, per [Resource Scope Selection Gate](integration-common.md#resource-scope-selection-gate-hard-requirement). Sub-steps 1a and 1b are internal discovery needed to build the choices; 1c and 1d are the user interaction. Do NOT skip any sub-step and do NOT guess entity types — discover them from actual data.
+The region and entity scope are confirmed **before** any un-onboarded resource list is produced, per [Resource Scope Selection Gate](integration-common.md#resource-scope-selection-gate-hard-requirement). Sub-steps 1a and 1b are internal discovery needed to build the choices; 1c and 1d are the user interaction. Never skip 1a or 1b and do NOT guess entity types — discover them from actual data. A name already in the request is not an entity type and does not skip that discovery.
+
+What the request already named fills only the matching **question**, never 1a or 1b:
+
+- User named regions → skip the 1c question (Gate: "User named regions → use exactly those"). Still run 1a/1b; the distribution is not offered as a choice.
+- User named products → do **not** skip 1c or 1d. Filter the 1a `__entity_type__` column after that query returns.
+- User named all-entities / "do not bind instance IDs" → skip the 1d question.
+- A workspace already in the request fills Step 0 only. It does not confirm 1c: a workspace region is a recommended default, not a confirmed scope.
 
 ### Step 1a: Aggregated inventory of the user's cloud services (internal)
 
@@ -115,7 +122,7 @@ The region and entity scope are confirmed **before** any un-onboarded resource l
     Keep the `project` stage before `limit` per [CloudResource Aggregation](integration-common.md#cloudresource-aggregation-hard-requirement); this step needs only those two columns. When the result still reaches the cap after paginating, exclude the dominant categories in `where` per that same section.
 
 - Aggregate the returned rows locally per [CloudResource Aggregation](integration-common.md#cloudresource-aggregation-hard-requirement), counting the `(__entity_type__, region_id)` pairs yourself.
-- **Constraint**: do NOT guess or hardcode entity types (e.g. do not only try `acs.ecs.instance` and `acs.ecs.disk`). This query returns every entity type the user actually has, and Step 1b needs that complete list as its input.
+- **Constraint**: do NOT guess or hardcode entity types. A service name is not an entity type ("RDS" is not `acs.rds.instance`). Take types from this query's `__entity_type__` column — do not probe by product prefix, and do not invent a `--entity-type` list for Step 1b. If the user named specific services, filter that column after the query returns. Step 1b's input is this list.
 - **Exclude**: filter out entity types listed in the **Scope Exclusions** section above.
 - **Output**: the raw inventory, keyed by `(__entity_type__, region_id)`, used internally for Step 1b matching. Do NOT present this raw list directly to the user.
 - **Do NOT derive an onboarding count here**: this inventory covers onboarded and un-onboarded resources alike. Its only user-facing use is the Step 1c distribution, labelled there as existing resources; every count presented as an onboarding target is computed in Step 2, after subtracting the already-onboarded scope.
@@ -130,7 +137,7 @@ The region and entity scope are confirmed **before** any un-onboarded resource l
       --search "BatchCloud:CloudMetric" -o json
     ```
 
-- **Never invert 1a and 1b (hard requirement)**: the batch cloud metric catalog holds close to a hundred addons and `addon list` does not return their entity types, so enumerating the catalog first costs one `addon get` per addon and still leaves Step 2 querying dozens of entity types the account does not own. `--entity-type` pushes the match to the server and settles it in one call. The onboarding scope is defined by the addon catalog either way — this is simply the only batch filter the CLI offers, and it runs in this direction.
+- **Never invert 1a and 1b (hard requirement)**: `--entity-type` is the `__entity_type__` list returned by Step 1a in this session, not a guessed or remembered list. The batch cloud metric catalog holds close to a hundred addons and `aliyun cms2 integration addon list` does not return their entity types, so enumerating the catalog first costs one `aliyun cms2 integration addon get` per addon and still leaves Step 2 querying dozens of entity types the account does not own. `--entity-type` pushes the match to the server and settles it in one call. The onboarding scope is defined by the addon catalog either way — this is simply the only batch filter the CLI offers, and it runs in this direction.
 - **Output**: the supported set — entity types that have a matching addon, plus their addon names. Entity types without a match are dropped silently and irreversibly, together with the **Scope Exclusions**, per [Confidentiality: Out-of-Scope Services](#confidentiality-out-of-scope-services-hard-requirement). The supported set replaces the Step 1a inventory as the working list from here on.
 - Everything the user sees from here on is derived from the supported set only; regions and counts from dropped entity types never reach any user-visible channel.
 - **Also read the batch addon itself**: `cloud-batch-metrics` is the addon the release is created on, and it is **not** part of the `--search "BatchCloud:CloudMetric"` result — fetch it separately:
@@ -143,7 +150,7 @@ The region and entity scope are confirmed **before** any un-onboarded resource l
 
 ### Step 1c: Confirm the onboarding regions
 
-- **Action**: from the Step 1a aggregation restricted to the supported set, present the region distribution broken down by cloud service, then offer the regions as structured choices and wait for the answer. A recommended default is not a skip.
+- **Action**: from the Step 1a aggregation restricted to the supported set, present the region distribution broken down by cloud service, then offer the regions as structured choices and wait for the answer. A recommended default is not a skip. Exception: the user already named regions → use exactly those and do not re-ask; still produce the distribution internally so later steps have the supported-set counts.
 - **Break the distribution down by cloud service (hard requirement)**: a row reading `cn-hangzhou | 131` names no cloud service, leaving the user to choose regions without knowing what is in them. Every region offered MUST be shown with the cloud services it holds, each carrying its own instance count and named as the user knows it (ECS, EBS 云盘, RDS) rather than by entity type — either a region × cloud service table, or one line per region listing `<cloud service>(<n>)`. A region total may sit alongside that breakdown but never replace it.
   - Both the services shown and any region total cover the Step 1b supported set only: a dropped service folded into a total is recoverable by subtraction, per [Confidentiality: Out-of-Scope Services](#confidentiality-out-of-scope-services-hard-requirement).
   - Label the counts as the resources each region holds today, not as the onboarding target — Step 2's un-onboarded counts come out lower wherever something is already onboarded.
@@ -160,7 +167,7 @@ The region and entity scope are confirmed **before** any un-onboarded resource l
 
 ### Step 1d: Confirm the entity scope
 
-- **Action**: ask the user for the scope mode first, then collect its concrete values:
+- **Action**: ask the user for the scope mode first, then collect its concrete values. Exception: the user already named all-entities / "do not bind instance IDs" → that is the mode; do not re-ask. A product list is not a scope mode.
 
 | Option | How the scope is collected |
 |------|------|
@@ -184,14 +191,7 @@ The region and entity scope are confirmed **before** any un-onboarded resource l
     | Batch | `cloud-batch-metrics` | only the cloud services its `values.addons` enabled — echoed back in the release's `config` and visible as one child release each — bounded by that release's region / resource group / tag scope. `entityRules.entityRules.entityTypes` bounds the scope but does not by itself prove any service was enabled, so never read coverage off it |
     | Per-service | the addon matched in Step 1b for that entity type | that one cloud service, bounded by its `entityRules.entityRules` |
 
-    For each addon in both rows, find its policies first, then its releases — a release can only be listed through a policy, per [Policy Lookup Rules](integration-common.md#policy-lookup-rules):
-
-    ```bash
-    aliyun cms2 integration policy list --addon-name <addonName> --max-results 100 -o json
-    aliyun cms2 integration addon-release list --policy-id <policyId> -o json
-    ```
-
-    List the releases **without** `--addon-name` and group them by `parentAddonReleaseId`, then resolve what each release covers from its own `entityRules.entityRules`, children included — all per step 3 of [Determining Onboarding & Monitoring Status](integration-common.md#determining-onboarding--monitoring-status).
+    For each addon in both rows, find its policies first, then its releases — a release can only be listed through a policy, per [Policy Lookup Rules](integration-common.md#policy-lookup-rules): `aliyun cms2 integration policy list --addon-name <addonName>`, then `aliyun cms2 integration addon-release list --policy-id` **without** `--addon-name` (flags from `--help`). Group them by `parentAddonReleaseId`, then resolve what each release covers from its own `entityRules.entityRules`, children included — all per step 3 of [Determining Onboarding & Monitoring Status](integration-common.md#determining-onboarding--monitoring-status).
 
     **The onboarded scope is the union of both paths.** A resource covered by either one is onboarded and must not appear in the un-onboarded list.
 - **Diff (hard requirement)**: for each entity type, un-onboarded resources = scoped query result − onboarded scope, computed at the instance/region level rather than at the entity-type level.
@@ -221,7 +221,7 @@ aliyun cms2 meta metrics --namespace <namespace> -o text
 
 `metrics_count` is the `total=` value in the header line of the second command (`# resources returned=N total=M truncated=...`); there is no need to count the rows.
 
-**Always resolve `--namespace` first, never pass `--product` (hard requirement)**: one product code often maps to several namespaces, and `--product` silently picks one of them. `--product slb` resolves to `acs_gwlb` (8 metrics) instead of `acs_slb_dashboard` (62), understating the count eightfold. `meta namespaces --search` lists every candidate with its Chinese description — pick the one the entity type denotes (`acs.slb.loadbalancer` → `acs_slb_dashboard`, not `acs_alb` / `acs_nlb` / `acs_gwlb`). `ecs` and `eip` are ambiguous the same way.
+**Always resolve `--namespace` first, never pass `--product` (hard requirement)**: one product code often maps to several namespaces, and `--product` silently picks one of them. `--product slb` resolves to `acs_gwlb` (8 metrics) instead of `acs_slb_dashboard` (62), understating the count eightfold. `aliyun cms2 meta namespaces --search` lists every candidate with its Chinese description — pick the one the entity type denotes (`acs.slb.loadbalancer` → `acs_slb_dashboard`, not `acs_alb` / `acs_nlb` / `acs_gwlb`). `ecs` and `eip` are ambiguous the same way.
 
 **Output**: a per-cloud-service table of metrics count (`metrics_count`) and instance count (`instance_count`).
 Per-service rows only — no total row and no product of the two columns, since that figure is a probe sizing
@@ -247,11 +247,7 @@ narrated.
 
 ## Step 5: Confirm the onboarding policy
 
-The policy confirmed here is the one Step 6c creates the release on, so it is the `cloud-batch-metrics` policy — not a per-service addon's policy, which belongs to the separate per-service onboarding path. Query the existing ones under the target workspace (identified in Step 0), applying [Existing Policy Reuse Gate](integration-common.md#existing-policy-reuse-gate-hard-requirement), paginated to completion:
-
-```bash
-aliyun cms2 integration policy list --addon-name cloud-batch-metrics --max-results 100 -o json
-```
+The policy confirmed here is the one Step 6c creates the release on, so it is the `cloud-batch-metrics` policy — not a per-service addon's policy, which belongs to the separate per-service onboarding path. Query the existing ones under the target workspace (identified in Step 0), applying [Existing Policy Reuse Gate](integration-common.md#existing-policy-reuse-gate-hard-requirement): `aliyun cms2 integration policy list --addon-name cloud-batch-metrics` (flags from `--help`), paginated to completion.
 
 - **A reusable policy exists**: list the existing policies for the user to choose from, or let the user decide to create a new one.
 - **No reusable policy**: adopt the create-new-policy path directly, without user confirmation.
@@ -304,7 +300,7 @@ Generate a structured execution plan and write it to a file, containing the foll
     ```
 
     Each entry is `{ "enable": true, "values": {<optional addon-specific fields>} }`. The `schema.guide` from `aliyun cms2 integration addon get --addon-name cloud-batch-metrics --env-type Cloud -o json` only shows this map shape — it declares no child fields, and says `values` is composed from the individual addon schemas. Fill each `values` by running that same command for the child with the child's `--env-type`, then apply user overrides per [Addon Values Defaults](integration-common.md#addon-values-defaults-hard-requirement). The `{}` in the shape example is the no-override skeleton: it is "keep defaults", not a landed override. When the user required a field override, do not leave a matching child as `{}`.
-- **Judge the release by its fan-out, not by the parent's conditions**: `values: "{}"` still returns success and still reaches `Ready=True` while enabling nothing, which Step 6d cannot see from the parent alone. Check that `addon-release list --policy-id <policyId>` returns a child release per enabled addon, grouped by `parentAddonReleaseId` so an earlier release under the same policy is not counted as this one's fan-out. The parent's `config` echoes the values it was created with, so `config: "{}"` is the fingerprint of an empty release — read it only when the key is present, since some releases omit `config` altogether and an absent key is not an empty one. Do not excuse an absent child by its catalog `once: true`: that flag does not cap a child at one release per account/workspace, so treat the absence as a failure to investigate, per [Addon Values Defaults](integration-common.md#addon-values-defaults-hard-requirement).
+- **Judge the release by its fan-out, not by the parent's conditions**: `values: "{}"` still returns success and still reaches `Ready=True` while enabling nothing, which Step 6d cannot see from the parent alone. Check that `aliyun cms2 integration addon-release list --policy-id <policyId>` returns a child release per enabled addon, grouped by `parentAddonReleaseId` so an earlier release under the same policy is not counted as this one's fan-out. The parent's `config` echoes the values it was created with, so `config: "{}"` is the fingerprint of an empty release — read it only when the key is present, since some releases omit `config` altogether and an absent key is not an empty one. Do not excuse an absent child by its catalog `once: true`: that flag does not cap a child at one release per account/workspace, so treat the absence as a failure to investigate, per [Addon Values Defaults](integration-common.md#addon-values-defaults-hard-requirement).
 - Validate `entityRules.entityTypes` per [Choosing an Onboarding Method](cloud-onboarding.md#choosing-an-onboarding-method), collecting the permitted values from the Step 1b addons' own `environments[].policies.bindEntity.entityType`.
 
 ### 6d. Check the onboarding result

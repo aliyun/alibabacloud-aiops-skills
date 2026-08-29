@@ -14,13 +14,7 @@ Follow [Standard Onboarding](integration-common.md#standard-onboarding) with the
 8. **Existing Policy Reuse Gate**: apply [Existing Policy Reuse Gate](integration-common.md#existing-policy-reuse-gate-hard-requirement) with its Cloud filters.
 9. **Create policy** (if needed): name it per [Policy Name Defaulting](integration-common.md#policy-name-defaulting-hard-requirement), setting `policyType` from the addon's `environments[].policyType`.
 10. **Addon Release Region Requirement**: run the [pre-check](integration-common.md#addon-release-region-requirement-hard-pre-check) before creating the addon release.
-11. **Create addon release**: build `values` per [Addon Values Defaults](integration-common.md#addon-values-defaults-hard-requirement), set the resource scope in the body's `entityRules`, both shaped per [Addon Release Create Body Shape](integration-common.md#addon-release-create-body-shape), then execute:
-
-    ```bash
-    aliyun cms2 integration addon-release create --policy-id <policyId> --body '<requestBody>' < /dev/null
-    ```
-
-    Show the planned addon release (policy ID, addon name, resource scope, values summary) and wait for explicit user confirmation before executing.
+11. **Create addon release**: build `values` per [Addon Values Defaults](integration-common.md#addon-values-defaults-hard-requirement), set the resource scope in the body's `entityRules`, both shaped per [Addon Release Create Body Shape](integration-common.md#addon-release-create-body-shape). `aliyun cms2 integration addon-release create` (flags from `--help`). Show the planned addon release (policy ID, addon name, resource scope, values summary) and wait for explicit user confirmation before executing.
 
 12. **Verify addon release status**: `aliyun cms2 integration addon-release list --policy-id <policyId> -o json`, **without** `--addon-name` so that any child releases the addon fanned out are evaluated too.
 
@@ -60,11 +54,11 @@ Two addons legitimately sharing one entity type is a real ambiguity rather than 
 
 ## Changing Settings on an Existing Cloud Release
 
-Follow [Addon Release Config Update](integration-common.md#addon-release-config-update-hard-requirement). What makes its child-release trap easy to hit here is that a Cloud entry addon declares almost nothing of its own — typically only `addons.<child>` fields. So the setting the user names is nearly always in a child, and its `fieldPath`s come from that child's own `addon get` with the child's `--env-type`. The same field often repeats on every engine child (`enableHighResolutionMonitor` on `cloud-rds`); a phrase that names it is a broadcast — update each hitting child release, not only the one whose `config` already shows the key. Do not wait for those children to pick up an entry-only write, and do not send one. Close a child with `addon-release delete`; open a child with `addon-release create` on that child's `addonName`. Leftover closed children in the unfiltered list are not present.
+Follow [Addon Release Config Update](integration-common.md#addon-release-config-update-hard-requirement). What makes its child-release trap easy to hit here is that a Cloud entry addon declares almost nothing of its own — typically only `addons.<child>` fields. So the setting the user names is nearly always in a child, and its `fieldPath`s come from that child's own `aliyun cms2 integration addon get` with the child's `--env-type`. The same field often repeats on every engine child (`enableHighResolutionMonitor` on `cloud-rds`); a phrase that names it is a broadcast — update each hitting child release, not only the one whose `config` already shows the key. Do not wait for those children to pick up an entry-only write, and do not send one. Close a child with `aliyun cms2 integration addon-release delete`; open a child with `aliyun cms2 integration addon-release create` on that child's `addonName`. Leftover closed children in the unfiltered list are not present.
 
 ## Choosing an Onboarding Method
 
-- **Batch onboarding for multiple cloud services** — addon `cloud-batch-metrics` (`aliyun cms2 integration addon list --search "BatchCloud:CloudMetric"`). Run the [batch workflow](batch-onboarding-workflow.md), whose [6c](batch-onboarding-workflow.md#6c-resolve-the-user-policy-and-create-the-addonrelease) composes `values` from the selected products rather than leaving it empty. When creating/updating a release, validate `entityRules.entityTypes` against those products' `environments[].policies.bindEntity.entityType`; `addon get --addon-name cloud-batch-metrics` returns no `entityTypes` of its own. Products actually onboarded come from `values.addons`, not from `entityRules`.
+- **Batch onboarding for multiple cloud services** — addon `cloud-batch-metrics` (`aliyun cms2 integration addon list --search "BatchCloud:CloudMetric"`). Run the [batch workflow](batch-onboarding-workflow.md), whose [6c](batch-onboarding-workflow.md#6c-resolve-the-user-policy-and-create-the-addonrelease) composes `values` from the selected products rather than leaving it empty. When creating/updating a release, validate `entityRules.entityTypes` against those products' `environments[].policies.bindEntity.entityType`; `aliyun cms2 integration addon get --addon-name cloud-batch-metrics` returns no `entityTypes` of its own. Products actually onboarded come from `values.addons`, not from `entityRules`.
 - **Single service or custom scope** — use the product-specific addon, discovered per [Addon Discovery for Cloud Services](#addon-discovery-for-cloud-services).
 
 ## Fleet Audit for Cloud Service Resources

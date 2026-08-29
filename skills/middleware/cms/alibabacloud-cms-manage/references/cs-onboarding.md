@@ -55,7 +55,7 @@ Follow [Standard Onboarding](integration-common.md#standard-onboarding) with the
     | region | Must equal `workspaceRegion`; used as `--region` |
     | status | Only `running` clusters can be onboarded |
 
-7. **Existing Policy Reuse Gate — uniqueness check first**: resolve the existing CS policy of every candidate cluster before asking the user to confirm anything. Pick **one** of the two lookup shapes by batch size and never run both — an unfiltered `policy list --policy-type CS` on top of the per-cluster lookups answers the same question twice:
+7. **Existing Policy Reuse Gate — uniqueness check first**: resolve the existing CS policy of every candidate cluster before asking the user to confirm anything. Pick **one** of the two lookup shapes by batch size and never run both — an unfiltered `aliyun cms2 integration policy list --policy-type CS` on top of the per-cluster lookups answers the same question twice:
 
     | Candidate clusters | Lookup |
     |--------------------|--------|
@@ -71,13 +71,7 @@ Follow [Standard Onboarding](integration-common.md#standard-onboarding) with the
     This is the write confirmation, not a second scope question: `bindResource.clusterId` is the `instance_id` extracted in step 6.
 9. **Create policy** (new-policy path): name it per [Policy Name Defaulting](integration-common.md#policy-name-defaulting-hard-requirement), set `policyType=CS`, `bindResource.clusterId=<clusterId>`. Pass `--region <workspaceRegion>`, which equals the cluster's `region_id` from step 6.
 10. **Addon Release Region Requirement**: run the [pre-check](integration-common.md#addon-release-region-requirement-hard-pre-check) before creating the addon release. Policy region and target region are both `workspaceRegion`, so it should pass without `Feature:CrossRegion`; a mismatch means the region scope was broken earlier — abort and fix the scope. The service dependency pre-check already ran in step 4 and is not repeated per cluster; redo it only if the selected addon changed.
-11. **Create addon release**: with the values confirmed in step 8 (built per [Addon Values Defaults](integration-common.md#addon-values-defaults-hard-requirement)), execute:
-
-    ```bash
-    aliyun cms2 integration addon-release create --policy-id <policyId> --body '<requestBody>' < /dev/null
-    ```
-
-    Build the body per [Addon Release Create Body Shape](integration-common.md#addon-release-create-body-shape) — for CS the cluster comes from the policy's `bindResource`, so the body carries no `entityRules`.
+11. **Create addon release**: with the values confirmed in step 8 (built per [Addon Values Defaults](integration-common.md#addon-values-defaults-hard-requirement)), `aliyun cms2 integration addon-release create` (flags from `--help`). Build the body per [Addon Release Create Body Shape](integration-common.md#addon-release-create-body-shape) — for CS the cluster comes from the policy's `bindResource`, so the body carries no `entityRules`.
 
     The addon name and the values were already confirmed in step 8, so nothing is asked here — a second prompt per cluster would turn an N-cluster batch into 2N prompts.
 
@@ -89,7 +83,7 @@ Follow [Standard Onboarding](integration-common.md#standard-onboarding) with the
 
 After step 2's `scene=container` narrowing, expect exactly one candidate to carry `GroupMode:true` — the entry addon, which the gate's rule 3 then auto-selects. If the count is not one, re-check step 2's scoping before anything else: APM addons that bind the same entity type also carry `GroupMode:true` and must not remain in the set. Only a scoped set that is already `scene=container` and still not one goes to rule 4. Never settle it by guessing from addon names or aliases. Take the child set from that addon's own schema as fetched in step 4, per [Addon Values Defaults](integration-common.md#addon-values-defaults-hard-requirement), never from a list reproduced in this document, and settle the result by the fan-out check in step 12.
 
-**Never make a child addon the target of the release.** Creating the release on `cs-default` alone delivers that child's slice and silently drops every other capability the entry addon fans out — events, control-plane logs, Ingress logs — along with the SLS storage fields (`store.storageTarget`, `store.project`) that only `cloud-acs-ack` exposes. Select a child addon only when the user explicitly asks for that one capability by itself. After the entry already exists, opening a missing child is `addon-release create` with that child's `addonName` on the same policy, per [Addon Release Config Update](integration-common.md#addon-release-config-update-hard-requirement) — not a second entry, and not an update of the gated parent.
+**Never make a child addon the target of the release.** Creating the release on `cs-default` alone delivers that child's slice and silently drops every other capability the entry addon fans out — events, control-plane logs, Ingress logs — along with the SLS storage fields (`store.storageTarget`, `store.project`) that only `cloud-acs-ack` exposes. Select a child addon only when the user explicitly asks for that one capability by itself. After the entry already exists, opening a missing child is `aliyun cms2 integration addon-release create` with that child's `addonName` on the same policy, per [Addon Release Config Update](integration-common.md#addon-release-config-update-hard-requirement) — not a second entry, and not an update of the gated parent.
 
 Nothing in `environments` tells a child apart from the entry addon: parent and children carry the same `policyType`, `bindEntity.entityType`, `singleEntityMode`, and `dependencies.services`. Nor does the catalog metadata — several children share the entry addon's own `scene` and can read more on-topic than it does. Judge on `GroupMode:true` and `weight` per [Addon Selection Gate](integration-common.md#addon-selection-gate-hard-requirement), never on how on-topic the keywords read.
 
@@ -103,7 +97,7 @@ Composing the body is not CS-specific: follow [Addon Values Defaults](integratio
 
 ### Changing settings on an existing CS release
 
-Follow [Addon Release Config Update](integration-common.md#addon-release-config-update-hard-requirement), taking the update targets from step 12's release list — CS children are found by exclusion, and a `-umodel` variant is its own release with its own config. The gated entry is not an update target: field changes go to the child `releaseName`; close a child with `addon-release delete`; open a child with `addon-release create` on that child's `addonName`. Do not also update the parent.
+Follow [Addon Release Config Update](integration-common.md#addon-release-config-update-hard-requirement), taking the update targets from step 12's release list — CS children are found by exclusion, and a `-umodel` variant is its own release with its own config. The gated entry is not an update target: field changes go to the child `releaseName`; close a child with `aliyun cms2 integration addon-release delete`; open a child with `aliyun cms2 integration addon-release create` on that child's `addonName`. Do not also update the parent.
 
 ## Multi-Cluster Batch Onboarding (Hard Requirement)
 
@@ -139,13 +133,7 @@ Triggered when the user picks the multiple-regions option in step 5 or names sev
 
 ## Collector Status Check
 
-CS policies always require at least one ClusterCollector. Query with:
-
-```bash
-aliyun cms2 integration collector list --policy-id <policyId> --collector-type ClusterCollector
-```
-
-Normalize each returned collector's state per [Determining Onboarding & Monitoring Status](integration-common.md#determining-onboarding--monitoring-status), judging each on its own `workloads[]`.
+CS policies always require at least one ClusterCollector. `aliyun cms2 integration collector list --collector-type ClusterCollector` (flags from `--help`). Normalize each returned collector's state per [Determining Onboarding & Monitoring Status](integration-common.md#determining-onboarding--monitoring-status), judging each on its own `workloads[]`.
 
 ## ACK Uniqueness Constraint
 

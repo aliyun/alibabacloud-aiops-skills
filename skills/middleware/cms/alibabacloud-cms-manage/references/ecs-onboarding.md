@@ -14,13 +14,7 @@ Follow [Standard Onboarding](integration-common.md#standard-onboarding) with the
 8. **Existing Policy Reuse Gate**: apply [Existing Policy Reuse Gate](integration-common.md#existing-policy-reuse-gate-hard-requirement) with its ECS filters.
 9. **Create policy** (if needed): name it per [Policy Name Defaulting](integration-common.md#policy-name-defaulting-hard-requirement) with `policyType=ECS`.
 10. **Addon Release Region Requirement**: run the [pre-check](integration-common.md#addon-release-region-requirement-hard-pre-check) before creating the addon release.
-11. **Create addon release**: build `values` per [Addon Values Defaults](integration-common.md#addon-values-defaults-hard-requirement), set the resource scope in the body's `entityRules`, both shaped per [Addon Release Create Body Shape](integration-common.md#addon-release-create-body-shape), then execute:
-
-    ```bash
-    aliyun cms2 integration addon-release create --policy-id <policyId> --body '<requestBody>' < /dev/null
-    ```
-
-    Show the planned addon release (policy ID, addon name, resource scope, values summary) and wait for explicit user confirmation before executing.
+11. **Create addon release**: build `values` per [Addon Values Defaults](integration-common.md#addon-values-defaults-hard-requirement), set the resource scope in the body's `entityRules`, both shaped per [Addon Release Create Body Shape](integration-common.md#addon-release-create-body-shape). `aliyun cms2 integration addon-release create` (flags from `--help`). Show the planned addon release (policy ID, addon name, resource scope, values summary) and wait for explicit user confirmation before executing.
 
 12. **Verify addon release status**: list the policy's releases per step 3 of [Determining Onboarding & Monitoring Status](integration-common.md#determining-onboarding--monitoring-status), then judge only the group under the release just created — the policy may already hold an earlier entry release whose children are a separate set.
 
@@ -36,19 +30,11 @@ Follow [Standard Onboarding](integration-common.md#standard-onboarding) with the
 
 ### ClusterCollector
 
-```bash
-aliyun cms2 integration collector list --policy-id <policyId> --collector-type ClusterCollector
-```
-
-ECS ClusterCollector is `metric-agent`, one per VPC the covered instances live in, so a policy normally returns several; normalize each state per [Determining Onboarding & Monitoring Status](integration-common.md#determining-onboarding--monitoring-status).
+`aliyun cms2 integration collector list --collector-type ClusterCollector` (flags from `--help`). ECS ClusterCollector is `metric-agent`, one per VPC the covered instances live in, so a policy normally returns several; normalize each state per [Determining Onboarding & Monitoring Status](integration-common.md#determining-onboarding--monitoring-status).
 
 ### NodeCollector
 
-Query NodeCollector only when node-level collection is required by the release set:
-
-```bash
-aliyun cms2 integration collector list --policy-id <policyId> --collector-type NodeCollector
-```
+Query NodeCollector only when node-level collection is required by the release set: `aliyun cms2 integration collector list --collector-type NodeCollector` (flags from `--help`).
 
 Treat these as node-collector signals unless product documentation says otherwise:
 - `cloud-acs-ecs-monitor`, whether named in `values.addons` or enabled by the entry schema's default per [Addon Values Defaults](integration-common.md#addon-values-defaults-hard-requirement)
