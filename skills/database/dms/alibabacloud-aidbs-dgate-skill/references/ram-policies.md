@@ -1,9 +1,19 @@
 # RAM permissions
 
-```yaml
-required_permissions: []
-```
+## Required RAM actions
 
-This Skill does not call Alibaba Cloud POP APIs with a RAM AccessKey, so it requests no RAM Actions. Dgate uses a user-specific, Region-bound Agent AccessToken and enforces its own Agent identity, instance ACL, security policy, masking, and audit controls.
+None.
 
-Do not replace Dgate authorization with broad RAM permissions and do not declare wildcard permissions. Instance access must be granted to the current Agent through the Alibaba Cloud AI Data Gateway console.
+This bootstrap Skill connects to Dgate through the managed MCP service or the
+`dgate` CLI. It authenticates with a Region-bound Dgate Agent AccessToken and
+uses Dgate's own Agent identity, instance ACL, security policy, and audit
+controls. It does not call Alibaba Cloud OpenAPI directly and does not require
+the user to grant Alibaba Cloud RAM actions, provide an AccessKey ID/Secret, or
+attach a RAM policy.
+
+Instance authorization is configured inside Dgate and must remain
+least-privilege. Do not treat a Dgate platform role, MCP connectivity, or
+metadata visibility as instance-level data permission.
+
+If a future version calls Alibaba Cloud OpenAPI directly, declare the minimum
+required RAM actions here and update `related_apis.yaml` before release.
