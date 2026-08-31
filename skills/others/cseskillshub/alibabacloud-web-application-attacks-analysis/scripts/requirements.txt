@@ -1,0 +1,10 @@
+# Web Application Attacks Analysis - pure standard-library edition
+#
+# log_analyzer.py parses origin web access logs (Nginx / Apache / IIS W3C)
+# entirely offline. There are NO Python package dependencies and NO
+# Alibaba Cloud product SDK dependencies. The skill is strictly READ-ONLY
+# and requires no credentials.
+#
+# Runtime requirements:
+#   - Python 3.9+ (standard library only: argparse, gzip, ipaddress, re,
+#     collections, datetime, pathlib, urllib.parse)
