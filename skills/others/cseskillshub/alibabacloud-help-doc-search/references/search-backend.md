@@ -61,12 +61,17 @@ Product-scoped searches (`-p/--product`) prefer **server-side filtering** via th
   on first write.
 - Shape: `{"expires_days": 30, "entries": {"<product_code>": {"category_id": <int>,
   "written_at": <unix_ts>}}}`
-- Built-in seed: `{"oss": 31815, "functioncompute": 2508973}` (oss verified:
+- Built-in seed: `{"oss": 31815, "functioncompute": 2508973, "ecs": 25365, "rds": 26090,
+  "slb": 27537, "vpc": 27706, "cdn": 27099, "ack": 85222, "ram": 28625, "sls": 28958,
+  "kms": 28933, "waf": 28515, "polardb": 2249963, "maxcompute": 27797}` (oss verified:
   with the CORS keyword, total drops from 978 to 131 and every result is an OSS
   document; functioncompute verified: wide searches with cold-start and
   function-compute related Chinese keywords yielded 8 votes for 2508973 among
   `/zh/functioncompute/` items, and a
-  precise query with that id returned only Function Compute documents). Seed
+  precise query with that id returned only Function Compute documents). The twelve
+  additional entries were verified on 2026-08-28: wide queries collected >=7
+  `/zh/{product}/` votes per id, and precise queries with each id returned 10/10 pure
+  product documents. Seed
   entries are bare integers; the read path accepts them directly and exempts
   them from the TTL
   (no `written_at`, permanently valid). Bare-integer entries are never written to
@@ -186,6 +191,32 @@ Known limitations of the fallback leg (printed to stderr when it is used):
 - Substring match on title + summary only — no tokenization, no synonyms, no ranking
 - A single-product query fetches one index (fast); an unscoped query scans 270+ product
   indexes concurrently (10–20 seconds)
+
+## Local degradation on rate limit / outage (stale cache fallback)
+
+The llms.txt read layer (`_get_llms_text`) has a third tier beyond "fresh cache / network":
+
+1. Fresh cache (within the 3-day TTL) — returned immediately.
+2. Network fetch — on success the cache is atomically refreshed.
+3. **Stale cache fallback**: when the network fetch fails (rate limit, outage, any
+   `[HTTP ...]`/`[Error]` marker) but an expired local cache exists for that product,
+   the expired content is served instead of nothing, with a WARN noting the results
+   may lag the live docs. Empty stale files are never served.
+
+This keeps product-scoped search, `list-docs`, and `read-product` functional during
+backend saturation as long as the product was queried at least once within recent
+history. The doSearch leg's own degradation (to the index leg) then combines with
+this layer: under a full rate-limit event, search degrades to
+"index leg over stale local cache".
+
+## Degradation hints on api-* failure exits
+
+The `api-products` / `api-list` / `api-info` commands depend on the single
+`api.aliyun.com` metadata endpoint (no backup backend). Every failure exit
+(product not resolved, catalog fetch failed, single-API metadata invalid) prints a
+fallback hint on stderr: verify codes with `api-products`, or fall back to
+help-doc search (`search "<error-code-or-keyword>" -p <product>`). Hint only; the
+commands' behavior is unchanged.
 
 ## Degradation trigger matrix
 

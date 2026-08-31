@@ -35,6 +35,8 @@ same principles hold whether or not a product filter (`-p`) is used.
 | Charging for a stopped pay-as-you-go instance | fragmented verbs: `search "stop charge" -p ecs` | full terminology chain: `search "pay-as-you-go stopped instance billing" -p ecs` |
 | Cross-account access to a bucket | colloquial sentence: `search "let another account read my bucket"` | terminology + product filter: `search "cross-account access bucket policy" -p oss` |
 | Why a CDN request returns 502 | bare symptom in prose: `search "my website is broken"` | symptom token + product filter: `search "502" -p cdn` |
+| Difference between two instance families, asked colloquially | colloquial literal: `search "difference"` | documentation terminology + product filter: `search "instance type family" -p ecs` |
+| Whether another account can read a bucket, asked colloquially | colloquial full sentence: `search "can others read my bucket"` | terminology + product filter: `search "cross-account access bucket policy" -p oss` |
 
 Pattern: weak queries are colloquial paraphrases or bare filler; strong queries are
 documentation terminology, keyword-like, optionally combined with a product filter.
@@ -79,6 +81,13 @@ The script handles this automatically:
   CamelCase detection points to this division of labor.
 - Do not rewrite or translate error codes; partial or paraphrased codes break the
   match.
+- **Chinese colloquial wording bridge.** When a query carries a translated or
+  colloquial Chinese error description (e.g. signature mismatch / missing access key /
+  request throttled),
+  the script prints an INFO hint mapping it to the canonical CamelCase code
+  (e.g. SignatureDoesNotMatch) — rerun `search` with that code verbatim for the
+  narrative troubleshooting documents. The bridge only hints; it never rewrites the
+  query itself.
 
 ## Result-feedback rephrasing
 

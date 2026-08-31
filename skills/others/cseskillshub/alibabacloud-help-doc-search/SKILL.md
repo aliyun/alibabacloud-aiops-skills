@@ -1,7 +1,24 @@
 ---
 name: alibabacloud-help-doc-search
 description: |
-  Search Alibaba Cloud official help documentation (help.aliyun.com) with relevance-ranked search, and verify OpenAPI contracts (parameters, error codes, RAM permission points) against api.aliyun.com metadata. Use when the user asks how to use or configure an Alibaba Cloud product, looks up an error code or error message, checks quota or usage limits, asks about billing rules, wants best practices or troubleshooting guides, confirms API parameter semantics, or wants to read a specific help document. Triggers: Alibaba Cloud documentation, help center, help.aliyun.com, product how-to guide, error code meaning, quota and limits, billing rules, RAM permission point, API reference, troubleshooting guide, best practice, read help document.
+  Search Alibaba Cloud official help documentation (help.aliyun.com) with relevance-ranked search, and verify OpenAPI contracts (parameters, error codes, RAM permission points) against api.aliyun.com metadata. Use when the user asks how to use or configure an Alibaba Cloud product, looks up an error code or asks what an error message means, checks quota or usage limits, asks about billing rules, wants best practices or troubleshooting guides, confirms API parameter semantics, or wants to read a specific help document. Triggers: Alibaba Cloud documentation, help center, help.aliyun.com, product how-to guide, error code meaning, what does this error mean, how to fix this error, quota and limits, billing rules, RAM permission point, API reference, troubleshooting guide, best practice, read help document. Do not use this skill to execute changes on cloud resources, or to diagnose a specific product incident when a dedicated product diagnosis skill is installed and applicable.
+metadata:
+  keywords:
+    - 帮助文档
+    - 官方文档
+    - 阿里云文档
+    - 查一下文档
+    - 错误码什么意思
+    - 报错代码怎么解决
+    - 配额和限制是多少
+    - 计费规则查询
+    - RAM 权限点
+    - API 参考
+    - 排查指南
+    - 最佳实践
+    - 读文档
+    - help document
+    - error code
 ---
 
 # Alibaba Cloud Help Documentation Search and OpenAPI Verification

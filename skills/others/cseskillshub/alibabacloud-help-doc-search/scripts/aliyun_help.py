@@ -45,8 +45,15 @@ CATEGORY_CACHE_TTL_DAYS = 30
 # All seeds are empirically verified: oss=31815 (a CORS query narrowed 978 -> 131, all OSS docs);
 # functioncompute=2508973 (wide searches with cold-start / Function Compute keywords collected
 # /zh/functioncompute/ entries, mode won 8 votes, and precise queries proved the filter effective).
+# The remaining entries were verified on 2026-08-28: wide queries collected >=7 /zh/{product}/ votes
+# per id, and precise queries with each id returned 10/10 pure product documents.
 # When adding seeds, keep references/search-backend.md in sync.
-CATEGORY_SEED = {"oss": 31815, "functioncompute": 2508973}
+CATEGORY_SEED = {
+    "oss": 31815, "functioncompute": 2508973,
+    "ecs": 25365, "rds": 26090, "slb": 27537, "vpc": 27706, "cdn": 27099,
+    "ack": 85222, "ram": 28625, "sls": 28958, "kms": 28933, "waf": 28515,
+    "polardb": 2249963, "maxcompute": 27797,
+}
 
 # Local cache for product llms.txt (also user-directory only): every search with -p fetches the full
 # product llms.txt (~1MB); cache it for 3 days to avoid repeated downloads; on expiry/read failure,
@@ -86,6 +93,13 @@ QUERY_SYNONYMS = [
     ("KMS", "密钥管理服务"),
     ("WAF", "Web应用防火墙"),
     ("DNS", "域名解析"),
+    ("PolarDB", "云原生数据库PolarDB"),
+    ("MaxCompute", "ODPS"),
+    ("MaxCompute", "大数据计算"),
+    # High-frequency concept terms (document titles may use either form)
+    ("CORS", "跨域"),
+    ("security group", "安全组"),
+    ("snapshot", "快照"),
 ]
 
 # Low-result expansion retry threshold: when the first round returns fewer items than this value and the dictionary can generate a different expanded query, retry once with the expanded term
@@ -94,6 +108,19 @@ EXPAND_RETRY_THRESHOLD = 2
 # CamelCase error-code shape (e.g. SignatureDoesNotMatch / InvalidAccessKeyId):
 # at least two capitalized segments, naturally containing internal capitals
 ERROR_CODE_RE = re.compile(r"^[A-Z][a-zA-Z0-9]*(?:[A-Z][a-zA-Z0-9]*)+$")
+
+# Chinese colloquial error wording -> canonical CamelCase error code (hint bridge only):
+# users often paste a translated/colloquial description instead of the code; the hint points
+# them at the verbatim code form, which is what documentation search actually matches.
+ERROR_CODE_CN_HINTS = [
+    ("签名不匹配", "SignatureDoesNotMatch"),
+    ("签名错误", "SignatureDoesNotMatch"),
+    ("访问密钥不存在", "InvalidAccessKeyId.NotFound"),
+    ("密钥不存在", "InvalidAccessKeyId.NotFound"),
+    ("请求被限流", "Throttling"),
+    ("没有权限", "Forbidden.RAM"),
+    ("资源不存在", "InvalidParameter.NotFound"),
+]
 
 
 def _build_synonym_lookup(pairs) -> dict:
@@ -137,13 +164,21 @@ def _expand_query(keyword: str) -> str | None:
 def _error_code_hint(keyword: str) -> None:
     """CamelCase error-code detection: when the whole query or any token matches the error-code shape, emit an INFO hint on stderr.
     Hint only; the search behavior itself is unchanged (error codes are still searched verbatim).
-    All-uppercase abbreviations (e.g. KMS/WAF) are not CamelCase error-code shapes and never trigger the hint."""
+    All-uppercase abbreviations (e.g. KMS/WAF) are not CamelCase error-code shapes and never trigger the hint.
+    Chinese colloquial error wording triggers the hint bridge: it suggests the canonical CamelCase
+    code but never rewrites the query (error codes must be searched verbatim)."""
     stripped = keyword.strip()
     tokens = [t for t in re.split(r"\s+", stripped) if t]
     for cand in [stripped] + tokens:
         if ERROR_CODE_RE.match(cand) and not cand.isupper():
             print("INFO: suspected error code detected; it will be searched verbatim as an error code. "
                   "For the contract-level error code list of a specific API, use api-info <product> <ApiName>",
+                  file=sys.stderr)
+            return
+    for phrase, code in ERROR_CODE_CN_HINTS:
+        if phrase in stripped:
+            print(f"INFO: colloquial error wording detected; if it refers to the '{code}' error, "
+                  f"search the code verbatim (e.g. search \"{code}\") for narrative troubleshooting docs",
                   file=sys.stderr)
             return
 
@@ -526,7 +561,8 @@ def _get_llms_text(product: str) -> tuple:
 
     Returns (text, from_cache). On cache miss/expiry/read failure, silently refetch from origin and atomically
     refresh the cache; when the fetch returns an error marker ([HTTP ...]/[Error]...), the cache is not written;
-    error semantics are unchanged.
+    Rate-limit/outage local degradation: when the origin fetch fails but an expired local cache exists,
+    degrade to the stale cache (non-empty content only) with a WARN, instead of surfacing nothing.
     """
     path = _llms_cache_path(product)
     try:
@@ -546,6 +582,18 @@ def _get_llms_text(product: str) -> tuple:
             os.replace(tmp_path, path)
         except OSError as e:
             print(f"WARN: failed to write the llms.txt cache ({e}); skipping cache this time", file=sys.stderr)
+    else:
+        # Local degradation on rate limit / outage: serve the expired cache if present
+        try:
+            with open(path, encoding="utf-8") as f:
+                stale = f.read()
+            if stale.strip():
+                print(f"WARN: llms.txt fetch failed ({text.splitlines()[0] if text else 'unknown'}); "
+                      f"degrading to the expired local cache for '{product}' "
+                      f"(results may lag the live docs)", file=sys.stderr)
+                return stale, True
+        except OSError:
+            pass
     return text, False
 
 
@@ -1127,6 +1175,7 @@ def api_products(args):
     """List OpenAPI metadata products (code/name/version), with optional keyword filtering."""
     products = _load_meta_products()
     if not products:
+        print(_META_FALLBACK_HINT, file=sys.stderr)
         return
     kw = (args.keyword or "").lower()
     if kw:
@@ -1150,11 +1199,13 @@ def api_list(args):
     prod = _resolve_meta_product(args.product)
     if not prod:
         print(f"Product '{args.product}' not found in the OpenAPI metadata; use api-products to see product codes.")
+        print(_META_FALLBACK_HINT, file=sys.stderr)
         return
     version = args.api_version or prod.get("defaultVersion")
     data = fetch_json(f"{META_BASE}/products/{prod['code']}/versions/{version}/api-docs.json")
     if not data:
         print(f"Failed to fetch the API list of {prod['code']}/{version}; available versions: {prod.get('versions')}")
+        print(_META_FALLBACK_HINT, file=sys.stderr)
         return
     apis = data.get("apis") or {}
     kw = (args.keyword or "").lower()
@@ -1194,11 +1245,19 @@ def _is_valid_api_meta(data) -> bool:
     )
 
 
+# Degradation hint for the api-* failure exits: the meta endpoint is a single dependency (no backup
+# backend), so every failure exit points the caller at the narrative fallback path.
+_META_FALLBACK_HINT = ("Hint: the OpenAPI metadata endpoint (api.aliyun.com) may be unavailable or rate-limited, "
+                       "or the product/API name may be wrong; verify codes with api-products, "
+                       "or fall back to help-doc search, e.g. search \"<error-code-or-keyword>\" -p <product>")
+
+
 def api_info(args):
     """Output the structured contract of a single API: parameters / error codes / RAM permission points / debug link."""
     prod = _resolve_meta_product(args.product)
     if not prod:
         print(f"Product '{args.product}' not found in the OpenAPI metadata; use api-products to see product codes.")
+        print(_META_FALLBACK_HINT, file=sys.stderr)
         return
     version = args.api_version or prod.get("defaultVersion")
     api_name = args.api
@@ -1215,6 +1274,7 @@ def api_info(args):
         if not _is_valid_api_meta(data):
             print(f"API '{args.api}' not found ({prod['code']}/{version}). "
                   f"Use api-list {prod['code']} to see the API catalog.")
+            print(_META_FALLBACK_HINT, file=sys.stderr)
             return
 
     if args.json:
