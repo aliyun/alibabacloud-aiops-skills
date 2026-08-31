@@ -1,0 +1,6 @@
+# No third-party dependencies required.
+# All cloud API calls go through the aliyun CLI (plugin mode), and the
+# script itself uses only the Python standard library (argparse / json /
+# statistics / subprocess / uuid / datetime).
+#
+# Do NOT add any alibabacloud-*-sdk package here.
