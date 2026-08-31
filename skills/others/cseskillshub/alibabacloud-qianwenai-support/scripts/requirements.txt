@@ -1,0 +1,2 @@
+# No external dependencies required — uses only Python stdlib.
+# The script uses urllib for HTTP and subprocess for CLI calls.
