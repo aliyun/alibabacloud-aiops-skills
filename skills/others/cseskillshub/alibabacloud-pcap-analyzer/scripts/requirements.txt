@@ -1,0 +1,2 @@
+# No Alibaba Cloud SDK dependency. Only scapy is required for local pcap parsing.
+scapy>=2.5,<3
