@@ -2,9 +2,7 @@
 
 > Companion to advisor SKILL.md iron-rule #28 and deploy SKILL.md iron-rules #29 / #32.
 >
-> **This table was derived by running `aliyun ecs describe-images` + several `describe-image-from-family` calls against a real account in cn-beijing on 2026-06-25**. The naming convention, family names, and matching ImageIds are all dry-run measured data.
->
-> **dry-run measured corrections**:
+> **Family-name corrections (wrong forms return 0 hits)**:
 > - `acs:alibaba_cloud_linux_3_2104_lts_x64` ✓ hit (includes the minor version `_2104_lts_`)
 > - `acs:alibaba_cloud_linux_3_x64` ✗ **0 hits** (missing the minor version)
 > - `acs:alibaba_cloud_linux_4_lts_x64` ✓ hit (must include the `_lts_` infix)
@@ -80,8 +78,8 @@ Phase 0 image resolution:
 
 Step 1 primary path:
   aliyun ecs describe-image-from-family \
-    --RegionId ${region} \
-    --ImageFamily ${image.family}    # from the advisor prescription
+    --biz-region-id ${region} \
+    --image-family ${image.family}    # from the advisor prescription
   ↓
   hit → get ImageId + CreationTime
   ↓
@@ -106,11 +104,11 @@ Step 4 RunInstances:
 
 Fallback (when the primary path gets 0 hits):
   aliyun ecs describe-images \
-    --RegionId ${region} \
-    --ImageFamily ${image.family} \           # same family as the primary path, but via the List API
-    --Status Available \
-    --ImageOwnerAlias system \
-    --PageSize 5
+    --biz-region-id ${region} \
+    --image-family ${image.family} \          # same family as the primary path, but via the List API
+    --status Available \
+    --image-owner-alias system \
+    --page-size 5
   ↓
   take Images.Image[0].ImageId (in the API default order, newest first)
   ↓
@@ -120,9 +118,9 @@ Fallback (when the primary path gets 0 hits):
      请回 advisor 重出处方（@opc-cloud-advisor 帮我换一个能用的镜像）。"
 
 ⚠️ Removed (dry-run measured):
-  - --SortOrder DESC (CLI 3.4.1 does not recognize this parameter → errors)
-  - --ImageName "${image.os_series}*" (the Chinese OSName has double spaces → wildcard 0 hits)
-  - switching to --ImageFamily hits reliably
+  - --sort-order DESC (CLI 3.4.1 does not recognize this parameter → errors)
+  - --image-name "${image.os_series}*" (the Chinese OSName has double spaces → wildcard 0 hits)
+  - switching to --image-family hits reliably
 ```
 
 ## Compatibility constraints with InstanceType

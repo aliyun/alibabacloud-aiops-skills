@@ -6,6 +6,10 @@ sku: starter_webui
 variant: default                                 # internal marker: ECS primary path (used when Phase 1.2.5 inquiry hits ¥99/yr)
 version: v1.0.0
 region_default: cn-beijing
+# ⚠️ SIZING-REFERENCE ONLY — never use this as the payment-gate total.
+# The payment total is always re-summed from live DescribePrice results in Phase 1.2.5
+# (Hard Gate #1 multi-order clause). Editing this field does not change the amount the
+# user will be charged; that comes from live inquiry, not from this static estimate.
 monthly_price: "约 ¥8.25/月（¥99/年活动摊算）"
 annual_promo: "¥99/年（ECS 经济型e 长期优惠，命中 RuleId=20906709，续费同价）"
 disclaimer: "💡 价格供参考，实际以最终下单为准。ECS ¥99/年活动以下单时活动可用性为准；询价未命中时由 deploy 切换到 fallback_ecs_config（按流量计费 100M 峰值，约 ¥284.99/年北京），并自动配 CloudMonitor 出流量告警。"
@@ -159,7 +163,7 @@ steps:
     product: esa
     action: PurchaseRatePlan
     # ESA product version 2024-09-10
-    # CLI: aliyun esa purchase-rate-plan --PlanName entranceplan --ChargeType PREPAY --AutoPay true --Period 1 [--force by version-guard]
+    # CLI: aliyun esa purchase-rate-plan --plan-name entranceplan --charge-type PREPAY --auto-pay true --period 1 [--force by version-guard]
     params:
       PlanName: "entranceplan"
       ChargeType: "PREPAY"
@@ -198,7 +202,9 @@ summary_template: |
 
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-# The post-summary "what's next": default uses has_desktop_tool (the current AI terminal is the deploy tool); no_desktop_tool is the rare fallback:
+# The post-summary "what's next". Branch on has_desktop_tool, resolved in Phase -1.2 by runtime
+# self-introspection (local-execution capability present = you ARE the desktop assistant), never by
+# asking the user. qwcn-pro is self-purchased desktop software and is NOT in this package's price.
 next_steps:
   has_desktop_tool: |
     接下来做什么？
@@ -210,7 +216,7 @@ next_steps:
 
   no_desktop_tool: |
     接下来做什么？
-    ① 下载安装 QoderWork CN Pro（你的桌面 AI 助手）：
+    ① 下载安装 QoderWork CN Pro（你的桌面 AI 助手，¥59/月，你自己订阅，不含在这个套餐里）：
        👉 https://qoder.com.cn/qoderwork
     ② 打开它 → 告诉它："帮我把代码部署到 ${ecs_public_ip}"
        它会帮你远程操作服务器、安装环境、部署代码 → 拿到可访问的链接。

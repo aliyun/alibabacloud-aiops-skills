@@ -21,6 +21,15 @@ user_summary: |
   💡 价格供参考，实际以最终下单为准。
 
 steps:
+  # ⚠️ STEP ORDERING: automatic (`type: api`) steps FIRST, manual (`type: manual`) steps LAST, so that a
+  #   self-purchase item the user is still deciding on can never hold an API step hostage.
+  #   EXCEPTION: a manual step whose `output_vars` are consumed by a later api step stays PINNED before
+  #   its consumer. None currently qualifies; before demoting a manual step, grep its `output_vars` keys
+  #   — zero `${...}` references means it is safe.
+  # ⛔ SCOPE: only add a step here if the product is in this SKU's `package_contents`. "Good security
+  #   practice" is not a licence to provision or guide a product the user did not buy — such advice goes
+  #   in the wrap-up card, never in `steps`.
+
   # ⚠️ Image resolution is **not at the yaml layer** —— it is consolidated into SKILL.md Phase 0.4 for central execution (maintained in one place, avoiding drift across 7 yamls).
   # All 7 yamls' RunInstances / CreateScalingConfiguration always write `ImageId: "${state.resources.ecs.image_id}"` to purely consume state; using ${latest_image_id} or a hardcoded literal is forbidden.
   # Reuse case: state.resources.ecs.image_id already exists → the whole Phase 0.4 is skipped, going straight to Phase 1 to load this yaml; scale-out/rebuild use the same ImageId and won't silently bump the OS major version overnight.
@@ -59,8 +68,12 @@ steps:
       esa_instance_id: "InstanceId"
     report: "✓ 全球加速已激活（ESA 免费版，¥0）"
     # ESA API: product ESA / version 2024-09-10
-    # PlanName enum (China site): entranceplan(free) / basic / medium(standard, limited-time ¥99) / high
-    # CLI: aliyun esa purchase-rate-plan --PlanName entranceplan --ChargeType PREPAY --AutoPay true --Period 1 [--force]
+    # PlanName enum (China site): entranceplan(free) / basic / medium(standard) / high
+    # ⚠️ Never hardcode a price for a paid plan. PurchaseRatePlan carries NO promo parameter
+    #   (verified 2026-08-26: --rule-desc-id & friends are silently dropped), and the discount is
+    #   applied server-side per ACCOUNT eligibility. Read the real amount from
+    #   `esa describe-rate-plan-price` → PriceModel.RatePlan.PlanPriceList[0].Price before charging.
+    # CLI: aliyun esa purchase-rate-plan --plan-name entranceplan --charge-type PREPAY --auto-pay true --period 1 [--force]
     # ⚠️ Version guard: before executing, compare against [cli_meta].esa_native_since
     #   - current CLI version < esa_native_since (including "pending") → keep --force, log a warning
     #   - current CLI version >= esa_native_since → drop --force
@@ -88,7 +101,6 @@ In the Lite/Pro yaml, the `ImageId` of the SWAS CreateInstances step is no longe
 ```bash
 aliyun swas-open list-images \
   --profile opc \
-  --RegionId cn-beijing \
   --image-type app \
   --biz-region-id cn-beijing
 ```
@@ -96,7 +108,7 @@ aliyun swas-open list-images \
 > ⚠️ CLI naming gotchas measured (not stated in the API docs):
 > - the API name `ListImages` is kebab-case `list-images` in the CLI
 > - parameter names are also kebab-case: `--image-type app` (not `--ImageType`)
-> - the required parameter `--biz-region-id cn-beijing` is not marked in the API docs but the CLI metadata requires it
+> - the required parameter `--biz-region-id cn-beijing` is not marked in the API docs but the CLI metadata requires it — it is the ONLY accepted spelling of the region flag here (`--RegionId` and `--region-id` both error with `unknown flag`), so do not pass a second region flag alongside it
 
 Return structure (measured): each image contains `ImageId / ImageName / ImageType / Platform / Description`, with **no separate timestamp field**. Version identification relies entirely on the ImageName date suffix (format `OpenClaw-YYYY.M.DD`, e.g. `OpenClaw-2026.5.19`).
 

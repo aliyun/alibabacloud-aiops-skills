@@ -5,6 +5,10 @@
 sku: starter_app
 version: v1.0.0
 region_default: cn-beijing
+# ⚠️ SIZING-REFERENCE ONLY — never use this as the payment-gate total.
+# The payment total is always re-summed from live DescribePrice results in Phase 1.2.5
+# (Hard Gate #1 multi-order clause). Editing this field does not change the amount the
+# user will be charged; that comes from live inquiry, not from this static estimate.
 monthly_price: "约 ¥212.88/月"
 annual_promo: "¥99/年（ECS，命中 RuleId=20906709 摊月 ¥8.25）+ Token Plan ¥198/月 + PDS ¥6.63/月 + ESA 免费"
 disclaimer: "💡 价格供参考，实际以最终下单为准。ECS ¥99/年活动以下单时活动可用性为准；询价未命中时由 deploy 切换到 fallback_ecs_config（按流量计费 100M 峰值，约 ¥284.99/年北京），并自动配 CloudMonitor 出流量告警。"
@@ -28,13 +32,13 @@ fallback_ecs_config:
 package_contents: |
   这个套餐包含：
   ✦ 一台「小店面」（服务器 2核2G）—— 你的产品跑在上面
-  ✦ AI 能力（Token Plan 标准版）—— 你的产品调 AI 时消耗的额度
+  ✦ AI 能力（Token Plan AI 模型订阅计划 标准版）—— 你的产品调 AI 时消耗的额度
   ✦ 存储空间（阿里云盘企业版 200GB）—— 产品相关的文件/数据存在这里
   ✦ 全球加速（ESA 免费版）—— 全国访问都快
-  ✦ 代码部署 —— 靠桌面 AI 助手远程搞定
+  ✦ 代码部署 —— 靠你的桌面 AI 助手远程帮你搞定（不是云资源，不含在套餐价里）
 
 deploy_creates: |
-  接下来我帮你创建的云资源：服务器（自动）+ ESA 加速（手动确认）。
+  接下来我帮你创建的云资源：服务器 + 全球加速，这两样我都自动帮你开好。
   Token Plan 和阿里云盘需要在控制台手动开通（有明确引导）。
 
 desktop_tool_download: "https://qoder.com.cn/qoderwork"
@@ -48,7 +52,7 @@ user_summary: |
   ✦ 你的「小店面」（服务器 2核2G + 40GiB 系统盘（类似你电脑的系统盘）+ 3Mbps 公网带宽）          → 自动创建
   ✦ AI 能力（Token Plan 标准版 25k/月）    → 引导你手动开通
   ✦ 存储空间（阿里云盘 200GB）              → 引导你手动开通
-  ✦ 全球加速（ESA 免费版）                  → 引导你手动开通
+  ✦ 全球加速（ESA 免费版）                  → 我自动帮你开（免费，不扣款）
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   费用：ECS ¥99/年（活动价摊月 ¥8.25） + Token ¥198/月 + PDS ¥6.63/月 + ESA 免费
   合计约 ¥212.88/月，北京地域
@@ -127,49 +131,12 @@ steps:
         费用：¥99/年（已按年付）
         状态：运行中
 
-  # ─── Step 2: Token Plan (manual) ───
-  - name: "开通 AI 能力（Token Plan 标准版）"
-    type: manual
-    instructions: |
-      请打开百炼控制台开通 Token Plan：
-      👉 https://common-buy.aliyun.com/token-plan
-
-      操作：
-      1. 如果是首次进入百炼，先点「开通服务」
-      2. 左侧菜单找到「Token Plan / 资源包」
-      3. 选择「标准版」（25,000 credits/月，¥198/月）→ 确认订购
-      
-      这个额度覆盖百炼平台全部模型（Qwen 全系列、DeepSeek 等）。
-      用量到 80% 时可以升级到高级版（100k/月，¥698）——升档前我会先报新月费让你确认才执行（与铁律 #22 联动）。
-
-      完成后告诉我"好了"。
-    report: "✓ AI 能力已激活（Token Plan 标准版 25k/月）"
-
-  # ─── Step 3: Alibaba Cloud Drive Enterprise PDS (manual) ───
-  - name: "开通存储空间（阿里云盘企业版 200GB）"
-    type: manual
-    instructions: |
-      请打开阿里云盘企业版购买页：
-      👉 https://common-buy.aliyun.com/?commodityCode=pds_trc_public_cn&regionId=cn-beijing
-
-      页面选择：
-      ① 类型 → 网盘空间
-      ② 用户数 → 5 人
-      ③ 存储空间 → 200GB
-      ④ 购买时长 → 1 月（¥6.63）或 1 年（¥6.63 × 12 = ¥79.6）
-      ⑤ 确认付款
-
-      这是你产品的文件/数据存储空间，跟个人网盘类似但是给你的产品用的。
-
-      完成后告诉我"好了"。
-    report: "✓ 存储空间已激活（阿里云盘 200GB）"
-
-  # ─── Step 4: ESA Free (API auto-provision) ───
+  # ─── Step 2: ESA Free (API auto-provision) ───
   - name: "开通全球加速（ESA 免费版）"
     type: api
     product: esa
     action: PurchaseRatePlan
-    # CLI: aliyun esa purchase-rate-plan --PlanName entranceplan --ChargeType PREPAY --AutoPay true --Period 1 [--force by version-guard]
+    # CLI: aliyun esa purchase-rate-plan --plan-name entranceplan --charge-type PREPAY --auto-pay true --period 1 [--force by version-guard]
     params:
       PlanName: "entranceplan"
       ChargeType: "PREPAY"
@@ -187,6 +154,44 @@ steps:
 # ═══════════════════════════════════════
 # Phase 4: summary output template (user-facing output)
 # ═══════════════════════════════════════
+
+  # ─── Step 3: Token Plan (manual) ───
+  - name: "开通 AI 能力（Token Plan AI 模型订阅计划 标准版）"
+    type: manual
+    instructions: |
+      请打开百炼控制台开通 Token Plan：
+      👉 https://common-buy.aliyun.com/token-plan
+
+      操作：
+      1. 如果是首次进入百炼，先点「开通服务」
+      2. 左侧菜单找到「Token Plan / 资源包」
+      3. 选择「标准版」（25,000 credits/月，¥198/月）→ 确认订购
+      
+      这个额度覆盖百炼平台全部模型（Qwen 全系列、DeepSeek 等）。
+      用量到 80% 时可以升级到高级版（100k/月，¥698）——升档前我会先报新月费让你确认才执行（与铁律 #22 联动）。
+
+      完成后告诉我"好了"。
+    report: "✓ AI 能力已激活（Token Plan 标准版 25k/月）"
+
+  # ─── Step 4: Alibaba Cloud Drive Enterprise PDS (manual) ───
+  - name: "开通存储空间（阿里云盘企业版 200GB）"
+    type: manual
+    instructions: |
+      请打开阿里云盘企业版购买页：
+      👉 https://common-buy.aliyun.com/?commodityCode=pds_trc_public_cn&regionId=cn-beijing
+
+      页面选择：
+      ① 类型 → 网盘空间（页面默认是「CDE Agent」，一定要切到「网盘空间」）
+      ② 用户数 → 5 人
+      ③ 存储空间 → 200GB
+      ④ 用户增量权益包 / 存储扩容权益包 → 都保持 0，不要加（加了会在套餐月费之外多扣钱）
+      ⑤ 购买时长 → 1 月（¥6.63）或 1 年（¥6.63 × 12 = ¥79.6）
+      ⑥ 确认付款
+
+      这是你产品的文件/数据存储空间，跟个人网盘类似但是给你的产品用的。
+
+      完成后告诉我"好了"。
+    report: "✓ 存储空间已激活（阿里云盘 200GB）"
 summary_template: |
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   🎉 全部就绪！你的 OPC 基础设施已创建完成
@@ -196,7 +201,7 @@ summary_template: |
      IP 地址：${ecs_public_ip}
      控制台：https://ecs.console.aliyun.com/
 
-  🤖 AI 能力（Token Plan 标准版）
+  🤖 AI 能力（Token Plan AI 模型订阅计划 标准版）
      额度：25,000 credits/月
      控制台：https://bailian.console.aliyun.com/
 
@@ -218,7 +223,7 @@ next_steps:
 
   no_desktop_tool: |
     接下来做什么？
-    ① 下载安装 QoderWork CN Pro（你的桌面 AI 助手）：
+    ① 下载安装 QoderWork CN Pro（你的桌面 AI 助手，¥59/月，你自己订阅，不含在这个套餐里）：
        👉 https://qoder.com.cn/qoderwork
     ② 打开它 → 告诉它："帮我把代码部署到 ${ecs_public_ip}"
        它会帮你远程部署代码到服务器 → 你的 AI 产品就能被用户访问了。

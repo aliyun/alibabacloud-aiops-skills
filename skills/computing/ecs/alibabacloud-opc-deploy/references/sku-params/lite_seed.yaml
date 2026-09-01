@@ -5,6 +5,10 @@
 sku: lite_seed
 version: v1.0.0
 region_default: cn-beijing
+# ⚠️ SIZING-REFERENCE ONLY — never use this as the payment-gate total.
+# The payment total is always re-summed from live DescribePrice results in Phase 1.2.5
+# (Hard Gate #1 multi-order clause). Editing this field does not change the amount the
+# user will be charged; that comes from live inquiry, not from this static estimate.
 monthly_price: "¥596.54/月 + OSS ¥9/年"
 disclaimer: "💡 价格供参考，实际以最终下单为准。"
 
@@ -17,14 +21,14 @@ package_contents: |
   ✦ 业务专用店面（ECS 2核4G）—— 你的产品跑在这台服务器上
   ✦ 客户档案柜（RDS 数据库 1核2G）—— 存用户数据和业务数据
   ✦ 储物间（OSS 40GB）—— 存图片/文件/附件
-  ✦ AI 能力（Token Plan 标准版）—— 产品调 AI 的额度
+  ✦ AI 能力（Token Plan AI 模型订阅计划 标准版）—— 产品调 AI 的额度
   ✦ 存储空间（阿里云盘 200GB）—— 产品相关文件
   ✦ 全球加速（ESA 免费版）
 
 deploy_creates: |
   接下来我帮你创建的资源：
   - 自动创建：轻量应用服务器 + ECS + RDS + OSS + VPC 网络
-  - 手动引导：Token Plan + PDS + ESA
+  - 手动引导：Token Plan + PDS
 
 # ═══════════════════════════════════════
 # Plain-language summary shown before user confirmation (user-facing output)
@@ -38,7 +42,7 @@ user_summary: |
   ✦ 储物间（OSS 40GB）                     → 自动创建
   ✦ AI 能力（Token Plan 标准版）            → 引导手动开通
   ✦ 存储空间（阿里云盘 200GB）              → 引导手动开通
-  ✦ 全球加速（ESA 免费版）                  → 引导手动开通
+  ✦ 全球加速（ESA 免费版）                  → 我自动帮你开（免费，不扣款）
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   费用：¥596.54/月 + OSS ¥9/年（北京地域）
   
@@ -50,6 +54,15 @@ user_summary: |
 steps:
 
   # ─── Step 1: SWAS lightweight server + OpenClaw image ───
+  # ⚠️ SWAS REGION — TWO FLAGS REQUIRED. The RegionId below must be passed BOTH as `--biz-region-id ${region}`
+  #    AND as the CLI's GLOBAL flag `--region ${region}`. `--biz-region-id` alone does NOT error: it only
+  #    reaches the request body, while the service endpoint still comes from the profile's default region, so
+  #    the instance is silently created THERE. E2E-measured 2026-08-27: a Beijing deploy landed the SWAS
+  #    instance in Hangzhou (¥70 wasted); adding the global `--region` on the retry fixed it.
+  #    Same applies to the ListInstances calls in wait_until / post_actions below — without the global flag
+  #    they read the wrong region's inventory and report 0 instances.
+  #    AFTER creating: read the instance back and confirm its region equals ${region} before moving on.
+  #    See cli-meta.md "Region — swas-open".
   - name: "创建 AI 助理的家（轻量应用服务器 + OpenClaw）"
     type: api
     product: swas-open
@@ -259,41 +272,59 @@ steps:
     type: api
     product: oss
     action: PutBucket
-    # `aliyun oss api` is not a valid subcommand; use `aliyun oss <verb>` (ossutil style,
-    # --profile still inherits the RamRoleArn credentials); PublicAccessBlock uses the access-monitor equivalent semantics (a private ACL already blocks anonymous access)
+    # ⚠️ **This step runs LAST — it is Pass 3c in provision.md, NOT wherever it sits in this file.**
+    # It depends on a purchase only the user can make, so all `type: api` steps (Pass 3a) and all
+    # `type: manual` hand-holding (Pass 3b) come FIRST. Never let this step block them.
+    # Precondition: read state.self_purchase.oss_package
+    #   bought / already_active → attempt directly
+    #   deferred                → emit the ONE permitted reminder, wait, then attempt
+    # 🔍 The activation check IS this call. No read-only probe works: on an unactivated account every read
+    #   succeeds (`ossutil ls` → "Bucket Number is: 0", `api list-buckets` → full XML,
+    #   `api get-bucket-info` → 404 NoSuchBucket). Only this write returns 403 UserDisable
+    #   (EC 0003-00000801). Creating a bucket is FREE, so attempting it is a zero-cost probe.
+    # On 403 UserDisable → OSS not activated. NOT a permission problem: no policy JSON, no ERROR GATE
+    #   three-option menu, no retry loop. Say once that the storage package purchase also activates the
+    #   service, keep everything already created, and wait. Retry once when the user confirms.
+    # Partial success is acceptable: if only the bucket is missing, the deployment is NOT a failure —
+    #   never tear down working paid infrastructure over one unpurchased storage package.
+    # Commands below use `aliyun ossutil` (ossutil 2.x): fs-style verbs (`mb`) plus API-level ones
+    # (`api put-bucket-*`). The legacy `oss` verb is deprecated. All E2E-verified on CLI 3.4.11.
     params:
       BucketName: "opc-${random_suffix}"
       # ⚠️ Bucket name is globally unique; use a random suffix
       RegionId: "${region}"
       StorageClass: "Standard"
       DataRedundancyType: "LRS"
-      # LRS = local redundancy, cheapest
+      # LRS = local redundancy, cheapest. Must match the package bought at Step 1.3 — a ZRS package
+      # does not offset LRS storage.
     cli_command: |
-      aliyun --profile opc oss mb oss://opc-${random_suffix} --acl private --storage-class Standard --redundancy-type LRS
+      aliyun --profile opc ossutil mb oss://opc-${random_suffix} --region ${region} --acl private --storage-class Standard --redundancy-type LRS
     output_vars:
       oss_bucket: "opc-${random_suffix}"
       oss_endpoint: "oss-${region}.aliyuncs.com"
     post_actions:
-      # Three-layer protection, all ossutil-style commands
+      # Layers 1 and 2 are set here. Layer 3 (block public access) is ON BY DEFAULT at creation
+      # (E2E-verified: get-bucket-info reads back BlockPublicAccess=true), so it needs no call — only the
+      # read-back at the end to prove it.
       - product: oss
         action: PutBucketEncryption
         cli_command: |
-          aliyun --profile opc oss bucket-encryption --method put oss://${oss_bucket} --sse-algorithm AES256
+          aliyun --profile opc ossutil api put-bucket-encryption --region ${region} --bucket ${oss_bucket} --server-side-encryption-rule '{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}'
       - product: oss
         action: PutBucketVersioning
         cli_command: |
-          aliyun --profile opc oss bucket-versioning --method put oss://${oss_bucket} enabled
-      - product: oss
-        action: PutPublicAccessBlock
-        # ossutil has no put-bucket-public-access-block equivalent yet;
-        # use access-monitor to enable access monitoring; mb already set --acl private, so anonymous public access is blocked
-        cli_command: |
-          aliyun --profile opc oss access-monitor --method put oss://${oss_bucket} Enabled
+          aliyun --profile opc ossutil api put-bucket-versioning --region ${region} --bucket ${oss_bucket} --versioning-configuration '{"Status":"Enabled"}'
       - product: oss
         action: PutBucketTagging
-        # backfill the opc:managed tag on the OSS bucket via ossutil bucket-tagging
+        # backfill the opc:managed tag. The effective RAM action is oss:PutBucketTagging (E2E-verified:
+        # ossutil's help says oss:PutBucketTags, but the existing PutBucketTagging policy entry is what works)
         cli_command: |
-          aliyun --profile opc oss bucket-tagging --method put oss://${oss_bucket} "opc:managed#true" "opc:sku#lite_seed"
+          aliyun --profile opc ossutil api put-bucket-tags --region ${region} --bucket ${oss_bucket} --tagging '{"TagSet":{"Tag":[{"Key":"opc:managed","Value":"true"},{"Key":"opc:sku","Value":"lite_seed"}]}}'
+      - product: oss
+        action: GetBucketInfo
+        # verify layer 3 instead of setting it: BlockPublicAccess must read back true
+        cli_command: |
+          aliyun --profile opc ossutil api get-bucket-info --region ${region} --bucket ${oss_bucket}
     report: |
       ✓ 储物间已开通（三层保护已开启）！
         Bucket：${oss_bucket}
@@ -302,44 +333,12 @@ steps:
         ② 版本保留：误删/误改可恢复
         ③ 阻断公共访问：禁止匿名公开访问，从根上避免数据泄露
 
-  # ─── Step 5: Token Plan (manual) ───
-  - name: "开通 AI 能力（Token Plan 标准版）"
-    type: manual
-    instructions: |
-      请打开百炼控制台开通 Token Plan：
-      👉 https://common-buy.aliyun.com/token-plan
-
-      操作：
-      1. 如果是首次进入百炼，先点「开通服务」
-      2. 左侧菜单找到「Token Plan / 资源包」
-      3. 选择「标准版」（25,000 credits/月，¥198/月）→ 确认订购
-
-      完成后告诉我"好了"。
-    report: "✓ AI 能力已激活（Token Plan 标准版 25k/月）"
-
-  # ─── Step 6: PDS Alibaba Cloud Drive (manual) ───
-  - name: "开通存储空间（阿里云盘企业版 200GB）"
-    type: manual
-    instructions: |
-      请打开阿里云盘企业版购买页：
-      👉 https://common-buy.aliyun.com/?commodityCode=pds_trc_public_cn&regionId=cn-beijing
-
-      页面选择：
-      ① 类型 → 网盘空间
-      ② 用户数 → 5 人
-      ③ 存储空间 → 200GB
-      ④ 购买时长 → 1 月（¥6.63）或 1 年（¥6.63 × 12 = ¥79.6）
-      ⑤ 确认付款
-
-      完成后告诉我"好了"。
-    report: "✓ 存储空间已激活（阿里云盘 200GB）"
-
-  # ─── Step 7: ESA Free (API auto-provision) ───
+  # ─── Step 5: ESA Free (API auto-provision) ───
   - name: "开通全球加速（ESA 免费版）"
     type: api
     product: esa
     action: PurchaseRatePlan
-    # CLI: aliyun esa purchase-rate-plan --PlanName entranceplan --ChargeType PREPAY --AutoPay true --Period 1 [--force]
+    # CLI: aliyun esa purchase-rate-plan --plan-name entranceplan --charge-type PREPAY --auto-pay true --period 1 [--force]
     # --force is decided by the version guard ([cli_meta].esa_native_since), no longer hardcoded
     params:
       PlanName: "entranceplan"
@@ -357,6 +356,39 @@ steps:
 # ═══════════════════════════════════════
 # Phase 4: summary output template (user-facing output)
 # ═══════════════════════════════════════
+
+  # ─── Step 6: Token Plan (manual) ───
+  - name: "开通 AI 能力（Token Plan AI 模型订阅计划 标准版）"
+    type: manual
+    instructions: |
+      请打开百炼控制台开通 Token Plan：
+      👉 https://common-buy.aliyun.com/token-plan
+
+      操作：
+      1. 如果是首次进入百炼，先点「开通服务」
+      2. 左侧菜单找到「Token Plan / 资源包」
+      3. 选择「标准版」（25,000 credits/月，¥198/月）→ 确认订购
+
+      完成后告诉我"好了"。
+    report: "✓ AI 能力已激活（Token Plan 标准版 25k/月）"
+
+  # ─── Step 7: PDS Alibaba Cloud Drive (manual) ───
+  - name: "开通存储空间（阿里云盘企业版 200GB）"
+    type: manual
+    instructions: |
+      请打开阿里云盘企业版购买页：
+      👉 https://common-buy.aliyun.com/?commodityCode=pds_trc_public_cn&regionId=cn-beijing
+
+      页面选择：
+      ① 类型 → 网盘空间（页面默认是「CDE Agent」，一定要切到「网盘空间」）
+      ② 用户数 → 5 人
+      ③ 存储空间 → 200GB
+      ④ 用户增量权益包 / 存储扩容权益包 → 都保持 0，不要加（加了会在套餐月费之外多扣钱）
+      ⑤ 购买时长 → 1 月（¥6.63）或 1 年（¥6.63 × 12 = ¥79.6）
+      ⑥ 确认付款
+
+      完成后告诉我"好了"。
+    report: "✓ 存储空间已激活（阿里云盘 200GB）"
 summary_template: |
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   🎉 全部就绪！你的 OPC 完整业务栈已创建完成
@@ -406,7 +438,7 @@ summary_template: |
 
   ─── 出事别慌三步卡 ───
   ① 怀疑账户被人乱用 / AccessKey 泄露 → 禁用 AK：https://ram.console.aliyun.com/users
-  ② 想知道发生了什么 → 操作审计：https://actiontrail.console.aliyun.com/events
+  ② 想知道账单/资源有没有异动 → 费用中心：https://usercenter2.aliyun.com/finance/expense-report/bill-detail
   ③ 拿不准 / 要人帮忙 → 提工单：https://smartservice.console.aliyun.com/service/create-ticket
 
   ─── 比喻 ↔ 阿里云正式名称 ───
@@ -414,7 +446,7 @@ summary_template: |
   | 业务专用店面    | 云服务器 ECS                            |
   | 客户档案柜      | 云数据库 RDS MySQL                       |
   | 储物间          | 对象存储 OSS                            |
-  | AI 能力         | 百炼 Token Plan                         |
+  | AI 能力         | Token Plan AI 模型订阅计划              |
   | 存储空间        | 阿里云盘 PDS                            |
   | 全球加速        | 边缘安全加速 ESA                        |
   💡 联系阿里云客服时用右边的正式名称沟通会更顺。

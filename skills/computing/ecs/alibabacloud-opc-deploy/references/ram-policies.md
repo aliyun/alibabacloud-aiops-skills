@@ -12,7 +12,7 @@
 4. RDS RAM evaluation **never populates** `acs:ResourceTag` — even if a resource carries the opc:managed tag, RAM cannot "see" it, so RDS Manage/Teardown operations cannot be isolated by a tag condition (E2E-confirmed).
 5. KeyPair resources do **not** support `acs:ResourceTag` — `ecs:DeleteKeyPairs` must be an unconditional Allow (E2E-confirmed).
 6. `CreateDBInstance`'s `--Tag` parameter is **accepted by the API but the tag is not persisted**; call `AddTagsToResource` after creation to attach it. ECS `RunInstances --Tag` likewise has no effect — a post_action `ecs:TagResources` call is required.
-7. ESS `CreateScalingGroup` must explicitly pass `--Tag.1.Key opc:managed --Tag.1.Value true`, otherwise later Manage/Teardown is ImplicitDenied.
+7. ESS `CreateScalingGroup` must explicitly pass `--tag Key=opc:managed Value=true`, otherwise later Manage/Teardown is ImplicitDenied.
 
 ## Policy: opc-deploy-policy
 
@@ -34,7 +34,6 @@ Create at https://ram.console.aliyun.com/policies/create (policy name: `opc-depl
         "ess:Describe*", "ess:List*",
         "swas-open:Describe*", "swas-open:List*",
         "esa:Describe*", "esa:List*",
-        "actiontrail:Describe*", "actiontrail:List*",
         "ram:GetCallerIdentity", "ram:GetUser", "ram:ListAccessKeys",
         "sts:GetCallerIdentity"
       ],
@@ -75,6 +74,7 @@ Create at https://ram.console.aliyun.com/policies/create (policy name: `opc-depl
       "Effect": "Allow",
       "Action": [
         "ecs:Modify*", "ecs:Stop*", "ecs:Start*", "ecs:Reboot*",
+        "ecs:RevokeSecurityGroup",
         "vpc:Modify*",
         "alb:Update*",
         "ess:Modify*", "ess:Disable*", "ess:RemoveInstances", "ess:DetachInstances"
@@ -103,12 +103,11 @@ Create at https://ram.console.aliyun.com/policies/create (policy name: `opc-depl
       "Resource": "*"
     },
     {
-      "Sid": "SwasEsaActionTrailNoTagSupport",
+      "Sid": "SwasEsaNoTagSupport",
       "Effect": "Allow",
       "Action": [
         "swas-open:CreateInstances", "swas-open:RebootInstance", "swas-open:StopInstance", "swas-open:StartInstance",
-        "esa:PurchaseRatePlan", "esa:CreateSite",
-        "actiontrail:CreateTrail", "actiontrail:UpdateTrail", "actiontrail:StartLogging", "actiontrail:StopLogging"
+        "esa:PurchaseRatePlan", "esa:CreateSite"
       ],
       "Resource": "*"
     },
@@ -118,7 +117,7 @@ Create at https://ram.console.aliyun.com/policies/create (policy name: `opc-depl
       "Action": [
         "ecs:DeleteInstance", "ecs:DeleteSecurityGroup",
         "vpc:DeleteVSwitch", "vpc:DeleteVpc",
-        "alb:DeleteLoadBalancer",
+        "alb:DeleteLoadBalancer", "alb:DeleteListener", "alb:DeleteServerGroup",
         "ess:DeleteScalingGroup", "ess:DeleteScalingRule", "ess:DeleteAlarm",
         "swas-open:DeleteInstance"
       ],
@@ -154,6 +153,114 @@ Create at https://ram.console.aliyun.com/policies/create (policy name: `opc-depl
   ]
 }
 ```
+
+## Scope the policy to the settled SKU (least privilege in practice)
+
+The policy above is the **full superset** covering all 7 SKUs. Granting it wholesale to a starter user
+authorizes six products that SKU never touches, which contradicts least privilege and contradicts the
+Phase -1.5 gate (which already narrows products to the settled SKU). **Before showing the policy JSON,
+narrow it to the SKU's product set**; the SKU is always settled by then (the SKU GATE precedes Phase 0).
+
+Product set per SKU, derived from each `references/sku-params/<sku>.yaml`:
+
+| SKU | Products actually used |
+|---|---|
+| starter_webui | ECS, ESA (+ VPC / SecurityGroup / KeyPair as ECS prerequisites) |
+| starter_app | ECS, ESA (+ VPC / SecurityGroup / KeyPair) — Token Plan and PDS are console-manual, no CLI permission needed |
+| lite_seed / lite_growth / lite_traction | ECS, SWAS, RDS, OSS, ESA (+ VPC / SecurityGroup / KeyPair) |
+| pro_steady | the Lite set + ALB |
+| pro_burst | the pro_steady set + ESS |
+
+How to narrow: keep every statement, but drop the action prefixes belonging to products outside the
+SKU's set (e.g. for a starter SKU drop `rds:*` / `oss:*` / `alb:*` / `ess:*` / `swas-open:*`). Keep `sts:GetCallerIdentity` and the `ram:Get*/List*` read-only actions in every
+variant — credential verification depends on them. When a statement ends up with no actions left, drop
+the whole statement. Never widen beyond the superset above.
+
+For the two starter SKUs the narrowed result is small enough to paste directly:
+
+```json
+{
+  "Version": "1",
+  "Statement": [
+    {
+      "Sid": "DescribeReadOnlyNoCondition",
+      "Effect": "Allow",
+      "Action": [
+        "ecs:Describe*", "ecs:List*",
+        "vpc:Describe*", "vpc:List*",
+        "esa:Describe*", "esa:List*",
+        "ram:GetCallerIdentity", "ram:GetUser", "ram:ListAccessKeys",
+        "sts:GetCallerIdentity"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "PriceQueryNoCondition",
+      "Effect": "Allow",
+      "Action": ["ecs:DescribePrice", "esa:DescribePrice"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "CreateAndTagNoCondition",
+      "Effect": "Allow",
+      "Action": [
+        "ecs:RunInstances", "ecs:CreateInstance",
+        "ecs:CreateSecurityGroup", "ecs:AuthorizeSecurityGroup",
+        "ecs:CreateKeyPair", "ecs:ImportKeyPair",
+        "ecs:TagResources",
+        "vpc:CreateVpc", "vpc:CreateVSwitch", "vpc:TagResources"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "EcsVpcManageOpcTagged",
+      "Effect": "Allow",
+      "Action": ["ecs:Modify*", "ecs:Stop*", "ecs:Start*", "ecs:Reboot*", "ecs:RevokeSecurityGroup", "vpc:Modify*"],
+      "Resource": "*",
+      "Condition": { "StringEquals": { "acs:ResourceTag/opc:managed": "true" } }
+    },
+    {
+      "Sid": "EsaNoTagSupport",
+      "Effect": "Allow",
+      "Action": ["esa:PurchaseRatePlan", "esa:Create*", "esa:Update*", "esa:Delete*"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "TeardownOpcTagged",
+      "Effect": "Allow",
+      "Action": [
+        "ecs:DeleteInstance", "ecs:DeleteInstances", "ecs:DeleteSecurityGroup",
+        "vpc:DeleteVSwitch", "vpc:DeleteVpc"
+      ],
+      "Resource": "*",
+      "Condition": { "StringEquals": { "acs:ResourceTag/opc:managed": "true" } }
+    },
+    {
+      "Sid": "TeardownNoTagSupport",
+      "Effect": "Allow",
+      "Action": ["ecs:DeleteKeyPairs"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "DenyUntaggedModifyAfterCreate",
+      "Effect": "Deny",
+      "Action": [
+        "ecs:Modify*", "ecs:Stop*", "ecs:Start*", "ecs:Reboot*",
+        "ecs:DeleteInstance", "ecs:DeleteInstances",
+        "vpc:DeleteVpc", "vpc:DeleteVSwitch"
+      ],
+      "Resource": "*",
+      "Condition": { "StringNotEquals": { "acs:ResourceTag/opc:managed": "true" } }
+    }
+  ]
+}
+```
+
+User-facing wording when presenting the policy: state which products it covers in plain language and
+that it is scoped to this package only. The ready-made hand-over copy lives in `policy-probe.md` —
+use it verbatim instead of restating it here.
+
+Do not present the full superset to a starter user and do not explain the narrowing mechanics.
 
 ## Statement layering notes (by measured acs:ResourceTag support)
 

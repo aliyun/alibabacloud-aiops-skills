@@ -5,8 +5,12 @@
 sku: pro_steady
 version: v1.0.0
 region_default: cn-beijing
-monthly_price: "¥2524.55/月 + ALB LCU 按量≈¥30-50"
-disclaimer: "💡 价格供参考，实际以最终下单为准。ESA medium ¥99/月命中限时优惠 RuleDescId=20980267（限购5个，以下单时活动可用性为准）。"
+# ⚠️ SIZING-REFERENCE ONLY — never use this as the payment-gate total.
+# The payment total is always re-summed from live DescribePrice results in Phase 1.2.5
+# (Hard Gate #1 multi-order clause). Editing this field does not change the amount the
+# user will be charged; that comes from live inquiry, not from this static estimate.
+monthly_price: "¥2518.50/月 + ALB LCU 按量≈¥30-50"
+disclaimer: "💡 价格供参考，实际以最终下单为准。ESA 标准版的成交价按账号优惠资格浮动（标价 ¥375/月，命中新用户专享等优惠后更低），下单前必须用 esa describe-rate-plan-price 实时询价取 Price 字段，不得引用本文件里的任何估值。"
 
 # ═══════════════════════════════════════
 # Package contents (user-facing output)
@@ -19,13 +23,13 @@ package_contents: |
   ✦ 客户档案柜（RDS 高可用版 4核8G）—— 数据库主备切换，数据不丢
   ✦ 大仓库（OSS 500GB）—— 存大量图片/视频/文件
   ✦ 全球加速（ESA 标准版）—— 全国加速 + 安全防护
-  ✦ AI 能力（Token Plan 标准版）
+  ✦ AI 能力（Token Plan AI 模型订阅计划 标准版）
   ✦ 存储空间（阿里云盘 500GB）
 
 deploy_creates: |
   接下来我帮你创建的资源：
   - 自动创建：轻量 + ECS ×2 + ALB + RDS HA + OSS + VPC 网络
-  - 手动引导：Token Plan + PDS + ESA 标准版
+  - 手动引导：Token Plan + PDS
 
 user_summary: |
   即将为你创建/开通（高可用架构）：
@@ -37,9 +41,9 @@ user_summary: |
   ✦ 大仓库（OSS 500GB）                      → 自动
   ✦ AI 能力（Token Plan 标准版）              → 手动
   ✦ 存储空间（阿里云盘 500GB）                → 手动
-  ✦ 全球加速（ESA 标准版）                    → 手动
+  ✦ 全球加速（ESA 标准版）                    → 我自动帮你开（这笔计入本次扣款，金额下单前询价告诉你）
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  费用：¥2524.55/月（固定）+ ALB 按量约 ¥30-50/月
+  费用：¥2518.50/月（固定）+ ALB 按量约 ¥30-50/月
   地域：北京
 
   ⚠️ Pro 架构资源多、费用高，请确认这是你要的规模。
@@ -162,30 +166,16 @@ steps:
         配置：4核8G × 2 台 · 40GiB 系统盘（类似你电脑的系统盘）· 100Mbps 峰值带宽
         网络：流量按使用量计费，每月送 220GB 免费额度（类似手机流量套餐——超出免费额度才计费）
 
-  # ─── Step 2.5: request an SSL certificate ───
-  # The ALB HTTPS listener needs a certificate ID issued by ACM / Certificate Management Service (CAS).
-  # This step is a manual guide: if the user has a filed domain → the engine calls cas DescribeCertificateList to get an existing cert / or cas CreateCertificateRequest to apply for a free DV cert;
-  # if the user has no domain yet → skip this step, leave ssl_certificate_id empty, and the downstream ALB step auto-degrades to an HTTP 80 direct-forward fallback.
-  - name: "申请 SSL 证书（HTTPS 必备）"
-    type: manual
-    optional: true
-    instructions: |
-      🔐 接下来要给 ALB 配 HTTPS（让用户敲 https://你的域名 能加密访问）。
-      这一步需要一个【已备案域名 + 已申请的免费 DV 证书】。
-
-      请告诉我你属于哪种情况：
-        A. 我已经在「SSL 证书服务」里申请过免费 DV 证书 → 把证书 ID 给我（控制台：https://yundun.console.aliyun.com/?p=cas）
-        B. 我有备案域名但还没证书 → 我帮你申请阿里云免费 DV 证书（约 5-10 分钟签发）
-        C. 我现在还没域名 → 跳过 HTTPS（先用 HTTP 上线，办好域名再回头加 HTTPS）
-
-      注意：选 C 时站点【未加密】，仅适合内测/演示，不建议长期使用。
-    output_vars:
-      ssl_certificate_id: ""  # A/B path fills in the cert ID; C path leaves it empty and the downstream auto-degrades
-      ssl_status: ""           # "ready" | "skipped"
-    report: |
-      ✓ SSL 证书阶段：${ssl_certificate_id ? "已就绪（证书 ID ${ssl_certificate_id}）" : "已跳过（HTTPS 暂未启用）"}
-
   # ─── Step 3: ALB load balancer ───
+  # ⚠️ ALB REGION: alb rejects --biz-region-id. The RegionId below must be passed as the CLI's GLOBAL
+  #    flag `--region ${region}`, NOT as a parameter flag. Omitting it does NOT error — the CLI falls
+  #    back to the profile's default region, which silently puts the ALB in a different region from its
+  #    own VPC/ECS. See cli-meta.md "Region — alb".
+  # ⚠️ ALB STRUCT PARAMS: LoadBalancerBillingConfig / ZoneMappings below are object / list params. With
+  #    two zone mappings they MUST be one JSON array, e.g.
+  #      --zone-mappings '[{"ZoneId":"..","VSwitchId":".."},{"ZoneId":"..","VSwitchId":".."}]'
+  #    The inline `ZoneId=a,VSwitchId=b ZoneId=c,VSwitchId=d` form silently keeps only ONE mapping,
+  #    and ALB requires two zones. See cli-meta.md "RepeatList — two or more entries".
   - name: "创建分流引导员（ALB 负载均衡）"
     type: api
     product: alb
@@ -244,40 +234,17 @@ steps:
           Servers.2.ServerId: "${ecs_instance_id_2}"
           Servers.2.ServerType: "Ecs"
           Servers.2.Port: 80
-      # Create the HTTP listener (HTTP does not forward business traffic directly; configure a 301 redirect to HTTPS)
-      # Engine execution rules:
-      #   - if the upstream SSL cert step produced ${ssl_certificate_id} → create this 80→443 redirect listener
-      #   - if the user skipped the cert step → forward HTTP 80 directly to the ServerGroup (DefaultActions.Type=ForwardGroup), and note in the report "HTTPS not enabled yet, recommend getting a cert soon"
+      # HTTP 80 listener, forwarding straight to the server group.
+      # HTTPS is deliberately NOT configured: a 443 listener needs an SSL certificate, and both the
+      # certificate and the filed domain it requires are OUTSIDE this package (2026-08-27 scope decision).
+      # Do NOT add a cert step, do NOT call any `cas` API, do NOT offer to apply for a certificate.
+      # The wrap-up card tells the user how to add HTTPS themselves once they have a domain + cert.
       - product: alb
         action: CreateListener
-        when: "${ssl_certificate_id} != ''"
         params:
           LoadBalancerId: "${alb_id}"
           ListenerProtocol: "HTTP"
           ListenerPort: 80
-          DefaultActions.1.Type: "Redirect"
-          DefaultActions.1.RedirectConfig.Protocol: "HTTPS"
-          DefaultActions.1.RedirectConfig.Port: "443"
-          DefaultActions.1.RedirectConfig.HttpCode: "HTTP_301"
-      # Fallback when there is no cert: HTTP 80 direct-forward (avoid an unreachable site)
-      - product: alb
-        action: CreateListener
-        when: "${ssl_certificate_id} == ''"
-        params:
-          LoadBalancerId: "${alb_id}"
-          ListenerProtocol: "HTTP"
-          ListenerPort: 80
-          DefaultActions.1.Type: "ForwardGroup"
-          DefaultActions.1.ForwardGroupConfig.ServerGroupTuples.1.ServerGroupId: "${server_group_id}"
-      # Create the HTTPS listener (actual business traffic on 443; only created when a cert exists)
-      - product: alb
-        action: CreateListener
-        when: "${ssl_certificate_id} != ''"
-        params:
-          LoadBalancerId: "${alb_id}"
-          ListenerProtocol: "HTTPS"
-          ListenerPort: 443
-          Certificates.1.CertificateId: "${ssl_certificate_id}"
           DefaultActions.1.Type: "ForwardGroup"
           DefaultActions.1.ForwardGroupConfig.ServerGroupTuples.1.ServerGroupId: "${server_group_id}"
       # Get the ALB DNS
@@ -290,15 +257,11 @@ steps:
     report: |
       ✓ 分流引导员已就位！
         ALB 地址：${alb_dns}
-        HTTPS 监听：${ssl_certificate_id ? "端口 443（实际业务流量；证书 ID ${ssl_certificate_id}）" : "暂未启用（建议尽快办域名+免费证书）"}
-        HTTP 监听：${ssl_certificate_id ? "端口 80（强跳 HTTPS，所有访客自动加密）" : "端口 80（直转后端，未加密——临时模式）"}
+        HTTP 监听：端口 80（直转后端）
         后端服务器：2 台 ECS 已挂载
         健康检查：已开启
-      
-      💡 ${ssl_certificate_id ? "访客无论敲不敲 https，最终都走加密通道。" : "⚠️ 当前为无证书临时模式，请尽快通过 SSL 证书服务申请免费 DV 证书后，让我重跑 HTTPS 监听步骤。"}
-         后续绑域名时 CNAME 指向这个 ALB 地址。
-         🔒 SSL 证书走阿里云数字证书服务（CAS · 免费 DV 版），到期前 30 天自动续——不用管。
-         （注意：ALB 监听用的证书来自 CAS，不是 ESA 边缘证书；两者独立，控制台分别在 yundun.console.aliyun.com/?p=cas 与 esa.console.aliyun.com）
+
+      💡 后续绑域名时 CNAME 指向这个 ALB 地址。
 
   # ─── Step 4: RDS HA ───
   - name: "创建客户档案柜（RDS 高可用版 4核8G）"
@@ -402,39 +365,91 @@ steps:
     type: api
     product: oss
     action: PutBucket
-    # use `aliyun oss <verb>` (ossutil style; --profile still inherits the RamRoleArn credentials)
+    # ⚠️ **This step runs LAST — it is Pass 3c in provision.md, NOT wherever it sits in this file.**
+    # It depends on a purchase only the user can make, so all `type: api` steps (Pass 3a) and all
+    # `type: manual` hand-holding (Pass 3b) come FIRST. Never let this step block them.
+    # Precondition: read state.self_purchase.oss_package
+    #   bought / already_active → attempt directly
+    #   deferred                → emit the ONE permitted reminder, wait, then attempt
+    # 🔍 The activation check IS this call. No read-only probe works: on an unactivated account every read
+    #   succeeds (`ossutil ls` → "Bucket Number is: 0", `api list-buckets` → full XML,
+    #   `api get-bucket-info` → 404 NoSuchBucket). Only this write returns 403 UserDisable
+    #   (EC 0003-00000801). Creating a bucket is FREE, so attempting it is a zero-cost probe.
+    # On 403 UserDisable → OSS not activated. NOT a permission problem: no policy JSON, no ERROR GATE
+    #   three-option menu, no retry loop. Say once that the storage package purchase also activates the
+    #   service, keep everything already created, and wait. Retry once when the user confirms.
+    # Partial success is acceptable: if only the bucket is missing, the deployment is NOT a failure —
+    #   never tear down working paid infrastructure over one unpurchased storage package.
+    # `aliyun ossutil` = ossutil 2.x: fs-style verbs (`mb`) + API-level ones (`api put-bucket-*`).
+    # The legacy `oss` verb is deprecated. All E2E-verified on CLI 3.4.11.
     params:
       BucketName: "opc-${random_suffix}"
       RegionId: "${region}"
       StorageClass: "Standard"
       DataRedundancyType: "LRS"
+      # Must match the 500 GB package bought at Step 1.3 — a ZRS package does not offset LRS storage.
     cli_command: |
-      aliyun --profile opc oss mb oss://opc-${random_suffix} --acl private --storage-class Standard --redundancy-type LRS
+      aliyun --profile opc ossutil mb oss://opc-${random_suffix} --region ${region} --acl private --storage-class Standard --redundancy-type LRS
     output_vars:
       oss_bucket: "opc-${random_suffix}"
       oss_endpoint: "oss-${region}.aliyuncs.com"
     post_actions:
+      # Layer 3 (block public access) is ON BY DEFAULT at creation — verified by read-back, not set by a call.
       - product: oss
         action: PutBucketEncryption
         cli_command: |
-          aliyun --profile opc oss bucket-encryption --method put oss://${oss_bucket} --sse-algorithm AES256
+          aliyun --profile opc ossutil api put-bucket-encryption --region ${region} --bucket ${oss_bucket} --server-side-encryption-rule '{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}'
       - product: oss
         action: PutBucketVersioning
         cli_command: |
-          aliyun --profile opc oss bucket-versioning --method put oss://${oss_bucket} enabled
-      - product: oss
-        action: PutPublicAccessBlock
-        # ossutil has no equivalent yet; use access-monitor + the already-set --acl private as the backstop
-        cli_command: |
-          aliyun --profile opc oss access-monitor --method put oss://${oss_bucket} Enabled
+          aliyun --profile opc ossutil api put-bucket-versioning --region ${region} --bucket ${oss_bucket} --versioning-configuration '{"Status":"Enabled"}'
       - product: oss
         action: PutBucketTagging
         cli_command: |
-          aliyun --profile opc oss bucket-tagging --method put oss://${oss_bucket} "opc:managed#true" "opc:sku#pro_steady"
+          aliyun --profile opc ossutil api put-bucket-tags --region ${region} --bucket ${oss_bucket} --tagging '{"TagSet":{"Tag":[{"Key":"opc:managed","Value":"true"},{"Key":"opc:sku","Value":"pro_steady"}]}}'
+      - product: oss
+        action: GetBucketInfo
+        # BlockPublicAccess must read back true
+        cli_command: |
+          aliyun --profile opc ossutil api get-bucket-info --region ${region} --bucket ${oss_bucket}
     report: "✓ 大仓库已开通（${oss_bucket}，500GB，¥54/月 · 三层保护：加密+版本+阻断公共访问）"
 
+  - name: "开通全球加速 + 安全防护（ESA 标准版）"
+    type: api
+    product: esa
+    action: PurchaseRatePlan
+    # ESA standard = medium. List price ¥375/month; the actual charge depends on which
+    # promotion the ACCOUNT qualifies for, and the discount is applied SERVER-SIDE automatically —
+    # PurchaseRatePlan has no promo parameter at all (verified 2026-08-26: --rule-desc-id and
+    # every similar spelling are silently DROPPED from the request, not rejected).
+    # So do NOT try to pass a promo id, and do NOT quote a price from this file.
+    # Get the real number from: aliyun esa describe-rate-plan-price --plan-name medium --period 1 --amount 1
+    #   --endpoint esa.cn-hangzhou.aliyuncs.com   → read PriceModel.RatePlan.PlanPriceList[0].Price
+    # Measured on one account: TotalPrice 375.0 / DiscountPrice 255.0 / Price 120.0, rule
+    # RuleDescId 20958767「产品新用户专享优惠，限购1个」. Eligibility is PER-ACCOUNT (same trap as the
+    # ECS ¥99/yr promo), so another account may legitimately see ¥375. Always inquire, never assume.
+    # includes DDoS + WAF + Bot management
+    # CLI: aliyun esa purchase-rate-plan --plan-name medium --charge-type PREPAY --auto-pay true --period 1 [--force by version-guard]
+    params:
+      PlanName: "medium"
+      ChargeType: "PREPAY"
+      AutoPay: true
+      AutoRenew: false  # the ¥375/month paid tier must disable auto-renew
+      Period: 1
+    output_vars:
+      esa_instance_id: "InstanceId"
+    report: |
+      ✓ 全球加速+安全防护已激活（ESA 标准版，成交金额与付款清单里那一笔一致——即下单前实时询价所得，不是本文件里的估值）
+        实例 ID：${esa_instance_id}
+        包含：全国加速 + DDoS 防护 + WAF + Bot 管理
+        控制台：https://esa.console.aliyun.com/
+    fallback_manual: |
+      如果 API 失败，降级手动：
+      👉 https://esa.console.aliyun.com/commonBuy
+      ⚠️ Pro 选「标准版」（不是免费版！）。页面会显示你账号实际能拿到的价格（标价 ¥375/月，有优惠资格则更低），以页面显示为准。
+
   # ─── Step 6-8: manual steps ───
-  - name: "开通 AI 能力（Token Plan 标准版）"
+  - name: "开通 AI 能力（Token Plan AI 模型订阅计划 标准版）"
     type: manual
     instructions: |
       请打开百炼控制台：👉 https://common-buy.aliyun.com/token-plan
@@ -449,94 +464,15 @@ steps:
       👉 https://common-buy.aliyun.com/?commodityCode=pds_trc_public_cn&regionId=cn-beijing
 
       页面选择：
-      ① 类型 → 网盘空间
+      ① 类型 → 网盘空间（页面默认是「CDE Agent」，一定要切到「网盘空间」）
       ② 用户数 → 5 人
       ③ 存储空间 → 500GB
-      ④ 购买时长 → 1 月（¥16.58）或 1 年（¥16.58 × 12 ≈ ¥199）
-      ⑤ 确认付款
+      ④ 用户增量权益包 / 存储扩容权益包 → 都保持 0，不要加（加了会在套餐月费之外多扣钱）
+      ⑤ 购买时长 → 1 月（¥16.58）或 1 年（¥16.58 × 12 ≈ ¥199）
+      ⑥ 确认付款
 
       完成后告诉我"好了"。
     report: "✓ 存储空间已激活（500GB）"
-
-  - name: "开通全球加速 + 安全防护（ESA 标准版）"
-    type: api
-    product: esa
-    action: PurchaseRatePlan
-    # ESA standard = medium, list price ¥375/month, limited-time promo ¥99/month (RuleDescId=20980267, limit 5)
-    # includes DDoS + WAF + Bot management
-    # CLI: aliyun esa purchase-rate-plan --PlanName medium --ChargeType PREPAY --AutoPay true --Period 1 [--force by version-guard]
-    params:
-      PlanName: "medium"
-      ChargeType: "PREPAY"
-      AutoPay: true
-      AutoRenew: false  # the ¥375/month paid tier must disable auto-renew
-      Period: 1
-    output_vars:
-      esa_instance_id: "InstanceId"
-    report: |
-      ✓ 全球加速+安全防护已激活（ESA 标准版 medium，¥99/月 限时优惠价；以下单时活动可用性为准）
-        实例 ID：${esa_instance_id}
-        包含：全国加速 + DDoS 防护 + WAF + Bot 管理
-        控制台：https://esa.console.aliyun.com/
-    fallback_manual: |
-      如果 API 失败，降级手动：
-      👉 https://esa.console.aliyun.com/commonBuy
-      ⚠️ Pro 选「标准版」（不是免费版！），¥375/月。
-
-  # ─── Step 9: security monitoring baseline ───
-  - name: "开启操作审计 ActionTrail（投递到 OSS 备份桶，留 90 天审计轨迹）"
-    type: api
-    product: actiontrail
-    action: CreateTrail
-    params:
-      Name: "opc-pro-steady-trail"
-      OssBucketName: "${oss_bucket}"
-      OssKeyPrefix: "actiontrail/"
-      EventRW: "All"
-      TrailRegion: "All"
-    output_vars:
-      trail_arn: "TrailARN"
-    report: |
-      ✓ 操作审计已开启
-        投递目标：${oss_bucket}/actiontrail/（受 OSS 三层保护：加密+版本+阻断公共访问）
-        留存：默认 90 天（OSS 桶 Versioning 已开，覆盖写不会丢历史）
-        💡 出事查谁动了什么：去 ActionTrail 控制台或直接 grep OSS 日志
-    fallback_manual: |
-      ActionTrail API 失败 → 控制台手动开：
-      👉 https://actiontrail.console.aliyun.com/
-
-  - name: "开通云安全中心基础版（免费，仅引导）"
-    type: manual
-    optional: true
-    instructions: |
-      云安全中心基础版（免费）会自动给所有 ECS 加上：
-      · 弱密码检测 · 漏洞扫描 · 异常登录告警 · 恶意进程检测
-      
-      请打开 👉 https://yundun.console.aliyun.com/?p=sas
-      首次进入会引导你「免费开通」——点同意即可，全程零费用。
-      
-      ⚠️ 如果想升级到高级版（恶意行为分析、应急响应等），后续按月付费即可，不强制。
-      完成后告诉我"好了"。
-    report: "✓ 云安全中心基础版已开通（免费）"
-
-  - name: "ESA WAF 三条基础防护规则（引导手动配置，需先有备案域名）"
-    type: manual
-    optional: true
-    instructions: |
-      ESA 标准版自带 WAF 引擎，但默认规则较宽松。建议手动加三条基础规则：
-      👉 https://esa.console.aliyun.com/ → 你的站点 → 安全防护 → WAF 自定义规则
-      
-      ① **SQL 注入拦截**：规则类型 SQL_INJECTION，动作 Block，灵敏度 Medium
-      ② **XSS 拦截**：规则类型 XSS，动作 Block，灵敏度 Medium
-      ③ **暴力登录限频**：URL 包含 /login，5 分钟内同 IP > 10 次 → Block 10 分钟
-      
-      没绑域名暂时跳过，绑域名后再回来开。
-      完成后告诉我"好了"或"先跳过"。
-    report: "✓ WAF 基础规则已配置（或暂跳过等绑域名）"
-
-# ═══════════════════════════════════════
-# Phase 4: summary (user-facing output)
-# ═══════════════════════════════════════
 summary_template: |
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   🎉 全部就绪！你的 Pro 高可用架构已创建完成
@@ -549,11 +485,11 @@ summary_template: |
   🔀 负载均衡 ALB：${alb_dns}
   🗄️ 数据库 RDS HA：${rds_connection_string}:${rds_port}（主备双节点）
   📦 OSS 500GB：${oss_bucket}
-  🤖 Token Plan 标准版 25k/月
+  🤖 Token Plan AI 模型订阅计划（标准版）25k/月
   📁 阿里云盘 500GB
   🌐 ESA 标准版（加速+防护）
 
-  💰 费用：¥2524.55/月（固定）+ ALB 按量约 ¥30-50/月
+  💰 费用：¥2518.50/月（固定）+ ALB 按量约 ¥30-50/月
 
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   接下来：
@@ -564,12 +500,17 @@ summary_template: |
   💡 用户访问你的域名 → ESA 加速 → ALB 分发 → 两台 ECS 任一处理
      一台 ECS 异常 → ALB 自动切到另一台 → 用户无感知
 
+  🌐 站点当前走 HTTP（80 端口）。想让访客用 https:// 打开，需要两样套餐外的东西：
+     一个已备案的域名 + 一张 SSL 证书（阿里云数字证书服务，有免费 DV 也有付费版）。
+     两样都不在本套餐内、也不由我代办。备齐之后你可以自己在 ALB 控制台加一个 443 监听、
+     挂上证书即可，不影响已经开好的任何资源。
+
 notes:
   - "ALB needs VSwitches in at least 2 zones — at execution time additionally query/create a VSwitch in the second zone"
   - "ALB pay-as-you-go: instance fee ¥0.049/h + LCU ¥0.042/h, roughly ¥35-50/month at OPC scale (instance-fee baseline ≈ ¥35.28/month)"
   - "RDS HighAvailability = primary+standby dual-node, auto-failover within 30 seconds"
   - "OSS 500GB is the Pro default (vs Lite 40GB), supports lots of image/video storage"
-  - "ESA standard (¥375/month) is the Pro default — includes DDoS+WAF, a must-have security baseline for public services"
+  - "ESA standard is the Pro default — includes DDoS+WAF, a must-have security baseline for public services. List price ¥375/month; the charged amount is whatever describe-rate-plan-price returns for THIS account (promotions are account-scoped)"
   - "Pro costs more than Lite for three things: dual-node no-downtime, HA database no-data-loss, ALB auto-distribution"
   - "ECS SecurityGroupId needs the ALB health-check source IP range allowlisted too — auto-configured after ALB creation"
 
