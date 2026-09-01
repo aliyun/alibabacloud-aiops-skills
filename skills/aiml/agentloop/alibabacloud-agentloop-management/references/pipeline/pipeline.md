@@ -136,7 +136,7 @@ nodes, or lifecycle targets.
 |---|---:|---|
 | AgentSpace | Yes | Target AgentLoop workspace |
 | Region | Yes for wrapper create | CLI endpoint region, for example `cn-hangzhou` |
-| Pipeline name | Yes | 3-63 lowercase letters, digits, hyphens. No underscores. Dataset and ContextStore names use the opposite rule; see the resource-name table in the router `SKILL.md` |
+| Pipeline name | Yes | 3-63 lowercase letters, digits, hyphens. No underscores. Dataset names use the opposite rule; see the resource-name table in the router `SKILL.md` |
 | Source project/logstore/query | Yes for create/preview/run design | `*` is allowed only after being shown clearly |
 | Time window | Required for RunOnce, preview, manual run | Use timezone-bearing ISO-8601 or Unix seconds |
 | Sink dataset | Yes for create | Only the dataset sink is supported |

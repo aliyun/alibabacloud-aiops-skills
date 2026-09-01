@@ -1,7 +1,7 @@
 # RAM Policy Reference
 
 > Skill-wide entry point for the RAM permissions of `alibabacloud-agentloop-management`
-> (`domain: aiops`). This skill spans five domains and each one calls a different
+> (`domain: aiops`). This skill spans four domains and each one calls a different
 > cloud surface, so the required actions are declared per domain. API granularity
 > only - **no `*` wildcard in Action lists** anywhere in this skill.
 >
@@ -10,7 +10,7 @@
 ## Domain Index
 
 Read the row that matches the domain being executed. The onboarding domain's actions
-are declared in this file (sections 1-5 below); the other four are declared in the
+are declared in this file (sections 1-5 below); the other three are declared in the
 per-domain files.
 
 | # | Domain | Cloud surface | Action prefixes | Declaration |
@@ -18,19 +18,17 @@ per-domain files.
 | 1 | Application onboarding (APM & AI observability) | CMS 2024-03-30, STS, Container Service | `cms:`, `sts:`, `cs:` | Sections 1-5 of this file |
 | 2 | Evaluation | AgentLoop 2026-05-20, SLS | `agentloop:`, `log:` | [evaluation/ram-policies.md](evaluation/ram-policies.md) |
 | 3 | Dataset | AgentLoop 2026-05-20 | `agentloop:` | [dataset/ram-policies.md](dataset/ram-policies.md) |
-| 4 | Experience (recall & store management) | AgentLoop SearchContext and ContextStore | `agentloop:` | [experience/ram-policies.md](experience/ram-policies.md) |
-| 5 | Pipeline | AgentLoop 2026-05-20 | `agentloop:` | [pipeline/ram-policies.md](pipeline/ram-policies.md) |
+| 4 | Pipeline | AgentLoop 2026-05-20 | `agentloop:` | [pipeline/ram-policies.md](pipeline/ram-policies.md) |
 
 Cross-domain notes:
 
-- Do not merge all five domains into one policy by default. Grant only the domains
+- Do not merge all four domains into one policy by default. Grant only the domains
   the identity actually executes.
 - Destructive actions are excluded from the default least-privilege templates.
-  `agentloop:DeleteDataset`, `agentloop:DeleteContextStore`, and the Pipeline
-  delete/terminate actions must be granted deliberately and scoped to a named
-  resource ARN where the target is known.
-- Experience recall in API Key mode is authenticated by the receiving ContextStore
-  service, not by RAM; it consumes no RAM action. See the experience declaration.
+  `agentloop:DeleteDataset` and the Pipeline delete/terminate actions must be
+  granted deliberately and scoped to a named resource ARN where the target is known.
+- Experience (recall and ContextStore) permissions are out of scope for this skill;
+  they are declared by the separate `alibabacloud-agentloop-experience` skill.
 - `kubectl` operations run against the cluster API server and do **not** consume
   Alibaba Cloud RAM Actions. The caller must hold valid cluster RBAC permissions
   separately.
