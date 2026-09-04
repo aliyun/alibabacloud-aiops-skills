@@ -7,6 +7,7 @@ the only executable entry point shipped by the Skill.
 
 import argparse
 import contextlib
+import copy
 import ctypes
 import errno
 import hashlib
@@ -18,6 +19,7 @@ import platform
 import re
 import secrets
 import shutil
+import signal
 import socket
 import stat
 import subprocess
@@ -30,16 +32,16 @@ import urllib.request
 import uuid
 import zipfile
 
-SKILL_VERSION = "0.3.0"
-RUNTIME_TAG = "v0.14.0"
-IAC_CODE_VERSION = "0.14.0"
+SKILL_VERSION = "0.4.0"
+RUNTIME_TAG = "v0.15.0"
+IAC_CODE_VERSION = "0.15.0"
 RUNTIME_PYTHON = "cp312"
 SKILL_DISTRIBUTION = "agenthub"
 SKILL_NAME = "alibabacloud-iac-code"
 USER_AGENT_TEMPLATE = "AlibabaCloud-Agent-Skills/alibabacloud-iac-code/{session-id}"
-MANIFEST_URL = "https://ros-public-tools.oss-cn-beijing.aliyuncs.com/github-releases/aliyun/iac-code/skill-runtime/releases/v0.14.0/runtime-manifest.json"
+MANIFEST_URL = "https://ros-public-tools.oss-cn-beijing.aliyuncs.com/github-releases/aliyun/iac-code/skill-runtime/releases/v0.15.0/runtime-manifest.json"
 # Replaced in a temporary staging directory by skill-runtime/package_skill.py.
-MANIFEST_SHA256 = "a00d36ad6cfbaed31594b5003f669e2a24148b2a4b4127e401c6eb7f38f0fc2e"
+MANIFEST_SHA256 = "50b819fb372ad3ea8171fe5556af5c187680f06c95e3e89226b1c190955482b9"
 SCHEMA_VERSION = 1
 MAX_MANIFEST_BYTES = 1024 * 1024
 MAX_ARCHIVE_BYTES = 2 * 1024 * 1024 * 1024
@@ -83,8 +85,11 @@ TERMINAL_STATES = {
 }
 INPUT_STATES = {"input-required", "task_state_input_required"}
 TURN_COMPLETED_STATE = "turn_completed"
-PIPELINE_RESULT_FIELDS = {"selling": "deployment"}
-PIPELINE_NORMAL_HANDOFFS = {"selling"}
+SESSION_BACKUP_NOT_READY_CODE = "SESSION_BACKUP_NOT_READY"
+DEFAULT_PIPELINE_NAME = "selling_solution_first"
+SUPPORTED_PIPELINE_NAMES = {"selling", "selling_solution_first"}
+PIPELINE_RESULT_FIELDS = {"selling": "deployment", "selling_solution_first": "deployment"}
+PIPELINE_NORMAL_HANDOFFS = {"selling", "selling_solution_first"}
 STEP_BOUNDARY_EVENT_TYPES = {
     "step_started",
     "step_completed",
@@ -104,6 +109,9 @@ _ACTIVE_LANGUAGE = "en"
 _SECRET_PATTERN = re.compile(
     r"(?i)(authorization\s*:\s*bearer\s+|access[_-]?key[_-]?(?:secret|id)?\s*[=:]\s*|"
     r"api[_-]?key\s*[=:]\s*|token\s*[=:]\s*|password\s*[=:]\s*)([^\s,;]+)"
+)
+_SENSITIVE_KEY_PATTERN = re.compile(
+    r"(?i)(password|passwd|secret|token|credential|access.?key|private.?key|client.?secret)"
 )
 
 
@@ -137,6 +145,28 @@ class BridgeError(Exception):
         if self.details:
             value["error"]["details"] = self.details
         return value
+
+
+def _session_backup_not_ready_error(value):
+    if not isinstance(value, dict):
+        return None
+    candidates = [value]
+    result = value.get("result")
+    if isinstance(result, dict):
+        candidates.append(result)
+    for candidate in candidates:
+        raw_error = candidate.get("error")
+        if not isinstance(raw_error, dict):
+            continue
+        data = raw_error.get("data") if isinstance(raw_error.get("data"), dict) else {}
+        code = data.get("code") or raw_error.get("code") or raw_error.get("Code")
+        if code != SESSION_BACKUP_NOT_READY_CODE:
+            continue
+        message = raw_error.get("message") or raw_error.get("Message")
+        if not isinstance(message, str) or not message:
+            message = "Session backup is still synchronizing. Retry after 3 seconds."
+        return BridgeError(SESSION_BACKUP_NOT_READY_CODE, _sanitize_text(message, 2000), True)
+    return None
 
 
 def _json_bytes(value):
@@ -946,6 +976,7 @@ def _runtime_matches(record, mode, pipeline_name, target, permission_wait_policy
         "target": target,
         "mode": mode,
         "pipelineName": pipeline_name or "",
+        "handoffToolConfirmation": True,
         "permissionWaitPolicy": permission_wait_policy,
     }
     if any(record.get(key) != value for key, value in expected.items()) or not _pid_alive(record.get("pid")):
@@ -963,6 +994,14 @@ def _runtime_matches(record, mode, pipeline_name, target, permission_wait_policy
     return card.get("version") == IAC_CODE_VERSION
 
 
+def _valid_job_pipeline_identity(mode, pipeline_name):
+    if mode == "normal":
+        return pipeline_name == ""
+    if mode == "pipeline":
+        return pipeline_name in SUPPORTED_PIPELINE_NAMES
+    return False
+
+
 def _runtime_record_for_job(job):
     record_path = job.get("runtimeRecord")
     target = job.get("target")
@@ -972,9 +1011,7 @@ def _runtime_record_for_job(job):
     generation = job.get("runtimeGeneration")
     if not all(isinstance(value, str) and value for value in (record_path, target, mode, workspace, generation)):
         raise BridgeError("runtime_identity_mismatch", "The Skill job runtime identity is incomplete.")
-    if mode not in {"normal", "pipeline"} or not isinstance(pipeline_name, str):
-        raise BridgeError("runtime_identity_mismatch", "The Skill job Pipeline identity is invalid.")
-    if (mode == "pipeline") != bool(pipeline_name):
+    if not isinstance(pipeline_name, str) or not _valid_job_pipeline_identity(mode, pipeline_name):
         raise BridgeError("runtime_identity_mismatch", "The Skill job mode and Pipeline identity do not match.")
     record = _load_json(pathlib.Path(record_path), "runtime_identity_mismatch")
     if record.get("generation") != job.get("runtimeGeneration"):
@@ -1009,6 +1046,40 @@ def _stop_spawned_process(process):
         process.wait(timeout=RUNTIME_STOP_TIMEOUT)
 
 
+def _recorded_runtime_is_ours(record):
+    pid = record.get("pid")
+    port = record.get("port")
+    token = record.get("token")
+    if not _pid_alive(pid) or not isinstance(port, int) or not isinstance(token, str) or not token:
+        return False
+    try:
+        health = _http_json("http://127.0.0.1:{}/health".format(port), token, timeout=2)
+    except BridgeError:
+        return False
+    return health.get("status") == "healthy" and health.get("version") == record.get("iacCodeVersion")
+
+
+def _stop_recorded_runtime(record):
+    pid = record.get("pid")
+    if not _pid_alive(pid):
+        return True
+    if not _recorded_runtime_is_ours(record):
+        return False
+    with contextlib.suppress(OSError):
+        os.kill(pid, signal.SIGTERM)
+    deadline = time.monotonic() + RUNTIME_STOP_TIMEOUT
+    while _pid_alive(pid) and time.monotonic() < deadline:
+        time.sleep(0.05)
+    if _pid_alive(pid):
+        force_signal = signal.SIGTERM if os.name == "nt" else signal.SIGKILL
+        with contextlib.suppress(OSError):
+            os.kill(pid, force_signal)
+        deadline = time.monotonic() + RUNTIME_STOP_TIMEOUT
+        while _pid_alive(pid) and time.monotonic() < deadline:
+            time.sleep(0.05)
+    return not _pid_alive(pid)
+
+
 def _remove_runtime_record(record_path, generation):
     if not record_path.is_file():
         return
@@ -1026,11 +1097,27 @@ def ensure_server(executable, artifact, mode, pipeline_name, permission_wait_pol
     _secure_directory(root)
     record_path = root / "runtime.json"
     with InstallLock(root / ".runtime.lock", timeout=10):
+        stale_record = None
         if record_path.is_file():
-            with contextlib.suppress(BridgeError):
+            try:
                 record = _load_json(record_path, "runtime_identity_mismatch")
-                if _runtime_matches(record, mode, pipeline_name, artifact["target"], permission_wait_policy):
-                    return record
+            except BridgeError as exc:
+                raise BridgeError(
+                    "runtime_start_failed",
+                    "The existing local iac-code A2A runtime record could not be verified.",
+                    True,
+                ) from exc
+            if _runtime_matches(record, mode, pipeline_name, artifact["target"], permission_wait_policy):
+                return record
+            stale_record = record
+        if stale_record is not None:
+            if not _stop_recorded_runtime(stale_record):
+                raise BridgeError(
+                    "runtime_start_failed",
+                    "The previous local iac-code A2A runtime could not be stopped safely.",
+                    True,
+                )
+            _remove_runtime_record(record_path, stale_record.get("generation"))
         token = secrets.token_urlsafe(32)
         port = _free_port()
         generation = uuid.uuid4().hex
@@ -1061,6 +1148,7 @@ def ensure_server(executable, artifact, mode, pipeline_name, permission_wait_pol
         environment.pop("IACCODE_A2A_ALLOWED_CWDS", None)
         environment["IAC_CODE_A2A_TRUST_REQUEST_CWD"] = "1"
         environment["IAC_CODE_SKILL_RUNTIME_GENERATION"] = generation
+        environment["IAC_CODE_HANDOFF_USE_TOOL_CONFIRMATION"] = "1"
         if pipeline_name:
             environment["IAC_CODE_PIPELINE_NAME"] = pipeline_name
         else:
@@ -1099,6 +1187,7 @@ def ensure_server(executable, artifact, mode, pipeline_name, permission_wait_pol
                 "generation": generation,
                 "mode": mode,
                 "pipelineName": pipeline_name or "",
+                "handoffToolConfirmation": True,
                 "permissionWaitPolicy": permission_wait_policy,
                 "pid": process.pid,
                 "port": port,
@@ -1246,7 +1335,16 @@ def _safe_input_envelope(value):
     if not isinstance(value, dict):
         return None
     kind = value.get("kind")
-    common = {"schemaVersion", "kind", "requestTaskId", "contextId", "inputId", "prompt", "options", "required"}
+    common = {
+        "schemaVersion",
+        "kind",
+        "requestTaskId",
+        "contextId",
+        "inputId",
+        "prompt",
+        "options",
+        "required",
+    }
     if kind == "permission":
         common.update(
             {
@@ -1264,7 +1362,20 @@ def _safe_input_envelope(value):
         )
     elif kind == "ask_user_question":
         common.update({"allowFreeText", "freeTextPrompt"})
-    elif kind not in {"ask_user_question", "candidate_selection"}:
+    elif kind == "candidate_selection":
+        pass
+    elif kind == "deployment_confirmation":
+        common.update(
+            {
+                "solutionSummary",
+                "templateUrl",
+                "cost",
+                "effectiveDeploymentParameters",
+                "parameterOverrides",
+                "previewReadyForCreate",
+            }
+        )
+    else:
         return None
     projected = {key: value[key] for key in common if key in value}
     projected["prompt"] = _sanitize_text(projected.get("prompt"), 600)
@@ -1283,16 +1394,40 @@ def _safe_input_envelope(value):
         projected["language"] = _sanitize_text(projected["language"], 10)
     if "deploymentSummary" in projected:
         projected["deploymentSummary"] = _safe_deployment_summary(projected["deploymentSummary"])
+    for key, maximum in (("solutionSummary", 1200), ("templateUrl", 1000)):
+        if key in projected:
+            projected[key] = _sanitize_text(projected[key], maximum)
+    if "previewReadyForCreate" in projected:
+        projected["previewReadyForCreate"] = projected["previewReadyForCreate"] is True
+    for key in ("cost", "effectiveDeploymentParameters", "parameterOverrides"):
+        if key in projected:
+            projected[key] = _safe_display_value(key, projected[key])
     options = projected.get("options")
     if isinstance(options, list):
         safe_options = []
         for item in options[:20]:
-            if not isinstance(item, dict) or not isinstance(item.get("id"), str):
+            if not isinstance(item, dict):
                 continue
+            if kind == "deployment_confirmation":
+                action = item.get("action")
+                if action not in {"confirm", "adjust", "reselect", "cancel"}:
+                    continue
+                option_id = item.get("id") or action
+                option_label = item.get("label") or item.get("name") or action
+            else:
+                option_id = item.get("id")
+                option_label = item.get("label")
+                if not isinstance(option_id, str):
+                    continue
             safe_item = {
-                "id": _sanitize_text(item.get("id"), 120),
-                "label": _sanitize_text(item.get("label"), 200),
+                "id": _sanitize_text(option_id, 120),
+                "label": _sanitize_text(option_label, 200),
             }
+            if kind == "deployment_confirmation":
+                safe_item["action"] = action
+                summary = item.get("summary") or item.get("description")
+                if isinstance(summary, str) and summary:
+                    safe_item["summary"] = _sanitize_text(summary, 600)
             if kind == "candidate_selection":
                 for key, maximum in (
                     ("summary", 600),
@@ -1319,6 +1454,36 @@ def _safe_input_envelope(value):
             safe_options.append(safe_item)
         projected["options"] = safe_options
     return projected
+
+
+def _safe_display_value(key, value, depth=0, budget=None):
+    """Bound and filter an existing Runtime confirmation value for Skill display."""
+
+    if budget is None:
+        budget = {"nodes": 240}
+    if budget["nodes"] <= 0 or depth > 6:
+        return "<truncated>"
+    budget["nodes"] -= 1
+    if _SENSITIVE_KEY_PATTERN.search(str(key)):
+        return "<redacted>"
+    if isinstance(value, dict):
+        result = {}
+        for index, (child_key, child_value) in enumerate(value.items()):
+            if index >= 60 or budget["nodes"] <= 0:
+                result["_truncated"] = True
+                break
+            safe_key = _sanitize_text(str(child_key), 120)
+            result[safe_key] = _safe_display_value(safe_key, child_value, depth + 1, budget)
+        return result
+    if isinstance(value, list):
+        return [_safe_display_value(key, item, depth + 1, budget) for item in value[:60]]
+    if isinstance(value, str):
+        return _sanitize_text(value, 600)
+    if value is None or isinstance(value, (bool, int)):
+        return value
+    if isinstance(value, float):
+        return value if math.isfinite(value) else None
+    return _sanitize_text(str(value), 200)
 
 
 def _safe_deployment_summary(value):
@@ -1633,15 +1798,14 @@ def _safe_step_conclusion_summary(step_id, conclusion_field, value):
 
 def _bounded_input_projection(projection):
     """Keep an input-required control event answerable within the spool/poll budget."""
-    bounded = dict(projection)
+    bounded = copy.deepcopy(projection)
     envelope = bounded.get("inputRequired")
     if not isinstance(envelope, dict):
         return bounded
-    envelope = dict(envelope)
-    options = envelope.get("options")
-    if isinstance(options, list):
-        envelope["options"] = [dict(item) for item in options if isinstance(item, dict)]
-    bounded["inputRequired"] = envelope
+    if envelope.get("kind") == "deployment_confirmation":
+        return _bounded_deployment_confirmation_projection(bounded, projection)
+    if len(_json_bytes(bounded)) > MAX_INPUT_PROJECTION_BYTES:
+        bounded["trimmed"] = True
 
     def shrink(key, minimum):
         value = envelope.get(key)
@@ -1701,9 +1865,143 @@ def _bounded_input_projection(projection):
             "a2a_transport_failed",
             "The A2A input request exceeded the bounded Skill protocol.",
         )
-    if bounded != projection:
-        bounded["trimmed"] = True
     return bounded
+
+
+def _bounded_deployment_confirmation_projection(bounded, original):
+    del original
+    envelope = bounded["inputRequired"]
+    if len(_json_bytes(bounded)) > MAX_INPUT_PROJECTION_BYTES:
+        bounded["trimmed"] = True
+
+    def shrink_text(key, minimum):
+        value = envelope.get(key)
+        if not isinstance(value, str) or len(value) <= minimum:
+            return False
+        envelope[key] = value[: max(minimum, len(value) // 2)]
+        return True
+
+    while len(_json_bytes(bounded)) > MAX_INPUT_PROJECTION_BYTES:
+        changed = shrink_text("solutionSummary", 120)
+        changed = shrink_text("templateUrl", 80) or changed
+        changed = shrink_text("prompt", 100) or changed
+        for option in envelope.get("options", []):
+            if not isinstance(option, dict):
+                continue
+            for key, minimum in (("summary", 40), ("label", 16)):
+                value = option.get(key)
+                if isinstance(value, str) and len(value) > minimum:
+                    option[key] = value[: max(minimum, len(value) // 2)]
+                    changed = True
+        if not changed:
+            break
+
+    if len(_json_bytes(bounded)) > MAX_INPUT_PROJECTION_BYTES:
+        cost = envelope.get("cost")
+        if isinstance(cost, dict):
+            summary_keys = {
+                "status",
+                "quoteStatus",
+                "quote_status",
+                "currency",
+                "totalMonthlyCost",
+                "total_monthly_cost",
+                "error",
+            }
+            envelope["cost"] = {key: cost[key] for key in cost if key in summary_keys}
+
+    for key in ("effectiveDeploymentParameters", "parameterOverrides"):
+        values = envelope.get(key)
+        if not isinstance(values, dict):
+            continue
+        while len(_json_bytes(bounded)) > MAX_INPUT_PROJECTION_BYTES and values:
+            values.pop(next(reversed(values)))
+
+    if len(_json_bytes(bounded)) > MAX_INPUT_PROJECTION_BYTES:
+        minimal = {
+            key: envelope[key]
+            for key in (
+                "schemaVersion",
+                "kind",
+                "requestTaskId",
+                "contextId",
+                "inputId",
+                "prompt",
+                "previewReadyForCreate",
+            )
+            if key in envelope
+        }
+        minimal["options"] = [
+            {key: option[key] for key in ("id", "label", "action") if key in option}
+            for option in envelope.get("options", [])
+            if isinstance(option, dict) and option.get("action") in {"confirm", "adjust", "reselect", "cancel"}
+        ]
+        bounded["inputRequired"] = minimal
+
+    if len(_json_bytes(bounded)) > MAX_INPUT_PROJECTION_BYTES:
+        raise BridgeError(
+            "a2a_transport_failed",
+            "The A2A deployment confirmation exceeded the minimum bounded protocol.",
+        )
+    return bounded
+
+
+def _deployment_confirmation_from_pipeline_metadata(metadata, task_id, context_id, state):
+    """Adapt the Runtime's existing Pipeline envelope to the Skill input contract."""
+
+    if state != "input-required" or not isinstance(metadata, dict):
+        return None
+    pipeline_values = []
+    batch = metadata.get("pipelineBatch")
+    if isinstance(batch, dict) and isinstance(batch.get("events"), list):
+        pipeline_values = batch["events"]
+    elif isinstance(metadata.get("pipeline"), dict):
+        pipeline_values = [metadata["pipeline"]]
+    for envelope in reversed(pipeline_values):
+        if not isinstance(envelope, dict):
+            continue
+        raw_input = envelope.get("input")
+        if not isinstance(raw_input, dict) and envelope.get("eventType") == "input_required":
+            raw_input = envelope.get("data")
+        if not isinstance(raw_input, dict) or raw_input.get("kind") != "deployment_confirmation":
+            continue
+        event_task_id = envelope.get("taskId")
+        event_context_id = envelope.get("contextId")
+        request_task_id = event_task_id if isinstance(event_task_id, str) and event_task_id else task_id
+        request_context_id = event_context_id if isinstance(event_context_id, str) and event_context_id else context_id
+        if not request_task_id or not request_context_id:
+            return None
+        input_id = raw_input.get("inputId") or raw_input.get("input_id")
+        if not isinstance(input_id, str) or not input_id:
+            event_id = envelope.get("eventId")
+            input_id = "input-{}".format(event_id if isinstance(event_id, str) and event_id else request_task_id)
+        normalized = {
+            "schemaVersion": 1,
+            "kind": "deployment_confirmation",
+            "requestTaskId": request_task_id,
+            "contextId": request_context_id,
+            "inputId": input_id,
+            "prompt": raw_input.get("prompt", ""),
+            "solutionSummary": raw_input.get("solutionSummary", raw_input.get("solution_summary", "")),
+            "templateUrl": raw_input.get("templateUrl", raw_input.get("template_url", "")),
+            "cost": raw_input.get("cost", {}),
+            "effectiveDeploymentParameters": raw_input.get(
+                "effectiveDeploymentParameters",
+                raw_input.get("effective_deployment_parameters", {}),
+            ),
+            "parameterOverrides": raw_input.get(
+                "parameterOverrides",
+                raw_input.get("parameter_overrides", {}),
+            ),
+            "previewReadyForCreate": raw_input.get(
+                "previewReadyForCreate",
+                raw_input.get("preview_ready_for_create", False),
+            ),
+            "options": raw_input.get("options", []),
+            "required": True,
+        }
+        return _safe_input_envelope(normalized)
+    return None
 
 
 def project_frame(frame):
@@ -1722,6 +2020,8 @@ def project_frame(frame):
     if state:
         projected["state"] = state
     input_value = _safe_input_envelope(metadata.get("input"))
+    if input_value is None:
+        input_value = _deployment_confirmation_from_pipeline_metadata(metadata, task_id, context_id, state)
     if input_value is None and state == "working" and isinstance(metadata.get("pendingPermissions"), list):
         input_value = next(
             (
@@ -1825,6 +2125,9 @@ def project_frame(frame):
                 "status": item.get("status"),
                 "sequence": item.get("sequence"),
             }
+            pipeline_name = item.get("pipelineName")
+            if pipeline_name in SUPPORTED_PIPELINE_NAMES:
+                milestone["pipelineName"] = pipeline_name
             for key in ("step", "parentStep", "candidate", "candidateStep"):
                 value = item.get(key)
                 if isinstance(value, dict):
@@ -2121,6 +2424,7 @@ def _append_projection(job_id, projection, turn_text=""):
             job["finalTextComplete"] = original.get("finalTextComplete") is True
             job["finalArtifacts"] = _deduplicated_artifacts(list(original.get("artifacts") or []))
             job["turnCompletedAt"] = int(time.time())
+            job.pop("assistantFinalReceived", None)
             job.pop("inputRequired", None)
         elif original.get("type") == "terminal":
             if (
@@ -2208,6 +2512,14 @@ def _complete_normal_turn(job_id):
             "time": int(time.time()),
         },
     )
+
+
+def _complete_normal_turn_after_final(job_id):
+    job = _load_json(_job_paths(job_id)[1])
+    if not _job_uses_normal_conversation(job) or job.get("assistantFinalReceived") is not True:
+        return False
+    _complete_normal_turn(job_id)
+    return True
 
 
 def _jsonrpc_payload(method, params):
@@ -2328,9 +2640,27 @@ def _worker_payload(job, prompt=None, response=None, cleanup_only=False):
         if not isinstance(pending, dict):
             raise BridgeError("input_response_mismatch", "The job has no pending input.")
         _validate_response_correlation(response, pending)
-        answer = response.get("answer") if isinstance(response, dict) else None
-        if answer is None:
-            answer = response
+        if response.get("kind") == "deployment_confirmation":
+            action = response.get("action")
+            if action not in {"confirm", "adjust", "reselect", "cancel"}:
+                raise BridgeError(
+                    "input_response_mismatch",
+                    "Deployment confirmation action must be confirm, adjust, reselect, or cancel.",
+                )
+            overrides = response.get("parameterOverrides")
+            if overrides is not None and not isinstance(overrides, dict):
+                raise BridgeError(
+                    "input_response_mismatch",
+                    "Deployment confirmation parameterOverrides must be a JSON object.",
+                )
+            business_response = {"action": action}
+            if overrides is not None:
+                business_response["parameter_overrides"] = overrides
+            answer = json.dumps(business_response, ensure_ascii=False, separators=(",", ":"))
+        else:
+            answer = response.get("answer") if isinstance(response, dict) else None
+            if answer is None:
+                answer = response
         message.update(
             {
                 "taskId": job.get("taskId"),
@@ -2392,6 +2722,52 @@ def _remove_job_pending_permission(job, input_id):
             job.pop("inputRequired", None)
 
 
+def _restore_retryable_permission_response(job_id, error):
+    _root, job_path, _spool = _job_paths(job_id)
+    job = _load_json(job_path)
+    pending = job.get("permissionResponseInput")
+    if not isinstance(pending, dict) or pending.get("kind") != "permission":
+        return False
+    _append_projection(
+        job_id,
+        {
+            "type": "input-required",
+            "state": "input-required",
+            "taskId": pending.get("requestTaskId") or job.get("taskId"),
+            "contextId": pending.get("contextId") or job.get("contextId"),
+            "inputRequired": pending,
+            "error": {
+                "code": error.code,
+                "message": error.message,
+                "retryable": True,
+            },
+            "time": int(time.time()),
+        },
+    )
+    return True
+
+
+def _clear_permission_response_input(job_id):
+    root, job_path, _spool = _job_paths(job_id)
+    with InstallLock(root / ".job.lock", timeout=10):
+        job = _load_json(job_path)
+        if "permissionResponseInput" not in job:
+            return
+        job.pop("permissionResponseInput", None)
+        _atomic_json(job_path, job)
+
+
+def _same_permission_input(left, right):
+    if not isinstance(left, dict) or not isinstance(right, dict):
+        return False
+    if left.get("kind") != "permission" or right.get("kind") != "permission":
+        return False
+    return all(
+        isinstance(left.get(key), str) and left.get(key) == right.get(key)
+        for key in ("requestTaskId", "contextId", "inputId", "toolUseId")
+    )
+
+
 def _subscription_after_stream(record, job_id):
     _root, job_path, _spool = _job_paths(job_id)
     job = _load_json(job_path)
@@ -2405,9 +2781,33 @@ def _subscription_after_stream(record, job_id):
         payload=_jsonrpc_payload("GetTask", {"id": task_id}),
         timeout=10,
     )
+    backup_not_ready = _session_backup_not_ready_error(status)
+    if backup_not_ready is not None:
+        if _restore_retryable_permission_response(job_id, backup_not_ready):
+            return None
+        raise backup_not_ready
     projection = project_frame(status)
+    pending_response = job.get("permissionResponseInput")
+    projected_input = projection.get("inputRequired")
+    if isinstance(pending_response, dict):
+        if projection.get("type") == "input-required":
+            if not _same_permission_input(projected_input, pending_response):
+                _clear_permission_response_input(job_id)
+        elif projection.get("state") in INPUT_STATES:
+            backup_not_ready = BridgeError(
+                SESSION_BACKUP_NOT_READY_CODE,
+                "Session backup is still synchronizing. Retry after 3 seconds.",
+                True,
+            )
+            if _restore_retryable_permission_response(job_id, backup_not_ready):
+                return None
+        elif projection.get("type") != "diagnostic":
+            _clear_permission_response_input(job_id)
     _append_projection(job_id, projection)
-    if projection.get("type") in {"terminal", "input-required"}:
+    if projection.get("type") == "terminal":
+        return None
+    if projection.get("type") == "input-required":
+        _complete_normal_turn_after_final(job_id)
         return None
     if projection.get("state") in INPUT_STATES:
         # A normal turn ends in INPUT_REQUIRED without an envelope to mean that
@@ -2422,19 +2822,38 @@ def worker(job_id, request_path):
     job = _load_json(job_path)
     record = _runtime_record_for_job(job)
     payload = _load_json(pathlib.Path(request_path), "input_response_mismatch")
+    permission_response_pending = isinstance(job.get("permissionResponseInput"), dict)
     attempts = 0
     while attempts < 3:
         attempts += 1
         try:
             for frame in _stream_jsonrpc(record, payload):
+                backup_not_ready = _session_backup_not_ready_error(frame)
+                if backup_not_ready is not None:
+                    if _restore_retryable_permission_response(job_id, backup_not_ready):
+                        return 0
+                    raise backup_not_ready
+                if permission_response_pending and isinstance(frame.get("result"), dict):
+                    _clear_permission_response_input(job_id)
+                    permission_response_pending = False
                 projection = project_frame(frame)
                 _append_projection(job_id, projection)
-                if projection.get("type") == "terminal" or projection.get("type") == "input-required":
+                if projection.get("type") == "terminal":
+                    return 0
+                if projection.get("type") == "input-required":
+                    _complete_normal_turn_after_final(job_id)
                     return 0
             payload = _subscription_after_stream(record, job_id)
             if payload is None:
                 return 0
-        except (BridgeError, ValueError, UnicodeDecodeError):
+        except (BridgeError, ValueError, UnicodeDecodeError) as exc:
+            if (
+                isinstance(exc, BridgeError)
+                and exc.code == SESSION_BACKUP_NOT_READY_CODE
+                and exc.retryable
+                and _restore_retryable_permission_response(job_id, exc)
+            ):
+                return 0
             job = _load_json(job_path)
             task_id = job.get("taskId")
             if not isinstance(task_id, str):
@@ -2591,7 +3010,11 @@ def _skill_config():
     try:
         encoded = config_path.read_bytes()
     except FileNotFoundError:
-        return {"channel": None, "permissionWaitPolicy": None}
+        return {
+            "channel": None,
+            "pipelineName": DEFAULT_PIPELINE_NAME,
+            "permissionWaitPolicy": None,
+        }
     except OSError as exc:
         raise BridgeError("skill_configuration_invalid", "The installed Skill config could not be read.") from exc
     if len(encoded) > MAX_SKILL_CONFIG_BYTES:
@@ -2602,14 +3025,21 @@ def _skill_config():
         raise BridgeError("skill_configuration_invalid", "The installed Skill config is not valid UTF-8 JSON.") from exc
     if not isinstance(config, dict):
         raise BridgeError("skill_configuration_invalid", "The installed Skill config must be a JSON object.")
-    unknown = sorted(str(key) for key in config if key not in {"channel", "permissionWaitPolicy"})
+    unknown = sorted(str(key) for key in config if key not in {"channel", "pipelineName", "permissionWaitPolicy"})
     if unknown:
         raise BridgeError(
             "skill_configuration_invalid",
             "Unknown installed Skill config fields: {}.".format(", ".join(unknown)),
         )
+    pipeline_name = config.get("pipelineName", DEFAULT_PIPELINE_NAME)
+    if not isinstance(pipeline_name, str) or pipeline_name not in SUPPORTED_PIPELINE_NAMES:
+        raise BridgeError(
+            "skill_configuration_invalid",
+            "pipelineName must be selling_solution_first or selling.",
+        )
     return {
         "channel": _normalize_telemetry_channel(config.get("channel")) if config.get("channel") is not None else None,
+        "pipelineName": pipeline_name,
         "permissionWaitPolicy": _normalize_permission_wait_policy(config.get("permissionWaitPolicy")),
     }
 
@@ -2671,14 +3101,23 @@ def start_job(args):
     if not workspace.is_absolute() or not workspace.exists() or not workspace.is_dir():
         raise BridgeError("runtime_identity_mismatch", "The Skill workspace must be an existing absolute directory.")
     workspace = workspace.resolve()
-    if args.mode == "pipeline" and not args.pipeline_name:
-        raise BridgeError("runtime_identity_mismatch", "Pipeline mode requires --pipeline-name.")
-    if args.mode == "normal" and args.pipeline_name:
-        raise BridgeError("runtime_identity_mismatch", "Normal mode cannot use a Pipeline name.")
     prompt = _read_workspace_prompt(workspace, args.prompt_file)
     preferred_language = _preferred_language(prompt, args.language)
     _set_output_language(preferred_language)
     skill_config = _skill_config()
+    configured_pipeline_name = skill_config["pipelineName"]
+    cli_pipeline_name = getattr(args, "pipeline_name", "")
+    if args.mode == "normal":
+        if cli_pipeline_name:
+            raise BridgeError("runtime_identity_mismatch", "Normal mode cannot use a Pipeline name.")
+        pipeline_name = ""
+    else:
+        if cli_pipeline_name and cli_pipeline_name != configured_pipeline_name:
+            raise BridgeError(
+                "runtime_identity_mismatch",
+                "The compatibility --pipeline-name value does not match the installed Skill config.",
+            )
+        pipeline_name = configured_pipeline_name
     channel = skill_config["channel"]
     permission_wait_policy = skill_config["permissionWaitPolicy"]
     artifact, executable, cache_hit = ensure_runtime()
@@ -2687,12 +3126,12 @@ def start_job(args):
         executable,
         artifact,
         args.mode,
-        args.pipeline_name,
+        pipeline_name,
         permission_wait_policy,
     )
     readiness = _runtime_configuration_readiness(
         record,
-        require_cloud=args.mode == "pipeline" and args.pipeline_name == "selling",
+        require_cloud=args.mode == "pipeline",
     )
     job_id = uuid.uuid4().hex
     root, job_path, spool = _job_paths(job_id)
@@ -2702,7 +3141,7 @@ def start_job(args):
         os.chmod(str(spool), 0o600)
     runtime_record = _runtime_record_path(
         args.mode,
-        args.pipeline_name,
+        pipeline_name,
         artifact["target"],
         permission_wait_policy,
     )
@@ -2715,7 +3154,7 @@ def start_job(args):
         "target": artifact["target"],
         "mode": args.mode,
         "conversationMode": args.mode,
-        "pipelineName": args.pipeline_name or "",
+        "pipelineName": pipeline_name,
         "workspace": str(workspace),
         "preferredLanguage": preferred_language,
         "runtimeRecord": str(runtime_record),
@@ -2759,9 +3198,8 @@ def _ensure_job_runtime(job_id):
     target = job.get("target")
     workspace = job.get("workspace")
     if (
-        mode not in {"normal", "pipeline"}
-        or not isinstance(pipeline_name, str)
-        or (mode == "pipeline") != bool(pipeline_name)
+        not isinstance(pipeline_name, str)
+        or not _valid_job_pipeline_identity(mode, pipeline_name)
         or not isinstance(target, str)
         or not target
         or not isinstance(workspace, str)
@@ -2902,6 +3340,8 @@ def _job_result(
             result[key] = job[key]
     if job.get("conversationMode") in {"normal", "pipeline"}:
         result["conversationMode"] = job["conversationMode"]
+    if job.get("mode") == "pipeline" and job.get("pipelineName") in SUPPORTED_PIPELINE_NAMES:
+        result["pipelineName"] = job["pipelineName"]
     if not boundary_reached and isinstance(job.get("cleanup"), dict):
         result["cleanup"] = job["cleanup"]
     if not boundary_reached and isinstance(job.get("inputRequired"), dict):
@@ -2946,7 +3386,7 @@ def poll_job(args):
     return _job_result(args.job_id, args.cursor, MAX_POLL_BYTES, preserve_final=False)
 
 
-def _step_display_name(step_id):
+def _step_display_name(step_id, pipeline_name=""):
     names = {
         "zh": {
             "intent_parsing": "理解部署需求",
@@ -2957,6 +3397,8 @@ def _step_display_name(step_id):
             "template_generating": "生成 IaC 模板",
             "reviewing": "审查 IaC 模板",
             "cost_estimating": "估算方案成本",
+            "solution_planning_and_selection": "规划并选择架构方案",
+            "materialize_selected_candidate": "生成并确认部署方案",
         },
         "en": {
             "intent_parsing": "understand deployment requirements",
@@ -2967,9 +3409,13 @@ def _step_display_name(step_id):
             "template_generating": "generate the IaC template",
             "reviewing": "review the IaC template",
             "cost_estimating": "estimate plan cost",
+            "solution_planning_and_selection": "plan and select a solution",
+            "materialize_selected_candidate": "materialize and confirm the selected solution",
         },
     }
     language_names = names.get(_ACTIVE_LANGUAGE, names["en"])
+    if _ACTIVE_LANGUAGE != "zh" and step_id == "deploying" and pipeline_name == "selling_solution_first":
+        return "deploy the selected solution"
     if step_id in language_names:
         return language_names[step_id]
     return str(step_id or "step").replace("_", " ").replace("-", " ")
@@ -2984,7 +3430,7 @@ def _step_progress_detail(milestone):
         coordinate = milestone.get("parentStep")
     coordinate = coordinate if isinstance(coordinate, dict) else {}
     step_id = coordinate.get("id") or coordinate.get("name")
-    detail = _step_display_name(step_id) if step_id else ""
+    detail = _step_display_name(step_id, milestone.get("pipelineName")) if step_id else ""
     index = coordinate.get("index")
     total = coordinate.get("total")
     if isinstance(index, int):
@@ -3524,6 +3970,8 @@ def respond_job(args):
             raise BridgeError("input_response_mismatch", "The pending input changed before the response was sent.")
         current["state"] = "working"
         current.pop("inputRequired", None)
+        if response.get("kind") == "permission":
+            current["permissionResponseInput"] = pending
         _atomic_json(job_path, current)
     worker_pid = _spawn_worker(args.job_id, payload)
     result = {
@@ -3641,7 +4089,7 @@ def _parser():
     cache_clean.add_argument("--confirm", action="store_true")
     start = commands.add_parser("start")
     start.add_argument("--mode", choices=("normal", "pipeline"), default="normal")
-    start.add_argument("--pipeline-name", default="")
+    start.add_argument("--pipeline-name", default="", help=argparse.SUPPRESS)
     start.add_argument("--cwd", required=True)
     start.add_argument("--prompt-file", required=True)
     start.add_argument("--language", choices=("auto",) + SUPPORTED_LANGUAGES, default="auto")
