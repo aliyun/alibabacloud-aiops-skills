@@ -1,7 +1,17 @@
 # Acceptance Criteria
 
-**Scenario**: LoongCollector cloud-side ops (onboarding, config, machine group, Lens, basic troubleshooting)
-**Purpose**: unified acceptance (U1-U6) + CLI command correctness patterns
+**Scenario**: LoongCollector install + cloud-side ops (onboarding, config, machine group, Lens, basic troubleshooting)
+**Purpose**: install stage gate + unified acceptance (U1-U6) + CLI command correctness patterns
+
+## 0. Install stage gate (not full-loop success)
+
+| Environment | Pass | Then |
+|---|---|---|
+| ECS / self-host | `loongcollectord status` → `loongcollector is running` | onboarding.cloud + U1-U6 |
+| ACK | addon `loongcollector` active; `loongcollector-ds` Ready via CS addon resources | reuse `k8s-log-${cid}` / `k8s-group-${cid}`; **SLS API default**; U1-U6 |
+| Self-k8s | `loongcollector-ds` Running; controller/operator present | reuse values Project / official group; CRD or API; U1-U6 |
+
+Process/Addon ready alone is not collection success. U5 empty → not verifiable, never report success.
 
 ---
 
@@ -9,13 +19,15 @@
 
 > Source: `loongcollector-oncall/knowledge/base/collection-config/config-model.md` (CRD/API unified checklist). CRD path is detection-only; API path uses `aliyun sls`.
 
+For U5, the final user-facing answer must contain one exact data-state token and the exact reason token defined by the Verify contract in `SKILL.md`.
+
 | ID | Check | Pass condition (API path) | Failure route |
 |---|---|---|---|
 | U1 | Config object | `get-logtail-pipeline-config` returns; inputs and flushers non-empty | back to config create/modify |
 | U2 | Group binding | `get-applied-configs` (group->config) and `get-applied-machine-groups` (config->group) agree | back to apply/bind |
-| U3 | Applied state | API read succeeds and recent update readable (CRD: `status.success=true` + `lastAppliedConfig` non-empty) | check management plane, permission, double-write |
+| U3 | Applied state | API read succeeds and recent update readable; CRD write path: `status.success=true` + `lastAppliedConfig` non-empty | check management plane, permission, double-write, controller |
 | U4 | Heartbeat & version | `list-machines` contains target; `lastHeartbeatTime` within threshold; version readable (Lens if needed) | heartbeat playbook |
-| U5 | Data arrival | new data in the acceptance window; if no new source logs, mark "not verifiable" | check input path, processing, send, source logs |
+| U5 | Data arrival | new data in the acceptance window; if no new source logs, mark "not verifiable". Include the exact data-state and reason tokens from `SKILL.md`. | check input path, processing, send, source logs |
 | U6 | Field & index | key fields present, searchable/aggregatable, correct type | back to config/index coupling |
 
 Polling: 15s x up to 4 for U5/U6; stop on first hit; on repeated empty, conclude "source produced no new logs" — do not extend sleeping.
@@ -51,7 +63,7 @@ Every U1-U6 result must come from a read issued **after** the change: re-read ea
 - INCORRECT: SPL mask `"mode":"builtin"` (must be `buildin`)
 
 ### 2.5 Observability / safety
-- CORRECT: every cloud-API command has `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-loongcollector-ops/<session-id>` and `--region <r>`
+- CORRECT: every cloud-API command has `--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-loongcollector-ops session/<session-id>"` and `--region <r>`
 - CORRECT: one direct `aliyun sls ...` command per tool call, with literal parameters
 - CORRECT: write commands run `--cli-dry-run` first, except when Get-before-Create proves exact equality; that idempotent path skips dry-run/write, runs the corresponding atomic get/list verification, and emits `[Idempotent-Skip] ...` in final Changes
 - CORRECT: every R2/R3/R4 target has an executed `normalize_diff.py` result (`--kind auto` outside config/index); every coupled config/index plan follows snapshots → `validate_pipeline.py` → `normalize_diff.py --kind config` → `normalize_diff.py --kind index`
@@ -77,6 +89,6 @@ Every U1-U6 result must come from a read issued **after** the change: re-read ea
 ## 4. Approval and troubleshooting acceptance
 - A pending confirmation ends the turn with the question and `[AWAITING: R2_CONFIRMATION] ask=<n>` (`ask=1` on the first ask, then `ask=2`, `ask=3`). Only actual user messages count as replies; when `ask=3` also receives no decision, emit `[BLOCKED: R2_CONFIRMATION_TIMEOUT]` as that turn's sole content. Explicit rejection ends with `[CANCELLED: R2_CONFIRMATION_REJECTED]` as that turn's sole content (no English long sentence). No write follows either state.
 - Create-and-bind and unbind are two separate questions; the original task wording is never approval; `--cli-dry-run` is forbidden before the matching explicit confirm.
-- After `get-logging` fails to yield a usable Lens entry, the turn ends with only `请提供 SLS Lens 服务日志的 Project 和 Logstore。` plus `[AWAITING: LENS_ENTRY]`. Do not write the troubleshooting conclusion in that same turn. `get-applied-configs` must already have been attempted once even if the business Project 404s. After the user supplies the entry, run `logtail_alarm` and the version-routed metric query, then conclude.
-- Troubleshooting always emits every applicable field-complete Heartbeat, Alarm, Collection, Binding, and Pipeline evidence line from `SKILL.md` §10 in the **user-facing final answer**, using `N/A` plus attempted command/error when a resource is missing, and `resource_status: Resource not found` (English) for missing resources. A later user「结束」must not drop those tokens.
+- After `get-logging` fails to yield a usable Lens entry, the turn ends with the fixed Lens-entry fallback subject from `SKILL.md` plus `[AWAITING: LENS_ENTRY]`. Do not write the troubleshooting conclusion in that same turn. `get-applied-configs` must already have been attempted once even if the business Project 404s. After the user supplies the entry, run `logtail_alarm` and the version-routed metric query, then conclude.
+- Troubleshooting always emits every applicable field-complete Heartbeat, Alarm, Collection, Binding, and Pipeline evidence line from `SKILL.md` §10 in the **user-facing final answer**, using `N/A` plus attempted command/error when a resource is missing, and `resource_status: Resource not found` for missing resources. A later explicit request to end the task must not drop those tokens.
 - Onboarding/Verify user-facing summaries must list the Project full name, Logstore, machine group, and config name.

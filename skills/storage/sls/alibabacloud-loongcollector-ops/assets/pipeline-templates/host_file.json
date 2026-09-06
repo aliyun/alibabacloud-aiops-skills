@@ -25,5 +25,5 @@
     { "Type": "flusher_sls", "Logstore": "<target_logstore>" }
   ],
   "_index_hint": "emit index update in the SAME batch for new fields (e.g. status/status_code -> long; level -> text). See references/index-coupling.md.",
-  "_cli": "aliyun sls create-logtail-pipeline-config --project <p> --config-name <config_name> --inputs '<inputs-json>' --processors '<processors-json>' --flushers '<flushers-json>' --global '{\"TopicType\":\"machine_group_topic\"}' --region <r> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-loongcollector-ops/<session-id>"
+  "_cli": "aliyun sls create-logtail-pipeline-config --project <p> --config-name <config_name> --inputs '<inputs-json>' --processors '<processors-json>' --flushers '<flushers-json>' --global '{\"TopicType\":\"machine_group_topic\"}' --region <r> --user-agent \"AlibabaCloud-Agent-Skills/alibabacloud-loongcollector-ops session/<session-id>\""
 }

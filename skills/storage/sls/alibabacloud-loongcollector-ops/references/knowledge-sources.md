@@ -23,7 +23,7 @@ meta:
 references:
   navigation.md:
     source: [architecture/loongcollector-ops-skill-design.md "§5 capability router"]
-    notes: "6-capability subset; install/lifecycle/Windows/ACK/CRD-controller excluded."
+    notes: "7 capabilities including install.deploy; Windows/Sidecar/uninstall still excluded."
 
   prerequisites.md:
     source: [architecture/loongcollector-ops-skill-design.md "§ preflight"]
@@ -35,7 +35,7 @@ references:
 
   cli-contracts.yaml:
     source: [related_apis.yaml, architecture/loongcollector-ops-skill-design.md]
-    notes: "Live `aliyun sls <cmd> --help` verification. status=confirmed|cli_gap|product_gap."
+    notes: "Live `aliyun sls <cmd> --help` verification plus ACK cs addon loongcollector, host install script, and CRD kubectl contracts."
 
   related-commands.md:
     source: [related_apis.yaml]
@@ -84,7 +84,7 @@ references:
 
   scenario-matrix.yaml:
     source: [base/collection-config/recipes.md, loongcollector-inner origin/main docs/cn/plugins/input/native/input_agentsight.md]
-    notes: "host/docker/k8s/host_agentsight signals + required inputs; k8s_crd is out of scope (detect double-write only)."
+    notes: "host/docker/k8s/host_agentsight signals; collection default SLS API; k8s_crd is opt-in when user asks and apiserver reachable."
 
   input-agentsight.md:
     source:
@@ -131,4 +131,24 @@ references:
 
   verification-method.md:
     source: [architecture/loongcollector-ops-skill-design.md]
-    notes: "Per-step verification commands."
+    notes: "Per-step verification commands including CRD U1/U3."
+
+  install-ecs.md:
+    source: [https://help.aliyun.com/zh/sls/loongcollector-installation-linux]
+    notes: "Workbench + official loongcollector.sh; no OOS."
+
+  install-host.md:
+    source: [https://help.aliyun.com/zh/sls/loongcollector-installation-linux]
+    notes: "Same script via user SSH alias."
+
+  install-ack.md:
+    source: [https://help.aliyun.com/zh/sls/loongcollector-installation-kubernetes-1]
+    notes: "aliyun cs addon name loongcollector; reuse k8s-log/k8s-group; collection default SLS API; temp public kubeconfig only for opt-in CRD."
+
+  install-k8s.md:
+    source: [https://help.aliyun.com/zh/sls/loongcollector-installation-kubernetes-1]
+    notes: "kubectl custom package; AK/SK never in chat."
+
+  crd-pipeline.md:
+    source: [base/collection-config/config-model.md]
+    notes: "Writable ClusterAliyunPipelineConfig; opt-in when user asks and kube-apiserver reachable. Default collection is SLS API."

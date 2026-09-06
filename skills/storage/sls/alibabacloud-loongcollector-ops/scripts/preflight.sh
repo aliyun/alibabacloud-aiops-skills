@@ -12,17 +12,26 @@
 #
 # Usage:
 #   bash scripts/preflight.sh [--profile <name>] [--region <region>] [--min-version 3.3.3]
+#                             [--need-ecs] [--need-cs] [--need-kubectl]
+#                             [--need-workbench]  (deprecated alias of --need-ecs)
 set -uo pipefail
 
 MIN_VERSION="3.3.3"
 PROFILE=""
 REGION=""
+NEED_ECS=0
+NEED_CS=0
+NEED_KUBECTL=0
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --profile)     PROFILE="${2:-}"; shift 2 ;;
     --region)      REGION="${2:-}"; shift 2 ;;
     --min-version) MIN_VERSION="${2:-}"; shift 2 ;;
+    --need-ecs)       NEED_ECS=1; shift ;;
+    --need-workbench) NEED_ECS=1; shift ;;
+    --need-cs)        NEED_CS=1; shift ;;
+    --need-kubectl)   NEED_KUBECTL=1; shift ;;
     -h|--help)
       grep '^#' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "unknown arg: $1" >&2; exit 2 ;;
@@ -97,6 +106,57 @@ if [ -n "$REGION" ]; then
   add_check "region" "pass" "region=$REGION (declared)"
 else
   add_check "region" "warn" "region not supplied; must be confirmed before any write"
+fi
+
+# ---- optional install adapters -------------------------------------------
+# ECS run-command / kubectl are channel probes, not hard gates. Missing adapter →
+# warn + continue (READY stays 1). Skill asks HITL / AWAITING, never PREFLIGHT_FAILED.
+if [ "$NEED_ECS" -eq 1 ]; then
+  if command -v aliyun >/dev/null 2>&1 && aliyun ecs run-command --help >/dev/null 2>&1; then
+    add_check "ecs_runcommand" "pass" "aliyun ecs run-command available"
+  else
+    add_check "ecs_runcommand" "warn" "ecs run-command help failed; still ask ECS install HITL"
+    echo "[WARN] aliyun ecs run-command not confirmed. Still ask: 是否确认在上述 ECS 上安装 LoongCollector？" >&2
+    echo "[WARN] Do not emit [BLOCKED: PREFLIGHT_FAILED] for this. Use run-command after confirm." >&2
+  fi
+fi
+
+if [ "$NEED_CS" -eq 1 ]; then
+  if command -v aliyun >/dev/null 2>&1 && aliyun plugin list 2>/dev/null | grep -qiE 'cs|aliyun-cli-cs'; then
+    add_check "cs_plugin" "pass" "aliyun-cli-cs plugin installed"
+    # First-use ACK not opened is a warn: Skill runs ensure_ack_prereq.sh after
+    # INSTALL_CONFIRMATION. Do not PREFLIGHT_FAILED on ErrorNotEnabled / cskpro.
+    CS_PROBE=""
+    if [ -n "$REGION" ]; then
+      CS_PROBE="$(aliyun cs describe-clusters --region "$REGION" 2>&1 || true)"
+    else
+      CS_PROBE="$(aliyun cs describe-clusters 2>&1 || true)"
+    fi
+    case "$CS_PROBE" in
+      *ErrorNotEnabled*|*cskpro*|*NotEnabled*)
+        add_check "ack_service" "warn" "ACK not enabled; after install confirm run scripts/ensure_ack_prereq.sh"
+        echo "[WARN] ACK service not enabled (ErrorNotEnabled/cskpro). Not a hard gate." >&2
+        echo "[WARN] After INSTALL_CONFIRMATION: bash scripts/ensure_ack_prereq.sh --region <r>" >&2
+        ;;
+      *)
+        add_check "ack_service" "pass" "CS describe-clusters reachable (or empty list)"
+        ;;
+    esac
+  else
+    add_check "cs_plugin" "fail" "aliyun-cli-cs plugin missing"
+    READY=0
+    echo "[FAIL] CS plugin missing. Run: aliyun plugin install --names aliyun-cli-cs" >&2
+  fi
+fi
+
+if [ "$NEED_KUBECTL" -eq 1 ]; then
+  if command -v kubectl >/dev/null 2>&1; then
+    add_check "kubectl" "pass" "kubectl present"
+  else
+    add_check "kubectl" "warn" "kubectl not found; ask AWAITING KUBECONFIG (not PREFLIGHT_FAILED)"
+    echo "[WARN] kubectl missing. Ask: 请提供可用的 kubectl 与目标集群 context。" >&2
+    echo "[WARN] End the turn with [AWAITING: KUBECONFIG]. Do not emit [BLOCKED: PREFLIGHT_FAILED]." >&2
+  fi
 fi
 
 # ---- emit JSON -----------------------------------------------------------

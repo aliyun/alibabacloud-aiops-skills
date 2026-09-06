@@ -7,9 +7,10 @@ Run `bash scripts/preflight.sh` or perform manually, in order:
 1. **CLI version**: `aliyun version` >= 3.3.3 (>= 3.3.5 recommended). Missing/old -> install/upgrade (see `cli-installation-guide.md`). Installing a dependency is a local environment change; tell the user.
 2. **SLS plugin**: `aliyun configure set --auto-plugin-install true`; ensure `aliyun-cli-sls` present (`aliyun plugin install --names aliyun-cli-sls`); `aliyun plugin update`. Verify with `aliyun sls --help`.
 3. **Credentials**: `aliyun configure list` shows a valid profile (AK / STS / OAuth). Never read or print AK/SK. No profile -> `[BLOCKED: PREFLIGHT_FAILED] gate=credentials; no valid CLI profile is configured.`
-4. **Scope**: confirm profile/account, region, project. These are fixed for the request; changing any requires a new confirmation.
+4. **Scope**: confirm profile/account, region, project (and cluster/host for `install.deploy`). These are fixed for the request; changing any requires a new confirmation.
+5. **Install adapters (only when `install.deploy` needs them)**: `bash scripts/preflight.sh --need-ecs` (ECS) / `--need-cs` (ACK) / `--need-kubectl` (**self_k8s install** or user-requested CRD). **`run-command` / kubectl missing is a warn, not a hard fail.** Missing kubectl on self_k8s **install** uses the fixed Missing kubeconfig subject from `SKILL.md` followed by `[AWAITING: KUBECONFIG]` as the **first** stop (before Observe/Plan/create-bind) — never `[BLOCKED: PREFLIGHT_FAILED]`. ACK collection uses SLS API — do not ask for kubeconfig. Missing usable SSH for `self_host` (including an alias that does not resolve) uses the fixed Missing SSH subject from `SKILL.md` followed by `[AWAITING: SSH]`; do not create cloud resources. ECS uses `aliyun ecs run-command` — do not emit `[BLOCKED: PREFLIGHT_FAILED] gate=workbench` / `gate=ecs`.
 
-Any failed gate -> emit `[BLOCKED: PREFLIGHT_FAILED] gate=<gate>; <reason>` and do not proceed.
+Hard-gate failure (CLI / SLS plugin / credentials / ACK CS plugin) -> emit `[BLOCKED: PREFLIGHT_FAILED] gate=<gate>; <reason>` and do not proceed.
 
 ## 2. Input contract by scenario
 
@@ -18,7 +19,7 @@ Collect only what the capability needs; do not use defaults for scope-changing f
 - Cloud scope: profile, `region`, `project`, `logstore`.
 - Collection scope: `scenario` (host/docker/k8s/host_agentsight), OS/arch (informational), collector version (read at runtime, see version_discovery).
 - Resource objects: `machine_group`, `config_name`, target path, target logstore. `host_agentsight` uses fixed `runtime-ebpf-agentsight-config` / `ebpf-event`.
-- Management plane: SLS API. CRD is read-only awareness (double-write detection); CRD write is out of scope.
+- Management plane: SLS API by default (host/Docker/K8s). Use `ClusterAliyunPipelineConfig` only when the user explicitly asks for GitOps/CR management, the kube-apiserver is reachable, RBAC allows creation, and the controller is running. Never use both planes for one config.
 - Risk scope: single vs batch, prod vs test, maintenance window.
 - Troubleshooting inputs: symptom, start time, sample log, expected fields, recent change.
 
@@ -32,11 +33,13 @@ Collect only what the capability needs; do not use defaults for scope-changing f
 - Exact lookup returns multiple candidates -> list them and require explicit selection.
 - `machine_group` needed but unknown (e.g. heartbeat/binding) -> ask; never omit `--machine-group`.
 - `scenario` or `machine_identify_type` undetermined for create/onboarding.
-- Collector version unconfirmed while a version-gated plugin is required (see `plugin-version-gates.yaml`).
+- Collector version unconfirmed (`list-machines` empty / no `.binary` and user did not give a version string) → use the fixed Missing collector version subject from `SKILL.md` followed by `[AWAITING: COLLECTOR_VERSION]`. Do not assume a plugin family. Never ask Lens only to learn the version.
 
 ## 4. Scope boundaries
 
-- Execution channel: `aliyun sls` + local validators only.
-- No SSH / kubectl / docker exec / scp. Host-side evidence, if truly needed, is described to the user in prose (what to check, not a command to paste) and never executed by this skill.
+- Cloud collection/query: `aliyun sls` + local validators.
+- `install.deploy` may use Workbench (ECS), user SSH (self-host), `aliyun cs` (ACK), and `kubectl` (self-k8s install; opt-in CRD). Never print kubeconfig.
+- ACK first-use is in-skill: `scripts/ensure_ack_prereq.sh` (`open-ack-service --type propayasgo` + CS RAM roles). Eval hooks may do the same to pre-warm a fixture cluster; do not treat hook-only as “Skill cannot open ACK”. `create-cluster` only when the user asked; never invent `sls-eval-loop-ack` or create ECS/VPC.
+- Forbidden: `kubectl exec`, `docker exec`, unbounded root shell, OOS/ChatOps, creating ECS, Windows, Sidecar, uninstall/rollback.
 - No admin project, no `starops`, no internal MCP, no private console API.
-- Installation / lifecycle requests: reply that they are out of scope and stop that branch.
+- Cloud-only capabilities (`onboarding.cloud` without install, `config.*`, `lens.query`, existing evals that say no SSH) still must not SSH/kubectl.

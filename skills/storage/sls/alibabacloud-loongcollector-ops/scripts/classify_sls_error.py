@@ -27,6 +27,10 @@ ACTION_RE = re.compile(
     r"([a-zA-Z]+:[A-Za-z0-9]+)",
     re.I,
 )
+OWNERSHIP_RE = re.compile(
+    r"does not belong to you|not belong to you|does not belong|不属于",
+    re.I,
+)
 
 # (error_tag, recovered_tag, matchers on errorCode / message / http)
 CLASS_RULES = (
@@ -122,6 +126,18 @@ def classify(payload: dict, http_code=None):
     action_match = ACTION_RE.search(message)
     if action_match:
         missing_action = action_match.group(1)
+
+    if OWNERSHIP_RE.search(message):
+        return {
+            "class": "resource_resolution",
+            "error_tag": "[BLOCKED: RESOURCE_RESOLUTION_FAILED]",
+            "recovered_tag": "",
+            "error_code": error_code,
+            "http_code": http,
+            "request_id": request_id,
+            "missing_action": missing_action,
+            "message": message,
+        }
 
     for error_tag, recovered_tag, rule in CLASS_RULES:
         codes = {c.casefold() for c in rule["codes"]}

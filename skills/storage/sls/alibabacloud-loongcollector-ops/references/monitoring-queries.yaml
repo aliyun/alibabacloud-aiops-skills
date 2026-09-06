@@ -2,7 +2,7 @@
 #
 # Channel: aliyun sls get-logs-v2 --project <lens_project> --logstore <lens_logstore>
 #          --from <unix_sec> --to <unix_sec> --query "<sql>"
-#          --region <lens_region> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-loongcollector-ops/<session-id>
+#          --region <lens_region> --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-loongcollector-ops session/<session-id>"
 # Hard constraints (see sls-lens-contracts.md): no `select *`; fields from allowlist;
 # JSON subfields via json_extract_scalar; logtail_alarm filters by project first, never config_name in where;
 # after an alarm_type match always output alarm_message; check meta.progress.

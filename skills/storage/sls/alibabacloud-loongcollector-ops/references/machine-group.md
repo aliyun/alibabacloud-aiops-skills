@@ -25,7 +25,8 @@ Creating, updating, or binding a machine group is R2: build the target object, r
 
 - Config is only delivered and collection only runs when heartbeat is OK. Heartbeat-not-OK must be triaged first.
 - `list-machines --project <p> --machine-group <g>` returns `machines[]` with identity, `lastHeartbeatTime`, and `binary` (the collector version, e.g. `3.3.4`) — this is the primary version source (see version discovery).
-- General host-side heartbeat checks: describe them to the user in prose — collector process running, `user_defined_id` matching the group identity, ALIUID matching the account, reporting region correct. Do not emit host shell commands; this skill cannot see the host layout and never executes there.
+- ACK / self-k8s: reuse official `k8s-group-${cluster_id}`; do not create an extra IP group for DaemonSet collectors.
+- Host-side heartbeat: cloud-only tasks describe checks in prose. `install.deploy` may re-use Workbench/SSH to read `loongcollectord status` and `/etc/ilogtail/user_defined_id` (read-only).
 - `ilogtail_config.json` decides the report endpoint; wrong region => no heartbeat. Field names differ across 3.0:
   - `<3.0`: `config_server_address` + `data_server_list`.
   - `>=3.0`: `config_servers` + `data_servers`. A `<3.0` agent cannot read `>=3.0` fields (breaks heartbeat).
@@ -38,7 +39,7 @@ aliyun sls create-machine-group \
   --project <p> --group-name <g> \
   --machine-identify-type userdefined \
   --machine-list my-app-id-1 my-app-id-2 \
-  --region <r> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-loongcollector-ops/<session-id>
+  --region <r> --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-loongcollector-ops session/<session-id>"
 ```
 
 > **`--machine-list` takes space-separated values, NOT a JSON array.** Passing

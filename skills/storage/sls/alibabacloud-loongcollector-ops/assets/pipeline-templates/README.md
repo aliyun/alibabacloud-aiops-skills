@@ -24,5 +24,6 @@ Native-first, minimal-viable Logtail pipeline configs. Source:
    SKILL_SESSION_ID=$SID python3 scripts/validate_pipeline.py --file rendered.json --collector-version <v>
    ```
 5. If processors add/rename fields, emit the index update diff in the SAME batch (`references/index-coupling.md`), `--cli-dry-run`, get approval, then apply.
+6. K8s collection defaults to this JSON + `create-logtail-pipeline-config`. CRD (`render_crd.py` + apply) only when the user asks (`references/crd-pipeline.md`).
 
 File-log templates use native processors only (never mix native + extended). `host_agentsight` default has no processors; the mask variant uses `processor_spl` alone (cannot mix with native/extended).

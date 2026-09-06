@@ -64,4 +64,8 @@ When the user asks for a plan without live queries: output the "after (YAML)" ch
 
 ## 4. Scope limits
 
-No SSH/kubectl/docker exec. Host-side checks are described to the user in prose — what to verify, not shell commands to paste. If neither cloud resources nor Lens can resolve the root cause and only host evidence remains, state that host-side collector-agent inspection is required (controlled host access, out of scope), and stop with the single blocking next step.
+`docker exec` and `kubectl exec` are forbidden. Cloud-only troubleshooting stays on `aliyun sls` + Lens.
+
+If this session already used `install.deploy` (or the user has the same Workbench/SSH/kubectl access), a **read-only** collector status check is allowed on that same channel: `loongcollectord status`, identity file content, `kubectl get/describe` for DS/controller/CR. No unbounded root shell.
+
+If neither cloud, Lens, nor that read-only channel can resolve the cause, state the single blocking next step and stop.

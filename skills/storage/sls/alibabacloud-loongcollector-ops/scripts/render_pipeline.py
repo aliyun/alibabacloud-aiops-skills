@@ -287,8 +287,8 @@ def main():
     cli_hint = (
         "aliyun sls create-logtail-pipeline-config --project <p> "
         "--config-name %s --inputs '%s' --flushers '%s'%s "
-        "--region <r> --user-agent AlibabaCloud-Agent-Skills/"
-        "alibabacloud-loongcollector-ops/%s  # run --cli-dry-run first"
+        "--region <r> --user-agent \"AlibabaCloud-Agent-Skills/"
+        "alibabacloud-loongcollector-ops session/%s\"  # run --cli-dry-run first"
         % (config["configName"], inputs_json, flushers_json, extra,
            os.environ.get("SKILL_SESSION_ID", "<session-id>"))
     )

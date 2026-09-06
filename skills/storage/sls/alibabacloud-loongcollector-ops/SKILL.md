@@ -1,18 +1,22 @@
 ---
 name: alibabacloud-loongcollector-ops
 description: |
-  Alibaba Cloud Simple Log Service (SLS) ingestion management for an already-deployed LoongCollector.
-  Triggers: "SLS 日志采集接入", "修改采集配置", "SLS 机器组", "新建 Logtail Pipeline 采集配置", "Logtail Pipeline", "SLS Lens 查询", "无数据排查", "心跳异常", "SLS 采集权限排查", "Logtail", "iLogtail", "AgentSight", "Agentloop", "input_agentsight", "eBPF Runtime", "ebpf-event".
+  Alibaba Cloud LoongCollector / SLS installation, collection onboarding, Pipeline config management and validation, machine groups, permission troubleshooting, and Lens queries.
+  HARD RULE: for matching requests, the first tool MUST load this skill before any SSH probe, directory setup, checklist/file write, or cloud read.
+  Triggers: "安装 LoongCollector", "ECS 安装采集器", "自建 Linux 主机安装 LoongCollector", "ACK 安装 loongcollector", "自建 K8s 部署采集", "从安装到能查到日志", "SLS 日志采集接入", "SLS 日志采集接入相关的事", "修改采集配置", "改采集配置", "采集配置校验", "validate_pipeline.py", "SLS 机器组", "新建 Logtail Pipeline 采集配置", "Logtail Pipeline", "ClusterAliyunPipelineConfig", "SLS Lens 查询", "无数据排查", "心跳异常", "SLS 采集权限排查", "SLS 权限排查", "阿里云 CLI 凭证没有 SLS 操作权限", "Logtail", "iLogtail", "AgentSight", "Agentloop", "input_agentsight", "eBPF Runtime", "ebpf-event".
 ---
 
-# LoongCollector Cloud-Side Ops
+# LoongCollector Ops
 
-Turn natural-language collection-ops requests into executable, verifiable, rollbackable `aliyun sls` workflows for users operating **their own** Alibaba Cloud SLS resources.
+Turn natural-language requests into executable, verifiable, rollbackable workflows for users operating **their own** LoongCollector and SLS resources — from install through collection to query.
 
-**Architecture**: `SLS Project + Logstore + Index + MachineGroup + Logtail Pipeline Config + Config-MachineGroup binding + SLS Lens (CloudLens for SLS) run logs`
+**Architecture**: `Install (ECS/self-host/ACK/self-k8s) + SLS Project + Logstore + Index + MachineGroup + Pipeline (API or ClusterAliyunPipelineConfig) + binding + SLS Lens`
 
-**Scope.** Assumes LoongCollector is **already installed and reporting heartbeat**. Covers:
+**Scope.** Covers:
+- Install/upgrade Linux collector: ECS `aliyun ecs run-command`, self-host SSH, ACK addon `loongcollector`, self-k8s custom package. Must continue to collection + query; process/Addon ready is only a stage gate.
+- ACK first-use: `open-ack-service --type propayasgo` + CS service roles (`scripts/ensure_ack_prereq.sh`). `create-cluster` only when the user asked to create a cluster. Eval hooks may pre-create a fixture cluster; that is not a production default.
 - Cloud onboarding: Project / Logstore / Index / MachineGroup / Pipeline Config / binding.
+- K8s collection: **default SLS Pipeline API** (`create-logtail-pipeline-config` + bind official group). CRD apply is opt-in only when the user asks for GitOps/CRD and a reachable kube-apiserver exists (`references/crd-pipeline.md`).
 - Config management: create, modify, apply, remove, data acceptance (U1-U6).
 - Machine group management: IP / user-defined identity, members, heartbeat, version.
 - SLS Lens: run-log query (`get-logs-v2`), topic/field contracts, version routing, degradation.
@@ -20,24 +24,59 @@ Turn natural-language collection-ops requests into executable, verifiable, rollb
 
 ## Language and HITL Delivery Contract
 
-**Hard language rule:** when the user's request is primarily Chinese, every user-facing message MUST use Simplified Chinese. This includes plans, clarification questions, confirmation questions and their answer options, reports, and error guidance. Product names, identifiers, CLI commands, JSON fields, error codes, and fixed status tags may remain English. Never switch the surrounding prose to English.
+**Hard language rule:** use the user's primary language for every user-facing message. This includes plans, clarification questions, confirmation questions and their answer options, reports, and error guidance. Product names, identifiers, CLI commands, JSON fields, error codes, and fixed status tags may remain in their original form. Never switch the surrounding prose to another language.
 
-**Stable Chinese HITL subjects:** ask short, direct questions, and reuse the identical sentence whenever the same question comes up again, so re-asking never looks like a new question:
+**Canonical user-facing message and marker catalog:** every value below is literal. Emit the selected value verbatim; never translate, paraphrase, or combine it with another question.
 
-- Missing task scope: `请补充要执行的具体操作目标、地域和 SLS Project。`
-- Missing Lens parameters: `请补充业务 Project、地域和查询时间范围。`
-- Machine-group identity choice: `请选择机器组标识类型：IP 或 userdefined。`
-- R2 approval (config update / non-create plan): `是否确认执行上述变更计划？请选择：确认执行或取消。`
-- Create-and-bind approval (from-zero create, machine-group create+bind, pipeline create+bind): `是否确认创建上述资源并完成绑定？请选择：确认执行或取消。` Prefer this subject whenever the approved plan creates resources or bindings; do not invent alternate confirmation wording.
-- Unbind approval: `是否确认将上述旧配置从机器组解绑？请选择：确认解绑或取消。`
-- Permission recovery: `是否已完成所需 RAM 授权并允许重试？请选择：已授权或未授权。`
-- Lens-entry fallback: `请提供 SLS Lens 服务日志的 Project 和 Logstore。`
+```yaml
+messages:
+  missing_task_scope: "请补充要执行的具体操作目标、地域和 SLS Project。"
+  missing_lens_parameters: "请补充业务 Project、地域和查询时间范围。"
+  machine_group_identity: "请选择机器组标识类型：IP 或 userdefined。"
+  r2_update: "是否确认执行上述变更计划？请选择：确认执行或取消。"
+  r2_create_bind: "是否确认创建上述资源并完成绑定？请选择：确认执行或取消。"
+  r3_unbind: "是否确认将上述旧配置从机器组解绑？请选择：确认解绑或取消。"
+  permission_recovery: "是否已完成所需 RAM 授权并允许重试？请选择：已授权或未授权。"
+  permission_recovery_short: "是否已完成所需 RAM 授权并允许重试？"
+  lens_entry: "请提供 SLS Lens 服务日志的 Project 和 Logstore。"
+  ecs_install: "是否确认在上述 ECS 上安装 LoongCollector？"
+  self_host_install: "是否确认在上述主机上安装 LoongCollector？"
+  ack_install: "是否确认在上述 ACK 集群安装 loongcollector 组件？"
+  self_k8s_install: "是否确认在上述 Kubernetes 集群安装 LoongCollector？"
+  kubeconfig: "请提供可用的 kubectl 与目标集群 context。"
+  ssh: "请提供已配置的 SSH（alias 或主机），不要在对话中发送私钥。"
+  collector_version: "请提供采集器版本（例如 3.3.9）。"
+markers:
+  ownership_error: ["不属于当前账号", "项目不属于你"]
+  permission_decline: ["未授权", "停止"]
+  permission_grant: ["已授权"]
+  cancel: ["取消"]
+  private_ip: ["私网 IP"]
+  routing_intent: ["日志采集", "安装采集器"]
+  end: ["结束"]
+  collector_deployed_without_version: ["LoongCollector 已部署"]
+  binding_acceptance: ["完成绑定与验收"]
+  approval: ["确认", "确认执行", "确认解绑"]
+  install_intent: ["允许安装", "请安装", "直接执行", "已授权操作", "任务已预授权"]
+  install_only_status: ["仅安装完成、采集未接入"]
+  deferral: ["还没想好", "等会儿再说", "暂不确认", "第二次等待", "第N次暂不确认", "先放一放", "已达到上限", "请阻塞"]
+  data_incomplete: ["无法完成数据面验收"]
+  data_empty: ["无数据"]
+  reason: ["原因"]
+  forbidden_empty_success: ["采集成功", "所有验收标准均已满足", "全链路验收通过", "通过"]
+  data_arrived: ["数据到达"]
+  root_cause_located: ["根因已定位"]
+  not_exists: ["不存在"]
+  pending_read: ["未执行待办", "待办"]
+```
 
-Do not replace these with long English prose, bilingual tables, or newly invented status labels. Whenever you re-ask, reproduce the same short Chinese question verbatim after the required `[AWAITING: ...]` tag. R2 confirmation tags MUST include the ask counter: first ask `[AWAITING: R2_CONFIRMATION] ask=1`; each deferral re-ask increments to `ask=2` then `ask=3`. Lens-entry fallback ends the turn with `[AWAITING: LENS_ENTRY]`.
+Pair `machine_group_identity` with `[AWAITING: MACHINE_GROUP_TYPE]` (never `R2_CONFIRMATION`). Pair `permission_recovery` with `[AWAITING: PERMISSION_CONFIRMATION]`; `lens_entry` with `[AWAITING: LENS_ENTRY]`; every install message with `[AWAITING: INSTALL_CONFIRMATION]`; `kubeconfig` with `[AWAITING: KUBECONFIG]`; `ssh` with `[AWAITING: SSH]`; and `collector_version` with `[AWAITING: COLLECTOR_VERSION]`. The `self_host_install` message is allowed only after a real SSH probe succeeds.
+
+Do not replace these with long English prose, bilingual tables, or newly invented status labels. Whenever you re-ask, reproduce the same short Chinese question verbatim before the required `[AWAITING: ...]` tag. **Last-line hard rule:** the matching tag immediately follows the question on the next line and is the last line of the turn — no blank line between question and tag, no blank line after it, no punctuation, and no extra sentence. The turn that emits a HITL tag must not copy any `[AWAITING: ...]` literal into a tool call, code block, `outputs/*`, or `ran_scripts/*`; duplicate tags break automatic matching. Install confirmation ends the turn with `[AWAITING: INSTALL_CONFIRMATION]` — never reuse `R2_CONFIRMATION` for install or for machine-group identity. Collection/create-bind confirmation tags MUST include the ask counter on the last line: first ask `[AWAITING: R2_CONFIRMATION] ask=1`; each deferral re-ask increments the counter. Lens-entry fallback ends the turn with `[AWAITING: LENS_ENTRY]`. Missing kubectl ends the turn with `[AWAITING: KUBECONFIG]`. Missing SSH ends the turn with `[AWAITING: SSH]`. Missing collector version ends the turn with `[AWAITING: COLLECTOR_VERSION]`. Machine-group identity ends with `[AWAITING: MACHINE_GROUP_TYPE]`. RAM recovery ends with `[AWAITING: PERMISSION_CONFIRMATION]`.
 
 **Fixed English tokens (must appear verbatim; surrounding prose stays Chinese):** `[BLOCKED: …]` / `[CANCELLED: …]` / `[AWAITING: …]` / `ask=1` / `ask=2` / `ask=3` / `[Error: permission|throttling|internal|parameter]` / `[RECOVERED: …]` / `resource_status: Resource not found` / `[Query: Incomplete]` / `INCOMPLETE`. Rejection and confirmation-timeout turns: the **sole content** of that turn is the short tag — no English long sentence, no prefix or suffix.
 
-**Out of scope.** Installation, upgrade, rollback, uninstall, restart; Windows/ACK/self-built K8s deploy; CRD controller/operator management; advanced troubleshooting (delay, duplicate, parse failure, container filter, data loss/truncation). If the user asks for installation or lifecycle, state clearly that it is not covered by this skill and do not improvise host/SSH/kubectl execution.
+**Out of scope.** Windows; Sidecar; uninstall/rollback/restart-as-lifecycle; creating ECS; OOS/ChatOps; writing `AliyunLogConfig` / `NamespaceAliyunPipelineConfig`; advanced troubleshooting (delay, duplicate, parse failure, container filter, data loss/truncation). `kubectl exec` and `docker exec` are forbidden. If the user asks for an out-of-scope lifecycle action, say so and stop that branch.
 
 ---
 
@@ -59,6 +98,7 @@ Do not replace these with long English prose, bilingual tables, or newly invente
 > - **NEVER** read, echo, or print AK/SK values (e.g., `echo $ALIBABA_CLOUD_ACCESS_KEY_ID` is FORBIDDEN)
 > - **NEVER** use `cat`, `less`, `head`, `tail`, `grep`, `open`, `json.load`, or any file-reading command on credential files (e.g., `~/.aliyun/config.json`, `~/.aws/credentials`). To check file existence use `ls` only — never display contents. Printing plaintext secrets is an immediate task failure and security incident.
 > - **NEVER** install or import `aliyun-log-python-sdk` / `aliyun.log` / `LogClient`, or any other SLS SDK, to bypass CLI. `pip install` of a cloud SDK is a task failure.
+> - **NEVER** print, `cat`, or paste kubeconfig / client certificates / tokens into the conversation. For opt-in CRD only: write `describe-cluster-user-kubeconfig` output to a `0600` tempfile.
 > - **NEVER** ask the user to input AK/SK directly in the conversation or command line
 > - **NEVER** use `aliyun configure set` with literal credential values
 > - **ONLY** use `aliyun configure list` to check credential status. `scripts/preflight.sh` already does this.
@@ -80,7 +120,7 @@ Run `bash scripts/preflight.sh` to check CLI version, plugin, credential presenc
 | Variable | Required | Description |
 |---|---|---|
 | (none for credentials) | — | Credentials come from `aliyun configure` profiles; never introduce AK/SK env vars in-session |
-| `SKILL_SESSION_ID` | Injected at script run | Same 32-hex session id as `--user-agent`; set inline when invoking bundled scripts (see §4) |
+| `SKILL_SESSION_ID` | Injected at script run | Same 32-hex session id as the `session/{session-id}` UserAgent token; set inline when invoking bundled scripts (see §4) |
 
 ---
 
@@ -95,12 +135,12 @@ This skill uses the user's own identity and only touches resources they are auth
 
 **Runtime detail (same gate, do not skip the three steps above):**
 1. Report the missing RAM Action and `requestID`; output `[Error: permission]`. Reading `references/ram-policies.md` alone is **not** a successful diagnose call.
-2. **Try** `ram-permission-diagnose` with the missing Actions and `requestID`. **FALLBACK:** if it is unavailable, output Action/`requestID`/RAM-console guide manually, then `[AWAITING: PERMISSION_CONFIRMATION]` and pause.
+2. **Try** `ram-permission-diagnose` with the missing Actions and `requestID`. **FALLBACK:** if it is unavailable, output Action/`requestID`/RAM-console guide manually, then ask catalog message `permission_recovery` with last line `[AWAITING: PERMISSION_CONFIRMATION]` and pause.
 3. Do not retry the affected write (including `--cli-dry-run`) before confirmation.
-4. **READ-PATH HARD STOP:** On 401/403/`Unauthorized`/`AccessDenied` for `get-project` / `get-machine-group` / `list-machines` / `get-log-store`, emit `[Error: permission]` with Action/`requestID`, then in the **same turn** ask exactly `是否已完成所需 RAM 授权并允许重试？请选择：已授权或未授权。`, and issue no further `aliyun sls` call that turn.
+4. **READ-PATH HARD STOP:** On 401/403/`Unauthorized`/`AccessDenied` for `get-project` / `get-machine-group` / `list-machines` / `get-log-store`, first read the message. If it is **ownership** (English ownership text or any catalog `ownership_error` marker) → this is **not** a RAM gate: emit `[BLOCKED: RESOURCE_RESOLUTION_FAILED]` and stop; do **not** ask `permission_recovery_short`, do not create the official `k8s-log-*` name, and do not retry. Otherwise emit `[Error: permission]` with Action/`requestID`, then in the **same turn** ask exactly `permission_recovery` with last line `[AWAITING: PERMISSION_CONFIRMATION]`, and issue **zero** further `aliyun sls` calls that turn — including `get-machine-group`, `list-machines`, `get-applied-configs`, and `get-log-store`. Those unread calls are catalog `pending_read` items, not queried conclusions.
 5. **After the user's permission answer (same gate for read-path and write/dry-run):**
-   - 未授权 / 停止 / decline → **zero tools that turn** (no `write_file`, no `aliyun sls`). The **sole content** is `[BLOCKED: PERMISSION_REQUIRED]` — no English long sentence.
-   - 已授权 → **same turn**, retry the **identical** failed command (if the failure was a dry-run, retry that dry-run first) and emit `[RECOVERED: permission_granted]` in the user-facing text immediately.
+   - Any catalog `permission_decline` marker or equivalent decline → **zero tools that turn** (no `write_file`, no `aliyun sls`). Explicitly state that execution is terminated, list every **not-yet-run** read as catalog `pending_read` with its RAM Action, then put `[BLOCKED: PERMISSION_REQUIRED]` on the final line. If the task asked for machine-group heartbeat, the pending items **must** include `get-machine-group` → `log:GetMachineGroup` and `list-machines` → `log:ListMachines` (name the group). Never present an unrun heartbeat as a queried conclusion.
+   - A catalog `permission_grant` marker → **same turn**, retry the **identical** failed command (if the failure was a dry-run, retry that dry-run first) and emit `[RECOVERED: permission_granted]` in the user-facing text immediately. Explicitly state that the disposition is human intervention followed by retry, so the recovery action is unambiguous.
 
 On `Unauthorized`/`AccessDenied` from a **core write or its dry-run**: stop the current write, enter the §6 permission-recovery branch, and never switch account/profile or widen scope.
 
@@ -123,11 +163,14 @@ On `Unauthorized`/`AccessDenied` from a **core write or its dry-run**: stop the 
 | `machine_identify_type` | Conditional | `ip` or `userdefined` | none |
 | `machine_list` | Conditional | IP list or user-defined identifiers | none |
 | `scenario` | Conditional | `host` / `docker` / `k8s` / `host_agentsight` | none |
+| `environment` | Conditional | `ecs` / `self_host` / `ack` / `self_k8s` for `install.deploy` | none |
+| `instance_id` | Conditional | ECS instance id (Workbench) | none |
+| `cluster_id` | Conditional | ACK / self-k8s cluster id | none |
 | `lens_project` / `lens_logstore` | Optional | SLS Lens entry when auto-discovery unavailable | none |
 
 Never substitute placeholder/example values for a missing real resource. Missing `region`, `project`, or a scope-changing target → STOP and ask.
 
-For a Chinese request with a missing `machine_identify_type`, ask exactly `请选择机器组标识类型：IP 或 userdefined。` using Chinese option descriptions. Do not emit a custom English status label or an English selection table.
+For a Chinese request with a missing `machine_identify_type`, ask exactly catalog message `machine_group_identity` using Chinese option descriptions, and end the turn with last line `[AWAITING: MACHINE_GROUP_TYPE]` — **never** `[AWAITING: R2_CONFIRMATION]`. After the user chooses, run `scripts/normalize_diff.py` and only then ask the create-and-bind question with `[AWAITING: R2_CONFIRMATION] ask=1`. Do not emit a custom English status label or an English selection table. **`install.deploy` exception:** do **not** ask machine-group identity until the collection create-bind gate has been confirmed. If that gate receives a catalog `cancel` marker or equivalent rejection, never ask. If the user already named IP, userdefined, or a catalog `private_ip` marker, never ask.
 
 ---
 
@@ -136,32 +179,44 @@ For a Chinese request with a missing `machine_identify_type`, ask exactly `请�
 Upon loading this skill, generate a random session ID (32-char lowercase hex string) once for the entire session. Use it as `{session-id}` below.
 
 **Rule: Every `aliyun` CLI command that calls a cloud API MUST include the `--user-agent` flag.**
-Local utility commands (e.g. `configure`, `plugin`, `version`) do not support this flag and should be excluded.
+This covers `aliyun sls`, `aliyun cs`, `aliyun ecs`, and any other `aliyun <product>` cloud call this skill issues, including `--cli-dry-run`. Local utility commands (e.g. `configure`, `plugin`, `version`) do not support this flag and should be excluded. `kubectl` / Workbench / SSH / local validators are not Alibaba Cloud APIs and do not send this flag.
+
+Use **two space-separated product tokens** (quote the whole value; the space is required):
 
 ```
---user-agent AlibabaCloud-Agent-Skills/alibabacloud-loongcollector-ops/{session-id}
+--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-loongcollector-ops session/{session-id}"
 ```
+
+| Token | Example | Query use |
+|---|---|---|
+| Skill identity | `AlibabaCloud-Agent-Skills/alibabacloud-loongcollector-ops` | All traffic from this skill |
+| Session | `session/{session-id}` | One session |
+
+Never glue the session id onto the skill token (`.../ops/{session-id}` is forbidden). Never omit quotes. Never skip, alter, or drop either token.
 
 Example (assuming session-id is `a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6`):
 ```bash
-aliyun sls list-machines --project my-proj --machine-group my-group --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-loongcollector-ops/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6
+aliyun sls list-machines --project my-proj --machine-group my-group --region cn-hangzhou --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-loongcollector-ops session/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6"
 ```
 
-Do not skip, alter the format, or omit `--user-agent` on any `aliyun` API command invocation.
+References that write `--user-agent <ua>` mean this exact quoted two-token string.
 
 **Script / Terraform execution:** When running Python SDK scripts or Terraform commands or bash scripts, inject the session-id via inline environment variable so the code can read it at runtime:
 
 ```bash
-# Python SDK script
+# Local validator (no cloud call)
 SKILL_SESSION_ID={session-id} python3 scripts/validate_pipeline.py --file rendered.json
+
+# Bundled script that itself calls a cloud API
+SKILL_SESSION_ID={session-id} bash scripts/wait_cs_task.sh --cluster-id c-xxx --region cn-shanghai
 
 # Terraform
 SKILL_SESSION_ID={session-id} terraform apply
 ```
 
-Scripts and Terraform configs should read `SKILL_SESSION_ID` from the environment (default to empty string if absent).
+Scripts and Terraform configs should read `SKILL_SESSION_ID` from the environment (default to empty string if absent). Any bundled script that itself invokes `aliyun` against a cloud API MUST send the same two-token UserAgent (currently `scripts/wait_cs_task.sh`).
 
-**Domain extension — ATOMIC CLOUD-CALL RULE (HARD):** Every tool invocation that calls SLS must contain exactly one direct `aliyun sls ...` command with literal, fully expanded parameter values, and the command must start with `aliyun sls`. Do not hide a cloud call behind shell variables, environment assignments, functions, aliases, wrapper scripts, loops, command substitutions, `eval`, pipes, or compound commands (`;`, `&&`, `||`). Compute timestamps or JSON in a separate local step, then place the resulting literals in the cloud command. This applies equally to verification and acceptance reads: no loops, no `cd …` prefix, no `$VAR` or `$(…)` substitution, including in `--from`/`--to` and JSON bodies. Never write cloud calls into a `.sh` file and run it; the command record is plain-text notes, not a runnable script. Local validators must receive what the command actually returned — save the real stdout to a file and pass that file; retyping or `echo`-ing an expected response is fabricated evidence. Generate the session ID with `python3 -c 'import secrets; print(secrets.token_hex(16))'` and validate `^[0-9a-f]{32}$`; never copy the example ID above into live commands.
+**Domain extension — ATOMIC CLOUD-CALL RULE (HARD):** Every tool invocation that calls SLS must contain exactly one direct `aliyun sls ...` command with literal, fully expanded parameter values, and the command must start with `aliyun sls`. Do not hide a cloud call behind shell variables, environment assignments, functions, aliases, wrapper scripts, loops, command substitutions, `eval`, pipes, redirections (including `2>&1`), or compound commands (`;`, `&&`, `||`). Use only lowercase hyphenated SLS plugin subcommands such as `get-project`; never use a PascalCase OpenAPI alias, because it bypasses the validated command/mocking contract. Compute timestamps or JSON in a separate local step, then place the resulting literals in the cloud command. This applies equally to verification and acceptance reads: no loops, no `cd …` prefix, no `$VAR` or `$(…)` substitution, including in `--from`/`--to` and JSON bodies. Never write cloud calls into a `.sh` file and run it; the command record is plain-text notes, not a runnable script. Local validators must receive what the command actually returned — save the real stdout to a file and pass that file; retyping or `echo`-ing an expected response is fabricated evidence. Generate the session ID with `python3 -c 'import secrets; print(secrets.token_hex(16))'` and validate `^[0-9a-f]{32}$`; never copy the example ID above into live commands.
 
 ---
 
@@ -171,9 +226,10 @@ Classify the request into exactly one capability, then load its `references/navi
 
 | Capability | Trigger | Required inputs | Adapters | Success state |
 |---|---|---|---|---|
+| `install.deploy` | Install/upgrade then collect and query | region, environment, instance or cluster | `ecs run-command` / ssh / `aliyun_cs` / kubectl / `aliyun_sls` | install gate + U1-U6 + query |
 | `config.modify` | Change an existing config / parse / fields | region, project, config | `aliyun_sls`, local validator | config + index + data verified |
-| `config.create` | Base resources exist, only create a config | region, project, logstore, machine_group, scenario | `aliyun_sls`, local validator | config exists, bound, has data |
-| `onboarding.cloud` | Collector installed, wire up cloud side | region, project, logstore, machine_group, source | `aliyun_sls`, local validator | U1-U6 pass |
+| `config.create` | Base resources exist, only create a config | region, project, logstore, machine_group, scenario | `aliyun_sls` (default); kubectl CRD only if user asked | config exists, bound, has data |
+| `onboarding.cloud` | Collector running, wire up cloud side (API) | region, project, logstore, machine_group, source | `aliyun_sls`, local validator | U1-U6 pass |
 | `machine_group.manage` | Create/modify group, members, binding | region, project, group | `aliyun_sls` | object + relations match target |
 | `lens.query` | Query collection alarms/status/metrics | business project, time range, lens entry | `aliyun_sls` | query complete with context |
 | `troubleshoot.basic` | No data / heartbeat abnormal | region, project, optional logstore/config/group | `aliyun_sls`, Lens | root cause or single blocker |
@@ -186,47 +242,63 @@ Full router spec (`when_to_use` / `out_of_scope` / `entry_signals` / `success|bl
 
 `Classify → Preflight → Observe → Plan → Approve → Execute → Verify → (Rollback)`
 
-- **Classify**: pick capability, scenario (`host/docker/k8s/host_agentsight`), management plane. Ask for scope-changing inputs; never guess. If the user names SLS / Log Service / 日志采集 / LoongCollector / Logtail without a concrete operation (create/modify/bind/query/troubleshoot), **stay in this skill**: clarify region, project/resource locator, and the intended operation before any cloud call; never improvise outside scope.
+`install.deploy` inserts an extra install Approve/Execute **before** collection Observe/Plan. Do not end after the process/Addon stage gate.
 
-  **Agentloop / AgentSight:** Agentloop、AgentSight、`input_agentsight`、eBPF Runtime、`ebpf-event` → `config.create` (or `onboarding.cloud` if the group must be created) with scenario `host_agentsight`. Load `references/agentsight-agentloop.md` and `references/input-agentsight.md`. Names are product-fixed (`runtime-ebpf-agentsight-config` → `ebpf-event`). Existing config is lock-and-skip, never overwrite. Host Linux, kernel `>=5.10`, collector `>=3.3.9`. Not OBI/OTLP.
+- **Classify**: pick capability, scenario (`host/docker/k8s/host_agentsight`), environment (`ecs|self_host|ack|self_k8s`), management plane (`api|crd`). **Default `api`** for host and K8s collection. Set `crd` only when the user explicitly asks for `ClusterAliyunPipelineConfig` / GitOps / `kubectl apply` CR **and** a reachable kube-apiserver is proven (`references/crd-pipeline.md`). ACK collection must not stop on `[AWAITING: KUBECONFIG]`. Ask for scope-changing inputs; never guess. If the user names SLS, Log Service, LoongCollector, Logtail, or any catalog `routing_intent` marker without a concrete operation, **stay in this skill**: clarify region, project/cluster/host, and the intended operation before any cloud call; never improvise outside scope.
 
-  **INTENT / PARAM CLARIFICATION STOP (hard):** Ask at most **one** clarifying question, in Chinese, using the applicable exact subject from the Language and HITL Delivery Contract: general scope `请补充要执行的具体操作目标、地域和 SLS Project。`; Lens `请补充业务 Project、地域和查询时间范围。`. If the user still gives no concrete values — undecided, wants only the checklist, or asks you not to run commands — **do not ask again**. In that same turn output a minimal checklist (region, Project/resource locator, operation goal; for Lens-only asks: business project or Lens entry + time range), put `[BLOCKED: MISSING_REQUIRED_INPUT]` on the final line, and end the turn — no further questions, cloud calls, Preflight, or Observe. Resume only when the user supplies concrete values.
+  **Agentloop / AgentSight:** Agentloop, AgentSight, `input_agentsight`, eBPF Runtime, or `ebpf-event` → `config.create` (or `onboarding.cloud` if the group must be created) with scenario `host_agentsight`. Load `references/agentsight-agentloop.md` and `references/input-agentsight.md`. Names are product-fixed (`runtime-ebpf-agentsight-config` → `ebpf-event`). **Lock forbids overwrite, not Plan:** even when `get-logtail-pipeline-config` already returns the object, still run `scripts/render_pipeline.py` + `scripts/validate_pipeline.py` + `scripts/normalize_diff.py` and ask catalog message `r2_create_bind`. After confirm, still issue `create-logtail-pipeline-config` (and `apply-config-to-machine-group` if unbound). `AlreadyExist` / already-bound → record the lock `[Idempotent-Skip]` and **do not update**. Host Linux, kernel `>=5.10`, collector `>=3.3.9`. Not OBI/OTLP.
 
-  Project locator: exact user prefix/handoff only — at most one `list-project --project-name <prefix>`, then `get-project` on the resolved full name; a `list-project` hit alone never proves the target nor authorizes work on it. Never broaden/synthesize names. Zero matches → `[BLOCKED: RESOURCE_RESOLUTION_FAILED] …`; multiple → ask user to choose.
-- **Preflight**: `scripts/preflight.sh` (CLI/plugin/credential/scope). On any hard-gate failure, output `[BLOCKED: PREFLIGHT_FAILED] gate=<gate>; <reason>` and stop.
-- **Observe (read-only)**: Get current objects + bindings + heartbeat; save a snapshot. Read collector version **before** choosing plugins.
-  **MANDATORY VERIFICATION COMMANDS:** existence is proven only by `get-project`, `get-machine-group`, and `get-log-store` (the last before any create/bind on that logstore). Observe **must start with** `get-project --project <full-name>` (or `list-project` then `get-project` on the resolved name). Concatenating a prefix with `EVAL_ACCOUNT_ID` is **not** existence proof and does **not** authorize skipping `get-project` to jump to `get-log-store`. The `get-project` result is the only runtime project name for later calls. `list-machines` / `get-applied-configs` / `list-log-stores` prove heartbeat or binding, never existence. Enter create only after a `get-*` returns ResourceNotExist. Even on `ProjectNotExist`, still issue the remaining independent gets once each (including `get-applied-configs`).
-- **Plan**: build target objects. **MANDATORY CHECKPOINT:** every planned R2/R3/R4 resource or relation change (including Project, Logstore, MachineGroup, binding, and unbinding) MUST have a target JSON and an executed `scripts/normalize_diff.py` result; use `--kind auto` for non-config/index objects. Never substitute raw `diff`, visual inspection, or a handwritten diff. Exit code `3` means "valid diff contains changes", not failure. Config/index coupling uses this fixed order: snapshot config and index → validate the full target config with `scripts/validate_pipeline.py` → run `scripts/normalize_diff.py --kind config` → run `scripts/normalize_diff.py --kind index`. Exit code `1` from validation blocks the write. Do not enter Approve until every applicable mandatory script has executed successfully. Include impact, risk, rollback, and verification. `mode=plan` MUST NOT call write commands.
+  **INTENT / PARAM CLARIFICATION STOP (hard):** Ask at most **one** clarifying question, in Chinese, using the applicable exact catalog message: `missing_task_scope` for general scope or `missing_lens_parameters` for Lens. If the user still gives no concrete values — undecided, wants only the checklist, or asks you not to run commands — **do not ask again**. In that same turn output a minimal declarative checklist (region, Project/resource locator, operation goal; for Lens-only asks: business project or Lens entry + time range), put `[BLOCKED: MISSING_REQUIRED_INPUT]` on the final line, and end the turn — no further questions, question marks, invitations to provide data, cloud calls, Preflight, or Observe. In particular, do not repeat either fixed clarification subject after the checklist. Resume only when the user supplies concrete values.
+
+  Project locator: exact user prefix/handoff only — at most one `list-project --project-name <prefix>`, then `get-project` on the resolved full name; a `list-project` hit alone never proves the target nor authorizes any next resource read. The `get-project` call is mandatory for read-only config views and Idempotent-Skip checks too: never jump directly from EVAL_ACCOUNT_ID/name resolution to `get-log-store` or `get-logtail-pipeline-config`. Never broaden/synthesize names. Zero matches → `[BLOCKED: RESOURCE_RESOLUTION_FAILED] …`; multiple → ask user to choose.
+- **Preflight**: `scripts/preflight.sh` (CLI/plugin/credential/scope). Add `--need-ecs` (ECS) / `--need-cs` (ACK) / `--need-kubectl` (**self_k8s install only**, or opt-in CRD). **Hard-gate only** (CLI / SLS plugin / credentials / ACK `--need-cs`): output `[BLOCKED: PREFLIGHT_FAILED] gate=<gate>; <reason>` and stop. **Adapters are not hard gates:**
+  - **ECS:** `run-command` is the only host channel. `--need-ecs` is a warn, not a hard fail. Still run `scripts/render_loongcollector_install_cmd.py`, and **still ask** catalog message `ecs_install` with last line `[AWAITING: INSTALL_CONFIRMATION]`. Never emit `[BLOCKED: PREFLIGHT_FAILED] gate=workbench` / `gate=ecs`. After confirm, use exactly `aliyun ecs run-command --biz-region-id <region> ... --instance-id <id>` and poll with `aliyun ecs describe-invocation-results --biz-region-id <region> --invoke-id <id>`; never use `--instance-id.1`, `--region-id`, or `--region` for these plugin commands. Do **not** use `workbench exec` / `aliyun ecs-workbench` / OOS.
+    **ECS post-install fast path:** After a successful invocation result, reuse every user-supplied Project, Logstore, machine-group, and config name verbatim. Do not read helper source, call `--help` for mapped commands, reinstall/update plugins, re-run Preflight, or write `outputs/*` / `ran_scripts/*` before collection approval. Run only the required Observe reads, render/validate/diff calls, then immediately emit the collection approval question. If invocation status is still running, wait and poll as separate tool calls; never combine `sleep` and the poll command.
+  - **self_k8s kubectl missing:** this is the **first** stop — before Observe, Plan, values render, or any create-bind question. Ask exactly catalog message `kubeconfig` + `[AWAITING: KUBECONFIG]` and end the turn. **Never** `[BLOCKED: PREFLIGHT_FAILED] gate=kubectl`. Cloud writes / `create-logtail-pipeline-config` are forbidden until kubectl is provided. A refusal or catalog `end` marker → stop; do not continue to R2 create-bind.
+  - **self_host SSH:** **before any** `create-*` / `apply-config-*` / install / `INSTALL_CONFIRMATION`, run exactly one direct probe: `ssh -o BatchMode=yes -o ConnectTimeout=8 <alias> -- true`. Use the user's existing SSH configuration; never add `StrictHostKeyChecking=no`, `UserKnownHostsFile=/dev/null`, or any option that weakens host-key verification. Do not wrap the probe in a pipe, `tee`, redirection, compound command, or logging helper that can mask its exit code. If the alias is missing, unresolvable, or the probe fails → immediately ask exactly catalog message `ssh` with last line `[AWAITING: SSH]` and **stop**; after the failed probe, do not call `write_file`, update a plan, or narrate a report before emitting that two-line gate. Do **not** ask the install-confirmation sentence on a failed probe. Do **not** create/edit `~/.ssh/config`, `/etc/hosts`, `authorized_keys`, or rewrite the alias to `127.0.0.1` / localhost to fake a working channel. Zero cloud writes that turn. Prompt-supplied alias that does not work is still “no usable SSH”. A catalog `end` marker → output only `[CANCELLED: SSH_REQUIRED]`; do not call tools or continue to install.
+  - ACK collection uses SLS API and must not ask for kubeconfig / `--need-kubectl`.
+  - **ACK first-use:** `--need-cs` hard-fails only on a missing CS plugin. Unopened ACK (`ErrorNotEnabled` / `cskpro`) or missing `AliyunCSDefaultRole` is **not** `[BLOCKED: PREFLIGHT_FAILED]`. After install confirm, run `bash scripts/ensure_ack_prereq.sh --region <r>`, then retry the failed CS write once. `create-cluster` only if the user asked: `--biz-profile Default` (never `--profile`), spec `ack.standard` then `ack.pro.small`. Do not invent `sls-eval-loop-ack` in production.
+- **Observe (read-only)**: Get current objects + bindings + heartbeat; save a snapshot. Read collector version (`list-machines` `.binary`) **before choosing plugins**. If the **user message already states a version** (e.g. `3.2.6` / `3.3.9` / `LoongCollector 3.2.6`), use that version and do **not** ask. If version is still unknown: ask exactly catalog message `collector_version` + `[AWAITING: COLLECTOR_VERSION]` and stop. Do **not** assume 3.x, do **not** silently pick `processor_json`, and do **not** ask Lens only to learn the version. A catalog `collector_deployed_without_version` marker without a version string is still unknown.
+  **MANDATORY VERIFICATION COMMANDS:** existence is proven only by `get-project`, `get-machine-group`, and `get-log-store` (the last before any create/bind on that logstore). Observe **must start with** `get-project --project <full-name>` (or `list-project` then `get-project` on the resolved name). For `config.create` / create-and-bind, check `get-machine-group` (or `list-machines`) immediately after Project resolution and before `get-log-store`, so the machine-group precheck is unambiguously recorded before config planning. Concatenating a prefix with `EVAL_ACCOUNT_ID` is **not** existence proof and does **not** authorize skipping `get-project` to jump to `get-log-store`. The `get-project` result is the only runtime project name for later calls. `list-machines` / `get-applied-configs` / `list-log-stores` prove heartbeat or binding, never existence. Enter create only after a `get-*` returns ResourceNotExist. Even on `ProjectNotExist`, still issue the remaining independent gets once each (including `get-applied-configs`).
+- **Plan**: build target objects. A from-zero `onboarding.cloud` plan includes Project, Logstore, **Index**, MachineGroup, PipelineConfig, and binding unless the user explicitly opts out of indexing; never infer that Index is optional merely because the prompt contains a catalog `binding_acceptance` marker. **MANDATORY CHECKPOINT:** every planned R2/R3/R4 resource or relation change (including Project, Logstore, Index, MachineGroup, binding, and unbinding) MUST have a target JSON and an executed `scripts/normalize_diff.py` result; use `--kind auto` for non-config/index objects. Never substitute raw `diff`, visual inspection, or a handwritten diff. Exit code `3` means "valid diff contains changes", not failure. Config/index coupling uses this fixed order: snapshot config and index → validate the full target config with `scripts/validate_pipeline.py` → run `scripts/normalize_diff.py --kind config` → run `scripts/normalize_diff.py --kind index`. Exit code `1` from validation blocks the write. Do not enter Approve until every applicable mandatory script has executed successfully. Include impact, risk, rollback, and verification. `mode=plan` MUST NOT call write commands.
+  **SCRIPT EVIDENCE MUST BE VISIBLE:** invoke each required Skill script as its own shell/tool call and keep its JSON/status on that call's stdout. It is fine to use `tee` to persist the same stdout, but do not redirect all script output only into `outputs/*` / `ran_scripts/*` and leave the tool result with just an exit code. A later file read or a handwritten execution record does not replace visible script-call evidence.
   **VALIDATION FAILURE HARD STOP:** if `scripts/validate_pipeline.py` returns exit code `1` or `status=invalid`, immediately output `[BLOCKED: VALIDATION_FAILED]` and end the turn. Do not run `--cli-dry-run`; do not execute any create/update/apply/remove/delete command; do not treat a server-side 4xx from an actual write as validation evidence. This rule overrides user approval and every later Execute step.
-- **Approve**: HARD GATE. For every R2 operation (create resource, update config, apply/bind, create/update index) you MUST, before Execute, explicitly output the normalized diff, ask the user to confirm, and end the turn. Ask at most one confirmation question per turn. For a Chinese request it must be the applicable exact subject from the Language and HITL Delivery Contract, with Chinese options (`确认执行` / `取消`), never English ones. Only an explicit positive answer authorizes a write. R3: explicit impact confirmation. R4: second confirmation, restate resources.
+- **Approve**: HARD GATE. For every R2 operation (create resource, update config, apply/bind, create/update index) you MUST, before Execute, explicitly output the normalized diff, ask the user to confirm, and end the turn. Ask at most one confirmation question per turn. For a Chinese request it must be the applicable exact subject from the Language and HITL Delivery Contract, with the catalog `approval` and `cancel` options, never English ones. Only an explicit positive answer authorizes a write. R3: explicit impact confirmation. R4: second confirmation, restate resources.
 
-  **SEPARATE UNBIND GATE:** Create-and-bind and unbind are two independent confirmations. First ask only `是否确认创建上述资源并完成绑定？请选择：确认执行或取消。`. After the user confirms **and** those writes (or exact Idempotent-Skip) finish, ask in a **new** turn `是否确认将上述旧配置从机器组解绑？请选择：确认解绑或取消。`. Never merge unbind into the create-and-bind question, and never run `remove-config-from-machine-group` (including `--cli-dry-run`) on the create-and-bind approval.
+  **SEPARATE INSTALL THEN COLLECTION GATES:** For `install.deploy`, first ask only the environment-specific install catalog message and end the turn with `[AWAITING: INSTALL_CONFIRMATION]` — **never** `[AWAITING: R2_CONFIRMATION]`. Catalog `install_intent` markers in the original request describe intent but are **not the separate confirmation reply**; only a fresh user message received after the install question authorizes `run-command` / SSH install / addon install. After install succeeds, if a **new** CR or API config/binding is required, ask in a **new** turn catalog message `r2_create_bind` with last line `[AWAITING: R2_CONFIRMATION] ask=1` before those writes. Do not ask machine-group identity or collector version between the two gates. On a catalog `cancel` marker or equivalent rejection: `[CANCELLED: R2_CONFIRMATION_REJECTED]`, report catalog `install_only_status`, and issue **zero** collection writes. If Observe already matches the target (get proves logstore/group/config/binding), emit `[Idempotent-Skip]` and do **not** re-issue create/apply. Pure reuse of ACK default collection is the same skip.
 
-  **DO NOT SKIP CONFIRMATION:** Automation, urgency, complete parameters, and the original task wording never waive this gate. While the answer is outstanding, emit the Chinese question and `[AWAITING: R2_CONFIRMATION] ask=1` on the first ask, end the turn, and wait for the user's next message.
+  **SECOND-GATE TAG UNIQUENESS:** In the post-install turn that asks for collection approval, the complete `[AWAITING: R2_CONFIRMATION] ask=1` token may appear exactly once: as the final response line. Before that final response, refer to the pending step only as "collection approval"; never put the token in a Plan/Todo item, tool description, tool argument, code block, output file, execution record, or narration. Do not write an execution record or update a plan after the final validation/diff call; emit the fixed question and tag immediately.
+
+  **SEPARATE UNBIND GATE:** Create-and-bind and unbind are two independent confirmations. First ask only catalog message `r2_create_bind`. After the user confirms **and** those writes (or exact Idempotent-Skip) finish, ask in a **new** turn catalog message `r3_unbind`. Never merge unbind into the create-and-bind question, and never run `remove-config-from-machine-group` (including `--cli-dry-run`) on the create-and-bind approval.
+
+  **DO NOT SKIP CONFIRMATION:** Automation, urgency, complete parameters, and the original task wording never waive this gate. While the answer is outstanding, emit the Chinese question and `[AWAITING: R2_CONFIRMATION] ask=1` on the first ask, end the turn, and wait for the user's next message. **Same-turn writes are a gate failure:** after the question, do not `--cli-dry-run`, `create-*`, `apply-config-*`, or `update-*` until the next user message contains an explicit catalog `approval` marker.
 
   **HARD GATE CHECKLIST (Approve → Execute):**
   0. Ask only once the plan is real: `scripts/validate_pipeline.py` has passed on any config payload and `scripts/normalize_diff.py` has run for every planned write. Asking approval for a plan you have not validated and diffed is a gate failure.
   1. Nothing you produce yourself is an answer. If the turn ends without the user having stated a decision, output `[AWAITING: R2_CONFIRMATION] ask=<n>` with the identical question and wait.
   2. Never treat the original task wording, “the task explicitly requires”, “parameters are complete”, or an already-rendered plan table as approval.
-  3. Enter Execute only after the user explicitly answers yes/confirm/approve or equivalent (`确认` / `确认执行` / `确认解绑`).
+  3. Enter Execute only after the user explicitly answers yes/confirm/approve or an equivalent catalog `approval` marker.
   4. `--cli-dry-run` for any R2/R3 write is part of Execute: it is **forbidden** before that explicit approval. Showing a plan without asking, then dry-running, is a gate failure.
   5. Violating this gate is a task failure.
 
-  **NON-ANSWER RULE (hard stop):** A reply that defers the decision instead of making it — blank, "later", "not sure yet", "还没想好", "等会儿再说", "暂不确认", or any equivalent — is not approval. Maintain ask counter `n` starting at `1` on the first confirmation turn. After each deferral, restate in **one** line which resources and operation are still waiting, re-ask the identical Chinese confirmation subject **exactly once**, emit `[AWAITING: R2_CONFIRMATION] ask=<n+1>` (`ask=2` then `ask=3`), and end the turn. Do not print the question or the AWAITING tag twice. A bare repeated question without `ask=<n>`, or a "take your time" soft-close with no question, both fail this rule. When `ask=3` has also gone unanswered, emit `[BLOCKED: R2_CONFIRMATION_TIMEOUT]` as the sole content of that turn. Explicit reject/cancel → sole content `[CANCELLED: R2_CONFIRMATION_REJECTED]`. Do not append English prose such as `User rejected the proposed plan…`. Full semantics: `references/risk-and-approval.md`.
+  **NON-ANSWER RULE (hard stop):** A blank reply, "later", "not sure yet", any catalog `deferral` marker, or any equivalent deferral is not approval. Maintain ask counter `n` starting at `1` on the first confirmation turn. After each deferral, restate in **one** line which resources and operation are still waiting, re-ask the identical Chinese confirmation subject **exactly once**, and put `[AWAITING: R2_CONFIRMATION] ask=<n+1>` on the **last line** (counter goes 1 → 2 → 3). Do not print the question or the AWAITING tag twice. Do not add a blank line after the tag. A bare repeated question without `ask=<n>`, or a "take your time" soft-close with no question, both fail this rule. After the user replies to the **third** ask with another catalog `deferral` marker, the **next turn's sole content** is `[BLOCKED: R2_CONFIRMATION_TIMEOUT]` — do not ask a fourth time, do not write, do not dry-run. Explicit reject/cancel → sole content `[CANCELLED: R2_CONFIRMATION_REJECTED]`. Do not append English prose such as `User rejected the proposed plan…`. Full semantics: `references/risk-and-approval.md`.
 
-  **TERMINAL-STATE HARD STOP:** Any `[BLOCKED: …]` / `[CANCELLED: …]` tag is the **sole content of the current turn** — no further tools (including `write_file`), dry-runs, writes, or Verify in that turn. Resume only with a fresh Plan + confirmation after the user re-opens the work.
-- **Execute**: approved commands only, with `--user-agent` and §4 atomic rule. Always run `--cli-dry-run` as its own call before the real write, so a rejected request surfaces before anything mutates state. **Idempotency:** get before create/apply; if state matches, skip both dry-run and write, verify via get/list, and emit exact `[Idempotent-Skip] <create/apply-command> skipped; verified via <get/list-command> that state matches expectation.` in `Changes`. If get already proves target Project/Logstore shard/TTL, any `create-project`/`create-log-store` (incl. dry-run) is a task failure. On `AlreadyExist`, get+compare → matching Idempotent-Skip, or `[BLOCKED: EXISTING_RESOURCE_CONFLICT]` if mismatched.
-  **Error recovery (≤3 retries / 4 total; keep `errorCode` + `requestID`):** Prefer `python3 scripts/classify_sls_error.py` and emit its `error_tag` **before** narration. Mapping: 400/`ParameterInvalid`→`[Error: parameter]` then fix+retry same API →`[RECOVERED: parameter_fixed]`; 429/`WriteQuotaExceed`→`[Error: throttling]` + backoff →`[RECOVERED: throttling_retry]`; 500→`[Error: internal]` + same-command retry →`[RECOVERED: internal_retry]`; 401/403→`[Error: permission]` then §2 Permission Failure Handling (Chinese ask: `是否已完成所需 RAM 授权并允许重试？请选择：已授权或未授权。`) → user-facing `[RECOVERED: permission_granted]` on 已授权 (retry the identical command the same turn) or sole-content `[BLOCKED: PERMISSION_REQUIRED]` on 未授权. Dry-run failures use the same branch; real write only after dry-run succeeds.
+  **TERMINAL-STATE HARD STOP:** After any `[BLOCKED: …]` / `[CANCELLED: …]` tag, run no further tools (including `write_file`), dry-runs, writes, or Verify. The collection-gate rejection after a successful install is the one reporting exception: output `[CANCELLED: R2_CONFIRMATION_REJECTED]` and exact catalog status `install_only_status`, then end the turn with zero tools. A permission rejection may also list the required not-yet-run reads from §2, but must explicitly state that execution has terminated. All other terminal turns contain only the short tag. Resume only with a fresh Plan + confirmation after the user re-opens the work.
+- **Execute**: approved commands only, with `--user-agent` and §4 atomic rule. Always run `--cli-dry-run` as its own call before the real write, so a rejected request surfaces before anything mutates state. **Idempotency:** get before create/apply; if state matches, skip both dry-run and write, verify via get/list, and emit exact `[Idempotent-Skip] <create/apply-command> skipped; verified via <get/list-command> that state matches expectation.` in `Changes`. If get already proves target Project/Logstore shard/TTL, any `create-project`/`create-log-store` (incl. dry-run) is a task failure. On `AlreadyExist`, get+compare → matching Idempotent-Skip, or `[BLOCKED: EXISTING_RESOURCE_CONFLICT]` if mismatched. **`config.modify` exception:** an explicit user request to change a config/index (rename field, change parse, sync index) **must** still run `scripts/normalize_diff.py`, ask catalog message `r2_update`, then after confirm issue `update-logtail-pipeline-config` and the coupled `update-index` (each with its own `--cli-dry-run` first). Do **not** skip those two writes just because the snapshot already matches — overwrite is the requested change. Create/apply Idempotent-Skip still applies. **AgentSight lock:** still Plan + HITL, then `create-logtail-pipeline-config`; `AlreadyExist` → `[Idempotent-Skip]`, do not update.
+  **Logstore Idempotent-Skip output:** when shardCount/TTL already match, the user-facing final answer must include the skipped command name, for example `[Idempotent-Skip] create-log-store skipped; verified via get-log-store that state matches expectation.`
+  **Error recovery (≤3 retries / 4 total; keep `errorCode` + `requestID`):** Prefer `python3 scripts/classify_sls_error.py` and emit its `error_tag` **before** narration. Mapping: 400/`ParameterInvalid`→`[Error: parameter]` then fix+retry same API →`[RECOVERED: parameter_fixed]`; 429/`WriteQuotaExceed`→`[Error: throttling]` + backoff →`[RECOVERED: throttling_retry]`; 500→`[Error: internal]` + same-command retry →`[RECOVERED: internal_retry]`; 401/403 whose message is ownership (`does not belong to you`) → `[BLOCKED: RESOURCE_RESOLUTION_FAILED]` (not a RAM HITL); other 401/403→`[Error: permission]` then §2 Permission Failure Handling (ask catalog message `permission_recovery`) → user-facing `[RECOVERED: permission_granted]` on catalog `permission_grant` (retry the identical command the same turn) or sole-content `[BLOCKED: PERMISSION_REQUIRED]` on catalog `permission_decline`. Dry-run failures use the same branch; real write only after dry-run succeeds.
 - When `get-logs-v2` returns `meta.progress=Incomplete`, that is an incomplete query (not a transport success to treat as final): output `[Query: Incomplete] attempt=<n>/4`, then retry the identical request per §9. When `meta.progress=Complete`, report `Complete` — do **not** emit `INCOMPLETE` or fabricate Incomplete retries.
-- **Verify**: acceptance evidence must be re-read **after** Execute — every created or changed object through its own `get-*` (`get-log-store`, `get-machine-group`, `get-logtail-pipeline-config`, `get-index`), both binding directions, and `list-machines` for heartbeat. Observe-phase reads describe the old state and never count as acceptance. Bounded polling (15s × up to 4) against U1-U6. After every config create/update/bind or onboarding flow, **must** execute a business-logstore `get-logs-v2` acceptance query before the final answer — skipping it because “config already verified” is a task failure. Report observed count/progress; if no rows arrive, state an evidence-based reason such as no new source logs, heartbeat/binding failure, or unavailable source-side evidence. Never equate zero rows with successful delivery. The user-facing final summary after onboarding/Verify **must** list the **Project full name**, Logstore, machine group, and config name (not only the three resource names).
+- **Verify**: acceptance evidence must be re-read **after** Execute — every created or changed object through its own `get-*` (`get-log-store`, `get-machine-group`, `get-logtail-pipeline-config`, `get-index`), both binding directions (`get-applied-configs` **and** `get-applied-machine-groups`), and `list-machines` for heartbeat. Do not declare Verify complete or start writing the final report until the applicable `get-index`, both binding reads, `list-machines`, and business `get-logs-v2` calls have actually run. In particular, a newly created machine group requires a post-create `get-machine-group`; its Observe-phase 404 never counts as acceptance. Observe-phase reads describe the old state and never count as acceptance. Bounded polling (15s × up to 4) against U1-U6. After every config create/update/bind or onboarding flow, **must** execute a business-logstore `get-logs-v2` acceptance query before the final answer — skipping it because “config already verified”, “no collector heartbeat”, or “data cannot arrive yet” is a task failure. Report observed count/progress; if no rows arrive (`count=0` / `data=[]`), you **must** say catalog `data_incomplete` and `data_empty` plus `reason`. **Forbidden** on empty U5: every catalog `forbidden_empty_success` marker. Never equate zero rows with successful delivery. The **last user-facing answer** (including after a later unbind) **must** contain catalog `data_arrived` or `data_empty`, plus `reason`. The user-facing final summary after onboarding/Verify **must** list the **Project full name**, Logstore, machine group, and config name (not only the three resource names).
 - **Rollback**: only from the pre-execution snapshot or declared inverse; never rebuild config from memory.
 
 Input contract and stop conditions: `references/prerequisites.md`.
 
 ### Scope & adapter rules
-- This skill executes **only** through `aliyun sls` + local validators. **No SSH / kubectl / docker exec** — if host-side evidence is required, state the limitation and describe in plain language what the user should check on the host (collector process running, identity file content, reporting region, account id). Do not emit host shell commands, and do not inspect local processes or install directories either: the collector runs on the user's hosts, never where this skill executes.
-- Fixed within one request: account/profile, region, project, group, config. Switching scope requires a fresh confirmation.
-- One management plane per config: API **or** CRD, never both. If double-write is detected, STOP (`references/pipeline-config.md`).
+- Cloud-only capabilities execute through `aliyun sls` + local validators. Existing cloud-only evals still forbid SSH/kubectl.
+- `install.deploy` may use `aliyun ecs run-command` + `aliyun ecs describe-invocation-results` (ECS), user SSH (fingerprint confirmed, no private key in chat), `aliyun cs` (addon name **`loongcollector`**), and `kubectl` for **self_k8s package install** plus opt-in CR get/apply. **No `workbench exec` / OOS / `kubectl exec` / `docker exec` / unbounded root shell.** Never print kubeconfig or client certs; write a 0600 tempfile only.
+- After install, host path **must** call `onboarding.cloud`. K8s path **must** reuse official Project/machine group, **create the pipeline via SLS API by default**, then U1–U6 and `get-logs-v2`. CRD apply only on explicit user request (`references/crd-pipeline.md`).
+- Fixed within one request: account/profile, region, project, cluster, group, config. Switching scope requires a fresh confirmation.
+- One management plane per config: API **or** CRD, never both. If double-write is detected, STOP (`references/pipeline-config.md`, `references/crd-pipeline.md`). A CR-owned config must not be updated via API. Defaulting to API does not authorize creating a second plane.
 
 ---
 
@@ -236,7 +308,7 @@ Input contract and stop conditions: `references/prerequisites.md`.
 |---|---|---|
 | R0 read | list/get, status, log query | auto |
 | R1 local | schema validate, render, diff | auto |
-| R2 reversible write | create resource, update config, apply/bind, create/update index | show diff + one confirmation |
+| R2 reversible write | create resource, update config, apply/bind, create/update index, install collector, `kubectl apply` CR | show diff + one confirmation |
 | R3 high impact | remove/unbind, bulk changes | confirm after stating impact |
 | R4 destructive | delete project/logstore/config/group | second confirmation, restate resources |
 
@@ -260,26 +332,30 @@ When processors add, remove, or rename a field, you MUST: 1) generate the config
 
 ---
 
+**First-create flag invariant:** the first dry-run and real invocation of `create-project` must use `--project-name`; never probe it with `--project`. Use `--logstore-name` for `create-log-store` and `--group-name` for `create-machine-group`. A failed exploratory write invocation can poison ordered evaluation even when a later retry succeeds.
+
 ## 9. SLS Lens (CloudLens for SLS) run logs
 
 Lens is the primary data source for basic troubleshooting. Run-log query itself uses public `aliyun sls get-logs-v2`.
 
-**Entry discovery.** Verify the business project with `get-project` first — a missing business project explains an empty query and must not be reported as a Lens failure. Then run `get-logging` once on it (even if missing) and `python3 scripts/parse_lens_logging.py`. State machine: (1) usable entry → verify+use; (2) else user-supplied `lens_project`/`lens_logstore` → verify+use; (3) else, **after** every independent non-Lens read has already been issued once (including `get-applied-configs` even on `ProjectNotExist`), ask once exactly `请提供 SLS Lens 服务日志的 Project 和 Logstore。` and emit `[AWAITING: LENS_ENTRY]` as the last line — that turn's user-facing content is **only** that question plus the tag: no conclusion, no evidence dump, no “根因已定位”. End the turn and wait. **Never** reuse the business Project or invent `internal-diagnostic_log` on it; after the user answers, **must** run planned `logtail_alarm` + version-routed metric queries, then write the conclusion; (4) if user cannot provide → continue independent MG/config/business checks with `resource_status: Resource not found`, never fabricate “no alarms”.
+**Entry discovery.** Verify the business project with `get-project` first — a missing business project explains an empty query and must not be reported as a Lens failure. Then run `get-logging` once on it (even if missing) and `python3 scripts/parse_lens_logging.py`. State machine: (1) usable entry (`loggingProject` / parsed lens project+logstore) → verify+use and **do not** ask `[AWAITING: LENS_ENTRY]`; (2) else user-supplied `lens_project`/`lens_logstore` → verify+use; (3) else, **after** every independent non-Lens read has already been issued once (including `get-applied-configs` even on `ProjectNotExist`), ask once exactly catalog message `lens_entry` and emit `[AWAITING: LENS_ENTRY]` as the last line — that turn's user-facing content is **only** that question plus the tag: no conclusion, no evidence dump, and no catalog `root_cause_located` marker. End the turn and wait. **Never** reuse the business Project or invent `internal-diagnostic_log` on it; after the user answers, **must** run planned `logtail_alarm` + version-routed metric queries, then write the conclusion; (4) if user cannot provide → continue independent MG/config/business checks with `resource_status: Resource not found`, never fabricate “no alarms”. After the final Lens/troubleshoot report, **stop** — do not ask Lens location again and do not wait for a catalog `end` marker.
 
-**Forbidden**: STAROps/JWT/console cookie; guessing `log-service-{uid}-{region}`; Lens topics on the business Project after discovery failed; skipping the ask-once HITL.
+**Forbidden**: STAROps/JWT/console cookie; guessing `log-service-{uid}-{region}`; Lens topics on the business Project after discovery failed; skipping the ask-once HITL. **`[AWAITING: LENS_ENTRY]` is only for `troubleshoot.basic` / `lens.query`.** Missing collector version on onboarding/config uses `[AWAITING: COLLECTOR_VERSION]`, never Lens.
 
 **Query hard constraints** (full: `references/sls-lens-contracts.md`, `references/monitoring-queries.yaml`): no `select *`; version route `>=3`→`loongcollector_metric`, `<3`→`logtail_profile`/`logtail_metric` (must execute that `get-logs-v2` even on failure); `logtail_alarm` filters by `project` (never `config_name` in where); Incomplete → `[Query: Incomplete] attempt=<n>/4` + identical retry ≤4, then `INCOMPLETE` if still incomplete after 4; `Complete` → report `Complete` and never fabricate `INCOMPLETE`; report Lens project/logstore/topic/window/route/completeness.
 
 ---
 
+**Mandatory version-route call:** for every known collector version `>=3`, including `3.2.6`, execute a distinct `aliyun sls get-logs-v2` query containing `__topic__: loongcollector_metric`. A `logtail_status` query is additional evidence and does not replace the metric query. Execute this call even when an earlier Lens query returns no rows or an error.
+
 ## 10. Troubleshooting (no-data, heartbeat)
 
 Fixed chain: `classify → heartbeat & version → config & binding → alarm/metric → business data → minimal fix → re-verify`.
-- **HARD RULE — the diagnostic chain never stops early.** If a read-only step returns `ResourceNotExist`/`ProjectNotExist`/`LogStoreNotExist`/`LoggingNotExist`, execute every remaining independent diagnostic step. **`get-applied-configs` is independent of Project existence** — issue it once even after `get-project`/`get-machine-group` already 404; do not substitute `get-logtail-pipeline-config` for binding evidence. For Lens-dependent steps, follow §9 (ask once + `[AWAITING: LENS_ENTRY]` → wait → then query) after **any** entry-discovery failure — `LoggingNotExist` and `ProjectNotExist` alike, since the Lens entry lives in a different project and a missing business project says nothing about it. Reporting the Lens entry as not found without having asked for it, or writing the final conclusion in the same turn as the Lens ask, is a task failure. Run each corresponding get/query command once (or after HITL supplies the entry), preserve its exact command and error code, record `resource_status: Resource not found` when applicable, and continue. Breaking off midway is a task failure. This continuation rule does not authorize writes and does not override the permission hard stop.
+- **HARD RULE — the diagnostic chain never stops early.** If a read-only step returns `ResourceNotExist`/`ProjectNotExist`/`LogStoreNotExist`/`LoggingNotExist`, execute every remaining independent diagnostic step. **`get-applied-configs` is independent of Project existence** — issue it once even after `get-project`/`get-machine-group` already 404; do not substitute `get-logtail-pipeline-config` for binding evidence. **Business `get-logs-v2` is also independent** — issue it once against the named business logstore even when the Project is missing (expect `ProjectNotExist` / `LogStoreNotExist`). The Lens-entry ask turn is **only** catalog message `lens_entry` plus `[AWAITING: LENS_ENTRY]`; no report in that turn. After the final report, do not ask a follow-up. For Lens-dependent steps, follow §9 (ask once + `[AWAITING: LENS_ENTRY]` → wait → then query) after **any** entry-discovery failure — `LoggingNotExist` and `ProjectNotExist` alike, since the Lens entry lives in a different project and a missing business project says nothing about it. Reporting the Lens entry as not found without having asked for it, or writing the final conclusion in the same turn as the Lens ask, is a task failure. Run each corresponding get/query command once (or after HITL supplies the entry), preserve its exact command and error code, record `resource_status: Resource not found` when applicable, and continue. Breaking off midway is a task failure. This continuation rule does not authorize writes and does not override the permission hard stop.
 - Cloud visibility and collector-side evidence corroborate each other; do not substitute one for the other.
 - No data: `get-logtail-pipeline-config --config-name` + `list-machines` + exact binding queries from §8 → `logtail_alarm` by project → `logtail_status` → version-matched pipeline topic → business logstore.
-- Heartbeat abnormal: `list-machines` → `logtail_status`; if Lens is unavailable, name the host-side items the user should verify (collector process, reporting region, account id, `user_defined_id`) in prose — no shell commands, no host access.
-- Every troubleshooting conclusion MUST emit the exact field-complete evidence lines defined in `references/troubleshooting.md` (`Heartbeat` / `Alarm` / `Collection`, plus `Binding` / `Pipeline` when those checks run). Use `N/A`/`unknown` instead of omitting a field; omitting any mandatory field is a task failure. When a resource is missing, `resource_status:` MUST be the English token `Resource not found` — Chinese「不存在」does not replace it. The **user-facing final answer** (not only `outputs/*.md`) must contain these lines. If the user later says「结束」after evidence was already given, either do not write a new short closing that becomes the final answer, or repeat the same evidence tokens (including `resource_status: Resource not found`) in that closing.
+- Heartbeat abnormal: `list-machines` → `logtail_status`; if Lens is unavailable, name the host-side items (collector process, reporting region, account id, `user_defined_id`). Cloud-only tasks stay in prose. `install.deploy` may re-use `run-command`/SSH/`kubectl get` for read-only status.
+- Every troubleshooting conclusion MUST emit the exact field-complete evidence lines defined in `references/troubleshooting.md` (`Heartbeat` / `Alarm` / `Collection`, plus `Binding` / `Pipeline` when those checks run). Use `N/A`/`unknown` instead of omitting a field; omitting any mandatory field is a task failure. When a resource is missing, `resource_status:` MUST be the English token `Resource not found` — the catalog `not_exists` marker does not replace it. The **user-facing final answer** (not only `outputs/*.md`) must contain these lines. If the user later sends a catalog `end` marker after evidence was already given, either do not write a new short closing that becomes the final answer, or repeat the same evidence tokens (including `resource_status: Resource not found`) in that closing.
 
 Playbooks and alarm handling cards: `references/troubleshooting.md`, `references/alarm-catalog.yaml`.
 
@@ -287,7 +363,7 @@ Playbooks and alarm handling cards: `references/troubleshooting.md`, `references
 
 ## 11. Output Contract
 
-Every execution outputs at least: **Conclusion** (done/partial/blocked/rolled-back) · **Scope** (profile-id/region/**Project full name**/logstore/group) · **Evidence** (key results; troubleshooting must reproduce every applicable §10 evidence line, including Binding/Pipeline, in the user-facing answer) · **Changes** (normalized diff + actual actions, including every Idempotent-Skip note) · **Acceptance** (U1-U6 results) · **Rollback** (needed? executed? snapshot/inverse) · **Next step** (single blocker or next minimal action). Onboarding/Verify summaries that list only Logstore / machine group / config and omit the Project full name fail this contract.
+Every execution outputs at least: **Conclusion** (done/partial/blocked/rolled-back) · **Scope** (profile-id/region/**Project full name**/logstore/group) · **Evidence** (key results; troubleshooting must reproduce every applicable §10 evidence line, including Binding/Pipeline, in the user-facing answer) · **Changes** (normalized diff + actual actions, including every Idempotent-Skip note) · **Acceptance** (U1-U6 results; after collection writes the **user-facing final answer** — not only `outputs/*.md` — must include catalog `data_arrived` or `data_empty`, and `reason`) · **Rollback** (needed? executed? snapshot/inverse) · **Next step** (single blocker or next minimal action). A troubleshooting next step that would create, update, bind, or repair resources must enumerate the minimal write set and state verbatim that it requires a fresh normalized diff and explicit user confirmation; the diagnostic turn itself performs no write. Onboarding/Verify summaries that list only Logstore / machine group / config and omit the Project full name fail this contract. A file-only report is not the final answer.
 
 Do not print secrets, full command history, or unrelated logs; on audit request output redacted commands + request IDs (`scripts/redact_output.py`). On failure keep the original error code / request ID / redacted context; never fake success.
 
@@ -295,19 +371,19 @@ Do not print secrets, full command history, or unrelated logs; on audit request 
 
 ## 12. Global Rules
 
-1. `aliyun sls` is the only execution channel. Prefer the exact validated mapping in §8 and `references/cli-contracts.yaml`; those commands are pre-verified, so do not re-check them with `--help`. Use `aliyun sls <cmd> --help` only for an undocumented command, before Plan. Never probe shorter aliases.
+1. Prefer the exact validated mapping in §8 and `references/cli-contracts.yaml`. SLS commands are pre-verified — do not re-check them with `--help`. Use `aliyun sls <cmd> --help` only for an undocumented command, before Plan. Never probe shorter aliases. ACK uses `aliyun cs` with addon name `loongcollector`. First-use enablement is `scripts/ensure_ack_prereq.sh` (`open-ack-service` + CS roles) — eval hooks may do the same for fixtures, but Skill must still know it. K8s collection **defaults to** `create-logtail-pipeline-config` + bind `k8s-group-${cid}`. `kubectl apply` of `ClusterAliyunPipelineConfig` is opt-in only.
 2. Use `get-logs-v2` (never the deprecated `get-logs`). `get-logs-v2` `--from`/`--to` are UNIX seconds.
 3. After approval, run a separate `--cli-dry-run` before every actual write; dry-run is not business approval. For §8 coupled writes, complete both dry-runs before the two uninterrupted actual writes. An exact `Idempotent-Skip` runs neither call.
 4. Get before Update; Update is overwrite — carry unchanged fields.
-5. Native plugins first; use extended plugins only when native cannot meet the need, and state the trade-off.
-6. No SSH/kubectl/docker exec; no admin project, no `starops`, no internal MCP, no private console API.
+5. Native plugins first when collector version is `>=3.x`. If version is unknown, ask catalog message `collector_version` — do not assume a plugin family. Use extended plugins when native cannot meet the need (e.g. `processor_rename`), and state the trade-off.
+6. No `kubectl exec` / `docker exec`; no admin project, no `starops`, no internal MCP, no private console API. SSH/`run-command`/kubectl only for `install.deploy` (and its read-only status follow-up) as specified. Never Workbench/OOS.
 7. Unknown alarm codes: consult official docs or `references/alarm-catalog.yaml`; never explain from memory.
 8. **NEVER run `aliyun` via `sudo`**. Run it directly as the current user; never switch users, shells, accounts, or credential profiles to bypass an error.
 9. Never modify or clear environment variables or CLI config you did not create. On an infrastructure-level failure (not an API error), retry the identical atomic command once, then report the raw output and stop — never fabricate the expected response.
 10. Diagnose a failed call from its own response — `errorCode`, `requestID`, message — plus `references/`. Never inspect the CLI binary, its install directory, local config files, or the environment to explain why a call behaved as it did; that is outside this skill's scope and risks exposing user configuration.
 11. The original request and complete parameters are never implicit R2+ authorization; only explicit post-diff approval is valid.
 12. Every SLS cloud call is one direct atomic command with literal parameters.
-13. Only the bundled `scripts/` helpers may be used: `preflight.sh`, `render_pipeline.py`, `validate_pipeline.py`, `normalize_diff.py`, `redact_output.py`, `classify_sls_error.py`, `parse_lens_logging.py`. `validate_pipeline.py`/`normalize_diff.py` are mandatory at the §6/§8 workflow points; `classify_sls_error.py` on non-2xx responses; `parse_lens_logging.py` after `get-logging`. Never `pip install` a cloud SDK and never import `aliyun.log`.
+13. Only the bundled `scripts/` helpers may be used: `preflight.sh`, `render_pipeline.py`, `validate_pipeline.py`, `normalize_diff.py`, `redact_output.py`, `classify_sls_error.py`, `parse_lens_logging.py`, `render_loongcollector_install_cmd.py`, `wait_cs_task.sh`, `render_crd.py`, `ensure_ack_prereq.sh`. `validate_pipeline.py`/`normalize_diff.py` are mandatory at the §6/§8 workflow points; `classify_sls_error.py` on non-2xx responses; `parse_lens_logging.py` after `get-logging`. If the user asked only to render/validate a `ClusterAliyunPipelineConfig` locally, run `render_crd.py` + `validate_pipeline.py` and stop — no `aliyun cs`, no `kubectl`, no cluster connect. Never `pip install` a cloud SDK and never import `aliyun.log`.
 14. Ask at most one question per turn, end the turn there, and wait for the user's next message; never answer your own question.
 
 ---
@@ -328,7 +404,7 @@ Cleanup is R3/R4. Unbind before delete; restate resources on delete. Order for a
 
 1. CLI-first with plugin-mode hyphenated subcommands (`aliyun sls get-logs-v2`), never classic `RunXxx` style or undocumented aliases.
 2. Confirm region/project and other user-specific parameters before any cloud call; never hardcode account values.
-3. One session-wide `--user-agent` id on every cloud call; inject `SKILL_SESSION_ID` for scripts.
+3. Every cloud call uses the two-token `--user-agent` (`AlibabaCloud-Agent-Skills/alibabacloud-loongcollector-ops` + `session/{session-id}`); inject `SKILL_SESSION_ID` for scripts that themselves call a cloud API.
 4. Approve with normalized diff before any R2+ write; dry-run and write as separate atomic calls.
 5. Least-privilege RAM from `references/ram-policies.md`; permission errors go through the §2 gate.
 6. Destructive cleanup stays behind R3/R4 confirmation; unbind before delete.
@@ -361,6 +437,11 @@ Cleanup is R3/R4. Unbind before delete; restate resources on delete. Order for a
 | `references/monitoring-queries.yaml` | Lens SQL library (get-logs-v2) |
 | `references/troubleshooting.md` | No-data / heartbeat playbooks |
 | `references/alarm-catalog.yaml` | Alarm code handling cards |
-| `references/acceptance-criteria.md` | U1-U6 + CLI acceptance patterns |
+| `references/acceptance-criteria.md` | Install stage gate + U1-U6 + CLI acceptance patterns |
 | `references/verification-method.md` | Per-step verification commands |
+| `references/install-ecs.md` | ECS Workbench + loongcollector.sh |
+| `references/install-host.md` | Self-host SSH + same script |
+| `references/install-ack.md` | ACK addon `loongcollector` + first-use `open-ack-service` / CS roles |
+| `references/install-k8s.md` | Self-k8s custom package |
+| `references/crd-pipeline.md` | Opt-in ClusterAliyunPipelineConfig + temp public KubeConfig |
 | `references/knowledge-sources.md` | Source provenance, drift tracking |

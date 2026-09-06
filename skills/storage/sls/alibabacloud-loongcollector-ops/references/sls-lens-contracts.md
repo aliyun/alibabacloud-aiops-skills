@@ -13,7 +13,7 @@ SLS Lens entry
 ├─ get-logging denied / only visible in console / ProjectNotExist
 │    -> first finish independent reads (including get-applied-configs);
 │       then this turn's only user-facing output is
-│       `请提供 SLS Lens 服务日志的 Project 和 Logstore。` + `[AWAITING: LENS_ENTRY]`;
+│       use the fixed Lens-entry fallback subject from `SKILL.md` + `[AWAITING: LENS_ENTRY]`;
 │       do not write the conclusion yet
 └─ not enabled / no permission / no entry after the user cannot provide
      -> continue machine-group + config + business-logstore checks;

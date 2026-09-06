@@ -29,7 +29,7 @@
     { "Type": "flusher_sls", "Logstore": "<target_logstore>" }
   ],
   "_k8s_hint": "DaemonSet vs Sidecar; confirm aliUid/region/net. ContainerFilters regex is regex_search (partial) on >=3.2.6 (VC-003). Low-replica pods may drift across nodes.",
-  "_crd_hint": "If the cluster manages configs via ClusterAliyunPipelineConfig (CRD), do NOT double-write via API — this skill only detects ownership; CRD write is out of scope.",
+  "_crd_hint": "Default this JSON via create-logtail-pipeline-config. CRD apply only when the user asks and kube-apiserver is reachable. Never double-write the same config.",
   "_index_hint": "emit index update in the SAME batch for new fields (index-coupling.md).",
-  "_cli": "aliyun sls create-logtail-pipeline-config --project <p> --config-name <config_name> --inputs '<inputs-json>' --processors '<processors-json>' --flushers '<flushers-json>' --global '{\"TopicType\":\"machine_group_topic\"}' --region <r> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-loongcollector-ops/<session-id>"
+  "_cli": "aliyun sls create-logtail-pipeline-config --project <p> --config-name <config_name> --inputs '<inputs-json>' --processors '<processors-json>' --flushers '<flushers-json>' --global '{\"TopicType\":\"machine_group_topic\"}' --region <r> --user-agent \"AlibabaCloud-Agent-Skills/alibabacloud-loongcollector-ops session/<session-id>\""
 }

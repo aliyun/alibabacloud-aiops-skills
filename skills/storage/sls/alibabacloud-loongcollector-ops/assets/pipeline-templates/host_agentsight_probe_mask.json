@@ -34,5 +34,5 @@
     { "Type": "flusher_sls", "Logstore": "ebpf-event" }
   ],
   "_mask_note": "SPL mask mode is the literal string buildin (not builtin). Do not change types or maskType. processor_spl cannot mix with native/extended processors.",
-  "_cli": "aliyun sls create-logtail-pipeline-config --project <p> --config-name runtime-ebpf-agentsight-config --inputs '<inputs-json>' --processors '<processors-json>' --flushers '[{\"Type\":\"flusher_sls\",\"Logstore\":\"ebpf-event\"}]' --global '{}' --region <r> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-loongcollector-ops/<session-id>"
+  "_cli": "aliyun sls create-logtail-pipeline-config --project <p> --config-name runtime-ebpf-agentsight-config --inputs '<inputs-json>' --processors '<processors-json>' --flushers '[{\"Type\":\"flusher_sls\",\"Logstore\":\"ebpf-event\"}]' --global '{}' --region <r> --user-agent \"AlibabaCloud-Agent-Skills/alibabacloud-loongcollector-ops session/<session-id>\""
 }

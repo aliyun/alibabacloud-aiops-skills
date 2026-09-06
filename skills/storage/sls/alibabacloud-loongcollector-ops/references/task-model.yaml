@@ -13,7 +13,7 @@
 
 request:
   id: "<session-scoped-id>"            # 32-char lowercase hex session id
-  capability: "config.modify|config.create|onboarding.cloud|machine_group.manage|lens.query|troubleshoot.basic"
+  capability: "install.deploy|config.modify|config.create|onboarding.cloud|machine_group.manage|lens.query|troubleshoot.basic"
   mode: "execute|plan"
 
 scope:                                  # fixed for the request
@@ -22,6 +22,10 @@ scope:                                  # fixed for the request
   region: "<region>"
   project: "<project>"
   logstore: "<optional>"
+  environment: "ecs|self_host|ack|self_k8s|cloud_only"
+  cluster_id: "<optional>"
+  instance_id: "<optional>"
+  management_plane: "api|crd"            # default api; crd only if user asked and apiserver reachable
 
 source:
   scenario: "host|docker|k8s|host_agentsight"
@@ -43,7 +47,7 @@ observability:
   collector_version: "<resolved-or-unknown>"
 
 execution:
-  adapters: ["aliyun_sls", "local_validator"]   # no ssh/kubectl
+  adapters: ["aliyun_sls", "local_validator"]   # install.deploy may add ecs_runcommand|ssh|aliyun_cs|kubectl
   risk_level: "R0|R1|R2|R3|R4"
   dry_run: "planned|passed|skipped_idempotent|failed"
   approval: {}                          # level, confirmed, timestamp

@@ -29,5 +29,5 @@
   ],
   "_container_filter_hint": "ContainerFilters regex is regex_search (partial match) on collector >=3.2.6; anchor with ^...$ if you need exact match (VC-003). Requires json-file log driver.",
   "_index_hint": "container fields (_pod_name_ / _namespace_ / _container_name_) plus parsed fields need index in the SAME batch (index-coupling.md).",
-  "_cli": "aliyun sls create-logtail-pipeline-config --project <p> --config-name <config_name> --inputs '<inputs-json>' --processors '<processors-json>' --flushers '<flushers-json>' --global '{\"TopicType\":\"machine_group_topic\"}' --region <r> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-loongcollector-ops/<session-id>"
+  "_cli": "aliyun sls create-logtail-pipeline-config --project <p> --config-name <config_name> --inputs '<inputs-json>' --processors '<processors-json>' --flushers '<flushers-json>' --global '{\"TopicType\":\"machine_group_topic\"}' --region <r> --user-agent \"AlibabaCloud-Agent-Skills/alibabacloud-loongcollector-ops session/<session-id>\""
 }

@@ -26,7 +26,7 @@ This is **not** OBI and **not** OTLP Metrics/Traces.
 | OS | Linux host eBPF; not Windows | plugin + help |
 | `RawHttpsFallback` | inner **main after 2026-08-12**; `libagentsight >= 0.9.0`; **not** in 3.3.9 GA help | inner `main` |
 
-Unknown collector version → ask; never assume 3.x. Below 3.3.9 on a cloud Agentloop job → block and tell the user to upgrade (do not improvise host install).
+Unknown collector version → use the fixed Missing collector version subject from `SKILL.md` followed by `[AWAITING: COLLECTOR_VERSION]`. Do not assume 3.x. Do not ask Lens only to learn the version. Below 3.3.9 on a cloud Agentloop job → block and tell the user to upgrade (do not improvise host install).
 
 ## ProbeConfig schema (pipeline JSON)
 

@@ -20,12 +20,12 @@ log:GetIndex
 log:GetMachineGroup, log:ListMachineGroup, log:ListMachines
 log:GetConfig, log:ListConfig            # pipeline config get/list
 log:GetAppliedConfigs, log:GetAppliedMachineGroups
-log:GetLogStoreLogs                       # GetLogsV2 (business + Lens run logs)
+log:GetLogStoreLogs                       # get-logs-v2 (business + Lens run logs)
 ```
 
 ## Layer: Operator (explicit user authorization)
 
-Used by `config.create`, `config.modify`, `onboarding.cloud`, `machine_group.manage` (create/update/bind).
+Used by `config.create`, `config.modify`, `onboarding.cloud`, `machine_group.manage` (create/update/bind), and the collection half of `install.deploy`.
 
 ```
 log:CreateProject, log:UpdateProject
@@ -57,7 +57,10 @@ log:DeleteProject
 | config.create | Get/List config, group, logstore | CreateConfig, ApplyConfigToMachineGroup, (CreateIndex/UpdateIndex) | — |
 | config.modify | GetConfig, GetIndex, ListMachines | UpdateConfig, UpdateIndex | — |
 | onboarding.cloud | all ReadOnly | Create/Update Project/LogStore/Index/MachineGroup/Config + Apply | — |
+| install.deploy (host) | all ReadOnly | same as onboarding; Workbench/SSH is not a RAM Action | — |
+| install.deploy (ACK) | all ReadOnly + cs describe/list addon | `cs:InstallClusterAddons`, `cs:UpgradeClusterAddons` | `cs:UnInstallClusterAddons` (out of scope) |
+| install.deploy (CRD) | all ReadOnly | Kubernetes `create/update` on `clusteraliyunpipelineconfigs` | `delete` CR (R4) |
 | machine_group.manage | Get/List group, ListMachines | Create/Update MachineGroup, Apply | Remove/Delete (R3/R4) |
 | cleanup | GetAppliedMachineGroups | — | Remove/Delete config/index/logstore/project |
 
-> Note: exact Action names should be confirmed against current SLS RAM documentation at authorization time; `log:GetLogStoreLogs` covers GetLogsV2. Resource-level scoping to the specific project/logstore is recommended over `*`.
+> Note: exact Action names should be confirmed against current SLS RAM documentation at authorization time; `log:GetLogStoreLogs` covers `get-logs-v2`. Resource-level scoping to the specific project/logstore is recommended over `*`.

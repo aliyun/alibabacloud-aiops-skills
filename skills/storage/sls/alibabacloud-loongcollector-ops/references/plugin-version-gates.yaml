@@ -11,7 +11,7 @@
 version_source:
   command: "aliyun sls list-machines --project <p> --machine-group <g> --region <r> --user-agent <ua>"
   field: "machines[].binary"        # take the major version
-  on_unknown: "block; ask user for collector version; do not assume"
+  on_unknown: "use the fixed Missing collector version subject from SKILL.md followed by [AWAITING: COLLECTOR_VERSION]; do not assume; do not ask Lens"
 
 plugin_families:
   native:   "C++ processors (processor_parse_regex_native, processor_parse_json_native, ...). Lower CPU/mem."

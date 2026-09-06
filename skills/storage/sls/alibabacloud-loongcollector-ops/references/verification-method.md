@@ -1,6 +1,6 @@
 # Verification Method — per-step commands
 
-All cloud-API commands append `--region <r>` and `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-loongcollector-ops/<session-id>`. Execute each displayed `aliyun sls` line as its own direct tool call with literal values. Use a separate `--cli-dry-run` call before writes; if get/list proves exact target-state equality, emit `Idempotent-Skip` and call neither dry-run nor write.
+All cloud-API commands append `--region <r>` and `--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-loongcollector-ops session/<session-id>"`. Execute each displayed `aliyun sls` line as its own direct tool call with literal values. Use a separate `--cli-dry-run` call before writes; if get/list proves exact target-state equality, emit `Idempotent-Skip` and call neither dry-run nor write.
 For `ParameterInvalid`, throttling, internal errors, or permission failures, preserve error code/requestID and follow the bounded recovery matrix in `SKILL.md` §6. Never treat an error response as successful verification.
 
 ## Preflight
@@ -23,10 +23,19 @@ aliyun sls get-applied-machine-groups --project <p> --config-name <c> --region <
 # pass: config appears for the group AND group appears for the config
 ```
 
+## U1 — config object (CRD path)
+```bash
+kubectl get clusteraliyunpipelineconfigs <c> -o yaml
+# pass: kind ClusterAliyunPipelineConfig; spec.config.inputs and flushers non-empty
+# after reconcile, optional: aliyun sls get-logtail-pipeline-config --project <p> --config-name <c>
+```
+
 ## U3 — applied state
 ```bash
 # API path: get-logtail-pipeline-config succeeds and recent update readable.
-# CRD path is detection-only and requires user-provided status evidence; this skill never runs kubectl.
+# CRD path (opt-in only; default K8s collection is SLS API):
+kubectl get clusteraliyunpipelineconfigs <c> -o yaml
+# pass: status.success==true and lastAppliedConfig non-empty
 ```
 
 ## U4 — heartbeat & version
@@ -74,6 +83,7 @@ aliyun sls get-logs-v2 --project <lens_project> --logstore <lens_logstore> --fro
 - `create-machine-group` → `get-machine-group`; compare identify type and complete member list.
 - `create-logtail-pipeline-config` → `get-logtail-pipeline-config`; compare the full normalized config.
 - `apply-config-to-machine-group` → both commands in U2; both relation directions must agree.
+- `kubectl apply -f <cr.yaml>` → `kubectl get clusteraliyunpipelineconfigs <c> -o yaml` (U1/U3) plus U2 cloud binding after reconcile.
 
 Only exact target-state equality permits skipping dry-run/write. Record every no-op in final `Changes` with the exact `[Idempotent-Skip]` sentence. An `AlreadyExist` response uses the same mapping; a differing object is `[BLOCKED: EXISTING_RESOURCE_CONFLICT]`, not an implicit update.
 

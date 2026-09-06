@@ -37,7 +37,7 @@ aliyun sls create-logtail-pipeline-config \
   --flushers '[{"Type":"flusher_sls","Logstore":"<logstore>"}]' \
   --global '{"TopicType":"machine_group_topic"}' \
   --log-sample '{"level":"INFO","msg":"ok"}' \
-  --region <r> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-loongcollector-ops/<session-id>
+  --region <r> --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-loongcollector-ops session/<session-id>"
 ```
 Render/validate and obtain explicit approval first. If Get-before-Create proves exact equality, emit the required `Idempotent-Skip` and run neither dry-run nor write. Otherwise, Execute uses separate direct dry-run and actual-write calls. For coupled config/index changes, run both dry-runs first and then both actual writes back-to-back as specified in `index-coupling.md`.
 
@@ -51,7 +51,7 @@ Render/validate and obtain explicit approval first. If Get-before-Create proves 
 
 ## 4. Version-before-plugin
 
-Read the collector major version first (`sls-lens-contracts.md` version discovery; `plugin-version-gates.yaml`). `>=3.x` -> native plugins and full pipeline; `1.x/2.x` -> gated plugin set. Do not generate a config before confirming version when a version-gated plugin is involved.
+Read the collector major version first (`list-machines` `.binary`; `plugin-version-gates.yaml`). `>=3.x` -> native plugins and full pipeline; `1.x/2.x` -> gated plugin set. If the version is unknown, use the fixed Missing collector version subject from `SKILL.md` followed by `[AWAITING: COLLECTOR_VERSION]`. Do not assume a plugin family and do not ask Lens.
 
 ## 5. Native-first plugin selection
 
@@ -91,8 +91,10 @@ Hard checks:
 - The coupled index diff removes each source key and adds its paired destination key; `response_code -> http_status` therefore removes `response_code` and adds `http_status` as `long`.
 - Run `scripts/validate_pipeline.py` on the full target config before diff/approval.
 
-## 6. CRD awareness (detection only)
+## 6. CRD management plane
 
-- The K8s management plane uses `ClusterAliyunPipelineConfig` (`telemetry.alibabacloud.com/v1alpha1`, cluster-scoped). Its status carries `success`, `message`, `lastUpdateTime`, `lastAppliedConfig`.
-- One config = one management plane. If a config appears managed by both API and CRD (double-write), STOP and report; do not silently update via API a config owned by a CRD (the controller will re-sync and overwrite).
-- CRD create/update execution is out of scope. Only detect ownership and read CRD status when the user provides cluster access context (read-only).
+- Write target: `ClusterAliyunPipelineConfig` (`telemetry.alibabacloud.com/v1alpha1`, cluster-scoped). Status: `success`, `message`, `lastUpdateTime`, `lastAppliedConfig`.
+- K8s collection **defaults to** `aliyun sls create/update-logtail-pipeline-config` + bind the official group.
+- CRD is opt-in only when the user explicitly asks for GitOps/CR management, the kube-apiserver is reachable, RBAC permits `ClusterAliyunPipelineConfig` creation, and the controller is running.
+- One config = one management plane. Double-write → STOP. Do not update via API a CR-owned config (controller will overwrite).
+- Do not create `AliyunLogConfig` or `NamespaceAliyunPipelineConfig`.

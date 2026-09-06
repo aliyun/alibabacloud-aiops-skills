@@ -112,9 +112,12 @@ Default `processors` is empty. Masking on appends **exactly one** `processor_spl
 
 Product behavior: existing config is a lock, not a conflict.
 
-1. `get-applied-configs` already contains `runtime-ebpf-agentsight-config` → skip create and skip apply; report lock.
-2. `get-logtail-pipeline-config` returns the object (or create returns `ConfigAlreadyExist` / `AlreadyExist`) → **do not update**, even if `ProbeConfig` differs. Emit `[Idempotent-Skip] create-logtail-pipeline-config skipped; verified via get-logtail-pipeline-config that runtime-ebpf-agentsight-config exists (Agentloop lock, no overwrite).`
-3. Changing probe/mask on an existing config is a separate `config.modify` after a new confirmation — never piggy-backed on confirm-access.
+Lock forbids **overwrite**, not Plan / HITL / the create call:
+
+1. Still run `scripts/render_pipeline.py` (empty `ProbeConfig`) + `scripts/validate_pipeline.py` + `scripts/normalize_diff.py`, then use the fixed create-and-bind approval subject from `SKILL.md`.
+2. After confirm, still issue `--cli-dry-run` then `create-logtail-pipeline-config`. If `get-applied-configs` already contains the name, still create (AlreadyExist is the lock) and skip apply only when both bind directions already match.
+3. `get-logtail-pipeline-config` returns the object (or create returns `ConfigAlreadyExist` / `AlreadyExist`) → **do not update**, even if `ProbeConfig` differs. Emit `[Idempotent-Skip] create-logtail-pipeline-config skipped; verified via get-logtail-pipeline-config that runtime-ebpf-agentsight-config exists (Agentloop lock, no overwrite).` **after** the create attempt (or after HITL if create was not issued because AlreadyExist was proven on the write).
+4. Changing probe/mask on an existing config is a separate `config.modify` after a new confirmation — never piggy-backed on confirm-access.
 
 This overrides the generic `EXISTING_RESOURCE_CONFLICT` rule **only** for this fixed config name during Agentloop create/bind.
 
@@ -122,9 +125,8 @@ This overrides the generic `EXISTING_RESOURCE_CONFLICT` rule **only** for this f
 
 1. `get-project` / `get-log-store ebpf-event` / `get-machine-group` (existence).
 2. `list-machines` → version gate `>= 3.3.9`. Confirm Linux kernel `>= 5.10` with the user in prose if host evidence is missing.
-3. `get-applied-configs` → if already bound, lock and go to Verify.
-4. `get-logtail-pipeline-config --config-name runtime-ebpf-agentsight-config` → exist: skip create; missing: `--cli-dry-run` then `create-logtail-pipeline-config`.
-5. If not bound: `--cli-dry-run` then `apply-config-to-machine-group`.
+3. After HITL: `--cli-dry-run` then `create-logtail-pipeline-config` even if get already saw the object (`AlreadyExist` = lock, do not update).
+4. If not bound: `--cli-dry-run` then `apply-config-to-machine-group`. If both bind directions already match, skip apply and record the lock.
 6. Do not auto-rollback a later step if an earlier step succeeded; report each result (matches console: a later-step failure does not roll back earlier successes).
 
 Create flags: `--project` `--config-name` `--inputs` `--flushers` `[--processors]` `--global '{}'`. Strip `_`-prefixed template keys before send.

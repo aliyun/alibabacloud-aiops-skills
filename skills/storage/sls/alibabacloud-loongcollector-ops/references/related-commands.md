@@ -1,6 +1,6 @@
 # `aliyun sls` Command Table
 
-All commands: append `--region <r>` and `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-loongcollector-ops/<session-id>`. Write commands: try `--cli-dry-run` first unless a matching get/list verification produced an `Idempotent-Skip`, in which case neither dry-run nor write is called. Read exact flags with `aliyun sls <cmd> --help`. Machine-parsable contracts and gap status: `cli-contracts.yaml`.
+All commands: append `--region <r>` and `--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-loongcollector-ops session/<session-id>"`. Write commands: try `--cli-dry-run` first unless a matching get/list verification produced an `Idempotent-Skip`, in which case neither dry-run nor write is called. Read exact flags with `aliyun sls <cmd> --help`. Machine-parsable contracts and gap status: `cli-contracts.yaml`.
 
 | Domain | CLI command | Purpose | Risk |
 |---|---|---|---|
@@ -36,6 +36,31 @@ All commands: append `--region <r>` and `--user-agent AlibabaCloud-Agent-Skills/
 | Query | `aliyun sls get-logs-v2` | Query business logstore / Lens run logs | R0 |
 | Query | `aliyun sls get-logging` | Discover Lens/service-log entry for a business project | R0 |
 
+## Install and K8s (non-SLS)
+
+Every `aliyun cs` cloud call still uses `--region` and `--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-loongcollector-ops session/<session-id>"`. Addon name is `loongcollector`, never `loongcollector-ds`.
+
+| Domain | Command | Purpose | Risk |
+|---|---|---|---|
+| ACK | `bash scripts/ensure_ack_prereq.sh --region <r>` | First-use: `open-ack-service --type propayasgo` + CS RAM roles. Idempotent. Not a cluster create | R2 |
+| ACK | `aliyun cs open-ack-service --type propayasgo` | Open ACK Pro+Basic. On `ErrorNotEnabled` / `cskpro` then retry the failed CS write once | R2 |
+| ACK | `aliyun ram get-role` / `aliyun ram create-role` / `aliyun ram attach-policy-to-role` | CS service roles (`AliyunCSDefaultRole` …). 403 → RAM HITL | R2 |
+| ACK | `aliyun cs create-cluster --biz-profile Default --cluster-spec ack.standard` | Only if the user asked to create a cluster. Never `--profile`. Then `ack.pro.small` | R2 |
+| ACK | `aliyun cs describe-addon --addon-name loongcollector` | Addon metadata / latest version | R0 |
+| ACK | `aliyun cs list-cluster-addon-instances` | Installed addons | R0 |
+| ACK | `aliyun cs describe-cluster-addon-instance --addon-name loongcollector` | Addon state | R0 |
+| ACK | `aliyun cs install-cluster-addons --biz-body name=loongcollector` | Install addon | R2 |
+| ACK | `aliyun cs upgrade-cluster-addons --biz-body component_name=loongcollector` | Upgrade addon | R2 |
+| ACK | `aliyun cs list-cluster-addon-instance-resources --instance-name loongcollector` | Helm objects + DS Ready (not kubectl) | R0 |
+| ACK | `aliyun cs describe-cluster-user-kubeconfig --private-ip-address false --temporary-duration-minutes 15` | Opt-in CRD only; write 0600 tempfile; never print | R0 |
+| ECS | `aliyun ecs run-command` + `aliyun ecs describe-invocation-results` | Run official `loongcollector.sh` via Cloud Assistant. Still ask ECS install HITL. Never workbench/OOS | R2 |
+| Host | `ssh <alias> -- <cmd>` | Same script on self-hosted Linux | R2 |
+| CRD | `kubectl apply -f <cr.yaml>` | Create/update `ClusterAliyunPipelineConfig` | R2 |
+| CRD | `kubectl get clusteraliyunpipelineconfigs` | U1/U3 | R0 |
+| CRD | `kubectl delete clusteraliyunpipelineconfigs <n>` | Remove CR (may delete cloud config) | R4 |
+
+Render helpers: `scripts/render_loongcollector_install_cmd.py`, `scripts/render_crd.py`, `scripts/wait_cs_task.sh`, `scripts/ensure_ack_prereq.sh`.
+
 ## Gaps and fallbacks
 
 - `update-machine-group-machine` (incremental member add/remove): NO plugin subcommand (CLI-003). Fallback: `get-machine-group` -> merge `machine-list` -> `update-machine-group` (full overwrite); re-read before write to avoid concurrent clobber.
@@ -48,7 +73,7 @@ All commands: append `--region <r>` and `--user-agent AlibabaCloud-Agent-Skills/
 ```bash
 python3 -c 'import time; end=int(time.time()); print(end-900, end)'
 aliyun sls get-logs-v2 --project <p> --logstore <l> --from <unix_from> --to <unix_to> \
-  --query "<query>" --region <r> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-loongcollector-ops/<session-id>
+  --query "<query>" --region <r> --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-loongcollector-ops session/<session-id>"
 ```
 
 ## Error recovery

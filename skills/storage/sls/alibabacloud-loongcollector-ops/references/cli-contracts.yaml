@@ -12,7 +12,7 @@
 #   - Get before Update; Update is overwrite semantics — carry unchanged fields back.
 #   - Get/list before Create/Apply; an Idempotent-Skip plus verification counts as successful completion.
 #   - Every cloud tool invocation contains exactly one direct, literal `aliyun sls ...` command.
-#   - Every cloud-API command carries: --region <r> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-loongcollector-ops/<session-id>
+#   - Every cloud-API command carries: --region <r> --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-loongcollector-ops session/<session-id>"
 #   - JSON list/object params passed as single-quoted JSON, e.g. --inputs '[{"Type":"input_file",...}]'
 #   - list output default is JSON; parse only declared fields; use --cli-query <jmespath> to project.
 
@@ -180,3 +180,144 @@ lens_entry_discovery:
   status: confirmed          # CLI-004
   method: "get-logging --project <business-project> -> loggingProject is the Lens project; the loggingDetails[] entry whose type is logtail_status/logtail_profile/logtail_alarm gives the Lens logstore (typically internal-diagnostic_log)."
   fallback: "if get-logging is unavailable/denied/LoggingNotExist and Lens evidence is required, ask once and wait for user-provided lens_project/logstore; verify it, then query via get-logs-v2. Never STAROps/console-private/UID-guessed entries."
+
+# --- install.deploy adapters (non-SLS) ------------------------------------
+# Cloud-API commands still carry --region and the skill --user-agent.
+# Do not use OOS / ChatOps. Addon name is loongcollector (not loongcollector-ds).
+
+host_install:
+  script: loongcollector.sh
+  official_doc: "https://help.aliyun.com/zh/sls/loongcollector-installation-linux"
+  render: "scripts/render_loongcollector_install_cmd.py"
+  actions:
+    install_same_account_same_region: "./loongcollector.sh install ${region}"
+    install_cross_region_internet: "./loongcollector.sh install ${region}-internet"
+    install_cross_region_acceleration: "./loongcollector.sh install ${region}-acceleration"
+    upgrade: "./loongcollector.sh upgrade"   # never reuse install to overwrite
+  identity:
+    user_defined_id: "/etc/ilogtail/user_defined_id"
+    users_file: "/etc/ilogtail/users/${aliuid}"   # cross-account
+  accept: "sudo /etc/init.d/loongcollectord status  ->  loongcollector is running"
+  windows: blocked
+
+ecs_runcommand:
+  status: confirmed_contract
+  exec:
+    command: "aliyun ecs run-command --region-id <region> --type RunShellScript --timeout 600 --command-content '<remote_command>' --instance-id.1 <ecs_instance_id>"
+    poll: "aliyun ecs describe-invocation-results --region-id <region> --invoke-id <invoke_id> --content-encoding PlainText"
+    note: "Poll until InvocationStatus is Success/Failed/PartialFailed. Read Output then loongcollectord status. Never workbench/OOS. Never print AK/SK. Never StrictHostKeyChecking=no."
+  scope: "Alibaba Cloud Linux ECS only; does not create ECS. Cloud Assistant must be running (default on Alibaba Cloud Linux)."
+
+ssh_host:
+  status: confirmed_contract
+  rule: "User-configured SSH alias/agent only; confirm host fingerprint; never accept a private key in chat; never StrictHostKeyChecking=no; no unbounded root shell."
+  shape: "ssh <alias> -- <literal-command>  then check exit code and loongcollectord status."
+
+ack_enablement:
+  status: confirmed
+  note: "Eval hooks also open ACK / create sls-eval-loop-ack as a fixture. Skill must still do this on a real first-use account. Do not invent the eval cluster name in production."
+  script: "scripts/ensure_ack_prereq.sh --region <r>"
+  when: "ErrorNotEnabled / cskpro / NotEnabled / EntityNotExist.Role on any aliyun cs write; or preflight ack_service=warn"
+  open_service:
+    cli: "aliyun cs open-ack-service --type propayasgo"
+    risk: R2
+    idempotent: true
+    detail: "enables ACK Pro + Basic pay-as-you-go; already-enabled is a no-op"
+  service_roles:
+    cli: "aliyun ram get-role / aliyun ram create-role / aliyun ram attach-policy-to-role"
+    trust: "cs.aliyuncs.com"
+    names:
+      - AliyunCSDefaultRole
+      - AliyunCSManagedKubernetesRole
+      - AliyunCSManagedNetworkRole
+      - AliyunCSManagedLogRole
+      - AliyunCSManagedCmsRole
+      - AliyunCSManagedCsiRole
+      - AliyunCSManagedAutoScalerRole
+    fail: "DefaultRole still missing -> RAM HITL, not PREFLIGHT_FAILED"
+  create_cluster:
+    only_when: "user explicitly asked to create a cluster"
+    never: ["--profile", "auto-create sls-eval-loop-ack", "create ECS / invent VPC"]
+    cli: "aliyun cs create-cluster --name <n> --cluster-type ManagedKubernetes --biz-profile Default --cluster-spec ack.standard --vpcid <vpc> --vswitch-ids <vsw>"
+    spec_order: [ack.standard, ack.pro.small]
+    recover: "ErrorNotEnabled -> open-ack-service then retry this spec once; EntityNotExist.Role -> ensure_ack_prereq.sh then retry once"
+    risk: R2
+
+ack_addon:
+  status: confirmed            # verified aliyun 3.4.6 + aliyun-cli-cs
+  plugin: "aliyun-cli-cs"
+  addon_name: "loongcollector"  # NOT loongcollector-ds (that is the in-cluster DaemonSet)
+  mutex: "logtail / logtail-ds already installed -> do not auto-uninstall (R4); stop and report."
+  commands:
+    describe_addon:
+      cli: "aliyun cs describe-addon --addon-name loongcollector [--cluster-id <cid>]"
+      required: [--addon-name]
+    list_instances:
+      cli: "aliyun cs list-cluster-addon-instances --cluster-id <cid>"
+      required: [--cluster-id]
+    describe_instance:
+      cli: "aliyun cs describe-cluster-addon-instance --cluster-id <cid> --addon-name loongcollector"
+      required: [--cluster-id, --addon-name]
+    get_instance:
+      cli: "aliyun cs get-cluster-addon-instance --cluster-id <cid> --instance-name loongcollector"
+      required: [--cluster-id, --instance-name]
+    list_resources:
+      cli: "aliyun cs list-cluster-addon-instance-resources --cluster-id <cid> --instance-name loongcollector"
+    install:
+      cli: "aliyun cs install-cluster-addons --cluster-id <cid> --biz-body name=loongcollector"
+      required: [--cluster-id, --biz-body]
+      note: "Current aliyun-cli-cs uses --biz-body name=... (not --body). Optional version= after describe-addon."
+      risk: R2
+    upgrade:
+      cli: "aliyun cs upgrade-cluster-addons --cluster-id <cid> --biz-body component_name=loongcollector"
+      required: [--cluster-id, --biz-body]
+      risk: R2
+  wait: "scripts/wait_cs_task.sh --cluster-id <cid> --addon-name loongcollector"
+  reuse_after_install:
+    project: "k8s-log-${cluster_id}"
+    machine_group: "k8s-group-${cluster_id}"
+  collection_default: "aliyun sls create-logtail-pipeline-config + apply-config-to-machine-group k8s-group-${cluster_id}"
+  kubeconfig_optional_crd:
+    status: confirmed            # verified 2026-08-28: public endpoint empty → intranet 6443 only
+    detail: "describe-cluster-detail master_url.api_server_endpoint must be non-empty before issuing public kubeconfig"
+    issue: "aliyun cs describe-cluster-user-kubeconfig --cluster-id <cid> --private-ip-address false --temporary-duration-minutes 15"
+    secret_rule: "Write config to 0600 tempfile; never print/cat kubeconfig or client certs; do not overwrite ~/.kube/config"
+    fail_closed: "empty public endpoint or TCP 6443 unreachable → stay on SLS API; do not enable EIP unless user asks"
+    not_agent_channel: "CloudShell / console Workbench are browser terminals, not OpenAPI exec"
+
+self_k8s_install:
+  official_doc: "https://help.aliyun.com/zh/sls/loongcollector-installation-kubernetes-1"
+  method: "User kubectl + official custom package; discover package version at runtime; never hardcode a doc example (e.g. 3.2.6) as latest."
+  values_required: [projectName, region, aliUid, net, clusterID, accessKeyID, accessKeySecret]
+  secret_rule: "Do not ask for or print AK/SK in chat; read from an already-configured local/cluster secret path the user names, or stop."
+  accept: "kubectl get po -n kube-system | grep loongcollector-ds  ->  Running"
+  reuse_after_install:
+    project: "values.yaml projectName"
+    machine_group: "k8s-group-${clusterID}"
+
+crd_pipeline:
+  kind: ClusterAliyunPipelineConfig
+  api_version: telemetry.alibabacloud.com/v1alpha1
+  scope: cluster
+  name_rule: "metadata.name == SLS config name; 2-128 lowercase [a-z0-9_-]"
+  default: "do not use; K8s collection uses SLS Pipeline API"
+  prefer_when:
+    - user explicitly asked for ClusterAliyunPipelineConfig / GitOps / kubectl apply CR
+    - environment is ack or self_k8s
+    - kube-apiserver reachable (public endpoint or in-VPC)
+    - kubectl auth can-i create clusteraliyunpipelineconfigs returns yes
+    - CRD registered
+    - alibaba-log-controller or loongcollector-operator is running
+  commands:
+    get_crd: "kubectl get crd clusteraliyunpipelineconfigs.telemetry.alibabacloud.com"
+    can_i: "kubectl auth can-i create clusteraliyunpipelineconfigs"
+    list: "kubectl get clusteraliyunpipelineconfigs -o yaml"
+    get: "kubectl get clusteraliyunpipelineconfigs <name> -o yaml"
+    dry_run: "kubectl apply --dry-run=server -f <cr.yaml>"
+    apply: "kubectl apply -f <cr.yaml>"
+    delete: "kubectl delete clusteraliyunpipelineconfigs <name>"
+  status_pass: "status.success==true and lastAppliedConfig non-empty"
+  forbidden_kinds: [AliyunLogConfig, NamespaceAliyunPipelineConfig]
+  render: "scripts/render_crd.py"
+  validate: "scripts/validate_pipeline.py on spec.config, then kubectl apply --dry-run=server after approval"
+
