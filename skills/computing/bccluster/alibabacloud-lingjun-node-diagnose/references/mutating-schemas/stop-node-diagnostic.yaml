@@ -1,0 +1,61 @@
+# Mutating Schema: eflo-controller stop-node-diagnostic
+# Purpose: terminate an in-progress fault-report deep-diagnosis flow (fault-report state machine Processing → DiagnosisTerminating → DiagnosisTerminated).
+# Key CLI truths (measured 2026-08-23 cn-wulanchabu, aliyun 3.3.10 + plugin aliyun-cli-eflo-controller 0.7.4):
+#   - the only business parameter is --report-id (required, string); the report id is shaped like i-997086804007
+#   - no --node-id / --cluster-id flags; node-dimension info is looked up via describe-fault-report / list-fault-reports
+#   - takes effect synchronously and returns a RequestId; no TaskId
+#   - after termination the node becomes available again; the deep diagnosis cannot be resumed — diagnosing again requires a fresh fault report (report-node-status)
+
+action: stop-node-diagnostic
+namespace: eflo-controller
+async: false                      # takes effect synchronously, no TaskId; returns RequestId
+reversible: partial               # the termination itself cannot be undone (a terminated diagnosis cannot be resumed), but after the node is available again a fresh fault report is possible
+returns: RequestId
+
+cli_top_level_args:
+  - flag: --region
+    type: string
+    business_required: true
+  - flag: --endpoint
+    type: string
+    business_required: true
+  - flag: --report-id
+    type: string                   # report id, shaped like i-997086804007
+    business_required: true
+    forbidden_inference: true      # must come from a measured list-fault-reports / describe-fault-report return or be explicitly user-provided; LLM fabrication is forbidden
+
+required_user_confirmed:
+  - field: Region
+    source: HITL
+  - field: ReportId
+    source: list-fault-reports / describe-fault-report
+    forbidden: ["LLM guessing"]
+  - field: "Target node (display only)"
+    source: "NodeId returned by list-fault-reports + Hostname looked up via describe-node"
+
+forbidden_inference:
+  - "ReportId"
+
+strong_confirmations:
+  - "确认"     # zh-session user-facing confirmation word; the Agent internally runs safe_mutate_confirm <hash>
+  - "confirm" # en-session user-facing confirmation word
+
+phase1_dump_fields:
+  - Region   # Endpoint is a derived parameter (derived from Region); it stays out of the confirmation table and appears only in the full CLI line
+  - ReportId
+  - "NodeId + Hostname (the fault-report target node, display only)"
+  - "Current fault status (Status measured via describe-fault-report; translated per the faultstate entries in zh sessions)"
+  - "Impact statement: the deep diagnosis stops immediately and cannot be resumed; the node becomes available again; diagnosing again requires a fresh fault report"
+  - Full CLI line
+
+# Hard-coupling validation: local checks that must run before the Phase 1 dump
+local_validation:
+  - rule: "the Status measured via describe-fault-report must be in a terminable state (Processing / DiagnosisTerminating)"
+    on_violation: "terminate the flow and tell the user the current status (terminal states such as DiagnosisPassed / FaultConfirmed / FaultFinish neither need nor allow termination)"
+  - rule: "ReportId must come from a measured list-fault-reports / describe-fault-report return within this session"
+    on_violation: "terminate the flow; run list-fault-reports first to locate the report id"
+
+verification:
+  - "stop-node-diagnostic returns 2xx + RequestId"
+  - "a describe-fault-report re-check shows Status changed to DiagnosisTerminating / DiagnosisTerminated"
+  - "a describe-node re-check shows the node back to an available state (OperatingState returns to Using or the user-expected state)"

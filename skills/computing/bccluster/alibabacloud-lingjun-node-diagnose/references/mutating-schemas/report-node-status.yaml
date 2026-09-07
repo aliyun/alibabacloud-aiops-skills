@@ -1,0 +1,78 @@
+# Mutating Schema: eflo-controller report-node-status
+# Purpose: general-user fault reporting (replaces the legacy PAI-only report-nodes-status,
+# which took --nodes/--reason/--issue-category/--start-time and must no longer be used).
+# Backend truths (user_report.py, re-verified 2026-08-31):
+#   - DiagnosisType has two reserved enums (QUICK / COMPREHENSIVE) but the current
+#     implementation accepts COMPREHENSIVE only (full JinGang deep-diagnosis chain,
+#     node goes offline); QUICK is reserved and rejected: 400
+#     "Only COMPREHENSIVE diagnosis type is supported"
+#   - the node's control_state MUST be Using, otherwise 400
+#   - daily quota: reports/day >= quota% of account machines (default 10%) -> 400
+#   - duplicate report for the same account+node -> 400 "Duplicate fault report..."
+#   - on success a fault report row is created immediately with Status=Processing
+#     (visible via list-fault-reports) and the response carries ReportId (i-<12 digits>)
+#   - node transitions to PreparationForDiagnosingClusterNode; a repair task is spawned
+
+action: report-node-status
+namespace: eflo-controller
+async: false                      # synchronous; returns ReportId + RequestId, no TaskId
+returns: ReportId + RequestId
+
+cli_top_level_args:
+  - flag: --region
+    type: string
+    business_required: true
+  - flag: --endpoint
+    type: string
+    business_required: true
+  - flag: --node-id
+    type: string                   # single NodeId per call (NOT a list)
+    business_required: true
+  - flag: --diagnosis-type
+    type: enum
+    enum: [COMPREHENSIVE]          # QUICK is reserved but rejected: 400 "Only COMPREHENSIVE diagnosis type is supported"
+    business_required: true
+  - flag: --description
+    type: string
+    business_required: true
+    forbidden_inference: true      # the user must write the real fault description; LLM splicing is forbidden
+
+required_user_confirmed:
+  - field: Region
+    source: HITL
+  - field: NodeId
+    source: list-cluster-nodes / describe-node
+    forbidden: ["LLM guessing"]
+  - field: DiagnosisType
+    source: fixed COMPREHENSIVE (sole accepted value)
+  - field: Description
+    source: HITL
+    forbidden: ["LLM composing the fault reason on its own"]
+
+forbidden_inference:
+  - "Description"
+
+strong_confirmations:
+  - "确认"     # zh-session user-facing confirmation word; the Agent internally runs safe_mutate_confirm <hash>
+  - "confirm" # en-session user-facing confirmation word
+
+phase1_dump_fields:
+  - Region   # Endpoint is a derived parameter (derived from Region); it stays out of the confirmation table and appears only in the full CLI line
+  - NodeId + Hostname + current OperatingState
+  - DiagnosisType
+  - Description
+  - Full CLI line
+
+# Hard-coupling validation: local checks that must run before the Phase 1 dump
+local_validation:
+  - rule: "describe-node shows the node present and in Using state"
+    on_violation: "terminate the flow; the server would return 400"
+  - rule: "DiagnosisType must be COMPREHENSIVE"
+    on_violation: "terminate the flow; any other value is rejected by the server"
+  - rule: "no unresolved duplicate report for the same account+node"
+    on_violation: "warn the user; the server would return 400 'Duplicate fault report...'"
+
+verification:
+  - "response carries ReportId (i-<12 digits>) + RequestId (sync)"
+  - "list-fault-reports shows the new report with Status=Processing"
+  - "describe-node shows the node leaving Using (PreparationForDiagnosingClusterNode)"

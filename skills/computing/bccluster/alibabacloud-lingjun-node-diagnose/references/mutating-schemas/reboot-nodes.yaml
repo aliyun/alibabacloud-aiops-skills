@@ -1,0 +1,50 @@
+# Mutating Schema: eflo-controller reboot-nodes
+
+action: reboot-nodes
+namespace: eflo-controller
+async: true
+reversible: true
+returns: TaskId | RequestId
+
+cli_top_level_args:
+  - flag: --region
+    type: string
+    business_required: true
+  - flag: --endpoint
+    type: string
+    business_required: true
+  - flag: --cluster-id
+    type: string
+    business_required: true
+  - flag: --nodes
+    type: list                  # space-separated NodeIds
+    business_required: true
+  - flag: --ignore-failed-node-tasks
+    type: boolean
+    business_required: false
+    default: false
+
+required_user_confirmed:
+  - field: Region
+    source: HITL
+  - field: ClusterId
+    source: list-clusters
+  - field: Nodes[]
+    source: list-cluster-nodes
+    forbidden: ["LLM guessing"]
+
+forbidden_inference: []           # reboot has no destructive parameters; all identity fields come from real list-* returns
+
+strong_confirmations:
+  - "确认"     # zh-session user-facing confirmation word; the Agent internally runs safe_mutate_confirm <hash>
+  - "confirm" # en-session user-facing confirmation word
+
+phase1_dump_fields:
+  - Region   # Endpoint is a derived parameter (derived from Region); it stays out of the confirmation table and appears only in the full CLI line
+  - ClusterId
+  - "Targets[]: NodeId + Hostname + MachineType"
+  - "IgnoreFailedNodeTasks (shown only when the user explicitly sets a non-default value)"
+  - Full CLI line
+
+verification:
+  - "describe-node.OperatingState returns to Using within 5–10min"

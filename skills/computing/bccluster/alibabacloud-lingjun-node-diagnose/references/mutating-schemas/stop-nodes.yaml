@@ -1,0 +1,48 @@
+# Mutating Schema: eflo-controller stop-nodes
+# Key CLI truth: stop-nodes has no --cluster-id parameter (unlike reboot-nodes / reimage-nodes).
+# Nodes are located directly via the --nodes list, with no cluster context.
+
+action: stop-nodes
+namespace: eflo-controller
+async: true
+reversible: true                  # after Stopped the node can be brought back via start / reboot
+returns: TaskId | RequestId
+
+cli_top_level_args:
+  - flag: --region
+    type: string
+    business_required: true
+  - flag: --endpoint
+    type: string
+    business_required: true
+  # Note: no --cluster-id; adding it by mistake → CLI reports unknown flag
+  - flag: --nodes
+    type: list                    # space-separated list of NodeId strings
+    business_required: true
+  - flag: --ignore-failed-node-tasks
+    type: boolean
+    business_required: false
+    default: false
+
+required_user_confirmed:
+  - field: Region
+    source: HITL
+  - field: Nodes[]
+    source: list-cluster-nodes    # the user first picks nodes via list-clusters → list-cluster-nodes
+    forbidden: ["LLM guessing", "splicing MachineType / Hostname strings"]
+
+forbidden_inference: []
+
+strong_confirmations:
+  - "确认"     # zh-session user-facing confirmation word; the Agent internally runs safe_mutate_confirm <hash>
+  - "confirm" # en-session user-facing confirmation word
+
+phase1_dump_fields:
+  - Region   # Endpoint is a derived parameter (derived from Region); it stays out of the confirmation table and appears only in the full CLI line
+  - "Targets[]: NodeId + Hostname + current OperatingState"
+  - "IgnoreFailedNodeTasks (shown only when the user explicitly sets a non-default value)"
+  - Full CLI line
+  - "Reminder: this command has no --cluster-id; the CLI locates NodeId across clusters — confirm the NodeId is unique and belongs to the intended cluster"
+
+verification:
+  - "describe-node.OperatingState transitions from Using/Stopping → Stopped within 5min"

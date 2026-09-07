@@ -1,0 +1,102 @@
+# Mutating Schema: eflo-controller reimage-nodes
+# High-risk destructive operation — reimaging the system disk (系统盘) equals a physical wipe and cannot be recovered.
+# Hostname / ImageId / LoginPassword / NodeId of every node are hard forbidden_inference;
+# the LLM must not "infer" or "reuse" them from describe-node / list-cluster-nodes / past commands.
+
+action: reimage-nodes
+namespace: eflo-controller
+async: true
+reversible: false                # destructive; system-disk data cannot be recovered
+returns: TaskId | RequestId
+
+cli_top_level_args:
+  - flag: --region
+    type: string
+    business_required: true
+  - flag: --endpoint
+    type: string
+    business_required: true
+  - flag: --cluster-id
+    type: string
+    business_required: true
+  - flag: --nodes
+    type: list<object>            # CLI truth: structured list, items are Key=Value combinations
+    business_required: true
+    item_schema:
+      - key: Hostname            # required
+        type: string
+        business_required: true
+        forbidden_inference: true   # must not reuse the old hostname / values from past commands
+      - key: ImageId             # required
+        type: string
+        business_required: true
+        forbidden_inference: true   # HITL must pick it from list-images
+      - key: LoginPassword       # required
+        type: string
+        business_required: true
+        forbidden_inference: true   # must not reuse the old password / any password from context
+        sensitive: true              # all output rendered as ******
+      - key: NodeId              # required
+        type: string
+        business_required: true
+        forbidden_inference: true   # must be taken from a real list-cluster-nodes response
+  - flag: --ignore-failed-node-tasks
+    type: boolean
+    business_required: false
+    default: false
+  - flag: --user-data
+    type: string
+    business_required: false       # cloud-init / startup script; if user-provided, passed through verbatim
+
+required_user_confirmed:
+  - field: Region
+    source: HITL
+  - field: ClusterId
+    source: list-clusters
+  - field: Nodes[].NodeId
+    source: list-cluster-nodes
+    forbidden: ["LLM guessing", "impersonating identity with MachineType / NodeGroupName / HpnZone"]
+  - field: Nodes[].Hostname
+    source: HITL
+  - field: Nodes[].ImageId
+    source: list-images
+    forbidden: ["LLM guessing", "reusing cluster.ImageId", "any image seen in context"]
+  - field: Nodes[].LoginPassword
+    source: HITL
+    sensitive: true
+
+forbidden_inference:
+  - "Nodes[].Hostname"
+  - "Nodes[].ImageId"
+  - "Nodes[].LoginPassword"
+  - "Nodes[].NodeId"
+
+# The confirmation word follows the session language (zh 「确认」 / en "confirm"); the Phase 1 confirmation table must prominently include the ⚠️ system-disk (系统盘) wipe, irreversible warning, and the confirmation word counts as acknowledgement
+strong_confirmations:
+  - "确认"     # zh session; the Agent internally runs safe_mutate_confirm <hash>
+  - "confirm" # en session
+
+phase1_dump_fields:
+  - Region   # Endpoint is a derived parameter (derived from Region); it stays out of the confirmation table and appears only in the full CLI line
+  - ClusterId
+  - "Nodes[]: NodeId + Hostname + ImageId + LoginPassword(******)"
+  - "IgnoreFailedNodeTasks (shown only when the user explicitly sets a non-default value)"
+  - UserData (if present, hinted as ******)
+  - Full CLI line (password field replaced with ******)
+
+prominent_warning_box:
+  required: true
+  fields:
+    - "ClusterId"
+    - "NodeGroupName"
+    - "NodeId"
+    - "Hostname"
+    - "OldImageId → NewImageId"
+  irreversibility_statement:
+    - "All data on the system disk will be wiped; the business cannot roll back"
+    - "The node enters the reboot → reimage → self-check flow and stays unavailable ~30–60min"
+    - "If the node holds unpersisted ephemeral data, the user must confirm it is backed up"
+
+verification:
+  - "describe-node.OperatingState returns to Using/HealthyUsing within 30–60min"
+  - "describe-node.ImageId equals the new image"

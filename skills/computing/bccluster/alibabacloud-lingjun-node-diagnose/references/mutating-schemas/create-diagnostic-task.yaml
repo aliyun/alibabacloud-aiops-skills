@@ -1,0 +1,81 @@
+# Mutating Schema: eflo-controller create-diagnostic-task
+# Purpose: mandatory coverage check during safe_mutate Phase 1 dry-run; any missing field or field implicitly inferred by the LLM blocks entry into Phase 2.
+
+action: create-diagnostic-task
+namespace: eflo-controller
+async: true
+returns: DiagnosticId
+
+# ---------- CLI input shape (aliyun 3.3.10 truth) ----------
+cli_top_level_args:
+  - flag: --region
+    type: string
+    cli_required: false
+    business_required: true
+  - flag: --endpoint
+    type: string
+    cli_required: false
+    business_required: true
+  - flag: --cluster-id
+    type: string
+    cli_required: false
+    business_required: true
+  - flag: --diagnostic-type
+    type: string
+    cli_required: false
+    business_required: true
+    enum: [BasicCheck, NodeHardwareCheck, CheckByAiJobLogs]  # calibrated against server-side measurement 2026-08-16; NetConfigCheck/NetRuntimeCheck deprecated 2026-08-19, never submitted
+  - flag: --node-ids
+    type: list                  # at the OpenAPI layer NodeIds is a string array (official example ["mock-sn-200101"]); at the CLI layer it is encoded as space-separated --node-ids value1 value2 value3; passing an array literal directly is forbidden (probe-measured 2026-08-19)
+    cli_required: false
+    business_required: conditional   # required when DiagnosticType ≠ CheckByAiJobLogs; recommended explicit for CheckByAiJobLogs too
+  - flag: --ai-job-log-info
+    type: object                # single JSON string
+    cli_required: false
+    business_required: conditional   # required only when DiagnosticType=CheckByAiJobLogs
+    structure: |
+      {
+        StartTime: ISO8601 (yyyy-MM-ddTHH:mm:ss+0800),
+        EndTime:   ISO8601,
+        AiJobLogs: [{NodeId: string, AiInstance: string, Logs: [string, ...]}, ...]
+      }
+
+# ---------- must be explicitly user-provided / user-confirmed ----------
+required_user_confirmed:
+  - field: Region
+    source: HITL (or describe-regions)
+    forbidden: ["LLM defaulting to cn-hangzhou", "leftover from a previous session"]
+  - field: ClusterId
+    source: list-clusters
+    forbidden: ["LLM guessing"]
+  - field: DiagnosticType
+    source: HITL three-way choice
+    forbidden: ["LLM self-selection"]
+  - field: NodeIds
+    source: list-cluster-nodes / list-cluster-hyper-nodes
+    forbidden: ["LLM guessing", "string splicing"]
+  - field: AiJobLogInfo (when DiagnosticType=CheckByAiJobLogs)
+    source: HITL sub-flow
+    forbidden_inference: true   # StartTime / EndTime / Logs[] must all be user-typed
+
+# ---------- forbidden_inference fields (LLM must never auto-fill) ----------
+forbidden_inference:
+  - AiJobLogInfo.StartTime
+  - AiJobLogInfo.EndTime
+  - AiJobLogInfo.AiJobLogs[].NodeId
+  - AiJobLogInfo.AiJobLogs[].AiInstance
+  - AiJobLogInfo.AiJobLogs[].Logs
+
+# ---------- confirmation word (session-language dependent: zh 「确认」 / en "confirm"; the hash is Agent-internal only) ----------
+strong_confirmations:
+  - 确认       # zh session: after the user replies 「确认」, the Agent internally runs safe_mutate_confirm <hash>
+  - confirm   # en session: the user replies "confirm"
+
+# ---------- fields the Phase 1 dump must contain ----------
+phase1_dump_fields:
+  - Region   # Endpoint is a derived parameter (derived from Region); it stays out of the confirmation table and appears only in the full CLI line
+  - ClusterId
+  - DiagnosticType
+  - "Targets[]: NodeId + Hostname + MachineType (from list-cluster-nodes / list-cluster-hyper-nodes)"
+  - "AiJobLogInfo (if applicable)"
+  - Full CLI line
