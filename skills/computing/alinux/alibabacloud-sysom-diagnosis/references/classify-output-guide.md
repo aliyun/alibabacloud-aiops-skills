@@ -26,6 +26,19 @@ internal fields outside the default Agent envelope.
 4. If a later deep action returns concrete holder or owner entities, combine
    them with classify instead of re-running broad local checks.
 
+## Next Steps May Not Be Runnable Yet
+
+`agent.next_steps[]` can recommend remote deep commands such as
+`memory filecache` or `memory memcgoffline` even though classify itself ran
+locally without credentials. Those commands are registered only while the skills
+catalog is reachable, so on an unconfigured machine they do not exist yet.
+
+A `status: normal` classify result therefore does not imply the recommended
+follow-up is available. If the follow-up returns domain help text or empty
+output, treat it as a missing command per the rules in `SKILL.md`, tell the user
+deep analysis needs credentials, and do not fall back to inventing findings or to
+broad manual shell probing.
+
 ## When No Memory Action Is Needed
 
 If classify returns no memory finding, or all findings are informational and do

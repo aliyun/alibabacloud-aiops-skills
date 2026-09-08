@@ -9,9 +9,11 @@ description: >
   surfaces recommendations; does not apply fixes automatically.
 license: Apache-2.0
 compatibility: >
-  Requires sysom-osops CLI. Remote diagnosis requires Alibaba Cloud credentials
-  through AK/SK or an ECS RAM Role, an online Cloud Assistant on the target ECS,
-  and a supported China Mainland or Hong Kong region.
+  Requires sysom-osops CLI. The control host running the CLI can be Linux or
+  macOS (x86_64 or aarch64); Windows is not supported. Remote diagnosis targets
+  a Linux ECS instance and requires Alibaba Cloud credentials through AK/SK or
+  an ECS RAM Role, an online Cloud Assistant on the target ECS, and a supported
+  China Mainland or Hong Kong region.
 metadata:
   domain: aiops
   product: sysom
@@ -28,9 +30,7 @@ allowed-tools: Bash Read
 
 # alibabacloud-sysom-diagnosis
 
-Use SysOM CLI and backend envelopes as the diagnosis source of truth. This Skill
-replaces the older SysOM diagnosis Skill and is the single entry point for SysOM
-ECS performance and stability diagnosis.
+Use SysOM CLI and backend envelopes as the diagnosis source of truth. This Skill replaces the older SysOM diagnosis Skill and is the single entry point for SysOM ECS performance and stability diagnosis.
 
 ## Immediate Route
 
@@ -58,10 +58,33 @@ Check whether the CLI is available:
 command -v sysom-osops
 ```
 
-If it is missing, install it:
+If it is missing, install it. The installer runs on **Linux or macOS** — it does
+not run on Windows. The target ECS being diagnosed must be Linux (see
+`references/supported-environments.md`), but the control host can be either OS.
+
+System-wide install (needs write access to `/usr/local/bin`, typically via
+`sudo`):
 
 ```bash
-curl -fsSL --connect-timeout 1000 https://sysom-prd-cn-hangzhou.oss-cn-hangzhou.aliyuncs.com/sysom_prd/skill_cli/install.sh | sudo bash
+curl -fsSL --connect-timeout 1000 https://sysom-prd-cn-hangzhou.oss-cn-hangzhou.aliyuncs.com/sysom_prd/skill_cli/install.sh \
+  | sudo bash
+```
+
+User-local install — no sudo, no root-owned paths. Works on both Linux and
+macOS, and is the recommended path when you do not have administrator
+privileges:
+
+```bash
+mkdir -p ~/.local/bin
+curl -fsSL --connect-timeout 1000 https://sysom-prd-cn-hangzhou.oss-cn-hangzhou.aliyuncs.com/sysom_prd/skill_cli/install.sh \
+  | bash -s -- -d "$HOME/.local/bin"
+```
+
+Then make sure the install directory is on your PATH (e.g. `~/.bashrc` /
+`~/.zshrc`):
+
+```bash
+export PATH="$HOME/.local/bin:$PATH"
 ```
 
 Then verify only the binary:
@@ -69,6 +92,27 @@ Then verify only the binary:
 ```bash
 command -v sysom-osops
 ```
+
+On macOS, the installer performs ad-hoc codesign and strips quarantine
+attributes automatically. If you are on Apple Silicon running an x86_64 shell
+under Rosetta, the installer detects the mismatch; pass `-f` to override only
+when you know the binary will run under translation.
+
+## Command Visibility Depends On Credentials
+
+Only local commands such as `memory classify` are always present. Every remote
+deep command is discovered at runtime from the SysOM skills catalog, which needs
+credentials. On a machine without credentials configured, expect:
+
+- `sysom-osops memory --help` to list only `classify`, with the deep memory
+  commands absent.
+- The top-level `sysom-osops --help` to omit the `io`, `net`, and `load` groups
+  entirely.
+
+This is a visibility limitation, not a capability limitation. Treat
+`references/deep-actions.md` as the authoritative command inventory for this
+Skill, and never infer from `--help` output that a domain or command is
+unsupported. Use `sysom-osops precheck` to report auth status.
 
 ## Core Workflow
 
@@ -308,6 +352,44 @@ Field semantics for guided diagnosis sessions:
 | `Sysom.DiagnosisVersionNotSupported` | Explain that the target instance diagnosis components need an update |
 | `Sysom.DiagnosisJsonParseFailed` | Retry once only when the user still needs the same evidence |
 | `Sysom.PollError` | Retry the same focused action once when the missing evidence is still required |
+
+### Empty Output Is Not an Envelope
+
+A command can exit non-zero with **no stdout and no stderr at all**. This is not
+an envelope, so do not parse it — parsing empty output as JSON will fail. The
+dominant cause is an unsupported flag: the CLI rejects an undefined flag before
+any envelope is produced, and currently swallows the message.
+
+When a command produces no output:
+
+1. Do not retry the same command unchanged, and do not report a diagnosis result.
+2. Check the flags you passed against `references/parameter-guide.md`, and
+   confirm with `sysom-osops <group> <command> --help`. Note that `io`, `load`,
+   and `net` commands accept only `--region`, `--instance`, and `--scope`.
+3. Re-run once with the unsupported flags removed.
+4. If the output is still empty, tell the user the command failed without a
+   diagnosable error, name the command and flags used, and treat it the same as
+   `Sysom.InvalidParameter` instead of inventing findings.
+
+### Help Text Is Not an Envelope
+
+A domain subcommand can be **missing** rather than broken. Remote deep commands
+are discovered at runtime from the SysOM skills catalog, which requires
+credentials. When credentials are absent the catalog is unreachable, the
+subcommand is never registered, and the CLI falls back to printing the domain
+group's help text — with **exit code 0**.
+
+Treat output that begins with `Commands under "<domain>" are discovered at
+runtime` as a missing command, never as a diagnosis result:
+
+1. Do not parse it as an envelope and do not report "no issue found". Exit code
+   0 here means the command never ran.
+2. Do not conclude that the domain is unsupported, or that this Skill only
+   offers `memory classify`.
+3. Tell the user that deep diagnosis needs credentials. Point them to
+   `sysom-osops precheck` for auth status and `sysom-osops configure` to set it
+   up; credential setup happens outside the conversation.
+4. Re-run the command only after the user confirms credentials are configured.
 
 ## References
 
