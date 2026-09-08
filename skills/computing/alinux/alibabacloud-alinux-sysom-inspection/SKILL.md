@@ -77,8 +77,10 @@ sysom-osops inspection ecs --region cn-shenzhen --scope-type batch --instances i
 sysom-osops inspection ecs --region cn-shenzhen --scope-type all
 
 # Re-check an existing report (--report-id)
-# Returns immediately without re-running (auto-generated in inspection next_steps)
-sysom-osops inspection ecs --report-id inspection-82a64d9d-11c5-45b2-a81c-27fc754891e8
+# Returns immediately without re-running (auto-generated in inspection next_steps).
+# IMPORTANT: --region and --scope-type (or --instance) MUST match the original
+# inspection command, otherwise the replay will fail with MissingParam errors.
+sysom-osops inspection ecs --region cn-shenzhen --scope-type all --report-id inspection-82a64d9d-11c5-45b2-a81c-27fc754891e8
 ```
 
 ## Invocation Modes
@@ -92,9 +94,11 @@ sysom-osops inspection ecs --report-id inspection-82a64d9d-11c5-45b2-a81c-27fc75
   for the rest in the report.
 - **Region-wide:** `--scope-type all` auto-discovers every ECS instance in the region
   (limit 5000), then applies the same Top-3 auto-diagnosis and LLM summarization in one command.
-- **Report replay:** `--report-id <reportId>` returns the existing report immediately without
-  re-running the inspection; inspection results emit this replay command in `next_steps`
-  automatically.
+- **Report replay:** `--region <region> --scope-type <scope-type> --report-id <reportId>`
+  (or `--region <region> --instance <instanceId> --report-id <reportId>`) returns the
+  existing report immediately without re-running the inspection; inspection results emit
+  this replay command — with the original `--region` and `--scope-type`/`--instance` —
+  in `next_steps` automatically.
 
 ## Observability
 
@@ -131,8 +135,10 @@ sysom-osops inspection ecs --report-id inspection-82a64d9d-11c5-45b2-a81c-27fc75
   deep-dive commands for the remaining ones in the report.
 - Report lookup uses ROA API `GET /api/v1/inspection/getInspectionReport`; the CLI polls until
   the report succeeds or times out.
-- `--report-id <reportId>` skips task creation and directly fetches the existing report;
-  inspection results also emit this replay command in `next_steps` automatically.
+- `--region <region> --scope-type <scope-type> --report-id <reportId>` (or with
+  `--instance` instead of `--scope-type`) skips task creation and directly fetches the
+  existing report; inspection results emit this replay command in `next_steps`
+  automatically, including the original `--region` and `--scope-type`/`--instance`.
 - Local threshold/event-rule configuration is not used; anomaly decisions come from the
   server-side inspection report.
 
@@ -160,8 +166,10 @@ and handle it as follows instead of blind retries:
   unmatched queries fall back to a full inspection.
 - Use `--scope-type batch --instances ...` for batch inspection and `--scope-type all` for the
   whole region (limit 5000 instances); both auto-diagnose the Top-3 most severe anomalies.
-- Use `--report-id` to re-check an existing report without re-execution; the replay command is
-  emitted automatically in inspection `next_steps`.
+- Use `--region <region> --scope-type <scope-type> --report-id <reportId>` (or with
+  `--instance` instead of `--scope-type`) to re-check an existing report without
+  re-execution; the replay command is emitted automatically in inspection `next_steps`
+  with the original `--region` and `--scope-type`/`--instance`.
 - A local Python CLI (`./scripts/osops.sh inspection`) is kept only as a fallback for
   environments where `sysom-osops` is unavailable.
 - Memory anomaly trigger logic of the fallback path stays implemented in

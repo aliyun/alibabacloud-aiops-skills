@@ -299,9 +299,11 @@ async def _list_all_instances_page(
     current: int,
     page_size: int,
 ) -> Dict[str, Any]:
-    raw = await caller.call_rpc(
-        "ListAllInstances",
-        {
+    raw = await caller.call_roa(
+        action="ListAllInstances",
+        pathname="/api/v1/am/instance/listAllInstances",
+        method="GET",
+        query={
             "region": region_id,
             "instanceType": instance_type,
             "managedType": managed_type,
@@ -319,8 +321,66 @@ async def _list_all_instances_page(
     return body
 
 
+async def _check_instance_managed(
+    caller: SysomOpenApiCaller,
+    *,
+    instance_id: str,
+    region_id: str,
+    instance_type: str = DEFAULT_SYSOM_INSTANCE_TYPE,
+) -> str:
+    """Determine whether *instance_id* is managed or unmanaged.
+
+    Makes two lightweight ``ListAllInstances`` calls — one with
+    ``managedType=managed`` and one with ``managedType=unmanaged`` — and
+    checks which list contains the target instance.  Pagination is handled
+    so that large fleets are still covered.
+
+    Returns ``"managed"``, ``"unmanaged"``, or ``"unknown"`` on failure.
+    """
+    for mt in ("managed", "unmanaged"):
+        page = 1
+        size = 100
+        while True:
+            try:
+                body = await _list_all_instances_page(
+                    caller,
+                    region_id=region_id,
+                    instance_type=instance_type,
+                    managed_type=mt,
+                    current=page,
+                    page_size=size,
+                )
+            except RuntimeError:
+                break
+            instances, total = _extract_pagination_data(body)
+            for inst in instances:
+                if _extract_instance_id(inst) == instance_id:
+                    return mt
+            # Exhausted all pages for this filter
+            if total is None or page * size >= total:
+                break
+            page += 1
+    return "unknown"
+
+
 def _extract_pagination_data(list_body: Dict[str, Any]) -> tuple[list[Dict[str, Any]], Optional[int]]:
     data = list_body.get("data") or list_body.get("Data") or {}
+
+    # Some ROA responses return data as a list directly (e.g. ListAllInstances).
+    if isinstance(data, list):
+        instances = [x for x in data if isinstance(x, dict)]
+        total: Optional[int] = None
+        for key in ("total", "Total", "totalCount", "TotalCount"):
+            val = list_body.get(key)
+            if val is None:
+                continue
+            try:
+                total = int(val)
+                break
+            except (TypeError, ValueError):
+                continue
+        return instances, total
+
     if not isinstance(data, dict):
         return [], None
 
@@ -336,7 +396,7 @@ def _extract_pagination_data(list_body: Dict[str, Any]) -> tuple[list[Dict[str, 
             instances_obj = nested
     instances = [x for x in (instances_obj or []) if isinstance(x, dict)]
 
-    total: Optional[int] = None
+    total = None
     for key in ("total", "Total", "totalCount", "TotalCount"):
         val = data.get(key)
         if val is None:
@@ -366,7 +426,7 @@ def _extract_instance_name(instance: Dict[str, Any]) -> str:
 
 
 def _infer_instance_managed_type(instance: Dict[str, Any]) -> str:
-    for key in ("managedType", "ManagedType"):
+    for key in ("managedType", "ManagedType", "manageType"):
         val = instance.get(key)
         if isinstance(val, str):
             low = val.strip().lower()
@@ -485,6 +545,28 @@ def _extract_initial_sysom_role_exist(data: Any) -> Optional[bool]:
     return None
 
 
+_SLR_PERMISSION_HINT = (
+    "The RAM user/role is missing 'ram:CreateServiceLinkedRole' permission. "
+    "This is required for first-time SysOM activation and is NOT included in "
+    "the AliyunSysomFullAccess system policy. "
+    "Fix: attach a custom policy granting ram:CreateServiceLinkedRole "
+    "(scoped to sysom.aliyuncs.com), or manually create the SysOM "
+    "service-linked role in the RAM console."
+)
+
+
+def _is_slr_permission_error(message: str) -> bool:
+    """Detect NoPermission errors related to service-linked role creation."""
+    msg_lower = message.lower()
+    indicators = (
+        "createservicelinkedrole",
+        "servicelinkedrole",
+        "service linked role",
+        "service-linked-role",
+    )
+    return any(ind in msg_lower for ind in indicators)
+
+
 async def _call_initial_sysom(
     caller: SysomOpenApiCaller,
     *,
@@ -503,14 +585,18 @@ async def _call_initial_sysom(
     status = raw.get("statusCode") or raw.get("status_code")
     body = normalize_sysom_body(raw)
     if not _is_http_ok(status):
-        raise RuntimeError(f"InitialSysom HTTP {status}: {body.get('message') or body}")
+        msg = body.get("message") or str(body)
+        hint = _SLR_PERMISSION_HINT if _is_slr_permission_error(str(msg)) else ""
+        raise RuntimeError(f"InitialSysom HTTP {status}: {msg}\n{hint}" if hint else f"InitialSysom HTTP {status}: {msg}")
 
     code = str(body.get("code") or body.get("Code") or "").strip().lower()
     if code and code != "success":
+        msg = str(body.get("message") or body.get("Message") or "InitialSysom returned non-Success")
+        hint = _SLR_PERMISSION_HINT if _is_slr_permission_error(msg) else ""
         return {
             "ok": False,
             "error_code": "api_call_failed",
-            "message": str(body.get("message") or body.get("Message") or "InitialSysom returned non-Success"),
+            "message": f"{msg}\n{hint}" if hint else msg,
             "raw_response": body,
         }
 
@@ -538,13 +624,15 @@ async def _call_initial_sysom(
 
 
 async def _install_sysom_agent(caller: SysomOpenApiCaller, *, instance_id: str, region_id: str) -> Dict[str, Any]:
-    raw = await caller.call_rpc(
-        "InstallAgentWithType",
-        {
+    raw = await caller.call_roa(
+        action="InstallAgentWithType",
+        pathname="/api/v1/am/agent/installAgent",
+        method="POST",
+        body={
             "instances": [{"instance": instance_id, "region": region_id}],
+            "instanceType": DEFAULT_SYSOM_INSTANCE_TYPE,
             "agentId": DEFAULT_SYSOM_AGENT_ID,
             "agentVersion": DEFAULT_SYSOM_AGENT_VERSION,
-            "instanceType": DEFAULT_SYSOM_INSTANCE_TYPE,
             "configId": DEFAULT_SYSOM_CONFIG_ID,
         },
     )
@@ -683,6 +771,8 @@ async def _wait_inspection_report_success(
         body = await _get_inspection_report(caller, report_id)
         status = _extract_inspection_report_status(body).lower()
         if status == "success":
+            return body
+        if status == "failed":
             return body
         await asyncio.sleep(poll_interval_seconds)
     raise TimeoutError(
@@ -1143,6 +1233,15 @@ def _build_inspection_conclusion(result: Dict[str, Any]) -> Dict[str, Any]:
     if result.get("memgraph_diagnosis_skipped_reason"):
         final_parts.append(f"Note: {result['memgraph_diagnosis_skipped_reason']}")
 
+    # Suggest managing the instance when it is unmanaged and the report is clean.
+    managed_type = (result.get("instance_selection") or {}).get("selected_instance_managed_type") or "unknown"
+    if managed_type == "unmanaged" and not abnormal_items:
+        final_parts.append(
+            "Tip: This instance is currently unmanaged. "
+            "Managing it via the SysOM console enables deeper metric collection "
+            "and allows memgraph diagnosis to trigger automatically."
+        )
+
     final_conclusion = " ".join(final_parts)
     abnormal_items_markdown = _format_abnormal_items_markdown(abnormal_items)
     template_values = {
@@ -1241,7 +1340,16 @@ async def run_inspection(args: argparse.Namespace) -> Dict[str, Any]:
         )
 
     items = list(getattr(args, "inspection_items", DEFAULT_INSPECTION_ITEMS))
-    managed_type = _infer_instance_managed_type(selected_instance or {}) if selected_instance else "unknown"
+    managed_type_filter = getattr(args, "managed_type", "all")
+    if managed_type_filter in ("managed", "unmanaged"):
+        managed_type = managed_type_filter
+    else:
+        managed_type = await _check_instance_managed(
+            caller,
+            instance_id=selected_instance_id,
+            region_id=args.region_id,
+            instance_type=getattr(args, "instance_type", DEFAULT_SYSOM_INSTANCE_TYPE),
+        )
     metric_source = getattr(args, "metric_source", None)
     if not metric_source:
         if managed_type == "managed":
