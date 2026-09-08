@@ -1,0 +1,75 @@
+# mutating-schemas/run-command.yaml
+namespace: eflo-controller
+action: run-command
+async: true
+result_key: InvokeId
+required:
+  - name: Region
+    cli: --region
+  - name: Endpoint
+    cli: --endpoint
+  - name: NodeIdList
+    cli: --node-id-list
+    type: array<string>
+    max_items: 50
+  - name: CommandContent
+    cli: --command-content
+    type: string
+    max_length: 16384  # 16KB
+optional:
+  - name: ClientToken
+    cli: --client-token
+    type: uuid
+    recommended: true
+  - name: Name
+    cli: --name
+    max_length: 30
+  - name: WorkingDir
+    cli: --working-dir
+    default: /root
+  - name: Timeout
+    cli: --timeout
+    type: int
+    default: 60
+    max: 86400
+  - name: Username
+    cli: --username
+    default: root
+  - name: ContentEncoding
+    cli: --content-encoding
+    enum: [PlainText, Base64]
+    default: PlainText
+  - name: RepeatMode
+    cli: --repeat-mode
+    enum: [Once, Period, NextRebootOnly, EveryReboot]
+    default: Once
+  - name: Frequency
+    cli: --frequency
+    when: "RepeatMode == Period"
+  - name: EnableParameter
+    cli: --enable-parameter
+    type: bool
+  - name: Parameters
+    cli: --parameters
+    type: json
+    when: "EnableParameter == true"
+forbidden_inference: []
+sensitive:
+  - CommandContent  # if user pastes secrets, redact in summaries
+verification:
+  - "describe-invocations Invocations[0].InvokeNodes[*].InvocationStatus = Success"
+---
+# mutating-schemas/stop-invocation.yaml
+namespace: eflo-controller
+action: stop-invocation
+async: false
+result_key: RequestId
+required:
+  - name: InvokeId
+    cli: --invoke-id
+optional:
+  - name: NodeIdList
+    cli: --node-id-list
+    type: array<string>
+forbidden_inference: []
+sensitive: []

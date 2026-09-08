@@ -1,0 +1,42 @@
+# mutating-schemas/change-node-types.yaml
+namespace: eflo-controller
+action: change-node-types
+async: true
+result_key: TaskId
+required:
+  - name: Region
+    cli: --region
+  - name: Endpoint
+    cli: --endpoint
+  - name: NodeIds
+    cli: --node-ids
+    type: array<string>
+    max_items: 10
+  - name: NodeType
+    cli: --node-type
+    type: string
+    enum:
+      - cpfs-enhanced
+      - ebs-enhanced
+      - balanced
+      - cpfs-enhanced-multi-tenant
+      - ebs-enhanced-multi-tenant
+      - balanced-multi-tenant
+      - zeroLeni-cpfs
+      - zeroLeni-ebs
+      - zeroLeni-balanced
+    note: "DPU/storage mode, NOT a MachineType. Transition allowed only within same tenant model & zeroLeni variant per cluster vdpu version matrix (see node-spec-change.md)."
+forbidden_inference:
+  - NodeType
+sensitive: []
+preconditions:
+  - "describe-node: OperatingState=Using (exactly), read current NodeType + NodeGroupId"
+  - "all NodeIds in the same NodeGroupId; ≤10 per call"
+  - "requested transition allowed by the vdpu/tenant matrix, else refuse"
+verification:
+  - "describe-task TaskState=execution_success"
+  - "describe-node NodeType == requested NodeType (compare NodeType, NOT MachineType; else ⚠ partial)"
+note: |
+  Task success ≠ node type change success. Per-node disk/ENI/dense-ENI counts exceeding the
+  target quota yield RESOURCE_INSUFFICIENT for that node. Invalid enum values return
+  "The node_type xxx is not supported." — never validate against list-machine-types.

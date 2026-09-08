@@ -1,0 +1,29 @@
+# mutating-schemas/stop-nodes.yaml
+namespace: eflo-controller
+action: stop-nodes
+async: true
+result_key: TaskId
+required:
+  - name: Region
+    cli: --region
+    type: string
+  - name: Endpoint
+    cli: --endpoint
+    type: string
+    pattern: "eflo-controller.<Region>.aliyuncs.com"
+  - name: NodeIds
+    cli: --nodes
+    type: array<string>
+    max_items: 100
+optional:
+  - name: IgnoreFailedNodeTasks
+    cli: --ignore-failed-node-tasks
+    type: bool
+    default: false
+forbidden_inference: []
+sensitive: []
+preconditions:
+  - "describe-node OperatingState ∈ {Using, HealthyUsing}"
+verification:
+  - "describe-task TaskState=execution_success"
+  - "describe-node OperatingState=Stopped (observed on me-east-1: ClusterNodeShutdown — accept both as stopped)"

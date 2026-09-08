@@ -1,0 +1,77 @@
+# Mutating Schema: eflo-controller approve-operation
+# Purpose: approve a pending maintenance proposal (repair / reboot / upgrade window) raised by the platform.
+# Key CLI truths (measured + backend dispatch re-verified 2026-08-31):
+#   - flags are --node-id (single NodeId) + --operation-type; there is NO --operation-id flag
+#   - OperationType is a bare string with NO server-side enum validation; the dispatch if/elif
+#     branches define the only valid values — an out-of-enum value falls into the default branch
+#     and fails with a confusing error (not an "invalid enum" error)
+#   - public enum: RepairMachine / RebootMachine / UpgradeMachine
+#   - TerminateWindow exists in the dispatch but is internal-only (ApproveOperationInner,
+#     used by auto-close tasks); it must NEVER be offered or submitted through this public CLI
+
+action: approve-operation
+namespace: eflo-controller
+async: false                      # takes effect synchronously, no TaskId; returns RequestId; the maintenance task itself proceeds asynchronously
+reversible: false
+returns: RequestId
+
+cli_top_level_args:
+  - flag: --region
+    type: string
+    business_required: true
+  - flag: --endpoint
+    type: string
+    business_required: true
+  - flag: --node-id
+    type: string                  # single NodeId per call
+    business_required: true
+  - flag: --operation-type
+    type: enum
+    enum: [RepairMachine, RebootMachine, UpgradeMachine]   # public values only
+    business_required: true
+    forbidden_values:
+      - value: TerminateWindow
+        reason: "internal-only entry point (ApproveOperationInner); forbidden through the public CLI"
+
+operation_type_semantics:
+  - value: RepairMachine
+    meaning: "approve the repair window and start the repair task (DPU-mode nodes first attempt a standby replacement; on success it returns directly)"
+    precondition: "node has a real fault window (otherwise the server rejects: no real fault on the node, operation forbidden); measured OperatingState must be ClusterNodeRepairPendingApproval"
+  - value: RebootMachine
+    meaning: "approve the reboot window and start the reboot task"
+    precondition: "node has a real fault window; measured OperatingState must be ClusterNodeRebootPendingApproval"
+  - value: UpgradeMachine
+    meaning: "approve the upgrade window (mainly hyper-node upgrade scenarios; does NOT require a real fault window)"
+    precondition: "measured OperatingState must be ClusterNodeUpgradePendingApproval (otherwise the server rejects: wrong state, upgrade cannot be approved)"
+
+required_user_confirmed:
+  - field: Region
+    source: HITL
+  - field: NodeId
+    source: describe-node
+    forbidden: ["LLM guessing"]
+  - field: OperationType
+    source: "three-way HITL picker (RepairMachine / RebootMachine / UpgradeMachine) guided by the measured pending state; the user selects explicitly"
+    forbidden: ["free-text invention (reboot / replace-disk / maintenance / ...)", "TerminateWindow"]
+
+strong_confirmations:
+  - "确认"     # zh-session user-facing confirmation word; the Agent internally runs safe_mutate_confirm <hash>
+  - "confirm" # en-session user-facing confirmation word
+
+phase1_dump_fields:
+  - Region   # Endpoint is a derived parameter (derived from Region); it stays out of the confirmation table and appears only in the full CLI line
+  - NodeId
+  - "Measured pending state (OperatingState from describe-node)"
+  - OperationType
+  - Full CLI line
+
+# Hard-coupling validation: local checks that must run before the Phase 1 dump
+local_validation:
+  - rule: "OperationType must be one of RepairMachine / RebootMachine / UpgradeMachine"
+    on_violation: "terminate the flow; out-of-enum values hit the server default dispatch branch and fail confusingly"
+  - rule: "OperationType must match the measured pending state (RepairMachine<-ClusterNodeRepairPendingApproval, RebootMachine<-ClusterNodeRebootPendingApproval, UpgradeMachine<-ClusterNodeUpgradePendingApproval)"
+    on_violation: "terminate the flow and re-present the picker with the state-matched option highlighted"
+
+verification:
+  - "describe-node re-check shows the node leaving the *PendingApproval state (e.g. into the repair/reboot/upgrade flow)"
+  - "no public CLI queries the proposal status directly; rely on platform notifications for completion"

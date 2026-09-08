@@ -1,0 +1,88 @@
+# mutating-schemas/tag-resources.yaml
+namespace: eflo-controller
+action: tag-resources
+async: false
+result_key: RequestId
+required:
+  - name: Region
+    cli: --region
+  - name: Endpoint
+    cli: --endpoint
+  - name: BizRegionId
+    cli: --biz-region-id
+    constraint: "== Region"
+  - name: ResourceType
+    cli: --resource-type
+    enum: [node, cluster, Hypernode]
+  - name: ResourceIds
+    cli: --resource-id
+    type: array<string>
+    max_items: 50
+  - name: Tags
+    cli: --tag
+    type: repeated  # --tag Key=k Value=v --tag Key=k2 Value=v2
+    min_items: 1
+forbidden_inference: []
+sensitive: []
+verification:
+  - "list-tag-resources returns Tags[] containing all new K-V"
+---
+# mutating-schemas/untag-resources.yaml
+namespace: eflo-controller
+action: untag-resources
+async: false
+result_key: RequestId
+required:
+  - name: Region
+    cli: --region
+  - name: Endpoint
+    cli: --endpoint
+  - name: BizRegionId
+    cli: --biz-region-id
+  - name: ResourceType
+    cli: --resource-type
+    enum: [node, cluster, Hypernode]
+  - name: ResourceIds
+    cli: --resource-id
+    type: array<string>
+mutually_exclusive_required:
+  - TagKeys
+  - All
+optional:
+  - name: TagKeys
+    cli: --tag-key
+    type: array<string>
+  - name: All
+    cli: --all
+    type: bool
+    note: "Only effective when TagKeys is empty; HITL must explicitly confirm before use"
+forbidden_inference: []
+sensitive: []
+---
+# mutating-schemas/change-resource-group.yaml
+namespace: eflo-controller
+action: change-resource-group
+async: false
+result_key: RequestId
+required:
+  - name: Region
+    cli: --region
+  - name: Endpoint
+    cli: --endpoint
+  - name: ResourceRegionId
+    cli: --resource-region-id
+    constraint: "== Region"
+  - name: ResourceType
+    cli: --resource-type
+    enum: [node, cluster, Hypernode]
+  - name: ResourceId
+    cli: --resource-id
+    type: string  # single id
+  - name: ResourceGroupId
+    cli: --resource-group-id
+    note: "MUST come from resourcemanager list-resource-groups HITL pick"
+forbidden_inference:
+  - ResourceGroupId
+sensitive: []
+verification:
+  - "describe-node ResourceGroupId == target"

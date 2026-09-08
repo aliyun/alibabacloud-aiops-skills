@@ -1,0 +1,45 @@
+# mutating-schemas/reimage-nodes.yaml
+namespace: eflo-controller
+action: reimage-nodes
+async: true
+result_key: TaskId
+irreversible: true
+confirm_reply_zh: "确认"
+confirm_reply_en: "confirm"  # 单环节确认：风险提示框 + 参数表同屏；口令按会话语言，英文大小写不敏感
+required:
+  - name: Region
+    cli: --region
+  - name: Endpoint
+    cli: --endpoint
+  - name: Nodes
+    cli: --nodes
+    type: array<object>
+    item_required:
+      - Hostname
+      - ImageId
+      - NodeId
+    item_optional:
+      - LoginPassword  # omit → node keeps its existing password; if supplied, forbidden_inference + sensitive still apply
+optional:
+  - name: ClusterId
+    cli: --cluster-id
+    recommended: true
+  - name: UserData
+    cli: --user-data
+    type: string  # Base64, ≤16KB
+  - name: IgnoreFailedNodeTasks
+    cli: --ignore-failed-node-tasks
+    default: false
+forbidden_inference:
+  - ImageId
+  - LoginPassword
+  - Hostname
+sensitive:
+  - LoginPassword
+preconditions:
+  - "describe-node OperatingState ∈ {Stopped, Using}"
+  - "list-images HITL pick"
+verification:
+  - "describe-task TaskState=execution_success"
+  - "describe-node ImageId == requested"
+  - "describe-node OperatingState=Using"

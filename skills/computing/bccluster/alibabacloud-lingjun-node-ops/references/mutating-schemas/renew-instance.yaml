@@ -1,0 +1,37 @@
+# mutating-schemas/renew-instance.yaml
+namespace: bssopenapi
+action: renew-instance
+async: false
+result_key: OrderId
+irreversible: true  # paid
+confirm_reply: render.confirm_word  # see lib/core/i18n.sh; single-step confirmation: danger box (with cost estimate) + parameter table in one message; word per session language, en case-insensitive
+required:
+  - name: InstanceId
+    cli: --instance-id
+    type: string
+    note: "= NodeId (e01-cn-xxx)"
+  - name: ProductCode
+    cli: --product-code
+    fixed: bccluster
+  - name: RenewPeriod
+    cli: --renew-period
+    type: int
+    enum: [1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 24, 36]
+business_required:
+  - name: ProductType
+    cli: --product-type
+    enum:
+      - bccluster_eflocomputing_public_cn
+      - bccluster_eflocomputing_public_intl
+optional:
+  - name: ClientToken
+    cli: --client-token
+    type: uuid
+    recommended: true
+    note: "Idempotency key; must remain stable across retries"
+forbidden_inference:
+  - RenewPeriod
+sensitive: []
+verification:
+  - "bssopenapi query-orders OrderId=<oid> Status=Success"
+  - "describe-node ExpiredTime advanced by RenewPeriod months"

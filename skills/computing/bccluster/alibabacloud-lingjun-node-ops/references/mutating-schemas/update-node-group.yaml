@@ -1,0 +1,52 @@
+# mutating-schemas/update-node-group.yaml
+namespace: eflo-controller
+action: update-node-group
+async: false
+result_key: RequestId
+required:
+  - name: Region
+    cli: --region
+  - name: Endpoint
+    cli: --endpoint
+  - name: NodeGroupId
+    cli: --node-group-id
+  - name: NewNodeGroupName
+    cli: --new-node-group-name
+    note: |
+      doc-hallucination: aliyun --help marks Optional, but server-side mandatory.
+      If user does not want to rename, copy the current value from describe-node-group.
+business_required_at_least_one:
+  - ImageId
+  - LoginPassword
+  - UserData
+  - BizKeyPairName
+  - BizRamRoleName
+  - FileSystemMountEnabled
+  - SystemDisk
+optional:
+  - name: ImageId
+    cli: --image-id
+  - name: LoginPassword
+    cli: --login-password
+  - name: UserData
+    cli: --user-data
+  - name: BizKeyPairName
+    cli: --biz-key-pair-name
+  - name: BizRamRoleName
+    cli: --biz-ram-role-name
+  - name: FileSystemMountEnabled
+    cli: --file-system-mount-enabled
+    type: bool
+  - name: SystemDisk
+    cli: --system-disk
+    type: object
+    note: |
+      仅支持 PerformanceLevel 字段（--system-disk PerformanceLevel=PL1）。
+      Category/Size 无参数不可改（CLI 3.3.10 dry-run 实测 unknown field）；
+      改盘型/容量需删重建节点组（scaling skill）。
+forbidden_inference:
+  - ImageId
+sensitive:
+  - LoginPassword
+verification:
+  - "describe-node-group fields == new values"

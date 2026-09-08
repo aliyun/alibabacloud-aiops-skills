@@ -1,0 +1,28 @@
+# mutating-schemas/reboot-nodes.yaml
+namespace: eflo-controller
+action: reboot-nodes
+async: true
+result_key: TaskId
+required:
+  - name: Region
+    cli: --region
+  - name: Endpoint
+    cli: --endpoint
+  - name: NodeIds
+    cli: --nodes
+    type: array<string>
+    max_items: 100
+optional:
+  - name: ClusterId
+    cli: --cluster-id
+    recommended: true
+  - name: IgnoreFailedNodeTasks
+    cli: --ignore-failed-node-tasks
+    default: false
+forbidden_inference: []
+sensitive: []
+preconditions:
+  - "describe-node OperatingState=Using"
+verification:
+  - "describe-task TaskState=execution_success"
+  - "describe-node BootTime advanced or OperatingState=Using"

@@ -1,0 +1,47 @@
+# mutating-schemas/report-node-status.yaml
+# Replaces the legacy PAI-only report-nodes-status (ReportNodesStatus, --nodes/--reason/...):
+# report-node-status (ReportNodeStatus) is the general-user fault-reporting API.
+# Backend truths (user_report.py, re-verified 2026-08-31):
+#   - DiagnosisType has two reserved enums (QUICK / COMPREHENSIVE) but the current
+#     implementation accepts COMPREHENSIVE only (full JinGang deep-diagnosis chain,
+#     node goes offline); QUICK is reserved and rejected: 400
+#     "Only COMPREHENSIVE diagnosis type is supported"
+#   - the node's control_state MUST be Using, otherwise 400
+#   - daily quota: reports/day >= quota% of account machines (default 10%) -> 400
+#   - duplicate report for the same account+node -> 400 "Duplicate fault report..."
+#   - on success a fault report row is created immediately with Status=Processing
+#     (visible via list-fault-reports) and the response carries ReportId (i-<12 digits>)
+#   - node transitions to PreparationForDiagnosingClusterNode; a repair task is spawned
+namespace: eflo-controller
+action: report-node-status
+async: false
+result_key: ReportId
+required:
+  - name: Region
+    cli: --region
+  - name: Endpoint
+    cli: --endpoint
+  - name: NodeId
+    cli: --node-id
+    type: string
+    note: "single NodeId per call (NOT a list)"
+  - name: DiagnosisType
+    cli: --diagnosis-type
+    enum:
+      - COMPREHENSIVE
+    note: "QUICK is reserved but rejected: 400 'Only COMPREHENSIVE diagnosis type is supported'"
+  - name: Description
+    cli: --description
+    forbidden_inference: true
+    note: "the user must write the real fault description; LLM composing/splicing is forbidden"
+preconditions:
+  - "describe-node shows the node present in the region"
+  - "node control/operating state is Using (otherwise the server returns 400)"
+  - "no unresolved duplicate report for the same account+node"
+forbidden_inference:
+  - Description
+sensitive: []
+verification:
+  - "response carries ReportId (i-<12 digits>) + RequestId (sync)"
+  - "list-fault-reports --status Processing shows the new report"
+  - "describe-node shows the node leaving Using (PreparationForDiagnosingClusterNode)"
