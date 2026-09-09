@@ -168,8 +168,12 @@ def query_account(client, region_id):
     """Step 2: Check account UID and overdue status"""
     try:
         uid_data = call_api(client, "sts", "2015-04-01", "GetCallerIdentity", region_id=region_id)
-        # Use CLI to call bssopenapi to avoid SDK DNS resolution issues
-        balance_data = call_cli("bssopenapi", "query-account-balance", region_id)
+        # bssopenapi is a CLI built-in metadata-mode product (NOT plugin-style),
+        # so it does not accept kebab-case: the QueryAccountBalance action name is
+        # passed verbatim in PascalCase (KB decision 94cff57 / E12). The former
+        # kebab form made the CLI print help text and exit 0, so json.loads failed
+        # and the account-overdue check silently degraded to "normal".
+        balance_data = call_cli("bssopenapi", "QueryAccountBalance", region_id)
         if "_error" in balance_data:
             raise RuntimeError(balance_data["_error"])
         available = float(balance_data.get("Data", {}).get("AvailableAmount", 0))
@@ -314,10 +318,15 @@ def query_eip(client, region_id, eip_address=None, allocation_id=None):
 
 def query_ddos(region_id, ip, instance_type="eip"):
     """Step 8: Check DDoS blackhole status (CLI call)"""
-    data = call_cli("antiddos-public", "describe-instance-ip-address", region_id, {
-        "ddos-region-id": region_id,
-        "instance-type": instance_type,
-        "instance-ip": ip,
+    # antiddos-public is a CLI built-in metadata-mode product (NOT plugin-style):
+    # action + params must be PascalCase verbatim (official DescribeInstanceIpAddress
+    # params DdosRegionId/InstanceType/InstanceIp; RAM action prefix yundun-ddos).
+    # The former kebab form made the CLI print help and exit 0, so json.loads failed
+    # and the DDoS blackhole check silently degraded to "normal".
+    data = call_cli("antiddos-public", "DescribeInstanceIpAddress", region_id, {
+        "DdosRegionId": region_id,
+        "InstanceType": instance_type,
+        "InstanceIp": ip,
     })
     if "_error" in data:
         return {"ip_status": "unknown", "status": "normal", "error": data["_error"]}
@@ -332,10 +341,15 @@ def query_ddos(region_id, ip, instance_type="eip"):
 
 def query_cfw(region_id, ip):
     """Step 9: Check Cloud Firewall (CFW) traffic diversion (CLI call)"""
-    data = call_cli("cloudfw", "describe-asset-list", region_id, {
-        "current-page": "1",
-        "page-size": "1",
-        "search-item": ip,
+    # cloudfw is a CLI built-in metadata-mode product (NOT plugin-style): action +
+    # params must be PascalCase verbatim (official DescribeAssetList params
+    # CurrentPage/PageSize/SearchItem; RAM action prefix yundun-cloudfirewall).
+    # The former kebab form made the CLI print help and exit 0, so json.loads failed
+    # and the CFW diversion check silently degraded to "normal".
+    data = call_cli("cloudfw", "DescribeAssetList", region_id, {
+        "CurrentPage": "1",
+        "PageSize": "1",
+        "SearchItem": ip,
     })
     if "_error" in data:
         return {"has_cfw": False, "status": "normal", "error": data["_error"]}

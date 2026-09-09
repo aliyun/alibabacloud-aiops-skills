@@ -12,54 +12,27 @@
 
 **Fast Path (Scenario 2: VPC Cloud Service Public Network)**: If the user provides `uid`, `vswitch_id`, and `region_id` together, **skip this step** and use the provided values for Step 2.
 
-> **Scenario 2 Input Validation**: The primary inputs for Scenario 2 are **vswitch_id and region_id**. Both UID and region_id can be auto-obtained if not provided by the user (UID from `sts_create.py` GetCallerIdentity, region_id from `scripts/region_detector.py`). If the user only provides a VSwitch ID, the system will auto-detect the region before proceeding.
+> **Scenario 2 Input Validation**: The primary inputs for Scenario 2 are **vswitch_id and region_id**. UID is auto-obtained from `sts_create.py` (GetCallerIdentity `AccountId`) if not provided. **region_id is mandatory** — extract it from the user's prompt; if missing, ask the user once and abort if still not provided (see SKILL.md mandatory-parameter gate).
 
 **Input Branch Logic** (execute only when fast path conditions are not met):
 
+> **IMPORTANT**: Do NOT execute `aliyun ecs describe-instances`, `aliyun vpc describe-vswitches`, or any standalone CLI command directly. The information extraction below is done by the Agent from the user's input; every cloud query is performed by the main detection script in Step 3.
+
 ### Branch A: Input is ECS Instance ID (e.g., `i-2zednz491t3g3f027i2m`)
 
-**Extract region_id and uid from user-provided information**:
-
-> **IMPORTANT**: Do NOT execute `aliyun ecs describe-instances` or any CLI command directly. The information extraction below is done by the Agent based on user input and the main detection script's output — NOT by running standalone CLI commands.
-
-- `region_id`: If the user provides it, use directly. If not provided, it will be **auto-detected** via `scripts/region_detector.py` after obtaining credentials (Step 2). Do NOT prompt the user for region_id unless auto-detection fails.
+- `region_id`: **Mandatory.** Use the value from the user's prompt. If missing, ask the user once (offer common regions cn-hangzhou / cn-shanghai / cn-beijing / cn-shenzhen, default cn-hangzhou); if still not provided, **abort** per SKILL.md's mandatory-parameter gate.
+- `instance_id`: **Mandatory** for the ECS scenario. If not provided, **abort immediately**, output: `[ERROR] Step 1 failed: instance_id is required for ECS scenario`
 - `uid`: Use the user-provided UID, or it will be extracted by the main detection script via `GetCallerIdentity`.
-- Available balance: Will be queried internally by the main detection script via BSS API.
+- Available balance: Queried internally by the main detection script via the BSS API.
 
-**Failure Handling**:
-- If region_id cannot be auto-detected (Step 2.5 fails) and user does not provide it → prompt user with **region selection options** (default: cn-hangzhou)
-- If instance_id is not provided → **Abort immediately**, output: `[ERROR] Step 1 failed: instance_id is required for ECS scenario`
+### Branch B: Input is VSwitch ID (e.g., `vsw-2ze4an6iacrvkp9bwb6py`)
 
-### Branch B: Input is Public IP (e.g., `123.57.151.107`)
+- `region_id`: **Mandatory.** Use the value from the user's prompt. If missing, ask the user once (offer common regions, default cn-hangzhou); if still not provided, **abort** per SKILL.md's mandatory-parameter gate.
+- `vswitch_id`: **Mandatory** for the VPC scenario. If not provided, **abort immediately**, output: `[ERROR] Step 1 failed: vswitch_id is required for VPC scenario`
+- `uid`: Use the user-provided UID, or it will be **automatically obtained** from `sts_create.py` Step 2 output (`AccountId` field from `GetCallerIdentity`). Do NOT prompt the user for UID.
+- `vpc_id` / `cidr_block`: Extracted by the main detection script internally.
 
-**Resolve instance_id and region_id from public IP via `scripts/region_detector.py`**:
-
-> **IMPORTANT**: Do NOT execute `aliyun ecs describe-instances` or any CLI command directly. Use the bundled `scripts/region_detector.py` script after obtaining credentials (Step 2) to auto-detect the instance and region.
-
-- `instance_id`: Auto-detected by `region_detector.py --public-ip <IP>` (searches EIP and ECS public IPs across regions). If auto-detection fails, ask the user.
-- `region_id`: Returned automatically by `region_detector.py` along with instance_id. If auto-detection fails, prompt the user with **region selection options**.
-- `uid`: Use the user-provided UID, or it will be extracted by the main detection script.
-
-**Failure Handling**:
-- If `region_detector.py` cannot find the public IP in any region → ask the user to provide instance_id and region_id
-- If user cannot provide instance_id → **Abort immediately**, output:
-  ```
-  This public IP cannot be resolved without instance_id. The skill "alibabacloud-ecs-vpc-publicnetwork-troubleshoot" requires an ECS instance ID. Please check if this IP belongs to another resource (SLB, NAT Gateway, EIP, etc.).
-  ```
-
-### Branch C: Input is VSwitch ID (e.g., `vsw-2ze4an6iacrvkp9bwb6py`)
-
-**Extract region_id and uid from user input**:
-
-> **IMPORTANT**: Do NOT execute `aliyun vpc describe-vswitches` or any CLI command directly. Use the bundled `scripts/region_detector.py` after obtaining credentials to auto-detect the region.
-
-- `region_id`: If the user provides it, use directly. If not provided, it will be **auto-detected** via `scripts/region_detector.py --vswitch-id <ID>` after obtaining credentials (Step 2). Do NOT prompt the user for region_id unless auto-detection fails.
-- `uid`: If the user provides it, use directly. If not provided, it will be **automatically obtained** from `sts_create.py` Step 2 output (`AccountId` field from `GetCallerIdentity`). Do NOT prompt the user for UID.
-- `vpc_id` / `cidr_block`: Will be extracted by the main detection script internally.
-
-**Failure Handling**:
-- If region_id cannot be auto-detected (Step 2.5 fails) and user does not provide it → prompt user with **region selection options** (default: cn-hangzhou)
-- If uid is not provided → Will be auto-obtained from `sts_create.py` in Step 2. No action needed at this step.
+> **Scenario identifier**: this skill accepts an ECS **instance_id** (Scenario 1) or a **vswitch_id** (Scenario 2) as the diagnostic target, per SKILL.md Input Parameters. A bare public IP is **not** a direct input — if the user only has a public IP, ask them for the corresponding instance_id before proceeding.
 
 ## Step 2: Obtain Access Credentials
 
@@ -102,44 +75,6 @@ python3 scripts/sts_create.py --cli --json
 
 **Failure Handling**:
 - If script execution fails → **Abort immediately**, output: `[ERROR] Step 2 failed: Failed to obtain access credentials. Please verify Alibaba Cloud credentials are configured (environment variables or aliyun CLI)`
-
-## Step 2.5: Region Auto-Detection (when region_id is missing)
-
-**Purpose**: Automatically detect the region_id from the user-provided resource identifier using `scripts/region_detector.py`. This step runs ONLY when region_id was not provided by the user.
-
-**Prerequisites**: Credentials must be successfully obtained from Step 2.
-
-```bash
-# Ensure credentials are set as environment variables before invoking
-# export ALIBABA_CLOUD_ACCESS_KEY_ID=<AK>
-# export ALIBABA_CLOUD_ACCESS_KEY_SECRET=<SK>
-# export ALIBABA_CLOUD_SECURITY_TOKEN=<TOKEN>
-
-# Detect region from ECS instance ID
-python3 scripts/region_detector.py --instance-id <instance_id>
-
-# Detect region from VSwitch ID
-python3 scripts/region_detector.py --vswitch-id <vswitch_id>
-
-# Detect region from public IP (EIP or ECS public IP)
-python3 scripts/region_detector.py --public-ip <public_ip>
-```
-
-**Output** (JSON):
-- Success: `{"success": true, "region_id": "cn-hangzhou", "resource_type": "ecs_instance", ...}`
-- Failure: `{"success": false, "error": "Resource not found in any searched region"}`
-
-**Behavior by scenario**:
-
-| Input Type | Auto-Detect Behavior |
-|------------|---------------------|
-| instance_id | Searches ECS DescribeInstances across common regions |
-| vswitch_id | Searches VPC DescribeVSwitchAttributes across common regions |
-| public_ip | Searches EIP DescribeEipAddresses + ECS DescribeInstances across common regions; returns instance_id + region_id |
-
-**Failure Handling**:
-- If `region_detector.py` returns `success: false` → prompt user with **region selection options** (cn-hangzhou, cn-shanghai, cn-beijing, cn-shenzhen), with cn-hangzhou as default. If user does not respond within 30 seconds, auto-select the default.
-- If user provides region_id manually after being prompted → use the user-provided value.
 
 ## Step 3: Invoke Scenario Script
 

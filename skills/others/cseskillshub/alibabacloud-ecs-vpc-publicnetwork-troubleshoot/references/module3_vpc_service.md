@@ -14,7 +14,7 @@ The script accepts all required information via command-line arguments:
 | `--vswitch-id` | Required | VSwitch ID, e.g., `vsw-2ze4an6iacrvkp9bwb6py` |
 | `--uid` | Optional | Customer account UID (auto-obtained from `sts_create.py` GetCallerIdentity if not provided; skips internal query when provided) |
 
-> **Scenario 2 Input Validation**: The primary inputs for this scenario are **vswitch_id and region_id**. UID is auto-obtained via GetCallerIdentity if not provided by the user. Region_id is auto-detected via `scripts/region_detector.py` if not provided. If the user only provides a VSwitch ID, the system will auto-detect the region before proceeding.
+> **Scenario 2 Input Validation**: The primary inputs for this scenario are **vswitch_id and region_id**. UID is auto-obtained via GetCallerIdentity if not provided by the user. **region_id is mandatory** — extract it from the user's prompt; if missing, ask the user once and abort if still not provided (see SKILL.md mandatory-parameter gate).
 
 ## Invocation
 

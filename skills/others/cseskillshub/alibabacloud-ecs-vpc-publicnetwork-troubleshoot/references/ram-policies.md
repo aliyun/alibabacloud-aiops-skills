@@ -6,7 +6,7 @@ This Skill is designed for Alibaba Cloud AIOps troubleshooting scenarios, perfor
 
 | RAM System Policy | Purpose | Related Skill Module |
 |---|---|---|
-| `AliyunECSReadOnlyAccess` | Query ECS instances, security groups, ENIs, images, etc. | scripts/ecs_public_troubleshoot.py, scripts/sg_rule_matcher.py |
+| `AliyunECSReadOnlyAccess` | Query ECS instances, security groups, ENIs, images, etc. | scripts/ecs_public_troubleshoot.py |
 | `AliyunVPCReadOnlyAccess` | Query VPC, VSwitches, NAT gateways, SNAT, route tables, EIPs, IPv4 gateways, network ACLs, etc. | scripts/ecs_public_troubleshoot.py, scripts/vpc_service_public_troubleshoot.py |
 | `AliyunCloudFirewallReadOnlyAccess` | Query Cloud Firewall (CFW) instances and policy status | scripts/ecs_public_troubleshoot.py, scripts/vpc_service_public_troubleshoot.py |
 | `AliyunYundunDDosReadOnlyAccess` | Query DDoS Protection, Anti-DDoS Basic, blackhole status | scripts/ecs_public_troubleshoot.py, scripts/vpc_service_public_troubleshoot.py |
@@ -39,6 +39,7 @@ To further restrict permissions, create the following **custom RAM Policy** and 
       "Effect": "Allow",
       "Action": [
         "vpc:DescribeVpcs",
+        "vpc:DescribeVpcAttribute",
         "vpc:DescribeVSwitches",
         "vpc:DescribeVSwitchAttributes",
         "vpc:DescribeNatGateways",
@@ -63,16 +64,15 @@ To further restrict permissions, create the following **custom RAM Policy** and 
     {
       "Effect": "Allow",
       "Action": [
-        "yundun-ddoscoo:DescribeInstance",
-        "antiddos-public:DescribeInstanceList",
-        "antiddos-public:DescribeIpStatus"
+        "yundun-ddos:DescribeInstanceIpAddress"
       ],
       "Resource": "*"
     },
     {
       "Effect": "Allow",
       "Action": [
-        "bss:QueryAccountBalance"
+        "bss:QueryAccountBalance",
+        "bssapi:QueryAccountBalance"
       ],
       "Resource": "*"
     },

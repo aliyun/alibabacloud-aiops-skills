@@ -1,6 +1,18 @@
 ---
 name: alibabacloud-ecs-vpc-publicnetwork-troubleshoot
-description: Diagnose Alibaba Cloud ECS public network access problems and VPC cloud service public network access problems. Covers ECS public network access, ECS public IP reachability, and ECS security group blocking (automatically handling the NAT-gateway egress path for instances without a public IP); and VPC cloud service public network access with NAT gateway, SNAT, route and EIP checks for DataWorks, SAE, ACK and other services. Use this when troubleshooting public network connectivity failures for ECS instances or VPC cloud services.
+description: |
+  Use when an ECS instance cannot reach the internet, its public IP is
+  unreachable, ping to the public network times out, a security group blocks
+  public access, or a VPC cloud service (DataWorks / SAE / ACK) cannot access the
+  public network. Diagnoses Alibaba Cloud ECS public network access and VPC cloud
+  service public egress: ECS public IP reachability and security-group blocking
+  (auto-handling the NAT-gateway egress path for instances without a public IP),
+  plus NAT gateway / SNAT / route / EIP checks for DataWorks, SAE, ACK and others.
+  Triggers: "ECS public network access diagnosis", "ECS public IP reachability",
+  "ECS security group blocking public access", "ECS cannot access the public network",
+  "ECS NAT gateway SNAT egress troubleshooting", "VPC cloud service public network access",
+  "DataWorks cannot access the public network", "SAE public network egress failure",
+  "ACK public network unreachable", "VPC NAT gateway SNAT route EIP check"
 ---
 
 # ECS/VPC Public Network Connectivity Troubleshooting
@@ -129,7 +141,9 @@ python3 scripts/vpc_service_public_troubleshoot.py \
 
 ## Observability
 
-All OpenAPI calls carry a unified User-Agent `AlibabaCloud-Agent-Skills/alibabacloud-ecs-vpc-publicnetwork-troubleshoot/{session-id}` for call-chain traceability; the session ID is generated once at skill start and shared across scripts via the `SKILL_SESSION_ID` environment variable.
+- **User-Agent template (mandatory)**: every OpenAPI call issued by the scripts carries a User-Agent built from the template `AlibabaCloud-Agent-Skills/{SKILL_NAME}/{session-id}`, where `{SKILL_NAME}` is this skill's frontmatter name — `alibabacloud-ecs-vpc-publicnetwork-troubleshoot` — and `{session-id}` is the session identifier described below. Resolved example: `AlibabaCloud-Agent-Skills/alibabacloud-ecs-vpc-publicnetwork-troubleshoot/4eefc3a1be2102b3eb41463c84e98e9b`.
+- **session-id rule**: generated **once per session** as a **32-char lowercase hex** string (`uuid.uuid4().hex`), and kept **consistent across the SDK and aliyun CLI backends** touched in that session. It is cached via the `SKILL_SESSION_ID` environment variable so every script in one session reports the same id.
+- The SDK backend injects it via `append_user_agent`; the CLI backend propagates the same value through the `ALIBABACLOUD_USER_AGENT` environment variable. This User-Agent is the only tracing marker this skill injects; all calls remain read-only.
 
 ## Important Notes
 
@@ -141,6 +155,17 @@ All OpenAPI calls carry a unified User-Agent `AlibabaCloud-Agent-Skills/alibabac
 6. **Branch decision**: accurately determine whether the ECS has a public IP/EIP to select the correct info table.
 7. **No scope creep**: diagnose only the requested instance/vswitch; do not proactively probe other resources.
 8. **Dependencies**: aliyun-cli (DDoS/CFW/EIP supplementary queries invoked *inside* the scripts) and Python SDK (`pip install -r scripts/requirements.txt`).
+
+## Customer Info
+
+- **License**: governed by the license of the parent open-source repository `aliyun/alibabacloud-aiops-skills`.
+- **Compatibility**: agents qoder / qwen-code / open_claw / claude-code; os macOS / Linux / Windows.
+- **Requires**: network reachability to the ecs / vpc / sts / cloudfw / antiddos-public / bssopenapi endpoints; a read-only RAM credential (see references/ram-policies.md); Python 3 with aliyun-python-sdk-core (scripts/requirements.txt); aliyun CLI for the DDoS / CFW / BSS supplementary queries.
+- **Scope**: read-only diagnosis; never creates, modifies, deletes or restarts any resource.
+- **Typical first questions**:
+  - "Check the public connectivity of ECS instance i-xxx in cn-hangzhou."
+  - "Public access to TCP 80 of my ECS is blocked - is the security group blocking it?"
+  - "DataWorks cannot access the public network from vSwitch vsw-xxx - check NAT, SNAT and route."
 
 ## Example Scenarios
 
