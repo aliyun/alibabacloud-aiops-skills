@@ -1,0 +1,10 @@
+# requirements.txt -- DB Cost Diagnosis
+#
+# Python standard library only. No third-party packages, no Alibaba Cloud SDK.
+#
+# The aliyun CLI (https://help.aliyun.com/document_detail/121541.html) is the
+# ONLY API channel: every OpenAPI call is executed as an `aliyun` CLI
+# subprocess, and credentials are resolved by the CLI's default credential
+# chain. Install and configure it with:
+#
+#     aliyun configure
