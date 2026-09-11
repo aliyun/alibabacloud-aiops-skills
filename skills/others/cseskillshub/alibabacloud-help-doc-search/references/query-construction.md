@@ -4,7 +4,30 @@ Unified guidance for constructing effective search queries against the Alibaba C
 help center with `scripts/aliyun_help.py`. It consolidates this skill's measured
 search behavior, the retrieval-first methodology described in SKILL.md, and the
 error-code workflow from SKILL.md. Apply it to every `search` invocation; the
-same principles hold whether or not a product filter (`-p`) is used.
+same principles hold whether or not a product filter (`-p`) is used. Every query is
+also scoped to exactly one `(site, language)` pair — see the next section.
+
+## Site and language scope of a query
+
+- The default scope is the `cn` portal in Chinese (`--site cn --lang zh`); omitting both
+  flags reproduces it exactly. Switch scope only when the user asks for it: an explicit
+  international-portal request, a non-Chinese document request, or a question about a
+  product that only the other portal documents.
+- Language and site are orthogonal dimensions: the `cn` portal also serves English, and
+  the international site also serves Chinese. "The user wrote in Chinese" is therefore
+  not evidence for choosing the `cn` portal.
+- Write the query in the language of the chosen corpus. A Chinese query issued against
+  an English corpus is accepted by the endpoint without an error and answers with
+  unrelated hits (measured: one Chinese billing query returned a single unrelated
+  document, another produced a whole-corpus match of 13618 items), so translate the
+  terms first; the script additionally warns on stderr when it detects this mismatch.
+- Never answer a scoped question by re-running the same query on the other portal. The
+  two portals document different products, regions, prices and compliance rules; a
+  cross-portal "something" is a wrong answer, not a fallback. An empty scoped result
+  means the topic is not documented on that portal, and the answer should say so.
+- Product codes are per portal: verify a code with `list-products` run with the same
+  `--site`/`--lang` before trusting a negative result. Only five aliases are normalized
+  by the script (`PRODUCT_CODE_ALIASES`); everything else must already be a real slug.
 
 ## Query construction principles
 
@@ -99,9 +122,22 @@ When the first round comes back empty or off-topic, do not repeat the same query
 2. Rebuild the query from those terms (replacing the weak token with the observed
    official term), keeping the product filter if it was correct.
 3. If still empty, degrade along the chain: narrow (product-scoped) → broad (drop
-   `-p`) → rephrase with synonyms; as a final fallback use WebSearch with
-   `site:help.aliyun.com` (optionally scoped with `/zh/{product_code}/`).
+   `-p`) → rephrase with synonyms; as a final fallback use WebSearch scoped to the
+   portal that was asked for — `site:help.aliyun.com` for a `cn` query, or
+   `site:www.alibabacloud.com/help/` for an `intl` query (optionally narrowed with
+   `/{lang}/{product_code}/`). Never widen the fallback to the other portal.
 
 This feedback loop complements the automatic alias expansion: the script covers
 known alias pairs mechanically, while rephrasing from observed result terminology
 covers topics that no dictionary anticipates.
+
+## Index-leg phrasing and the bilingual vocabulary (F3, F6)
+
+- The index leg now ranks by coverage, so a query phrased differently from the titles is no
+  longer hopeless. Keep it to the concept words anyway: a partial match has to cover at least a
+  third of the query's tokens before it counts.
+- An error code, a parameter name or a quota number is never recalled from the index leg; that
+  is the metadata leg's job, and an empty answer for such a query says so out loud.
+- For an English corpus, write the query in English. The script maps a Chinese query onto
+  documented English wording when it recognises the terms and says so; when it recognises
+  none, it declines the English full-text leg instead of returning noise.
