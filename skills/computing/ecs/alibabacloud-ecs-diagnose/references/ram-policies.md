@@ -25,6 +25,17 @@ This document lists all RAM permissions required by the `alibabacloud-ecs-diagno
 | `RunCommand` | `ecs:RunCommand` | Execute commands via Cloud Assistant |
 | `DescribeInvocationResults` | `ecs:DescribeInvocationResults` | Query command execution results |
 
+### EBS Disk Performance Diagnosis (Optional)
+
+These permissions are only needed when using the **Disk Performance / IO Bottleneck**
+diagnosis scenario. All three actions are L1 low-risk read-only operations.
+
+| API Action | Permission | Purpose |
+|------------|------------|---------|
+| `DescribeLensMonitorDisks` | `ebs:DescribeLensMonitorDisks` | List disks monitored by CloudLens for EBS |
+| `CreateDiagnoseReport` | `ebs:CreateDiagnoseReport` | Initiate a disk performance diagnosis report |
+| `DescribeDiagnoseReport` | `ebs:DescribeDiagnoseReport` | Poll diagnosis status and retrieve results |
+
 ## Policy JSON Template
 
 ### Minimum Read-Only Policy (Basic Diagnostics Only)
@@ -103,6 +114,29 @@ This document lists all RAM permissions required by the `alibabacloud-ecs-diagno
 }
 ```
 
+### EBS Performance Diagnosis Policy (Optional Add-on)
+
+The two policies above do NOT include `ebs` permissions by design. Only attach this
+add-on policy when the **Disk Performance / IO Bottleneck** diagnosis scenario is
+needed, to maintain the least privilege principle.
+
+```json
+{
+  "Version": "1",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ebs:DescribeLensMonitorDisks",
+        "ebs:CreateDiagnoseReport",
+        "ebs:DescribeDiagnoseReport"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+```
+
 ## Applying Permissions
 
 ### Option 1: Using RAM Console (Recommended for Production)
@@ -124,21 +158,21 @@ Create policy file `ecs-diagnostics-policy.json` with the JSON above, then:
 aliyun ram create-policy \
   --policy-name ECS-Diagnostics-Policy \
   --policy-document file://ecs-diagnostics-policy.json \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 
 # Attach to a user
 aliyun ram attach-policy-to-user \
   --policy-name ECS-Diagnostics-Policy \
   --policy-type Custom \
   --user-name <your-ram-user-name> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 
 # Attach to a role
 aliyun ram attach-policy-to-role \
   --policy-name ECS-Diagnostics-Policy \
   --policy-type Custom \
   --role-name <your-ram-role-name> \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 ```
 
 ## Least Privilege Principle
@@ -155,26 +189,26 @@ After applying permissions, verify they work correctly:
 ```bash
 # Test ECS read permission
 aliyun ecs describe-instances \
-  --region-id cn-hangzhou \
+  --biz-region-id cn-hangzhou \
   --page-size 1 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 
 # Test VPC read permission
 aliyun vpc describe-vpcs \
-  --region-id cn-hangzhou \
+  --biz-region-id cn-hangzhou \
   --page-size 1 \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 
 # Test CMS read permission
 aliyun cms describe-metric-last \
   --namespace acs_ecs_dashboard \
   --metric-name CPUUtilization \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 
 # Test Cloud Assistant permission (only if Deep Diagnostics is needed)
 aliyun ecs describe-invocation-results \
-  --region-id cn-hangzhou \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
+  --biz-region-id cn-hangzhou \
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 ```
 
 ## Troubleshooting Permission Issues

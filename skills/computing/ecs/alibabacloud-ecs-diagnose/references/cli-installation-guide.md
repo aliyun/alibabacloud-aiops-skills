@@ -512,10 +512,8 @@ After installation and configuration:
    aliyun fc --help
    ```
 
-3. **Read documentation**:
-   - [Command Syntax Guide](./command-syntax.md)
-   - [Global Flags Reference](./global-flags.md)
-   - [Common Scenarios](./common-scenarios.md)
+3. **Read the official CLI documentation** in the References section below for command
+   syntax, global flags, and common scenarios.
 
 ## References
 

@@ -11,9 +11,9 @@
 
 #### ✅ CORRECT - Valid product names
 ```bash
-aliyun ecs describe-instances --user-agent AlibabaCloud-Agent-Skills
-aliyun vpc describe-vpcs --user-agent AlibabaCloud-Agent-Skills
-aliyun cms describe-metric-last --user-agent AlibabaCloud-Agent-Skills
+aliyun ecs describe-instances --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
+aliyun vpc describe-vpcs --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
+aliyun cms describe-metric-last --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 ```
 
 #### ❌ INCORRECT - Invalid product names
@@ -32,20 +32,20 @@ aliyun cloudmonitor describe-metric-last  # Wrong: Use "cms" not "cloudmonitor"
 #### ✅ CORRECT - Valid actions in plugin mode
 ```bash
 # ECS actions
-aliyun ecs describe-instances --user-agent AlibabaCloud-Agent-Skills
-aliyun ecs describe-instance-attribute --user-agent AlibabaCloud-Agent-Skills
-aliyun ecs describe-instance-status --user-agent AlibabaCloud-Agent-Skills
-aliyun ecs describe-instance-history-events --user-agent AlibabaCloud-Agent-Skills
-aliyun ecs describe-security-group-attribute --user-agent AlibabaCloud-Agent-Skills
-aliyun ecs run-command --user-agent AlibabaCloud-Agent-Skills
-aliyun ecs describe-invocation-results --user-agent AlibabaCloud-Agent-Skills
+aliyun ecs describe-instances --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
+aliyun ecs describe-instance-attribute --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
+aliyun ecs describe-instance-status --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
+aliyun ecs describe-instance-history-events --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
+aliyun ecs describe-security-group-attribute --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
+aliyun ecs run-command --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
+aliyun ecs describe-invocation-results --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 
 # VPC actions
-aliyun vpc describe-vpcs --user-agent AlibabaCloud-Agent-Skills
-aliyun vpc describe-eip-addresses --user-agent AlibabaCloud-Agent-Skills
+aliyun vpc describe-vpcs --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
+aliyun vpc describe-eip-addresses --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 
 # CMS actions
-aliyun cms describe-metric-last --user-agent AlibabaCloud-Agent-Skills
+aliyun cms describe-metric-last --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 ```
 
 #### ❌ INCORRECT - Wrong action format or non-existent actions
@@ -70,77 +70,77 @@ aliyun ecs show-instance  # Should be: describe-instances
 ```bash
 # Instance query with correct parameters
 aliyun ecs describe-instances \
-  --region-id cn-hangzhou \
+  --biz-region-id cn-hangzhou \
   --instance-ids '["i-xxxxx"]' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 
 # Query by instance name
 aliyun ecs describe-instances \
-  --region-id cn-hangzhou \
+  --biz-region-id cn-hangzhou \
   --instance-name "my-instance" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 
 # Query by private IP
 aliyun ecs describe-instances \
-  --region-id cn-hangzhou \
+  --biz-region-id cn-hangzhou \
   --private-ip-addresses '["192.168.1.10"]' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 
 # Security group query
 aliyun ecs describe-security-group-attribute \
-  --region-id cn-hangzhou \
+  --biz-region-id cn-hangzhou \
   --security-group-id sg-xxxxx \
   --direction ingress \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 
 # System events query
 aliyun ecs describe-instance-history-events \
-  --region-id cn-hangzhou \
+  --biz-region-id cn-hangzhou \
   --instance-id i-xxxxx \
   --instance-event-cycle-status.1 Executing \
   --instance-event-cycle-status.2 Inquiring \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 
 # Cloud Assistant command execution
 aliyun ecs run-command \
-  --region-id cn-hangzhou \
+  --biz-region-id cn-hangzhou \
   --instance-id.1 i-xxxxx \
   --type RunShellScript \
   --command-content "dXB0aW1l" \
   --timeout 60 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 
 # Monitoring metrics query
 aliyun cms describe-metric-last \
-  --region-id cn-hangzhou \
+  --biz-region-id cn-hangzhou \
   --namespace acs_ecs_dashboard \
   --metric-name CPUUtilization \
   --dimensions '[{"instanceId":"i-xxxxx"}]' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 ```
 
 #### ❌ INCORRECT - Invalid parameter names or formats
 ```bash
 # Wrong parameter names (API-style PascalCase)
 aliyun ecs describe-instances \
-  --RegionId cn-hangzhou \  # Should be: --region-id
+  --RegionId cn-hangzhou \  # Should be: --biz-region-id
   --InstanceIds '["i-xxxxx"]'  # Should be: --instance-ids
 
 # Wrong array format for instance IDs
 aliyun ecs describe-instances \
-  --region-id cn-hangzhou \
+  --biz-region-id cn-hangzhou \
   --instance-ids i-xxxxx  # Should be: '["i-xxxxx"]' (JSON array)
 
 # Wrong multiple instance specification
 aliyun ecs run-command \
-  --region-id cn-hangzhou \
+  --biz-region-id cn-hangzhou \
   --instance-ids '["i-xxxxx","i-yyyyy"]' \  # Wrong parameter name
   --type RunShellScript \
   --command-content "dXB0aW1l"
 
 # Correct way for multiple instances
 aliyun ecs run-command \
-  --region-id cn-hangzhou \
+  --biz-region-id cn-hangzhou \
   --instance-id.1 i-xxxxx \
   --instance-id.2 i-yyyyy \  # Correct: use .1, .2, .3, etc.
   --type RunShellScript \
@@ -154,7 +154,7 @@ aliyun cms describe-metric-last \
 ```
 
 **Explanation**:
-1. Plugin mode uses kebab-case for parameter names (--region-id, not --RegionId)
+1. Plugin mode uses kebab-case for parameter names (--biz-region-id, not --RegionId)
 2. Array parameters use JSON format with quotes
 3. Repeated parameters use .1, .2, .3 suffix notation
 4. Dimensions parameter requires JSON format
@@ -166,19 +166,19 @@ aliyun cms describe-metric-last \
 #### ✅ CORRECT - Always include user-agent
 ```bash
 aliyun ecs describe-instances \
-  --region-id cn-hangzhou \
+  --biz-region-id cn-hangzhou \
   --instance-ids '["i-xxxxx"]' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 ```
 
 #### ❌ INCORRECT - Missing user-agent
 ```bash
 aliyun ecs describe-instances \
-  --region-id cn-hangzhou \
+  --biz-region-id cn-hangzhou \
   --instance-ids '["i-xxxxx"]'
 ```
 
-**Explanation**: All commands in this skill MUST include `--user-agent AlibabaCloud-Agent-Skills` for tracking and analytics.
+**Explanation**: All commands in this skill MUST include `--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"` for tracking and analytics.
 
 ---
 
@@ -294,9 +294,9 @@ read -p "Enter your AccessKey ID: " AK
 ```bash
 # Get invocation result and decode
 aliyun ecs describe-invocation-results \
-  --region-id cn-hangzhou \
+  --biz-region-id cn-hangzhou \
   --invoke-id t-xxxxx \
-  --user-agent AlibabaCloud-Agent-Skills \
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}" \
   | jq -r '.Invocation.InvocationResults.InvocationResult[0].Output' \
   | base64 -d
 ```
@@ -305,9 +305,9 @@ aliyun ecs describe-invocation-results \
 ```bash
 # Wrong: Shows Base64 encoded string
 aliyun ecs describe-invocation-results \
-  --region-id cn-hangzhou \
+  --biz-region-id cn-hangzhou \
   --invoke-id t-xxxxx \
-  --user-agent AlibabaCloud-Agent-Skills \
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}" \
   | jq -r '.Invocation.InvocationResults.InvocationResult[0].Output'
 ```
 
@@ -321,24 +321,24 @@ aliyun ecs describe-invocation-results \
 COMMAND=$(echo 'df -h' | base64)
 
 aliyun ecs run-command \
-  --region-id cn-hangzhou \
+  --biz-region-id cn-hangzhou \
   --instance-id.1 i-xxxxx \
   --type RunShellScript \
   --command-content "$COMMAND" \
   --timeout 60 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 ```
 
 #### ❌ INCORRECT - Send plain text commands
 ```bash
 # Wrong: Command content must be Base64 encoded
 aliyun ecs run-command \
-  --region-id cn-hangzhou \
+  --biz-region-id cn-hangzhou \
   --instance-id.1 i-xxxxx \
   --type RunShellScript \
   --command-content "df -h" \
   --timeout 60 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 ```
 
 ---
@@ -352,9 +352,9 @@ aliyun ecs run-command \
 Error: Forbidden.RAM - User not authorized to operate on the specified resource
 
 Action:
-1. Read references/ram-policies.md
-2. Inform user of required permissions
-3. Wait for user to grant permissions
+1. Identify the missing permission from the error
+2. Use `ram-permission-diagnose` to guide the permission request
+3. Wait for the user to confirm the grant
 4. Retry after confirmation
 ```
 
@@ -448,9 +448,9 @@ Deep Diagnostics (if approved):
 ### ✅ CORRECT - Always specify region
 ```bash
 aliyun ecs describe-instances \
-  --region-id cn-hangzhou \
+  --biz-region-id cn-hangzhou \
   --instance-ids '["i-xxxxx"]' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 ```
 
 ### ❌ INCORRECT - Omit region or use wrong format
@@ -458,13 +458,13 @@ aliyun ecs describe-instances \
 # Missing region
 aliyun ecs describe-instances \
   --instance-ids '["i-xxxxx"]' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 
 # Wrong region format
 aliyun ecs describe-instances \
   --region hangzhou \  # Should be: cn-hangzhou
   --instance-ids '["i-xxxxx"]' \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 ```
 
 **Explanation**: Region ID is required for most ECS/VPC APIs and must use the full format (e.g., cn-hangzhou, not hangzhou).
@@ -477,9 +477,9 @@ aliyun ecs describe-instances \
 ```bash
 # Extract instance ID
 aliyun ecs describe-instances \
-  --region-id cn-hangzhou \
+  --biz-region-id cn-hangzhou \
   --instance-name "my-instance" \
-  --user-agent AlibabaCloud-Agent-Skills \
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}" \
   | jq -r '.Instances.Instance[0].InstanceId'
 
 # Extract CPU utilization value
@@ -487,14 +487,14 @@ aliyun cms describe-metric-last \
   --namespace acs_ecs_dashboard \
   --metric-name CPUUtilization \
   --dimensions '[{"instanceId":"i-xxxxx"}]' \
-  --user-agent AlibabaCloud-Agent-Skills \
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}" \
   | jq -r '.Datapoints' | jq -r '.[0].Average'
 ```
 
 ### ❌ INCORRECT - Use grep/sed/awk on JSON
 ```bash
 # Wrong: Fragile parsing
-aliyun ecs describe-instances --region-id cn-hangzhou \
+aliyun ecs describe-instances --biz-region-id cn-hangzhou \
   | grep InstanceId | cut -d'"' -f4
 ```
 
@@ -510,41 +510,41 @@ aliyun ecs describe-instances --region-id cn-hangzhou \
 ```bash
 # Short command: 30-60 seconds
 aliyun ecs run-command \
-  --region-id cn-hangzhou \
+  --biz-region-id cn-hangzhou \
   --instance-id.1 i-xxxxx \
   --type RunShellScript \
   --command-content "$(echo 'uptime' | base64)" \
   --timeout 60 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 
 # Long command: 120-600 seconds
 aliyun ecs run-command \
-  --region-id cn-hangzhou \
+  --biz-region-id cn-hangzhou \
   --instance-id.1 i-xxxxx \
   --type RunShellScript \
   --command-content "$(echo 'du -sh /*' | base64)" \
   --timeout 600 \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 ```
 
 #### ❌ INCORRECT - No timeout or too short
 ```bash
 # Missing timeout (may use default)
 aliyun ecs run-command \
-  --region-id cn-hangzhou \
+  --biz-region-id cn-hangzhou \
   --instance-id.1 i-xxxxx \
   --type RunShellScript \
   --command-content "$(echo 'du -sh /*' | base64)" \
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 
 # Timeout too short for long operation
 aliyun ecs run-command \
-  --region-id cn-hangzhou \
+  --biz-region-id cn-hangzhou \
   --instance-id.1 i-xxxxx \
   --type RunShellScript \
   --command-content "$(echo 'find / -name "*.log"' | base64)" \
   --timeout 10 \  # Too short!
-  --user-agent AlibabaCloud-Agent-Skills
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 ```
 
 ---
@@ -554,7 +554,7 @@ aliyun ecs run-command \
 Before considering the skill complete, verify:
 
 - [ ] All CLI commands use plugin mode format (kebab-case)
-- [ ] All commands include `--user-agent AlibabaCloud-Agent-Skills`
+- [ ] All commands include `--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"`
 - [ ] All parameters use correct naming (kebab-case, not PascalCase)
 - [ ] Array parameters use correct JSON format
 - [ ] Enum values are valid and correct

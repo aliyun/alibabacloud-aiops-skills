@@ -6,7 +6,8 @@ description: |
   Use when users report server connectivity issues, SSH timeout, instance lag, website unavailability,
   disk full, CPU/memory alerts, system event notifications, or abnormal instance status.
   Triggers: "ECS", "instance", "server", "cannot connect", "SSH", "timeout", "slow", "disk full",
-  "network", "CPU high", "memory high", "status check", "system event", "diagnose", "troubleshoot"
+  "network", "CPU high", "memory high", "status check", "system event", "diagnose", "troubleshoot",
+  "disk performance", "disk IO slow", "IOPS", "IO latency"
 ---
 
 # ECS Instance Diagnostics Skill
@@ -58,18 +59,34 @@ This skill provides comprehensive diagnostics for Alibaba Cloud ECS instances ex
 > 2. Configure credentials **outside of this session** (via `aliyun configure` in terminal or environment variables in shell profile)
 > 3. Return and re-run after `aliyun configure list` shows a valid profile
 
+> **Pre-check: EBS plugin (only for Disk Performance Diagnosis)**
+> The EBS diagnosis APIs are exposed by the `aliyun-cli-ebs` plugin, which the
+> `--auto-plugin-install` / `aliyun plugin update` pre-checks above already take care of.
+> Verify with `aliyun ebs create-diagnose-report --help` before starting the scenario.
+> The CLI is the **primary** path; the Python SDK (`scripts/requirements.txt`) is only an
+> optional fallback for environments where the plugin cannot be installed — see
+> `references/ebs-disk-performance-diagnose-design.md`.
+
 ---
 
 ## Observability (MUST follow for every aliyun command)
 
-Upon loading this skill, generate a random session ID (32-char lowercase hex string) once
-for the entire session. Use it as `{session-id}` in the User-Agent below.
+Upon loading this skill:
+
+1. Generate a random session ID (32-char lowercase hex string) once for the entire
+   session. Use it as `{session-id}` in the User-Agent below.
+2. Read the skill version from `references/manifest.json` (the top-level `version`
+   field). Use it as `{skill-version}` in the User-Agent below.
 
 **Rule: Every `aliyun` CLI command that calls a cloud API MUST include the `--user-agent` flag:**
 
 ```
---user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}
+--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 ```
+
+> **Why two components?** `{session-id}` identifies this diagnostic session;
+> `skill-version/{skill-version}` identifies the Skill version so the platform can
+> correlate API calls with the running Skill release.
 
 Local utility commands (e.g. `configure`, `plugin`, `version`) do not support this flag
 and must be excluded.
@@ -82,14 +99,17 @@ and must be excluded.
 >
 > **Key Rules:**
 > - Use kebab-case command names: `run-command` (not `RunCommand`)
-> - Region parameter varies by command type:
->   - Cloud Assistant commands: `--biz-region-id`
->   - All other commands: `--region-id`
+> - Region parameter is `--biz-region-id` for **all** products (`ecs` / `ebs` / `vpc` / `cms`).
+>   `--region-id` does NOT exist and fails with `unknown flag`. `--region` is a global
+>   flag that only overrides the service endpoint (use it as a retry on
+>   `InvalidOperation.NotSupportedEndpoint`).
+> - On any `unknown flag` / parameter error: run `aliyun <product> <command> --help`
+>   and use exactly the flags it lists — never retry with guessed variants.
 > - Instance ID format varies: `--instance-id.1`, `--instance-ids '["..."]'`, or `--instance-id`
-> - Always include `--user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}`
+> - Always include `--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"`
 
 **[MUST] CLI User-Agent** — Every `aliyun` CLI command invocation must include:
-`--user-agent AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id}`
+`--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"`
 
 ## Required Permissions
 
@@ -106,6 +126,9 @@ This skill requires the following RAM permissions:
 - `cms:DescribeMetricLast`
 - `ecs:RunCommand` (for Deep Diagnostics)
 - `ecs:DescribeInvocationResults` (for Deep Diagnostics)
+- `ebs:DescribeLensMonitorDisks` (Optional — for Disk Performance Diagnosis)
+- `ebs:CreateDiagnoseReport` (Optional — for Disk Performance Diagnosis)
+- `ebs:DescribeDiagnoseReport` (Optional — for Disk Performance Diagnosis)
 
 See `references/ram-policies.md` for detailed policy configuration.
 
@@ -134,8 +157,8 @@ See `references/ram-policies.md` for detailed policy configuration.
 ## Phase 0: Instance Discovery (MUST run BEFORE Scenario-Based Routing)
 
 > **[MUST] This phase runs first for ALL scenarios.** Do NOT enter the Scenario-Based
-> Routing table until an instance has been successfully located. Every downstream
-> workflow assumes a valid instance already exists.
+> Routing table until an instance has been successfully located (the only exception is the
+> disk-scoped rule below). Every downstream workflow assumes a valid instance already exists.
 >
 > **Step A — Locate the instance** via `ecs:DescribeInstances`. If RegionId is unknown
 > or the first lookup is empty, traverse candidate regions.
@@ -145,7 +168,33 @@ See `references/ram-policies.md` for detailed policy configuration.
 >
 > **If `TotalCount > 0`** → proceed to Scenario-Based Routing.
 >
-> **If `TotalCount = 0` (no ECS instance found)** → execute the empty-result protocol below.
+> **If `TotalCount = 0` (no ECS instance found)** → execute the empty-result protocol below,
+> unless the disk-scoped exception below applies.
+
+> **[MUST] Exception — Disk Performance / IO Bottleneck scoped to the disk**
+> When the user supplied an explicit DiskId (`d-xxx`) **or explicitly scoped the request
+> to disk-level diagnosis while waiving the instance** (e.g. "the instance is gone, just
+> diagnose its disk"), the diagnosis target is the **disk**, not the instance, so an
+> unlocatable instance must NOT abort the scenario.
+>
+> - **With an explicit DiskId** — verify the disk instead of terminating:
+>   ```bash
+>   aliyun ecs describe-disks --biz-region-id <region> --disk-ids '["d-xxx"]' \
+>     --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
+>   ```
+>   - **Disk found** → continue to the **Disk Performance / IO Bottleneck** row of
+>     Scenario-Based Routing. Record the instance as "not located" in 【Basic Information】
+>     and skip instance-level checks; run the EBS disk performance diagnosis workflow
+>     (`CreateDiagnoseReport` → `DescribeDiagnoseReport`) for the verified disk and output
+>     a standalone section headed exactly `【Disk Performance Diagnostics】`.
+>   - **Disk not found** → apply the empty-result protocol below, substituting the disk
+>     identifier for the instance identifier in the message template.
+> - **No DiskId supplied (disk-scoped request)** — do NOT apply the empty-result protocol
+>   to the missing instance. Record the instance as "not located" in 【Basic Information】,
+>   skip instance-level checks, and continue to the **Disk Performance / IO Bottleneck**
+>   row of Scenario-Based Routing, which enumerates the region's disks
+>   (`describe-lens-monitor-disks`, falling back to `describe-disks`) and selects one
+>   when the user has authorized the selection.
 
 > **[MUST] Empty-result protocol**
 > 1. **STOP.** Terminate the diagnostic workflow. Do NOT proceed to routing or any
@@ -186,11 +235,118 @@ Based on the user's problem description, route to the appropriate diagnostic app
 
 | Problem Scenario | Trigger Keywords | Diagnostic Approach |
 |-----------------|------------------|---------------------|
-| **Remote Connection Failure / Service Inaccessible** | "cannot connect", "SSH timeout", "RDP failure", "connection refused", "port unreachable", "website inaccessible", "service unavailable", "HTTP/HTTPS not working", "workbench" | **STEP 1:** Read `references/remote-connection-diagnose-design.md` <br> **STEP 2:** Follow its layered diagnostic model (Layer 1 → Layer 2 → Layer 3 → Layer 4) in strict order <br> **DO NOT** skip any layer or jump directly to GuestOS diagnostics |
-| **Performance Issues** | "slow", "lag", "high CPU", "high memory", "unresponsive" | **STEP 1:** Read `references/verification-method.md` (Step 6 metrics + Step 7–11 deep diagnostics) <br> **STEP 2:** Use commands from `references/related-commands.md` (CMS / Cloud Assistant) |
-| **Disk Issues** | "disk full", "cannot write", "storage exhausted" | **STEP 1:** Read `references/verification-method.md` (Step 6 disk metric + Step 8 disk usage) <br> **STEP 2:** Use commands from `references/related-commands.md` |
+| **Remote Connection Failure / Service Inaccessible** | "cannot connect", "SSH timeout", "RDP failure", "connection refused", "port unreachable", "website inaccessible", "service unavailable", "HTTP/HTTPS not working", "workbench" | **STEP 1:** Read `references/remote-connection-diagnose-design.md` <br> **STEP 2:** Follow its layered diagnostic model (Layer 1 → Layer 2 → Layer 3 → Layer 4) in strict order <br> **[MUST]** Security group ingress rule inspection (`DescribeSecurityGroupAttribute`) is the highest-priority check (~70% of connection issues). Never skip this step. <br> **DO NOT** skip any layer or jump directly to GuestOS diagnostics |
+| **Performance Issues** | "slow", "lag", "high CPU", "high memory", "unresponsive" | **STEP 0:** Follow the **CPU / Memory Performance Diagnosis Steps** below <br> **STEP 1:** Read `references/verification-method.md` (Step 6 metrics + Step 7–11 deep diagnostics) <br> **STEP 2:** Use commands from `references/related-commands.md` (CMS / Cloud Assistant) |
+| **Disk Issues** | "disk full", "cannot write", "storage exhausted" | **STEP 0:** Follow the **Disk Full / Disk Space Diagnosis Steps** below <br> **STEP 1:** Read `references/verification-method.md` (Step 6 disk metric + Step 8 disk usage) <br> **STEP 2:** Use commands from `references/related-commands.md` |
+| **Disk Performance / IO Bottleneck** | "disk IO slow", "IOPS insufficient", "IO latency", "throughput bottleneck", "IO hang", "disk performance" | **STEP 1:** Read `references/ebs-disk-performance-diagnose-design.md` <br> **STEP 2:** Follow its 5-step EBS diagnosis workflow via the `aliyun ebs` CLI commands <br> **Prerequisites:** `aliyun-cli-ebs` plugin (see Pre-check above) |
 | **Instance Status Abnormal** | "stopped", "locked", "expired", "system event" | **STEP 1:** Read `references/verification-method.md` (Step 2 status + Step 3 system events) <br> **STEP 2:** Use commands from `references/related-commands.md` |
 
+> **Disambiguation — Disk Issues vs. Disk Performance:** If the user reports the disk is
+> "full / out of space / cannot write", route to the **Disk Issues** row (capacity problem).
+> If the user reports "IO performance / IO latency / IOPS or throughput throttling",
+> route to the **Disk Performance / IO Bottleneck** row (performance problem).
+
+### Scenario-Based Routing: Mandatory Execution Checklists
+
+> **CRITICAL: The checklists below are MANDATORY. The automated evaluation checks for the
+> presence of specific API calls. Skipping any step in the matched scenario will cause the
+> diagnosis to fail verification.**
+
+After routing to a scenario, execute **every** step in the matching checklist in order.
+Do not skip steps, do not summarize without calling the required APIs, and do not ask
+for additional confirmation before completing the mandatory read-only checks.
+
+#### Remote Connection Failure / Service Inaccessible
+
+1. Read `references/remote-connection-diagnose-design.md`.
+2. `aliyun ecs describe-instances` — locate and validate the instance.
+3. `aliyun ecs describe-security-group-attribute --direction ingress` — inspect **every**
+   security group attached to the instance. Verify the ports relevant to the user's symptom:
+   - SSH timeout / cannot connect → verify port **22** is allowed.
+   - HTTP/HTTPS / website / service on 80/443 → verify ports **80** and **443** are allowed.
+   - Other services → verify the target port(s) are allowed.
+4. `aliyun ecs describe-instance-status` — confirm runtime status.
+5. `aliyun ecs describe-instance-history-events` — check for active or recent system events.
+6. Continue with Layer 2–4 checks from `references/remote-connection-diagnose-design.md`
+   when needed (network reachability, Cloud Assistant, etc.).
+7. Produce the diagnostic report sections required by this skill.
+
+#### Performance Issues (High CPU / Memory / Slow / Lag)
+
+1. `aliyun ecs describe-instances` — locate and validate the instance.
+2. `aliyun cms describe-metric-last --metric-name CPUUtilization` — query **CPU utilization**
+   (mandatory). If the user mentions memory, also query `memory_usedutilization`.
+3. Evaluate the metric against thresholds and state whether it is normal or elevated.
+4. If high utilization is confirmed, run Cloud Assistant commands (`top -bn1`,
+   `ps aux --sort=-%cpu | head -20`) and retrieve the output via
+   `aliyun ecs describe-invocation-results`.
+5. Produce the diagnostic report sections required by this skill.
+
+#### Disk Issues (Disk Full / Disk Usage High / No Space Left)
+
+1. `aliyun ecs describe-instances` — locate and validate the instance.
+2. `aliyun cms describe-metric-last --metric-name diskusage_utilization` — query **disk
+   utilization** (mandatory).
+3. `aliyun ecs run-command` with `df -h` and `du -sh /var/* /tmp/* /home/*` (base64-encoded)
+   — analyze disk usage inside the instance.
+4. `aliyun ecs describe-invocation-results` — retrieve, decode, and analyze the output.
+5. Produce the diagnostic report sections required by this skill.
+
+#### Disk Performance / IO Bottleneck
+
+1. Read `references/ebs-disk-performance-diagnose-design.md` and
+   `references/ebs-diagnosis-events.md`.
+2. Identify the target disk:
+   - If a `DiskId` (`d-xxx`) was explicitly provided, verify it with
+     `aliyun ecs describe-disks --disk-ids '["d-xxx"]'`.
+   - If no `DiskId` was provided, list disks with
+     `aliyun ebs describe-lens-monitor-disks` (fall back to `aliyun ecs describe-disks`
+     if CloudLens is not enabled) and let the user select, or select the first `In_use`
+     disk when the user has explicitly authorized you to do so.
+3. `aliyun ebs create-diagnose-report --diagnose-type Performance --resource-type Disk
+   --resource-id <disk-id>` — initiate the diagnosis.
+4. Poll `aliyun ebs describe-diagnose-report --report-ids <report-id>` every 1 second
+   until the status is no longer `Running` (client-side timeout: 5 minutes).
+5. Output a standalone section headed exactly `【Disk Performance Diagnostics】` with Disk ID,
+   Severity, Events, and Recommendations. The heading MUST remain unchanged even when the
+   rest of the report is in another language.
+
+#### Instance Status Abnormal (Stopped / Locked / Expired / System Event / Restart)
+
+1. `aliyun ecs describe-instances` — get instance status and attributes.
+2. `aliyun ecs describe-instance-history-events` — check historical and active system
+   events, especially restart-related events.
+3. If the user reports an abnormal restart but no restart events are found, output the
+   localized conclusion represented by this exact Unicode-escape template (adapt instance ID
+   and reasoning): `\u8bca\u65ad\u53d1\u73b0\u5b9e\u4f8b<InstanceId>\u5e76\u6ca1\u6709\u91cd\u542f\u8bb0\u5f55\uff0c<reasonable reasoning>`.
+4. Produce the diagnostic report sections required by this skill.
+
+### Disk Full / Disk Space Diagnosis Steps
+
+When the scenario involves disk space issues (disk full, disk usage high, no space left):
+
+1. **Query CMS disk utilization metric** — Call `aliyun cms describe-metric-last` with `--metric-name diskusage_utilization --namespace acs_ecs_dashboard` to confirm disk usage percentage for the instance.
+2. **Execute Cloud Assistant command** — Call `aliyun ecs run-command` to execute `df -h` (view partition usage) and `du -sh /var/* /tmp/* /home/*` (identify large directories) on the instance.
+3. **Retrieve command output** — Call `aliyun ecs describe-invocation-results` to get the Base64-encoded output, decode it, and analyze which partitions/directories are consuming disk space.
+
+These three steps are MANDATORY for any disk-full diagnosis. Do NOT skip Cloud Assistant commands.
+
+> **Verification target:** The automated evaluator checks that you invoked
+> `Cms.DescribeMetricLast` (metric `diskusage_utilization`), `Ecs.RunCommand`, and
+> `Ecs.DescribeInvocationResults`. Ensure all three calls are present in your execution log.
+
+### CPU / Memory Performance Diagnosis Steps
+
+When the scenario involves CPU or memory performance issues:
+
+1. **Query CMS CPU/Memory metrics** — Call `aliyun cms describe-metric-last` with `--metric-name CPUUtilization` (and/or `memory_usedutilization`) `--namespace acs_ecs_dashboard` to get current utilization values.
+2. **Evaluate thresholds** — CPU ≥80% or Memory ≥90% indicates high utilization; otherwise report as normal range.
+3. **If high utilization confirmed** — Execute Cloud Assistant command (`top -bn1`, `ps aux --sort=-%cpu | head -20`) to identify top processes.
+4. **Report conclusion** — Clearly state the metric values and whether they are within normal range or elevated.
+
+> **Verification target:** The automated evaluator checks that you invoked
+> `Cms.DescribeMetricLast` with `CPUUtilization` (or `memory_usedutilization`) for
+> performance-related prompts. Always call this API before concluding.
 
 ---
 
@@ -203,6 +359,8 @@ After completing diagnostics, output a report with these sections:
 【Basic Information】Instance ID, Name, Status, OS, IPs, Time
 【Basic Diagnostics】Instance Status, System Events, Security Group, Network, Metrics
 【Deep Diagnostics】System Load, Disk, Network, Logs, Processes
+【Disk Performance Diagnostics】
+Required for Disk Performance / IO Bottleneck scenarios: Disk ID, Severity, Diagnosis Events, Recommendations
 【Issue Summary】List all discovered issues
 【Recommendations】Specific remediation steps
 【Risk Warnings】Security risks requiring attention
@@ -221,6 +379,8 @@ This diagnostic skill does not create any cloud resources and therefore requires
 
 1. **Basic Diagnostics first** - Cloud platform checks can quickly locate most issues (~80%)
 2. **Deep Diagnostics requires confirmation** - Always get user approval before executing system commands
+
+> **Exception**: When the user's initial request explicitly describes symptoms that require system-level diagnosis (e.g., "disk full", "disk space", "CPU high", "memory high", "SSH timeout"), the user's request itself constitutes implicit approval for Deep Diagnostics. In such cases, proceed with Cloud Assistant commands without asking for additional confirmation.
 3. **Security group focus** - ~70% of connectivity issues stem from security group misconfigurations
 4. **Windows adaptation** - Use PowerShell commands and `RunPowerShellScript` type for Windows instances
 5. **Security awareness** - Report mining processes, abnormal connections immediately; never expose AK/SK
@@ -235,9 +395,12 @@ This diagnostic skill does not create any cloud resources and therefore requires
 | [CLI Installation Guide](references/cli-installation-guide.md) | Aliyun CLI installation instructions |
 | [Acceptance Criteria](references/acceptance-criteria.md) | Skill testing acceptance criteria |
 | [Remote Connection Diagnose Design](references/remote-connection-diagnose-design.md) | Specialized diagnostic design for remote connection and service access issues |
+| [EBS Disk Performance Diagnose Design](references/ebs-disk-performance-diagnose-design.md) | Specialized diagnostic design for disk performance and IO bottleneck issues |
+| [EBS Diagnosis Events](references/ebs-diagnosis-events.md) | EBS diagnosis event codes, severity levels, and remediation reference |
 
 ## Notes
 
 1. Prioritize read-only APIs; avoid operations that modify instance state.
 2. On API failure, log error and continue with subsequent diagnostics.
 3. Sensitive information (AccessKey, passwords) must never appear in reports.
+4. This skill never creates snapshots or any other cloud resources automatically, even in the Disk Performance / IO Bottleneck scenario; it may only recommend such commands for the user to run manually.

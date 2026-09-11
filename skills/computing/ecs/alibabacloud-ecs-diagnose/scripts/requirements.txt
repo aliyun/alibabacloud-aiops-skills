@@ -1,0 +1,8 @@
+# Python SDK dependencies — required ONLY by the Disk Performance Diagnosis
+# scenario (EBS diagnosis APIs, see references/ebs-disk-performance-diagnose-design.md).
+# All other diagnostics in this skill use the aliyun CLI and do not need these packages.
+# Install: pip install -r scripts/requirements.txt
+alibabacloud-tea-openapi>=0.3.7
+alibabacloud-credentials>=0.3.8
+alibabacloud-tea-util>=0.3.7
+alibabacloud-openapi-util>=0.1.8
