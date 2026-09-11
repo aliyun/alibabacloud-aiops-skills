@@ -58,7 +58,7 @@ Read the matching management or diagnosis entry, then follow only the references
 needed for the requested operation.
 
 - [Manage alert rules](references/rules/manage-alert-rules.md): find, inspect, create,
-  update, disable, enable, or delete rules.
+  update, disable, enable, delete, or temporarily mute/unmute rules.
 - [Manage alert notifications](references/notifications/manage-notifications.md): manage
   notification objects, alert policies, action policies, and content templates.
 - [Diagnose alert events](references/diagnosis/diagnose.md): explain trigger

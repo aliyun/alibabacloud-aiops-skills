@@ -3,7 +3,7 @@
 Use this catalog for official API definitions. For commands and their handling,
 follow the relevant management operation:
 
-- [Alert rules](rules/manage-alert-rules.md): find, inspect, enable, disable, delete, create, and update.
+- [Alert rules](rules/manage-alert-rules.md): find, inspect, enable, disable, delete, create, update, and temporarily mute/unmute.
 - [Notification resources](notifications/manage-notifications.md): choose the resource by purpose.
 - [ResourceRecord API operations](notifications/api/resource-records.md): shared record encoding and CRUD.
 - [Alert history](diagnosis/diagnose.md#start-with-the-incident): query execution and trigger evidence.

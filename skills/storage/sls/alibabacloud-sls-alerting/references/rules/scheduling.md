@@ -62,8 +62,6 @@ For other schedule fields and examples, see the
 For example, checking every minute, querying `-5m` through `now`, and repeating
 notifications every hour are compatible choices. Set each from the requirement.
 
-The complete schedule is passed to create/update as compact JSON:
-
-```bash
---schedule "$(jq -c '.schedule' "$SLS_ALERT_FILE")"
-```
+When creating or updating a rule, serialize the complete `schedule` object from
+the prepared rule document as a JSON string and pass it to `--schedule`. Preserve
+all schedule fields unrelated to the requested change.

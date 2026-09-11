@@ -41,6 +41,7 @@ Example outer record:
 
 Type-specific files show the decoded inner object. Save that object as
 `SLS_RESOURCE_VALUE_FILE`; `jq -c .` supplies the string contents to `--value`.
+If `jq` is unavailable, use a Python script instead.
 The CLI performs outer JSON encoding. Do not use `jq @json` on an already
 serialized string, or send the whole outer record as `--value`.
 Keep template text and DSL in the file so shell expansion does not consume

@@ -1,12 +1,8 @@
 #!/usr/bin/env python3
-"""Offline checks for CLI-bound direct SLS log alert documents (Python 3.7+).
+"""Validate an SLS alert rule JSON document locally.
 
-Usage: validate_alert.py [--json] FILE (or - for stdin).
-Checks structure, identity byte limits, schedule shape, query/join cardinality,
-severity and JSON types, and known CLI incompatibility. Does not execute or
-parse SQL, expressions, Cron grammar, policy DSL, permissions, or templates.
-Unknown fields are retained. Unsupported modes are warnings, not service errors.
-Exit 0: local checks passed (inspect warnings); 1: invalid; 2: CLI usage error.
+Usage: python3 scripts/validate_alert.py [--json] FILE
+Use - as FILE to read JSON from stdin.
 """
 
 import argparse

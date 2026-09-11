@@ -1,14 +1,8 @@
 #!/usr/bin/env python3
-"""Offline SLS ResourceRecord validation (Python 3.7+, standard library only).
+"""Validate an SLS notification resource value or ResourceRecord locally.
 
-Usage: validate_resource.py --input-kind value|record --resource-name NAME FILE
-Add --purpose read for service responses; the default custom-write mode also
-rejects built-in markers and reserved custom-policy fields. Record mode accepts
-an outer record or {"record": {...}} wrapper and checks single JSON encoding and
-ID/name mapping. --json reports errors and warnings without echoing the payload.
-Exit 0: local checks passed; 1: invalid input; 2: invalid CLI arguments.
-No DSL parsing, resource lookup, rendering, or service acceptance is tested.
-Unknown resource and Webhook types produce warnings and skip type-specific checks.
+Usage: python3 scripts/validate_resource.py --input-kind value|record --resource-name NAME [--purpose custom-write|read] [--json] FILE
+Use - as FILE to read JSON from stdin.
 """
 
 from __future__ import print_function

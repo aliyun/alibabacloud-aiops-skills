@@ -5,6 +5,7 @@ how triggered alerts enter notification processing. A rule belongs to a Project.
 
 - To create a rule or change its settings, follow [create or update a rule](create-update-alert-rule.md).
 - To find, inspect, disable, enable, or delete a rule, use the operations below.
+- To temporarily mute a rule or cancel its mute, follow [mute or unmute a rule](mute-alert-rule.md).
 
 Use the stable rule ID for operations. Resolve a supplied display name to a
 unique ID by listing and inspecting matches; do not substitute the display name.

@@ -2,6 +2,7 @@
 
 Use this operation to create a rule or change its behavior. To inspect, enable,
 disable, or delete a rule, use [rule management](manage-alert-rules.md).
+To temporarily mute a rule or cancel its mute, follow [mute or unmute a rule](mute-alert-rule.md).
 
 ## Prepare the change
 
@@ -51,6 +52,8 @@ Follow [rule verification](verify-alert-rule.md) before submitting it.
 ## Submit the change
 
 Use `--cli-dry-run` to inspect the generated request before submitting it:
+
+If `jq` is unavailable, use a Python script instead.
 
 ```bash
 aliyun sls create-alert \
