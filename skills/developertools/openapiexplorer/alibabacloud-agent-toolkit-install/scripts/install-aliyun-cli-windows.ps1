@@ -69,7 +69,7 @@ try {
     }
 
     $ZipPath = Join-Path $DownloadDir "aliyun-cli.zip"
-    Start-BitsTransfer -Source $DownloadUrl -Destination $ZipPath
+    Start-BitsTransfer -Source $DownloadUrl -Destination $ZipPath -RetryTimeout 900
     Expand-Archive -Path $ZipPath -DestinationPath $DownloadDir -Force
     Move-Item -Path "$DownloadDir\aliyun.exe" -Destination "$InstallDir\" -Force
 

@@ -3,9 +3,10 @@ name: alibabacloud-agent-toolkit-install
 description: >
   Install Alibaba Cloud Agent Toolkit end-to-end: verify and set up prerequisites
   (uv, Alibaba Cloud CLI, authentication, CLI plugins, MCP Server Core, bearer
-  token exchange), then install the toolkit via openplugin. Use when: alibabacloud
-  agent toolkit install, environment check, prerequisite check, setup alibabacloud,
-  plugin install, toolkit setup, mcp core setup, aliyun CLI setup.
+  token exchange), then install the toolkit via the current client's supported
+  plugin mechanism. Use when: alibabacloud agent toolkit install, environment check,
+  prerequisite check, setup alibabacloud, plugin install, toolkit setup, mcp core
+  setup, aliyun CLI setup.
 license: Apache-2.0
 metadata:
   domain: environment-setup
@@ -30,6 +31,31 @@ Each step is classified by risk level. Follow these rules strictly:
 
 ---
 
+## Prerequisites
+
+**Pre-check: Aliyun CLI >= 3.3.3 required**
+> Run `aliyun version` to verify >= 3.3.3. If not installed or version too low, run
+> `/bin/bash -c "$(curl -fsSL https://aliyuncli.alicdn.com/setup.sh)"` to install or update.
+
+## Observability (MUST follow for every aliyun command)
+
+Before any cloud API invocation, read `references/manifest.json` from this skill's root and use only its top-level non-empty string `version` as `{skill-version}`. If missing or invalid, STOP. NEVER invent, guess, or reuse a version from another skill.
+
+Bind version and session to the current skill name and skill root. Before this skill's first cloud API invocation in a conversation, generate a fresh random 32-character lowercase hexadecimal session ID. Reuse that session ID for this skill throughout the conversation; each skill MUST use a distinct session ID. NEVER copy one from documentation, examples, another skill, or a previous conversation, and NEVER send the literal `{session-id}` placeholder. On a skill switch or return, reread that skill's manifest; never cross-skill reuse either value.
+
+**Rule: Every `aliyun` CLI command that calls a cloud API MUST include the `--user-agent` flag.**
+
+Markdown examples may omit the flag for brevity. The Agent MUST append the exact flag to every actual execution, including commands generated or extended at runtime.
+
+Local utility commands (e.g. `configure`, `plugin`, `version`) do not support this flag
+and should be excluded.
+
+```
+--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-agent-toolkit-install/{session-id} skill-version/{skill-version}"
+```
+
+---
+
 ## Checklist Overview
 
 Run through these steps sequentially. **Skip any step whose check already passes.**
@@ -41,27 +67,6 @@ Run through these steps sequentially. **Skip any step whose check already passes
 5. [Check / Create MCP Server Core](#step-5-mcp-server-core) — Auto (check) / Confirm-cloud (create)
 6. [Check Bearer token exchange](#step-6-bearer-token-exchange) — Auto (check)
 7. [Install Alibaba Cloud Agent Toolkit](#step-7-install-toolkit) — Confirm
-
----
-
-## Observability
-
-All `aliyun` CLI business API commands in this skill **must** include the
-`--user-agent` flag for attribution tracking:
-
-```
---user-agent AlibabaCloud-Agent-Skills/alibabacloud-agent-toolkit-install/{session-id}
-```
-
-**`{session-id}` generation rules:**
-
-- Generate a UUID v4 once at the **start** of the skill run.
-- Reuse the same `{session-id}` value for **every** `aliyun` command within the same
-  skill invocation.
-- Do **not** replace `{session-id}` with a literal — it is a template variable resolved
-  at runtime.
-
----
 
 ## Step 1: `uv` {#step-1-uv}
 
@@ -102,8 +107,8 @@ instruct the user to restart their terminal or source their shell profile
 aliyun version
 ```
 
-- **Pass** → outputs a version string (e.g. `3.x.x`). Proceed to Step 3.
-- **Fail** → `command not found`. Install below.
+- **Pass** → outputs version 3.3.3 or later. Proceed to Step 3.
+- **Fail** → `command not found` or version below 3.3.3. Install or update below.
 
 ### Install (Confirm — ask user before executing)
 
@@ -138,7 +143,7 @@ instruct the user to open a new terminal session so the updated PATH takes effec
 ### Check (Auto)
 
 ```bash
-aliyun sts get-caller-identity --user-agent AlibabaCloud-Agent-Skills/alibabacloud-agent-toolkit-install/{session-id}
+aliyun sts get-caller-identity --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-agent-toolkit-install/{session-id} skill-version/{skill-version}"
 ```
 
 - **Pass** → returns JSON containing `AccountId`, `Arn`, and `UserId`. **Record the
@@ -168,7 +173,7 @@ and re-run the check:
 
 ```bash
 aliyun configure set --current <ProfileName>
-aliyun sts get-caller-identity --user-agent AlibabaCloud-Agent-Skills/alibabacloud-agent-toolkit-install/{session-id}
+aliyun sts get-caller-identity --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-agent-toolkit-install/{session-id} skill-version/{skill-version}"
 ```
 
 If it still fails, suggest the user verify their profiles:
@@ -213,7 +218,7 @@ The MCP Server Core is a cloud-side resource that can only be created **once** p
 ### Check (Auto)
 
 ```bash
-aliyun openapiexplorer list-api-mcp-server-cores --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-agent-toolkit-install/{session-id}
+aliyun openapiexplorer list-api-mcp-server-cores --region cn-hangzhou --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-agent-toolkit-install/{session-id} skill-version/{skill-version}"
 ```
 
 - **Pass** → response contains `"totalCount": 1`. The MCP Core already exists. Proceed to Step 6.
@@ -227,7 +232,7 @@ This will create a cloud-side MCP Server Core resource in the user's Alibaba Clo
 account (region: cn-hangzhou). **Explain this to the user and wait for explicit approval.**
 
 ```bash
-aliyun openapiexplorer create-api-mcp-server-core --region cn-hangzhou --user-agent AlibabaCloud-Agent-Skills/alibabacloud-agent-toolkit-install/{session-id}
+aliyun openapiexplorer create-api-mcp-server-core --region cn-hangzhou --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-agent-toolkit-install/{session-id} skill-version/{skill-version}"
 ```
 
 Possible outcomes:
@@ -289,7 +294,7 @@ aliyun RamOAuth GenerateAccessToken \
   --force \
   --endpoint ramoauth.aliyuncs.com \
   --method POST \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-agent-toolkit-install/{session-id}
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-agent-toolkit-install/{session-id} skill-version/{skill-version}"
 ```
 
 - **Pass** → returns a valid token response. **All prerequisites are satisfied.**
@@ -341,13 +346,78 @@ can exchange tokens directly.
 
 All prerequisites are now satisfied. Install the toolkit itself.
 
-### Install (Confirm — ask user before executing)
+### Detect QwenWork (Auto)
 
-> **CRITICAL — use `npx openplugin` exactly as shown below. No alternatives.**
+Before choosing an installer, check the current process environment:
+
+```bash
+if [ "${QODER_WORK_INTEGRATION_PRODUCT:-}" = "qwenworkcn" ] || \
+   { [ "${QODERCN_CLI:-}" = "1" ] && [ "${QODERWORK_IS_CN:-}" = "true" ]; }; then
+  echo qwenworkcn
+else
+  echo other
+fi
+```
+
+- **`qwenworkcn`** → use the QwenWork branch below. Do **not** run `openplugin`.
+- **`other`** → use the existing `openplugin` branch below.
+
+### QwenWork install (Confirm — ask user before executing)
+
+Install these three plugin suites:
+
+- `alibabacloud-core`
+- `alibabacloud-spec-ops`
+- `alibabacloud-ecs-ops`
+
+Clone the official toolkit into a temporary directory, validate the selected plugin
+packages, then install each complete directory under
+`${QODERCN_CONFIG_DIR:-$HOME/.qwenworkcn}/plugins-custom/`. QwenWork scans this
+location and registers the plugin's Skills, hooks, and `.mcp.json`; do not split
+plugin skills into the global `skills/` or MCP configuration into the global
+`mcp.json`.
+
+Show the user the repository source, destination, and the three plugin names, explain
+that three local QwenWork plugins will be installed, and **wait for explicit
+approval**. After approval:
+
+1. Create a temporary directory and clone
+   `https://github.com/aliyun/alibabacloud-agent-toolkit.git` into it.
+2. Validate `.qoder-plugin/plugin.json` in `alibabacloud-core` and
+   `alibabacloud-spec-ops`.
+3. If `alibabacloud-ecs-ops/.qoder-plugin/plugin.json` is absent, create the parent
+   directory and generate a valid JSON compatibility manifest from its
+   `.claude-plugin/plugin.json`, adding:
+   - `"displayName": "Alibaba Cloud ECS Ops"`
+   - `"hooks": "./hooks/qoderwork-hooks.json"`
+   - `"mcpServers": "./.mcp.json"`
+4. Replace every literal `__PLUGIN_ROOT__` occurrence in each selected plugin's
+   temporary `hooks/qoderwork-hooks.json` with that plugin's final absolute
+   destination path. QwenWork itself resolves `${QODER_PLUGIN_ROOT}`, so leave that
+   runtime variable unchanged.
+5. Before changing installed plugins, validate all three prepared packages: each
+   manifest must parse as JSON and have the expected `name`; every declared hooks or
+   MCP file must exist; and no literal `__PLUGIN_ROOT__` may remain.
+6. Create the destination parent directory if needed. Move every existing plugin to
+   a timestamped backup directory outside `plugins-custom`, for example
+   `${QODERCN_CONFIG_DIR:-$HOME/.qwenworkcn}/plugin-backups/<name>-<timestamp>`;
+   never permanently delete or overwrite it.
+7. Copy each complete plugin directory to its final destination with a command that
+   preserves hidden files, such as `cp -R <source> <destination>` after the old
+   destination has been moved aside.
+8. Repeat the package validation against all three destinations. Then ask the user
+   to restart QwenWork so it rescans and registers the new plugins.
+
+Resolve the QwenWork configuration directory to an absolute path from
+`QODERCN_CONFIG_DIR` when set; only fall back to `$HOME/.qwenworkcn`. Never use
+`~/.qoderwork` for this branch.
+
+### Other clients: openplugin (Confirm — ask user before executing)
+
+> **CRITICAL — outside QwenWork, use `npx openplugin` exactly as shown below.**
 >
-> The toolkit is distributed through the `openplugin` registry and can **only** be
-> installed via `npx openplugin`. It is NOT available on PyPI, npm, or as an
-> `aliyun plugin`.
+> The toolkit is distributed through the `openplugin` registry. It is NOT available
+> on PyPI, npm, or as an `aliyun plugin`.
 >
 > **Do NOT:**
 > - Install via `pip` / `uv pip install` (e.g. `alibabacloud-mcp-server` or any
@@ -355,8 +425,6 @@ All prerequisites are now satisfied. Install the toolkit itself.
 > - Install via `npm install`
 > - Install via `aliyun plugin install`
 > - Search for alternative package names or installation methods
->
-> **Just run the exact command below:**
 
 ```bash
 npx openplugin aliyun/alibabacloud-agent-toolkit
@@ -364,7 +432,7 @@ npx openplugin aliyun/alibabacloud-agent-toolkit
 
 Show the command and **wait for approval** before executing.
 
-After the command completes, the toolkit plugins are installed and ready to use.
+After the selected branch completes, the toolkit plugins are installed and ready to use.
 
 ---
 
