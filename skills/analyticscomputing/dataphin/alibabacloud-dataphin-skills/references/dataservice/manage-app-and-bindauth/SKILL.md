@@ -155,11 +155,13 @@ aliyun dataphin-public --help
 
 ## 7. Observability
 
+版本 `{version}`（Shell 变量 `SKILL_VERSION`）来自套件 `references/manifest.json` 的 `version` 字段，与 session-id 一同继承[父技能 §7](../../../SKILL.md#7-observability)。直接加载本子技能时先完成父层初始化；所有 CLI / SDK 调用使用父技能名称与同一版本，跨 Shell 调用须重新注入这些值。
+
 本子 Skill 的 session-id **继承自父 Skill `alibabacloud-dataphin-skills`**，不重新生成。
 
 所有 CLI 命令携带：
 ```
---user-agent AlibabaCloud-Agent-Skills/manage-app-and-bindauth/{SESSION_ID}
+--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 其中 `{SESSION_ID}` 为父 Skill 生成的 32 字符小写十六进制字符串。
@@ -176,7 +178,7 @@ aliyun dataphin-public --help
 aliyun dataphin-public get-data-service-app-groups \
   --op-tenant-id "{OpTenantId}" \
   --endpoint <YOUR_DATAPHIN_ENDPOINT> \
-  --user-agent "AlibabaCloud-Agent-Skills/manage-app-and-bindauth/{SESSION_ID}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 > 从返回列表中选择目标分组的 `Id` 作为 `AppGroupId`（如 `509`）。注：该命令的 `--project-id` 参数**已废弃**，可不传；如需新建分组用 `create-data-service-app-group`。
@@ -198,7 +200,7 @@ aliyun dataphin-public create-data-service-app \
   --op-tenant-id "{OpTenantId}" \
   --create-command '{"AppGroupId": {AppGroupId}, "AppName": "{AppName}", "Scenarios": "OPENAPI"}' \
   --endpoint <YOUR_DATAPHIN_ENDPOINT> \
-  --user-agent "AlibabaCloud-Agent-Skills/manage-app-and-bindauth/{SESSION_ID}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 > **create-command 结构**：`{AppGroupId: integer, AppName: string, AppKey?: string, AppSecret?: string, OwnerIds?: [string], Scenarios?: string}`。**无 `ProjectId`、无 `AppDescription` 字段**；`AppGroupId` 为整数，直接内嵌不加引号。
@@ -226,7 +228,7 @@ aliyun dataphin-public add-data-service-app-member \
   --OpTenantId "{OpTenantId}" \
   --AddCommand '{"AppId": "{AppId}", "UserId": "{UserId}"}' \
   --endpoint <YOUR_DATAPHIN_ENDPOINT> \
-  --user-agent "AlibabaCloud-Agent-Skills/manage-app-and-bindauth/{SESSION_ID}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 **响应处理：**
@@ -244,7 +246,7 @@ aliyun dataphin-public list-data-service-published-apis \
   --project-id "{ProjectId}" \
   --list-query PageNo=1 PageSize=100 \
   --endpoint <YOUR_DATAPHIN_ENDPOINT> \
-  --user-agent "AlibabaCloud-Agent-Skills/manage-app-and-bindauth/{SESSION_ID}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 **响应处理：**
@@ -275,7 +277,7 @@ aliyun dataphin-public grant-data-service-api \
   --ProjectId "{ProjectId}" \
   --GrantCommand '{"ApiId": "{ApiId}", "AppId": "{AppId}", "Columns": ["field1", "field2"]}' \
   --endpoint <YOUR_DATAPHIN_ENDPOINT> \
-  --user-agent "AlibabaCloud-Agent-Skills/manage-app-and-bindauth/{SESSION_ID}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 完整参数结构见 [GrantDataServiceApi 参数参考](./references/grant-api-params.md)。
@@ -293,7 +295,7 @@ aliyun dataphin-public list-authorized-data-service-api-details \
   --op-tenant-id "{OpTenantId}" \
   --list-query AppKeyStr={AppKeyStr} Page=1 PageSize=50 \
   --endpoint <YOUR_DATAPHIN_ENDPOINT> \
-  --user-agent "AlibabaCloud-Agent-Skills/manage-app-and-bindauth/{SESSION_ID}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 > **⚠️ 参数更正（据实测）**：本命令**不接受 `--AppId`**，而是用 `--list-query` 对象，结构 `{AppKey: integer, AppKeyStr: string, Page: integer, PageSize: integer}`。必传字符串形式的 **`AppKeyStr`**（如 `200001170-limei_test`，可从步骤 2b 的 `AppInfoList[].AppKeyStr` 或 `get-data-service-app` 取得）与分页 `Page`/`PageSize`；不传会报 `--list-query is required` 或 `appKeyStr 不能为空`。
@@ -313,7 +315,7 @@ aliyun dataphin-public get-data-service-app \
   --OpTenantId "{OpTenantId}" \
   --AppId "{AppId}" \
   --endpoint <YOUR_DATAPHIN_ENDPOINT> \
-  --user-agent "AlibabaCloud-Agent-Skills/manage-app-and-bindauth/{SESSION_ID}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 **响应处理：**
@@ -337,7 +339,7 @@ aliyun dataphin-public reset-data-service-app-secret \
   --OpTenantId "{OpTenantId}" \
   --AppId "{AppId}" \
   --endpoint <YOUR_DATAPHIN_ENDPOINT> \
-  --user-agent "AlibabaCloud-Agent-Skills/manage-app-and-bindauth/{SESSION_ID}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 **响应处理：**
@@ -358,7 +360,7 @@ aliyun dataphin-public list-data-service-apps \
   --OpTenantId "{OpTenantId}" \
   --ProjectId "{ProjectId}" \
   --endpoint <YOUR_DATAPHIN_ENDPOINT> \
-  --user-agent "AlibabaCloud-Agent-Skills/manage-app-and-bindauth/{SESSION_ID}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 ## 10. Cleanup
@@ -375,7 +377,7 @@ aliyun dataphin-public revoke-data-service-api \
   --ProjectId "{ProjectId}" \
   --RevokeCommand '{"ApiId": "{ApiId}", "AppId": "{AppId}"}' \
   --endpoint <YOUR_DATAPHIN_ENDPOINT> \
-  --user-agent "AlibabaCloud-Agent-Skills/manage-app-and-bindauth/{SESSION_ID}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 ### 删除应用

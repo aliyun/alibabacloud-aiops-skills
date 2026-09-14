@@ -24,7 +24,7 @@
 - `get-standard-lookup-table --nullable false` 反查名称/编码/码值数一致
 
 ### 5. Observability
-- 所有调用 API 的 `aliyun` 命令携带 `--user-agent AlibabaCloud-Agent-Skills/manage-lookup-table/{session-id}`
+- 所有调用 API 的 `aliyun` 命令携带 `--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"`
 - session-id 继承父 skill，不重新生成
 
 ## 错误模式

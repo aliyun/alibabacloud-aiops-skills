@@ -96,19 +96,21 @@ aliyun plugin install --names aliyun-cli-dataphin-public
 
 ## 7. Observability (MUST follow for every aliyun command)
 
+版本 `{version}`（Shell 变量 `SKILL_VERSION`）来自套件 `references/manifest.json` 的 `version` 字段，与 session-id 一同继承[父技能 §7](../../../SKILL.md#7-observability)。直接加载本子技能时先完成父层初始化；所有 CLI / SDK 调用使用父技能名称与同一版本，跨 Shell 调用须重新注入这些值。
+
 **session-id 由父 skill `alibabacloud-dataphin-skills` 在套件入口加载时生成（32-char 小写 hex），本子 skill 加载时直接继承同一 session-id，不再重新生成。**
 
 **Rule: Every `aliyun` CLI command that calls a cloud API MUST include the `--user-agent` flag.**
 Local utility commands (e.g. `configure`, `plugin`, `version`) do not support this flag and should be excluded.
 
 ```
---user-agent AlibabaCloud-Agent-Skills/update-pipeline-task/{session-id}
+--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"
 ```
 
 Example (assuming session-id is `a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6`):
 ```bash
 aliyun dataphin-public get-pipeline-by-id --tenant-id "1234567890123456789" \
-  --user-agent AlibabaCloud-Agent-Skills/update-pipeline-task/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6 skill-version/{version}"
 ```
 
 Do not skip, alter the format, or omit `--user-agent` on any `aliyun` API command invocation.
@@ -129,7 +131,7 @@ aliyun dataphin-public get-pipeline-by-id \
   --project-id "$PROJECT_ID" \
   --context Env=DEV ProjectId=$PROJECT_ID \
   --pipeline-id <pipelineId> \
-  --user-agent AlibabaCloud-Agent-Skills/update-pipeline-task/$SESSION_ID
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/$SESSION_ID skill-version/$SKILL_VERSION"
 ```
 
 - 定位方式三选一：`--pipeline-id`（管道主键）/ `--file-id`（任务文件 ID）/ `--node-id`（调度节点 ID）
@@ -212,7 +214,7 @@ aliyun dataphin-public update-pipeline \
   --schedule-config "$(cat schedule-config.json)" \
   --settings "$(cat settings.json)" \
   --submit true \
-  --user-agent AlibabaCloud-Agent-Skills/update-pipeline-task/$SESSION_ID
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/$SESSION_ID skill-version/$SKILL_VERSION"
 ```
 
 - `--pipeline-config` / `--schedule-config` 即使**没改也必须完整回传**（必填 + 覆盖语义）
@@ -225,13 +227,13 @@ aliyun dataphin-public update-pipeline-by-async \
   --tenant-id "$TENANT_ID" --project-id "$PROJECT_ID" \
   --context Env=DEV ProjectId=$PROJECT_ID \
   --node-info '...' --pipeline-config '...' --schedule-config '...' --settings '...' --submit true \
-  --user-agent AlibabaCloud-Agent-Skills/update-pipeline-task/$SESSION_ID
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/$SESSION_ID skill-version/$SKILL_VERSION"
 
 # 用返回的异步 ID 轮询结果
 aliyun dataphin-public get-pipeline-async-result \
   --tenant-id "$TENANT_ID" --project-id "$PROJECT_ID" \
   --async-id <asyncId> --env DEV \
-  --user-agent AlibabaCloud-Agent-Skills/update-pipeline-task/$SESSION_ID
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/$SESSION_ID skill-version/$SKILL_VERSION"
 ```
 
 ## 9. Success Verification
@@ -246,7 +248,7 @@ aliyun dataphin-public get-pipeline-by-id \
   --tenant-id "$TENANT_ID" --project-id "$PROJECT_ID" \
   --context Env=DEV ProjectId=$PROJECT_ID \
   --pipeline-id <pipelineId> \
-  --user-agent AlibabaCloud-Agent-Skills/update-pipeline-task/$SESSION_ID
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/$SESSION_ID skill-version/$SKILL_VERSION"
 ```
 
 3. 带 `--submit` 提交的变更，如需发布到 PROD，走 `grant-data-source-permission` skill 的发布生效校验链（`publish-object-list` → `list-publish-records`）
@@ -265,7 +267,7 @@ aliyun dataphin-public update-pipeline \
   --schedule-config "$(cat current-schedule-config.json)" \
   --settings "$(cat current-settings.json)" \
   --submit true \
-  --user-agent AlibabaCloud-Agent-Skills/update-pipeline-task/$SESSION_ID
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/$SESSION_ID skill-version/$SKILL_VERSION"
 ```
 
 ## 11. Command Tables

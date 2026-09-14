@@ -95,20 +95,22 @@ aliyun plugin install --names aliyun-cli-dataphin-public
 
 ## 7. Observability (MUST follow for every aliyun command)
 
+版本 `{version}`（Shell 变量 `SKILL_VERSION`）来自套件 `references/manifest.json` 的 `version` 字段，与 session-id 一同继承[父技能 §7](../../../../SKILL.md#7-observability)。直接加载本子技能时先完成父层初始化；所有 CLI / SDK 调用使用父技能名称与同一版本，跨 Shell 调用须重新注入这些值。
+
 **session-id 由父 skill `alibabacloud-dataphin-skills` 在套件入口加载时生成（32-char 小写 hex），本子 skill 加载时直接继承同一 session-id，不再重新生成。**
 
 **Rule: Every `aliyun` CLI command that calls a cloud API MUST include the `--user-agent` flag.**
 Local utility commands (e.g. `configure`, `plugin`, `version`) do not support this flag and should be excluded.
 
 ```
---user-agent AlibabaCloud-Agent-Skills/create-maxcompute-compute-source/{session-id}
+--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"
 ```
 
 Example (assuming session-id is `a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6`):
 ```bash
 aliyun dataphin-public list-compute-sources --op-tenant-id "1234567890123456789" \
   --type MAX_COMPUTE --page-size 20 \
-  --user-agent AlibabaCloud-Agent-Skills/create-maxcompute-compute-source/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6 skill-version/{version}"
 ```
 
 Do not skip, alter the format, or omit `--user-agent` on any `aliyun` API command invocation.
@@ -118,7 +120,7 @@ Do not skip, alter the format, or omit `--user-agent` on any `aliyun` API comman
 ```bash
 TENANT_ID="<19位租户ID>"
 SESSION_ID="<inherited from alibabacloud-dataphin-skills>"
-UA="--user-agent AlibabaCloud-Agent-Skills/create-maxcompute-compute-source/$SESSION_ID"
+UA="AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/$SESSION_ID skill-version/$SKILL_VERSION"
 ```
 
 > **CLI 入参结构说明**：`create-compute-source` 使用**扁平 flag**（`--compute-source-name` / `--type` / `--description` / `--config-list`），CLI 会自动序列化为 OpenAPI 的 `CreateCommand` JSON 对象。`--config-list` 是**列表**，每个元素是一个 `{"Key":"...","Value":"..."}` JSON 字符串，多个用空格分隔。
@@ -136,7 +138,7 @@ aliyun dataphin-public check-compute-source-connectivity \
     '{"Key":"maxcompute.project","Value":"<MC_PROJECT>"}' \
     '{"Key":"maxcompute.access.id","Value":"<MC_ACCESS_ID>"}' \
     '{"Key":"maxcompute.access.key","Value":"<MC_ACCESS_KEY>"}' \
-  $UA
+  --user-agent "$UA"
 ```
 
 期望返回 `"Success": true` 且 `CheckResult.Connected: true`。若 `Connected: false`，看 `Reason` 字段（`InvalidAK` / `ProjectNotFound` / `timeout`）排查后重试。
@@ -154,7 +156,7 @@ aliyun dataphin-public create-compute-source \
     '{"Key":"maxcompute.project","Value":"<MC_PROJECT>"}' \
     '{"Key":"maxcompute.access.id","Value":"<MC_ACCESS_ID>"}' \
     '{"Key":"maxcompute.access.key","Value":"<MC_ACCESS_KEY>"}' \
-  $UA
+  --user-agent "$UA"
 ```
 
 响应：
@@ -193,7 +195,7 @@ aliyun dataphin-public create-compute-source \
 ```bash
 aliyun dataphin-public list-compute-sources \
   --op-tenant-id "$TENANT_ID" \
-  --type MAX_COMPUTE --keyword "<CS_NAME>" --page-size 20 $UA
+  --type MAX_COMPUTE --keyword "<CS_NAME>" --page-size 20 --user-agent "$UA"
 ```
 
 确认返回 `ComputeSourceList` 中包含刚创建的计算源（按 `Name` 匹配），记录其 `Id`。
@@ -205,7 +207,7 @@ CS_ID="<Step 2 反查到的 Id>"
 
 aliyun dataphin-public check-compute-source-connectivity-by-id \
   --op-tenant-id "$TENANT_ID" \
-  --compute-source-id "$CS_ID" $UA
+  --compute-source-id "$CS_ID" --user-agent "$UA"
 ```
 
 期望返回连通状态为通过。
@@ -215,7 +217,7 @@ aliyun dataphin-public check-compute-source-connectivity-by-id \
 ```bash
 aliyun dataphin-public delete-compute-source \
   --op-tenant-id "$TENANT_ID" \
-  --compute-source-id "$CS_ID" $UA
+  --compute-source-id "$CS_ID" --user-agent "$UA"
 ```
 
 > **前置条件**：计算源若已 `BindProject: true`（绑定项目），需先在项目上解绑/更换计算源后才能删除。

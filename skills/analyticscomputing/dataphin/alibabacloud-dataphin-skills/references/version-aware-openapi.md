@@ -100,7 +100,7 @@ SDK 全量内部接口  ⊃  公共云网关已发布(POP)  ⊇  CLI 插件命�
 
 | channel | 生成的调用形态 |
 |---|---|
-| `cli_command` | `aliyun dataphin-public <cli_command> [--endpoint <ep> --skip-secure-verify]（独立部署时）--op-tenant-id <id> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id}` |
+| `cli_command` | `aliyun dataphin-public <cli_command> [--endpoint <ep> --skip-secure-verify]（独立部署时）--op-tenant-id <id> --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"` |
 | `sdk_only` | 泛化调用模板（§4）；**明确标注不能用 CLI / 不能用 `--force`** |
 
 ## 4. sdk_only 泛化调用模板（RPC V1 签名，真机验证）

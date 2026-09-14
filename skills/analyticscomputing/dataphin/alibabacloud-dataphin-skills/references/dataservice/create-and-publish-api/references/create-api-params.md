@@ -118,10 +118,11 @@ from alibabacloud_tea_util import models as util_models
 
 # 1. 配置客户端
 # UA 可观测（Principle 9）：SKILL_SESSION_ID 由 Agent 执行时内联注入（继承自父 skill）
-SESSION_ID = os.environ.get('SKILL_SESSION_ID', '')
-ua = 'AlibabaCloud-Agent-Skills/create-and-publish-api'
-if SESSION_ID:
-    ua = f'{ua}/{SESSION_ID}'
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(os.environ["SUITE_ROOT"]) / "references/scripts"))
+from skill_user_agent import build_user_agent
+ua = build_user_agent()
 
 config = open_api_models.Config(
     access_key_id=os.environ['ALIBABA_CLOUD_ACCESS_KEY_ID'],

@@ -25,4 +25,4 @@
 - [ ] 基线 JSON 保留至验证完成（唯一回滚手段）
 - [ ] 所有写操作执行前已 HITL 确认
 - [ ] 大整数 ID 以字符串呈现
-- [ ] 每个 `aliyun` API 命令带 `--user-agent AlibabaCloud-Agent-Skills/update-unstructured-workflow/{session-id}`（session-id 继承父层）
+- [ ] 每个 `aliyun` API 命令带 `--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"`（session-id 继承父层）

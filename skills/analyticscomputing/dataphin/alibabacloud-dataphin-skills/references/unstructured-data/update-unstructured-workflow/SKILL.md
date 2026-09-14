@@ -103,20 +103,22 @@ aliyun plugin install --names aliyun-cli-dataphin-public
 
 ## 7. Observability (MUST follow for every aliyun command)
 
+版本 `{version}`（Shell 变量 `SKILL_VERSION`）来自套件 `references/manifest.json` 的 `version` 字段，与 session-id 一同继承[父技能 §7](../../../SKILL.md#7-observability)。直接加载本子技能时先完成父层初始化；所有 CLI / SDK 调用使用父技能名称与同一版本，跨 Shell 调用须重新注入这些值。
+
 **session-id 由父 skill `alibabacloud-dataphin-skills` 在套件入口加载时生成（32-char 小写 hex），本子 skill 加载时直接继承同一 session-id，不再重新生成。**
 
 **Rule: Every `aliyun` CLI command that calls a cloud API MUST include the `--user-agent` flag.**
 Local utility commands (e.g. `configure`, `plugin`, `version`) do not support this flag and should be excluded.
 
 ```
---user-agent AlibabaCloud-Agent-Skills/update-unstructured-workflow/{session-id}
+--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"
 ```
 
 Example (assuming session-id is `a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6`):
 ```bash
 aliyun dataphin-public get-pipeline-by-id --op-tenant-id "$TENANT_ID" --project-id "$PROJECT_ID" \
   --context Env=PROD ProjectId="$PROJECT_ID" --pipeline-id "$PIPELINE_ID" \
-  --user-agent AlibabaCloud-Agent-Skills/update-unstructured-workflow/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6 skill-version/{version}"
 ```
 
 Do not skip, alter the format, or omit `--user-agent` on any `aliyun` API command invocation.
@@ -129,7 +131,7 @@ PROJECT_ID="789"            # 工作流所属 BASIC 模式项目 ID
 PIPELINE_ID="12345"         # 目标工作流 PipelineId（或改用 --file-id / --node-id）
 PROFILE="<aliyun configure list 中的有效 profile 名>"
 SESSION_ID="<inherited from alibabacloud-dataphin-skills>"
-UA="AlibabaCloud-Agent-Skills/update-unstructured-workflow/$SESSION_ID"
+UA="AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/$SESSION_ID skill-version/$SKILL_VERSION"
 ```
 
 **本 skill 所有 `aliyun` API 命令统一携带 `--profile "$PROFILE"`；独立部署模式下按父 skill Step 0 约定另追加 `--skip-secure-verify`。**
@@ -168,7 +170,7 @@ aliyun dataphin-public get-pipeline-by-id --op-tenant-id "$TENANT_ID" --project-
 | 增/删算子 | `steps[]` + `hops[]` 同步增删 | 新 step 生成新 UUID v4；删 step 必须同时删除其关联 hops 并重接上下游 |
 | 调整连线 | `hops[]` | `hop.id === source + "-" + target`；字段契约（上游落表列 ⊇ 下游 inputColumn）仍须满足 |
 | 切换数据集版本 / 表 | `neuronInput` / `neuronOutput` 环境值 | 新值必须来自 `get-dataset` 回读（datasetVersionId/datasetTable 等成组换，不能只换一半） |
-| 改资源规格 | `pluginConfig.setting.requiredResource` | 同时置 `resourceModifiedByUser: true` |
+| 改资源规格 | `pluginConfig.setting.requiredResource` | 同时置 `resourceModifiedByUser: true`；🔴 **未被要求改资源时，`setting` 整块原样回传**——`resourceModifiedByUser: true` 表示用户已手工调优，禁止用默认值覆写或把该标记重置 |
 | 开/关多列输出 | `neuronModel.enableOutputMultiColumn`/`customOutputColumns` + `columnMappings` 整组替换 | 仅 llm_inference/image_understanding；原单列（answer/image_content）不复存在，**下游以原列为输入的算子必须同步切列**（详见 spec §二.7） |
 | 改调度 | ScheduleConfig | 仅在用户明确要求时改；否则原样回传回读值 |
 
@@ -182,7 +184,8 @@ aliyun dataphin-public get-pipeline-by-id --op-tenant-id "$TENANT_ID" --project-
 - 所有 `hop.source/target` 指向存在的 step，`hop.id` 拼接正确，无悬空连线（被删 step 的 hops 已清理）；
 - 每条连线字段契约与内容类型兼容（LLM/评分/去重类算子不吃 URL 输入，桥接规则同创建时）；
 - 环境值均来自回读或 `get-dataset`，无占位串、无编造值；
-- 未变更的 step/hop 与基线逐字段一致（`jq -S` 排序后 diff 仅剩本次变更项）。
+- 未变更的 step/hop 与基线逐字段一致（`jq -S` 排序后 diff 仅剩本次变更项）；
+- **资源配置保留**：本次未要求改资源的算子，`setting` 与基线逐字段相同；`resourceModifiedByUser: true` 的算子（用户已手工调优）的 `requiredResource` 与该标记**绝不能被默认值覆写或重置**（update 全量覆盖，覆写即丢失调优）。
 
 ### Step 5 提交更新（写操作，执行前 HITL 确认，见下方「执行前确认」）
 

@@ -153,11 +153,13 @@ aliyun dataphin-public export-kg-schema --help
 
 ## 7. Observability
 
+版本 `{version}`（Shell 变量 `SKILL_VERSION`）来自套件 `references/manifest.json` 的 `version` 字段，与 session-id 一同继承[父技能 §7](../../../SKILL.md#7-observability)。直接加载本子技能时先完成父层初始化；所有 CLI / SDK 调用使用父技能名称与同一版本，跨 Shell 调用须重新注入这些值。
+
 本子 Skill 的 session-id **继承自父 Skill `alibabacloud-dataphin-skills`**，不重新生成。
 
 所有 CLI 命令携带：
 ```
---user-agent AlibabaCloud-Agent-Skills/manage-kg-schema/{SESSION_ID}
+--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 其中 `{SESSION_ID}` 为父 Skill 生成的 32 字符小写十六进制字符串。
@@ -175,7 +177,7 @@ aliyun dataphin-public export-kg-schema \
   --workspace-id "{WorkspaceId}" \
   --output-format yaml \
   --profile {profile} --endpoint {endpoint} \
-  --user-agent "AlibabaCloud-Agent-Skills/manage-kg-schema/{SESSION_ID}" \
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}" \
   --cli-query 'SchemaInfo.Content'
 ```
 
@@ -308,7 +310,7 @@ aliyun dataphin-public import-kg-schema \
   --workspace-id "{WorkspaceId}" \
   --import-command "$(cat import-cmd.json)" \
   --profile {profile} --endpoint {endpoint} \
-  --user-agent "AlibabaCloud-Agent-Skills/manage-kg-schema/{SESSION_ID}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 > **字段名注意**：`--import-command` JSON 结构为 `{Content, InputFormat, MergeStrategy}`——格式字段名是 **`InputFormat`**（取值 `yaml`/`json`），不是 `Format`。
@@ -337,7 +339,7 @@ aliyun dataphin-public publish-kg-schema \
     "DataAdjustmentPolicies": []
   }' \
   --profile {profile} --endpoint {endpoint} \
-  --user-agent "AlibabaCloud-Agent-Skills/manage-kg-schema/{SESSION_ID}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 **响应处理：**
@@ -353,7 +355,7 @@ aliyun dataphin-public get-kg-schema-publish-result \
   --workspace-id "{WorkspaceId}" \
   --version-id {VersionId} \
   --profile {profile} --endpoint {endpoint} \
-  --user-agent "AlibabaCloud-Agent-Skills/manage-kg-schema/{SESSION_ID}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 **响应处理：**
@@ -398,7 +400,7 @@ aliyun dataphin-public export-kg-schema \
   --op-tenant-id "{OpTenantId}" --workspace-id "{WorkspaceId}" \
   --output-format yaml \
   --profile {profile} --endpoint {endpoint} \
-  --user-agent "AlibabaCloud-Agent-Skills/manage-kg-schema/{SESSION_ID}" \
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}" \
   --cli-query 'SchemaInfo.Content'
 
 # 2. 本地编辑 YAML，删除不需要的 entityTypes / relationTypes 条目
@@ -409,7 +411,7 @@ aliyun dataphin-public import-kg-schema \
   --op-tenant-id "{OpTenantId}" --workspace-id "{WorkspaceId}" \
   --import-command '{"Content": "...(移除目标类型后的 YAML)...", "InputFormat": "yaml", "MergeStrategy": "Replace"}' \
   --profile {profile} --endpoint {endpoint} \
-  --user-agent "AlibabaCloud-Agent-Skills/manage-kg-schema/{SESSION_ID}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 
 # 4. 发布使删除生效（见步骤 4）
 ```

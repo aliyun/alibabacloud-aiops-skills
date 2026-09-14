@@ -55,7 +55,7 @@ aliyun dataphin-public list-projects --help
 所有调用云 API 的 `aliyun dataphin-public` 命令必须携带：
 
 ```bash
---user-agent AlibabaCloud-Agent-Skills/create-project/{session-id}
+--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"
 ```
 
 本地工具命令如 `aliyun version`、`aliyun configure list`、`aliyun plugin update` 不支持该参数，可不追加。

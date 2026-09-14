@@ -27,7 +27,7 @@
 - [ ] 删除后 `list-compute-sources` 反查不再命中
 
 ### Observability 验收
-- [ ] 所有 `aliyun` API 命令均携带 `--user-agent AlibabaCloud-Agent-Skills/create-maxcompute-compute-source/{session-id}`
+- [ ] 所有 `aliyun` API 命令均携带 `--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"`
 - [ ] session-id 继承自父 skill `alibabacloud-dataphin-skills`
 # 验收标准
 

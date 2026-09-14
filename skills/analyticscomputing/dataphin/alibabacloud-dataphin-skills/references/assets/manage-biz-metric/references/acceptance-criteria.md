@@ -35,7 +35,7 @@
 - 遇到发布/上架/下架诉求，需说明不在本 OpenAPI 命令边界内
 
 ### 6. Observability
-- 所有调用 API 的 `aliyun` 命令携带 `--user-agent AlibabaCloud-Agent-Skills/manage-biz-metric/{session-id}`
+- 所有调用 API 的 `aliyun` 命令携带 `--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"`
 - session-id 继承父 skill，不重新生成
 
 ## 错误模式

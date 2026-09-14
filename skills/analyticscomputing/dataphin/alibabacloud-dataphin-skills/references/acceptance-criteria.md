@@ -31,8 +31,8 @@
 - [ ] 能验证授权结果
 
 ### call-data-service-api
-- [ ] 能使用 Python SDK 同步调用 API
-- [ ] 能使用 Python SDK 异步调用 API
+- [ ] 能使用零依赖 Python 脚本同步调用 API
+- [ ] 能使用零依赖 Python 脚本异步调用 API
 - [ ] 返回正确业务数据
 - [ ] AppKey/AppSecret 通过环境变量传入
 
@@ -108,6 +108,17 @@
 - [ ] 能按名称查询草稿态与已发布态详情，正确使用 `--draft true/false`
 - [ ] 能删除业务指标定义并反查目标不存在
 - [ ] 不伪造 `publish-biz-metric`、`online-biz-metric`、`offline-biz-metric` 等不存在命令
+
+### develop-metric
+- [ ] Step 0 先搜现成结果表，命中则跳过任务开发
+- [ ] `list-tables` **每次调用都带 `--cli-query`**；先取 `PageResult.TotalCount` 再翻页；空页不重试
+- [ ] `get-table-columns` 用 `--catalog <项目英文名>`，**未传 `--project-id` / `--env`**
+- [ ] 投影返回字面 `null` 时去掉 `--cli-query` 原样重跑核实（防「假成功」）
+- [ ] 任务参数不在本 skill 重复，正确委托 `update-batch-task` / `submit-batch-task`
+- [ ] Step 4 输出控制台登记指引并**暂停**，未拿到用户「已建好」不继续（最关键验收点）
+- [ ] **未出现编造命令**（如 `create-custom-index`）
+- [ ] Step 5 `TotalCount=0` 时优先判定「建了未上架」而非重建
+- [ ] 即席查询 `--sub-task-id` 用 0 起始下标；`Result:""` 判为仍在运行而非失败
 
 ### manage-row-level-permission
 - [ ] 能分页查询行级权限列表
@@ -187,6 +198,12 @@
 - [ ] create 响应 SuccessCount 与入参 GUID 数一致，FailedGuidList 不为空时逐个报告原因
 - [ ] get-asset-mapping-relations / get-belong-asset-mapping 反查命中；GUID 单次 ≤1000
 
+### resolve-asset-guid
+- [ ] 资产类型已明确（未猜）；含内部 ID 的类型（`dp_index.` / `biz_index.` / `dp_api.` / `qbi_page_`）未尝试拼接，走搜索反查
+- [ ] 逐段来源正确：逻辑表第三段 = 数据板块名**小写**（不是项目名）；MaxCompute 项目名未手工加 `_dev`；`dp_ds_table.` 未假定固定 5 段
+- [ ] 已回读校验（`get-catalog-asset-details`，6.0 环境降级用 `list-tables` 字符串等值比对），且校对了 `AssetType` / `AssetFullName` / `Env`，未以“命令未报错”作为通过依据
+- [ ] 交付含 GUID 全文 + 资产类型 + 校验证据 + 下游参数用法；校验未过时不交付、不流入写类 skill
+
 # 新增迁移 Skill 验收标准
 
 以下 skill 由 `dataphin-cli/skills/analyticscomputing` 迁移而来，已做如下适配：
@@ -201,10 +218,16 @@
 - ✅ 使用 `aliyun dataphin-public <verb-resource>` 插件模式命令
 - ✅ 大整数 ID（19 位 snowflake）在 JSON 中按字符串传参
 - ✅ 写操作前进行 HITL 确认
-- ✅ 每个 `aliyun` API 命令携带 `--user-agent AlibabaCloud-Agent-Skills/{SkillName}/{session-id}`
+- ✅ 每个 `aliyun` API 命令携带 `--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"`
 
 ## 通用错误模式
 
 - ❌ 使用旧 `dataphin` 二进制命令
 - ❌ 硬编码 tenant-id / project-id / AK/SK
 - ❌ 遗漏 `--user-agent`
+
+### manifest 派生的版本化 UA
+
+- 发布版本只维护在套件发布清单的 `version` 字段中；兼容清单中的 Dataphin 服务端版本不作为 UA 版本。
+- 父子技能及 SDK 使用同一父技能名称、32 字符 session-id 和 manifest 版本；CLI 传参保留 UA 中空格，作为一个参数。
+- 离线回归：`python3 tests/test_user_agent.py`（仓库根目录）；覆盖 manifest 升级、无效元数据、SDK 请求头、签名不变、Shell 参数及文档旧格式检查。

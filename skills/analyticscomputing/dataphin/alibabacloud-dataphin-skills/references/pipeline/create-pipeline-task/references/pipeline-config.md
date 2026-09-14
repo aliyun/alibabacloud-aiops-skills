@@ -30,25 +30,31 @@
 }
 ```
 
+> **输出端为 Hive 时**：将输出 Step 的 `Key` 改为 `"hadoophiveoutput"`，`StepName` 改为 `"Hive_1"`，PluginConfig 见下方 [Hive writer](#hive-writer-的-pluginfighadoophiveoutput)。<br>
+> **输出端为 PostgreSQL 时**：将输出 Step 的 `Key` 改为 `"postgresqloutput"`，PluginConfig 见下方 [PostgreSQL writer](#postgresql-writer-的-pluginfipostgresqloutput)。
+
 ### MySQL reader 的 `PluginConfig`（mysqlinput）
+
+> **来源**：`OAMysqlInputConfig`，继承自 `OARdbmsInputConfig`（`stepKey` = `"mysqlinput"`，`dsType` = `"MYSQL"`）
 
 ```jsonc
 {
   "dsName": "<mysql数据源名>",            // 必填，对应已建的 MySQL 数据源
   "dsId":   "<数据源ID>",                  // 必填（字符串，避免精度丢失）
   "dsType": "MYSQL",
+  "dsProjectId": "<project-id>",           // 项目 ID（字符串），需与 currentProjectId 一致
+  "currentProjectId": <project-id-int>,     // 当前项目 ID（整数）
   "schemaName": "<db-name>",               // 库名
   "tables": ["<table-name>"],              // 单表数组；多表见 multiTable=true
   "multiTable": false,
   "prefix": "<table-name>",                // 通常与 tables[0] 同名
-  "driverVersion": "MYSQL_8_X",            // 枚举见下
+  "driverVersion": "MYSQL_8_X",            // 枚举见下（非 Java 模型字段，管道运行时扩展）
   "timeZoneFrom": "datasource",
-  "noFlowTimeout": 30,                     // 无数据流超时（秒）
-  "sqlTimeout": 30,
+  "noFlowTimeout": 30,                     // 无数据流超时（秒，管道运行时扩展）
+  "sqlTimeout": 30,                        // SQL 超时（秒，管道运行时扩展）
   "pluginAlias": "mysqlinput",
   "webPluginKey": "mysqlinput",
   "stepName": "MySQL_1",
-  "currentProjectId": <project-id-int>,
   "columns": [                             // 字段定义；每列结构见下
     {
       "name": "<col-name>",
@@ -67,7 +73,7 @@
     }
     // ... 其他列
   ],
-  "column": [                               // 简版列（与 columns 一一对应）
+  "column": [                               // 简版列（与 columns 一一对应，管道运行时扩展）
     { "name": "<col>", "originalName": "<col>", "type": "String",
       "originalType": "text", "id": "<col>", "index": 1,
       "isPk": false, "isSourceData": true, "comment": "" }
@@ -80,23 +86,30 @@
 
 ### MaxCompute writer 的 `PluginConfig`（maxcomputeoutput）
 
+> **来源**：`OAOdpsOutputConfig`（`stepKey` = `"maxcomputeoutput"`，`dsType` = `"MAX_COMPUTE"`），继承自 `OABaseOutputPluginConfig`
+
 ```jsonc
 {
   "dsName": "<maxcompute数据源名>",
   "dsId":   "<数据源ID>",
   "dsType": "MAX_COMPUTE",
-  "dsProjectId": <project-id-int>,
+  "dsProjectId": "<project-id>",           // ⚠ 项目 ID **必须字符串**，需与 currentProjectId 一致；传整数会被当作计算引擎解析，提交报 compute engine not found（实测 v3.4.2）
+  "currentProjectId": <project-id-int>,     // 当前项目 ID（整数）
   "table": "<目标表名>",
   "partition": "ds='${bizdate}'",          // 分区表达式；非分区表传空串
-  "loadStrategy": "append",                 // append | overwrite
-  "prodTableNotExistAction": "autocreate",  // autocreate | error
+  "loadStrategy": "overwrite",              // overwrite | append（默认 overwrite，Builder 构造器在 OALoadStrategy.OVER_WRITE 初始化）
+  "prodTableNotExistAction": "ignore",      // ignore | autocreate（默认 ignore，TableNotExistAction 枚举）
+  "preSql": "",                             // 前置 SQL（可选）
+  "postSql": "",                            // 后置 SQL（可选）
   "pluginAlias": "maxcomputeoutput",
-  "columns": [
+  "webPluginKey": "maxcomputeoutput",
+  "stepName": "MaxCompute_1",
+  "columns": [                              // 目标列结构（管道运行时扩展，非 Java 模型字段）
     {
       "name": "<col>",
       "originalName": "<col>",
       "type": "String",
-      "dataType": "string",
+      "dataType": "string",                 // ⚠ 目标 MaxCompute 列类型
       "rawDataType": "string",
       "originalType": "string",
       "seqNumber": 1,
@@ -118,26 +131,88 @@
 }
 ```
 
+### Hive writer 的 `PluginConfig`（hadoophiveoutput）
+
+> **来源**：`OAHiveOutputConfig`（`stepKey` = `"hadoophiveoutput"`，`dsType` = `"HIVE"`）
+
+```jsonc
+{
+  "dsName": "<计算源名称>",                // 项目绑定的 Hive 计算源名，如 "mdc_dev"
+  "dsId":   "<计算源ID>",                  // 计算源 ID（字符串）
+  "dsType": "HIVE",
+  "dsProjectId": "<project-id>",           // 项目 ID（字符串），必填：Hive writer 依赖项目解析计算源
+  "currentProjectId": <project-id-int>,     // 当前项目 ID（整数）
+  "table": "<目标表名>",
+  "partition": "ds='${bizdate}'",          // 分区表达式；非分区表传空串
+  "loadStrategy": "append",                 // append | truncateAll | overwrite（默认 truncateAll，Builder 构造器在 OALoadStrategy.TRUNCATE_ALL 初始化）
+  "prodTableNotExistAction": "ignore",       // ignore | autocreate（默认 ignore，TableNotExistAction 枚举）
+  "fileCode": "UTF-8",                      // 文件编码（默认 UTF-8）
+  "nullFormat": "\\N",                      // 空值字符串（默认 \N）
+  "separator": "\\u0001",                   // 字段分隔符（默认 \u0001）
+  "zipType": "",                            // 压缩格式：none | gzip | deflate | bzip2 | lz4 | snappy
+  "preSql": "",                             // 前置 SQL（可选）
+  "postSql": "",                            // 后置 SQL（可选）
+  "perfConfig": "",                         // Hadoop 性能参数（可选）
+  "pluginAlias": "hadoophiveoutput",
+  "webPluginKey": "hadoophiveoutput",
+  "stepName": "Hive_1",
+  "columns": [
+    {
+      "name": "<col>",
+      "originalName": "<col>",
+      "type": "String",                     // CLI 通用类型：String/Long/Double/Boolean/Date
+      "dataType": "string",                  // ⚠ 目标 Hive 列类型（如 string / bigint / boolean / timestamp / decimal(19,2)）
+      "rawDataType": "string",
+      "originalType": "string",
+      "seqNumber": 1,
+      "pk": false, "pt": false,
+      "partitioned": false, "partition": false,
+      "allowEmpty": false,
+      "comment": "",
+      "guid": ""
+    }
+  ],
+  "columnMappings": [                       // ⚠ 必填：reader↔writer 列映射
+    { "order": 0, "sourceColumn": "<src-col>",
+      "inputColumnIndex": 0,
+      "targetColumn": "<tgt-col>",
+      "type": "String",
+      "originalType": "string" }
+  ]
+}
+```
+
+> **关键差异**（相对 MaxCompute writer）：
+> - `Step` 的 `Key` 必须是 `"hadoophiveoutput"`（**不是** `"hiveoutput"`！Java 模型 `OAHiveOutputConfig.stepKey()` 固定返回此值）
+> - `pluginAlias` / `webPluginKey` 与 `Key` 一致，均为 `"hadoophiveoutput"`
+> - `dsId` / `dsName` 指向**计算源**（非普通数据源），`dsProjectId` 必填
+> - `prodTableNotExistAction` 默认 `"ignore"`。合法值仅 `"ignore"` 和 `"autocreate"`（Java `TableNotExistAction` 枚举），**不存在 `"error"` 值**
+> - 新增 Hive 特有字段：`fileCode`、`nullFormat`、`separator`、`zipType`、`preSql`、`postSql`、`perfConfig`
+> - `columns[].dataType` / `originalType` 必须填 **Hive 兼容类型**（string / bigint / boolean / timestamp / decimal(p,s) 等），不能照搬源端类型
+
 > `columnMappings` 的 `inputColumnIndex` 从 0 开始，必须与 reader `columns` 的顺序对齐。
 
 ### Doris reader 的 `PluginConfig`（dorisinput）
+
+> **来源**：`OARdbmsInputConfig` 动态派生（`stepKey` = `"dorisinput"`，`dsType` = `"DORIS"`）。Doris 无独立 Java 模型，复用通用 RDBMS 输入组件。
 
 ```jsonc
 {
   "dsName": "<doris数据源名>",
   "dsId":   "<数据源ID>",
   "dsType": "DORIS",
+  "dsProjectId": "<project-id>",           // 项目 ID（字符串）
+  "currentProjectId": <project-id-int>,     // 当前项目 ID（整数）
   "schemaName": "<db-name>",               // Doris 的库名
   "tables": ["<table-name>"],
   "multiTable": false,
   "prefix": "<table-name>",
   "timeZoneFrom": "datasource",
-  "noFlowTimeout": 30,
-  "sqlTimeout": 30,
+  "noFlowTimeout": 30,                     // 管道运行时扩展
+  "sqlTimeout": 30,                        // 管道运行时扩展
   "pluginAlias": "dorisinput",
   "webPluginKey": "dorisinput",
   "stepName": "Doris_1",
-  "currentProjectId": <project-id-int>,
   "columns": [
     {
       "name": "user_id",
@@ -164,24 +239,31 @@
 }
 ```
 
-> Doris reader 的结构与 MySQL reader 基本一致，区别：`dsType` = `DORIS`、`pluginAlias` / `webPluginKey` = `dorisinput`、无 `driverVersion` 字段。
+> Doris reader 的结构与 MySQL reader 基本一致，无独立 Java 模型。区别：`dsType` = `DORIS`、`pluginAlias` / `webPluginKey` = `dorisinput`、无 `driverVersion` 字段。
 
 ### PostgreSQL writer 的 `PluginConfig`（postgresqloutput）
+
+> **来源**：`OAPgOutputConfig`，继承自 `OARdbmsOutputConfig`（`stepKey` = `"postgresqloutput"`，`dsType` = `"POSTGRE_SQL"`）
 
 ```jsonc
 {
   "dsName": "<pg数据源名>",
   "dsId":   "<数据源ID>",
   "dsType": "POSTGRE_SQL",
+  "dsProjectId": "<project-id>",           // 项目 ID（字符串），需与 currentProjectId 一致
+  "currentProjectId": <project-id-int>,     // 当前项目 ID（整数）
   "schemaName": "<schema-name>",            // ⚠ 必填：PostgreSQL 的 schema（如 "public"、"dataphin"）
   "table": "<目标表名>",
-  "loadStrategy": "append",                 // append | overwrite
-  "prodTableNotExistAction": "error",       // ⚠ CLI 场景只用 "error"，autocreate 不生效
+  "loadStrategy": "overwrite",              // overwrite | append | update | copy（默认 overwrite，Builder 构造器在 OARdbmsLoadStrategy.TRUNCATE 初始化）
+  "prodTableNotExistAction": "ignore",      // ignore | autocreate（默认 ignore，TableNotExistAction 枚举）
+  "batchByteSize": 33554432,               // 批次字节大小（默认 33554432）
+  "batchSize": 2048,                        // 批次记录数（默认 2048）
+  "preSql": "",                             // 前置 SQL（可选）
+  "postSql": "",                            // 后置 SQL（可选）
   "pluginAlias": "postgresqloutput",
   "webPluginKey": "postgresqloutput",
   "stepName": "PostgreSQL_1",
-  "currentProjectId": <project-id-int>,
-  "columns": [
+  "columns": [                              // 管道运行时扩展
     {
       "name": "user_id",
       "originalName": "user_id",
@@ -214,6 +296,8 @@
 > **关键差异**（相对 MaxCompute writer）：
 > - `dsType` = `POSTGRE_SQL`（注意下划线）
 > - `schemaName` 必填（PG 有 schema 概念，常见值 `public` / 自定义 schema）
+> - `loadStrategy` 默认 `"overwrite"`，额外支持 `"update"` 和 `"copy"`（OARdbmsLoadStrategy 枚举）
+> - `batchByteSize` / `batchSize` 控制写入批次（PG writer 特有）
 > - 无 `partition` / `prodTableDdl` 字段（PG 非分区表场景不需要）
 > - `columns` 的 `dataType` / `originalType` 必须填 **PostgreSQL 兼容类型**（numeric / varchar / smallint 等），不能照搬源端类型
 > - `columnMappings[].originalType` 填**目标列（PG）**类型

@@ -2,7 +2,7 @@
 
 > **为什么需要本篇**：`call-data-service-api` 的 §6 假设你已经持有 `appKey`/`appSecret`/`apiId`/`host` 四要素。但真实场景往往只给「应用名 + 要调的 API 名」（例：*让应用「客户管理」查询客户列表*）。本篇给出一条**从零反查这四要素**的可照抄配方，并汇总踩坑点。
 >
-> 反查走**管理面 OpenAPI**（`aliyun dataphin-public`，RAM AK/Secret）；真正调用走**数据服务网关**（AppKey/AppSecret，用附带脚本签名）——两套凭证、两条链路，不要混用。
+> 反查走**管理面 OpenAPI**（`aliyun dataphin-public`，RAM AK/Secret）；真正调用走**数据服务网关的附带脚本**（AppKey/AppSecret）——两套凭证、两条链路，不要混用。
 
 ## 反查配方（4 步）
 
@@ -14,7 +14,7 @@
 aliyun dataphin-public list-data-service-apps \
   --op-tenant-id <OpTenantId> \
   --list-query PageNo=1 PageSize=100 \
-  --endpoint <ENDPOINT> --user-agent "AlibabaCloud-Agent-Skills/call-data-service-api/{SESSION_ID}"
+  --endpoint <ENDPOINT> --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 在返回 `Data.AppList[]` 中按 `AppName` 匹配拿 `AppId`。
@@ -28,7 +28,7 @@ aliyun dataphin-public list-data-service-apps \
 ```bash
 aliyun dataphin-public get-data-service-app \
   --op-tenant-id <OpTenantId> --app-id <AppId> \
-  --endpoint <ENDPOINT> --user-agent "AlibabaCloud-Agent-Skills/call-data-service-api/{SESSION_ID}"
+  --endpoint <ENDPOINT> --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 返回 `Data.AppKey` / `Data.AppSecret`。
@@ -42,7 +42,7 @@ aliyun dataphin-public get-data-service-app \
 aliyun dataphin-public list-authorized-data-service-api-details \
   --op-tenant-id <OpTenantId> \
   --list-query AppKeyStr=<AppKey> Page=1 PageSize=100 \
-  --endpoint <ENDPOINT> --user-agent "AlibabaCloud-Agent-Skills/call-data-service-api/{SESSION_ID}"
+  --endpoint <ENDPOINT> --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 在返回 `Result.Data[]` 中按 `ApiName` 匹配，拿到：
@@ -58,7 +58,7 @@ aliyun dataphin-public list-authorized-data-service-api-details \
 ```bash
 aliyun dataphin-public get-data-service-api-document \
   --op-tenant-id <OpTenantId> --id <ApiId> \
-  --endpoint <ENDPOINT> --user-agent "AlibabaCloud-Agent-Skills/call-data-service-api/{SESSION_ID}"
+  --endpoint <ENDPOINT> --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 关键返回字段：
@@ -104,10 +104,10 @@ curl -sS -k -m 8 "http://<候选host>/list/<apiId>?appKey=<AppKey>&env=PROD"
 
 | 返回 | 结论 |
 |------|------|
-| JSON 且 `code` 以 `DPN-OLTP-` 开头（如 `DPN-OLTP-COMMON-001 "Request method 'GET' not supported"`） | ✅ **命中网关**（它要 POST，调用脚本用 POST） |
+| JSON 且 `code` 以 `DPN-OLTP-` 开头（如 `DPN-OLTP-COMMON-001 "Request method 'GET' not supported"`） | ✅ **命中网关**（它要 POST，脚本用 POST） |
 | 连接失败 / DNS 不解析 / 404 / 非 DPN-OLTP 响应 | ❌ 换候选域名 |
 
-> HTTP(80) 与 HTTPS(443) 一般都通；POC/私有部署用私有 CA 时，**优先用 HTTP(80) 规避证书校验**（脚本 `--scheme HTTP`，默认端口 80）。若必须 HTTPS 且证书不受信，用脚本 `--scheme HTTPS --ignore-ssl` 跳过校验或导入私有 CA。
+> HTTP(80) 与 HTTPS(443) 一般都通；POC/私有部署用私有 CA 时，**优先用 HTTP(80) 规避证书校验**（脚本 `--scheme HTTP --port 80`）。若必须 HTTPS 且证书不受信，用脚本 `--scheme HTTPS --ignore-ssl` 或导入私有 CA。
 > 若探测全失败，才回退到「向环境运维/管理员索取网关地址」。
 
 ## 暗坑清单（P2 速查）
@@ -115,7 +115,7 @@ curl -sS -k -m 8 "http://<候选host>/list/<apiId>?appKey=<AppKey>&env=PROD"
 | 坑 | 现象 | 规避 |
 |----|------|------|
 | 应用同名 | 两个「客户管理」，选错就授权/调用错对象 | 用 **AppKey** 唯一确定，不靠名字 |
-| AppKey 类型 | 详情接口返回 `"200000326"`（字符串） | 比较用 `str()`；脚本 `appKey` 参数按字符串处理 |
+| AppKey 类型 | 详情接口返回 `"200000326"`（字符串） | 比较用 `str()`；脚本 `appKey` 按字符串处理 |
 | AppKeyStr vs AppKey | `list-authorized-*` 传 `AppKey`(int) 查不到 | 用 `AppKeyStr`（字符串） |
 | returnFields 取值 | 传了未授权字段 → 报错「字段不存在或无权限」 | 取步骤 C 的 `Authorized*ReturnParameters` |
 | 字段有值但为 null | 部分字段返回 null | 多为**源库数据本身为空**，非授权问题（无权限会报错而非返回 null） |

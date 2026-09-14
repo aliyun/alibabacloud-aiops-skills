@@ -5,6 +5,8 @@ description: |-
 ---
 # 编辑计算源 skill
 
+调用 CLI / SDK 前，继承[父技能 §7](../../../SKILL.md#7-observability) 初始化的 session-id 与套件 `references/manifest.json` 中的 `version`；直接加载时先完成父层初始化。API 命令统一附带 `--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"`，使用父技能名称与同一会话、版本。
+
 ## 适用场景
 
 - 修改计算源 Name / Description

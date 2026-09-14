@@ -74,6 +74,10 @@
       "min_version": "6.0"
     },
     {
+      "id": "dev/manage-resource-file",
+      "min_version": "6.0"
+    },
+    {
       "id": "ops/create-node-supplement",
       "min_version": "6.0"
     },
@@ -110,7 +114,27 @@
       "min_version": "6.0"
     },
     {
+      "id": "assets/manage-lookup-table",
+      "min_version": "6.0"
+    },
+    {
+      "id": "assets/manage-standard-mapping",
+      "min_version": "6.0"
+    },
+    {
       "id": "assets/configure-quality-rule",
+      "min_version": "6.0"
+    },
+    {
+      "id": "assets/manage-asset-attributes",
+      "min_version": "6.3"
+    },
+    {
+      "id": "assets/query-asset-details",
+      "min_version": "6.3"
+    },
+    {
+      "id": "assets/resolve-asset-guid",
       "min_version": "6.0"
     },
     {
@@ -184,6 +208,10 @@
     {
       "id": "assets/manage-biz-metric",
       "min_version": "6.0"
+    },
+    {
+      "id": "assets/develop-metric",
+      "min_version": "6.1"
     }
   ]
 }

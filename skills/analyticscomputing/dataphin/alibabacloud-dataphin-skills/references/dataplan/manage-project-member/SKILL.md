@@ -99,13 +99,15 @@ aliyun plugin install aliyun-cli-dataphin-public
 
 ## 7. Observability (MUST follow for every aliyun command)
 
+版本 `{version}`（Shell 变量 `SKILL_VERSION`）来自套件 `references/manifest.json` 的 `version` 字段，与 session-id 一同继承[父技能 §7](../../../SKILL.md#7-observability)。直接加载本子技能时先完成父层初始化；所有 CLI / SDK 调用使用父技能名称与同一版本，跨 Shell 调用须重新注入这些值。
+
 **session-id 由父 skill `alibabacloud-dataphin-skills` 在套件入口加载时生成（32-char 小写 hex），本子 skill 加载时直接继承同一 session-id，不再重新生成。**
 
 **Rule: Every `aliyun` CLI command that calls a cloud API MUST include the `--user-agent` flag.**
 Local utility commands (e.g. `configure`, `plugin`, `version`) do not support this flag and should be excluded.
 
 ```
---user-agent AlibabaCloud-Agent-Skills/manage-project-member/{session-id}
+--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"
 ```
 
 ## 8. Core Workflow
@@ -131,7 +133,7 @@ aliyun dataphin-public add-project-member \
       }
     ]
   }' \
-  --user-agent AlibabaCloud-Agent-Skills/manage-project-member/$SESSION_ID
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/$SESSION_ID skill-version/$SKILL_VERSION"
 ```
 
 ### 8.2 更新成员角色
@@ -149,7 +151,7 @@ aliyun dataphin-public update-project-member \
       }
     ]
   }' \
-  --user-agent AlibabaCloud-Agent-Skills/manage-project-member/$SESSION_ID
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/$SESSION_ID skill-version/$SKILL_VERSION"
 ```
 
 ### 8.3 移除项目成员
@@ -162,7 +164,7 @@ aliyun dataphin-public remove-project-member \
     "Env": "DEV",
     "UserIdList": ["<target-user-id>"]
   }' \
-  --user-agent AlibabaCloud-Agent-Skills/manage-project-member/$SESSION_ID
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/$SESSION_ID skill-version/$SKILL_VERSION"
 ```
 
 ### 8.4 查询成员列表
@@ -176,7 +178,7 @@ aliyun dataphin-public list-project-members \
     "PageSize": 20,
     "PageNo": 1
   }' \
-  --user-agent AlibabaCloud-Agent-Skills/manage-project-member/$SESSION_ID
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/$SESSION_ID skill-version/$SKILL_VERSION"
 ```
 
 ### 执行前确认（**写操作必备 / HITL 章节**）
@@ -204,7 +206,7 @@ aliyun dataphin-public remove-project-member \
   --op-tenant-id "$TENANT_ID" \
   --id "$PROJECT_ID" \
   --remove-command '{"UserIdList": ["<user-id>"]}' \
-  --user-agent AlibabaCloud-Agent-Skills/manage-project-member/$SESSION_ID
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/$SESSION_ID skill-version/$SKILL_VERSION"
 ```
 
 ## 11. Command Tables

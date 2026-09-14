@@ -126,11 +126,13 @@ aliyun dataphin-public --help
 
 ## 7. Observability
 
+版本 `{version}`（Shell 变量 `SKILL_VERSION`）来自套件 `references/manifest.json` 的 `version` 字段，与 session-id 一同继承[父技能 §7](../../../SKILL.md#7-observability)。直接加载本子技能时先完成父层初始化；所有 CLI / SDK 调用使用父技能名称与同一版本，跨 Shell 调用须重新注入这些值。
+
 本子 Skill 的 session-id **继承自父 Skill `alibabacloud-dataphin-skills`**，不重新生成。
 
 所有 CLI 命令携带：
 ```
---user-agent AlibabaCloud-Agent-Skills/monitor-api-operations/{SESSION_ID}
+--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 其中 `{SESSION_ID}` 为父 Skill 生成的 32 字符小写十六进制字符串。
@@ -148,7 +150,7 @@ aliyun dataphin-public get-data-service-api-call-summary \
   --start-time "2026-06-01 00:00:00" \
   --end-time "2026-06-30 23:59:59" \
   --endpoint <YOUR_DATAPHIN_ENDPOINT> \
-  --user-agent "AlibabaCloud-Agent-Skills/monitor-api-operations/{SESSION_ID}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 **响应处理：**
@@ -166,7 +168,7 @@ aliyun dataphin-public get-data-service-api-call-trend \
   --start-time "2026-06-01 00:00:00" \
   --end-time "2026-06-30 23:59:59" \
   --endpoint <YOUR_DATAPHIN_ENDPOINT> \
-  --user-agent "AlibabaCloud-Agent-Skills/monitor-api-operations/{SESSION_ID}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 > 注意：`get-data-service-api-call-trend` 无 `--api-id` 参数，返回项目下全量趋势数据。
@@ -186,7 +188,7 @@ aliyun dataphin-public list-data-service-api-calls \
   --project-id "{ProjectId}" \
   --list-query '{"ApiId":{ApiId},"StartTime":"2026-06-01 00:00:00","EndTime":"2026-06-30 23:59:59","PageNo":1,"PageSize":20}' \
   --endpoint <YOUR_DATAPHIN_ENDPOINT> \
-  --user-agent "AlibabaCloud-Agent-Skills/monitor-api-operations/{SESSION_ID}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 > `list-*` 系命令的时间、分页、过滤条件均通过 `--list-query` JSON 对象传入，而非独立参数。
@@ -209,7 +211,7 @@ aliyun dataphin-public get-data-service-api-error-impact \
   --start-time "2026-06-01 00:00:00" \
   --end-time "2026-06-30 23:59:59" \
   --endpoint <YOUR_DATAPHIN_ENDPOINT> \
-  --user-agent "AlibabaCloud-Agent-Skills/monitor-api-operations/{SESSION_ID}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 > 注意：`get-data-service-api-error-impact` 无 `--api-id` 参数，返回项目下所有 API 的异常汇总。
@@ -224,7 +226,7 @@ aliyun dataphin-public list-data-service-api-impacts \
   --project-id "{ProjectId}" \
   --list-query '{"ApiId":{ApiId},"StartTime":"2026-06-01 00:00:00","EndTime":"2026-06-30 23:59:59","PageNo":1,"PageSize":20}' \
   --endpoint <YOUR_DATAPHIN_ENDPOINT> \
-  --user-agent "AlibabaCloud-Agent-Skills/monitor-api-operations/{SESSION_ID}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 **响应处理：**

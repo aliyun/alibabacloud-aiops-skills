@@ -119,13 +119,13 @@ aliyun dataphin-public --help
 ```bash
 # 1) 取现有属性值（避免覆盖丢字段）
 aliyun dataphin-public get-standard --tenant-id <tenant-id> --standard-id "<标准 Id>" \
-  --nullable false --user-agent AlibabaCloud-Agent-Skills/update-standard/{session-id} --format json
+  --nullable false --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}" --format json
 
 # 2) 取模板属性 Code → Id 映射（--cli-query 裁剪）
 aliyun dataphin-public get-standard-template --tenant-id <tenant-id> \
   --standard-template-id <模板 Id> --nullable false \
   --cli-query 'TemplateInfo.AttributesConfig.AttributeList[].{Id:Id,Code:Code,Name:Name,Required:Required}' \
-  --user-agent AlibabaCloud-Agent-Skills/update-standard/{session-id} --format json
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}" --format json
 ```
 
 > `AttributeValueList` 与监控配置不同，**没有逐元素增/改/删语义——传什么就是全量**：只想改一个属性也必须把其他属性值一并带上，否则 Required 属性会变空而报错。
@@ -212,7 +212,7 @@ aliyun dataphin-public update-standard \
       }
     ]
   }' \
-  --user-agent AlibabaCloud-Agent-Skills/update-standard/{session-id}
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"
 ```
 
 ### 分支 2 · Type = QUALITY（更新数据质量监控）
@@ -251,7 +251,7 @@ aliyun dataphin-public update-standard \
       }
     ]
   }' \
-  --user-agent AlibabaCloud-Agent-Skills/update-standard/{session-id}
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"
 ```
 
 > RuleValidateConfigList 是一棵「父 RELATION + 子 EXPRESSION」的树：
@@ -269,12 +269,14 @@ aliyun dataphin-public update-standard \
 
 ## 8. Observability
 
+版本 `{version}`（Shell 变量 `SKILL_VERSION`）来自套件 `references/manifest.json` 的 `version` 字段，与 session-id 一同继承[父技能 §7](../../../SKILL.md#7-observability)。直接加载本子技能时先完成父层初始化；所有 CLI / SDK 调用使用父技能名称与同一版本，跨 Shell 调用须重新注入这些值。
+
 本 Skill 属于 `alibabacloud-dataphin-skills` 套件，**继承父 Skill `alibabacloud-dataphin-skills` 的 session-id**，子 Skill 不再重新生成。
 
 所有调用 Alibaba Cloud API 的 `aliyun` 命令必须携带：
 
 ```
---user-agent AlibabaCloud-Agent-Skills/update-standard/{session-id}
+--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"
 ```
 
 其中 `{session-id}` 替换为父 Skill 生成的 32 位小写十六进制字符串。
@@ -298,7 +300,7 @@ update-standard **修改的是已有标准，不产生新资源**，因此没有
 # 更新前先备份当前全量配置（改动前执行）
 aliyun dataphin-public get-standard --tenant-id <tenant-id> \
   --standard-id <standard-id> \
-  --user-agent AlibabaCloud-Agent-Skills/update-standard/{session-id} --format json > standard-backup.json
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}" --format json > standard-backup.json
 
 # 如需回滚，用备份中的原值再 update-standard 一次即可
 ```

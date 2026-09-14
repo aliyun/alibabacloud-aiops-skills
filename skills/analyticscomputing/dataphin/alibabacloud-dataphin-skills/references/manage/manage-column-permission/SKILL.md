@@ -103,20 +103,22 @@ aliyun plugin install --names aliyun-cli-dataphin-public
 
 ## 7. Observability (MUST follow for every aliyun command)
 
+版本 `{version}`（Shell 变量 `SKILL_VERSION`）来自套件 `references/manifest.json` 的 `version` 字段，与 session-id 一同继承[父技能 §7](../../../SKILL.md#7-observability)。直接加载本子技能时先完成父层初始化；所有 CLI / SDK 调用使用父技能名称与同一版本，跨 Shell 调用须重新注入这些值。
+
 **session-id 由父 skill `alibabacloud-dataphin-skills` 在套件入口加载时生成（32-char 小写 hex），本子 skill 加载时直接继承同一 session-id，不再重新生成。**
 
 **Rule: Every `aliyun` CLI command that calls a cloud API MUST include the `--user-agent` flag.**
 Local utility commands (e.g. `configure`, `plugin`, `version`) do not support this flag and should be excluded.
 
 ```
---user-agent AlibabaCloud-Agent-Skills/manage-column-permission/{session-id}
+--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"
 ```
 
 Example (assuming session-id is `a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6`):
 ```bash
 aliyun dataphin-public list-resource-permissions --tenant-id "1234567890123456789" \
   --tab-type TABLE --page 1 --page-size 10 \
-  --user-agent AlibabaCloud-Agent-Skills/manage-column-permission/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6 skill-version/{version}"
 ```
 
 Do not skip, alter the format, or omit `--user-agent` on any `aliyun` API command invocation.
@@ -126,7 +128,7 @@ Do not skip, alter the format, or omit `--user-agent` on any `aliyun` API comman
 ```bash
 TENANT_ID="<大整数租户 ID，字符串>"
 SESSION_ID="<inherited from alibabacloud-dataphin-skills>"
-UA="AlibabaCloud-Agent-Skills/manage-column-permission/$SESSION_ID"
+UA="AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/$SESSION_ID skill-version/$SKILL_VERSION"
 
 # 0) 确认用户身份。授权前先确认 userId 对应的真实用户。
 aliyun dataphin-public get-users --tenant-id "$TENANT_ID" \
@@ -142,6 +144,8 @@ aliyun dataphin-public get-table-columns --tenant-id "$TENANT_ID" \
   --user-agent "$UA" --format json
 
 # 2) 查询现有授权记录。表/字段权限记录使用 TABLE 页签。
+#    授权记录在响应的 PageResult.Data[]（不是 UserList/PermissionList），提取用：
+#    ... --format json | jq '.PageResult.Data[]'
 aliyun dataphin-public list-resource-permissions --tenant-id "$TENANT_ID" \
   --tab-type TABLE --search-text "<表名或字段名>" \
   --page 1 --page-size 10 \
@@ -193,12 +197,14 @@ aliyun dataphin-public revoke-resource-permission --tenant-id "$TENANT_ID" \
 
 > [Agent 自主发现] `grant-resource-permission` / `revoke-resource-permission` / `check-resource-permission` 的 `--resource-list` 是 list，元素会按 JSON 解析且真实服务端要求对象；传 `--resource-list field_guid` 会报 `invalid JSON element`，传 `--resource-list '"field_guid"'` 会在真实调用时报 `Expected BEGIN_OBJECT but was STRING`。正确写法是 `--resource-list '{"ResourceId":"field_guid"}'`，CLI 最终映射为 `ResourceList:[{"ResourceId":"field_guid"}]`。
 
+> [Agent 自主发现] `list-resource-permissions` 的授权记录数组在响应 `.PageResult.Data[]` 路径下（不是常见的 `UserList` / `PermissionList`），用 `jq '.PageResult.Data[]'` 提取；判空/查重时以该数组长度为准。
+
 ## 9. Success Verification
 
 每次执行后必须进行结果验证：
 
 1. **字段定位验证**：`get-table-columns` 返回目标字段，并记录字段候选 `Guid`、字段名、字段类型和所属表；该 `Guid` 需再与权限记录或 `check-resource-permission` 可识别的 `ResourceId` 核对。
-2. **授权前查重**：执行 grant 前先用 `list-resource-permissions --tab-type TABLE --search-text <表/字段>` 检查是否已有相同用户 + 相同字段 + 相同操作权限。
+2. **授权前查重**：执行 grant 前先用 `list-resource-permissions --tab-type TABLE --search-text <表/字段>` 检查是否已有相同用户 + 相同字段 + 相同操作权限（记录在 `.PageResult.Data[]`）。
 3. **grant 验证**：授权返回成功后，执行 `check-resource-permission` 校验目标用户对目标字段的 `SELECT` 权限。
 4. **审计验证**：执行 `list-resource-permission-operation-log`，确认授权或回收动作进入操作日志。
 5. **revoke 验证**：回收后再次执行 `check-resource-permission` 或查询授权记录，确认目标字段权限已失效。

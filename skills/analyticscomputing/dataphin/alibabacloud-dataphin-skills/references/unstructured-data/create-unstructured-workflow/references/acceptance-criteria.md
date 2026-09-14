@@ -23,4 +23,4 @@
 - [ ] 提示词按业务语境定制，非跨场景照搬
 - [ ] 所有写操作执行前已 HITL 确认；`delete-dataset` 逐次人工确认且先自查下游引用
 - [ ] 大整数 ID 以字符串呈现
-- [ ] 每个 `aliyun` API 命令带 `--user-agent AlibabaCloud-Agent-Skills/create-unstructured-workflow/{session-id}`（session-id 继承父层）
+- [ ] 每个 `aliyun` API 命令带 `--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"`（session-id 继承父层）

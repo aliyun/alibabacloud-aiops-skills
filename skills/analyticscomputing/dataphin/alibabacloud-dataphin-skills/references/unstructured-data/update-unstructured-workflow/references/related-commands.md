@@ -27,4 +27,4 @@ aliyun dataphin-public get-dataset --op-tenant-id "$TENANT_ID" \
   --project-id "$PROJECT_ID" --id "<DatasetId>"
 ```
 
-> 所有 API 命令实际执行时必须追加 `--profile <有效 profile 名>`（认证信息统一来自阿里云 CLI 配置）与 `--user-agent AlibabaCloud-Agent-Skills/update-unstructured-workflow/{session-id}`（session-id 继承父 skill）。
+> 所有 API 命令实际执行时必须追加 `--profile <有效 profile 名>`（认证信息统一来自阿里云 CLI 配置）与 `--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"`（session-id 继承父 skill）。

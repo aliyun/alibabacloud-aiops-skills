@@ -106,13 +106,15 @@ aliyun plugin install --names aliyun-cli-dataphin-public
 
 ## 7. Observability (MUST follow for every aliyun command)
 
+版本 `{version}`（Shell 变量 `SKILL_VERSION`）来自套件 `references/manifest.json` 的 `version` 字段，与 session-id 一同继承[父技能 §7](../../../SKILL.md#7-observability)。直接加载本子技能时先完成父层初始化；所有 CLI / SDK 调用使用父技能名称与同一版本，跨 Shell 调用须重新注入这些值。
+
 **session-id 由父 skill `alibabacloud-dataphin-skills` 在套件入口加载时生成（32-char 小写 hex），本子 skill 加载时直接继承同一 session-id，不再重新生成。**
 
 **Rule: Every `aliyun` CLI command that calls a cloud API MUST include the `--user-agent` flag.**
 Local utility commands (e.g. `configure`, `plugin`, `version`) do not support this flag and should be excluded.
 
 ```
---user-agent AlibabaCloud-Agent-Skills/manage-data-classification/{session-id}
+--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"
 ```
 
 Do not skip, alter the format, or omit `--user-agent` on any `aliyun` API command invocation.
@@ -122,7 +124,7 @@ Do not skip, alter the format, or omit `--user-agent` on any `aliyun` API comman
 ```bash
 TENANT_ID="<大整数租户 ID，字符串>"
 SESSION_ID="<inherited from alibabacloud-dataphin-skills>"
-UA="AlibabaCloud-Agent-Skills/manage-data-classification/$SESSION_ID"
+UA="AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/$SESSION_ID skill-version/$SKILL_VERSION"
 
 # 1) 查询已有识别结果，先确认是否已经打标。
 aliyun dataphin-public list-security-identify-results --tenant-id "$TENANT_ID" \

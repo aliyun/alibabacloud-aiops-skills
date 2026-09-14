@@ -144,12 +144,14 @@ aliyun dataphin-public --help
 
 ## 7. Observability
 
+版本 `{version}`（Shell 变量 `SKILL_VERSION`）来自套件 `references/manifest.json` 的 `version` 字段，与 session-id 一同继承[父技能 §7](../../../SKILL.md#7-observability)。直接加载本子技能时先完成父层初始化；所有 CLI / SDK 调用使用父技能名称与同一版本，跨 Shell 调用须重新注入这些值。
+
 本 Skill 属于 `alibabacloud-dataphin-skills` 套件，**继承父 Skill `alibabacloud-dataphin-skills` 的 session-id**，子 Skill 不再重新生成。
 
 所有调用 Alibaba Cloud API 的 `aliyun` 命令必须携带：
 
 ```
---user-agent AlibabaCloud-Agent-Skills/rerun-task-instance/{session-id}
+--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"
 ```
 
 其中 `{session-id}` 替换为父 Skill 生成的 32 位小写十六进制字符串。
@@ -186,7 +188,7 @@ aliyun dataphin-public list-instances \
   --max-biz-date "$BIZDATE" \
   --page 1 --page-size 20 \
   --format json \
-  --user-agent AlibabaCloud-Agent-Skills/rerun-task-instance/{session-id} \
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}" \
   | jq '.PageResult.Data[] | {InstanceId:.Id, NodeName:.NodeInfo.Name, NodeId:.NodeInfo.Id, StatusList, BizDate:.BizDate}'
 ```
 
@@ -202,7 +204,7 @@ PROJECTS=$(aliyun dataphin-public list-projects \
   --env "$ENV" \
   --page-no 1 --page-size 100 \
   --format json \
-  --user-agent AlibabaCloud-Agent-Skills/rerun-task-instance/{session-id} \
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}" \
   | jq -r '.PageResult.ProjectList[] | "\(.Id) \(.Name)"')
 
 # 2) 在每个项目中搜索实例
@@ -217,7 +219,7 @@ while read -r PID PNAME; do
     --max-biz-date "$BIZDATE" \
     --page 1 --page-size 20 \
     --format json \
-    --user-agent AlibabaCloud-Agent-Skills/rerun-task-instance/{session-id} \
+    --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}" \
     | jq -r --arg pid "$PID" --arg pname "$PNAME" '
         .PageResult.Data[]? |
         "\(.Id)\t\(.NodeInfo.Name)\t\(.NodeInfo.Id)\t\($pid)\t\($pname)\t\(.StatusList | join(","))"
@@ -257,7 +259,7 @@ aliyun dataphin-public operate-instance \
   --operation RERUN \
   --instance-id-list "{\"Id\":\"$INSTANCE_ID\"}" \
   --format json \
-  --user-agent AlibabaCloud-Agent-Skills/rerun-task-instance/{session-id}
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"
 ```
 
 返回成功仅表示运维指令已下发，不代表实例最终成功。必须继续验证。
@@ -272,7 +274,7 @@ aliyun dataphin-public get-physical-instance \
   --project-id "$PROJECT_ID" \
   --instance-id "$INSTANCE_ID" \
   --format json \
-  --user-agent AlibabaCloud-Agent-Skills/rerun-task-instance/{session-id} \
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}" \
   | jq '{Id, StatusList, StartExecuteTime, EndExecuteTime, Duration}'
 ```
 
@@ -284,7 +286,7 @@ aliyun dataphin-public get-physical-instance-log \
   --project-id "$PROJECT_ID" \
   --instance-id "$INSTANCE_ID" \
   --format json \
-  --user-agent AlibabaCloud-Agent-Skills/rerun-task-instance/{session-id} \
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}" \
   | jq -r '.TaskrunLogList[-1].LogContent'
 ```
 
@@ -325,7 +327,7 @@ aliyun dataphin-public fix-data \
   --contain-root-instance true \
   --downstream-range ALL_INSTANCE \
   --format json \
-  --user-agent AlibabaCloud-Agent-Skills/rerun-task-instance/{session-id}
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"
 ```
 
 > **关键坑：`--root-instance-id` 必须传 JSON 对象 `{"Id":"t_xxx"}`**，不能传裸字符串（会报 `invalid JSON`）或 JSON 字符串（会报 `Expected BEGIN_OBJECT but was STRING`）。
@@ -344,7 +346,7 @@ aliyun dataphin-public get-physical-instance-log \
   --project-id "$PROJECT_ID" \
   --instance-id "$ROOT_INSTANCE_ID" \
   --format json \
-  --user-agent AlibabaCloud-Agent-Skills/rerun-task-instance/{session-id} \
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}" \
   | jq '[.TaskrunLogList[] | {TaskrunId, Status, StartTime, EndTime, Duration}]'
 ```
 

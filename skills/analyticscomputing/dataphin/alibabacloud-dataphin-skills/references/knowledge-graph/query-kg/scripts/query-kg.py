@@ -28,6 +28,11 @@ import argparse
 import json
 import os
 import sys
+from pathlib import Path
+
+# Shared helper resolves the installed suite manifest independently of cwd.
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
+from skill_user_agent import build_user_agent
 
 try:
     from alibabacloud_tea_openapi import models as open_api_models
@@ -58,11 +63,8 @@ def _build_client(ignore_ssl):
             "ALIBABA_CLOUD_ACCESS_KEY_SECRET / DATAPHIN_ENDPOINT\n"
         )
         sys.exit(2)
-    # UA 可观测（Principle 9）：SKILL_SESSION_ID 由 Agent 执行时内联注入，缺失时降级为仅 skill 名
-    session_id = os.environ.get('SKILL_SESSION_ID', '')
-    ua = 'AlibabaCloud-Agent-Skills/query-kg'
-    if session_id:
-        ua = f'{ua}/{session_id}'
+    # Inherit the parent session; read the release version from the suite manifest.
+    ua = build_user_agent()
     config = open_api_models.Config(
         access_key_id=ak_id, access_key_secret=ak_secret, endpoint=endpoint,
         user_agent=ua,

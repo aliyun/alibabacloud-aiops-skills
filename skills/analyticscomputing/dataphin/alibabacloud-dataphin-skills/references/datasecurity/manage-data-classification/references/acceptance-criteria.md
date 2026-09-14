@@ -19,7 +19,7 @@
 - [ ] 写操作前必须展示租户、分级、分类、表、字段、分类 ID、覆盖策略和影响范围，并获得用户明确确认。
 - [ ] `--conflict-strategy` 默认使用 `COVER_UNLOCKED`；使用 `COVER_ALL` 前必须提示会覆盖线上全部打标。
 - [ ] 删除分级前确认没有分类绑定；删除分类前确认没有识别结果、识别规则或脱敏联动依赖。
-- [ ] 所有 OpenAPI CLI 命令必须携带 `--user-agent AlibabaCloud-Agent-Skills/manage-data-classification/{session-id}`。
+- [ ] 所有 OpenAPI CLI 命令必须携带 `--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"`。
 - [ ] 不读取、不回显、不写入 AK/SK 等凭证。
 
 ## 业务语义验收

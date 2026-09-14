@@ -109,6 +109,15 @@
         "dataphin:PagedQueryQualityRules",
         "dataphin:PagedQueryQualityRuleTasks",
         "dataphin:ListTablePartitions",
+        "dataphin:GetCatalogAssetDetails",
+        "dataphin:GetAssetAttributes",
+        "dataphin:ListCatalogAssets",
+        "dataphin:GetTableLineages",
+        "dataphin:GetTableColumnLineages",
+        "dataphin:ListQualityWatches",
+        "dataphin:ListQualityRules",
+        "dataphin:ListQualityRuleTasks",
+        "dataphin:ListQualityWatchTasks",
         "dataphin:SearchDataSourceConfig",
         "dataphin:CreateJdbcConnection",
         "dataphin:ExecSqlByJdbc",
@@ -215,7 +224,13 @@
         "dataphin:ListDatasets",
         "dataphin:UpdateDataset",
         "dataphin:DeleteDataset",
-        "dataphin:CreateWorkFlowByJson"
+        "dataphin:CreateWorkFlowByJson",
+        "dataphin:GetFileStorageCredential",
+        "dataphin:CreateResource",
+        "dataphin:GetResource",
+        "dataphin:GetResourceByVersion",
+        "dataphin:UpdateResource",
+        "dataphin:DeleteResource"
       ],
       "Resource": "*"
     }
@@ -355,6 +370,17 @@
 #### get-bizdate
 - 无云端 API 调用（本地命令），无需任何 RAM 权限
 
+#### manage-resource-file
+- `dataphin:GetFileStorageCredential`
+- `dataphin:CreateResource`
+- `dataphin:GetResource`
+- `dataphin:GetResourceByVersion`
+- `dataphin:UpdateResource`
+- `dataphin:DeleteResource`
+
+> 上述 Action 名按 `dataphin:<ApiName>` 命名惯例推断，**尚未经 RAM 侧真机确认**（测试用 AK 在 RAM 层一路通畅，未触发过 403，无法反推真实 Action 名）；以官方文档或实际 403 报错中的 Action 名为准。
+> **重要**：资源文件写操作（CreateResource / UpdateResource / DeleteResource）除 RAM 权限外，还需调用者是目标项目的**项目成员**（否则报 HTTP 400 `DPN.Filter.NoPermission`，与 RAM 无关）。两层权限区分见 `dev/manage-resource-file/SKILL.md` §13。
+
 ### ops
 
 #### create-node-supplement
@@ -472,6 +498,14 @@
 - `dataphin:GetBizMetricByName`
 - `dataphin:DeleteBizMetric`
 
+#### develop-metric
+- `dataphin:ListCatalogAssets` — list-catalog-assets（读；找现成结果表、核验指标注册）
+- `dataphin:GetCatalogAssetDetails` — get-catalog-asset-details（读）
+- `dataphin:ListTables` — list-tables（读；找来源表）
+- `dataphin:GetTableColumns` — get-table-columns（读；校验字段）
+
+> 本 skill 自身只需只读权限；计算任务的建/提/发权限见 `update-batch-task` / `submit-batch-task` 分组，即席试算见 `execute-ad-hoc-task` 分组。创建自定义指标与资产上架无 OpenAPI，由人工在控制台完成，不涉及 RAM Action。
+
 #### configure-quality-rule
 - `dataphin:GetQualityWatchByObjectId`
 - `dataphin:SaveQualityWatch`
@@ -495,6 +529,47 @@
 - `dataphin:ListTablePartitions`
 
 > 未采集外部数据源表取字段场景另需：`dataphin:SearchDataSourceConfig`、`dataphin:CreateJdbcConnection`、`dataphin:ExecSqlByJdbc`、`dataphin:QuerySqlTaskStatus`、`dataphin:FetchSqlResult`、`dataphin:CloseJdbcConnection`。
+
+#### query-asset-details
+
+① 属性 / 字段列表 / 使用说明（只读）：
+- `dataphin:GetCatalogAssetDetails`
+- `dataphin:GetAssetAttributes`
+- `dataphin:ListCatalogAssets`
+
+③ 血缘（只读）：
+- `dataphin:GetTableLineages`
+- `dataphin:GetTableColumnLineages`
+
+④ 质量概况（只读）：
+- `dataphin:GetQualityWatchByObjectId`
+- `dataphin:ListQualityWatches`
+- `dataphin:ListQualityRules`
+- `dataphin:ListQualityRuleTasks`
+- `dataphin:ListQualityWatchTasks`
+
+② 数据预览（**非只读：起即席查询任务、真实读表、消耗计算资源**）：
+- `dataphin:ExecuteAdHocTask`
+- `dataphin:GetAdHocTaskResult`
+- `dataphin:GetAdHocTaskLog`
+- `dataphin:ListDataSourceWithConfig`
+
+> 只需部分板块时按上面分组裁剪授权；不做数据预览时可完全不授 ② 组，本 skill 其余部分即为纯只读。
+
+#### resolve-asset-guid
+
+全只读（段值解析 + 反查 + 回读校验）：
+- `dataphin:ListBizUnits` — list-biz-units（数据板块名，`dp_table.` 第三段）
+- `dataphin:ListProjects` — list-projects（项目名，`odps.` 第三段）
+- `dataphin:ListDataSourceWithConfig` — list-data-source-with-config（DataSourceId，`dp_ds_table.` 第三段）
+- `dataphin:ListTables` — list-tables（资产清单反查，含未上架表）
+- `dataphin:GetTableColumns` — get-table-columns（字段名校对）
+- `dataphin:ListCatalogAssets` — list-catalog-assets（已上架资产反查）
+- `dataphin:GetCatalogAssetDetails` — get-catalog-asset-details（回读校验，6.1+）
+- `dataphin:GetBizMetricByName` — get-biz-metric-by-name（业务指标 GUID 直取）
+- `dataphin:GetAssetAttributes`（可选）— 下游可用性验证，6.3+ SDK 通道
+
+> 本 skill 不包含任何写 Action；已授上述只读权限时，它与 `query-asset-details` 的 ① 组完全重叠部分无需重复授权。
 
 ### datasecurity
 

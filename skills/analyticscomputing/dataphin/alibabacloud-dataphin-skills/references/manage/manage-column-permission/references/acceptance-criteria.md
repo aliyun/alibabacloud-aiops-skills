@@ -25,7 +25,7 @@
 - [ ] 回收前说明可能影响的任务、消费链路、数据服务 API 或报表访问。
 - [ ] 不把页面内部 REST 接口 `grantByResource` / `submitAuthRevoke` 作为外部 Skill 命令入口。
 - [ ] 不把字段权限误写成行级权限规则；字段权限控制列可见性，行级权限控制行过滤。
-- [ ] 所有 API 命令必须携带 `--user-agent AlibabaCloud-Agent-Skills/manage-column-permission/{session-id}`。
+- [ ] 所有 API 命令必须携带 `--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"`。
 
 ## 结果验收
 

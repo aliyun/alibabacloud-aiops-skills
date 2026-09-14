@@ -14,7 +14,7 @@
 所有命令均需：
 - `--op-tenant-id` — 租户 ID
 - `--workspace-id` — 知识图谱空间 ID
-- `--user-agent AlibabaCloud-Agent-Skills/query-kg/{SESSION_ID}` — 可观测标识
+- `--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"` — 可观测标识
 - 独立部署环境加 `--endpoint dataphin-openapi.<env>.aliyun.com`（不带 `https://` 前缀）
 
 ## 兜底脚本（旧版本独立部署）

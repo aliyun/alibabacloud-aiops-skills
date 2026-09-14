@@ -37,7 +37,7 @@
 - 若验证运行时过滤效果，需另走授权申请/审批/实际 SQL 查询链路，不能仅凭 create/update 判定已生效
 
 ### 6. Observability
-- 所有调用 API 的 `aliyun` 命令携带 `--user-agent AlibabaCloud-Agent-Skills/manage-row-level-permission/{session-id}`
+- 所有调用 API 的 `aliyun` 命令携带 `--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"`
 - session-id 继承父 skill，不重新生成
 
 ## 错误模式

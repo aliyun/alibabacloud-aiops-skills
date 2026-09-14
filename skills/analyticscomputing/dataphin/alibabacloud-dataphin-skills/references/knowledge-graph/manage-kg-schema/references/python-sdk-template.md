@@ -17,9 +17,11 @@ from alibabacloud_tea_openapi import models as open_api_models
 from alibabacloud_tea_util import models as util_models
 
 # UA 可观测（Principle 9）：SKILL_SESSION_ID 由 Agent 执行时内联注入，与 CLI --user-agent 同一 session-id
-# 继承自父 skill alibabacloud-dataphin-skills，未设置时降级为仅 skill 名
-SESSION_ID = os.environ.get('SKILL_SESSION_ID', '')
-_ua = 'AlibabaCloud-Agent-Skills/manage-kg-schema' + (f'/{SESSION_ID}' if SESSION_ID else '')
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(os.environ["SUITE_ROOT"]) / "references/scripts"))
+from skill_user_agent import build_user_agent
+_ua = build_user_agent()
 
 # 初始化客户端
 config = open_api_models.Config(

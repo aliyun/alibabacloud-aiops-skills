@@ -103,7 +103,7 @@ aliyun dataphin-public --help
 TENANT_ID=<tenant-id>
 PROJECT_ID=<project-id>
 ENV=PROD
-USER_AGENT="AlibabaCloud-Agent-Skills/monitor-task-instance/{session-id}"
+USER_AGENT="AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"
 
 # 1) 取真实业务日期（绝对不要依赖会话上下文时间）
 TODAY=$(date "+%Y%m%d")
@@ -157,12 +157,14 @@ aliyun dataphin-public get-physical-instance-log --dataphin-profile <p> --env $E
 
 ## 8. Observability
 
+版本 `{version}`（Shell 变量 `SKILL_VERSION`）来自套件 `references/manifest.json` 的 `version` 字段，与 session-id 一同继承[父技能 §7](../../../SKILL.md#7-observability)。直接加载本子技能时先完成父层初始化；所有 CLI / SDK 调用使用父技能名称与同一版本，跨 Shell 调用须重新注入这些值。
+
 本 Skill 属于 `alibabacloud-dataphin-skills` 套件，**继承父 Skill `alibabacloud-dataphin-skills` 的 session-id**，子 Skill 不再重新生成。
 
 所有调用 Alibaba Cloud API 的 `aliyun` 命令必须携带：
 
 ```
---user-agent AlibabaCloud-Agent-Skills/monitor-task-instance/{session-id}
+--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"
 ```
 
 其中 `{session-id}` 替换为父 Skill 生成的 32 位小写十六进制字符串。

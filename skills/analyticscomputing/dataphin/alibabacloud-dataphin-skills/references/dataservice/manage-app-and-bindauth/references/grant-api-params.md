@@ -35,7 +35,7 @@ aliyun dataphin-public get-data-service-api-document \
   --OpTenantId "{OpTenantId}" \
   --ApiId "{ApiId}" \
   --endpoint <YOUR_DATAPHIN_ENDPOINT> \
-  --user-agent "AlibabaCloud-Agent-Skills/manage-app-and-bindauth/{SESSION_ID}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 从返回的 `ResponseParameters` 中提取 `ParameterName` 作为可授权字段。
@@ -48,7 +48,7 @@ aliyun dataphin-public grant-data-service-api \
   --ProjectId "{ProjectId}" \
   --GrantCommand '{"ApiId": "{ApiId}", "AppId": "{AppId}", "Columns": ["field1", "field2"]}' \
   --endpoint <YOUR_DATAPHIN_ENDPOINT> \
-  --user-agent "AlibabaCloud-Agent-Skills/manage-app-and-bindauth/{SESSION_ID}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 ## 注意事项

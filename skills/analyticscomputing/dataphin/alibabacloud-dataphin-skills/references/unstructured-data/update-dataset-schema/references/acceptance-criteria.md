@@ -20,4 +20,4 @@
 - [ ] update-dataset 提交的是完整列清单，非仅新增列
 - [ ] 已被工作流引用的列未删未改（只加不减）
 - [ ] 大整数 ID 以字符串呈现；写操作前 HITL 确认
-- [ ] 每个 `aliyun` API 命令带 `--profile` 与 `--user-agent AlibabaCloud-Agent-Skills/update-dataset-schema/{session-id}`（session-id 继承父层）
+- [ ] 每个 `aliyun` API 命令带 `--profile` 与 `--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"`（session-id 继承父层）

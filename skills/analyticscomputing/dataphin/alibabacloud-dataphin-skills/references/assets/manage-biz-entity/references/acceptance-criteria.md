@@ -35,7 +35,7 @@
 - delete 前必须确认无维度逻辑表、事实逻辑表、汇总逻辑表、指标或其它业务实体依赖
 
 ### 6. Observability
-- 所有调用 API 的 `aliyun` 命令携带 `--user-agent AlibabaCloud-Agent-Skills/manage-biz-entity/{session-id}`
+- 所有调用 API 的 `aliyun` 命令携带 `--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"`
 - session-id 继承父 skill，不重新生成
 
 ## 错误模式

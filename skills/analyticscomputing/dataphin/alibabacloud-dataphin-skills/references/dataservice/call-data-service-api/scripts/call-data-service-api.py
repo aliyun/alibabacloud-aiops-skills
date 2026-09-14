@@ -15,7 +15,7 @@ path 不做 query 归一化/排序，签名与实际请求行必须完全一致�
   DATAPHIN_APP_KEY       应用 AppKey（来自 manage-app-and-bindauth）
   DATAPHIN_APP_SECRET    应用 AppSecret
   DATAPHIN_GATEWAY_HOST  数据服务网关地址（控制台 数据服务 > 服务管理 > 网络配置）
-  SKILL_SESSION_ID       可观测 session-id（可选，写入 user-agent）
+  SKILL_SESSION_ID       可观测 session-id（必填，继承父层，写入 user-agent）
 
 用法：
   # 同步调用（LIST/GET/CREATE/UPDATE/DELETE）
@@ -43,10 +43,15 @@ import json
 import os
 import ssl
 import sys
+from pathlib import Path
 import time
 import uuid
 from datetime import datetime
 from urllib.parse import urlparse
+
+# Shared helper resolves the installed suite manifest independently of cwd.
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
+from skill_user_agent import build_user_agent
 
 SUCCESS_CODE = 'DPN-OLTP-COMMON-000'
 # ApiConfig.method → 网关路径动词。methodType 由 API 发布时的操作类型决定，
@@ -93,13 +98,11 @@ class Gateway:
         """构造并签名请求头（算法见模块 docstring）。"""
         # user-agent 承载可观测标记：**不要**用 X-Ca-User-Agent，
         # x-ca-* 前缀会被纳入签名串，易触发 SignatureDoesNotMatch
-        ua = 'AlibabaCloud-Agent-Skills/call-data-service-api'
-        session_id = os.environ.get('SKILL_SESSION_ID', '')
         headers = {
             'accept': accept,
             'content-type': 'application/json',
             'date': str(datetime.now()),
-            'user-agent': f'{ua}/{session_id}' if session_id else ua,
+            'user-agent': build_user_agent(),
             'x-ca-key': self.app_key,
             'x-ca-nonce': str(uuid.uuid4()),
             'x-ca-signature-method': 'HmacSHA256',

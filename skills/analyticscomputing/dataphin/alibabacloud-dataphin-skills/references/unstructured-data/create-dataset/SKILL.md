@@ -102,20 +102,22 @@ aliyun plugin install --names aliyun-cli-dataphin-public
 
 ## 7. Observability (MUST follow for every aliyun command)
 
+版本 `{version}`（Shell 变量 `SKILL_VERSION`）来自套件 `references/manifest.json` 的 `version` 字段，与 session-id 一同继承[父技能 §7](../../../SKILL.md#7-observability)。直接加载本子技能时先完成父层初始化；所有 CLI / SDK 调用使用父技能名称与同一版本，跨 Shell 调用须重新注入这些值。
+
 **session-id 由父 skill `alibabacloud-dataphin-skills` 在套件入口加载时生成（32-char 小写 hex），本子 skill 加载时直接继承同一 session-id，不再重新生成。**
 
 **Rule: Every `aliyun` CLI command that calls a cloud API MUST include the `--user-agent` flag.**
 Local utility commands (e.g. `configure`, `plugin`, `version`) do not support this flag and should be excluded.
 
 ```
---user-agent AlibabaCloud-Agent-Skills/create-dataset/{session-id}
+--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"
 ```
 
 Example (assuming session-id is `a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6`):
 ```bash
 aliyun dataphin-public get-dataset --op-tenant-id "$TENANT_ID" \
   --project-id "$PROJECT_ID" --id "12345" \
-  --user-agent AlibabaCloud-Agent-Skills/create-dataset/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6 skill-version/{version}"
 ```
 
 Do not skip, alter the format, or omit `--user-agent` on any `aliyun` API command invocation.
@@ -127,7 +129,7 @@ TENANT_ID="30001011"
 PROJECT_ID="789"
 PROFILE="<aliyun configure list 中的有效 profile 名>"
 SESSION_ID="<inherited from alibabacloud-dataphin-skills>"
-UA="AlibabaCloud-Agent-Skills/create-dataset/$SESSION_ID"
+UA="AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/$SESSION_ID skill-version/$SKILL_VERSION"
 ```
 
 **本 skill 所有 `aliyun` API 命令统一携带 `--profile "$PROFILE"`（认证信息只来自 CLI 配置）；独立部署模式下按父 skill Step 0 约定另追加 `--skip-secure-verify`。**

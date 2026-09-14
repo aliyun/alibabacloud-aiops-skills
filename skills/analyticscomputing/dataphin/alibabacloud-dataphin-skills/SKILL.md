@@ -58,6 +58,7 @@ aliyun dataphin-public --help
 - `dev/find-tenant-root-node` — 查找租户虚拟根节点
 - `dev/get-batch-task-info-by-name` — 按名称获取批任务详情
 - `dev/get-bizdate` — 获取业务日期（bizdate）
+- `dev/manage-resource-file` — 资源文件管理（上传 JAR/配置文件并创建/更新/查询/删除 Dataphin 资源）
 - `ops/create-node-supplement` — 创建补数据任务
 - `ops/rerun-task-instance` — 重跑任务实例
 - `ops/monitor-task-instance` — 任务实例监控与日志查询
@@ -70,8 +71,10 @@ aliyun dataphin-public --help
 - `assets/manage-topic-domain` — 主题域全生命周期管理（查询/创建/更新/删除，组织数据仓库分层）
 - `assets/manage-biz-entity` — 业务实体全生命周期管理（业务对象/业务活动的查询/创建/更新/上线/下线/删除）
 - `assets/manage-biz-metric` — 业务指标定义管理（创建/更新/草稿与已发布态查询/删除）
+- `assets/develop-metric` — 指标开发（找来源表 → 校验字段 → 建计算任务 → 登记自定义指标 → 核验关联）
 - `assets/manage-asset-attributes` — 资产自定义属性管理（查属性定义 + 按 GUID 批量覆盖写属性值）
-- `assets/query-asset-details` — 资产详情综合查询（批量读属性值 + 目录挂载层级链，纯只读）
+- `assets/query-asset-details` — 资产目录详情查询（属性/字段/使用说明 + 数据预览 + 血缘 + 质量概况四板块）
+- `assets/resolve-asset-guid` — 资产 GUID 解析（按类型拼接 + 回读校验 + 搜索反查，为需要 GUID 的子 skill 提供前置）
 - `assets/manage-lookup-table` — 数据标准码表管理（创建/查询/更新/删除，码值整体覆盖维护）
 - `assets/manage-standard-mapping` — 标准落标映射管理（字段-标准双向查询/批量建映射/置无效/删除）
 - `datasecurity/grant-data-source-permission` — 数据源授权给生产账号
@@ -79,7 +82,7 @@ aliyun dataphin-public --help
 - `datasecurity/manage-data-masking` — 数据脱敏需求拆解、字段标签前置检查与公开 API 边界确认
 - `dataservice/create-and-publish-api` — 数据服务 API 创建与发布
 - `dataservice/manage-app-and-bindauth` — 应用管理与 API 权限绑定
-- `dataservice/call-data-service-api` — API 调用（Python SDK，同步/异步）
+- `dataservice/call-data-service-api` — API 调用（零依赖 Python 脚本，同步/异步/SSE）
 - `dataservice/monitor-api-operations` — 数据服务 API 运维监控（调用汇总、趋势分析、调用日志、异常影响分析）
 - `knowledge-graph/manage-kg-schema` — 知识图谱本体模型管理（Schema CRUD、导入导出、发布）
 - `knowledge-graph/manage-kg-knowledge` — 知识图谱知识数据管理（实体关系 CRUD、批量导入）
@@ -271,6 +274,7 @@ aliyun dataphin-public create-data-source --body '...' --profile dataphin-standa
 | 虚拟根节点、NodeWithoutUpstream、挂默认上游、DagId | → `find-tenant-root-node` |
 | 按名称查任务、查任务代码、查任务调度 | → `get-batch-task-info-by-name` |
 | 业务日期、bizdate、T-1、今天日期、昨天 | → `get-bizdate` |
+| 上传资源、资源文件、UDF 资源、JAR 资源、创建资源、create-resource、update-resource、get-resource、delete-resource | → `manage-resource-file` |
 | 补数据、补跑、回填、重跑、supplement、backfill | → `create-node-supplement` |
 | 重跑实例 / rerun / 任务重跑 / operate-instance / 实例恢复 | → `rerun-task-instance` |
 | 实例状态 / 查看日志 / 任务监控 / 实例监控 / WAIT_SCHEDULE / FAILED / taskrun | → `monitor-task-instance` |
@@ -283,8 +287,10 @@ aliyun dataphin-public create-data-source --body '...' --profile dataphin-standa
 | 管理主题域、主题域生命周期、新建/修改/删除主题域、主题域列表、数据仓库分层、数据板块下建主题域 | → `manage-topic-domain` |
 | 管理业务实体、业务对象、业务活动、新建/修改/上线/下线/删除业务实体、维度建模、事实建模、业务模型 | → `manage-biz-entity` |
 | 管理业务指标、业务口径、指标定义、新建/修改/查询/删除业务指标、GMV、DAU、转化率、指标关系图 | → `manage-biz-metric` |
+| 开发指标、创建技术指标、自定义指标、从表开发指标、指标计算任务、登记自定义指标 | → `develop-metric` |
 | 码表、标准代码、码值、代码值、lookup table、创建码表、维护码值 | → `manage-lookup-table` |
 | 落标、标准映射、映射关系、字段关联标准、有效映射、无效映射、解除映射 | → `manage-standard-mapping` |
+| 资产 GUID、guid 怎么拼、拼 GUID、界面查不到 GUID、TableGuid、AssetGuid、dp_table、dp_ds_table、odps.、dp_index、cust_index、biz_index、dp_api、qbi_page、资产唯一标识 | → `resolve-asset-guid` |
 | 数据源授权、生产账号授权、DsRead、DsWrite、PublishStatus=0 | → `grant-data-source-permission` |
 | 数据分级分类、分类分级、数据分类、数据分级、安全等级、敏感数据标签、识别结果、C1、C2、C3、C4 | → `manage-data-classification` |
 | 数据脱敏、脱敏规则、动态脱敏、字段脱敏、手机号打星、身份证脱敏、邮箱脱敏、白名单、masking、desensitize | → `manage-data-masking` |
@@ -303,19 +309,26 @@ aliyun dataphin-public create-data-source --body '...' --profile dataphin-standa
 
 ## 7. Observability
 
-生成 session-id（32 字符小写十六进制），全套件复用：
+套件发布版本唯一来源是 [references/manifest.json](./references/manifest.json) 的 `version` 字段（SemVer）；发布时只在该文件更新版本。`references/config/version-manifest.json` 的 `min_version` / `default_min_version` 是 Dataphin 服务端兼容版本，不能用于 UA。
+
+父层仅生成一次 session-id（32 字符小写十六进制），全套件复用。
+
+将 `SUITE_ROOT` 设为本 SKILL.md 所在的实际绝对目录（由当前加载文件定位，不依赖工作目录），再执行以下初始化。使用[公共 UA helper](./references/scripts/skill_user_agent.py) 校验 manifest；文件缺失、版本为空/非法时停止 API 调用，不得猜测版本或省略后缀。
 
 ```bash
 SESSION_ID=$(python3 -c "import uuid; print(uuid.uuid4().hex)")
-echo "Session ID: $SESSION_ID"
+SKILL_VERSION=$(python3 "$SUITE_ROOT/references/scripts/skill_user_agent.py" --version) || exit 1
+UA=$(python3 "$SUITE_ROOT/references/scripts/skill_user_agent.py" --session-id "$SESSION_ID") || exit 1
 ```
 
-所有子 Skill 中的 `aliyun` 命令均需携带：
+所有父子 Skill 的 API 命令均需携带（整个 UA 为一个带引号的参数）：
 ```
---user-agent AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID}
+--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"
 ```
 
-子 Skill 继承父层生成的 session-id，无需重新生成。
+Shell 写作 `--user-agent "$UA"`，不可将 flag 与值合在变量中再进行未引用展开。`{version}` 必须替换为 manifest 读取的 `SKILL_VERSION`，示例中的 session 占位符也必须替换为当前值。`configure` / `plugin` / `version` 等本地工具命令除外。
+
+子 Skill 继承父层的 session-id、SKILL_VERSION、UA 与 SUITE_ROOT，不重新生成、不改成子技能名称。直接加载子 Skill 时先执行本节初始化；跨 Shell 调用由 Agent 重新注入已保存值，不依赖上一次 Shell 的环境。SDK 脚本内联传入 `SKILL_SESSION_ID="$SESSION_ID" python3 ...`；临时 SDK 模板还须传入 `SUITE_ROOT="$SUITE_ROOT"` 以加载公共 helper。SDK 直接读取 manifest，禁止无 session-id 降级或手写版本。
 
 ## 8. Core Workflow（场景路由表分发）
 
@@ -382,6 +395,7 @@ echo "Session ID: $SESSION_ID"
 | 虚拟根节点 / NodeWithoutUpstream / 挂默认上游 / DagId | [find-tenant-root-node](./references/dev/find-tenant-root-node/SKILL.md) |
 | 按名称查任务 / 查任务代码 / 查任务调度 / get-batch-task-info-by-name | [get-batch-task-info-by-name](./references/dev/get-batch-task-info-by-name/SKILL.md) |
 | 业务日期 / bizdate / T-1 / 今天日期 / 昨天 | [get-bizdate](./references/dev/get-bizdate/SKILL.md) |
+| 上传资源 / 资源文件 / UDF 资源 / JAR 资源 / create-resource / update-resource / get-resource / delete-resource | [manage-resource-file](./references/dev/manage-resource-file/SKILL.md) |
 | 补数据 / 补跑 / 回填 / 重跑 / supplement / backfill | [create-node-supplement](./references/ops/create-node-supplement/SKILL.md) |
 | 重跑实例 / rerun / 任务重跑 / operate-instance / 实例恢复 | [rerun-task-instance](./references/ops/rerun-task-instance/SKILL.md) |
 | 实例状态 / 查看日志 / 任务监控 / 实例监控 / WAIT_SCHEDULE / FAILED / taskrun | [monitor-task-instance](./references/ops/monitor-task-instance/SKILL.md) |
@@ -394,10 +408,12 @@ echo "Session ID: $SESSION_ID"
 | 管理主题域 / 主题域生命周期 / 新建 / 修改 / 删除主题域 / 主题域列表 / 数据仓库分层 / 数据板块下建主题域 | [manage-topic-domain](./references/assets/manage-topic-domain/SKILL.md) |
 | 管理业务实体 / 业务对象 / 业务活动 / 业务实体生命周期 / 新建 / 修改 / 上线 / 下线 / 删除业务实体 / 维度建模 / 事实建模 | [manage-biz-entity](./references/assets/manage-biz-entity/SKILL.md) |
 | 管理业务指标 / 业务口径 / 指标定义 / 新建 / 修改 / 查询 / 删除业务指标 / GMV / DAU / 转化率 / 指标关系图 | [manage-biz-metric](./references/assets/manage-biz-metric/SKILL.md) |
+| 开发指标 / 创建技术指标 / 自定义指标 / 从表开发指标 / 指标计算任务 / 登记自定义指标 / develop metric | [develop-metric](./references/assets/develop-metric/SKILL.md) |
 | 码表 / 标准代码 / 码值 / 代码值 / lookup table / 创建码表 / 维护码值 / create-standard-lookup-table | [manage-lookup-table](./references/assets/manage-lookup-table/SKILL.md) |
 | 落标 / 标准映射 / 映射关系 / 字段关联标准 / 有效映射 / 无效映射 / 解除映射 / create-standard-mapping | [manage-standard-mapping](./references/assets/manage-standard-mapping/SKILL.md) |
 | 资产属性 / 自定义属性 / 属性回写 / 批量更新属性 / 资产打标 / update-asset-attributes / AssetAttribute | [manage-asset-attributes](./references/assets/manage-asset-attributes/SKILL.md) |
-| 资产画像 / 资产属性查询 / 资产详情 / 目录层级 / 资产挂载目录 / 专题 / DirectoryChain / get-asset-attributes | [query-asset-details](./references/assets/query-asset-details/SKILL.md) |
+| 资产 GUID / guid 怎么拼 / 拼 GUID / 界面查不到 GUID / TableGuid / AssetGuid / dp_table / dp_ds_table / odps. / dp_index / cust_index / biz_index / dp_api / qbi_page / 资产唯一标识 | [resolve-asset-guid](./references/assets/resolve-asset-guid/SKILL.md) |
+| 资产详情 / 资产画像 / 资产属性查询 / 字段列表 / 使用说明 / 数据预览 / 前50条 / 血缘 / 上下游 / 字段血缘 / 质量概况 / 质量分 / 目录层级 / 资产挂载目录 / 专题 / DirectoryChain | [query-asset-details](./references/assets/query-asset-details/SKILL.md) |
 | 租户成员 / 添加租户成员 / 移除租户成员 / 更新全局角色 / 租户成员管理 / tenant member | [manage-tenant-member](./references/manage/manage-tenant-member/SKILL.md) |
 | 行级权限 / 行权限 / row permission / row-level permission / 按行过滤 / 管控规则 / 授权账号 / 受影响账号 | [manage-row-level-permission](./references/manage/manage-row-level-permission/SKILL.md) |
 | 列级权限 / 字段权限 / 字段级权限 / column permission / field permission / 敏感字段可见性 / PHYSICAL_FIELD | [manage-column-permission](./references/manage/manage-column-permission/SKILL.md) |
@@ -418,8 +434,21 @@ echo "Session ID: $SESSION_ID"
 | 创建数据集 / 新建数据集 / 数据集管理 / 元数据表 / 表结构设计 / 向量表 / Milvus / create-dataset / list-datasets / Dataset | [create-dataset](./references/unstructured-data/create-dataset/SKILL.md) |
 | 更新数据集表结构 / 数据集加列 / 修改元数据表 / 重新加载表结构 / ALTER TABLE 数据集 / update-dataset-schema | [update-dataset-schema](./references/unstructured-data/update-dataset-schema/SKILL.md) |
 
-4. **加载子 SKILL.md**：委托执行，传递 session-id
+4. **加载子 SKILL.md**：委托执行，传递 session-id、SKILL_VERSION、UA 和 SUITE_ROOT
 5. **汇报结果**：子 Skill 完成后返回执行摘要
+
+### Step 0–5 输入 / 输出示例与边界情况
+
+以下为虚构的文档走查示例，不是实际执行结果，也不作为用户参数的默认值；环境判定与会话标识属于内部上下文，回复用户时仍遵守 §4.1 的中性表述规则。
+
+| 步骤 | 示例输入 | 预期输出 | 边界情况与处理 |
+|------|----------|----------|----------------|
+| Step 0：前置检查与环境锁定 | CLI 版本为 `3.4.8`，存在有效 profile `dataphin-standalone`，已取得服务端版本 `6.3` | 版本闸门输出 `PASS: aliyun CLI 3.4.8 (>= 3.4.8)`；回显“本次使用已有 profile `dataphin-standalone`”；内部锁定环境并按 `6.3` 裁剪接口集 | 闸门未 PASS 则停止；无有效 profile 时按 §4.1 分步完成配置；版本获取失败时询问版本，不猜测、不切换环境 |
+| Step 1：识别场景 | 用户说“帮我创建一个数据集” | 内部提取关键词“创建数据集” | 仅说“帮我处理数据”时，中性询问具体操作，不自行选择业务场景 |
+| Step 2：接口版本门控 | 已锁定版本 `6.3`，目标 `CreateDataset` 最低版本为 `6.2` | 目标接口在有效集内，允许继续路由 | 若版本为 `6.0`，回复“当前版本 6.0 不支持创建数据集，需 6.2 及以上”，停止收参和执行 |
+| Step 3：匹配路由 | 关键词“创建数据集”，版本门控已通过 | 唯一目标为 `references/unstructured-data/create-dataset/SKILL.md` | 命中多个场景时先确认意图；没有匹配项时说明未找到对应指导，不编造路径 |
+| Step 4：加载与透传 | 目标文档可读；父层已初始化 session-id `0123456789abcdef0123456789abcdef`，并保存 `SKILL_VERSION`、`UA`、`SUITE_ROOT` | 加载目标子 Skill；继承同一 session-id、版本、UA 和套件路径，进入子 Skill 的参数确认流程 | 文档缺失或不可读则停止；未初始化时先完成 §7；跨 Shell 重注入已保存值，不重新生成 session-id |
+| Step 5：汇报结果 | 子 Skill 返回“已创建数据集 demo_orders，回读验证通过” | 回复“已创建数据集 demo_orders，回读验证通过。” | 仅完成文档分析时回复“已定位指导文件，尚未执行创建”；执行失败或未验证时如实说明，不宣称成功 |
 
 ## 9. Success Verification
 
@@ -441,6 +470,8 @@ echo "Session ID: $SESSION_ID"
 
 - 大整数 ID（19 位 snowflake）必须用字符串传参，示例中用引号包住
 - 写操作（create/update/delete/grant/publish）执行前必须 HITL 确认
+- **不要同时传 `--mode AK` 和业务参数 `--mode`**（[实测确认]）：部分命令（如 `list-projects`）的业务参数 `--mode`（项目模式 `BASIC`/`DEV_PROD`）与全局鉴权参数 `--mode`（`AK`/`StsToken`）**同名冲突**，同时出现直接报 `ERROR: parse failed --mode duplicated`。需要指定业务 `--mode` 时，凭证改用环境变量 `ALIBABA_CLOUD_ACCESS_KEY_ID` / `ALIBABA_CLOUD_ACCESS_KEY_SECRET` 注入，不要在命令行上写 `--mode AK --access-key-id ...`
+- **`list-projects` 的 `--mode` 实际必填**（[实测确认，`--help` 标为可选]）：不传时服务端报 `DPN.Project.EnumNotFound：枚举ModeEnum不存在`。且 `BASIC` 与 `DEV_PROD` 是两个不交集的结果集，要枚举全部项目必须两种模式各查一次
 - 独立部署环境 Endpoint 默认规则：
   - 管理面 OpenAPI：`dataphin-openapi.<env>.aliyun.com`
   - 数据服务网关：`dataphin-os-gateway.<env>.aliyun.com`

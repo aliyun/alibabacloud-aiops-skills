@@ -21,4 +21,4 @@
 - [ ] 向量列 Dimension 与下游 Embedding 算子 vectorDimension 一致；URL 语义列带 `Url:true`
 - [ ] `delete-dataset` 前已自查下游引用且逐次人工确认
 - [ ] 大整数 ID 以字符串呈现
-- [ ] 每个 `aliyun` API 命令带 `--user-agent AlibabaCloud-Agent-Skills/create-dataset/{session-id}`（session-id 继承父层）
+- [ ] 每个 `aliyun` API 命令带 `--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"`（session-id 继承父层）

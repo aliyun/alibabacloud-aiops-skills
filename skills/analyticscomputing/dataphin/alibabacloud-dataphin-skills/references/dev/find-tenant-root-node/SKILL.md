@@ -5,6 +5,8 @@ description: |-
 ---
 # 查找租户根节点 skill
 
+调用 CLI / SDK 前，继承[父技能 §7](../../../SKILL.md#7-observability) 初始化的 session-id 与套件 `references/manifest.json` 中的 `version`；直接加载时先完成父层初始化。API 命令统一附带 `--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"`，使用父技能名称与同一会话、版本。
+
 ## 背景知识（必读）
 
 Dataphin 的"项目根节点"是**每个项目自动生成的虚拟节点**，用于承接未声明上游的任务。其 Name / OutputName 形如：

@@ -99,13 +99,15 @@ aliyun plugin install --names aliyun-cli-dataphin-public
 
 ## 7. Observability (MUST follow for every aliyun command)
 
+版本 `{version}`（Shell 变量 `SKILL_VERSION`）来自套件 `references/manifest.json` 的 `version` 字段，与 session-id 一同继承[父技能 §7](../../../SKILL.md#7-observability)。直接加载本子技能时先完成父层初始化；所有 CLI / SDK 调用使用父技能名称与同一版本，跨 Shell 调用须重新注入这些值。
+
 **session-id 由父 skill `alibabacloud-dataphin-skills` 在套件入口加载时生成（32-char 小写 hex），本子 skill 加载时直接继承同一 session-id，不再重新生成。**
 
 **Rule: Every `aliyun` CLI command that calls a cloud API MUST include the `--user-agent` flag.**
 Local utility commands (e.g. `configure`, `plugin`, `version`) do not support this flag and should be excluded.
 
 ```
---user-agent AlibabaCloud-Agent-Skills/manage-data-masking/{session-id}
+--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"
 ```
 
 Do not skip, alter the format, or omit `--user-agent` on any `aliyun` API command invocation.
@@ -115,7 +117,7 @@ Do not skip, alter the format, or omit `--user-agent` on any `aliyun` API comman
 ```bash
 TENANT_ID="<大整数租户 ID，字符串>"
 SESSION_ID="<inherited from alibabacloud-dataphin-skills>"
-UA="AlibabaCloud-Agent-Skills/manage-data-masking/$SESSION_ID"
+UA="AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/$SESSION_ID skill-version/$SKILL_VERSION"
 
 # 1) 核对版本感知 OpenAPI 索引与本 Skill 使用的公开前置检查命令。
 #    当前索引没有脱敏规则 CRUD；不要拉取裸 dataphin-public --help 全量输出。
@@ -124,12 +126,15 @@ aliyun dataphin-public list-security-identify-records --help
 aliyun dataphin-public get-security-classify --help
 
 # 2) 查询目标字段是否已有分类分级标签。没有标签时，应提示先完成字段分类分级。
+#    识别结果数组在 .PageResult.SecurityIdentifyResultList[]，提取用：
+#    ... --cli-query 'PageResult.SecurityIdentifyResultList[].{Field:FieldName,ClassifyId:ClassifyId,Level:LevelName,Status:Status}'
 aliyun dataphin-public list-security-identify-results --tenant-id "$TENANT_ID" \
   --keyword "<表名或字段名>" \
   --page-no 1 --page-size 10 \
   --user-agent "$UA" --format json
 
 # 3) 对目标字段做精确识别记录回读，确认 table-catalog / table-name / field-name 口径正确。
+#    记录数组在 .PageResult.IdentifyRecordList[]（注意与命令名不对称，不是 SecurityIdentifyRecordList）
 aliyun dataphin-public list-security-identify-records --tenant-id "$TENANT_ID" \
   --table-catalog "<项目英文名或板块英文名或数据源 schema>" \
   --table-name "<表名>" \
@@ -138,6 +143,7 @@ aliyun dataphin-public list-security-identify-records --tenant-id "$TENANT_ID" \
   --user-agent "$UA" --format json
 
 # 4) 回读分类详情，确认分类状态、分级和后续脱敏规则所需 classifyId。
+#    ⚠️ 分类 ID 不存在时不报错：仍返回 Code=OK，但 SecurityClassifyInfo 为 null；判成败必须检查 SecurityClassifyInfo 非空。
 aliyun dataphin-public get-security-classify --tenant-id "$TENANT_ID" \
   --security-classify-id "<分类ID>" \
   --user-agent "$UA" --format json
@@ -210,6 +216,10 @@ aliyun dataphin-public get-security-classify --tenant-id "$TENANT_ID" \
 #### [Agent 自主发现] 白名单会反向绕过脱敏
 - 现象：创建白名单后，指定账号看到明文或低强度脱敏结果。
 - 结论：白名单是高风险例外配置，必须确认账号、场景和有效期。
+
+#### [Agent 自主发现] 响应数组路径不对称且假 ID 不报错
+- 现象：`list-security-identify-results` 的数组在 `.PageResult.SecurityIdentifyResultList[]`，而 `list-security-identify-records` 的数组在 `.PageResult.IdentifyRecordList[]`（前缀不对称）；`get-security-classify` 传入不存在的分类 ID 时仍返回 `Code=OK`，仅 `SecurityClassifyInfo` 为 null。
+- 结论：提取用 `--cli-query` 按上述实测路径取数；判成败以目标数组/对象非空为准，不能只看 `Code=OK`。
 
 ### Reference Links
 

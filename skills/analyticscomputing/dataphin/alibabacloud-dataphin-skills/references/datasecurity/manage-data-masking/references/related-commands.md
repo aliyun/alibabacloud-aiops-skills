@@ -51,7 +51,7 @@
 ```bash
 TENANT_ID="<租户 ID>"
 SESSION_ID="<inherited from alibabacloud-dataphin-skills>"
-UA="AlibabaCloud-Agent-Skills/manage-data-masking/$SESSION_ID"
+UA="AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/$SESSION_ID skill-version/$SKILL_VERSION"
 
 aliyun dataphin-public list-security-identify-results --tenant-id "$TENANT_ID" \
   --keyword "phone" \

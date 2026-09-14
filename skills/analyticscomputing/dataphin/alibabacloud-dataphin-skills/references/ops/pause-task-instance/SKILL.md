@@ -129,12 +129,14 @@ aliyun dataphin-public --help
 
 ## 7. Observability
 
+版本 `{version}`（Shell 变量 `SKILL_VERSION`）来自套件 `references/manifest.json` 的 `version` 字段，与 session-id 一同继承[父技能 §7](../../../SKILL.md#7-observability)。直接加载本子技能时先完成父层初始化；所有 CLI / SDK 调用使用父技能名称与同一版本，跨 Shell 调用须重新注入这些值。
+
 本 Skill 属于 `alibabacloud-dataphin-skills` 套件，**继承父 Skill `alibabacloud-dataphin-skills` 的 session-id**，子 Skill 不再重新生成。
 
 所有调用 Alibaba Cloud API 的 `aliyun` 命令必须携带：
 
 ```
---user-agent AlibabaCloud-Agent-Skills/pause-task-instance/{session-id}
+--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"
 ```
 
 其中 `{session-id}` 替换为父 Skill 生成的 32 位小写十六进制字符串。
@@ -173,7 +175,7 @@ aliyun dataphin-public list-instances \
   --max-biz-date "$BIZDATE" \
   --page 1 --page-size 50 \
   --format json \
-  --user-agent AlibabaCloud-Agent-Skills/pause-task-instance/{session-id} \
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}" \
   | jq -r '.PageResult.Data[]? | "\(.Id)\t\(.NodeInfo.Name)\t\(.DueTime)\t\(.StatusList|join(","))"'
 ```
 
@@ -193,7 +195,7 @@ aliyun dataphin-public list-instances \
   --max-biz-date "$BIZDATE" \
   --page 1 --page-size 50 \
   --format json \
-  --user-agent AlibabaCloud-Agent-Skills/pause-task-instance/{session-id} \
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}" \
   | jq -r '.PageResult.Data[]? | "\(.Id)\t\(.DueTime)"' \
   | while IFS=$'\t' read -r ID DUE; do
       HM=$(date -r $((DUE/1000)) "+%H:%M")
@@ -212,7 +214,7 @@ PROJECTS=$(aliyun dataphin-public list-projects \
   --env "$ENV" \
   --page-no 1 --page-size 100 \
   --format json \
-  --user-agent AlibabaCloud-Agent-Skills/pause-task-instance/{session-id} \
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}" \
   | jq -r '.PageResult.ProjectList[] | "\(.Id) \(.Name)"')
 
 while read -r PID PNAME; do
@@ -225,7 +227,7 @@ while read -r PID PNAME; do
     --max-biz-date "$BIZDATE" \
     --page 1 --page-size 50 \
     --format json \
-    --user-agent AlibabaCloud-Agent-Skills/pause-task-instance/{session-id} \
+    --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}" \
     | jq -r --arg pid "$PID" --arg pname "$PNAME" \
         '.PageResult.Data[]? | "\(.Id)\t\(.NodeInfo.Name)\t\(.DueTime)\t\($pid)\t\($pname)\t\(.StatusList|join(","))"'
 done <<< "$PROJECTS"
@@ -262,7 +264,7 @@ aliyun dataphin-public operate-instance \
   --operation "$OPERATION" \
   --instance-id-list "{\"Id\":\"$INSTANCE_ID\"}" \
   --format json \
-  --user-agent AlibabaCloud-Agent-Skills/pause-task-instance/{session-id}
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"
 ```
 
 返回 `Success=true` 且 `InstanceStatusList[].Status == "SUCCESS"` 仅表示运维指令已下发，必须继续验证。
@@ -279,7 +281,7 @@ aliyun dataphin-public get-physical-instance \
   --project-id "$PROJECT_ID" \
   --instance-id "$INSTANCE_ID" \
   --format json \
-  --user-agent AlibabaCloud-Agent-Skills/pause-task-instance/{session-id} \
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}" \
   | jq '.Instance | {Id, StatusList, SchedulePaused:.NodeInfo.SchedulePaused, DueTime, BizDate}'
 ```
 

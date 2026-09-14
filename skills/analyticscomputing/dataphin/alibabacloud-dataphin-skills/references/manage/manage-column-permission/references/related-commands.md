@@ -40,6 +40,7 @@ aliyun dataphin-public get-table-columns --tenant-id "$TENANT_ID" \
 ### 查询授权记录
 
 ```bash
+# 授权记录在响应的 PageResult.Data[]，提取用 jq '.PageResult.Data[]'
 aliyun dataphin-public list-resource-permissions --tenant-id "$TENANT_ID" \
   --tab-type TABLE --search-text "<表名或字段名>" \
   --page 1 --page-size 10 \

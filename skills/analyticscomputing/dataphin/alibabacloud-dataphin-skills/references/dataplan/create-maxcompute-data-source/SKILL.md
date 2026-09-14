@@ -99,20 +99,22 @@ aliyun plugin install --names aliyun-cli-dataphin-public
 
 ## 7. Observability (MUST follow for every aliyun command)
 
+版本 `{version}`（Shell 变量 `SKILL_VERSION`）来自套件 `references/manifest.json` 的 `version` 字段，与 session-id 一同继承[父技能 §7](../../../SKILL.md#7-observability)。直接加载本子技能时先完成父层初始化；所有 CLI / SDK 调用使用父技能名称与同一版本，跨 Shell 调用须重新注入这些值。
+
 **session-id 由父 skill `alibabacloud-dataphin-skills` 在套件入口加载时生成（32-char 小写 hex），本子 skill 加载时直接继承同一 session-id，不再重新生成。**
 
 **Rule: Every `aliyun` CLI command that calls a cloud API MUST include the `--user-agent` flag.**
 Local utility commands (e.g. `configure`, `plugin`, `version`) do not support this flag and should be excluded.
 
 ```
---user-agent AlibabaCloud-Agent-Skills/create-maxcompute-data-source/{session-id}
+--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"
 ```
 
 Example (assuming session-id is `a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6`):
 ```bash
 aliyun dataphin-public list-data-source-with-config --op-tenant-id "1234567890123456789" \
   --list-query '{"TypeList":["MAX_COMPUTE"],"Page":1,"PageSize":20}' \
-  --user-agent AlibabaCloud-Agent-Skills/create-maxcompute-data-source/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6 skill-version/{version}"
 ```
 
 Do not skip, alter the format, or omit `--user-agent` on any `aliyun` API command invocation.
@@ -122,7 +124,7 @@ Do not skip, alter the format, or omit `--user-agent` on any `aliyun` API comman
 ```bash
 TENANT_ID="<19位租户ID>"
 SESSION_ID="<inherited from alibabacloud-dataphin-skills>"
-UA="--user-agent AlibabaCloud-Agent-Skills/create-maxcompute-data-source/$SESSION_ID"
+UA="AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/$SESSION_ID skill-version/$SKILL_VERSION"
 ```
 
 ### Step 1：连通性预检（可选但推荐）
@@ -140,7 +142,7 @@ aliyun dataphin-public check-data-source-connectivity \
       {"Key": "maxcompute.access.id", "Value": "<MC_ACCESS_ID>"},
       {"Key": "maxcompute.access.key", "Value": "<MC_ACCESS_KEY>"}
     ]
-  }' $UA
+  }' --user-agent "$UA"
 ```
 
 期望返回 `"ConnectStatus": true`。若为 `false`，请检查 endpoint / project / AK 是否正确后重试。
@@ -165,7 +167,7 @@ aliyun dataphin-public create-data-source \
         {"Key": "maxcompute.access.key", "Value": "<MC_ACCESS_KEY>"}
       ]
     }
-  }' $UA
+  }' --user-agent "$UA"
 ```
 
 响应：
@@ -205,7 +207,7 @@ aliyun dataphin-public create-data-source \
         ]
       }
     }
-  }' $UA
+  }' --user-agent "$UA"
 ```
 
 > **提示**：开发环境的 `maxcompute.project` 推荐与生产环境使用不同的 MaxCompute 项目以实现数据隔离。
@@ -236,7 +238,7 @@ aliyun dataphin-public create-data-source \
 ```bash
 aliyun dataphin-public list-data-source-with-config \
   --op-tenant-id "$TENANT_ID" \
-  --list-query '{"TypeList":["MAX_COMPUTE"],"Name":"<DS_NAME>","Page":1,"PageSize":20}' $UA
+  --list-query '{"TypeList":["MAX_COMPUTE"],"Name":"<DS_NAME>","Page":1,"PageSize":20}' --user-agent "$UA"
 ```
 
 确认返回列表中包含刚创建的数据源（按 Name 匹配）。
@@ -246,7 +248,7 @@ aliyun dataphin-public list-data-source-with-config \
 ```bash
 aliyun dataphin-public check-data-source-connectivity-by-id \
   --op-tenant-id "$TENANT_ID" \
-  --id "$PROD_DS_ID" $UA
+  --id "$PROD_DS_ID" --user-agent "$UA"
 ```
 
 期望返回 `"ConnectStatus": true`。
@@ -256,7 +258,7 @@ aliyun dataphin-public check-data-source-connectivity-by-id \
 ```bash
 aliyun dataphin-public delete-data-source \
   --op-tenant-id "$TENANT_ID" \
-  --delete-command '{"Mode":"DEV_PROD","ProdDataSourceId":"'"$PROD_DS_ID"'"}' $UA
+  --delete-command '{"Mode":"DEV_PROD","ProdDataSourceId":"'"$PROD_DS_ID"'"}' --user-agent "$UA"
 ```
 
 > `Mode` 枚举值：

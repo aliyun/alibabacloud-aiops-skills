@@ -118,7 +118,7 @@ aliyun dataphin-public --help
 aliyun dataphin-public get-standard-template --tenant-id <tenant-id> \
   --standard-template-id <模板 Id> --nullable false \
   --cli-query 'TemplateInfo.AttributesConfig.AttributeList[].{Id:Id,Code:Code,Name:Name,Required:Required}' \
-  --user-agent AlibabaCloud-Agent-Skills/create-standard/{session-id} --format json
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}" --format json
 ```
 
 返回形如（Id 为 19 位以内大整数，JSON 里按数值传，展示时按字符串保留精度）：
@@ -229,7 +229,7 @@ aliyun dataphin-public create-standard \
       }
     ]
   }' \
-  --user-agent AlibabaCloud-Agent-Skills/create-standard/{session-id}
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"
 ```
 
 ### 分支 2 · Type = QUALITY（数据质量监控）
@@ -265,7 +265,7 @@ aliyun dataphin-public create-standard \
       }
     ]
   }' \
-  --user-agent AlibabaCloud-Agent-Skills/create-standard/{session-id}
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"
 ```
 
 > RuleValidateConfigList 是一棵「父 RELATION + 子 EXPRESSION」的树：
@@ -282,12 +282,14 @@ aliyun dataphin-public create-standard \
 
 ## 8. Observability
 
+版本 `{version}`（Shell 变量 `SKILL_VERSION`）来自套件 `references/manifest.json` 的 `version` 字段，与 session-id 一同继承[父技能 §7](../../../SKILL.md#7-observability)。直接加载本子技能时先完成父层初始化；所有 CLI / SDK 调用使用父技能名称与同一版本，跨 Shell 调用须重新注入这些值。
+
 本 Skill 属于 `alibabacloud-dataphin-skills` 套件，**继承父 Skill `alibabacloud-dataphin-skills` 的 session-id**，子 Skill 不再重新生成。
 
 所有调用 Alibaba Cloud API 的 `aliyun` 命令必须携带：
 
 ```
---user-agent AlibabaCloud-Agent-Skills/create-standard/{session-id}
+--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"
 ```
 
 其中 `{session-id}` 替换为父 Skill 生成的 32 位小写十六进制字符串。
@@ -313,12 +315,12 @@ aliyun dataphin-public create-standard \
 # 查出标准 Id（需指定阶段 DEV/PROD）
 aliyun dataphin-public list-standards --tenant-id <tenant-id> \
   --standard-stage DEV \
-  --user-agent AlibabaCloud-Agent-Skills/create-standard/{session-id} --format json
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}" --format json
 
 # 删除标准（create-standard 的反向操作）
 aliyun dataphin-public delete-standard --tenant-id <tenant-id> \
   --standard-id <standard-id> \
-  --user-agent AlibabaCloud-Agent-Skills/create-standard/{session-id} --format json
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}" --format json
 ```
 
 > `delete-standard` 为直接删除；若只需状态下线而保留标准，用 `offline-standard`（额外必填 `--comment`）。

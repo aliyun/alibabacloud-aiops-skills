@@ -25,7 +25,7 @@
 - 发布后 PROD 阶段状态为 `ACTIVE` 表示生效
 
 ### 5. Observability
-- 所有调用 API 的 `aliyun` 命令携带 `--user-agent AlibabaCloud-Agent-Skills/manage-data-standard/{session-id}`
+- 所有调用 API 的 `aliyun` 命令携带 `--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"`
 - session-id 继承父 skill，不重新生成
 
 ## 错误模式

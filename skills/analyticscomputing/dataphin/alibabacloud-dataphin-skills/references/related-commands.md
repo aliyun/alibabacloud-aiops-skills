@@ -39,12 +39,13 @@
 
 ## call-data-service-api
 
-> 本 Skill 不使用 `aliyun` CLI，通过 Python SDK 调用数据服务网关。
+调用面使用附带的零依赖 Python 脚本；管理面元信息查询仍用 `aliyun` CLI。
 
-| 方法 | 用途 | 模式 |
+| 入口 | 用途 | 模式 |
 |------|------|------|
-| `DataphinApiClient.call_api()` | 同步调用 API | 同步 |
-| `async_call_api()` | 异步调用并轮询 | 异步 |
+| `scripts/call-data-service-api.py call` | 查询或 DML | 同步 |
+| `scripts/call-data-service-api.py async-call` | 轮询、分页合并及关闭任务 | 异步 |
+| `scripts/call-data-service-api.py sse` | 逐帧输出 | SSE |
 
 ## monitor-api-operations
 
@@ -233,6 +234,17 @@
 | `get-ad-hoc-task-result` | 查询即席任务结果 | 读 |
 | `list-data-source-with-config` | 查询数据源 | 读 |
 
+## manage-resource-file
+
+| 命令 | 用途 | 类型 |
+|------|------|------|
+| `get-file-storage-credential` | 获取对象存储上传凭证（oss/ceph） | 读 |
+| `create-resource` | 创建 Dataphin 资源 | 写 |
+| `get-resource` | 获取资源最新版本 | 读 |
+| `get-resource-by-version` | 获取资源指定版本 | 读 |
+| `update-resource` | 更新资源 | 写 |
+| `delete-resource` | 删除资源 | 写（高危） |
+
 ## find-tenant-root-node
 
 | 命令 | 用途 | 类型 |
@@ -308,6 +320,18 @@
 | `get-biz-metric-by-name` | 按名称查询草稿态或已发布业务指标详情 | 读 |
 | `delete-biz-metric` | 删除业务指标定义 | 写 |
 
+## develop-metric
+
+| 命令 | 用途 | 类型 |
+|------|------|------|
+| `list-catalog-assets` | `--asset-type TABLE` 找现成结果表 / `INDEX` 核验指标注册 | 读 |
+| `list-tables` | 找来源表；扁平参数无 `--list-query`，**必带 `--cli-query`** | 读 |
+| `get-table-columns` | 校验字段；走 catalog 维度 `--catalog <项目英文名>` + `--table-name` | 读 |
+| `get-catalog-asset-details` | 按 `--guid` 查资产详情 | 读 |
+
+> 写操作全部委托：任务建改 → `update-batch-task`；提交发布 → `submit-batch-task`；口径试算 → `execute-ad-hoc-task`；关联指标 → `manage-biz-metric`。
+> **创建自定义指标（`CUSTOM_INDEX`）、创建派生指标、资产上架均无 OpenAPI 命令** （实测插件 0.7.1），必须人工在控制台完成。
+
 ## manage-data-classification
 
 | 命令 | 用途 | 类型 |
@@ -357,6 +381,19 @@
 | `update-batch-task` | 更新批任务 | 写 |
 | `get-batch-task-info` | 查询批任务详情 | 读 |
 | `list-files` | 按名称搜索任务文件 | 读 |
+
+## resolve-asset-guid
+
+| 命令 | 用途 | 类型 |
+|------|------|------|
+| `list-biz-units` | 取数据板块名（`dp_table.` 第三段，拼前转小写） | 读 |
+| `list-projects` | 取项目名（`odps.` 第三段；`--mode` 事实必填） | 读 |
+| `list-data-source-with-config` | 取 `DataSourceId`（`dp_ds_table.` 第三段） | 读 |
+| `list-tables` | 资产清单反查真实 GUID（含未上架表；`--catalog` 必填） | 读 |
+| `get-table-columns` | 校对字段名与大小写（字段 GUID 末段） | 读 |
+| `list-catalog-assets` | 已上架资产反查（TABLE/INDEX/BIZ_INDEX/API/PAGE） | 读 |
+| `get-biz-metric-by-name` | 业务指标 GUID 直取（`draft` 必填） | 读 |
+| `get-catalog-asset-details` | 回读校验 GUID（唯一放行判据，6.1+） | 读 |
 
 ## manage-row-level-permission
 

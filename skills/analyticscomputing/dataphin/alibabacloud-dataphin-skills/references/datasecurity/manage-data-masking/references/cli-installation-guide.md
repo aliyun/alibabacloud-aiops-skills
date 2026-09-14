@@ -116,7 +116,7 @@ aliyun configure list
 所有调用云 API 的命令必须携带：
 
 ```bash
---user-agent AlibabaCloud-Agent-Skills/manage-data-masking/{session-id}
+--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"
 ```
 
 本地工具命令如 `aliyun version`、`aliyun configure list`、`aliyun plugin update` 不追加该参数。

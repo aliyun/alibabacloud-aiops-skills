@@ -99,20 +99,22 @@ aliyun plugin install --names aliyun-cli-dataphin-public
 
 ## 7. Observability (MUST follow for every aliyun command)
 
+版本 `{version}`（Shell 变量 `SKILL_VERSION`）来自套件 `references/manifest.json` 的 `version` 字段，与 session-id 一同继承[父技能 §7](../../../SKILL.md#7-observability)。直接加载本子技能时先完成父层初始化；所有 CLI / SDK 调用使用父技能名称与同一版本，跨 Shell 调用须重新注入这些值。
+
 **session-id 由父 skill `alibabacloud-dataphin-skills` 在套件入口加载时生成（32-char 小写 hex），本子 skill 加载时直接继承同一 session-id，不再重新生成。**
 
 **Rule: Every `aliyun` CLI command that calls a cloud API MUST include the `--user-agent` flag.**
 Local utility commands (e.g. `configure`, `plugin`, `version`) do not support this flag and should be excluded.
 
 ```
---user-agent AlibabaCloud-Agent-Skills/create-unstructured-workflow/{session-id}
+--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"
 ```
 
 Example (assuming session-id is `a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6`):
 ```bash
 aliyun dataphin-public list-datasets --op-tenant-id "$TENANT_ID" \
   --dataset-query '{"ProjectId": 123, "Keyword": "知识库", "IncludeVersionList": true, "Page": 1, "PageSize": 10}' \
-  --user-agent AlibabaCloud-Agent-Skills/create-unstructured-workflow/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6 skill-version/{version}"
 ```
 
 Do not skip, alter the format, or omit `--user-agent` on any `aliyun` API command invocation.
@@ -124,7 +126,7 @@ TENANT_ID="30001011"        # 租户 ID
 PROJECT_ID="789"            # BASIC 模式项目 ID
 PROFILE="<aliyun configure list 中的有效 profile 名>"
 SESSION_ID="<inherited from alibabacloud-dataphin-skills>"
-UA="AlibabaCloud-Agent-Skills/create-unstructured-workflow/$SESSION_ID"
+UA="AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/$SESSION_ID skill-version/$SKILL_VERSION"
 ```
 
 **本 skill 所有 `aliyun` API 命令统一携带 `--profile "$PROFILE"`（认证信息只来自 CLI 配置）；独立部署模式下按父 skill Step 0 约定另追加 `--skip-secure-verify`。**
@@ -150,7 +152,8 @@ UA="AlibabaCloud-Agent-Skills/create-unstructured-workflow/$SESSION_ID"
 2. 连接判定 = **输出字段 ⊇ 下游输入字段** 且 **内容类型兼容**：LLM 推理/文本质量分/去重类算子**仅读 PG 表文本字段值，不支持 URL 输入**；上游产出 `xxx_url` 时必须桥接（`text_chunking` 调大 chunkSize 优先，`python_executor` 兜底）。
 3. **多分支抽取链路提示 filters 分流 [人工注入]**：分类节点（如打标输出 doc_type）后接 N 个按类抽取节点时，若抽取节点不加 `filters` 分流，每条数据会被 N 个节点全量跑一遍（模型调用费 ×N，实测外部案例 6 分支全量跑）——设计时应提示用户按分类列加 filters；⚠️ filters 结构尚无实测验证过的骨架，优先引导界面配置或回读已有带 filters 的工作流作基线。
 4. 模型按 operator-reference §推荐模型选型；`modelId` 留待 Step 4 从实际环境取。
-5. 输出设计稿（需求理解 / 算子链 + 每条连线的字段契约 / 数据集五不可变字段 + 表 schema / 模型与提示词全文 / 资源清单与风险），⏸ **等用户书面确认后才进 Step 3**——数据集 5 个字段创建后不可变，一次定型；元数据表与工作流配置均以此设计稿为准。
+5. **跨数据集落表的表结构必须预留上游主键列 [人工注入]**：链路中出现“算子输出到非来源数据集”时，若上游（来源）表有主键，目标表 schema **必须包含该主键列**（用于回溯源记录）；同时在设计稿里定死目标表主键选型——有主键走 `UPSERT`（一对多拆行时用派生唯一键如 `chunk_id`）、**确定不设主键则写明 `APPEND`**。这两件事必须在 Step 3 建表**之前**定下（建后改列要走 `update-dataset-schema`，成本高）。
+6. 输出设计稿（需求理解 / 算子链 + 每条连线的字段契约 / 数据集五不可变字段 + 表 schema（含主键列与落表策略）/ 模型与提示词全文 / 资源清单与风险），⏸ **等用户书面确认后才进 Step 3**——数据集 5 个字段创建后不可变，一次定型；元数据表与工作流配置均以此设计稿为准。
 
 ### Step 3 数据集准备（参数映射 → 搜索复用 → 创建 → 回读）
 
@@ -190,9 +193,10 @@ aliyun dataphin-public get-dataset --op-tenant-id "$TENANT_ID" \
 1. 顶层 `{"pipelineDTO": {"steps": [...], "hops": [...]}}`；每个 step 新生成 UUID v4 且 `step.id === pluginConfig.stepId`、`pluginConfig.webPluginKey === step.key`；**所有 step（含首节点）带 `"distribute": true`**；画布坐标按纵向布局生成（主干 `x` 固定、`y` 步进 140），但注意首次界面打开会被前端自动横排覆盖，需界面整理保存一次固化。
 2. **环境值**（datasetId/versionId/storageDsId/metadataDsId/datasetTable/mountPath 等）只能按 §环境值映射表从 Step 3 `get-dataset` 回读结果填充，**禁止编造**；`modelId` 从实际环境模型实例取（取不到时向用户索要）。
 3. **outputSelf 规则**：算子的 `neuronInput` 与 `neuronOutput` 指向**同一数据集同一版本（回写自己读的那张表）**时，`neuronOutput.outputSelf` 必须为 `true`；跨数据集或跨版本时为 `false`。
-4. **loadStrategy 规则**：输出目标元数据表**有主键 → 默认 `UPSERT`（主键冲突时更新）；无主键 → `APPEND`（追加）**；`OVERWRITE`（覆盖）仅在用户明确需要全量覆盖时显式选用。
-5. 提示词类字段（modelPrompt / LLM prompt）按业务语境**定制生成**，禁止跨场景生搬硬套；要素提取类场景先与用户确认输出模式——单列 JSON，或 **多列输出**（`enableOutputMultiColumn + customOutputColumns`，仅 llm_inference/image_understanding 支持，每要素直接拆列落表，见 spec §多列输出）。
-6. 组装完跑 §结构自检清单（id/hop 引用一致、字段契约、outputSelf/loadStrategy 与表结构一致、无占位串残留），全过才进 Step 5。
+4. **跨数据集落表（`outputSelf: false`）的两条硬约束**：① 上游（来源）表有主键时，下游 `columnMappings` **必须增加一行把该主键列透传**（`sourceColumnType: COLUMN`、`sourceColumn` = 上游主键列名），保证产出可回溯源记录；② 目标表**无主键字段时 `loadStrategy` 必为 `APPEND`**（有主键才用 `UPSERT`）。详见 spec §跨数据集落表时的主键传递规则。
+5. **loadStrategy 规则**：输出目标元数据表**有主键 → 默认 `UPSERT`（主键冲突时更新）；无主键 → `APPEND`（追加）**；`OVERWRITE`（覆盖）仅在用户明确需要全量覆盖时显式选用。
+6. 提示词类字段（modelPrompt / LLM prompt）按业务语境**定制生成**，禁止跨场景生搬硬套；要素提取类场景先与用户确认输出模式——单列 JSON，或 **多列输出**（`enableOutputMultiColumn + customOutputColumns`，仅 llm_inference/image_understanding 支持，每要素直接拆列落表，见 spec §多列输出）。
+7. 组装完跑 §结构自检清单（id/hop 引用一致、字段契约、outputSelf/loadStrategy 与表结构一致、无占位串残留），全过才进 Step 5。
 
 ### Step 5 创建工作流（写操作，执行前 HITL 确认，见下方「执行前确认」）
 

@@ -35,7 +35,7 @@
 - 不硬编码 tenant-id / 模板 Id / 标准集 Id
 
 ### 8. 可观测性
-- 每条 aliyun 命令携带 `--user-agent AlibabaCloud-Agent-Skills/create-standard/{session-id}`
+- 每条 aliyun 命令携带 `--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"`
 - session-id 继承自父套件，不重新生成
 
 ## 错误模式

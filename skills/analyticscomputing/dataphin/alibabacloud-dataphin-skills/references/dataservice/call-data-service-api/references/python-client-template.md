@@ -1,7 +1,6 @@
-# Python 调用模板（零依赖，无需 SDK）
+# Python 调用模板（零依赖）
 
-> 首选：直接用本 Skill 附带脚本 [`scripts/call-data-service-api.py`](../scripts/call-data-service-api.py)，
-> 无需安装任何 SDK / 三方库。本文给出**签名规范**与**最小可用客户端**，供需要嵌入自有工程时照抄。
+调用和签名统一复用附带的 [`call-data-service-api.py`](../scripts/call-data-service-api.py)。无需 SDK、requests 或第三方包。
 
 ## 1. 签名规范（HMAC-SHA256，阿里云 API 网关规范）
 
@@ -39,107 +38,49 @@ POST\n
 > 2. **签名的 path 必须与实际请求行完全一致**：query 直接拼在 path 里，不要用 `requests` 的 `params=`（可能重排/重编码）。
 > 3. **JSON body 不参与签名**，不要给 JSON 请求加 `content-md5`；`content-type` 不要带 `; charset=UTF-8`。
 
-## 2. 最小可用客户端（requests 版，约 60 行）
+## 2. 在工程内复用 Gateway
+
+将附带脚本放到工程的 `scripts/call-data-service-api.py`，以下示例保存为工程根目录的 `invoke_api.py`。凭证在会话外配置；业务变量沿用用户确认的参数。使用 `SKILL_SESSION_ID="$SESSION_ID" python3 invoke_api.py` 继承会话标记。
 
 ```python
-#!/usr/bin/env python3
-"""Dataphin 数据服务 API 调用 — requests 版最小客户端"""
-
-import base64
-import hashlib
-import hmac
+import importlib.util
 import json
 import os
-import time
-import uuid
-from datetime import datetime
+from pathlib import Path
 
-import requests
+script_path = Path(__file__).resolve().parent / "scripts" / "call-data-service-api.py"
+spec = importlib.util.spec_from_file_location("dataphin_gateway", script_path)
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
 
-SUCCESS_CODE = "DPN-OLTP-COMMON-000"
-
-
-class DataphinGateway:
-    def __init__(self, host, app_key, app_secret, stage="RELEASE", env="PROD",
-                 scheme="http", port=80):
-        self.base = f"{scheme}://{host}:{port}"
-        self.app_key, self.app_secret = str(app_key), app_secret
-        self.stage, self.env = stage, env
-
-    def _headers(self, path, accept="application/json"):
-        headers = {
-            "accept": accept,
-            "content-type": "application/json",
-            "date": str(datetime.now()),
-            "x-ca-key": self.app_key,
-            "x-ca-nonce": str(uuid.uuid4()),
-            "x-ca-signature-method": "HmacSHA256",
-            "x-ca-stage": self.stage,
-            "x-ca-timestamp": str(int(time.time() * 1000)),
-        }
-        ca_keys = sorted(k for k in headers if k.startswith("x-ca-"))
-        string_to_sign = (
-            f"POST\n{headers['accept']}\n\n{headers['content-type']}\n{headers['date']}\n"
-            + "".join(f"{k}:{headers[k]}\n" for k in ca_keys)
-            + path
-        )
-        # 顺序关键：先 signature-headers，再 signature
-        headers["x-ca-signature-headers"] = ",".join(ca_keys)
-        headers["x-ca-signature"] = base64.b64encode(hmac.new(
-            self.app_secret.encode(), string_to_sign.encode(), hashlib.sha256
-        ).digest()).decode()
-        return headers
-
-    def post(self, path, params, accept="application/json"):
-        # ⚠️ query 已拼在 path 里，不要再用 params= 传（会与签名串不一致）
-        resp = requests.post(self.base + path, headers=self._headers(path, accept),
-                             data=json.dumps(params), timeout=30, verify=False)
-        resp.raise_for_status()
-        return resp.json()
-
-    def call(self, api_id, method, params):
-        """method: LIST / GET / CREATE / UPDATE / DELETE（决定路径动词）"""
-        path = f"/{method.lower()}/{api_id}?appKey={self.app_key}&env={self.env}"
-        return self.post(path, params)
-
-
-if __name__ == "__main__":
-    gw = DataphinGateway(
-        host=os.environ["DATAPHIN_GATEWAY_HOST"],
-        app_key=os.environ["DATAPHIN_APP_KEY"],
-        app_secret=os.environ["DATAPHIN_APP_SECRET"],
-    )
-    result = gw.call(10083, "LIST", {
-        "conditions": {}, "returnFields": [], "pageStart": 0, "pageSize": 10,
-        "keepColumnCase": True,
-    })
-    if result.get("code") == SUCCESS_CODE:
-        # ⚠️ 结果字段随 methodType 不同：LIST → results（数组）；GET → result（单对象）
-        print(f"调用成功，返回 {len(result.get('results', []))} 条数据")
-    else:
-        print(f"调用失败: code={result.get('code')}, message={result.get('message')}")
+gateway = module.Gateway(
+    host=os.environ["DATAPHIN_GATEWAY_HOST"],
+    app_key=os.environ["DATAPHIN_APP_KEY"],
+    app_secret=os.environ["DATAPHIN_APP_SECRET"],
+    stage=os.environ["STAGE"], env=os.environ["DATA_ENV"],
+    scheme=os.environ["SCHEME"], port=int(os.environ["PORT"]),
+)
+api_id, method = os.environ["API_ID"], os.environ["METHOD"]
+with open("query.json", encoding="utf-8") as stream:
+    params = json.load(stream)
+result = gateway.call(api_id, method, params)
+if result.get("code") != module.SUCCESS_CODE:
+    raise RuntimeError("数据服务返回业务错误，请检查响应 code 和 message")
+# LIST: result["results"]；GET: result["result"]；DML: 按 API 响应定义处理。
 ```
 
-> 环境无 `requests` 时不必安装：脚本 `scripts/call-data-service-api.py` 用 `http.client` 实现，纯标准库。
+异步入口为 `gateway.async_call(api_id, method, params, poll_interval=1.0, timeout=300)`；SSE 入口为 `gateway.sse(api_id, method, params)`，迭代处理返回对象。直接复用脚本，不复制 `_headers` 或另外实现签名。
 
-## 3. DML 与流式调用
+## 3. 调用参数
 
-```python
-# DML：method 换成 CREATE / UPDATE / DELETE，参数结构为 ManipulationParam
-gw.call(10083, "CREATE", {"conditions": {"id": 1, "name": "test"}})
-gw.call(10083, "DELETE", {"batchConditions": [{"id": 1}, {"id": 2}]})  # 批量
-# ⚠️ 单条操作用 conditions，不要塞进 batchConditions
+命令行 `--method` 为大写 LIST/GET/CREATE/UPDATE/DELETE，映射为路径小写动词。环境、协议、端口及退出码见 [命令参考](./related-commands.md)。路径保持 `/{methodType}/{apiId}?appKey={appKey}&env={env}`，methodType 不能仅由 IsPagedQuery 推断。
 
-# 流式（SSE）：accept 改为 text/event-stream，按 \n\n 切帧、取 data: 前缀行
-# 直接用脚本：python3 scripts/call-data-service-api.py sse --api-id 10085 --method GET --params '{}'
-```
-
-## 4. 查询参数（QueryParam）字段说明
+## 查询参数（QueryParam）字段说明
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| `conditions` | dict | 视 API | 查询条件，key=字段名 value=值 |
-| `returnFields` | list | 否 | 返回字段列表，空列表返回所有**已授权**字段 |
+| `conditions` | dict | 视 API | 查询条件，key=字段名 value=值（IN 类型用列表） |
+| `returnFields` | list | 否 | 返回字段列表，空列表返回所有有权限字段 |
 | `orderBys` | list | 否 | 排序字段，如 `[{"field": "id", "order": "ASC"}]` |
 | `pageStart` | int | 否 | 分页起始位置（仅 LIST 类型生效） |
 | `pageSize` | int | 否 | 每页条数（仅 LIST 类型生效） |
@@ -148,17 +89,14 @@ gw.call(10083, "DELETE", {"batchConditions": [{"id": 1}, {"id": 2}]})  # 批量
 | `keepColumnCase` | bool | 否 | 是否保持字段大小写（建议 True） |
 | `returnTotalNum` | bool | 否 | 是否返回总数（有性能损耗） |
 | `apiVersion` | str | 否 | API 版本号（仅开发环境支持） |
-| `accountType` | str | 否 | 代理账号类型（USER_ID/ACCOUNT_NAME/SOURCE_USER_ID） |
-| `delegationUid` | str | 否 | 代理账号 ID（使用代理模式时需配置） |
+| `accountType` | str | 否 | 代理账号类型 |
+| `delegationUid` | str | 否 | 代理账号 ID |
 
-## 5. 使用要点
+## DML 操作参数（ManipulationParam）字段说明
 
-1. **优先用脚本**：`scripts/call-data-service-api.py` 已覆盖同步/异步/SSE，签名与官方 SDK 逐字节一致
-2. **环境变量**：`DATAPHIN_APP_KEY` / `DATAPHIN_APP_SECRET` / `DATAPHIN_GATEWAY_HOST`，不硬编码、不打印
-3. **method 大写**：路径动词由它决定（`LIST`→`/list/{apiId}`），猜错 → `403 ... not bind app`
-4. **scheme 选择**：内置网关仅支持 HTTP；阿里云 API 网关支持 HTTPS（自签证书用 `--ignore-ssl`）
-5. **stage 参数**：`RELEASE` = 生产，`PRE` = 开发；与 API 发布环境不匹配会 403
-6. **Python 版本**：>= 3.9（脚本仅用标准库）
-7. **时间偏差**：客户端与服务端偏差 > 15 分钟 → `TimestampExpired`
-8. **IN 类型参数**：使用列表传值，如 `{"age": [10, 20, 30]}`
-9. **大整数 ID**：19 位 snowflake ID 在 Python 中按字符串处理
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `conditions` | dict | 视 API | 单条操作的条件，key=字段名 value=值 |
+| `batchConditions` | list | 视 API | 批量操作的条件列表，每个元素为 dict |
+
+> **注意**：如果数据量是"单条"，不要将 conditions 放进 batchConditions。

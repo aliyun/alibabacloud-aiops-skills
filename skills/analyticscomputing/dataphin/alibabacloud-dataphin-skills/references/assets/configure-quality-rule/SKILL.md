@@ -60,8 +60,11 @@ aliyun plugin install --names aliyun-cli-dataphin-public
 >     import json, os
 >     client = AcsClient(AK, SK, "cn-shanghai")          # regionId 占位即可
 >     # UA 可观测（Principle 9）：SKILL_SESSION_ID 由 Agent 执行时内联注入（继承自父 skill）
->     _sid = os.environ.get("SKILL_SESSION_ID", "")
->     client.set_user_agent("AlibabaCloud-Agent-Skills/configure-quality-rule" + ("/" + _sid if _sid else ""))
+>     import sys
+>     from pathlib import Path
+>     sys.path.insert(0, str(Path(os.environ["SUITE_ROOT"]) / "references/scripts"))
+>     from skill_user_agent import build_user_agent
+>     client.set_user_agent(build_user_agent())
 >     req = CommonRequest()
 >     req.set_domain(ENDPOINT)             # 如 dataphin-openapi.poc.lydaas.com，不带 https://
 >     req.set_version("2023-06-30")        # 以环境实测为准
@@ -171,27 +174,29 @@ aliyun plugin install --names aliyun-cli-dataphin-public
 
 ## 7. Observability (MUST follow for every aliyun command)
 
+版本 `{version}`（Shell 变量 `SKILL_VERSION`）来自套件 `references/manifest.json` 的 `version` 字段，与 session-id 一同继承[父技能 §7](../../../SKILL.md#7-observability)。直接加载本子技能时先完成父层初始化；所有 CLI / SDK 调用使用父技能名称与同一版本，跨 Shell 调用须重新注入这些值。
+
 **session-id 由父 skill `alibabacloud-dataphin-skills` 在套件入口加载时生成（32-char 小写 hex），本子 skill 加载时直接继承同一 session-id，不再重新生成。**
 
 **Rule: Every `aliyun` CLI command that calls a cloud API MUST include the `--user-agent` flag.**
 Local utility commands (e.g. `configure`, `plugin`, `version`) do not support this flag and should be excluded.
 
 ```
---user-agent AlibabaCloud-Agent-Skills/configure-quality-rule/{session-id}
+--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"
 ```
 
 Example (assuming session-id is `a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6`):
 ```bash
 aliyun dataphin-public get-quality-watch-by-object-id --tenant-id "1234567890123456789" \
   --watch-type "TABLE" --watch-object-id "<表ID>" \
-  --user-agent AlibabaCloud-Agent-Skills/configure-quality-rule/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6 skill-version/{version}"
 ```
 
 Do not skip, alter the format, or omit `--user-agent` on any `aliyun` API command invocation.
 
 ## 8. Core Workflow
 
-> 变量约定：`TENANT_ID`（19 位字符串）、`SESSION_ID`（继承父层）、`UA=AlibabaCloud-Agent-Skills/configure-quality-rule/$SESSION_ID`。
+> 变量约定：`TENANT_ID`（19 位字符串）、`SESSION_ID`（继承父层）、`UA="AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/$SESSION_ID skill-version/$SKILL_VERSION"`。
 > 命令均为插件模式 kebab-case；括号内标注对应 OpenAPI Action 原名，响应字段为 **PascalCase**（`WatchId`/`RuleId`/`ScheduleId`）。
 
 ### Step 1: 解析业务维度

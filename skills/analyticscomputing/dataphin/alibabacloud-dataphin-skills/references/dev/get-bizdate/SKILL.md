@@ -5,6 +5,8 @@ description: |-
 ---
 # 获取当前日期 / 业务日期 skill
 
+调用 CLI / SDK 前，继承[父技能 §7](../../../SKILL.md#7-observability) 初始化的 session-id 与套件 `references/manifest.json` 中的 `version`；直接加载时先完成父层初始化。API 命令统一附带 `--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"`，使用父技能名称与同一会话、版本。
+
 ## 背景知识（必读）
 
 - **会话上下文中的 system time 不可信**：Qoder 等 IDE 在系统提示里给的 "current system time" 是**会话创建时刻**的快照，与"现在"可能差几小时甚至几天，在跨日 / 跨小时取数场景下产生错位。

@@ -1,7 +1,7 @@
 ---
 name: call-data-service-api
 description: |
-  调用 Dataphin 数据服务已发布的 API。使用附带脚本（Python 标准库，零依赖）完成 HMAC-SHA256 签名，无需下载官方 SDK。
+  使用附带的零依赖 Python 脚本调用 Dataphin 已发布的数据服务 API。脚本内置 HMAC-SHA256 签名，仅用标准库，无需安装 SDK。
   触发场景：调用数据服务 API / SDK 调用 / Python 调用 / AppKey 调用 / 异步调用 API。
 ---
 
@@ -9,18 +9,18 @@ description: |
 
 ## 1. Scenario Description
 
-应用开发者调用 Dataphin 数据服务已发布并授权的 API，支持同步、异步和流式（SSE）三种调用模式。调用脚本内置 HMAC-SHA256 签名认证，**不依赖官方 SDK，也不需要任何第三方库**。
+应用开发者使用附带的零依赖 Python 脚本调用已发布并授权的 API，支持同步、异步和流式（SSE）三种调用模式。脚本内置 HMAC-SHA256 签名认证，用户无需手动拼接签名串。
 
 **业务流程：**
 ```
-确认调用信息 → 同步调用 API → （可选）异步调用 → 验证调用成功
+确认调用信息 → 检查脚本 → 同步调用 API → （可选）异步调用 → 验证调用成功
 ```
 
 **资源拓扑：**
 ```
 数据服务网关
 ├── 阿里云 API 网关模式（推荐脚本调用）
-│   ├── HMAC-SHA256 签名（脚本内置）
+│   ├── 脚本内置 HMAC-SHA256 签名
 │   └── AppKey/AppSecret → 脚本自动处理
 ├── 内置网关模式
 │   ├── 参数认证（appkey/appsecret 请求参数）
@@ -39,7 +39,6 @@ description: |
 - 应用已创建并获授权（S2 `manage-app-and-bindauth` 产出）
 - 已获取 AppKey 和 AppSecret
 - 已确认网关地址和 API 调用路径
-- Python >= 3.9（仅需标准库）
 
 **与 S1/S2 的衔接：**
 - S1 产出 `ApiId` + API 路径（通过 `get-data-service-api-document` 查询）
@@ -50,21 +49,19 @@ description: |
 | 维度 | 管理面（S1/S2/S4） | 调用面（本 Skill） |
 |------|-------------------|-------------------|
 | 凭证 | RAM AccessKey/Secret | **App AppKey/AppSecret** |
-| 工具 | `aliyun` CLI | **本 Skill 调用脚本（HTTP + 签名）** |
+| 工具 | `aliyun` CLI | **Python 标准库调用脚本** |
 | 网关 | 阿里云 OpenAPI 网关 | **数据服务网关** |
 | 环境 | 无区分 | **Dev / Prod（stage 参数）** |
 
 ## 2. Installation
 
-**无需安装任何 SDK 或第三方库。**
+**Python ≥ 3.9，仅使用标准库，无需安装 SDK 或第三方包。**
 
-| 用途 | 要求 | 说明 |
-|-----|------|------|
-| **API 调用（本 Skill 核心）** | Python ≥ 3.9 | 直接用 `scripts/call-data-service-api.py`，纯标准库 |
-| 元信息查询（apiId/AppKey 等） | aliyun CLI ≥ 3.4.8 + dataphin 插件 | 见 [CLI 安装指引](./references/cli-installation-guide.md) |
-| 嵌入自有工程（可选） | `requests` 或标准库 | 见 [Python 调用模板](./references/python-client-template.md) |
-
-> 官方 Python/Java SDK 亦可用（控制台「数据服务 → 应用管理 → 调用说明 → SDK 下载」），但**不是本 Skill 的前置条件**；脚本签名逻辑与官方 SDK v5.5.0 逐字节一致。
+| 用途 | 入口 |
+|------|------|
+| 同步、异步和 SSE 调用 | `scripts/call-data-service-api.py` |
+| 嵌入 Python 工程 | [Python 调用模板](./references/python-client-template.md)，复用同一脚本 |
+| 查询应用及 API 元信息 | `aliyun` CLI，见 [CLI 安装指引](./references/cli-installation-guide.md) |
 
 ## 3. Environment Variables
 
@@ -81,7 +78,7 @@ description: |
 ### Pre-check: Credentials Required
 
 ```bash
-# 检查 Python 环境（脚本要求 >= 3.9，无需第三方库）
+# 检查 Python 环境（脚本要求 >= 3.9）
 python3 --version
 
 # 确认应用凭证已获取（来自 S2 manage-app-and-bindauth 产出）
@@ -94,7 +91,7 @@ python3 --version
 
 **认证方式说明：**
 
-本 Skill **不使用 RAM 凭证**，使用数据服务应用凭证（AppKey/AppSecret），签名由调用脚本内置完成。
+本 Skill **不使用 RAM 凭证**，使用数据服务应用凭证（AppKey/AppSecret），脚本内置签名认证。
 
 | 网关类型 | 认证方式 | 脚本支持 | 适用场景 |
 |---------|---------|---------|---------|
@@ -109,7 +106,7 @@ python3 --version
 
 ### 认证方式一：脚本自动签名（阿里云 API 网关）——推荐
 
-`scripts/call-data-service-api.py` 内置 HMAC-SHA256 签名，用户只需提供 AppKey/AppSecret，脚本自动完成全部签名流程（nonce/timestamp 生成、签名串构造、签名计算、Header 设置）。签名串规范见 [Python 调用模板 §1](./references/python-client-template.md)，App 认证说明见 [App 认证参考](../../ram-policies.md)。
+`scripts/call-data-service-api.py` 统一完成 nonce/timestamp、签名串与请求头构造。凭证从环境变量读取；签名规则及工程内复用方式见 [Python 调用模板](./references/python-client-template.md)。App 认证要求见 [App 认证参考](../../ram-policies.md)。
 
 ### 认证方式二：参数认证（内置网关）
 
@@ -142,7 +139,7 @@ aliyun dataphin-public list-data-service-apps \
 | 错误码 | 原因 | 解决方案 |
 |--------|------|---------|
 | `AppKeyNotFound` | AppKey 无效 | 检查 AppKey 是否正确，是否来自 S2 |
-| `SignatureDoesNotMatch` | 签名不匹配（自行实现签名时） | 用附带脚本可避免；自研时对照 [签名规范](./references/python-client-template.md) 检查：`x-ca-signature-headers` 不含 `x-ca-signature` 自身、path 与签名串完全一致、JSON 请求不带 `content-md5` |
+| `SignatureDoesNotMatch` | 签名不匹配（手动签名时） | 使用附带脚本；排查签名头是否包含签名自身、path 是否被改写、JSON 请求是否错误添加 Content-MD5 |
 | `TimestampExpired` | 时间戳偏差过大 | 确保客户端时间与服务器偏差 < 15 分钟 |
 | `The request api path not bind app` | 应用未授权该 API | 回到 S2 完成授权流程 |
 | `InvalidAppKey` | AppKey/AppSecret 参数错误（内置网关） | 检查 appkey/appsecret 参数值 |
@@ -191,33 +188,32 @@ aliyun dataphin-public list-data-service-apps \
 
 ## 7. Observability
 
+版本 `{version}`（Shell 变量 `SKILL_VERSION`）来自套件 `references/manifest.json` 的 `version` 字段，与 session-id 一同继承[父技能 §7](../../../SKILL.md#7-observability)。直接加载本子技能时先完成父层初始化；所有 CLI / SDK 调用使用父技能名称与同一版本，跨 Shell 调用须重新注入这些值。
+
 本子 Skill 的 session-id **继承自父 Skill `alibabacloud-dataphin-skills`**，不重新生成。
 
-调用脚本通过标准 `user-agent` 请求头标记（脚本读取环境变量 `SKILL_SESSION_ID` 自动注入）：
+前置发现所用 CLI API 命令附带 `--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"`。
+
+脚本读取 `SKILL_SESSION_ID`，并由公共 helper 从 manifest 读取版本，通过普通 `user-agent` 请求头标记：
+
 ```
-user-agent: AlibabaCloud-Agent-Skills/call-data-service-api/{SESSION_ID}
+user-agent: AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}
 ```
 
-> **⚠️ 不要用 `X-Ca-User-Agent` 之类的 `x-ca-*` 头承载可观测标记**：`x-ca-*` 前缀会被纳入签名串，多一个头就要同步进 `x-ca-signature-headers`，否则触发 `SignatureDoesNotMatch`。用普通 `user-agent`（不参与签名）最稳妥。
-
-其中 `{SESSION_ID}` 为父 Skill 生成的 32 字符小写十六进制字符串。
+每次执行脚本时用 `SKILL_SESSION_ID="$SESSION_ID" python3 ...` 内联传入父层的 32 字符会话 ID。不要把标记放进 `x-ca-*` 头，避免改变签名头集合。
 
 ## 8. Core Workflow
 
-### 步骤 0：环境前置检查
+### 步骤 0：脚本前置检查
 
-在执行任何调用之前，确认 Python 版本与凭证环境变量就绪。**无需下载或安装 SDK。**
+在本 Skill 目录确认 Python 和附带脚本可用：
 
 ```bash
-# 1. Python >= 3.9（脚本仅用标准库，无需 pip install）
 python3 --version
-
-# 2. 确认脚本存在（相对于本 Skill 目录）
-ls ./scripts/call-data-service-api.py
-
-# 3. 确认凭证环境变量（值不打印）
-: "${DATAPHIN_APP_KEY:?未设置}" "${DATAPHIN_APP_SECRET:?未设置}" "${DATAPHIN_GATEWAY_HOST:?未设置}"
+python3 scripts/call-data-service-api.py --help
 ```
+
+脚本不依赖 SDK、`requests` 或其他第三方包。调用凭证由环境变量传入，值不得打印。
 
 ### 步骤 0.5：零参数发现（仅有「应用名 + API 名」时）
 
@@ -236,16 +232,15 @@ ls ./scripts/call-data-service-api.py
 
 ### 步骤 1：确认调用信息
 
-在发起调用前，确认以下信息已就绪并导出为环境变量（凭证不打印）：
+在发起调用前，按 §6 确认 AppKey/AppSecret、host、apiId、methodType、stage、env、协议和端口。凭证在会话外配置；业务变量沿用用户确认的取值：
 
 ```bash
-export DATAPHIN_APP_KEY=<来自 S2>
-export DATAPHIN_APP_SECRET=<来自 S2>
-export DATAPHIN_GATEWAY_HOST=<控制台「网络配置」获取>
-export SKILL_SESSION_ID=<父 Skill 生成的 session-id>   # 可观测标记，可选
-# 调用时还需：apiId（整数）、method（LIST/GET/CREATE/UPDATE/DELETE）、
-#             stage（RELEASE=生产 / PRE=开发）、env（PROD / PRE）
+: "${DATAPHIN_APP_KEY:?未设置}" "${DATAPHIN_APP_SECRET:?未设置}" "${DATAPHIN_GATEWAY_HOST:?未设置}"
+: "${API_ID:?未确认}" "${METHOD:?未确认}" "${STAGE:?未确认}" "${DATA_ENV:?未确认}"
+: "${SCHEME:?未确认}" "${PORT:?未确认}" "${SESSION_ID:?未继承父层会话 ID}"
 ```
+
+`METHOD` 使用大写 `LIST/GET/CREATE/UPDATE/DELETE`，脚本映射成路径中的小写动词。`STAGE` 为 `RELEASE/PRE`，`DATA_ENV` 为 `PROD/PRE`；协议、端口选项见 [命令参考](./references/related-commands.md)。
 
 ### 步骤 1.5：查询 API 文档（如路径未知）
 
@@ -266,71 +261,58 @@ API 调用 URL 构造规则：`/{methodType}/{apiId}?appKey={appKey}&env={env}`
 
 **methodType 由 API 操作类型决定（5 选 1），按操作语义/命名判断——不要只看 `IsPagedQuery`：**
 
-| API 操作类型 / 命名 | method | 网关路径 |
+| API 操作类型 / 命名 | methodType | 网关路径 |
 |---|---|---|
-| 列表查询（`List*` / `Bulk*` / 分页） | `LIST` | `/list/{apiId}` |
-| 单条查询（`Get*`，按主键精确取一条） | `GET` | `/get/{apiId}` |
-| 新增（`Create*`） | `CREATE` | `/create/{apiId}` |
-| 更新（`Update*`） | `UPDATE` | `/update/{apiId}` |
-| 删除（`Delete*`） | `DELETE` | `/delete/{apiId}` |
+| 列表查询（`List*` / `Bulk*` / 分页） | `list` | `/list/{apiId}` |
+| 单条查询（`Get*`，按主键精确取一条） | `get` | `/get/{apiId}` |
+| 新增（`Create*`） | `create` | `/create/{apiId}` |
+| 更新（`Update*`） | `update` | `/update/{apiId}` |
+| 删除（`Delete*`） | `delete` | `/delete/{apiId}` |
 
 > **⚠️ `IsPagedQuery=true` 不等于 `list`**：`get` 类 API 也可能 `IsPagedQuery=true`（实测 `GetCustomer`）。猜错 methodType → `403 ... not bind app {appKey}`，换正确动词重试。
 
-### 步骤 2：同步调用 API（推荐）
+### 步骤 2：准备业务请求参数
 
-用附带脚本 `scripts/call-data-service-api.py` 调用，脚本内置 HMAC-SHA256 签名，无需 SDK、无需第三方库。完整说明见 [Python 调用模板](./references/python-client-template.md)。
+按 API 文档和授权字段准备 `query.json`：查询使用 QueryParam（`conditions`、`returnFields`、分页等）；DML 使用 ManipulationParam（单条 `conditions` 或批量 `batchConditions`）。完整字段表见 [Python 调用模板](./references/python-client-template.md)。
 
-```bash
-# LIST 同步调用（--method 决定路径动词，须大写）
-python3 scripts/call-data-service-api.py call \
-  --api-id 10083 --method LIST \
-  --params '{"conditions":{},"returnFields":[],"pageStart":0,"pageSize":10,"keepColumnCase":true}' \
-  --stage RELEASE --env PROD
-
-# GET 单条查询（结果在 result 字段，不是 results）
-python3 scripts/call-data-service-api.py call --api-id 10084 --method GET \
-  --params '{"conditions":{"id":1}}'
-
-# 私有化自签 HTTPS：加 --scheme HTTPS --ignore-ssl
-```
-
-成功时脚本输出 `code == "DPN-OLTP-COMMON-000"` 的 JSON 并以退出码 0 结束；业务失败退出码 1，缺少环境变量/参数错误退出码 2。
-
-> **结果字段随 method 不同**：`LIST` → `results`（数组）；`GET` → `result`（单个对象）。
-
-### 步骤 3：异步调用（大数据量）
+### 步骤 3：同步调用
 
 ```bash
-# 自动完成：提交 → 轮询 jobId → 合并分页结果 → closeJob
-python3 scripts/call-data-service-api.py async-call \
-  --api-id 10083 --method LIST --params-file query.json \
-  --poll-interval 1 --timeout 600
+SKILL_SESSION_ID="$SESSION_ID" python3 scripts/call-data-service-api.py call \
+  --api-id "$API_ID" --method "$METHOD" --params-file query.json \
+  --stage "$STAGE" --env "$DATA_ENV" --scheme "$SCHEME" --port "$PORT"
 ```
 
-详见 [异步调用模板](./references/async-call-template.md)。
+脚本输出原始业务 JSON：`LIST` 读取 `results` 数组，`GET` 读取 `result` 对象；DML 按目标 API 的响应定义处理。`--params` 也可传 JSON 字符串，与 `--params-file` 二选一。
 
-### 步骤 4：流式调用（SSE）与 DML
+### 步骤 4：异步调用
 
 ```bash
-# 流式调用：逐帧输出 JSON
-python3 scripts/call-data-service-api.py sse --api-id 10085 --method GET --params '{}'
-
-# DML：--method 换 CREATE/UPDATE/DELETE，参数为 ManipulationParam
-python3 scripts/call-data-service-api.py call --api-id 10083 --method CREATE \
-  --params '{"conditions":{"id":1,"name":"test"}}'
-# 批量操作用 batchConditions，详见 references/python-client-template.md
+SKILL_SESSION_ID="$SESSION_ID" python3 scripts/call-data-service-api.py async-call \
+  --api-id "$API_ID" --method "$METHOD" --params-file query.json \
+  --stage "$STAGE" --env "$DATA_ENV" --scheme "$SCHEME" --port "$PORT"
 ```
 
-### 步骤 5：嵌入自有工程（可选）
+脚本处理提交、jobId 轮询、分页合并和 `closeJob`；无 jobId 时直接返回同步响应。轮询超时与间隔用 `--timeout`、`--poll-interval` 控制，见 [异步调用说明](./references/async-call-template.md)。
 
-如需在已有 Python 工程内调用（而非命令行），可照抄 [Python 调用模板](./references/python-client-template.md) 的 `requests` 版最小客户端（约 60 行）。签名规范见该文档 §1。
+### 步骤 5：SSE 与工程内复用
+
+```bash
+SKILL_SESSION_ID="$SESSION_ID" python3 scripts/call-data-service-api.py sse \
+  --api-id "$API_ID" --method "$METHOD" --params-file query.json \
+  --stage "$STAGE" --env "$DATA_ENV" --scheme "$SCHEME" --port "$PORT"
+```
+
+SSE 逐帧输出 JSON。工程内调用通过标准库加载同一脚本的 `Gateway`，见 [Python 调用模板](./references/python-client-template.md)，不另写签名客户端。
 
 ### 步骤 6：验证调用成功
 
 验证标准：
-- 脚本退出码为 0
+- 响应 HTTP 状态码为 200
 - 响应 `code` 字段为 `"DPN-OLTP-COMMON-000"`（不是 `"0"`）
-- 返回数据含预期业务字段（`LIST` 看 `results`，`GET` 看 `result`）
+- 返回数据含预期业务字段
+
+返回校验按 methodType 区分：`LIST` 检查 `results` 列表中的授权业务字段，`GET` 检查 `result` 对象，DML 检查目标 API 定义的响应字段。脚本同步/异步命令退出码为 0 才表示其检查通过；退出码说明见 [命令参考](./references/related-commands.md)。
 
 ## 9. Success Verification
 
@@ -338,17 +320,17 @@ python3 scripts/call-data-service-api.py call --api-id 10083 --method CREATE \
 
 1. **HTTP 状态检查**：响应状态码为 200
 2. **业务码检查**：`code == "DPN-OLTP-COMMON-000"` 表示业务成功（注意：不是 `"0"`）
-3. **数据完整性**：返回 `results` 列表包含预期业务字段
+3. **数据完整性**：按操作类型检查 `results`（LIST）或 `result`（GET），DML 按 API 文档验证
 
 ## 10. Cleanup
 
 本 Skill 无需清理资源。API 调用不创建持久化资源，无需回滚操作。
 
-> **注意**：`async-call` 在异步任务完成/失败后会自动调用 `closeJob` 关闭任务（放在 `finally` 中），无需手动清理。
+> **注意**：脚本的 `async-call` 在轮询结束、失败或超时后通过 `finally` 尝试调用 `closeJob` 关闭任务，无需手动清理。
 
 ## 11. Command Tables
 
-本 Skill 用附带脚本调用数据服务网关，同时用少量 CLI 命令获取调用所需的元信息。
+本 Skill 使用附带脚本调用数据服务网关，同时使用少量 CLI 命令获取调用所需的元信息。
 
 ### CLI 信息查询命令
 
@@ -361,25 +343,24 @@ python3 scripts/call-data-service-api.py call --api-id 10083 --method CREATE \
 
 ### 调用脚本子命令
 
-| 子命令 | 用途 | 模式 |
-|------|------|------|
-| `call --api-id <id> --method <M> --params '<json>'` | 调用 API | 同步 |
-| `async-call --api-id <id> --method <M> --params-file <f>` | 调用 API（自动轮询、合并分页、关闭任务） | 异步 |
-| `sse --api-id <id> --method <M> --params '<json>'` | 逐帧输出数据 | 流式(SSE) |
+| 子命令 | 用途 |
+|--------|------|
+| `call` | 同步查询或 DML |
+| `async-call` | 异步调用、轮询与分页合并 |
+| `sse` | 流式调用 |
 
-选项与请求参数详见 [API 调用参考](./references/related-commands.md) 及 [Python 调用模板](./references/python-client-template.md)。
+完整参数、退出码和请求字段见 [命令参考](./references/related-commands.md)。
 
 ## 12. Best Practices
 
-- **零依赖调用**：用 `scripts/call-data-service-api.py`（纯标准库），无需安装 SDK 或 `requests`，签名与官方 SDK v5.5.0 逐字节一致
-- **环境变量存储凭证**：不要硬编码 AppKey/AppSecret，使用 `DATAPHIN_APP_KEY` / `DATAPHIN_APP_SECRET` 环境变量，且不打印
+- **统一使用附带脚本**：签名逻辑集中维护，直接调用与工程内复用使用同一实现
+- **环境变量存储凭证**：不要硬编码 AppKey/AppSecret，使用 `DATAPHIN_APP_KEY` / `DATAPHIN_APP_SECRET` 环境变量
 - **API 调用路径**：正确格式为 `/{methodType}/{apiId}?appKey=xxx&env=xxx`，不是 `/api/<GroupId>/<ApiName>`
-- **method 大写**：`--method` 使用大写（`LIST`/`GET`/`CREATE`/`UPDATE`/`DELETE`），它决定网关路径动词
-- **scheme 选择**：内置网关仅支持 HTTP；阿里云 API 网关支持 HTTPS（自签证书用 `--ignore-ssl`）
+- **methodType 大小写**：脚本的 `--method` 参数使用大写（`LIST`/`GET`/`CREATE`/`UPDATE`/`DELETE`）
+- **scheme 选择**：内置网关仅支持 HTTP；阿里云 API 网关支持 HTTPS
 - **业务成功码**：`DPN-OLTP-COMMON-000`（不是 `0`）
-- **异步调用**：大数据量查询用 `async-call`，脚本自动轮询并合并分页结果、关闭任务
-- **签名自研需谨慎**：`x-ca-signature-headers` 不含 `x-ca-signature` 自身、path 与签名串完全一致、JSON 请求不带 `content-md5`、`content-type` 不带 `; charset`（详见 [签名规范](./references/python-client-template.md)）
-- **可观测标记走 `user-agent`**：不要用 `x-ca-*` 头承载，避免影响签名
+- **异步调用**：大数据量查询使用 `async-call`，脚本自动轮询并合并分页结果
+- **Impala API**：如底层是 Impala 引擎，通过 `--timeout`（秒）和 `--poll-interval`（秒）设置合理的轮询超时和间隔
 - **大整数 ID**：API 返回的 19 位 snowflake ID 在 Python 中按字符串处理
 - **IN 类型参数**：使用列表传递值，如 `{"age": [10, 20, 30]}`
 - **分页稳定性**：使用 ORDER BY 主键或联合主键，避免分页时数据重复或丢失

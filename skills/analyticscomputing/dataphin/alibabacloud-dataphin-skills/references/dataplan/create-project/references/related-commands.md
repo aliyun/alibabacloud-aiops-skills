@@ -48,7 +48,7 @@
 ```bash
 TENANT_ID="<租户 ID>"
 SESSION_ID="<inherited from alibabacloud-dataphin-skills>"
-UA="AlibabaCloud-Agent-Skills/create-project/$SESSION_ID"
+UA="AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/$SESSION_ID skill-version/$SKILL_VERSION"
 
 aliyun dataphin-public get-project-by-name --tenant-id "$TENANT_ID" \
   --project-name "dummy_practice_dev" \

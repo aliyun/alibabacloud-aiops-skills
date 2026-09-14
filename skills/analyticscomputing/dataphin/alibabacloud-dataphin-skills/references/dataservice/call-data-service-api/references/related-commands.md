@@ -1,6 +1,6 @@
 # API 调用参考（call-data-service-api）
 
-> 本 Skill **不依赖任何 SDK**：调用走附带脚本 [`scripts/call-data-service-api.py`](../scripts/call-data-service-api.py)（纯标准库，内置 HMAC-SHA256 签名）；元信息查询走 `aliyun` CLI。
+> 本 Skill 使用附带脚本调用数据服务网关，仅依赖 Python 标准库；元信息查询仍走下列管理面 CLI。
 
 ## CLI 信息查询命令
 
@@ -50,48 +50,34 @@
 
 query 参数固定为 `appKey` / `env` / `fetchSize` / `jobId`，详见 [异步调用模板](./async-call-template.md)。
 
-## 请求参数结构速查
+## 查询参数（QueryParam）字段说明
 
-调用参数即 HTTP JSON body，无客户端配置对象：
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `conditions` | dict | 视 API | 查询条件，key=字段名 value=值（IN 类型用列表） |
+| `returnFields` | list | 否 | 返回字段列表，空列表返回所有有权限字段 |
+| `orderBys` | list | 否 | 排序字段，如 `[{"field": "id", "order": "ASC"}]` |
+| `pageStart` | int | 否 | 分页起始位置（仅 LIST 类型生效） |
+| `pageSize` | int | 否 | 每页条数（仅 LIST 类型生效） |
+| `useModelCache` | bool | 否 | 是否使用模型缓存 |
+| `useResultCache` | bool | 否 | 是否使用结果缓存 |
+| `keepColumnCase` | bool | 否 | 是否保持字段大小写（建议 True） |
+| `returnTotalNum` | bool | 否 | 是否返回总数（有性能损耗） |
+| `apiVersion` | str | 否 | API 版本号（仅开发环境支持） |
+| `accountType` | str | 否 | 代理账号类型 |
+| `delegationUid` | str | 否 | 代理账号 ID |
 
-| 场景 | body 结构 |
-|------|----------|
-| 查询（LIST/GET） | QueryParam：`conditions` / `returnFields` / `pageStart` / `pageSize` / ... |
-| DML（CREATE/UPDATE/DELETE） | ManipulationParam：`conditions`（单条）或 `batchConditions`（批量） |
+## DML 操作参数（ManipulationParam）字段说明
 
-字段完整说明见 [Python 调用模板 §4](./python-client-template.md)。
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `conditions` | dict | 视 API | 单条操作的条件，key=字段名 value=值 |
+| `batchConditions` | list | 视 API | 批量操作的条件列表，每个元素为 dict |
 
-## 响应格式
+> **注意**：如果数据量是"单条"，不要将 conditions 放进 batchConditions。
 
-```json
-{
-  "code": "DPN-OLTP-COMMON-000",
-  "message": "success",
-  "results": [{ "field1": "value1", "field2": "value2" }],
-  "totalNum": 100,
-  "sessionId": "...",
-  "executeContext": { "requestId": "...", "executeTime": 113 }
-}
-```
+## API 路径与返回值
 
-| 字段 | 说明 |
-|------|------|
-| `code` | 业务码，`"DPN-OLTP-COMMON-000"` 表示成功 |
-| `message` | 错误信息 |
-| `results` | 业务数据列表 |
-| `totalNum` | 数据总数（需设置 `returnTotalNum: true`） |
-| `executeContext.requestId` | 请求追踪 ID |
+脚本按 `--method` 映射到 `/{methodType}/{apiId}?appKey={appKey}&env={env}`；LIST/GET/CREATE/UPDATE/DELETE 对应 list/get/create/update/delete。LIST 的结果在 `results`，GET 的结果在 `result`；DML 按目标 API 文档处理。
 
-## get-data-service-api-document 关键返回字段
-
-| 字段 | 含义 | 用途 |
-|------|------|------|
-| `GroupId` / `GroupName` | API 分组 | 构造调用路径 |
-| `Name` | API 名称 | 构造调用路径 |
-| `RequestMethod` | HTTP 方法：0=GET, 1=POST | 确定请求方法 |
-| `Protocol` | 协议类型 | HTTP/HTTPS |
-| `PublicParamList` | 公共参数 | 内置网关的 appkey/appsecret |
-| `RequestParamList` | 业务请求参数 | 构造请求参数 |
-| `ResponseParamList` | 响应参数 | 解析返回数据 |
-| `IsPagedQuery` | 是否分页 | 仅辅助；**不能单独定 methodType**（`get` 也可能为 `true`），methodType 按 API 操作类型定 |
-| `CacheTime` | 缓存时间 | 缓存策略参考 |
+签名头规范及工程内复用见 [Python 调用模板](./python-client-template.md)。

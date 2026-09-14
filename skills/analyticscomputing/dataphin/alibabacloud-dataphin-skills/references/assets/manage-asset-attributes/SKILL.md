@@ -93,13 +93,15 @@ aliyun plugin install --names aliyun-cli-dataphin-public
 
 ## 7. Observability (MUST follow for every aliyun command)
 
+版本 `{version}`（Shell 变量 `SKILL_VERSION`）来自套件 `references/manifest.json` 的 `version` 字段，与 session-id 一同继承[父技能 §7](../../../SKILL.md#7-observability)。直接加载本子技能时先完成父层初始化；所有 CLI / SDK 调用使用父技能名称与同一版本，跨 Shell 调用须重新注入这些值。
+
 **session-id 由父 skill `alibabacloud-dataphin-devops` 在套件入口加载时生成（32-char 小写 hex），本子 skill 加载时直接继承同一 session-id，不再重新生成。**
 
 **Rule: Every `aliyun` CLI command that calls a cloud API MUST include the `--user-agent` flag.**
 Local utility commands (e.g. `configure`, `plugin`, `version`) do not support this flag and should be excluded.
 
 ```
---user-agent AlibabaCloud-Agent-Skills/manage-asset-attributes/{session-id}
+--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"
 ```
 
 > SDK 兜底路径（§8）请把同一字符串设置到 OpenAPI Client 的 `user_agent` 配置项，保持可观测性一致。
@@ -109,7 +111,7 @@ Local utility commands (e.g. `configure`, `plugin`, `version`) do not support th
 ```bash
 OP_TENANT_ID="<19 位租户 ID 字符串>"
 SESSION_ID="<inherited from alibabacloud-dataphin-devops>"
-UA="AlibabaCloud-Agent-Skills/manage-asset-attributes/$SESSION_ID"
+UA="AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/$SESSION_ID skill-version/$SKILL_VERSION"
 ```
 
 ### Step 1 · 查可用属性定义（GetAssetTypeAttributeCodes，只读）
@@ -190,7 +192,11 @@ conf = om.Config(
     access_key_secret=os.environ["ALIBABA_CLOUD_ACCESS_KEY_SECRET"],
     endpoint=os.environ["DATAPHIN_OPENAPI_ENDPOINT"],  # 独立部署必填
 )
-conf.user_agent = "AlibabaCloud-Agent-Skills/manage-asset-attributes/<session-id>"
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(os.environ["SUITE_ROOT"]) / "references/scripts"))
+from skill_user_agent import build_user_agent
+conf.user_agent = build_user_agent()
 client = OpenApiClient(conf)
 
 params = om.Params(action="UpdateAssetAttributes", version="2023-06-30",

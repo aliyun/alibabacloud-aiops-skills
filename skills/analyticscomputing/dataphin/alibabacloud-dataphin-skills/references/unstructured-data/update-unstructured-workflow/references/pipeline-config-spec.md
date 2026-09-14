@@ -201,6 +201,7 @@
 ### 6. 改资源规格
 
 - `setting.requiredResource.mem` / `cpus` 改值后，同时置 `resourceModifiedByUser: true`。
+- 🔴 **不要动用户已调过的资源配置 [人工注入]**：回读基线中 `setting.resourceModifiedByUser === true` 的算子，说明**用户已在界面手工调过资源规格**——除非用户本次明确要求改资源，**`setting` 整块必须原样回传**，禁止用默认值（如 `mem:1024/cpus:0.5`）或创建时的模板值覆盖，也禁止把 `resourceModifiedByUser` 重置为 `false`（update 是全量覆盖语义，覆写即丢失用户调优，大任务可能因资源不足跑失败）。真要改时，先在变更设计稿里展示**现有值 → 目标值**让用户确认。
 
 ### 7. 开/关多列输出（llm_inference / image_understanding 专属）
 
@@ -221,6 +222,7 @@
 - [ ] 所有 `hop.source/target` 指向存在的 step；`hop.id === source + "-" + target`；无悬空连线；
 - [ ] 每条连线满足字段契约（上游落表列 ⊇ 下游 inputColumn 需求）与内容类型兼容；
 - [ ] 环境值均来自回读或 `get-dataset`，成组一致，无占位串残留；
-- [ ] `columnMappings` 无 `targetColumn` 为空的行；
+- [ ] `columnMappings` 无 `targetColumn` 为空的行；跳过本次变更的算子，其 `columnMappings` 与基线逐行一致；
+- [ ] **未被要求改资源的算子，`setting` 与基线逐字段一致**——尤其 `resourceModifiedByUser: true` 的算子（用户已手工调优），`requiredResource` 与该标记均不得被默认值覆写或重置；
 - [ ] 未变更部分与基线 diff 为零（`jq -S` 排序后比对，仅剩本次变更项）；
 - [ ] 提交后**立即回读校验步骤数/连线数**（防 pipelineDTO 形态误提交导致静默清空）；若开/关了多列输出，验证下游算子输入列已同步切换。

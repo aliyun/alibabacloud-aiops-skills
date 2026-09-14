@@ -156,11 +156,13 @@ aliyun dataphin-public exec-kg-cypher --help
 
 ## 7. Observability
 
+版本 `{version}`（Shell 变量 `SKILL_VERSION`）来自套件 `references/manifest.json` 的 `version` 字段，与 session-id 一同继承[父技能 §7](../../../SKILL.md#7-observability)。直接加载本子技能时先完成父层初始化；所有 CLI / SDK 调用使用父技能名称与同一版本，跨 Shell 调用须重新注入这些值。
+
 本子 Skill 的 session-id **继承自父 Skill `alibabacloud-dataphin-skills`**，不重新生成。
 
 所有 CLI 命令携带：
 ```
---user-agent AlibabaCloud-Agent-Skills/query-kg/{SESSION_ID}
+--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 其中 `{SESSION_ID}` 为父 Skill 生成的 32 字符小写十六进制字符串。
@@ -197,7 +199,7 @@ aliyun dataphin-public exec-kg-cypher \
     "Limit": 100
   }' \
   --profile {profile} --endpoint {endpoint} \
-  --user-agent "AlibabaCloud-Agent-Skills/query-kg/{SESSION_ID}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 > `--exec-command` 是 JSON 对象：`Query`（Cypher 语句，必填）、`Limit`（返回上限，默认 100）、`Params`（参数化查询 `[{DataType, Key, Value}]`，可选）。
@@ -250,7 +252,7 @@ aliyun dataphin-public get-kg-neighbor \
   --entity-type "{EntityType}" \
   --neighbors-query '{"Depth": 1, "DirectionType": "Both"}' \
   --profile {profile} --endpoint {endpoint} \
-  --user-agent "AlibabaCloud-Agent-Skills/query-kg/{SESSION_ID}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 > **重要**：
@@ -273,7 +275,7 @@ aliyun dataphin-public get-kg-neighbor \
   --entity-type "{EntityType}" \
   --neighbors-query '{"Depth": 2, "DirectionType": "Out", "RelationTypes": ["ACTED_IN", "INVEST"]}' \
   --profile {profile} --endpoint {endpoint} \
-  --user-agent "AlibabaCloud-Agent-Skills/query-kg/{SESSION_ID}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 `--neighbors-query` 结构：
@@ -307,7 +309,7 @@ aliyun dataphin-public search-kg-by-semantic \
     "MinSimilarity": 0.6
   }' \
   --profile {profile} --endpoint {endpoint} \
-  --user-agent "AlibabaCloud-Agent-Skills/query-kg/{SESSION_ID}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 `SearchCommand` 字段：
@@ -346,7 +348,7 @@ aliyun dataphin-public exec-kg-cypher \
   --op-tenant-id "{OpTenantId}" --workspace-id "{WorkspaceId}" \
   --exec-command '{"Query": "MATCH (n:Drug {drug_code: '\''D002'\''}) RETURN n LIMIT 1", "Limit": 1}' \
   --profile {profile} --endpoint {endpoint} \
-  --user-agent "AlibabaCloud-Agent-Skills/query-kg/{SESSION_ID}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 # → 从响应 Data.NodeList[0] 提取 DataId（如 "0a259156-d9f9-4bc1-be44-9b942a0b0e1a"）和 EntityType（如 "Drug"）
 
 # Step B: 以该实体为起点遍历邻居（深度 2、双向）
@@ -356,7 +358,7 @@ aliyun dataphin-public get-kg-neighbor \
   --entity-type "Drug" \
   --neighbors-query '{"Depth": 2, "DirectionType": "Both"}' \
   --profile {profile} --endpoint {endpoint} \
-  --user-agent "AlibabaCloud-Agent-Skills/query-kg/{SESSION_ID}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 # → Data.NodeList[] 和 Data.EdgeList[] 包含完整的子图数据
 ```
 
@@ -374,7 +376,7 @@ aliyun dataphin-public list-kg-entity \
   --entity-type "COMPANY" \
   --list-query '{"Keyword": "阿里", "FilterList": [{"PropertyCode": "industry", "Op": "eq", "Value": "互联网"}], "PageNum": 1, "PageSize": 20}' \
   --profile {profile} --endpoint {endpoint} \
-  --user-agent "AlibabaCloud-Agent-Skills/query-kg/{SESSION_ID}" \
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}" \
   --cli-query 'PageResult.EntityList[0].EntityId'
 
 # Step B: 以得到的 EntityId 为起点遍历邻居（引擎无关）
@@ -384,7 +386,7 @@ aliyun dataphin-public get-kg-neighbor \
   --entity-type "COMPANY" \
   --neighbors-query '{"Depth": 2, "DirectionType": "Both"}' \
   --profile {profile} --endpoint {endpoint} \
-  --user-agent "AlibabaCloud-Agent-Skills/query-kg/{SESSION_ID}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 > `list-kg-entity` 的实体类型走**扁平参数** `--entity-type`（实测把 `EntityType` 写进 `--list-query` 会报 `unknown field: EntityType`）；分页/过滤才在 `--list-query` 里。

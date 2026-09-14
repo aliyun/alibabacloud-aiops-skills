@@ -122,7 +122,7 @@ aliyun dataphin-public --help
 TENANT_ID=<tenant-id>
 PROJECT_ID=<project-id>
 ENV=PROD
-USER_AGENT="AlibabaCloud-Agent-Skills/execute-ad-hoc-task/{session-id}"
+USER_AGENT="AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"
 
 # 1) 查找数据源（仅 DATABASE_SQL / HOLOGRES_SQL 等需要）
 aliyun dataphin-public list-data-source-with-config --dataphin-profile <p> --env $ENV \
@@ -177,12 +177,14 @@ aliyun dataphin-public get-ad-hoc-task-log --dataphin-profile <p> --env $ENV \
 
 ## 8. Observability
 
+版本 `{version}`（Shell 变量 `SKILL_VERSION`）来自套件 `references/manifest.json` 的 `version` 字段，与 session-id 一同继承[父技能 §7](../../../SKILL.md#7-observability)。直接加载本子技能时先完成父层初始化；所有 CLI / SDK 调用使用父技能名称与同一版本，跨 Shell 调用须重新注入这些值。
+
 本 Skill 属于 `alibabacloud-dataphin-skills` 套件，**继承父 Skill `alibabacloud-dataphin-skills` 的 session-id**，子 Skill 不再重新生成。
 
 所有调用 Alibaba Cloud API 的 `aliyun` 命令必须携带：
 
 ```
---user-agent AlibabaCloud-Agent-Skills/execute-ad-hoc-task/{session-id}
+--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{session-id} skill-version/{version}"
 ```
 
 其中 `{session-id}` 替换为父 Skill 生成的 32 位小写十六进制字符串。
@@ -247,6 +249,22 @@ COLUMN_TYPE:[{"name":"?column?","type":"int4"},...]
 `get-ad-hoc-task-result` 在任务刚结束时可能返回空 `Result`（或 `ExecuteResult` 不存在），因为输出数据可能尚未上传到结果服务。建议：
 1. 先通过 `get-ad-hoc-task-log` 确认 `TaskStatus: SUCCESS`
 2. 再调用 `get-ad-hoc-task-result`，必要时等待 3-10 秒
+
+> **[必读] 未就绪有两种哨兵值，轮询终止条件必须同时排除**（[实测确认]）：用 `--cli-query 'ExecuteResult.Result'` 取值时，实测返回序列为 **`null` → `""` → 真实值**：
+> - `null` —— `ExecuteResult` 整个对象不存在（任务刚提交）
+> - `""` —— 对象存在但结果未上传完
+>
+> 两者**都表示未就绪**。只判空字符串会把 `null` 误当成“有值”而提前退出转而拿不到结果。正确写法：
+>
+> ```bash
+> for i in $(seq 1 15); do
+>   R=$(aliyun dataphin-public get-ad-hoc-task-result ... --sub-task-id 0 \
+>       --cli-query 'ExecuteResult.Result')
+>   case "$R" in ""|'""'|null) sleep 10 ;; *) break ;; esac
+> done
+> ```
+>
+> 另注：zsh **不对未加引号的变量做单词分割**，把一串 flag 存在普通变量里再展开会被当成单个参数，报 `required flags missing`；需用数组 `DP=(--a v --b v)` + `"${DP[@]}"`。
 
 ## 11. 常见报错
 
@@ -420,14 +438,14 @@ aliyun dataphin-public get-ad-hoc-task-result \
   --tenant-id <tenant-id> \
   --project-id <project-id> \
   --task-id <从返回的TaskId取> \
-  --sub-task-id 1
+  --sub-task-id 0
 
 # 查日志
 aliyun dataphin-public get-ad-hoc-task-log \
   --tenant-id <tenant-id> \
   --project-id <project-id> \
   --task-id <TaskId> \
-  --sub-task-id 1 \
+  --sub-task-id 0 \
   --offset 0
 ```
 

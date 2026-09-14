@@ -141,11 +141,13 @@ aliyun plugin list | grep dataphin-public
 
 ## 7. Observability
 
+版本 `{version}`（Shell 变量 `SKILL_VERSION`）来自套件 `references/manifest.json` 的 `version` 字段，与 session-id 一同继承[父技能 §7](../../../SKILL.md#7-observability)。直接加载本子技能时先完成父层初始化；所有 CLI / SDK 调用使用父技能名称与同一版本，跨 Shell 调用须重新注入这些值。
+
 本子 Skill 的 session-id **继承自父 Skill `alibabacloud-dataphin-skills`**，不重新生成。
 
 所有 CLI 命令携带：
 ```
---user-agent AlibabaCloud-Agent-Skills/manage-kg-knowledge/{SESSION_ID}
+--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 其中 `{SESSION_ID}` 为父 Skill 生成的 32 字符小写十六进制字符串。
@@ -178,7 +180,7 @@ aliyun dataphin-public create-kg-entity \
     ]
   }' \
   --profile {profile} --endpoint {endpoint} \
-  --user-agent "AlibabaCloud-Agent-Skills/manage-kg-knowledge/{SESSION_ID}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 > **注意**：KG 写操作的请求体标志不是通用的 `--body`，而是对应的命令对象标志（`--create-command` / `--update-command` / `--exec-command`），否则报缺参错误。
@@ -211,7 +213,7 @@ aliyun dataphin-public batch-create-kg-entity \
     ]
   }' \
   --profile {profile} --endpoint {endpoint} \
-  --user-agent "AlibabaCloud-Agent-Skills/manage-kg-knowledge/{SESSION_ID}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 **响应处理：**
@@ -233,7 +235,7 @@ aliyun dataphin-public get-kg-entity \
   --entity-type "COMPANY" \
   --entity-id "{EntityId}" \
   --profile {profile} --endpoint {endpoint} \
-  --user-agent "AlibabaCloud-Agent-Skills/manage-kg-knowledge/{SESSION_ID}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 
 # 列出实体（带关键词搜索和属性过滤）
 aliyun dataphin-public list-kg-entity \
@@ -249,7 +251,7 @@ aliyun dataphin-public list-kg-entity \
     "PageSize": 20
   }' \
   --profile {profile} --endpoint {endpoint} \
-  --user-agent "AlibabaCloud-Agent-Skills/manage-kg-knowledge/{SESSION_ID}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 **查询行为说明：**
@@ -284,7 +286,7 @@ aliyun dataphin-public create-kg-relation \
     ]
   }' \
   --profile {profile} --endpoint {endpoint} \
-  --user-agent "AlibabaCloud-Agent-Skills/manage-kg-knowledge/{SESSION_ID}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 ### 步骤 5：Cypher 图查询（仅 Neo4j 引擎空间）
@@ -300,7 +302,7 @@ aliyun dataphin-public exec-kg-cypher \
     "Limit": 100
   }' \
   --profile {profile} --endpoint {endpoint} \
-  --user-agent "AlibabaCloud-Agent-Skills/manage-kg-knowledge/{SESSION_ID}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 **响应处理（实测字段均在 `Data` 下）：**
@@ -321,7 +323,7 @@ aliyun dataphin-public get-kg-neighbor \
   --entity-type "COMPANY" \
   --neighbors-query '{"Depth": 1, "DirectionType": "Both"}' \
   --profile {profile} --endpoint {endpoint} \
-  --user-agent "AlibabaCloud-Agent-Skills/manage-kg-knowledge/{SESSION_ID}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 **参数说明：**
@@ -349,14 +351,14 @@ aliyun dataphin-public delete-kg-relation \
   --op-tenant-id {OpTenantId} --workspace-id "{WorkspaceId}" \
   --relation-type "INVEST" --relation-id "{RelationId}" \
   --profile {profile} --endpoint {endpoint} \
-  --user-agent "AlibabaCloud-Agent-Skills/manage-kg-knowledge/{SESSION_ID}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 
 # 删除实体
 aliyun dataphin-public delete-kg-entity \
   --op-tenant-id {OpTenantId} --workspace-id "{WorkspaceId}" \
   --entity-type "COMPANY" --entity-id "{EntityId}" \
   --profile {profile} --endpoint {endpoint} \
-  --user-agent "AlibabaCloud-Agent-Skills/manage-kg-knowledge/{SESSION_ID}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 ## 11. Command Tables

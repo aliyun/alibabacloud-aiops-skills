@@ -29,12 +29,17 @@
 - **`type` 取值规则 [人工注入]**：必须等于该算子在 [`operator-reference.md`](operator-reference.md) 算子清单中所属的**分类分节名**，逐算子查表确认，**禁止从示例骨架照抄或按名字类比推断**——实测踩坑：`image_basic_info` 属 **image** 分类，被类比 `file_basic_info` 误写成 `normal`。特例：`file_basic_info` 是唯一**双分类**算子（normal/text 均合法，本套件示例用 normal）；其余基本信息算子均单一分类（image→image、video→video、audio→audio）；
 - `pluginConfig.webPluginKey` 与 step `key` 一致；
 - `pluginConfig` 五大区块：`neuronInput` / `neuronParameters?` / `neuronModel?` / `neuronOutput` / `setting`（`?` 表示部分算子才有）；
+- **`setting` 资源配置与 `resourceModifiedByUser` 语义 [人工注入]**：`setting.requiredResource.{mem,cpus}` 是算子资源规格，**创建时给默认值并置 `resourceModifiedByUser: false`**（轻量算子 mem 1024/cpus 0.5，解析与模型类 2048~4096/1）；用户一旦在界面手工调过资源，该标记会变为 `true`——**此后任何更新都不得覆写这组值**（见兄弟 skill `update-unstructured-workflow` §改资源规格）；
 - **画布坐标 `x`/`y` [人工注入]**：默认按**纵向布局**生成——主干链路 `x` 固定（如 300），`y` 从 100 起每节点 **+140** 向下递增；并行分支同 `y`、`x` 左右错开 ±290（与界面手工纵向摆放保存后的范式同构）。⚠️ 实测：**API 传入的坐标在界面首次打开时会被前端自动横排布局覆盖**，界面拖拽保存后才持久化——验证指引中应提示用户首次打开后纵向整理并保存一次；
 - **`distribute` 标记 [Agent 自主发现]**：界面保存版**所有 step（含首节点）均带 `"distribute": true`**，组装时统一设置，不要只给下游节点——实测外部案例：漏在 **6 路分叉点**上的节点缺此字段，创建成功但运行异常；
 - **`webConfig` 固定传 `{"requireCompeleted": true}` [人工注入]**：不要传空 `{}`（健康骨架均带此值；旧版本文顶层示例曾误写 `{}` 被外部照抄，已纠正）；
 - **`neuronInput` 环境值字段带全 [Agent 自主发现]**：即便是文件扫描类首节点（file_basic_info），HYBRID 数据集时 `neuronInput` 也应带 `datasetTable` 与 `metadataDsId`（界面保存版如此），不要裁剪；
 - **`neuronOutput.outputSelf` 规则 [人工注入]**：算子的输入与输出指向**同一数据集同一版本（即回写自己读取的那张表）**时必须为 `true`；跨数据集或跨版本落表时为 `false`。对照真实示例：解析/推理/向量化算子同表 UPSERT 回写 → `true`；切分算子 V1 表读、V2 表写（同数据集跨版本）与基本信息算子跨数据集落表 → `false`；
 - **`neuronOutput.loadStrategy` 规则 [人工注入]**：枚举 `APPEND`(追加数据) / `UPSERT`(主键冲突时更新) / `OVERWRITE`(覆盖数据)。默认值按输出目标元数据表判定：**表有主键 → 默认 `UPSERT`；表无主键 → `APPEND`**；`OVERWRITE` 仅在用户明确需要全量覆盖（如首节点全量重扫）时显式选用；
+- **跨数据集落表时的主键传递规则 [人工注入]**：当算子输出到**非来源数据集**（`outputSelf: false`）时：
+  1. 若**输入（来源）数据集的表有主键**，则**必须把该主键列一并写入下游输出**（在下游 `columnMappings` 中增加一行，`sourceColumn` = 上游主键列名、`sourceColumnType` = `COLUMN`（透传上游表列）而非 `NEURON`，`targetColumn` = 目标表对应列），否则产出行与源文件/源记录**无法关联回溯**；该主键列需在目标表 schema 中预留（数据集设计阶段就要带上）；
+  2. 目标表的主键选型决定 `loadStrategy`——目标表**有主键** → `UPSERT`（推荐把上游主键或其派生键如 `chunk_id` 设为目标表主键，保证重跑幂等）；目标表**无主键字段** → `loadStrategy` 必须选 **`APPEND`**（无主键时 UPSERT 无冲突判定依据）；
+  3. 一对多拆行场景（如切片/按页抽取）：上游主键不足以唯一标识下游行时，目标表主键用派生唯一键（如 `chunk_id`），**但上游主键列仍需作为普通列透传**保留述源能力；
 - 部分字段存在联动：如 `neuronModel.modelId` 仅 `modelSource === 'MULTIMODAL'` 时出现，`modelPrompt` 仅 `enable_image_interpretation === true` 时展示且必填（≤2000 字符）。
 
 ### hops[]（连线）
@@ -135,7 +140,8 @@
 - [ ] 所有 `hop.source/target` 指向存在的 step；`hop.id === source + "-" + target`；
 - [ ] 每条连线满足字段契约（上游落表列 ⊇ 下游 inputColumn 需求）与内容类型兼容（URL 不直连仅文本算子）；
 - [ ] 逐算子校验 `outputSelf`：输入与输出同数据集同版本 → 必为 `true`；跨数据集/跨版本 → 必为 `false`；
-- [ ] 逐算子校验 `loadStrategy`：输出目标表有主键 → `UPSERT`；无主键 → `APPEND`；`OVERWRITE` 需有明确全量覆盖理由；
+- [ ] 逐算子校验 `loadStrategy`：输出目标表有主键 → `UPSERT`；无主键 → **必为 `APPEND`**；`OVERWRITE` 需有明确全量覆盖理由；
+- [ ] **跨数据集落表（`outputSelf: false`）的算子：上游表有主键时，下游 `columnMappings` 必含该主键列的透传行**（`sourceColumnType: COLUMN`）且目标表 schema 已预留该列——否则产出无法回溯源记录；
 - [ ] 坐标为纵向布局：主干 `x` 固定、`y` 递增（步进 ~140），并行分支同 `y` 错 `x`；
 - [ ] 所有 step（含首节点）带 `distribute: true`（分叉点漏标→运行异常，实测）且 `webConfig: {"requireCompeleted": true}`（非空 `{}`）；`neuronInput` 环境值字段带全（含首节点的 datasetTable/metadataDsId）；
 - [ ] 每个 step 的 `type` 与其 `key` 在 operator-reference 清单的分类一致（逐算子查表，勿类比推断）；

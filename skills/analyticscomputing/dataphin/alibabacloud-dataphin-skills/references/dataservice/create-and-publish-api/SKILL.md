@@ -185,11 +185,13 @@ aliyun dataphin-public --help
 
 ## 7. Observability
 
+版本 `{version}`（Shell 变量 `SKILL_VERSION`）来自套件 `references/manifest.json` 的 `version` 字段，与 session-id 一同继承[父技能 §7](../../../SKILL.md#7-observability)。直接加载本子技能时先完成父层初始化；所有 CLI / SDK 调用使用父技能名称与同一版本，跨 Shell 调用须重新注入这些值。
+
 本子 Skill 的 session-id **继承自父 Skill `alibabacloud-dataphin-skills`**，不重新生成。
 
 所有 CLI 命令携带：
 ```
---user-agent AlibabaCloud-Agent-Skills/create-and-publish-api/{SESSION_ID}
+--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 其中 `{SESSION_ID}` 为父 Skill 生成的 32 字符小写十六进制字符串。
@@ -202,7 +204,7 @@ aliyun dataphin-public --help
 aliyun dataphin-public get-data-service-my-projects \
   --op-tenant-id "{OpTenantId}" \
   --endpoint <YOUR_DATAPHIN_ENDPOINT> \
-  --user-agent "AlibabaCloud-Agent-Skills/create-and-publish-api/{SESSION_ID}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 **响应处理：**
@@ -217,7 +219,7 @@ aliyun dataphin-public get-data-service-api-groups \
   --op-tenant-id "{OpTenantId}" \
   --project-id "{ProjectId}" \
   --endpoint <YOUR_DATAPHIN_ENDPOINT> \
-  --user-agent "AlibabaCloud-Agent-Skills/create-and-publish-api/{SESSION_ID}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 **响应处理：**
@@ -251,10 +253,11 @@ from alibabacloud_tea_openapi import models as open_api_models
 from alibabacloud_tea_util import models as util_models
 
 # UA 可观测（Principle 9）：SKILL_SESSION_ID 由 Agent 执行时内联注入（继承自父 skill）
-SESSION_ID = os.environ.get('SKILL_SESSION_ID', '')
-ua = 'AlibabaCloud-Agent-Skills/create-and-publish-api'
-if SESSION_ID:
-    ua = f'{ua}/{SESSION_ID}'
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(os.environ["SUITE_ROOT"]) / "references/scripts"))
+from skill_user_agent import build_user_agent
+ua = build_user_agent()
 
 config = open_api_models.Config(
     access_key_id=os.environ['ALIBABA_CLOUD_ACCESS_KEY_ID'],
@@ -349,7 +352,7 @@ aliyun dataphin-public publish-data-service-api \
   --project-id "{ProjectId}" \
   --version-id "{VersionId}" \
   --endpoint <YOUR_DATAPHIN_ENDPOINT> \
-  --user-agent "AlibabaCloud-Agent-Skills/create-and-publish-api/{SESSION_ID}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 **VersionId 说明：**
@@ -363,7 +366,7 @@ aliyun dataphin-public list-data-service-published-apis \
   --project-id "{ProjectId}" \
   --list-query "PageNo=1 PageSize=50" \
   --endpoint <YOUR_DATAPHIN_ENDPOINT> \
-  --user-agent "AlibabaCloud-Agent-Skills/create-and-publish-api/{SESSION_ID}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 **验证标准：**
@@ -383,7 +386,7 @@ aliyun dataphin-public get-data-service-api-document \
   --id "{ApiId}" \
   --version-id "{VersionId}" \
   --endpoint <YOUR_DATAPHIN_ENDPOINT> \
-  --user-agent "AlibabaCloud-Agent-Skills/create-and-publish-api/{SESSION_ID}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-dataphin-skills/{SESSION_ID} skill-version/{version}"
 ```
 
 ## 10. Cleanup
