@@ -1,50 +1,74 @@
 ---
 name: alibabacloud-sls-agent-workflow
-description: Route and orchestrate Alibaba Cloud Simple Log Service (SLS) work across specialist skills for application integration, index management, exact querying, exploratory analysis, and visualization. Use when the user asks which SLS skill to use, wants an overview of available SLS skills, gives a broad or ambiguous SLS goal, requests an end-to-end workflow spanning two or more supported domains, or needs a selected SLS specialist that is not installed. For a clearly scoped single-domain request with its specialist available, hand off directly without adding an unnecessary workflow.
+description: Manage Alibaba Cloud Simple Log Service (SLS) resources and analyze logs. Use when users need to integrate applications through SLS SDKs, set up LoongCollector/Logtail collection, manage Projects, Logstores or indexes, query, analyze or visualize logs, or configure and diagnose alerts.
 ---
 
 # Alibaba Cloud SLS Agent Workflow
 
-Turn the user's SLS outcome into the smallest capable sequence of specialist skills, carry useful context and evidence between them, and continue until the requested outcome is verified or a concrete gap is reached. This skill coordinates work; it does not duplicate specialist instructions.
+## Global Rules
+
+- Never request, read, or expose AccessKey ID or AccessKey Secret values — including in files, logs, and command arguments.
+- If a selected skill is unavailable, read [Install specialist skills](references/install-specialist-skills.md) to install and load it before use.
+- Use exact full skill names whenever naming, selecting, installing, or handing off to a specialist.
+
+## Observability
+
+Before this skill's first cloud call, read its [manifest](references/manifest.json) and use the top-level non-empty string `version` as `{skill-version}`. Stop and report a missing or invalid file/version; never guess it.
+
+Generate a fresh random 32-character lowercase hexadecimal `{session-id}` for this skill in the conversation:
+
+```bash
+python3 -c 'import secrets; print(secrets.token_hex(16))'
+```
+
+Reuse this session ID for subsequent operations, pagination, and retries. Every Alibaba Cloud API command and request-only dry run performed by this skill **MUST** include:
+
+```text
+--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-sls-agent-workflow/{session-id} skill-version/{skill-version}"
+```
+
+Set `SLS_WORKFLOW_USER_AGENT` to the resolved value and pass it double-quoted. This applies to direct CLI calls in the examples, including `create-project`, `create-log-store`, and `put-json-logs`, and to API calls made through scripts or helpers. Local `configure`, `plugin`, `version`, and help commands are exempt. Do not send literal placeholders, credentials, or personal identifiers.
+
+When switching to a specialist, prefer to follow its own observability rules and use its own skill identity, manifest version, prefer to reuse the session ID above.
+
+## SLS resources and relationships
+
+Logs are written to a Logstore within a Project using LoongCollector, an SDK, or the CLI, and can then be queried using an SDK or the CLI with suitable index settings. Alert rules and notification objects are managed through the CLI by the alerting specialist.
+
+| Concept | Role and relationship |
+| --- | --- |
+| Project | Regional resource container for Logstores, collection configs, machine groups, and alert rules. |
+| Logstore | Stores logs within a Project; the destination for writes and collection, and the data source for queries. |
+| Index | Logstore configuration for indexed search and analytics. Field names, types, and analytics settings must match the query workload. Creating or updating an index affects only logs written after the configuration takes effect. |
+| Query | Reads a Logstore over a time range using search, SQL, or SPL in SLS query syntax. |
+| LoongCollector / iLogtail | High-performance log collector for Linux and Windows; runs on hosts to collect and process logs according to collection configs and send them to SLS. |
+| Collection config | Defines a collector's inputs, parsing, and destination Logstore; applying it to a machine group selects the hosts that run it. |
+| Machine group | Identifies collector hosts and exposes their heartbeat status. Groups and collection configs can have multiple bindings. |
+| Alert rule | Belongs to a Project and evaluates configured queries on a schedule. Its data sources can be in a different Project; conditions determine whether it fires. |
 
 ## Specialist catalog
 
-Use exact full skill names whenever naming, selecting, installing, or handing off to a specialist.
+| Specialist skill | Capabilities | When to use | When not to use |
+| --- | --- | --- | --- |
+| `alibabacloud-sls-sdk-guidance` | SDK selection, installation, and usage for SLS resource management and log operations; Producer, Consumer, and Appender integration | Integrate applications or logging frameworks with SLS; use SDKs to manage SLS resources or work with logs programmatically | Prefer CLI for one-shot or simple standalone resource operations. Prefer LoongCollector for collecting log files from many different processes on a host. Collector installation/configuration and query-language work without SDK integration belong to their respective specialists. |
+| `alibabacloud-sls-index-config-management` | Independent Logstore index inspection, generation, creation, update, deletion, and optimization | Create, update, or optimize index configurations | A Pipeline or collection-field change requires a coupled index change: keep both with `alibabacloud-loongcollector-ops` |
+| `alibabacloud-sls-query` | Index search, SQL, and SPL authoring, explanation, execution, optimization, and troubleshooting | Need a precise statement or reproducible result, including writing only the SQL for an alert; diagnose query syntax, filters, or time ranges | Tasks unrelated to search, SQL, or SPL statements. |
+| `alibabacloud-sls-data-agent` | Online analysis agent with long-lived sessions, dependent on the StarOps digital employee; supports data acquisition, multi-step analysis, and visualizations | Only when the user explicitly requests Data Agent to analyze data | Do not trigger for general log analysis, anomaly investigation, or chart requests without an explicit request to use Data Agent. |
+| `alibabacloud-sls-alerting` | SLS alert rule and notification management; alert history and alert event diagnosis | Explain or manage alert rules, schedules, thresholds, enable/disable, mute/unmute, recipients, channels, policies, and templates; investigate triggering, notification issues, causes, frequency, or duration using available evidence | SQL-only authoring; general anomaly exploration; collector troubleshooting without SLS alert rule management or alert event diagnosis; generic messaging; alerts from other services such as CloudMonitor/Prometheus |
+| `alibabacloud-loongcollector-ops` | LoongCollector installation/upgrade/use on ECS, Linux hosts, ACK, and self-managed Kubernetes; collection onboarding, Pipeline configs, machine groups/bindings, coupled indexes, SLS Lens, and basic diagnosis | Install or upgrade LoongCollector; collect logs; manage logstore collection configs and machine groups; query SLS Lens; diagnose collector no-data or heartbeat issues. | Independent index management not coupled to collection changes; in-application SDK or logging-framework integration, such as Log4j2 Appender. |
 
-| Specialist skill | Choose it for | Boundary |
-| --- | --- | --- |
-| `alibabacloud-sls-sdk-guidance` | SDK selection and installation; application writes, Producer, Consumer, Appender, and programmatic query integration | It provides application integration guidance, not general cloud-resource operations. |
-| `alibabacloud-sls-index-config-management` | Independent index inspection, generation, creation, update, deletion, or optimization from log samples and query workloads | Use it for fields already present in delivered data; the current suite does not change upstream collection pipelines. |
-| `alibabacloud-sls-query` | Precise index search, SQL, or SPL authoring, explanation, execution, optimization, and query troubleshooting | Prefer it when the user needs a controlled, reproducible statement or exact result. |
-| `alibabacloud-sls-data-agent` | Autonomous natural-language data acquisition, multi-step analysis, trends, anomalies, conclusions, and visualizations | Prefer it for exploratory analysis. It does not replace application integration, index management, exact query control, or managed dashboard resources. |
+## End-to-end examples
 
-## Route by outcome
+Read the matching example for a step-by-step overview of the scenarios below. Adapt the steps to existing resources and the user's goal; use the selected skills and CLI help for operation details.
 
-- For an explicit single-domain request, select the matching specialist. Load and follow it when the user requests execution or detailed guidance; for a route-only request, return the owner and boundary without adding a workflow.
-- For a multi-stage outcome, select only the specialists that contribute to it and order them by dependency. Let verified results determine whether later stages are still needed.
-- Apply the catalog boundaries when intents overlap. Give each stage one primary owner, and combine exact querying with exploratory analysis only when both outcomes are useful.
-
-Before executing or handing off a stage, load its specialist skill and defer commands, prerequisites, permissions, confirmations, rollback, and verification to it. Continue into execution when the user requested action and the required authority and context are available; do not stop at a route or plan unless the user asked for guidance or a real blocker remains.
-
-Carry forward only context that helps the next specialist: region, Project, Logstore, source, application language, relevant fields, time range, desired result, decisions already made, and verified evidence. Do not create a workflow-context file unless the user asks for one.
-
-## Progressive references
-
-Read only the reference that matches the active need:
-
-| Need | Reference |
+| Example | Read when |
 | --- | --- |
-| One or more selected specialist skills are unavailable | [Install specialist skills](references/install-specialist-skills.md) |
-| Bring application logs from a source to a queryable, analyzed, alert-ready state | [Application log landing](references/workflows/application-log-landing.md) |
-| Build or adjust an index and prove the intended queries work | [Index and query readiness](references/workflows/index-query-readiness.md) |
+| [Write and query logs](references/examples/write-and-query-logs.md) | Create project and logstore, configure indexes, write sample logs, and query them; or understand why written logs are not queryable. |
+| [Collection to alert](references/examples/collection-to-alert.md) | Collect host logs using LoongCollector, including Project and Logstore creation, index configuration, machine group and collection config setup, then configure alerts. |
 
-Do not read every workflow reference for a single request.
+## References
 
-## Boundaries and completion
-
-- Treat only installed specialist skills as executable. If a selected skill is missing, follow the installation reference before relying on it.
-- The current suite has no specialist for host-agent collection, machine groups, collection Pipeline configuration or binding, collector heartbeat, SLS Lens troubleshooting, general standalone Project/Logstore management, managed SLS alert resources, data processing, shipping, or persistent dashboard resources. State the gap instead of inventing a skill or silently implementing its cloud operations in this router. A specialist may still manage a resource when that resource is explicitly within its own documented scope.
-- Never request, read, or expose AccessKey ID or AccessKey Secret values.
-- Preserve every specialist's approval and safety gates. Earlier approval for the overall goal does not bypass a later specialist's required confirmation.
-- Respond in the user's language while keeping skill names, commands, resource identifiers, and product terms intact.
-- Lead the final response with what was achieved or what blocks completion. Include concise evidence for claims, identify any unfinished stage, and avoid claiming that a plan, generated query, visualization, or configuration draft is a deployed cloud resource.
+- [RAM policies](references/ram-policies.md): permissions and resource scopes for direct CLI calls; read when checking access or handling permission errors.
+- [Install specialist skills](references/install-specialist-skills.md): install and load a required skill that is unavailable.
+- [Write and query logs](references/examples/write-and-query-logs.md): complete example of Project, Logstore, index, log writes, and queries.
+- [Collection to alert](references/examples/collection-to-alert.md): complete example of collector setup, collection bindings, query validation, and alert delivery.
