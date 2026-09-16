@@ -112,10 +112,11 @@ Subtitle Track 1: Title text
       "SubtitleTrackClips": [
         {
           "Type": "Text",
-          "Text": "Our Wonderful Moments",
+          "Content": "Our Wonderful Moments",
           "TimelineIn": 0,
           "TimelineOut": 5,
           "Font": "AlibabaPuHuiTi",
+          "FontSize": 80,
           "X": 0.5,
           "Y": 0.15,
           "Outline": 1,
@@ -131,6 +132,8 @@ Subtitle Track 1: Title text
 ## Key Configuration Instructions
 
 ### Image Duration
+
+Image clips (`"Type": "Image"`) typically set their display time with `Duration` (seconds), e.g. `{"Type": "Image", "MediaURL": "...", "Duration": 3}`, instead of `In`/`Out`.
 
 Recommended duration for each slide:
 - **Fast switching**: 1-2 seconds/image
@@ -149,13 +152,34 @@ Total duration = Number of images × Duration per image
 
 - Music duration should match the total video duration
 - Volume recommendation `0.2-0.4`, don't overpower
-- Add `FadeIn` and `FadeOut` to avoid abruptness
+- Add an `AFade` effect (`SubType: "In"` / `SubType: "Out"`, see `02-multi-track-audio.md`) to avoid abruptness
 
 ### Title Style
 
 - Font size: 60-100 (adjust according to video size)
 - White text + black outline, ensure clear visibility
 - Position: Top (Y=0.15) or Bottom (Y=0.85)
+
+### Camera Motion (KenBurns)
+
+To make static images feel dynamic, add a KenBurns effect to each image clip (slow zoom/pan). With no parameters it defaults to a slow zoom-out; see `04-effects-and-transitions.md` for `Start`/`End` control.
+
+```json
+{
+  "Type": "Image",
+  "MediaURL": "https://bucket.oss-cn-shanghai.aliyuncs.com/photo1.jpg",
+  "Duration": 5,
+  "Effects": [{ "Type": "KenBurns" }]
+}
+```
+
+### Global Watermark / Logo
+
+Add a persistent watermark or logo over the whole slideshow by putting a `GlobalImage` clip in a top video track (see `04-effects-and-transitions.md`):
+
+```json
+{ "VideoTrackClips": [{ "Type": "GlobalImage", "MediaURL": "https://bucket.oss-cn-shanghai.aliyuncs.com/logo.png", "X": 10, "Y": 10, "Width": 247, "Height": 74 }] }
+```
 
 ## LLM Generation Suggestions
 

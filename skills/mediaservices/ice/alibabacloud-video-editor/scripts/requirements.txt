@@ -1,0 +1,27 @@
+# Alibaba Cloud Common SDK dependencies for video_editor.py
+# Install: pip install -r scripts/requirements.txt
+#
+# These are minimum versions, not exact pins. Pinning them fails to resolve:
+# alibabacloud-tea-openapi 0.4.x requires alibabacloud-credentials>=1.0.2, so an
+# older exact credentials version makes the whole set unsatisfiable
+# (ResolutionImpossible).
+
+# Core OpenAPI client
+alibabacloud-tea-openapi>=0.3.12
+
+# Credential management — default chain: env vars, aliyun CLI profile
+# (~/.aliyun/config.json), ~/.alibabacloud/credentials.ini, ECS RAM role.
+# >=1.0.2 is required twice over: it is the floor tea-openapi 0.4.x depends on,
+# and the aliyun CLI profile provider does not exist before 1.x — with an older
+# release `aliyun configure` alone cannot authenticate (see SKILL.md §1.1).
+alibabacloud-credentials>=1.0.2
+
+# OpenAPI utilities
+alibabacloud-openapi-util>=0.2.2
+
+# Tea utilities
+alibabacloud-tea-util>=0.3.13
+
+# The generated ICE SDK (alibabacloud_ice20201109) is deliberately NOT required:
+# the scripts call ICE through the generic OpenApiClient above, so the SDK adds a
+# large dependency tree that nothing imports.
