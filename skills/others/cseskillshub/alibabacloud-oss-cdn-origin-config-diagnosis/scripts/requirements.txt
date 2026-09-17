@@ -1,0 +1,2 @@
+# OSS control-plane metadata queries (GetBucketInfo) -- measured 2.19.x
+oss2>=2.19.0,<3
