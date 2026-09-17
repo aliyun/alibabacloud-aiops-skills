@@ -1,0 +1,4 @@
+# alibabacloud-oss-backup-integration-diagnosis scripts
+# Pure Python standard library only (argparse, json, re, sys, uuid).
+# No third-party dependencies are required; this skill makes zero cloud API
+# calls and needs no HTTP/SDK client libraries.
