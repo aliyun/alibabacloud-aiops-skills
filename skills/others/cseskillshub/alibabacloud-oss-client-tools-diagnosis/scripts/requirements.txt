@@ -1,0 +1,4 @@
+# alibabacloud-oss-client-tools-diagnosis scripts
+# Pure Python standard library only (argparse, json, sys, uuid).
+# No third-party dependencies are required; this skill makes zero cloud API
+# calls, performs no network probing, and never executes client commands.
