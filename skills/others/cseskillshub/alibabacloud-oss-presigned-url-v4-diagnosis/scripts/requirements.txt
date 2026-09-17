@@ -1,0 +1,4 @@
+# alibabacloud-oss-presigned-url-v4-diagnosis scripts
+# Pure Python standard library only (argparse, json, re, sys, time, uuid,
+# urllib.parse). No third-party dependencies are required; this skill makes
+# zero cloud API calls and needs no HTTP/SDK client libraries.
