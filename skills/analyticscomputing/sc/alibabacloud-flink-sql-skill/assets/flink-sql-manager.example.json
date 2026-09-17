@@ -1,0 +1,10 @@
+{
+  "region_id": "cn-beijing",
+  "workspace": "replace with the real Workspace ID",
+  "namespace": "replace with the real Namespace",
+  "git": {
+    "repo_url": "git@example.com:team/flink-sql-deployments.git",
+    "local_path": "/tmp/vvr-sql-sync",
+    "branch": "main"
+  }
+}
