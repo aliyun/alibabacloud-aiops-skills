@@ -100,7 +100,7 @@ import java.util.Properties;
 public class LindormQuickStart {
     public static void main(String[] args) throws Exception {
         // 1. Configure the connection. MySQL protocol is recommended.
-        // The agent selects the correct domain format according to instance ServiceType. See sql-client-guide.md.
+        // The agent selects the correct domain format according to instance service_type. See sql-client-guide.md.
         Class.forName("com.mysql.cj.jdbc.Driver");
         String url = "jdbc:mysql://<connection-endpoint>:33060/default?sslMode=disabled";
         Properties props = new Properties();
@@ -199,13 +199,13 @@ create_sql = """CREATE TABLE IF NOT EXISTS sensor (
   humidity BIGINT,
   PRIMARY KEY(device_id, region, time)
 )"""
-response = requests.post(url, data=create_sql)
+response = requests.post(url, data=create_sql, timeout=60)
 print(f"Create table result: {response.status_code}")
 
 # 3. Write one row.
 insert_sql = f"""INSERT INTO sensor (device_id, region, time, temperature, humidity) VALUES
 ('F07A1260', 'north-cn', '{time.strftime('%Y-%m-%d %H:%M:%S')}', 75.3, 45)"""
-response = requests.post(url, data=insert_sql)
+response = requests.post(url, data=insert_sql, timeout=60)
 print(f"Write result: {response.status_code}")
 
 # 4. Batch write, recommended.
@@ -217,12 +217,12 @@ batch_sql = f"""INSERT INTO sensor (device_id, region, time, temperature, humidi
 ('F07A1260', 'north-cn', '{times[1]}', 76.1, 47),
 ('F07A1261', 'south-cn', '{times[2]}', 18.1, 44),
 ('F07A1261', 'south-cn', '{times[3]}', 19.7, 44)"""
-response = requests.post(url, data=batch_sql)
+response = requests.post(url, data=batch_sql, timeout=60)
 print(f"Batch write result: {response.status_code}")
 
 # 5. Query data.
 query_sql = "SELECT device_id, region, time, temperature FROM sensor LIMIT 100"
-response = requests.post(url, data=query_sql)
+response = requests.post(url, data=query_sql, timeout=60)
 result = response.json()
 for row in result.get('rows', []):
     print(f"device: {row[0]}, region: {row[1]}, time: {row[2]}, temperature: {row[3]}")
@@ -286,7 +286,7 @@ import org.apache.http.util.EntityUtils;
 public class LindormSearchQuickStart {
     public static void main(String[] args) throws Exception {
         // 1. Configure the connection. Elasticsearch-compatible API uses port 30070.
-        // Select the domain format according to ServiceType: V1=.lindorm.rds.aliyuncs.com, V2=.lindorm.aliyuncs.com.
+        // Select the domain format according to service_type: V1=.lindorm.rds.aliyuncs.com, V2=.lindorm.aliyuncs.com.
         String searchUrl = "ld-xxxx-proxy-search-pub.lindorm.rds.aliyuncs.com";
         int searchPort = 30070;
         String username = "user";

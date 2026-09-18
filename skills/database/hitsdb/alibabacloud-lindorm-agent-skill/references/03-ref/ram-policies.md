@@ -100,7 +100,7 @@ Run the following commands to verify whether permissions are configured correctl
 
 ```bash
 # Test Lindorm permissions.
-aliyun hitsdb get-lindorm-instance-list --region cn-shanghai
+aliyun lindorm instance list --lindorm-region cn-shanghai
 
 # Test CloudMonitor permissions.
 aliyun cms describe-metric-meta-list --namespace acs_lindorm

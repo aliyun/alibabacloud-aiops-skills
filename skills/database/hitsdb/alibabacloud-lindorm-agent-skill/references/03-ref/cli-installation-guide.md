@@ -5,7 +5,7 @@ Complete guide for installing and configuring Aliyun CLI.
 > **Agent Note**: This document is for human offline reference. When responding to users, follow the credential security rules in SKILL.md: NEVER use `aliyun configure set` with literal credential values, NEVER read/echo/print AK/SK, and ALWAYS direct users to configure credentials outside the session.
 
 
-> **Aliyun CLI 3.3.3+**: Supports installing and using all published Alibaba Cloud product plugins. Make sure to upgrade to 3.3.3 or later for full plugin ecosystem coverage.
+> **Aliyun CLI 3.4.1+**: Supports installing and using all published Alibaba Cloud product plugins. Make sure to upgrade to 3.4.1 or later for full plugin ecosystem coverage.
 
 ## Installation
 
@@ -17,7 +17,7 @@ brew install aliyun-cli
 # Upgrade to latest
 brew upgrade aliyun-cli
 
-# Verify version (>= 3.3.3)
+# Verify version (>= 3.4.1)
 aliyun version
 ```
 
@@ -507,7 +507,7 @@ After installation and configuration:
 
 2. **Explore commands**:
    ```bash
-   aliyun hitsdb --help
+   aliyun lindorm --help
    aliyun cms --help
    ```
 

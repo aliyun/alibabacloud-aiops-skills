@@ -142,7 +142,7 @@ After collecting the information, the Agent automatically assembles the correct 
 
 > **Protocol selection**: The wide table engine uses MySQL protocol port 33060, and the time series engine uses Avatica protocol port 8242.
 
-> **V1/V2 domain differences**: V2 instance domains are `*.lindorm.aliyuncs.com`; V1 instance domains are `*.lindorm.rds.aliyuncs.com`. The Agent can obtain the precise address by running `aliyun hitsdb get-lindorm-instance-engine-list --instance-id <id>`.
+> **V1/V2 domain differences**: V2 instance domains are `*.lindorm.aliyuncs.com`; V1 instance domains are `*.lindorm.rds.aliyuncs.com`. The Agent can obtain the precise address by running `aliyun lindorm v1 instance engine-list <id>`.
 
 ### Environment Variable Configuration, Recommended
 
@@ -183,7 +183,7 @@ lindorm-cli --format json --execute "SELECT 1" 2>/dev/null
 
 1. **Check the Lindorm whitelist**: Confirm that the client IP has been added to the instance whitelist.
    ```bash
-   aliyun hitsdb get-instance-ip-white-list --instance-id <id>
+   aliyun lindorm v1 instance whitelist get <id> --lindorm-region <region>
    ```
 2. **Check network link reachability**:
    ```bash

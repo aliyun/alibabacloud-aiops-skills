@@ -7,47 +7,50 @@
 
 ## Correct CLI Command Patterns
 
-### 1. Lindorm API Calls, aliyun hitsdb
+### 1. Lindorm Instance Management Calls, aliyun lindorm
 
 #### ✅ CORRECT
 
 ```bash
-# Query instance list, default Shanghai region.
-aliyun hitsdb get-lindorm-instance-list --region cn-shanghai
+# Query the instance list. Pass the region with --lindorm-region and verify region_id in the output.
+aliyun lindorm instance list --lindorm-region cn-shanghai
 
-# Query instance details.
-aliyun hitsdb get-lindorm-instance --instance-id ld-uf6l5kr48wqm6rf1h
+# Query instance details. The instance ID is a positional argument.
+aliyun lindorm v1 instance describe ld-uf6l5kr48wqm6rf1h --lindorm-region cn-shanghai
 
-# Query storage details.
-aliyun hitsdb get-lindorm-fs-used-detail --instance-id ld-uf6l5kr48wqm6rf1h
+# Query V1 storage details.
+aliyun lindorm v1 instance storage ld-uf6l5kr48wqm6rf1h --lindorm-region cn-shanghai
 
-# Query V2 instance storage details.
-aliyun hitsdb get-lindorm-v2-storage-usage --instance-id ld-uf64f07n285tlbaz2
+# Query V2 storage details.
+aliyun lindorm v2 instance storage ld-uf64f07n285tlbaz2 --lindorm-region cn-shanghai
 
-# Query engine list.
-aliyun hitsdb get-lindorm-instance-engine-list --instance-id ld-uf6l5kr48wqm6rf1h
+# Query the engine list.
+aliyun lindorm v1 instance engine-list ld-uf6l5kr48wqm6rf1h --lindorm-region cn-shanghai
 
-# Query IP whitelist.
-aliyun hitsdb get-instance-ip-white-list --instance-id ld-uf6l5kr48wqm6rf1h
+# Query the IP whitelist.
+aliyun lindorm v1 instance whitelist get ld-uf6l5kr48wqm6rf1h --lindorm-region cn-shanghai
 
-# Query region list.
-aliyun hitsdb describe-regions
+# List supported regions.
+aliyun lindorm regions list
 
-# Query instance overview, all regions.
-aliyun hitsdb get-instance-summary
+# Query the all-region instance overview.
+aliyun lindorm summary
 ```
 
 #### ❌ INCORRECT
 
 ```bash
 # Error: incorrect instance ID format.
-aliyun hitsdb get-lindorm-instance --instance-id lindorm-xxx --region cn-shanghai  # ❌ Use ld-xxx format.
+aliyun lindorm v1 instance describe lindorm-xxx  # ❌ Use the ld-xxx format.
 
-# Error: missing required parameter.
-aliyun hitsdb get-lindorm-instance --region cn-shanghai  # ❌ Missing --instance-id.
+# Error: missing positional instance ID.
+aliyun lindorm v1 instance describe  # ❌ accepts 1 arg(s), received 0
 
-# Error: incorrect region format.
-aliyun hitsdb get-lindorm-instance-list --region Shanghai  # ❌ Use cn-shanghai.
+# Error: passing the instance ID as a flag.
+aliyun lindorm v1 instance describe --instance-id ld-xxx  # ❌ The plugin has no such flag; the ID is positional.
+
+# Error: passing the region with --region.
+aliyun lindorm instance list --region cn-beijing  # ❌ The parent aliyun CLI consumes it silently. Use --lindorm-region.
 ```
 
 ### 2. CloudMonitor API Calls, aliyun cms
@@ -179,24 +182,26 @@ For time format rules, see SKILL.md → "Time format". Acceptance examples:
 #### ✅ CORRECT Output Structure
 
 ```json
-{
-  "InstanceList": [
-    {
-      "InstanceId": "ld-uf6l5kr48wqm6rf1h",
-      "InstanceAlias": "production-environment",
-      "InstanceStatus": "ACTIVATION",
-      "RegionId": "cn-shanghai"
-    }
-  ],
-  "TotalCount": 1
-}
+[
+  {
+    "instance_id": "ld-uf6l5kr48wqm6rf1h",
+    "instance_name": "production-environment",
+    "status": "ACTIVATION",
+    "region_id": "cn-shanghai",
+    "zone_id": "cn-shanghai-f",
+    "arch": "v2",
+    "service_type": "lindorm_v2",
+    "network_type": "vpc",
+    "create_time": "2026-07-22 10:29:57"
+  }
+]
 ```
 
 #### Validation Points
 
-- `InstanceList` array exists.
-- Each instance contains `InstanceId` and `InstanceStatus`.
-- `InstanceStatus` is a valid status value: ACTIVATION, CREATING, or STOPPED.
+- The top level is an array because `instance list` directly returns the instance list.
+- Each instance contains `instance_id` and `status`.
+- `status` is a valid status value: ACTIVATION, CREATING, or STOPPED.
 
 ---
 

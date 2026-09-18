@@ -92,7 +92,7 @@ Reference: https://github.com/alibaba/canal
 > ⚠️ The Lindorm wide table engine is MySQL-compatible but not fully compatible with MySQL. Sqoop may fail because of DDL differences.
 
 ```bash
-# Select the connection address based on the instance ServiceType. See sql-client-guide.md → "Connection domain name format".
+# Select the connection address based on the instance service_type. See sql-client-guide.md → "Connection domain name format".
 # The V1/V2 MySQL protocol port is 33060.
 sqoop export \
   --connect jdbc:mysql://<connection_address>:<port>/default \
@@ -120,7 +120,7 @@ cursor = mysql_conn.cursor()
 cursor.execute("SELECT * FROM source_table")
 
 # 2. Write to Lindorm through the MySQL protocol.
-# Select the connection address based on the instance ServiceType. See sql-client-guide.md.
+# Select the connection address based on the instance service_type. See sql-client-guide.md.
 # The V1/V2 MySQL protocol port is 33060. For domain name format, see sql-client-guide.md.
 lindorm_conn = pymysql.connect(
     host='<connection_address>',

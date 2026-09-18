@@ -29,28 +29,26 @@ Run the following commands to obtain the architecture version, connection endpoi
 
 ```bash
 # 1. Get instance details and identify the V1/V2 architecture
-aliyun hitsdb get-lindorm-instance \
-    --instance-id <instance-id>
+aliyun lindorm v1 instance describe <instance-id> --lindorm-region <region>
 
-# 2. Get connection endpoints of each engine
-aliyun hitsdb get-lindorm-instance-engine-list \
-    --instance-id <instance-id>
+# 2. Get connection endpoints for each engine
+aliyun lindorm v1 instance engine-list <instance-id> --lindorm-region <region>
 ```
 
 **Key information to extract**:
 
 | Item | Source field | Description |
 |------|--------------|-------------|
-| Architecture version | `ServiceType` | `lindorm_v2*` = V2 architecture; `lindorm` = V1 architecture |
-| Connection endpoint | `NetInfoList` | Domain names and ports of each engine. This field is used by both V1 and V2 |
-| Network type | `NetType` | `"0"` = public network available; `"2"` = VPC private network only. The value is a string and is the same for V1/V2 |
-| Engine version | `EngineList` | Version number of each engine |
+| Architecture version | `service_type` from describe | `lindorm_v2*` = V2 architecture; `lindorm` = V1 architecture |
+| Connection endpoint | `connection_string` / `port` from engine-list, applicable to V1 and V2 | Domain name and port of each engine |
+| Network type | `net_type` from engine-list | `PUBLIC` = public network; `VPC` = VPC only. The raw value remains available as `net_type_code`: `"0"` for public and `"2"` for VPC. |
+| Engine version | `engines[].version` from describe | Version of each engine |
 
-> **Note**: `get-lindorm-instance-engine-list` returns `NetInfoList` and `NetType` for both V1 and V2. Another V2-only API, `get-lindorm-v2-instance-details`, returns `ConnectAddressList` and `Type=INTRANET/INTERNET`. See Phase 2.
+> **Note**: `v1|v2 instance engine-list` returns a flattened engine-by-address array for both V1 and V2, including `net_type` and `connection_string`. The V2-only `v2 instance describe` command also returns `connect_address_list` with `type=INTRANET/INTERNET`. See Phase 2.
 
 **Endpoint domain format**:
 
-For endpoint formats, see [sql-client-guide.md](sql-client-guide.md). It includes V1/V2 `ServiceType` identification logic and complete examples.
+For endpoint formats, see [sql-client-guide.md](sql-client-guide.md). It includes V1/V2 `service_type` identification logic and complete examples.
 
 ---
 
@@ -60,24 +58,24 @@ Before providing connection code, confirm the following two items.
 
 #### 1. Public-network access check
 
-**Method 1: Use `get-lindorm-instance-engine-list` for both V1 and V2**
+**Method 1: Use `v1|v2 instance engine-list`, applicable to V1 and V2**
 
-Check the string field `NetType` in `NetInfoList`:
-- `"0"`: public network available
-- `"2"`: VPC private network only
+Check the `net_type` field in the returned array:
+- `PUBLIC`, with `net_type_code: "0"`: public network available
+- `VPC`, with `net_type_code: "2"`: VPC private network only
 
-**Method 2: Use `get-lindorm-v2-instance-details` for V2 only**
+**Method 2: Use `v2 instance describe`, V2 only**
 
-Check the `Type` field in `ConnectAddressList`:
+Check the `type` field in `connect_address_list`:
 - `INTERNET`: public network available
 - `INTRANET`: VPC private network only
 
-**If only a VPC private endpoint exists (`NetType="2"` or `Type=INTRANET`)**:
-> ⚠️ The SQL port of the current instance only supports VPC private-network access. To connect from a local computer:
+**If only a VPC endpoint is available, `net_type=VPC` or `type=INTRANET`**:
+> ⚠️ The SQL port currently supports only VPC access. To connect from a local computer:
 > 1. Log on to the [Lindorm console](https://lindorm.console.aliyun.com/).
 > 2. Click the instance ID, then go to **Database Connection** → **Engine**.
 > 3. Click **Enable Public Endpoint** in the upper-right corner.
-> 4. Configure the whitelist with your local IP address.
+> 4. Add your local public IP address to the whitelist.
 >
 > Alternatively, run the connection and operations on an Alibaba Cloud ECS instance in the same VPC as Lindorm.
 
@@ -85,11 +83,9 @@ Check the `Type` field in `ConnectAddressList`:
 
 **V2 instances**:
 ```bash
-aliyun hitsdb get-lindorm-v2-instance-details \
-    --instance-id <instance-id>
+aliyun lindorm v2 instance describe <instance-id> --lindorm-region <region>
 ```
-
-Extract the `InitialRootPassword` field. The username is `root`.
+Extract `initial_root_password`. The username is `root`.
 
 > ⚠️ **Password retrieval and confirmation flow:**
 > 1. **First connection**: use `InitialRootPassword`.
@@ -122,7 +118,8 @@ Instance ld-xxx has the following engines enabled:
 
 [SQL credentials]
 - Username: root
-- Password: for a V2 instance, the `InitialRootPassword` has been obtained through `get-lindorm-v2-instance-details`; for a V1 instance, view it in Lindorm Insight → User Management in the console.
+- Password: for V2, use `initial_root_password` returned by `v2 instance describe`;
+            for V1, view it in Lindorm Insight → User Management in the console.
 ```
 
 **Connectivity verification with the MySQL command line**:
@@ -171,8 +168,7 @@ After the connection succeeds, tell the user:
 **The agent proactively checks the whitelist**:
 
 ```bash
-aliyun hitsdb get-instance-ip-white-list \
-    --instance-id <instance-id>
+aliyun lindorm v1 instance whitelist get <instance-id> --lindorm-region <region>
 ```
 
 **Provide clear recommendations after analysis**:

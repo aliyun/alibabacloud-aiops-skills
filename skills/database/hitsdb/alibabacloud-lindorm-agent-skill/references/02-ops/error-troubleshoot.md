@@ -33,17 +33,17 @@ Follow this guide when users encounter error codes, exceptions, or error message
 
 | Error Code | Meaning | Possible Cause | Solution |
 |--------|------|---------|---------|
-| `InvalidParameter.InstanceId` | Invalid instance ID | Incorrect ID format, does not exist, or has been released | Check the format, which should be ld-xxx, and use `get-lindorm-instance --instance-id <id>` to confirm whether it exists |
-| `InstanceNotFound` | Instance does not exist | Incorrect ID or released instance | Use `get-lindorm-instance --instance-id <id>` to confirm |
-| `InstanceStatusInvalid` | Instance status does not support the operation | Instance is not running | Wait until the instance changes to ACTIVATION |
-| `InstanceLocked` | Instance is locked | Overdue payment, security reason, or O&M in progress | Check account balance or contact technical support |
-| `QuotaExceeded` | Insufficient quota | Regional quota limit exceeded | Submit a ticket to request quota increase |
-| `Instance.IsNotValid` | Instance ID format is valid but the instance does not exist | Incorrect ID or released instance | Confirm through `get-instance-summary` |
-| `InvalidAccessKeyId.NotFound` | AccessKey does not exist | Incorrect AK ID | Check AK configuration |
-| `SignatureDoesNotMatch` | Signature error | Incorrect AK Secret | Verify that the Secret is correct |
-| `Forbidden.RAM` | Insufficient RAM permissions | Lindorm permissions are missing | Add the `AliyunLindormReadOnlyAccess` permission |
-| `UnauthorizedOperation` | Unauthorized operation | Specific operation permission is missing | Contact the primary account for authorization |
-| `Throttling.User` | User-level throttling | Request frequency is too high | Reduce frequency and add retry mechanism |
+| `InvalidParameter.InstanceId` | Invalid instance ID | Incorrect format, nonexistent instance, or released instance | Confirm the `ld-xxx` format and run `aliyun lindorm v1 instance describe <id>` |
+| `InstanceNotFound` | Instance does not exist | Incorrect ID or released instance | Run `aliyun lindorm v1 instance describe <id>` |
+| `InstanceStatusInvalid` | Instance status does not support the operation | Instance is not running | Wait until the instance reaches `ACTIVATION` |
+| `InstanceLocked` | Instance is locked | Overdue payment, security issue, or maintenance in progress | Check the account balance or contact technical support |
+| `QuotaExceeded` | Insufficient quota | Regional quota exceeded | Submit a ticket to request a quota increase |
+| `Instance.IsNotValid` | The ID format is valid but the instance does not exist | Incorrect ID or released instance | Confirm with `aliyun lindorm summary` |
+| `InvalidAccessKeyId.NotFound` | AccessKey does not exist | Incorrect AccessKey ID | Check the AccessKey configuration |
+| `SignatureDoesNotMatch` | Signature mismatch | Incorrect AccessKey secret | Verify the secret |
+| `Forbidden.RAM` | Insufficient RAM permissions | Lindorm permissions are missing | Add `AliyunLindormReadOnlyAccess` |
+| `UnauthorizedOperation` | Unauthorized operation | A specific action permission is missing | Ask the primary account to grant permission |
+| `Throttling.User` | User-level throttling | Request rate is too high | Reduce the rate and add retries |
 | `Throttling.System` | System-level throttling | System load is high | Retry later |
 
 ---
@@ -118,11 +118,11 @@ The following are MySQL-compatible error codes and Lindorm extended error codes 
 
 | Metric Exception | Possible Cause | Troubleshooting Suggestion | V2 Note |
 |---------|---------|---------|--------|
-| `cpu_idle < 10%` | CPU usage is too high | Check slow query logs and consider scaling out | — |
-| `mem_used_percent > 90%` | Memory is tight | Check cache configuration and scale out | ⚠️ V2 returns empty. Calculate by using `1 - mem_free/mem_total`. |
-| `storage_used_percent > 85%` | Insufficient storage space | Clean up data or scale out | ⚠️ V2 requires the `get-lindorm-v2-storage-usage` API |
-| `read_rt_p99 > 1000ms` | High query latency | Analyze slow queries and create indexes | ⚠️ V2 returns empty |
-| `write_rt_p99 > 500ms` | High write latency | Check write mode and consider scaling out | ⚠️ V2 returns empty |
+| `cpu_idle < 10%` | CPU utilization is too high | Check slow query logs and consider scaling out | — |
+| `mem_used_percent > 90%` | Memory pressure | Check cache configuration and scale out | ⚠️ V2 returns no data; calculate `1 - mem_free/mem_total` |
+| `storage_used_percent > 85%` | Insufficient storage | Clean up data or scale out | ⚠️ For V2, run `aliyun lindorm v2 instance storage` |
+| `read_rt_p99 > 1000ms` | High query latency | Analyze slow queries and create indexes | ⚠️ V2 returns no data |
+| `write_rt_p99 > 500ms` | High write latency | Check the write pattern and consider scaling out | ⚠️ V2 returns no data |
 
 ---
 
@@ -140,9 +140,9 @@ The following are MySQL-compatible error codes and Lindorm extended error codes 
 2. The instance does not exist or has been released.
 
 [Troubleshooting Steps]
-Step 1: Verify ID format — confirm that it starts with ld-.
-Step 2: Confirm whether it exists — aliyun hitsdb get-lindorm-instance --instance-id <id>
-The API automatically locates the region, so --region is not required.
+Step 1: Verify the ID format and confirm that it starts with `ld-`.
+Step 2: Confirm that it exists: aliyun lindorm v1 instance describe <id> --lindorm-region <instance-region>
+Pass the region explicitly. In plugin mode, the parent aliyun CLI consumes `--region` silently. Without `--lindorm-region`, the active profile region is used and an instance in another region is reported as NotFound.
 
 [Official Documentation] https://help.aliyun.com/zh/lindorm/developer-reference/common-error-codes-reference
 ```
@@ -155,9 +155,9 @@ The API automatically locates the region, so --region is not required.
 [Error Meaning] The username or password is incorrect.
 
 [Troubleshooting Steps]
-Step 1: Confirm that the password is correct. If forgotten, reset it in the console.
-Step 2: Check RAM permissions and make sure AliyunLindormReadOnlyAccess is included.
-Step 3: Verify the fix — aliyun hitsdb get-instance-summary
+Step 1: Confirm that the password is correct. If it is forgotten, reset it in the console.
+Step 2: Check RAM permissions and make sure `AliyunLindormReadOnlyAccess` is granted.
+Step 3: Verify the fix with `aliyun lindorm summary`.
 
 [Common Mistakes]
 ❌ Using a RAM user without Lindorm authorization

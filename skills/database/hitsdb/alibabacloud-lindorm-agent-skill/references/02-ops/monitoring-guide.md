@@ -134,7 +134,7 @@ For V2, calculate memory usage by using `1 - mem_free / mem_total`.
 | `storage_used_percent` | Total storage usage percentage | % | > 80% | ⚠️ No data |
 | `storage_used_bytes` | Total storage usage | bytes | — | ✅ |
 
-For V2, storage usage percentage must be obtained through the `get-lindorm-v2-storage-usage` API. CloudMonitor has no data.
+For V2, obtain the storage usage percentage by running `aliyun lindorm v2 instance storage`; CloudMonitor does not provide this data.
 
 > ⚠️ **Storage hard limit**: When the hot storage or cold storage watermark is ≥ 95%, the system automatically prohibits data writes. It is recommended to set capacity alert thresholds at 75% to 80% and scale out in advance to avoid business impact.
 
@@ -172,8 +172,8 @@ Engine-specific metrics return data only when the corresponding engine is enable
 | Memory utilization | `mem_used_percent`, V1 / `1 - mem_free / mem_total`, V2 |
 | QPS | `read_ops` + `write_ops` |
 | Latency / RT | `read_rt` or `write_rt` |
-| P99 latency | `get_rt_p99` / `put_rt_p99`, V1 / —, no data for V2 |
-| Storage usage percentage | `hot_storage_used_percent`, V1 / `get-lindorm-v2-storage-usage` API, V2 |
+| P99 latency | `get_rt_p99` / `put_rt_p99` for V1; no data for V2 |
+| Storage usage percentage | `hot_storage_used_percent` for V1; `v2 instance storage` for V2 |
 | Network traffic | `bytes_in` + `bytes_out` |
 | Load | `load_one` |
 
@@ -257,10 +257,10 @@ Event alerts cannot be captured by metric thresholds and are a key O&M capabilit
 |------|----|----|-------------|-------------|----------------|
 | CPU utilization | `cpu_idle ≤ 30` | `cpu_idle ≤ 30` | ≤ 30% for 30min | ≤ 20% for 5min | ≤ 5% for 3min |
 | Memory utilization | `mem_used_percent` | `1 - mem_free/mem_total` | ≥ 85% for 30min | ≥ 92% for 5min | — |
-| Hot storage usage percentage | `hot_storage_used_percent` | `get-lindorm-v2-storage-usage` API | ≥ 70% | ≥ 80% | ≥ 90% |
-| P99 latency | `get_rt_p99` | —, no data | ≥ 50ms | ≥ 100ms | ≥ 200ms |
+| Hot storage usage percentage | `hot_storage_used_percent` | `v2 instance storage` | ≥ 70% | ≥ 80% | ≥ 90% |
+| P99 latency | `get_rt_p99` | No data | ≥ 50ms | ≥ 100ms | ≥ 200ms |
 
-> V2 storage alerts: CloudMonitor has no `hot_storage_used_percent` / `storage_used_percent` data. You must obtain it through the `get-lindorm-v2-storage-usage` API, or configure storage-space-based alert rules in the console.
+> For V2 storage alerts, CloudMonitor does not provide `hot_storage_used_percent` or `storage_used_percent`. Run `aliyun lindorm v2 instance storage`, or configure a storage-space-based alert rule in the console.
 
 ### Notification Channels
 

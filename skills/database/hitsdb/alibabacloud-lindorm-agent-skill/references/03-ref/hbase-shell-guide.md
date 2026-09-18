@@ -74,7 +74,7 @@ Start directly after configuration:
 Use Alibaba Cloud CLI to obtain the HBase API connection address:
 
 ```bash
-aliyun hitsdb get-lindorm-instance-engine-list --instance-id <id>
+aliyun lindorm v1 instance engine-list <id> --lindorm-region <region>
 ```
 
 Find the connection address whose engine type is `lindorm` in the returned result. Both V1 and V2 instances use this engine code. The port is `30020`.
@@ -94,7 +94,7 @@ Find the connection address whose engine type is `lindorm` in the returned resul
 
 **Troubleshooting steps**:
 
-1. Check whitelist: `aliyun hitsdb get-instance-ip-white-list --instance-id <id>`
+1. Check whitelist: `aliyun lindorm v1 instance whitelist get <id>`
 2. Test port reachability: `nc -zv <host> 30020 -w 5`
 3. Confirm that `./bin/hbase shell` from the alihbase package is used, not open-source HBase Shell.
 

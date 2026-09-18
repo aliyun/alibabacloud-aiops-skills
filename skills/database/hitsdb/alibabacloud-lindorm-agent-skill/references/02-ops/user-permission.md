@@ -92,11 +92,11 @@ Sure, I can help you create a read-only account. Lindorm supports two permission
 The new user can connect in the following way:
 
 **Connection information:**
-> The Agent automatically selects the correct V1/V2 domain name format based on instance ServiceType. See `sql-client-guide.md` → "Connection domain name format".
+> The Agent automatically selects the correct V1/V2 domain name format based on instance service_type. See `sql-client-guide.md` → "Connection domain name format".
 
 ```bash
 mysql -h <connection_address> -P 33060 -u bi_readonly -p
-# Address retrieval: console instance details → Database Connection, or aliyun hitsdb get-lindorm-instance-engine-list --instance-id <id>
+# Address retrieval: console instance details → Database Connection, or aliyun lindorm v1 instance engine-list <id>
 ```
 
 **Test read-only permission:**

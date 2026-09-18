@@ -14,13 +14,13 @@ This document provides development references for connecting to Lindorm SQL in m
 
 Lindorm instances have two architecture versions, V1 and V2, and their domain formats are different. During execution, the agent should:
 
-1. **Query instance details** to obtain `ServiceType`.
+1. **Query instance details** to obtain `service_type`.
 2. **Identify the architecture type**:
    - `lindorm_v2*` -> use the V2 domain format.
    - `lindorm` -> use the V1 domain format.
 3. **Automatically fill in** the correct connection endpoint.
 
-| Architecture | ServiceType | Domain format | Private endpoint example | Public endpoint example |
+| Architecture | service_type | Domain format | Private endpoint example | Public endpoint example |
 |--------------|-------------|---------------|--------------------------|-------------------------|
 | **V2** | `lindorm_v2*` | `*.lindorm.aliyuncs.com` | `ld-xxx-proxy-lindorm-vpc.lindorm.aliyuncs.com:33060` | `ld-xxx-proxy-lindorm-pub.lindorm.aliyuncs.com:33060` |
 | **V1** | `lindorm` | `*.lindorm.rds.aliyuncs.com` | `ld-xxx-proxy-lindorm.lindorm.rds.aliyuncs.com:33060` | `ld-xxx-proxy-lindorm-public.lindorm.rds.aliyuncs.com:33060` |
@@ -29,7 +29,7 @@ Lindorm instances have two architecture versions, V1 and V2, and their domain fo
 >
 > **A V1 public endpoint is available only after public access is enabled**. By default, only the private endpoint is provided. The public endpoint suffix is `-public`.
 >
-> **How to obtain it**: console -> instance details -> Database Connection, or run `aliyun hitsdb get-lindorm-instance-engine-list --instance-id <id>`.
+> **How to obtain it**: console -> instance details -> Database Connection, or run `aliyun lindorm v1 instance engine-list <id>`.
 
 ---
 
@@ -103,7 +103,7 @@ https://help.aliyun.com/zh/lindorm/user-guide/add-connect-wide-table-engines-thr
 
 ### MySQL Protocol, Recommended
 
-All examples use the `<connection-endpoint>` placeholder. The agent automatically fills in the correct V1/V2 domain according to the instance `ServiceType`.
+All examples use the `<connection-endpoint>` placeholder. The agent automatically fills in the correct V1/V2 domain according to the instance `service_type`.
 
 #### Java
 

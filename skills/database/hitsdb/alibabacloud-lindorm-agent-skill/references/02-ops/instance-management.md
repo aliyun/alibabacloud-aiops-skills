@@ -22,33 +22,42 @@ Covers instance queries, including lists, details, engines, and storage, and pro
 
 **Region strategy**:
 
-- **Default behavior**: If the user does not specify a region, query `cn-shanghai`, East China 2 Shanghai, by default, and **must explicitly state** that "this query is for the Shanghai region".
-- **Extended query**: If the user says "all regions", "not sure", or "maybe in another region", first run `get-instance-summary` to obtain a cross-region overview, and then query regions as needed.
+- Pass the region with `--lindorm-region`, never `--region`. The parent `aliyun` CLI consumes `--region` silently. See SKILL.md → "Region Policy".
+- **Default behavior**: If the user does not specify a region, query `--lindorm-region cn-shanghai` and explicitly state that the query covers the China East 2, Shanghai region.
+- **Expanded query**: If the user asks for all regions, is unsure, or says the instance may be elsewhere, first run `aliyun lindorm summary` for navigation. It may under-report, so then query each region with `--lindorm-region`.
+- Before responding, verify `region_id` in the output instead of assuming the parameter took effect.
 
 **Execution commands**:
 
 ```bash
-# Query the instance list in a specified region. --region is required.
-aliyun hitsdb get-lindorm-instance-list --region cn-shanghai
+# List V1 and V2 instances in the specified region.
+aliyun lindorm instance list --lindorm-region cn-shanghai --output json
 
-# Query a cross-region instance overview. --region is not required.
-aliyun hitsdb get-instance-summary
+# Search by a partial name or ID.
+aliyun lindorm instance list --lindorm-region cn-shanghai --query <keyword>
 
-# Query all regions.
-aliyun hitsdb describe-regions
+# Query the all-region overview. This command is region-agnostic.
+aliyun lindorm summary
+
+# List all supported regions.
+aliyun lindorm regions list
 ```
 
-**Key field descriptions**:
+**Key fields**, returned in snake_case with `--output json`:
 
 | Field | Meaning | Common Values |
 |------|------|--------|
-| InstanceId | Instance ID | `ld-xxx` |
-| InstanceAlias | Instance alias | User-defined name |
-| InstanceStatus | Instance status | `ACTIVATION`, running<br>`CREATING`, creating<br>`STOPPED`, stopped |
-| PayType | Billing type | `POSTPAY`, pay-as-you-go<br>`PREPAY`, subscription |
-| RegionId | Region ID | `cn-shanghai` |
-| ZoneId | Zone ID | `cn-shanghai-e` |
-| NetworkType | Network type | `vpc` |
+| instance_id | Instance ID | `ld-xxx` |
+| instance_name | Instance alias | User-defined name, which may be empty |
+| status | Instance status | `ACTIVATION`, running<br>`CREATING`, being created<br>`STOPPED`, stopped |
+| arch | Architecture | `v1` / `v2`, suitable for direct command routing |
+| service_type | Instance type | `lindorm` / `lindorm_v2` / ... |
+| region_id | Region ID | `cn-shanghai` |
+| zone_id | Zone ID | `cn-shanghai-e` |
+| network_type | Network type | `vpc` |
+| create_time | Creation time | `2026-07-22 10:29:57` |
+
+> This command does not return billing type or engine enablement flags. Use Flow 2 or Flow 3 when those details are required.
 
 ---
 
@@ -59,21 +68,22 @@ aliyun hitsdb describe-regions
 **Execution command**:
 
 ```bash
-aliyun hitsdb get-lindorm-instance --instance-id <instance-id>
+aliyun lindorm v1 instance describe <instance-id> --lindorm-region <region>
 ```
 
-**Parameter descriptions**:
-- `--instance-id`: Instance ID, required.
-- `--region`: Region ID, optional. It is automatically located based on instance-id.
+**Parameters**:
+- The instance ID is a required positional argument. Do not use `--instance-id`.
+- Specify the region with `--lindorm-region`; otherwise, the active profile region is used. The endpoint is resolved from the region, not automatically from the instance ID.
+- For V2, run `aliyun lindorm v2 instance describe <instance-id> --lindorm-region <region>` to obtain node-group topology and `connect_address_list`.
 
-**Key field descriptions**:
+**Key fields**, in snake_case:
 
 | Category | Field | Meaning |
 |------|------|------|
-| **Basic** | InstanceId / InstanceAlias / InstanceStatus / CreateTime / ExpireTime | Instance ID, alias, status, creation time, expiration time |
-| **Network** | VpcId / VswitchId / NetworkType | VPC, vSwitch, network type |
-| **Storage** | InstanceStorage / DiskCategory / DiskUsage / ColdStorage | Storage capacity in GB, disk type, usage percentage, cold storage capacity |
-| **Engines** | EngineList / EnableLTS / EnableSearch | Engine list, time series and search switches |
+| **Basic** | instance_id / status / service_type / arch_version / create_time / expire_time | ID, status, type, architecture version, and creation/expiration times |
+| **Network** | vpc_id / vswitch_id / network_type | VPC, VSwitch, and network type |
+| **Storage** | instance_storage / disk_category / disk_threshold | Capacity in GB, disk type, and watermark threshold in percent |
+| **Engines** | engines[]: engine / core_count / cpu_count / memory_size / specification / latest_version | Engine list and specifications |
 
 ---
 
@@ -84,19 +94,21 @@ aliyun hitsdb get-lindorm-instance --instance-id <instance-id>
 **Execution command**:
 
 ```bash
-aliyun hitsdb get-lindorm-instance-engine-list --instance-id <instance-id>
+aliyun lindorm v1 instance engine-list <instance-id> --lindorm-region <region>
 ```
 
-**Key field descriptions**:
+**Key fields**: The top level is an array flattened by engine and endpoint.
 
 | Field | Meaning |
 |------|------|
-| EngineType | Engine type. For details, see SKILL.md → "Engine types". |
-| Version | Current version |
-| LatestVersion | Latest upgradable version |
-| CpuCount | Number of CPU cores |
-| MemorySize | Memory size in GB |
-| CoreCount | Number of nodes |
+| engine_type | Engine type. See SKILL.md → "Engine Types". |
+| connection_string | Connection domain name |
+| port | Port |
+| net_type | `VPC`, private / `PUBLIC`, public |
+| net_type_code | `"2"` for VPC, `"0"` for public |
+| access_type | Access type, distinguishing multiple protocol ports of the same engine |
+
+> Engine specifications, node counts, and versions are not returned by this command. Use `instance describe` from Flow 2 and inspect `engines[]`. Engines without reachable endpoints, such as bds or compute, are still listed with empty endpoint fields.
 
 ---
 
@@ -107,45 +119,52 @@ aliyun hitsdb get-lindorm-instance-engine-list --instance-id <instance-id>
 **Execution commands, selected by version**:
 
 ```bash
-# V1 instance.
-aliyun hitsdb get-lindorm-fs-used-detail --instance-id <instance-id>
+# V1 instance
+aliyun lindorm v1 instance storage <instance-id> --lindorm-region <region>
 
-# V2 instance.
-aliyun hitsdb get-lindorm-v2-storage-usage --instance-id <instance-id>
+# V2 instance
+aliyun lindorm v2 instance storage <instance-id> --lindorm-region <region>
 ```
 
 **Key field descriptions**:
 
-**V1 instance** (`get-lindorm-fs-used-detail`):
+**V1 instance**, `v1 instance storage`:
 
 | Field | Meaning |
 |------|------|
-| FsCapacity | Total file engine capacity, in bytes |
-| FsCapacityHot / FsCapacityCold | Hot/cold storage capacity, in bytes |
-| FsUsedHot / FsUsedCold | Used hot/cold storage, in bytes |
-| FsUsedOnLindormTable | Used by Lindorm wide table |
-| FsUsedOnLindormTableData | Wide table data size |
-| FsUsedOnLindormTableWAL | WAL log size |
+| fs_capacity | Total capacity, bytes encoded as a string |
+| fs_capacity_hot / fs_capacity_cold | Hot/cold storage capacity in bytes |
+| fs_used_hot / fs_used_cold | Used hot/cold storage in bytes |
+| used_on_lindorm_table | Capacity used by the wide table engine |
+| used_on_lindorm_table_data | Wide table data size |
+| used_on_lindorm_table_wal | WAL size |
+| disks[] | Details by disk type: disk_type / capacity / used / used_lindorm_* |
 
-**V2 instance** (`get-lindorm-v2-storage-usage`):
+> V1 storage fields are byte values encoded as strings. Convert them to numbers before calculation.
+
+**V2 instance**, `v2 instance storage`; `--output json` is required:
 
 | Field | Meaning |
 |------|------|
-| UsageByDiskCategory[] | Usage detail array by disk type |
-| └ diskType | Disk type, such as `PerformanceCloudStorage` or `CapacityCloudStorage` |
-| └ capacity | Capacity, in bytes |
-| └ used | Used capacity, in bytes |
-| └ usedLindormTable | Used by wide table |
-| └ usedLindormTsdb | Used by time series |
-| CapacityByDiskCategory[] | Capacity information array by disk category |
-| └ category | Category, such as `PERF_CLOUD_ESSD_PL1` or `REMOTE_CAP_OSS` |
-| └ capacity | Capacity, in GB |
+| usage_by_disk_category[] | Usage details grouped by disk type |
+| └ diskType | `StandardCloudStorage` / `PerformanceCloudStorage` / `CapacityCloudStorage` |
+| └ capacity | Capacity in bytes |
+| └ used | Used capacity in bytes |
+| └ usedLindormTable | Capacity used by the wide table engine |
+| └ usedLindormTsdb | Capacity used by the time series engine |
+| capacity_by_disk_category[] | Capacity information grouped by disk category |
+| └ category | `STD_CLOUD_ESSD_PL0` / `PERF_CLOUD_ESSD_PL1` / `REMOTE_CAP_OSS`, and others |
+| └ capacity | Capacity in GB |
+
+> ⚠️ The top-level keys are snake_case, but keys inside the arrays remain camelCase because they are passed through from the API. Table output cannot flatten these arrays; use `--output json`.
 
 ---
 
-## Scaling Knowledge
+## Scaling
 
-**⚠️ This read-only Skill does not execute scaling change commands.** The following is knowledge guidance and directs users to operate in the console.
+> This section provides knowledge and solution selection only. For the complete workflow for issuing a configuration change, including dry-run preview, parameter constraints, UpgradeType inference, storage coupling, scale-in risk warnings, and known pitfalls, see **`instance-lifecycle.md`**.
+>
+> Configuration changes affect billing. Run `--dry-run` first and obtain explicit user confirmation before execution. The user may also perform the operation in the console.
 
 ### Scaling Method Comparison
 
@@ -155,7 +174,7 @@ aliyun hitsdb get-lindorm-v2-storage-usage --instance-id <instance-id>
 | Insufficient QPS | Increase node count, horizontal scaling | 10 to 20 minutes | No impact |
 | High single-query latency | Upgrade node specification, vertical scaling | About 30 minutes, rolling restart | Recommended during off-peak hours |
 
-Operation path: Lindorm console → Instance details → Change Configuration
+Operation paths: use `aliyun lindorm v1|v2 instance modify` in the CLI, as described in `instance-lifecycle.md`, or go to Lindorm console → Instance Details → Change Configuration.
 
 ### Scaling Constraints
 
@@ -175,8 +194,8 @@ Operation path: Lindorm console → Instance details → Change Configuration
 
 | Missing Parameter | Strategy |
 |------|------|
-| Missing region | Query `cn-shanghai` by default and proactively state the query region. If the user says "all regions", first use `get-instance-summary`. |
-| Missing instance-id | List instances first and let the user select one. |
+| Missing region | Default to `--lindorm-region cn-shanghai` and state the queried region. If the user asks for all regions, start with `aliyun lindorm summary`. |
+| Missing instance ID | Run `aliyun lindorm instance list --lindorm-region <region>` and let the user select an instance. |
 
 ---
 
@@ -184,14 +203,17 @@ Operation path: Lindorm console → Instance details → Change Configuration
 
 | Error | Cause | Guidance |
 |------|------|------|
-| Instance does not exist | Instance ID is incorrect or the instance has been released | Use `get-lindorm-instance-list` to confirm the instance ID |
-| Region mismatch | Instance is in another region | Prompt the user to specify the correct region |
-| Insufficient permissions | AK has no Lindorm permission | `AliyunLindormReadOnlyAccess` permission is required |
+| Instance does not exist | Incorrect ID or released instance | Confirm the ID with `aliyun lindorm instance list --lindorm-region <region>` |
+| Region mismatch | The instance is in another region | Pass the correct `--lindorm-region`. Misusing `--region` silently queries the wrong region instead of failing. |
+| Insufficient permissions | The AccessKey lacks Lindorm permissions | `AliyunLindormReadOnlyAccess` is required |
 
 ---
 
 ## Related Scenarios
 
-- Performance analysis before scale-out → `monitoring-guide.md`
+- **Instance write operations**, including create, modify, release, and billing conversion → `instance-lifecycle.md`
+- Whitelist / security group → `network-access-control.md`
+- CLI quick reference, region rules, and return structures → `../03-ref/related-commands.md`
+- Performance analysis before scaling → `monitoring-guide.md`
 - Storage usage details → `storage-analysis.md`
-- Monitoring settings after scale-out → `monitoring-guide.md`
+- Monitoring after scaling → `monitoring-guide.md`

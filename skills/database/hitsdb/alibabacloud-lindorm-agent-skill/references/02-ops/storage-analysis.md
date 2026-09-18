@@ -21,6 +21,16 @@ Typical user expressions:
 
 ## Execution Flow
 
+### Step 0: Determine the Instance Architecture
+
+For a known instance ID, always query instance details before choosing the storage API:
+
+```bash
+aliyun lindorm v1 instance describe <instance-id> --lindorm-region <region> --output json
+```
+
+The underlying `GetLindormInstance` action is shared by V1 and V2, so this command is the architecture probe for both. Read `service_type` or `arch_version`, then choose `v1 instance storage` or `v2 instance storage`. Do not guess the architecture from the instance ID or storage fields.
+
 ### Flow 1: Obtain Storage Details, Snapshot Data
 
 **Applicable scenario**: The user wants to quickly understand current storage usage.
@@ -28,13 +38,11 @@ Typical user expressions:
 **Execution commands**:
 
 ```bash
-# V1 instance.
-aliyun hitsdb get-lindorm-fs-used-detail \
-    --instance-id <instance-id>
+# V1 instance
+aliyun lindorm v1 instance storage <instance-id> --lindorm-region <region>
 
-# V2 instance, instanceType=lindorm_v2.
-aliyun hitsdb get-lindorm-v2-storage-usage \
-    --instance-id <instance-id>
+# V2 instance, instanceType=lindorm_v2
+aliyun lindorm v2 instance storage <instance-id> --lindorm-region <region>
 ```
 
 **Output presentation**:
@@ -50,79 +58,81 @@ Then expand detailed fields as needed.
 
 **Key field descriptions**:
 
-**V1 instance** (`get-lindorm-fs-used-detail`):
+**V1 instance**, `v1 instance storage`, backed by GetLindormFsUsedDetail:
 
 | Field | Meaning | Unit |
 |------|------|------|
-| `FsCapacity` | Total file engine capacity | bytes |
-| `FsCapacityHot` | Hot storage capacity | bytes |
-| `FsCapacityCold` | Cold storage capacity | bytes |
-| `FsUsedHot` | Used hot storage | bytes |
-| `FsUsedCold` | Used cold storage | bytes |
-| `FsUsedOnLindormTable` | Used by Lindorm wide table | bytes |
-| `FsUsedOnLindormTableData` | Wide table data size | bytes |
-| `FsUsedOnLindormTableWAL` | WAL log size | bytes |
+| `fs_capacity` | Total file-engine capacity | bytes |
+| `fs_capacity_hot` | Hot storage capacity | bytes |
+| `fs_capacity_cold` | Cold storage capacity | bytes |
+| `fs_used_hot` | Used hot storage | bytes |
+| `fs_used_cold` | Used cold storage | bytes |
+| `used_on_lindorm_table` | Storage used by the Lindorm wide table engine | bytes |
+| `used_on_lindorm_table_data` | Wide table data size | bytes |
+| `used_on_lindorm_table_wal` | WAL size | bytes |
 
 **V1 formulas**:
 
-- **Total capacity** = `FsCapacityHot` + `FsCapacityCold`
-- **Used capacity** = `FsUsedHot` + `FsUsedCold`
+- **Total capacity** = `fs_capacity_hot` + `fs_capacity_cold`
+- **Used capacity** = `fs_used_hot` + `fs_used_cold`
 - **Storage usage percentage** = used capacity / total capacity × 100%
-- **Hot storage usage percentage** = `FsUsedHot` / `FsCapacityHot` × 100%
-- **Cold storage usage percentage** = `FsUsedCold` / `FsCapacityCold` × 100%
+- **Hot storage usage percentage** = `fs_used_hot` / `fs_capacity_hot` × 100%
+- **Cold storage usage percentage** = `fs_used_cold` / `fs_capacity_cold` × 100%
 
-**V2 instance** (`get-lindorm-v2-storage-usage`):
+**V2 instance**, `v2 instance storage`, backed by GetLindormV2StorageUsage:
 
 | Field | Meaning | Unit |
 |------|------|------|
-| `UsageByDiskCategory[]` | Usage details array by disk type | — |
+| `usage_by_disk_category[]` | Usage details grouped by disk type | — |
 | └ `diskType` | Disk type | `PerformanceCloudStorage`, hot / `CapacityCloudStorage`, cold |
 | └ `capacity` | Disk capacity | bytes |
 | └ `used` | Used capacity | bytes |
-| └ `usedLindormTable` | Used by wide table | bytes |
-| └ `usedLindormTsdb` | Used by time series | bytes |
-| `CapacityByDiskCategory[]` | Capacity information by disk category | — |
-| └ `category` | Category | `PERF_CLOUD_ESSD_PL1` / `REMOTE_CAP_OSS`, etc. |
+| └ `usedLindormTable` | Capacity used by the wide table engine | bytes |
+| └ `usedLindormTsdb` | Capacity used by the time series engine | bytes |
+| `capacity_by_disk_category[]` | Capacity grouped by disk category | — |
+| └ `category` | Category | `PERF_CLOUD_ESSD_PL1`, `REMOTE_CAP_OSS`, and others |
 | └ `capacity` | Capacity | GB |
+
+> Note: The two V2 arrays are maps passed through from the underlying API. Fields inside the arrays preserve their original API casing, such as `diskType` and `usedLindormTable`; only top-level fields use snake_case.
 
 **V2 formulas**:
 
 - **Hot storage usage percentage** = `PerformanceCloudStorage.used` / `PerformanceCloudStorage.capacity` × 100%
 - **Cold storage usage percentage** = `CapacityCloudStorage.used` / `CapacityCloudStorage.capacity` × 100%
-- **Total used capacity** = sum of `used` for each diskType
+- **Total usage** = the sum of `used` across all disk types
 
 **Example output**:
 
-```text
+```
 [Storage Usage] Instance ld-uf6l5kr48wqm6rf1h
 
 [Total Capacity] 800GB, hot storage 500GB + cold storage 300GB
 [Used Capacity] 520GB, 65%
   - Hot storage used: 320GB, 64%
   - Cold storage used: 200GB, 67%
-[Status] ⚠️ Hot storage is close to the threshold, recommended < 80%
+[Status] ⚠️ Hot storage is approaching the threshold; recommended < 80%.
 
 [Storage Distribution]
-- Lindorm wide table: 480GB, data 450GB + WAL 30GB
-- Others: 40GB
+- Lindorm wide table engine: 480GB, data 450GB + WAL 30GB
+- Other: 40GB
 
-[Suggestions] Hot storage usage is high. Recommended actions:
+[Suggestions] Hot storage usage is high:
 1. Check whether historical data can be migrated to cold storage.
 2. Consider expanding hot storage or enabling automatic hot/cold tiering.
 
-View storage details in the console:
-1. Console: https://lindorm.console.aliyun.com/
+📍 View storage details in the console:
+1. Open https://lindorm.console.aliyun.com/.
 2. Click instance ID "ld-xxx".
-3. Left-side menu: Storage Information.
+3. In the left navigation pane, click Storage Information.
 4. View:
    - Total storage capacity
-   - Hot storage usage / usage percentage
-   - Cold storage usage / usage percentage
-   - Storage growth trend, last 7 days / 30 days
+   - Hot storage usage and percentage
+   - Cold storage usage and percentage
+   - Storage growth trend for the past 7 or 30 days
 
-View detailed storage analysis in ClusterManager:
-1. Console → ld-xxx → Database Connection → "Access through ClusterManager".
-2. Storage Analysis → View:
+📍 View detailed storage analysis in ClusterManager:
+1. Console → ld-xxx → Database Connection → Access through ClusterManager.
+2. Storage Analysis → view:
    - Top 10 tables by storage usage
    - Column family storage distribution
    - Data bloat analysis
@@ -346,7 +356,7 @@ https://help.aliyun.com/zh/lindorm/user-guide/enable-cold-storage
 
 ### Missing instance-id
 
-**Follow-up strategy**: First use `aliyun hitsdb get-instance-summary` to confirm the region, and then use `aliyun hitsdb get-lindorm-instance-list --region <region>` to let the user select an instance.
+**Follow-up strategy**: First run `aliyun lindorm summary` to identify the region, then run `aliyun lindorm instance list --lindorm-region <region>` and let the user select an instance.
 
 ### Missing Time Range, Storage Trend Analysis
 

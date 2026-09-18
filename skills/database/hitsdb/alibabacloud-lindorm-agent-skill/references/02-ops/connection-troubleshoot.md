@@ -13,22 +13,23 @@ Typical user expressions:
 
 ## Troubleshooting Principles
 
-Connection troubleshooting uses a **layered troubleshooting** strategy: instance status → whitelist → network configuration, locating the issue layer by layer.
+Connection troubleshooting uses a **layered troubleshooting** strategy: instance status and architecture → engine connection endpoints → whitelist → network configuration, locating the issue layer by layer.
 
 Output format: **Issue Location → Root Cause Analysis → Solution**
 
 ## Execution Flow
 
-### Step 1: Check Instance Status
+### Step 1: Check Instance Status and Architecture
 
 **Purpose**: Confirm whether the instance is running normally.
 
 **Command**:
 
 ```bash
-aliyun hitsdb get-lindorm-instance \
-    --instance-id <instance-id>
+aliyun lindorm v1 instance describe <instance-id> --lindorm-region <region> --output json
 ```
+
+The underlying `GetLindormInstance` action is shared by V1 and V2. Read `service_type` or `arch_version` from this response before selecting the endpoint query below.
 
 **Check points**:
 
@@ -79,8 +80,7 @@ If the status is abnormal:
 **Command**:
 
 ```bash
-aliyun hitsdb get-instance-ip-white-list \
-    --instance-id <instance-id>
+aliyun lindorm v1 instance whitelist get <instance-id> --lindorm-region <region>
 ```
 
 **Check points**:
@@ -130,23 +130,26 @@ Do you need help checking the network configuration?
 
 ---
 
-### Step 3: Check Network Configuration
+### Step 3: Query Engine Endpoints and Check Network Configuration
 
-**Purpose**: Confirm whether the network type matches the access method.
+**Purpose**: Obtain the actual engine connection addresses and confirm whether their network type matches the client's access method.
 
-**Command**:
+**Commands**:
 
 ```bash
-aliyun hitsdb get-lindorm-instance \
-    --instance-id <instance-id>
+# V1: connection addresses are returned only by GetLindormInstanceEngineList.
+aliyun lindorm v1 instance engine-list <instance-id> --lindorm-region <region> --output json
+
+# V2: connection addresses are included in connect_address_list.
+aliyun lindorm v2 instance describe <instance-id> --lindorm-region <region> --output json
 ```
 
 **Check points**:
 
-Extract network configuration from instance details:
-- `NetworkType`: Network type, such as `vpc`
-- `VpcId`: VPC ID
-- `VswitchId`: vSwitch ID
+For V1, inspect the engine-list response for the target engine's public and VPC endpoints. For V2, inspect `engines[].node_groups[].connect_address_list[]`. Also retain network configuration from Step 1:
+- `network_type`: Network type, such as `vpc`
+- `vpc_id`: VPC ID
+- `vswitch_id`: vSwitch ID
 
 **Network type and access method**:
 
@@ -404,24 +407,24 @@ Different Lindorm engines have different connection addresses. **Always select t
 **Method 2: Obtain through API**
 
 ```bash
-# V1/V2 common: query engine connection endpoints.
-aliyun hitsdb get-lindorm-instance-engine-list --instance-id ld-xxx
+# V1/V2: query engine connection endpoints
+aliyun lindorm v1 instance engine-list ld-xxx --lindorm-region <region>
 
-# V2 only: query instance details, including ConnectAddressList.
-aliyun hitsdb get-lindorm-v2-instance-details --instance-id ld-xxx
+# V2 only: query instance details, including connect_address_list
+aliyun lindorm v2 instance describe ld-xxx --lindorm-region <region>
 ```
 
-**`get-lindorm-instance-engine-list`, V1/V2 common**:
-Returns `NetInfoList`. Determine the network type by `NetType`:
-- `NetType: "0"` → Public address, `-pub`
-- `NetType: "2"` → VPC internal address, `-vpc`
+**`v1|v2 instance engine-list`, applicable to V1 and V2**:
+Returns an engine-by-address flattened array. Use `net_type` to identify the network:
+- `net_type: PUBLIC`, `net_type_code: "0"` → public endpoint, `-pub`
+- `net_type: VPC`, `net_type_code: "2"` → VPC endpoint, `-vpc`
 
-**`get-lindorm-v2-instance-details`, V2 only**:
-Returns `ConnectAddressList`. Determine the network type by `Type`:
-- `Type: INTERNET` → Public address, `-pub`
-- `Type: INTRANET` → VPC internal address, `-vpc`
+**`v2 instance describe`, V2 only**:
+Returns `connect_address_list`. Use `type` to identify the network:
+- `type: INTERNET` → public endpoint, `-pub`
+- `type: INTRANET` → VPC endpoint, `-vpc`
 
-> If neither API response contains a public address, meaning no `NetType: "0"` and no `Type: INTERNET`, public access has not been enabled and must be applied for in the console.
+> If neither command returns a public endpoint, with no `net_type: PUBLIC` and no `type: INTERNET`, public access has not been enabled. Enable it in the console.
 
 ### Enable Public Access
 
@@ -444,11 +447,11 @@ Returns `ConnectAddressList`. Determine the network type by `Type`:
 Run complete troubleshooting with one set of commands:
 
 ```bash
-# 1. Check instance status.
-aliyun hitsdb get-lindorm-instance --instance-id ld-xxx
+# 1. Check instance status
+aliyun lindorm v1 instance describe ld-xxx --lindorm-region <region>
 
-# 2. Check whitelist.
-aliyun hitsdb get-instance-ip-white-list --instance-id ld-xxx
+# 2. Check the whitelist
+aliyun lindorm v1 instance whitelist get ld-xxx --lindorm-region <region>
 ```
 
 ---
@@ -459,11 +462,11 @@ aliyun hitsdb get-instance-ip-white-list --instance-id ld-xxx
 
 | Check Item | Command | Expected Result |
 |--------|------|----------|
-| **Instance status** | `aliyun hitsdb get-lindorm-instance --instance-id <id>` | `InstanceStatus = ACTIVATION` |
-| **Whitelist configuration** | `aliyun hitsdb get-instance-ip-white-list --instance-id <id>` | Contains the client IP or VPC CIDR block |
-| **Network type** | `aliyun hitsdb get-lindorm-instance --instance-id <id>` | `NetworkType = vpc` |
-| **VPC match** | `aliyun hitsdb get-lindorm-instance --instance-id <id>` | Client and instance are in the same VPC for internal access |
-| **Public address** | View in console or API | Public connection address has been enabled, not EIP |
+| **Instance status** | `aliyun lindorm v1 instance describe <id>` | `status = ACTIVATION` |
+| **Whitelist** | `aliyun lindorm v1 instance whitelist get <id>` | Contains the client IP or VPC CIDR block |
+| **Network type** | `aliyun lindorm v1 instance describe <id>` | `network_type = vpc` |
+| **VPC match** | `aliyun lindorm v1 instance describe <id>` | Client and instance are in the same VPC for private access |
+| **Public endpoint** | View in the console or through the API | A public connection endpoint, not an EIP, is enabled |
 
 **Network connectivity tests, advanced troubleshooting**:
 
