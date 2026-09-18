@@ -1,0 +1,105 @@
+# Local REST metadata for evaluation adapters; not an Alibaba POP API registry.
+# Required subsets below are scenario-scoped, not a replacement for live OpenAPI.
+product: Alibaba Cloud Bailian Managed Agent
+version: null
+version_note: Workspace-scoped REST API has no verified POP product/version identifier.
+base_path: /api/v1/agentstudio
+source: references/integration/api-endpoints.md
+operations:
+  - name: Agents API
+    method: GET
+    path: /agents
+    required_params: []
+    response_fields: [data, next_page, request_id]
+  - name: Sessions API
+    method: POST
+    path: /sessions
+    scenario: sandbox execution
+    required_params: [agent, environment_id]
+    response_fields: [id, status, stop_reason]
+  - name: Sessions API
+    method: GET
+    path: /sessions/{session_id}
+    required_params: [session_id]
+    response_fields: [id, status, stop_reason]
+  - name: Events API
+    method: POST
+    path: /sessions/{session_id}/events
+    required_params: [session_id, input]
+    approval_fields: ["input[].content[].data.batch_id", "input[].content[].data.call_id", "input[].content[].data.result"]
+    approval_event_type: tool_approval_response
+    response_note: JSON acknowledgement is not proof of approval acceptance; inspect subsequent events.
+  - name: Events API
+    method: GET
+    path: /sessions/{session_id}/events
+    required_params: [session_id]
+    response_fields: [data, next_page, request_id]
+  - name: Events API
+    method: GET
+    path: /sessions/{session_id}/events/stream
+    required_params: [session_id]
+    response_format: text/event-stream
+    response_fields: [type, content]
+  - name: Environments API
+    method: POST
+    path: /environments
+    required_params: [name]
+    response_fields: [id, config]
+  - name: Files API
+    method: POST
+    path: /files
+    request_format: multipart/form-data
+    required_params: [file]
+    response_fields: [id]
+  - name: Session Resources API
+    method: POST
+    path: /sessions/{session_id}/resources
+    required_params: [session_id, type, file_id, mount_path]
+    request_schema_source: references/tutorials/03-mount-files.md
+  - name: Credentials API
+    method: POST
+    path: /vaults/{vault_id}/credentials
+    required_params: [vault_id, name, auth.type, auth.secret_name, auth.secret_value, auth.networking.allowed_hosts]
+    response_fields: [id, name, auth]
+    sensitive_fields: [auth.secret_value]
+  - name: Deployments API
+    method: POST
+    path: /deployments
+    required_params: [name, agent.id, initial_events]
+    scheduled_fields: [schedule.type, schedule.expression, schedule.timezone]
+    response_fields: [id, agent, schedule, status]
+  - name: Webhooks API
+    method: POST
+    path: /webhook_endpoints
+    example_url: https://www.baidu.com
+    example_scope: endpoint creation and read-back only; not delivery verification
+    required_params: [url, events]
+    response_fields: [id, status, signing_secret]
+    sensitive_fields: [signing_secret]
+  - name: Agents API
+    method: POST
+    path: /agents/{agent_id}
+    required_params: [agent_id, name, version]
+    response_fields: [id, name, version, tools, mcp_servers]
+  - name: Session Threads API
+    method: GET
+    path: /sessions/{session_id}/threads
+    required_params: [session_id]
+    response_fields: [data]
+    availability_note: Archived field-tested endpoint; verify in target workspace.
+  - name: Session Threads API
+    method: GET
+    path: /sessions/{session_id}/threads/{thread_id}/events
+    required_params: [session_id, thread_id]
+    response_fields: [data]
+  - name: Files API
+    method: GET
+    path: /files/{file_id}
+    required_params: [file_id]
+    response_fields: [id, status, downloadable]
+  - name: Files API
+    method: GET
+    path: /files/{file_id}/content
+    required_params: [file_id]
+    preconditions: [downloadable=true]
+    response_format: file bytes
