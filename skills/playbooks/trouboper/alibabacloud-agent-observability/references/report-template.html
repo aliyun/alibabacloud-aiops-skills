@@ -1,0 +1,2998 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent链路观测报告</title>
+<!--
+  ─────────────────────────────────────────────────────────────
+  Agent链路观测报告 · 单文件模版
+  ─────────────────────────────────────────────────────────────
+  用法：双击在浏览器打开即可。**完全离线**——不依赖任何 CDN/外部脚本，
+        全部图表为内联手写 SVG, works in offline and intranet environments.
+
+  报告结构（五大板块，板块标题可点击折叠）：
+    1 链路信息      Trace/Session 标识 + 指标胶囊 + 输入/输出内容
+    2 链路分析      总耗时 · TTFT · Token消耗 · LLM调用 · TOOL调用 · SKILL加载
+                    + 链路分析总结
+    3 性能分析      LLM与工具调用耗时占比 · LLM调用耗时TOP · TOOL调用耗时TOP
+                    + 性能分析总结
+    4 LLM调用分析   单轮耗时趋势 · 单轮Token消耗趋势 · 单轮Token输出速率 · 缓存命中率
+                    + LLM调用分析总结
+    5 TOOL调用分析  调用耗时趋势 · 输入输出大小 · 各工具调用次数
+                    + TOOL调用分析总结
+    附 执行轨迹树 + 节点详情（水平排放，联动）、节点明细表（可排序/导出 CSV）
+
+  替换真实数据：只需改写页面底部 script 标签里的 window.TRACE_DATA，
+  上述全部板块、图表、明细表与各板块「分析总结」均由该对象实时推导，
+  无需改 HTML。数据缺失时对应图表显示「暂无数据」，不编造数值。
+
+  window.TRACE_DATA 结构：
+    meta     链路信息（traceId / sessionId / agent / model / query /
+             startTime / endTime / status / env / user）
+             meta.title 可选，不填则由 query 自动生成「10 字……」缩略标题
+             meta.finalOutput 可选，链路信息「输出」卡片内容；
+             不填则自动取最后一个 LLM 节点的 output
+    summary  汇总指标（多数可由 spans 自动推导，写了则以写的为准）
+    spans    扁平执行节点数组，字段：
+             id, parentId, kind(react|llm|tool|skill|agent), name,
+             startMs, durationMs, round, status(ok|warn|error),
+             model, totalTokens, promptTokens, completionTokens,
+             cachedTokens（LLM 命中缓存的 prompt token，算缓存命中率）,
+             ttftMs, tool, skill（skill 节点的技能名）,
+             input, output, note
+             · TOOL 输入/输出大小由 input/output 字符串长度自动推导，
+               也可显式给 inputChars / outputChars 覆盖
+  ─────────────────────────────────────────────────────────────
+-->
+
+<style>
+/* ── 设计系统 token ────────────────────────────────
+   母题：trace 观测台的「彩色层级竖条 + 等宽指标」——
+   配色从截图里抽：react=紫、llm=橙、tool=粉，底色走极浅冷灰。 */
+:root{
+  --bg:        oklch(98.2% .004 250);
+  --bg-soft:   oklch(96.4% .006 250);
+  --surface:   oklch(100% 0 0);
+  --line:      oklch(90.5% .006 250);
+  --line-soft: oklch(94.5% .005 250);
+  --ink:       oklch(24% .02 260);
+  --ink-2:     oklch(44% .018 260);
+  --ink-3:     oklch(58% .014 260);
+
+  --react:     oklch(56% .19 300);
+  --llm:       oklch(66% .16 55);
+  --tool:      oklch(60% .20 355);
+  --ok:        oklch(56% .13 155);
+  --warn:      oklch(70% .15 80);
+  --error:     oklch(56% .21 25);
+  --accent:    oklch(50% .16 250);
+
+  --react-bg:  oklch(96% .025 300);
+  --llm-bg:    oklch(96.5% .03 70);
+  --tool-bg:   oklch(96.5% .022 355);
+  --skill:     oklch(58% .14 200);
+  --skill-bg:  oklch(96% .025 200);
+
+  /* 分析板块图表序列色（取自参考图：靛蓝主色 + 青绿辅色 + 草绿 + 红） */
+  --s1:        oklch(56% .19 275);   /* 靛蓝 #6366F1 —— 主序列 */
+  --s2:        oklch(68% .13 185);   /* 青绿 #14B8A6 —— 辅序列 */
+  --s3:        oklch(64% .17 135);   /* 草绿 #65A30D —— 第三序列 */
+  --s4:        oklch(56% .21 25);    /* 红   #EF4444 —— 失败 */
+  --s1-bg:     oklch(96.5% .02 275);
+  --s1-line:   oklch(89% .045 275);
+  --s2-bg:     oklch(96.5% .02 185);
+  --s3-bg:     oklch(96.5% .025 135);
+
+  --r-s: 4px; --r-m: 8px; --r-l: 14px;
+  --sp: 4px;
+  --shadow-1: 0 1px 2px oklch(24% .02 260 / .05);
+  --shadow-2: 0 6px 24px -8px oklch(24% .02 260 / .18);
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --maxw: 1480px;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%; scroll-behavior:smooth; scroll-padding-top:76px}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:var(--sans); font-size:14px; line-height:1.65;
+  text-wrap:pretty; -webkit-font-smoothing:antialiased;
+}
+main{max-width:var(--maxw); margin:0 auto; padding:0 28px 56px}
+h2{margin:0}
+code{font-family:var(--mono); font-size:.9em}
+.sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.skip{
+  position:fixed; left:12px; top:-60px; z-index:99; padding:10px 16px;
+  background:var(--accent); color:#fff; border-radius:0 0 var(--r-m) var(--r-m);
+  text-decoration:none; transition:top .18s ease;
+}
+.skip:focus{top:0}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:2px}
+::selection{background:oklch(90% .08 250)}
+
+.h-eyebrow{
+  font-size:12px; font-weight:700; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); margin:0 0 6px;
+}
+
+/* ── 按钮 / 表单控件 ── */
+.btn{
+  display:inline-flex; align-items:center; gap:6px; min-height:34px; padding:0 13px;
+  font:inherit; font-size:13px; font-weight:600; color:var(--ink-2);
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--r-m);
+  cursor:pointer; transition:background .16s, color .16s, border-color .16s, box-shadow .16s;
+  white-space:nowrap;
+}
+.btn:hover{color:var(--ink); border-color:oklch(78% .02 250); box-shadow:var(--shadow-1)}
+.btn:active{transform:translateY(1px)}
+.btn--ghost{background:transparent}
+
+.field{display:inline-flex; align-items:center; gap:7px; background:var(--surface);
+  border:1px solid var(--line); border-radius:var(--r-m); padding:0 10px; min-height:34px}
+.field:focus-within{border-color:var(--accent); box-shadow:0 0 0 3px oklch(50% .16 250 / .12)}
+.field__lbl{font-size:11px; font-weight:700; letter-spacing:.08em; color:var(--ink-3);
+  text-transform:uppercase; white-space:nowrap; flex:none}
+.field input{border:0; outline:0; background:transparent; font:inherit; font-size:13px; color:var(--ink); width:190px; padding:6px 0}
+.field input::placeholder{color:oklch(72% .01 250)}
+
+.chips{display:inline-flex; gap:4px; padding:3px; background:var(--bg-soft); border-radius:var(--r-m)}
+.chip{
+  min-height:28px; padding:0 11px; font:inherit; font-size:12.5px; font-weight:600;
+  color:var(--ink-3); background:transparent; border:0; border-radius:6px; cursor:pointer;
+  transition:background .16s, color .16s;
+}
+.chip:hover{color:var(--ink)}
+.chip.is-on{background:var(--surface); color:var(--ink); box-shadow:var(--shadow-1)}
+
+/* ── 顶栏 ── */
+.topbar{
+  position:sticky; top:0; z-index:50; display:flex; align-items:center; gap:20px;
+  padding:0 28px; height:60px; background:oklch(100% 0 0 / .86);
+  backdrop-filter:saturate(1.6) blur(10px); border-bottom:1px solid var(--line);
+}
+.topbar__id{display:flex; align-items:center; gap:10px; min-width:0}
+.mark{display:grid; place-items:center; width:30px; height:30px; border-radius:var(--r-m);
+  background:linear-gradient(140deg, var(--react), var(--accent)); color:#fff; flex:none}
+.topbar__title{font-size:15px; font-weight:700; letter-spacing:-.01em}
+.topbar__ver{font-family:var(--mono); font-size:10.5px; color:var(--ink-3);
+  padding:2px 7px; border:1px solid var(--line); border-radius:20px; white-space:nowrap}
+.topbar__nav{display:flex; gap:2px; margin-left:auto}
+.topbar__nav a{
+  padding:7px 11px; font-size:13px; font-weight:600; color:var(--ink-3);
+  text-decoration:none; border-radius:var(--r-m); transition:color .16s, background .16s;
+}
+.topbar__nav a:hover{color:var(--ink); background:var(--bg-soft)}
+.topbar__nav a.is-active{color:var(--accent); background:oklch(96% .02 250)}
+
+/* ══════════════════════════════════════════════
+   板块通用骨架：白卡 + 可折叠标题（参考图「▼ 性能分析」）
+   ══════════════════════════════════════════════ */
+.blk{
+  margin:0 0 18px; padding:20px 22px 22px; background:var(--surface);
+  border:1px solid var(--line); border-radius:var(--r-l); box-shadow:var(--shadow-1);
+  position:relative; overflow:hidden;
+}
+.blk__title{
+  display:flex; align-items:center; gap:9px; margin:0 0 16px;
+  font-size:16px; font-weight:700; letter-spacing:-.015em; color:var(--ink);
+}
+.blk__fold{
+  flex:none; display:grid; place-items:center; width:20px; height:20px; padding:0;
+  background:transparent; border:0; cursor:pointer; color:var(--ink-2); border-radius:4px;
+  transition:background .16s, color .16s;
+}
+.blk__fold:hover{background:var(--bg-soft); color:var(--ink)}
+.blk__fold svg{width:10px; height:10px; transition:transform .22s cubic-bezier(.22,.8,.3,1)}
+.blk.is-fold .blk__fold svg{transform:rotate(-90deg)}
+.blk.is-fold .blk__body{display:none}
+.blk__tag{
+  flex:none; font-family:var(--mono); font-size:11px; font-weight:600; color:var(--ink-3);
+  letter-spacing:.03em; padding:2px 8px; background:var(--bg-soft); border-radius:var(--r-s);
+}
+.blk__note{
+  margin:0 0 16px; font-size:12.5px; color:var(--ink-3); line-height:1.6;
+}
+
+/* 1w / 时间范围 小标签（参考图卡片标题右侧） */
+.tag{
+  flex:none; font-family:var(--mono); font-size:11px; font-weight:600; color:var(--ink-3);
+  background:oklch(95.5% .004 260); border-radius:var(--r-s); padding:2px 7px; white-space:nowrap;
+}
+.tag--range{font-family:var(--sans); letter-spacing:0}
+
+/* 图表网格：3 列 / 4 列等宽（参考图排版） */
+.g3{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:16px}
+.g4{display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:16px}
+.g2{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:16px}
+
+/* 图表面板卡：标题栏 + 绘图区 + 底部图例 */
+.pcard{
+  display:flex; flex-direction:column; min-width:0; min-height:300px;
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--r-m);
+  padding:14px 16px 10px; box-shadow:0 1px 2px oklch(24% .02 260 / .03);
+}
+.pcard__h{display:flex; align-items:center; gap:8px; margin-bottom:12px; min-width:0}
+.pcard__t{
+  font-size:14px; font-weight:700; color:var(--ink); letter-spacing:-.01em;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0;
+}
+.pcard__range{
+  margin-left:auto; font-size:11.5px; color:var(--ink-3); white-space:nowrap;
+  overflow:hidden; text-overflow:ellipsis; min-width:0;
+}
+.pcard__b{flex:1 1 auto; width:100%; position:relative; min-height:180px}
+.pcard__lg{
+  display:flex; flex-wrap:wrap; gap:8px 16px; margin-top:8px; padding-top:9px;
+  border-top:1px solid var(--line-soft); font-size:11.5px; color:var(--ink-2);
+}
+.pcard__lg span{display:inline-flex; align-items:center; gap:6px; min-width:0}
+.pcard__lg i{width:10px; height:10px; border-radius:2px; background:var(--c, var(--s1)); flex:none}
+.pcard__lg em{font-style:normal; font-family:var(--mono); color:var(--ink-3)}
+.pcard__empty{
+  position:absolute; inset:0; display:grid; place-items:center;
+  color:oklch(72% .01 260); font-size:13px; letter-spacing:.02em;
+}
+
+/* ══════════════════════════════════════════════
+   板块 1 · 链路信息（参考 clipboard_1789427684804）
+   顶部 Trace ID 栏 → 中部胶囊指标 → 底部输入/输出双卡
+   ══════════════════════════════════════════════ */
+.blk--info{padding:18px 22px 20px}
+.blk--info::before{
+  content:""; position:absolute; inset:0 auto 0 0; width:3px;
+  background:linear-gradient(180deg, var(--s1), var(--s2), var(--s3));
+}
+.li__bar{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:4px}
+/* 主标题：会话缩略标题（原 Trace ID 位置），大号粗体 */
+.li__title{
+  margin:0; font-size:17px; font-weight:700; color:var(--ink); letter-spacing:-.015em;
+  min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1 1 auto;
+}
+.li__ops{margin-left:auto; display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+/* Trace ID 行：标签 + 等宽靛蓝值（原会话标题位置），小号常规 */
+.li__tidrow{
+  margin:0 0 14px; display:flex; align-items:baseline; gap:8px; min-width:0;
+  font-size:13px; color:var(--ink-2);
+}
+.li__lbl{font-size:12px; font-weight:600; color:var(--ink-3); letter-spacing:.02em; flex:none}
+.li__tid{
+  font-family:var(--mono); font-size:13px; font-weight:600; color:var(--s1);
+  letter-spacing:-.01em; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+
+/* 胶囊指标 */
+.pills{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px}
+.pill{
+  display:inline-flex; align-items:baseline; gap:6px; padding:6px 13px;
+  background:oklch(96.2% .004 260); border-radius:999px;
+  font-size:12.5px; line-height:1.5; max-width:100%;
+}
+.pill__k{color:var(--ink-3); white-space:nowrap}
+.pill__v{
+  font-weight:700; color:var(--ink); font-variant-numeric:tabular-nums;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0;
+}
+.pill__v--id{font-family:var(--mono); font-size:12px; color:var(--s1); letter-spacing:-.01em}
+.pill__v--bad{color:var(--error)}
+.pill__v--warn{color:oklch(48% .14 75)}
+.pill__v--ok{color:var(--ok)}
+
+/* 输入 / 输出 双卡 */
+.io-cards{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:14px}
+.io-card{
+  display:flex; align-items:flex-start; gap:12px; padding:14px 16px; min-width:0;
+  background:var(--s1-bg); border:1px solid var(--s1-line); border-radius:var(--r-m);
+}
+.io-card--out{background:var(--s2-bg); border-color:oklch(89% .04 185)}
+.io-card__badge{
+  flex:none; background:var(--surface); color:var(--s1); font-size:12px; font-weight:700;
+  padding:3px 9px; border-radius:5px; box-shadow:var(--shadow-1); letter-spacing:.02em;
+}
+.io-card--out .io-card__badge{color:oklch(48% .12 185)}
+.io-card__txt{
+  margin:0; font-size:13.5px; line-height:1.62; color:var(--ink); word-break:break-word;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+}
+.io-card__txt.is-empty{color:var(--ink-3); font-style:italic}
+
+/* ══════════════════════════════════════════════
+   板块 2 · 链路分析：6 张指标卡（Token 卡 2.5 倍宽）
+   ref clipboard_1789428336186
+   ══════════════════════════════════════════════ */
+.acards{display:flex; flex-wrap:wrap; gap:12px; align-items:stretch}
+.acard{
+  flex:1 1 132px; min-width:0; display:flex; flex-direction:column; gap:12px;
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--r-m);
+  padding:14px 16px 15px; box-shadow:0 1px 2px oklch(24% .02 260 / .03);
+  transition:box-shadow .2s, transform .2s, border-color .2s; position:relative;
+}
+.acard:hover{box-shadow:var(--shadow-2); transform:translateY(-2px); border-color:oklch(86% .03 275)}
+.acard--wide{flex:2.6 1 300px}
+.acard__h{display:flex; align-items:center; gap:8px; min-width:0}
+.acard__name{
+  font-size:13px; font-weight:600; color:var(--ink-2); letter-spacing:-.005em;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0;
+}
+.acard__range{
+  margin-left:auto; font-size:11.5px; color:var(--ink-3);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0;
+}
+.acard__body{display:flex; align-items:baseline; gap:3px; margin-top:auto}
+.acard__val{
+  font-family:var(--mono); font-size:31px; font-weight:700; letter-spacing:-.035em;
+  line-height:1; color:var(--s1); font-variant-numeric:tabular-nums;
+}
+.acard__unit{font-size:13px; font-weight:600; color:var(--s1); letter-spacing:0}
+.acard__sub{margin:-6px 0 0; font-size:11.5px; color:var(--ink-3); line-height:1.5}
+/* Token 卡的三个子指标：总(靛蓝) / 输入(青绿) / 输出(草绿) */
+.asubs{flex:1; display:flex; align-items:flex-end; justify-content:space-around; gap:8px}
+.asub{display:flex; flex-direction:column; align-items:center; gap:6px; min-width:0; flex:1}
+.asub__k{font-size:12.5px; color:var(--ink-2); white-space:nowrap}
+.asub__v{
+  font-family:var(--mono); font-size:26px; font-weight:700; letter-spacing:-.03em;
+  line-height:1; color:var(--s1); font-variant-numeric:tabular-nums;
+}
+.asub--in .asub__v{color:oklch(60% .12 185)}
+.asub--out .asub__v{color:oklch(52% .15 135)}
+.asub--in .asub__k{color:oklch(48% .09 185)}
+.asub--out .asub__k{color:oklch(44% .1 135)}
+
+/* ══════════════════════════════════════════════
+   板块 3 · 性能分析：耗时占比饼图 + 两张 TOP 表
+   ref clipboard_1789428561307
+   ══════════════════════════════════════════════ */
+.pie-wrap{display:flex; align-items:center; justify-content:center; gap:10px; height:100%; min-height:180px}
+.pie-legend{display:flex; flex-direction:column; gap:9px; font-size:12px; color:var(--ink-2); flex:none}
+.pie-legend span{display:inline-flex; align-items:center; gap:7px}
+.pie-legend i{width:10px; height:10px; border-radius:2px; background:var(--c, var(--s1)); flex:none}
+.pie-legend em{font-style:normal; font-family:var(--mono); color:var(--ink); font-weight:700}
+
+/* TOP 迷你表 */
+.top-tbl-wrap{overflow-x:auto; flex:1 1 auto; border:1px solid var(--line-soft); border-radius:var(--r-s)}
+.top-tbl{width:100%; border-collapse:collapse; font-size:12.5px; min-width:420px}
+.top-tbl caption{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0)}
+.top-tbl th{
+  position:sticky; top:0; background:oklch(98% .003 260); text-align:left; white-space:nowrap;
+  font-size:11.5px; font-weight:700; color:var(--ink-2); padding:8px 9px;
+  border-bottom:1px solid var(--line); border-right:1px solid var(--line-soft);
+  cursor:pointer; user-select:none; transition:background .14s, color .14s;
+}
+.top-tbl th:last-child{border-right:0}
+.top-tbl th:hover{background:oklch(95% .01 275); color:var(--s1)}
+.top-tbl th .sarr{font-size:9px; color:var(--ink-3); margin-left:3px; opacity:.5}
+.top-tbl th[aria-sort] .sarr{color:var(--s1); opacity:1}
+.top-tbl th.num, .top-tbl td.num{text-align:right; font-variant-numeric:tabular-nums}
+.top-tbl td{
+  padding:7px 9px; border-bottom:1px solid var(--line-soft); border-right:1px solid var(--line-soft);
+  color:var(--s1); font-family:var(--mono); font-size:12px; vertical-align:top;
+  max-width:170px; overflow:hidden; text-overflow:ellipsis;
+}
+.top-tbl td:last-child{border-right:0}
+.top-tbl tbody tr:last-child td{border-bottom:0}
+.top-tbl tbody tr{cursor:pointer; transition:background .14s}
+.top-tbl tbody tr:hover{background:oklch(97% .012 275)}
+.top-tbl .nm{color:var(--ink); font-family:var(--sans); font-weight:600; white-space:nowrap}
+.top-tbl .sid{color:var(--ink-3); font-size:11px}
+.top-foot{
+  display:flex; align-items:center; gap:10px; margin-top:9px; padding-top:8px;
+  border-top:1px solid var(--line-soft); font-size:12px; color:var(--ink-2);
+}
+.top-foot__total{font-variant-numeric:tabular-nums}
+.pager{margin-left:auto; display:flex; align-items:center; gap:5px}
+.pager button{
+  width:24px; height:24px; display:grid; place-items:center; padding:0;
+  background:var(--bg-soft); border:1px solid var(--line-soft); border-radius:var(--r-s);
+  color:var(--ink-2); cursor:pointer; font:inherit; font-size:12px; line-height:1;
+  transition:background .14s, color .14s, border-color .14s;
+}
+.pager button:hover:not(:disabled){background:var(--s1-bg); color:var(--s1); border-color:var(--s1-line)}
+.pager button:disabled{color:oklch(80% .005 260); cursor:not-allowed}
+.pager__n{font-family:var(--mono); font-size:11.5px; color:var(--ink-3); padding:0 3px}
+.pager__n b{color:var(--s1); font-weight:700}
+
+/* ══════════════════════════════════════════════
+   各板块「分析总结」：要点列表 + 结论条
+   ══════════════════════════════════════════════ */
+.summary{
+  margin-top:18px; padding:16px 18px; background:var(--bg-soft);
+  border:1px solid var(--line-soft); border-left:3px solid var(--s1);
+  border-radius:var(--r-m);
+}
+.summary--warn{border-left-color:var(--warn)}
+.summary--err{border-left-color:var(--error)}
+.summary__h{
+  display:flex; align-items:center; gap:8px; margin:0 0 10px;
+  font-size:13.5px; font-weight:700; color:var(--ink); letter-spacing:-.01em;
+}
+.summary__h .tag{margin-left:auto}
+.summary__lead{
+  margin:0 0 11px; font-size:13px; color:var(--ink); line-height:1.72; font-weight:500;
+}
+.summary ul{margin:0; padding:0; list-style:none; display:grid; gap:7px}
+.summary li{
+  position:relative; padding-left:16px; font-size:12.5px; color:var(--ink-2); line-height:1.7;
+}
+.summary li::before{
+  content:""; position:absolute; left:2px; top:9px; width:5px; height:5px;
+  border-radius:50%; background:var(--ink-3); opacity:.55;
+}
+.summary li b{color:var(--ink); font-weight:700}
+.summary li code{
+  font-family:var(--mono); font-size:11.5px; padding:1px 5px; border-radius:3px;
+  background:var(--surface); border:1px solid var(--line-soft); color:var(--ink-2);
+}
+.summary li[data-tone="bad"]::before{background:var(--error); opacity:.85}
+.summary li[data-tone="warn"]::before{background:var(--warn); opacity:.9}
+.summary li[data-tone="ok"]::before{background:var(--ok); opacity:.85}
+.summary__ev{
+  display:inline-flex; align-items:center; gap:4px; margin:0 2px; padding:1px 7px;
+  font-family:var(--mono); font-size:10.5px; font-weight:700; color:var(--s1);
+  background:var(--surface); border:1px solid var(--s1-line); border-radius:20px;
+  cursor:pointer; transition:background .14s, color .14s, border-color .14s; vertical-align:1px;
+}
+.summary__ev:hover{background:var(--s1); color:#fff; border-color:var(--s1)}
+.summary__empty{margin:0; font-size:12.5px; color:var(--ink-3); line-height:1.7}
+
+
+/* ── 卡片 ── */
+.card{
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--r-l);
+  box-shadow:var(--shadow-1); padding:22px 24px; margin-bottom:18px;
+}
+
+/* 执行轨迹 + 节点详情：水平排放，两栏等高、内部独立滚动 */
+.split-row{
+  display:grid; grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);
+  gap:18px; align-items:stretch; margin-bottom:18px; height:680px;
+}
+.split-row > .card{margin-bottom:0; min-width:0; min-height:0; overflow:hidden;
+  display:flex; flex-direction:column}
+.split-row .tree-wrap{flex:1 1 auto; min-height:0; max-height:none}
+.split-row .card__head{flex-direction:column; gap:12px; flex:none}
+/* 竖排时 flex-basis 会作用于高度，必须重置，否则标题区被撑出大片空白 */
+.split-row .card__head > div:first-child{flex:0 0 auto}
+.split-row .legend{flex:none}
+.split-row .toolbar{width:100%}
+.split-row .field{flex:1 1 240px; min-width:210px}
+.split-row .field input{width:100%; min-width:0}
+/* 详情栏在窄列里改为纵向堆叠，与树同高独立滚动 */
+.split-row .card--split .detail{flex:1 1 auto; min-height:0; max-height:none;
+  grid-template-columns:minmax(0,1fr); overflow:auto; padding-right:4px}
+.split-row .detail__stats{grid-template-columns:repeat(2, minmax(0,1fr));
+  max-height:none; overflow:visible}
+.split-row .detail__io{max-height:none}
+.split-row .io pre{max-height:188px}
+/* 窄栏下精简行内指标，保证树不挤压变形 */
+.split-row .t-m--ttft{display:none}
+.split-row .t-round{display:none}
+.split-row .t-name{font-size:12.5px}
+.split-row .tree ul ul{margin-left:11px; padding-left:11px}
+.card__head{display:flex; align-items:flex-start; gap:20px; flex-wrap:wrap; margin-bottom:16px}
+.card__head > div:first-child{flex:1 1 320px; min-width:0}
+.card__title{font-size:17px; font-weight:700; letter-spacing:-.015em; display:flex; align-items:baseline; gap:10px; flex-wrap:wrap}
+.card__hint{font-size:11.5px; font-weight:600; color:var(--ink-3); letter-spacing:.04em; font-family:var(--mono)}
+.card__desc{margin:5px 0 0; font-size:13px; color:var(--ink-2); max-width:74ch}
+.toolbar{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+
+.legend{
+  display:flex; align-items:center; gap:16px; flex-wrap:wrap; padding:9px 13px;
+  background:var(--bg-soft); border-radius:var(--r-m); font-size:12px; color:var(--ink-2);
+  margin-bottom:14px;
+}
+.legend span{display:inline-flex; align-items:center; gap:6px}
+.legend__sep{width:1px; height:13px; background:var(--line)}
+.dot{width:9px; height:9px; border-radius:3px; display:block; background:var(--tone)}
+.dot[data-tone="react"]{--tone:var(--react)}
+.dot[data-tone="llm"]{--tone:var(--llm)}
+.dot[data-tone="tool"]{--tone:var(--tool)}
+.dot[data-tone="skill"]{--tone:var(--skill)}
+.dot[data-tone="error"]{--tone:var(--error)}
+
+/* ── 图表（手写 SVG，零外部依赖）── */
+.chart{margin:0; background:var(--bg-soft); border:1px solid var(--line-soft);
+  border-radius:var(--r-m); padding:14px 16px 12px; position:relative}
+.chart--solo{background:transparent; border:0; padding:0}
+.chart__box{width:100%; position:relative}
+.chart__box svg{display:block; width:100%; overflow:visible;
+  font-family:var(--mono); font-variant-numeric:tabular-nums}
+
+/* SVG 图元基础样式 */
+.ax-line{stroke:var(--line); stroke-width:1}
+.grid-line{stroke:var(--line); stroke-width:1; stroke-dasharray:3 4; opacity:.85}
+.ax-txt{fill:var(--ink-3); font-size:10.5px}
+.ax-txt--y{text-anchor:end}
+.ax-txt--x{text-anchor:middle}
+.ax-txt--lead{text-anchor:start}
+.lbl{fill:var(--ink-2); font-size:11px}
+.lbl--val{fill:var(--ink-3); font-size:10.5px}
+.lbl--cat{fill:var(--ink-2); font-size:11px; font-family:var(--sans)}
+
+/* 条形：宽度/高度生长动画 */
+.bar-h{transform-origin:left center; animation:growX .7s cubic-bezier(.22,.8,.3,1) both}
+.bar-v{transform-origin:center bottom; animation:growY .7s cubic-bezier(.22,.8,.3,1) both}
+@keyframes growX{from{transform:scaleX(0)} to{transform:scaleX(1)}}
+@keyframes growY{from{transform:scaleY(0)} to{transform:scaleY(1)}}
+
+/* 折线：描线生长 */
+.line-path{fill:none; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round;
+  stroke-dasharray:var(--len); stroke-dashoffset:var(--len);
+  animation:drawLine .9s cubic-bezier(.4,.1,.3,1) .12s forwards}
+@keyframes drawLine{to{stroke-dashoffset:0}}
+.area-path{opacity:0; animation:fadeIn .5s ease .55s forwards}
+@keyframes fadeIn{to{opacity:1}}
+
+/* 环形：每段 dasharray 已编码弧长，入场只做淡入+轻微缩放 */
+.donut-seg{animation:donutIn .55s cubic-bezier(.22,.8,.3,1) both; transition:opacity .15s}
+@keyframes donutIn{from{opacity:0} to{opacity:1}}
+
+/* 散点/数据点 */
+.pt{opacity:0; animation:ptIn .3s ease forwards}
+@keyframes ptIn{to{opacity:1}}
+
+/* hover 命中区与高亮 */
+.hit{fill:transparent; cursor:pointer}
+.g-bar{cursor:pointer}
+.g-bar:hover .bar-h, .g-bar:focus-visible .bar-h{filter:brightness(1.12)}
+.g-col:hover .bar-v{filter:brightness(1.12)}
+.g-col{cursor:pointer}
+svg g[tabindex]:focus-visible{outline:2px solid var(--accent); outline-offset:1px; border-radius:3px}
+svg g:hover .donut-seg{opacity:1}
+.row-hl{fill:oklch(50% .16 250 / .07); opacity:0; transition:opacity .14s; pointer-events:none}
+.g-bar:hover .row-hl, .g-col:hover .row-hl{opacity:1}
+
+/* 阈值参考线 */
+.thr{stroke:var(--error); stroke-width:1; stroke-dasharray:4 3; opacity:.75}
+
+/* 浮动 tooltip（JS 定位）*/
+.tip{
+  position:fixed; z-index:80; pointer-events:none; opacity:0; max-width:300px;
+  padding:8px 11px; background:oklch(100% 0 0 / .98); border:1px solid var(--line);
+  border-radius:var(--r-m); box-shadow:var(--shadow-2);
+  font-family:var(--mono); font-size:11.5px; line-height:1.6; color:var(--ink);
+  transition:opacity .13s ease; white-space:pre-line;
+}
+.tip.is-on{opacity:1}
+.tip b{font-weight:700}
+.tip .t-k{color:var(--ink-3)}
+.tip .t-err{color:var(--error); font-weight:700}
+
+/* 无障碍：图表数据表替代（默认折叠，可展开）*/
+.chart__alt{margin-top:8px}
+.chart__alt summary{cursor:pointer; font-size:11.5px; color:var(--ink-3);
+  font-family:var(--sans); user-select:none; padding:2px 0}
+.chart__alt summary:hover{color:var(--ink)}
+.chart__alt table{width:100%; border-collapse:collapse; font-size:11.5px; margin-top:6px}
+.chart__alt th, .chart__alt td{text-align:left; padding:4px 7px;
+  border-bottom:1px solid var(--line-soft); color:var(--ink-2)}
+.chart__alt th{font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-3)}
+.chart__alt td.n, .chart__alt th.n{text-align:right; font-family:var(--mono)}
+
+/* ── 表格 ── */
+.table-wrap{overflow-x:auto; border:1px solid var(--line-soft); border-radius:var(--r-m)}
+.tbl{width:100%; border-collapse:collapse; font-size:13px; min-width:880px}
+.tbl thead th{
+  position:sticky; top:0; background:var(--bg-soft); text-align:left; padding:10px 13px;
+  font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--ink-3); border-bottom:1px solid var(--line); cursor:pointer; user-select:none;
+  white-space:nowrap; transition:color .15s, background .15s;
+}
+.tbl thead th:hover{color:var(--ink); background:oklch(94% .008 250)}
+.tbl thead th.num{text-align:right}
+.tbl thead th::after{content:"↕"; margin-left:5px; opacity:.32; font-size:10px}
+.tbl thead th.is-sorted::after{content:"↓"; opacity:.9; color:var(--accent)}
+.tbl thead th.is-sorted[data-dir="asc"]::after{content:"↑"}
+.tbl tbody td{padding:9px 13px; border-bottom:1px solid var(--line-soft); color:var(--ink-2); vertical-align:middle}
+.tbl tbody td.num{text-align:right; font-family:var(--mono); font-variant-numeric:tabular-nums; color:var(--ink)}
+.tbl tbody tr{cursor:pointer; transition:background .14s}
+.tbl tbody tr:hover{background:oklch(97.5% .008 250)}
+.tbl tbody tr.is-picked{background:oklch(95% .03 250); box-shadow:inset 3px 0 0 var(--accent)}
+.tbl tbody tr:last-child td{border-bottom:0}
+.kind-tag{display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700;
+  font-family:var(--mono); letter-spacing:.04em; padding:2px 8px; border-radius:20px;
+  background:var(--tbg); color:var(--tc)}
+.kind-tag i{width:6px; height:6px; border-radius:2px; background:currentColor; display:block}
+.kind-tag[data-k="react"]{--tc:var(--react); --tbg:var(--react-bg)}
+.kind-tag[data-k="llm"]{--tc:oklch(52% .14 55); --tbg:var(--llm-bg)}
+.kind-tag[data-k="tool"]{--tc:var(--tool); --tbg:var(--tool-bg)}
+.kind-tag[data-k="skill"]{--tc:var(--skill); --tbg:var(--skill-bg)}
+.kind-tag[data-k="agent"]{--tc:var(--accent); --tbg:oklch(95% .02 250)}
+.st{display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:600}
+.st::before{content:""; width:7px; height:7px; border-radius:50%; background:var(--tone)}
+.st[data-s="ok"]{--tone:var(--ok); color:oklch(42% .12 155)}
+.st[data-s="warn"]{--tone:var(--warn); color:oklch(48% .13 80)}
+.st[data-s="error"]{--tone:var(--error); color:var(--error)}
+.st[data-s="error"]::before{animation:pulseDot 1.8s ease-in-out infinite}
+
+/* ── 详情面板 ── */
+.card--split .detail{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.15fr); gap:18px}
+.detail__stats{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:10px; align-content:start}
+.dstat{padding:12px 14px; background:var(--bg-soft); border:1px solid var(--line-soft); border-radius:var(--r-m)}
+.dstat dt{font-size:11px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--ink-3); margin:0}
+.dstat dd{margin:4px 0 0; font-family:var(--mono); font-size:16px; font-weight:700; color:var(--ink); font-variant-numeric:tabular-nums}
+.dstat dd small{font-size:11px; font-weight:600; color:var(--ink-3); margin-left:3px}
+.detail__io{display:grid; gap:10px; align-content:start}
+.io{border:1px solid var(--line-soft); border-radius:var(--r-m); overflow:hidden; background:var(--bg-soft)}
+.io__h{display:flex; align-items:center; gap:8px; padding:8px 12px; background:var(--surface);
+  border-bottom:1px solid var(--line-soft); font-size:11px; font-weight:700;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--ink-3)}
+.io__h b{margin-left:auto; font-family:var(--mono); font-size:10.5px; letter-spacing:0;
+  text-transform:none; color:var(--ink-3); font-weight:600}
+.io pre{
+  margin:0; padding:12px 14px; font-family:var(--mono); font-size:12px; line-height:1.62;
+  color:var(--ink-2); white-space:pre-wrap; word-break:break-word; max-height:230px; overflow:auto;
+}
+.io--note{border-left:3px solid var(--warn)}
+.io--err{border-left:3px solid var(--error)}
+.detail__empty{
+  grid-column:1/-1; display:grid; place-items:center; gap:8px; min-height:200px;
+  border:1px dashed var(--line); border-radius:var(--r-m); color:var(--ink-3); font-size:13px; text-align:center; padding:30px;
+}
+.detail__empty svg{opacity:.4}
+
+/* ── 页脚 ── */
+.foot{
+  max-width:var(--maxw); margin:0 auto; padding:22px 28px 40px;
+  border-top:1px solid var(--line); color:var(--ink-3); font-size:12.5px;
+}
+.foot p{margin:0}
+.foot__meta{margin-top:5px; font-family:var(--mono); font-size:11.5px}
+
+/* ── 执行轨迹树 ──────────────────────────────────
+   嵌套 ul 提供层级竖线（对齐截图的连接线观感），
+   每行左侧 3px 彩色竖条标识节点类型。 */
+.tree-wrap{max-height:640px; overflow:auto; border:1px solid var(--line-soft);
+  border-radius:var(--r-m); background:var(--surface); padding:8px}
+.tree{font-size:13px; min-width:760px}
+.tree ul{list-style:none; margin:0; padding:0}
+.tree ul ul{margin-left:15px; padding-left:14px; border-left:1px dashed var(--line);
+  position:relative}
+.tree ul ul::before{
+  content:""; position:absolute; left:-1px; top:0; bottom:0; width:1px;
+  background:linear-gradient(180deg, transparent, var(--accent) 12%, var(--accent) 88%, transparent);
+  opacity:0; transition:opacity .3s;
+}
+.tree ul ul:hover::before{opacity:.35}
+
+.t-row{
+  display:flex; align-items:center; gap:9px; padding:5px 9px 5px 7px;
+  border-radius:6px; cursor:pointer; position:relative;
+  transition:background .14s, box-shadow .14s;
+  border-left:3px solid transparent;
+}
+.t-row:hover{background:var(--bg-soft)}
+.t-row.is-picked{background:oklch(95.5% .028 250); border-left-color:var(--accent)}
+.t-row.is-hit{box-shadow:inset 0 0 0 1px oklch(80% .1 250 / .5)}
+.t-row.is-dim{opacity:.28}
+.t-row[data-k="react"]{border-left-color:var(--react)}
+.t-row[data-k="llm"]{border-left-color:var(--llm)}
+.t-row[data-k="tool"]{border-left-color:var(--tool)}
+.t-row[data-k="skill"]{border-left-color:var(--skill)}
+.t-row[data-k="agent"]{border-left-color:var(--accent)}
+.t-row[data-st="error"]{background:oklch(97% .025 25)}
+.t-row[data-st="error"]:hover{background:oklch(95.5% .035 25)}
+
+.t-chev{
+  flex:none; width:18px; height:18px; display:grid; place-items:center;
+  border:0; background:transparent; padding:0; cursor:pointer; border-radius:4px;
+  color:var(--ink-3); transition:transform .2s cubic-bezier(.3,.8,.4,1), color .15s, background .15s;
+}
+.t-chev:hover{color:var(--ink); background:oklch(92% .008 250)}
+.t-chev svg{width:9px; height:9px; display:block}
+.t-row.is-open > .t-chev{transform:rotate(90deg)}
+.t-chev[disabled]{visibility:hidden}
+
+.t-tag{
+  flex:none; font-family:var(--mono); font-size:10px; font-weight:700; letter-spacing:.05em;
+  text-transform:uppercase; padding:2px 6px; border-radius:4px; min-width:44px; text-align:center;
+  background:var(--tbg); color:var(--tc);
+}
+.t-row[data-k="react"] .t-tag{--tc:var(--react); --tbg:var(--react-bg)}
+.t-row[data-k="llm"]   .t-tag{--tc:oklch(50% .14 55); --tbg:var(--llm-bg)}
+.t-row[data-k="tool"]  .t-tag{--tc:var(--tool); --tbg:var(--tool-bg)}
+.t-row[data-k="skill"] .t-tag{--tc:var(--skill); --tbg:var(--skill-bg)}
+.t-row[data-k="agent"] .t-tag{--tc:var(--accent); --tbg:oklch(95% .02 250)}
+
+.t-name{flex:0 1 auto; min-width:0; font-weight:600; color:var(--ink);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.t-name mark{background:oklch(88% .14 95); color:inherit; border-radius:2px; padding:0 1px}
+.t-round{flex:none; font-family:var(--mono); font-size:10.5px; color:var(--ink-3);
+  border:1px solid var(--line); border-radius:20px; padding:0 7px}
+
+.t-metrics{flex:none; margin-left:auto; display:flex; align-items:center; gap:7px; font-family:var(--mono); font-size:11px}
+.t-m{display:inline-flex; align-items:center; gap:3px; padding:1px 7px; border-radius:4px;
+  background:var(--bg-soft); color:var(--ink-2); white-space:nowrap; font-variant-numeric:tabular-nums}
+.t-m b{font-weight:600; color:var(--ink-3); font-size:9.5px; letter-spacing:.04em}
+.t-m--hot{background:oklch(95% .05 30); color:oklch(45% .18 28); font-weight:700}
+.t-m--slow{background:oklch(96% .05 80); color:oklch(45% .13 75); font-weight:700}
+
+/* 耗时占比条：贴在行底部，进入视口后从左向右生长 */
+.t-bar{position:absolute; left:0; bottom:0; height:2px; width:0; border-radius:0 2px 2px 0;
+  background:var(--tone, var(--accent)); opacity:.55; transition:width .5s ease}
+.t-row[data-k="react"] .t-bar{--tone:var(--react)}
+.t-row[data-k="llm"] .t-bar{--tone:var(--llm)}
+.t-row[data-k="tool"] .t-bar{--tone:var(--tool)}
+.t-row[data-k="skill"] .t-bar{--tone:var(--skill)}
+
+.t-kids{overflow:hidden}
+.t-kids[hidden]{display:none}
+.tree__empty{padding:46px 20px; text-align:center; color:var(--ink-3); font-size:13px}
+
+/* ── 详情：指标条 ── */
+.meter{margin-top:9px}
+.meter__t{display:flex; justify-content:space-between; font-size:11px; color:var(--ink-3); margin-bottom:4px; font-family:var(--mono)}
+.meter__b{height:6px; background:var(--line-soft); border-radius:3px; overflow:hidden}
+.meter__b i{display:block; height:100%; width:0; border-radius:3px;
+  background:linear-gradient(90deg, var(--accent), var(--react)); transition:width .8s cubic-bezier(.22,.8,.3,1)}
+
+/* ── 响应式 ── */
+@media (max-width: 1380px){
+  .split-row{grid-template-columns:minmax(0,1fr); height:auto}
+  .split-row .tree-wrap{max-height:440px; flex:none}
+  .split-row .card--split .detail{max-height:none; flex:none}
+  .g4{grid-template-columns:repeat(2, minmax(0,1fr))}
+}
+@media (max-width: 1180px){
+  .g3{grid-template-columns:minmax(0,1fr)}
+  .g4{grid-template-columns:repeat(2, minmax(0,1fr))}
+  .card--split .detail{grid-template-columns:minmax(0,1fr)}
+  /* 链路分析 6 卡：Token 宽卡独占一行 */
+  .acard{flex:1 1 150px}
+  .acard--wide{flex:1 1 100%}
+}
+@media (max-width: 900px){
+  .topbar{height:auto; flex-wrap:wrap; padding:10px 18px; gap:10px}
+  .topbar__nav{order:3; width:100%; margin-left:0; overflow-x:auto; padding-bottom:2px}
+  main{padding:0 18px 44px}
+  .card{padding:18px 16px}
+  .blk{padding:16px 15px 18px}
+  .detail__stats{grid-template-columns:repeat(2, minmax(0,1fr))}
+  .field input{width:130px}
+  .io-cards{grid-template-columns:minmax(0,1fr)}
+  .g4{grid-template-columns:minmax(0,1fr)}
+  .acard__val{font-size:26px}
+  .asub__v{font-size:22px}
+  .li__title{font-size:15px}
+  .li__tid{font-size:12px}
+}
+@media (max-width: 620px){
+  .toolbar{width:100%}
+  .chips{flex-wrap:wrap}
+  .t-metrics{gap:4px}
+  .t-m--ttft{display:none}
+  .blk__title{font-size:15px}
+  .pcard{min-height:260px}
+  .acard{flex:1 1 100%}
+}
+
+/* ── 动效 ─────────────────────────────────────────
+   ① 入场逐段上浮  ② KPI 数字滚动  ③ 树节点逐级点亮
+   ④ 折叠/展开高度过渡（JS 控制）  ⑤ 图表描线生长 */
+
+/* 入场：进入视口后上浮淡入 */
+.reveal{opacity:0; transform:translateY(14px);
+  transition:opacity .5s cubic-bezier(.22,.8,.3,1), transform .5s cubic-bezier(.22,.8,.3,1)}
+.reveal.is-in{opacity:1; transform:none}
+
+/* 树节点：逐级点亮入场 */
+@keyframes nodeIn{
+  from{opacity:0; transform:translateX(-7px)}
+  to  {opacity:1; transform:none}
+}
+.t-row.is-anim{animation:nodeIn .34s cubic-bezier(.22,.8,.3,1) both}
+
+/* 异常节点红点呼吸 */
+@keyframes pulseDot{
+  0%,100%{transform:scale(1);   opacity:1}
+  50%    {transform:scale(1.5); opacity:.45}
+}
+
+/* 顶部进度细线：页面滚动进度 */
+.scrollbar{position:fixed; left:0; top:0; height:2px; width:0; z-index:60;
+  background:linear-gradient(90deg, var(--react), var(--accent), var(--tool));
+  transition:width .12s linear}
+
+/* 折叠/展开高度过渡 */
+.t-kids{transition:max-height .26s cubic-bezier(.3,.8,.4,1), opacity .2s ease}
+
+/* 图表容器淡入 */
+@keyframes chartIn{from{opacity:0} to{opacity:1}}
+.chart__box.is-ready{animation:chartIn .45s ease both}
+
+/* 减少动画：全部关闭位移/呼吸，保留即时状态 */
+@media (prefers-reduced-motion: reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{
+    animation-duration:.001ms !important; animation-iteration-count:1 !important;
+    transition-duration:.001ms !important;
+  }
+  .reveal{opacity:1; transform:none}
+  /* SVG 动画直接落到终态，避免停在 dashoffset 初始值导致图形不可见 */
+  .line-path{stroke-dashoffset:0}
+  .area-path, .pt, .donut-seg{opacity:1}
+  .bar-h, .bar-v{transform:none}
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">跳到主内容</a>
+
+<header class="topbar">
+  <div class="topbar__id">
+    <span class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M4 6h6M4 12h10M4 18h7" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/><circle cx="17" cy="6" r="2.6" fill="currentColor"/><circle cx="19" cy="18" r="2.6" fill="currentColor"/></svg></span>
+    <span class="topbar__title">Agent链路观测报告</span>
+    <span class="topbar__ver">Trace Report v2.0</span>
+  </div>
+  <nav class="topbar__nav" aria-label="章节导航">
+    <a href="#sec-info">链路信息</a>
+    <a href="#sec-link">链路分析</a>
+    <a href="#sec-perf">性能分析</a>
+    <a href="#sec-llm">LLM调用</a>
+    <a href="#sec-tool">TOOL调用</a>
+    <a href="#sec-trace">执行轨迹</a>
+    <a href="#sec-detail">节点明细</a>
+  </nav>
+</header>
+
+<main id="main">
+
+  <!-- ══════════ 板块 1 · 链路信息 ══════════ -->
+  <section class="blk blk--info" id="sec-info" aria-labelledby="info-h">
+    <div class="blk__body">
+      <div class="li__bar">
+        <h2 class="li__title" id="info-h" title="">—</h2>
+        <div class="li__ops">
+          <span class="tag" id="liStatus">—</span>
+          <span class="tag tag--range" id="liAgent">—</span>
+        </div>
+      </div>
+      <p class="li__tidrow"><span class="li__lbl">Trace ID</span><span class="li__tid" id="liTraceId">—</span></p>
+      <div class="pills" id="liPills"><!-- JS 渲染 --></div>
+      <div class="io-cards">
+        <div class="io-card">
+          <span class="io-card__badge">输入</span>
+          <p class="io-card__txt" id="liInput">—</p>
+        </div>
+        <div class="io-card io-card--out">
+          <span class="io-card__badge">输出</span>
+          <p class="io-card__txt" id="liOutput">—</p>
+        </div>
+      </div>
+      <div class="summary" id="sumInfo"><!-- JS 渲染 --></div>
+    </div>
+  </section>
+
+  <!-- ══════════ 板块 2 · 链路分析 ══════════ -->
+  <section class="blk" id="sec-link" aria-labelledby="link-h">
+    <h2 class="blk__title" id="link-h">
+      <button class="blk__fold" type="button" data-fold="#sec-link" aria-expanded="true" aria-label="折叠 链路分析">
+        <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5 L5 6.5 L8 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      链路分析 <span class="tag" id="linkRange">—</span>
+    </h2>
+    <div class="blk__body">
+      <div class="acards" id="acards"><!-- JS 渲染 --></div>
+      <div class="summary" id="sumLink"><!-- JS 渲染 --></div>
+    </div>
+  </section>
+
+  <!-- ══════════ 板块 3 · 性能分析 ══════════ -->
+  <section class="blk" id="sec-perf" aria-labelledby="perf-h">
+    <h2 class="blk__title" id="perf-h">
+      <button class="blk__fold" type="button" data-fold="#sec-perf" aria-expanded="true" aria-label="折叠 性能分析">
+        <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5 L5 6.5 L8 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      性能分析 <span class="tag" id="perfRange">—</span>
+    </h2>
+    <div class="blk__body">
+      <div class="g3">
+        <div class="pcard">
+          <div class="pcard__h"><span class="pcard__t">LLM与工具调用耗时占比</span><span class="tag">1w</span></div>
+          <div class="pcard__b" id="chartPie" data-h="240"></div>
+        </div>
+        <div class="pcard">
+          <div class="pcard__h"><span class="pcard__t">LLM调用耗时TOP</span><span class="pcard__range" id="rangeLlmTop">—</span></div>
+          <div class="pcard__b" id="boxLlmTop"></div>
+          <div class="top-foot" id="footLlmTop"></div>
+        </div>
+        <div class="pcard">
+          <div class="pcard__h"><span class="pcard__t">TOOL调用耗时TOP</span><span class="pcard__range" id="rangeToolTop">—</span></div>
+          <div class="pcard__b" id="boxToolTop"></div>
+          <div class="top-foot" id="footToolTop"></div>
+        </div>
+      </div>
+      <div class="summary" id="sumPerf"><!-- JS 渲染 --></div>
+    </div>
+  </section>
+
+  <!-- ══════════ 板块 4 · LLM调用分析 ══════════ -->
+  <section class="blk" id="sec-llm" aria-labelledby="llm-h">
+    <h2 class="blk__title" id="llm-h">
+      <button class="blk__fold" type="button" data-fold="#sec-llm" aria-expanded="true" aria-label="折叠 LLM调用分析">
+        <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5 L5 6.5 L8 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      LLM调用分析 <span class="tag" id="llmRange">—</span>
+    </h2>
+    <div class="blk__body">
+      <div class="g4">
+        <div class="pcard">
+          <div class="pcard__h"><span class="pcard__t">LLM单轮耗时趋势</span><span class="tag">1w</span></div>
+          <div class="pcard__b" id="chartLlmDur" data-h="220"></div>
+          <div class="pcard__lg" id="lgLlmDur"></div>
+        </div>
+        <div class="pcard">
+          <div class="pcard__h"><span class="pcard__t">LLM单轮Token消耗趋势</span><span class="tag">1w</span></div>
+          <div class="pcard__b" id="chartLlmTok" data-h="220"></div>
+          <div class="pcard__lg" id="lgLlmTok"></div>
+        </div>
+        <div class="pcard">
+          <div class="pcard__h"><span class="pcard__t">LLM单轮Token输出速率</span><span class="tag">1w</span></div>
+          <div class="pcard__b" id="chartLlmRate" data-h="220"></div>
+          <div class="pcard__lg" id="lgLlmRate"></div>
+        </div>
+        <div class="pcard">
+          <div class="pcard__h"><span class="pcard__t">LLM缓存命中率</span><span class="tag">1w</span></div>
+          <div class="pcard__b" id="chartLlmCache" data-h="220"></div>
+          <div class="pcard__lg" id="lgLlmCache"></div>
+        </div>
+      </div>
+      <div class="summary" id="sumLlm"><!-- JS 渲染 --></div>
+    </div>
+  </section>
+
+  <!-- ══════════ 板块 5 · TOOL调用分析 ══════════ -->
+  <section class="blk" id="sec-tool" aria-labelledby="tool-h">
+    <h2 class="blk__title" id="tool-h">
+      <button class="blk__fold" type="button" data-fold="#sec-tool" aria-expanded="true" aria-label="折叠 TOOL调用分析">
+        <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5 L5 6.5 L8 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      TOOL调用分析 <span class="tag" id="toolRange">—</span>
+    </h2>
+    <div class="blk__body">
+      <div class="g3">
+        <div class="pcard">
+          <div class="pcard__h"><span class="pcard__t">TOOL调用耗时趋势</span><span class="tag">1w</span></div>
+          <div class="pcard__b" id="chartToolDur" data-h="220"></div>
+          <div class="pcard__lg" id="lgToolDur"></div>
+        </div>
+        <div class="pcard">
+          <div class="pcard__h"><span class="pcard__t">TOOL调用输入输出大小</span><span class="tag">1w</span></div>
+          <div class="pcard__b" id="chartToolIO" data-h="220"></div>
+          <div class="pcard__lg" id="lgToolIO"></div>
+        </div>
+        <div class="pcard">
+          <div class="pcard__h"><span class="pcard__t">各工具调用次数</span><span class="pcard__range" id="rangeToolCnt">—</span></div>
+          <div class="pcard__b" id="chartToolCnt" data-h="220"></div>
+          <div class="pcard__lg" id="lgToolCnt"></div>
+        </div>
+      </div>
+      <div class="summary" id="sumTool"><!-- JS 渲染 --></div>
+    </div>
+  </section>
+
+  <!-- ══════════ 附录 · 执行轨迹树 + 节点详情（水平排放）══════════ -->
+  <div class="split-row">
+
+  <!-- ══ 执行轨迹树 ══ -->
+  <section class="card card--trace" id="sec-trace" aria-labelledby="trace-h">
+    <div class="card__head">
+      <div>
+        <h2 id="trace-h" class="card__title">执行轨迹 <span class="card__hint">React · LLM · Tool 调用树</span></h2>
+        <p class="card__desc">点击节点展开/折叠，单击行查看详情；左侧色条标识节点类型，竖线表示父子层级。</p>
+      </div>
+      <div class="toolbar" role="group" aria-label="轨迹树操作">
+        <label class="field">
+          <span class="field__lbl">搜索</span>
+          <input type="search" id="treeSearch" placeholder="节点名 / 工具 / 模型…" autocomplete="off">
+        </label>
+        <div class="chips" id="kindFilter" role="group" aria-label="按类型筛选">
+          <button class="chip is-on" data-kind="all" type="button">全部</button>
+          <button class="chip" data-kind="react" type="button">React</button>
+          <button class="chip" data-kind="llm" type="button">LLM</button>
+          <button class="chip" data-kind="tool" type="button">Tool</button>
+          <button class="chip" data-kind="skill" type="button">Skill</button>
+          <button class="chip" data-kind="bad" type="button">仅异常</button>
+        </div>
+        <button class="btn btn--ghost" id="btnExpand" type="button">全部展开</button>
+        <button class="btn btn--ghost" id="btnCollapse" type="button">全部折叠</button>
+      </div>
+    </div>
+    <div class="legend" aria-hidden="true">
+      <span><i class="dot" data-tone="react"></i>React 步骤</span>
+      <span><i class="dot" data-tone="llm"></i>LLM 调用</span>
+      <span><i class="dot" data-tone="tool"></i>工具执行</span>
+      <span><i class="dot" data-tone="skill"></i>Skill 加载</span>
+      <span><i class="dot" data-tone="error"></i>异常</span>
+      <span class="legend__sep"></span>
+      <span>TTFT = 首 token 延迟</span>
+    </div>
+    <div class="tree-wrap">
+      <div class="tree" id="tree" role="tree" aria-label="Agent 执行轨迹树"><!-- JS 渲染 --></div>
+      <div class="tree__empty" id="treeEmpty" hidden>没有匹配的节点，试试清空搜索或切换筛选。</div>
+    </div>
+  </section>
+
+  <!-- ══ 节点详情 ══ -->
+  <section class="card card--split card--detail" id="detail-card" aria-labelledby="detail-h">
+    <div class="card__head">
+      <div>
+        <h2 id="detail-h" class="card__title">节点详情 <span class="card__hint" id="detailPath">未选择节点</span></h2>
+        <p class="card__desc">展示选中节点的入参、出参与性能指标，用于定位单步问题。</p>
+      </div>
+    </div>
+    <div class="detail" id="detail"><!-- JS 渲染 --></div>
+  </section>
+
+  </div>
+
+  <!-- ══ 附录 · 执行时序甘特图 ══ -->
+  <section class="card" id="sec-gantt" aria-labelledby="gantt-h">
+    <div class="card__head">
+      <div>
+        <h2 id="gantt-h" class="card__title">执行时序 <span class="card__hint">附录 · 内联手写 SVG，零外部依赖</span></h2>
+        <p class="card__desc">全部节点按开始时间排列，条长 = 耗时；虚线为各轮起点。点击任一条可在右侧「节点详情」定位该节点，悬停查看明细。</p>
+      </div>
+    </div>
+    <figure class="chart chart--solo">
+      <div class="chart__box" id="chartGantt" data-h="440"></div>
+    </figure>
+  </section>
+
+  <!-- ══ 节点明细表 ══ -->
+  <section class="card" id="sec-detail" aria-labelledby="table-h">
+    <div class="card__head">
+      <div>
+        <h2 id="table-h" class="card__title">节点明细 <span class="card__hint" id="tableCount">—</span></h2>
+        <p class="card__desc">扁平化清单，便于排序与导出；点击表头切换排序，点击行定位到轨迹树对应节点。</p>
+      </div>
+      <div class="toolbar">
+        <button class="btn btn--ghost" id="btnCsv" type="button">导出 CSV</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="tbl" id="tbl">
+        <caption class="sr">Agent 执行节点明细，含类型、名称、轮次、耗时、Token、TTFT 与状态</caption>
+        <thead>
+          <tr>
+            <th scope="col" data-sort="kind">类型</th>
+            <th scope="col" data-sort="name">节点名称</th>
+            <th scope="col" data-sort="round">轮次</th>
+            <th scope="col" data-sort="startMs" class="num">开始(s)</th>
+            <th scope="col" data-sort="durationMs" class="num is-sorted" aria-sort="descending">耗时</th>
+            <th scope="col" data-sort="totalTokens" class="num">Tokens</th>
+            <th scope="col" data-sort="ttftMs" class="num">TTFT</th>
+            <th scope="col" data-sort="status">状态</th>
+          </tr>
+        </thead>
+        <tbody id="tblBody"><!-- JS 渲染 --></tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<footer class="foot">
+  <p>Agent链路观测报告模版 · 数据驱动渲染，替换 <code>window.TRACE_DATA</code> 即可复用 · 完全离线，零外部依赖</p>
+  <p class="foot__meta" id="footMeta">—</p>
+</footer>
+
+<script>
+/* ══════════════════════════════════════════════════════════
+   ① 示例数据 —— 替换这里即可接入真实 Trace
+   spans 为扁平数组，靠 parentId 组树；startMs 相对会话起点。
+   ══════════════════════════════════════════════════════════ */
+window.TRACE_DATA = {
+  meta: {
+    sessionId: "sess_8f2c41ab9d07",
+    traceId: "tr_20260914_a71f3c",
+    agent: "ResearchAgent · react-v2",
+    model: "ideal:ideal-2.5-pro",
+    query: "分析近 7 日 Agent 会话失败率上升的原因，并给出优化建议",
+    startTime: "2026-09-14 09:32:11.408",
+    endTime: "2026-09-14 09:33:11.648",
+    status: "error",
+    env: "prod / cn-hangzhou",
+    user: "u_1029384"
+  },
+
+  /* summary 留空则由 spans 自动推导；需要覆盖时按同名字段写入即可 */
+  summary: {},
+
+  spans: [
+    { id:"n1", parentId:null, kind:"agent", name:"ResearchAgent.run", startMs:0, durationMs:60240,
+      round:null, status:"error", model:"ideal:ideal-2.5-pro",
+      note:"会话触达 60s 总时长预算被强制中断，round:4 未能产出结论，由 orchestrator 标记为 error。" },
+
+    /* ── round 1：技能加载 ── */
+    { id:"n18", parentId:"n1", kind:"skill", name:"skill · load trace-analyzer", startMs:0, durationMs:96,
+      round:1, status:"ok", skill:"trace-analyzer",
+      input:'{"skill":"trace-analyzer","version":"1.4.2"}',
+      output:'{"loaded":true,"tools":["query_session_metrics","query_tool_latency"],"promptTokens":2140}',
+      note:"首轮加载会话观测技能，注入 2 个工具定义，占用 2140 prompt tokens。" },
+
+    /* ── round 1 ── */
+    { id:"n2", parentId:"n1", kind:"react", name:"react · plan", startMs:120, durationMs:6840,
+      round:1, status:"ok",
+      note:"首轮规划：确定需要先取会话明细，再做失败归因聚类。" },
+    { id:"n3", parentId:"n2", kind:"llm", name:"LLM · think", startMs:180, durationMs:4120,
+      round:1, status:"ok", model:"ideal:ideal-2.5-pro",
+      totalTokens:5177, promptTokens:4382, completionTokens:795, cachedTokens:0, ttftMs:1420,
+      input:"system: 你是会话观测分析助手…\nuser: 分析近 7 日 Agent 会话失败率上升的原因\nhistory: []",
+      output:"thought: 需要先拿到近 7 日会话明细，再按失败类型聚类。\naction: query_session_metrics" },
+    { id:"n4", parentId:"n2", kind:"tool", name:"execute_tool · query_session_metrics", startMs:4360, durationMs:2480,
+      round:1, status:"ok", tool:"query_session_metrics",
+      input:'{"range":"7d","groupBy":["failure_type","agent_name"],"limit":500}',
+      output:'{"rows":412,"failureRate":0.0831,"delta":"+2.4pp WoW","top":[{"failure_type":"tool_timeout","count":198}]}',
+      note:"返回 412 行，失败率 8.31%，环比 +2.4pp。" },
+
+    /* ── round 2 ── */
+    { id:"n5", parentId:"n1", kind:"react", name:"react · observe", startMs:7020, durationMs:9460,
+      round:2, status:"ok" },
+    { id:"n6", parentId:"n5", kind:"llm", name:"LLM · reason", startMs:7100, durationMs:5860,
+      round:2, status:"ok", model:"ideal:ideal-2.5-pro",
+      totalTokens:11482, promptTokens:9870, completionTokens:1612, cachedTokens:4100, ttftMs:2180,
+      input:"observation: 412 rows, failureRate=0.0831 …\ninstruction: 对 tool_timeout 做下钻",
+      output:"thought: tool_timeout 占比 48%，需要看是哪些工具、超时阈值多少。\naction: query_tool_latency" },
+    { id:"n7", parentId:"n5", kind:"tool", name:"execute_tool · query_tool_latency", startMs:13040, durationMs:2830,
+      round:2, status:"ok", tool:"query_tool_latency",
+      input:'{"toolName":"*","metric":["p50","p95","p99"],"range":"7d"}',
+      output:'{"query_session_metrics":{"p95":2410},"kb_search":{"p95":18200,"p99":41000},"odps_query":{"p95":9600}}',
+      note:"kb_search p95 达 18.2s，已逼近 20s 工具超时阈值。" },
+
+    /* ── round 3：并行取数 + 一次重试 ── */
+    { id:"n8", parentId:"n1", kind:"react", name:"react · act", startMs:16540, durationMs:29960,
+      round:3, status:"warn", note:"本轮出现一次工具超时重试，整体耗时被拉长。" },
+    { id:"n19", parentId:"n8", kind:"skill", name:"skill · load log-miner", startMs:16560, durationMs:412,
+      round:3, status:"ok", skill:"log-miner",
+      input:'{"skill":"log-miner","version":"0.9.1"}',
+      output:'{"loaded":true,"tools":["fetch_error_logs"],"promptTokens":3860,"warn":"beta skill"}',
+      note:"为下钻错误日志临时加载 log-miner，注入 fetch_error_logs 工具定义，prompt 增量 3860 tokens。" },
+    { id:"n9", parentId:"n8", kind:"llm", name:"LLM · reason", startMs:16620, durationMs:4980,
+      round:3, status:"ok", model:"ideal:ideal-2.5-pro",
+      totalTokens:14206, promptTokens:12480, completionTokens:1726, cachedTokens:8200, ttftMs:1860,
+      output:"thought: 需要 kb_search 的错误日志样本，同时拉取近 7 日上下文长度分布。\nactions: [fetch_error_logs, query_context_stats]" },
+    { id:"n10", parentId:"n8", kind:"tool", name:"execute_tool · fetch_error_logs", startMs:21680, durationMs:20040,
+      round:3, status:"error", tool:"fetch_error_logs",
+      input:'{"source":"sls","query":"level:ERROR AND tool:kb_search","range":"7d","limit":200}',
+      output:'TimeoutError: tool exceeded 20000ms deadline\n  at ToolExecutor.run (executor.ts:218)\n  at ReactLoop.step (react.ts:104)',
+      note:"SLS 查询命中 20s 工具超时上限，未返回任何日志样本。" },
+    { id:"n11", parentId:"n8", kind:"tool", name:"execute_tool · query_context_stats", startMs:21720, durationMs:4,
+      round:3, status:"ok", tool:"query_context_stats",
+      input:'{"metric":["avg_context_tokens","truncated_ratio"],"range":"7d"}',
+      output:'{"avgContextTokens":41200,"truncatedRatio":0.213,"platformRecommend":400000}',
+      note:"与 n10 并行发起，4ms 命中缓存返回。" },
+    { id:"n12", parentId:"n8", kind:"llm", name:"LLM · retry-decide", startMs:41800, durationMs:3460,
+      round:3, status:"ok", model:"ideal:ideal-2.5-pro",
+      totalTokens:8934, promptTokens:8120, completionTokens:814, cachedTokens:6900, ttftMs:980,
+      output:"thought: fetch_error_logs 超时，改用缩小时间窗（24h）重试一次。\naction: fetch_error_logs" },
+    { id:"n13", parentId:"n8", kind:"tool", name:"execute_tool · fetch_error_logs (retry)", startMs:45340, durationMs:1120,
+      round:3, status:"warn", tool:"fetch_error_logs",
+      input:'{"source":"sls","query":"level:ERROR AND tool:kb_search","range":"24h","limit":50}',
+      output:'{"rows":37,"sample":"upstream 504 from kb-gateway","note":"结果被 limit 截断，仅覆盖 24h"}',
+      note:"重试成功但样本量从 200 降到 50，时间窗收缩导致结论置信度下降。" },
+
+    /* ── round 4：撞上会话预算，链路中断 ── */
+    { id:"n14", parentId:"n1", kind:"react", name:"react · synthesize", startMs:46560, durationMs:13520,
+      round:4, status:"error", note:"归因阶段再次失败，react loop 未能在会话预算内收敛。" },
+    { id:"n20", parentId:"n14", kind:"skill", name:"skill · load report-writer", startMs:46570, durationMs:1830,
+      round:4, status:"warn", skill:"report-writer",
+      input:'{"skill":"report-writer","version":"2.0.0"}',
+      output:'{"loaded":true,"degraded":true,"reason":"manifest fetch slow (1.6s)","promptTokens":4720}',
+      note:"归因阶段加载报告撰写技能；manifest 拉取慢导致降级加载，prompt 增量 4720 tokens。" },
+    { id:"n15", parentId:"n14", kind:"llm", name:"LLM · reason", startMs:46640, durationMs:5420,
+      round:4, status:"ok", model:"ideal:ideal-2.5-pro",
+      totalTokens:18340, promptTokens:16210, completionTokens:2130, cachedTokens:11800, ttftMs:3260,
+      input:"observations: 4 tool results (1 failed, 1 partial) …",
+      output:"thought: 已有证据指向 kb_search 网关侧超时；再取一次全量错误分布以确认。\naction: fetch_error_logs",
+      note:"TTFT 3.26s 为全会话最高，上下文已累积到 16k prompt tokens。" },
+    { id:"n16", parentId:"n14", kind:"tool", name:"execute_tool · fetch_error_logs", startMs:52140, durationMs:4900,
+      round:4, status:"error", tool:"fetch_error_logs",
+      input:'{"source":"sls","query":"level:ERROR","range":"7d","limit":1000}',
+      output:'BudgetExceededError: session wall-clock budget 60000ms exhausted\n  at ToolExecutor.run (executor.ts:218)',
+      note:"同一工具第二次失败；本次 limit 放大到 1000 触发全表扫描，被会话 60s 预算强制中断。" },
+    { id:"n17", parentId:"n14", kind:"llm", name:"LLM · final-answer (aborted)", startMs:57120, durationMs:2920,
+      round:4, status:"error", model:"ideal:ideal-2.5-pro",
+      totalTokens:6210, promptTokens:6040, completionTokens:170, cachedTokens:5400, ttftMs:2860,
+      input:"observations: incomplete …",
+      output:"（生成中断）assistant: 根据现有数据，失败率上升主要与",
+      note:"输出在 170 tokens 处被 orchestrator 截断：会话总时长触达 60s 预算上限。" }
+  ]
+};
+
+/* ══════════════════════════════════════════════════════════
+   ② 核心渲染：指标推导 → 元信息 / KPI / 树 / 详情 / 表格 / 洞察
+   ══════════════════════════════════════════════════════════ */
+(function () {
+  "use strict";
+
+  var DATA = window.TRACE_DATA || { meta: {}, summary: {}, spans: [] };
+  var SPANS = (DATA.spans || []).slice();
+  var META = DATA.meta || {};
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+  var REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ── 工具函数 ── */
+  function byId(id) { for (var i = 0; i < SPANS.length; i++) if (SPANS[i].id === id) return SPANS[i]; return null; }
+  function num(v, d) { return (typeof v === "number" && isFinite(v)) ? v : (d || 0); }
+  function fmtMs(ms) {
+    ms = num(ms);
+    if (ms < 1000) return ms + "ms";
+    if (ms < 60000) return (ms / 1000).toFixed(2) + "s";
+    return Math.floor(ms / 60000) + "m" + Math.round((ms % 60000) / 1000) + "s";
+  }
+  function fmtS(ms) { return (num(ms) / 1000).toFixed(2); }
+  function fmtInt(n) { return num(n).toLocaleString("en-US"); }
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function tryJson(s) {
+    if (s == null) return null;
+    if (typeof s === "object") return s;
+    try { return JSON.parse(s); } catch (e) { return null; }
+  }
+  function pretty(s) {
+    var j = tryJson(s);
+    return j ? JSON.stringify(j, null, 2) : String(s == null ? "" : s);
+  }
+  function kindLabel(k) {
+    return { react: "REACT", llm: "LLM", tool: "TOOL", skill: "SKILL", agent: "AGENT" }[k] || String(k || "NODE").toUpperCase();
+  }
+  function stLabel(s) { return { ok: "正常", warn: "告警", error: "异常" }[s] || "正常"; }
+
+  /* ── 组树 + 推导指标 ── */
+  var kids = {};
+  SPANS.forEach(function (s) {
+    var p = s.parentId || "__root__";
+    (kids[p] = kids[p] || []).push(s);
+  });
+  Object.keys(kids).forEach(function (k) {
+    kids[k].sort(function (a, b) { return num(a.startMs) - num(b.startMs); });
+  });
+  var ROOTS = kids["__root__"] || [];
+  var depthOf = {};
+  (function walk(list, d) {
+    list.forEach(function (s) { depthOf[s.id] = d; walk(kids[s.id] || [], d + 1); });
+  })(ROOTS, 0);
+
+  function isLeaf(s) { return !(kids[s.id] && kids[s.id].length); }
+
+  var t0 = Infinity, t1 = -Infinity;
+  SPANS.forEach(function (s) {
+    var a = num(s.startMs), b = a + num(s.durationMs);
+    if (a < t0) t0 = a;
+    if (b > t1) t1 = b;
+  });
+  if (!isFinite(t0)) { t0 = 0; t1 = 0; }
+
+  var S = DATA.summary || {};
+  var llmSpans = SPANS.filter(function (s) { return s.kind === "llm"; });
+  var toolSpans = SPANS.filter(function (s) { return s.kind === "tool"; });
+  var reactSpans = SPANS.filter(function (s) { return s.kind === "react"; });
+  var skillSpans = SPANS.filter(function (s) { return s.kind === "skill"; });
+  var errSpans = SPANS.filter(function (s) { return s.status === "error"; });
+  var warnSpans = SPANS.filter(function (s) { return s.status === "warn"; });
+
+  var totalTokens = S.totalTokens != null ? S.totalTokens
+    : llmSpans.reduce(function (a, s) { return a + num(s.totalTokens); }, 0);
+  var promptTokens = S.promptTokens != null ? S.promptTokens
+    : llmSpans.reduce(function (a, s) { return a + num(s.promptTokens); }, 0);
+  var compTokens = S.completionTokens != null ? S.completionTokens
+    : llmSpans.reduce(function (a, s) { return a + num(s.completionTokens); }, 0);
+
+  var llmMs = llmSpans.reduce(function (a, s) { return a + num(s.durationMs); }, 0);
+  var toolMs = toolSpans.reduce(function (a, s) { return a + num(s.durationMs); }, 0);
+  var skillMs = skillSpans.reduce(function (a, s) { return a + num(s.durationMs); }, 0);
+  var wallMs = S.durationMs != null ? S.durationMs : (t1 - t0);
+
+  var ttfts = llmSpans.map(function (s) { return num(s.ttftMs); }).filter(function (v) { return v > 0; });
+  var ttftAvg = ttfts.length ? ttfts.reduce(function (a, b) { return a + b; }, 0) / ttfts.length : 0;
+  var ttftMax = ttfts.length ? Math.max.apply(null, ttfts) : 0;
+
+  var rounds = S.rounds != null ? S.rounds
+    : SPANS.reduce(function (a, s) { return (typeof s.round === "number" && s.round > a) ? s.round : a; }, 0);
+
+  /* ── 缓存命中：cachedTokens / promptTokens（仅 LLM 节点）── */
+  var cachedTokens = S.cachedTokens != null ? S.cachedTokens
+    : llmSpans.reduce(function (a, s) { return a + num(s.cachedTokens); }, 0);
+  var cacheHitRate = promptTokens > 0 ? (cachedTokens / promptTokens) : 0;   /* 0~1 */
+  var cacheLlms = llmSpans.filter(function (s) { return num(s.cachedTokens) > 0; });
+
+  /* ── LLM 输出速率：completionTokens / (duration - ttft) ── */
+  function outRate(s) {
+    var gen = num(s.durationMs) - num(s.ttftMs);
+    if (gen <= 0) gen = num(s.durationMs);
+    return gen > 0 ? (num(s.completionTokens) / gen) * 1000 : 0;   /* token/s */
+  }
+
+  /* ── TOOL 输入/输出字符数 ── */
+  function ioChars(s, key) {
+    var explicit = key === "in" ? s.inputChars : s.outputChars;
+    if (typeof explicit === "number" && isFinite(explicit)) return explicit;
+    return String(s[key === "in" ? "input" : "output"] == null ? "" : s[key === "in" ? "input" : "output"]).length;
+  }
+
+  /* 热点阈值：用于树上行内高亮 */
+  var HOT_TOKEN = llmSpans.length
+    ? llmSpans.map(function (s) { return num(s.totalTokens); }).sort(function (a, b) { return b - a; })[0] * 0.75
+    : 0;
+  var SLOW_MS = toolSpans.length
+    ? toolSpans.map(function (s) { return num(s.durationMs); }).sort(function (a, b) { return b - a; })[0] * 0.6
+    : 0;
+
+  var M = {
+    durationMs: wallMs, totalTokens: totalTokens, promptTokens: promptTokens, completionTokens: compTokens,
+    llmCalls: llmSpans.length, toolCalls: toolSpans.length, reactCalls: reactSpans.length,
+    skillCalls: skillSpans.length,
+    rounds: rounds, errors: errSpans.length, warns: warnSpans.length,
+    llmMs: llmMs, toolMs: toolMs, skillMs: skillMs, ttftAvg: ttftAvg, ttftMax: ttftMax,
+    cachedTokens: cachedTokens, cacheHitRate: cacheHitRate, cacheLlmCount: cacheLlms.length,
+    t0: t0, t1: t1, nodes: SPANS.length
+  };
+
+  /* ══════════════════════════════════════════════
+     板块 1 · 链路信息
+     ══════════════════════════════════════════════ */
+  var pct = function (a, b) { return b > 0 ? Math.round((a / b) * 100) : 0; };
+  var pct1 = function (a, b) { return b > 0 ? (a / b * 100).toFixed(1) : "0.0"; };
+  /* 缩略标题：取前 10 个字符 + "……"（按码点切，emoji/代理对不会被截半）*/
+  function thumbTitle(src) {
+    var t = String(src == null ? "" : src).trim();
+    if (!t) return "（无会话标题）";
+    var chars = Array.from(t);
+    if (chars.length <= 10) return t;
+    return chars.slice(0, 10).join("") + "……";
+  }
+  function fmtK(n) {
+    n = num(n);
+    if (Math.abs(n) >= 1000000) return (n / 1000000).toFixed(2).replace(/\.?0+$/, "") + "M";
+    if (Math.abs(n) >= 1000) return (n / 1000).toFixed(n >= 10000 ? 2 : 1).replace(/\.0$/, "") + "K";
+    return String(Math.round(n));
+  }
+  /* 时间范围标签：参考图「2026-09-08 06:20:42~2026-09-15 06:20:42」 */
+  var RANGE_TXT = (META.startTime && META.endTime)
+    ? META.startTime + "~" + META.endTime
+    : (META.startTime || META.endTime || "");
+
+  var fullQuery = META.query || META.title || "";
+  var titleSrc = META.title || fullQuery;
+  var shortTitle = thumbTitle(titleSrc);
+
+  /* Trace ID 标题栏 */
+  var tidEl = $("#liTraceId");
+  tidEl.textContent = META.traceId || "（无 Trace ID）";
+  tidEl.title = META.traceId || "";
+  var stKey = META.status === "ok" ? "ok" : META.status === "warn" ? "warn" : META.status === "error" ? "error" : "";
+  var stEl = $("#liStatus");
+  stEl.textContent = "状态 " + (stKey ? stLabel(stKey) : "—");
+  stEl.style.color = stKey === "ok" ? "var(--ok)" : stKey === "warn" ? "oklch(48% .14 75)"
+    : stKey === "error" ? "var(--error)" : "";
+  stEl.style.background = stKey === "ok" ? "oklch(95% .04 155)" : stKey === "warn" ? "oklch(95% .05 80)"
+    : stKey === "error" ? "oklch(95% .04 25)" : "";
+  $("#liAgent").textContent = META.agent || "—";
+  $("#liAgent").title = [META.agent, META.model, META.env, META.user].filter(Boolean).join(" · ");
+
+  var qEl = $("#info-h");
+  qEl.textContent = shortTitle || "（未提供会话标题）";
+  qEl.title = (META.query ? "完整 Query：" : "完整标题：") + (titleSrc || "（未提供）");
+
+  /* 胶囊指标（顺序对齐参考图） */
+  function pill(k, v, cls, title) {
+    return '<span class="pill"><span class="pill__k">' + esc(k) + '</span>' +
+      '<span class="pill__v' + (cls ? " " + cls : "") + '"' +
+      (title ? ' title="' + esc(title) + '"' : "") + '>' + esc(v) + "</span></span>";
+  }
+  var pills = [
+    pill("开始时间", META.startTime || "—", "", META.endTime ? "结束时间：" + META.endTime : ""),
+    pill("耗时", fmtS(M.durationMs) + "s", "", fmtMs(M.durationMs)),
+    pill("Agent调用次数", M.nodes + "", "", "共 " + M.nodes + " 个执行节点 / " + M.rounds + " 轮"),
+    pill("总Token", fmtInt(M.totalTokens), "", "输入 " + fmtInt(M.promptTokens) + " · 输出 " + fmtInt(M.completionTokens)),
+    pill("输入Token", fmtInt(M.promptTokens), "", "占比 " + pct(M.promptTokens, M.totalTokens) + "%"),
+    pill("输出Token", fmtInt(M.completionTokens), "", "占比 " + pct(M.completionTokens, M.totalTokens) + "%"),
+    pill("缓存命中率", (M.cacheHitRate * 100).toFixed(1) + "%",
+      M.cacheHitRate > 0 ? "pill__v--ok" : "pill__v--warn",
+      "命中 " + fmtInt(M.cachedTokens) + " / 输入 " + fmtInt(M.promptTokens) + " tokens"),
+    pill("会话ID", META.sessionId || "—", "pill__v--id", META.sessionId || ""),
+    pill("用户 ID", META.user || "—", "pill__v--id", META.user || ""),
+    pill("LLM调用", M.llmCalls + "", "", "累计 " + fmtMs(M.llmMs) + " · 占 " + pct(M.llmMs, M.durationMs) + "%"),
+    pill("工具调用", M.toolCalls + "", M.toolCalls ? "" : "pill__v--warn",
+      "累计 " + fmtMs(M.toolMs) + " · 占 " + pct(M.toolMs, M.durationMs) + "%"),
+    pill("运行环境", META.env || "—", "", META.model || ""),
+    pill("异常节点", M.errors + "", M.errors ? "pill__v--bad" : "pill__v--ok",
+      "异常 " + M.errors + " · 告警 " + M.warns)
+  ];
+  $("#liPills").innerHTML = pills.join("");
+
+  /* 输入 / 输出 双卡：输出优先取 meta.finalOutput，否则取最后一个 LLM 节点的 output */
+  function setIo(sel, text, emptyHint) {
+    var node = $(sel);
+    var t = String(text == null ? "" : text).trim();
+    if (!t) { node.textContent = emptyHint; node.classList.add("is-empty"); node.title = ""; return; }
+    node.textContent = t.replace(/\s*\n\s*/g, "  ");
+    node.classList.remove("is-empty");
+    node.title = t;                       /* 悬停看全文（卡片内 2 行截断） */
+  }
+  var lastLlmOut = "";
+  for (var li = llmSpans.length - 1; li >= 0; li--) {
+    if (String(llmSpans[li].output || "").trim()) { lastLlmOut = llmSpans[li].output; break; }
+  }
+  setIo("#liInput", META.query || META.input || "", "（未提供链路输入）");
+  setIo("#liOutput", META.finalOutput != null ? META.finalOutput : lastLlmOut,
+    M.errors ? "（链路中断，未产出最终输出）" : "（未采集到链路输出）");
+
+  /* ══════════════════════════════════════════════
+     板块 2 · 链路分析：6 张指标卡
+     ══════════════════════════════════════════════ */
+  function aCard(name, val, unit, sub, wide) {
+    return '<div class="acard' + (wide ? " acard--wide" : "") + '">' +
+      '<div class="acard__h"><span class="acard__name">' + esc(name) + '</span><span class="tag">1w</span></div>' +
+      '<div class="acard__body"><span class="acard__val" data-count="' + esc(name) + '">' + esc(val) +
+      "</span><span class=\"acard__unit\">" + esc(unit) + "</span></div>" +
+      (sub ? '<p class="acard__sub">' + esc(sub) + "</p>" : "") + "</div>";
+  }
+  /* Token 消耗：宽卡 + 三子指标（总 / 输入 / 输出） */
+  var tokenCard = '<div class="acard acard--wide">' +
+    '<div class="acard__h"><span class="acard__name">Token消耗</span>' +
+    '<span class="acard__range tag--range" title="' + esc(RANGE_TXT) + '">' + esc(RANGE_TXT || "—") + "</span></div>" +
+    '<div class="asubs">' +
+      '<div class="asub"><span class="asub__k">总Token</span><span class="asub__v">' + fmtK(M.totalTokens) + "</span></div>" +
+      '<div class="asub asub--in"><span class="asub__k">输入Token</span><span class="asub__v">' + fmtK(M.promptTokens) + "</span></div>" +
+      '<div class="asub asub--out"><span class="asub__k">输出Token</span><span class="asub__v">' + fmtK(M.completionTokens) + "</span></div>" +
+    "</div>" +
+    '<p class="acard__sub">输入占 ' + pct(M.promptTokens, M.totalTokens) + "% · 缓存命中 " +
+      (M.cacheHitRate * 100).toFixed(1) + "%</p></div>";
+
+  $("#acards").innerHTML =
+    aCard("总耗时", fmtS(M.durationMs), "s",
+      M.rounds ? M.rounds + " 轮 · 均 " + fmtMs(M.durationMs / M.rounds) : "单轮") +
+    aCard("TTFT", fmtS(M.ttftAvg), "s",
+      M.llmCalls ? "均 " + fmtMs(M.ttftAvg) + " · 峰值 " + fmtMs(M.ttftMax) : "本次会话无 LLM 调用") +
+    tokenCard +
+    aCard("LLM调用", M.llmCalls, "次", M.llmCalls ? "累计 " + fmtMs(M.llmMs) : "无 LLM 调用") +
+    aCard("TOOL调用", M.toolCalls, "次", M.toolCalls ? "累计 " + fmtMs(M.toolMs) : "本次会话无工具调用") +
+    aCard("SKILL加载", M.skillCalls, "次", M.skillCalls ? "累计 " + fmtMs(M.skillMs) : "本次会话未加载技能");
+
+  /* 各板块标题右侧的时间范围标签 */
+  ["#linkRange", "#perfRange", "#llmRange", "#toolRange", "#rangeLlmTop", "#rangeToolTop", "#rangeToolCnt"]
+    .forEach(function (sel) { var e = $(sel); if (e) { e.textContent = RANGE_TXT || "—"; e.title = RANGE_TXT || ""; } });
+
+  /* 数字滚动动画：作用于板块 2 指标卡 */
+  function countUp(node, target, fmt) {
+    if (!node) return;
+    if (REDUCED) { node.textContent = fmt(target); return; }
+    var dur = 850, st = null;
+    function step(ts) {
+      if (!st) st = ts;
+      var p = Math.min(1, (ts - st) / dur);
+      var e = 1 - Math.pow(1 - p, 3);
+      node.textContent = fmt(target * e);
+      if (p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+  var counters = [
+    ["总耗时", M.durationMs / 1000, function (v) { return v.toFixed(3); }],
+    ["TTFT", M.ttftAvg / 1000, function (v) { return v.toFixed(3); }],
+    ["LLM调用", M.llmCalls, function (v) { return String(Math.round(v)); }],
+    ["TOOL调用", M.toolCalls, function (v) { return String(Math.round(v)); }],
+    ["SKILL加载", M.skillCalls, function (v) { return String(Math.round(v)); }]
+  ];
+  function runCounters() {
+    counters.forEach(function (c) { countUp($('#acards [data-count="' + c[0] + '"]'), c[1], c[2]); });
+  }
+
+  /* ── 执行轨迹树 ── */
+  var treeEl = $("#tree"), treeEmpty = $("#treeEmpty");
+  var CHEV = '<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M3 1.5 L7 5 L3 8.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  function metricsHtml(s) {
+    var out = [];
+    if (s.model) out.push('<span class="t-m" title="模型"><b>model</b>' + esc(s.model) + "</span>");
+    if (num(s.totalTokens) > 0) out.push('<span class="t-m' + (num(s.totalTokens) >= HOT_TOKEN ? " t-m--hot" : "") +
+      '" title="总 token 消耗"><b>tokens</b>' + fmtInt(s.totalTokens) + "</span>");
+    if (num(s.ttftMs) > 0) out.push('<span class="t-m t-m--ttft' + (num(s.ttftMs) >= 3000 ? " t-m--slow" : "") +
+      '" title="首 token 延迟"><b>TTFT</b>' + fmtS(s.ttftMs) + "s</span>");
+    if (s.tool) out.push('<span class="t-m" title="工具名"><b>tool</b>' + esc(s.tool) + "</span>");
+    out.push('<span class="t-m' + (num(s.durationMs) >= SLOW_MS && s.kind === "tool" ? " t-m--slow" : "") +
+      '" title="节点耗时">' + fmtMs(s.durationMs) + "</span>");
+    return out.join("");
+  }
+
+  function rowHtml(s) {
+    var hasKids = !isLeaf(s);
+    return '' +
+      '<div class="t-row" role="treeitem" tabindex="0" data-id="' + esc(s.id) + '" data-k="' + esc(s.kind) +
+        '" data-st="' + esc(s.status || "ok") + '" aria-expanded="' + (hasKids ? "true" : "false") +
+        '" aria-level="' + (depthOf[s.id] + 1) + '" title="' + esc(s.name) + '">' +
+        '<button class="t-chev" type="button" tabindex="-1" aria-hidden="true"' + (hasKids ? "" : " disabled") + ">" + CHEV + "</button>" +
+        '<span class="t-tag">' + kindLabel(s.kind) + "</span>" +
+        '<span class="t-name">' + esc(s.name) + "</span>" +
+        (typeof s.round === "number" ? '<span class="t-round">round:' + s.round + "</span>" : "") +
+        '<span class="t-metrics">' + metricsHtml(s) + "</span>" +
+        '<span class="t-bar" aria-hidden="true"></span>' +
+      "</div>";
+  }
+
+  function buildTree(list) {
+    if (!list || !list.length) return "";
+    return "<ul>" + list.map(function (s) {
+      var sub = kids[s.id] || [];
+      return "<li>" + rowHtml(s) +
+        (sub.length ? '<div class="t-kids">' + buildTree(sub) + "</div>" : "") + "</li>";
+    }).join("") + "</ul>";
+  }
+
+  treeEl.innerHTML = buildTree(ROOTS);
+  if (!SPANS.length) {
+    treeEmpty.hidden = false;
+    treeEmpty.textContent = "本次会话没有采集到执行节点（spans 为空）。";
+    treeEl.hidden = true;
+  }
+
+  /* 占比条：相对该节点父级耗时（根节点相对总时长） */
+  SPANS.forEach(function (s) {
+    var row = treeEl.querySelector('.t-row[data-id="' + s.id + '"]');
+    if (!row) return;
+    var p = s.parentId ? byId(s.parentId) : null;
+    var base = p ? num(p.durationMs) : M.durationMs;
+    var w = base > 0 ? Math.min(100, (num(s.durationMs) / base) * 100) : 0;
+    var bar = $(".t-bar", row);
+    if (bar) bar.dataset.w = w.toFixed(1);
+  });
+
+  /* 折叠 / 展开（带高度过渡） */
+  function setFold(row, open) {
+    var li = row.parentElement, box = li && $(".t-kids", li);
+    if (!box) return;
+    row.classList.toggle("is-open", open);
+    row.setAttribute("aria-expanded", open ? "true" : "false");
+    if (REDUCED) { box.hidden = !open; box.style.maxHeight = ""; return; }
+    if (open) {
+      box.hidden = false;
+      var h = box.scrollHeight;
+      box.style.maxHeight = "0px";
+      requestAnimationFrame(function () { box.style.maxHeight = h + "px"; });
+      setTimeout(function () { if (!box.hidden) box.style.maxHeight = "none"; }, 280);
+    } else {
+      box.style.maxHeight = box.scrollHeight + "px";
+      requestAnimationFrame(function () {
+        box.style.maxHeight = "0px";
+        setTimeout(function () { box.hidden = true; }, 260);
+      });
+    }
+  }
+  function foldAll(open) {
+    $$(".t-row", treeEl).forEach(function (row) {
+      var box = row.parentElement && $(".t-kids", row.parentElement);
+      if (box) setFold(row, open);
+    });
+  }
+  /* 默认全展开 */
+  $$(".t-row", treeEl).forEach(function (r) {
+    if ($(".t-kids", r.parentElement)) { r.classList.add("is-open"); r.setAttribute("aria-expanded", "true"); }
+  });
+
+  treeEl.addEventListener("click", function (e) {
+    var row = e.target.closest(".t-row");
+    if (!row) return;
+    if (e.target.closest(".t-chev")) {
+      setFold(row, !row.classList.contains("is-open"));
+      e.stopPropagation();
+      return;
+    }
+    selectNode(row.dataset.id, true);
+  });
+  treeEl.addEventListener("keydown", function (e) {
+    var row = e.target.closest(".t-row");
+    if (!row) return;
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectNode(row.dataset.id, true); }
+    else if (e.key === "ArrowRight" && !row.classList.contains("is-open")) { e.preventDefault(); setFold(row, true); }
+    else if (e.key === "ArrowLeft" && row.classList.contains("is-open")) { e.preventDefault(); setFold(row, false); }
+    else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      var rows = $$(".t-row", treeEl).filter(function (r) { return r.offsetParent !== null; });
+      var i = rows.indexOf(row);
+      var n = rows[e.key === "ArrowDown" ? i + 1 : i - 1];
+      if (n) n.focus();
+    }
+  });
+
+  $("#btnExpand").addEventListener("click", function () { foldAll(true); });
+  $("#btnCollapse").addEventListener("click", function () {
+    /* 保留根节点展开，其余折叠，便于一眼看层级 */
+    $$(".t-row", treeEl).forEach(function (row) {
+      if ($(".t-kids", row.parentElement)) setFold(row, depthOf[row.dataset.id] === 0);
+    });
+  });
+
+  /* 搜索 + 类型筛选 */
+  var filterKind = "all", filterText = "";
+  function hay(s) { return [s.name, s.tool, s.model, s.note, s.id, s.input, s.output].join(" ").toLowerCase(); }
+  function isDirect(s) {
+    var okKind = filterKind === "all" ||
+      (filterKind === "bad" ? (s.status === "error" || s.status === "warn") : s.kind === filterKind);
+    return okKind && (!filterText || hay(s).indexOf(filterText) > -1);
+  }
+  function applyFilter() {
+    var hitIds = {};
+    SPANS.forEach(function (s) { if (isDirect(s)) hitIds[s.id] = true; });
+    /* 命中节点的祖先也要显示，保持树形连续 */
+    Object.keys(hitIds).forEach(function (id) {
+      var p = byId(id), guard = 0;
+      while (p && p.parentId && guard++ < 60) { hitIds[p.parentId] = true; p = byId(p.parentId); }
+    });
+    var visible = 0;
+    $$(".t-row", treeEl).forEach(function (row) {
+      var id = row.dataset.id, s = byId(id);
+      var show = !!hitIds[id];
+      row.parentElement.hidden = !show;
+      if (show) visible++;
+      var direct = show && isDirect(s);
+      row.classList.toggle("is-hit", direct && (filterKind !== "all" || !!filterText));
+      /* 名称高亮（命中在入参/出参里时给行加提示标记）*/
+      var nameEl = $(".t-name", row);
+      if (nameEl) {
+        var raw = s.name;
+        var html = filterText
+          ? esc(raw).replace(new RegExp("(" + filterText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ")", "ig"), "<mark>$1</mark>")
+          : esc(raw);
+        if (filterText && html === esc(raw) && direct) {
+          html += ' <span class="t-round" title="命中在入参/出参/备注中">命中详情</span>';
+        }
+        nameEl.innerHTML = html;
+      }
+      /* 有命中子孙时自动展开 */
+      if (show && $(".t-kids", row.parentElement)) {
+        var hasHitKid = (kids[id] || []).some(function (c) {
+          var g = 0, stack = [c];
+          while (stack.length && g++ < 400) { var n = stack.pop(); if (hitIds[n.id]) return true; (kids[n.id] || []).forEach(function (x) { stack.push(x); }); }
+          return false;
+        });
+        if (hasHitKid && !row.classList.contains("is-open")) setFold(row, true);
+      }
+    });
+    treeEmpty.hidden = visible > 0;
+    treeEl.hidden = visible === 0;
+  }
+  var searchTimer = null;
+  $("#treeSearch").addEventListener("input", function (e) {
+    clearTimeout(searchTimer);
+    var v = e.target.value.trim().toLowerCase();
+    searchTimer = setTimeout(function () { filterText = v; applyFilter(); }, 160);
+  });
+  $("#kindFilter").addEventListener("click", function (e) {
+    var b = e.target.closest(".chip");
+    if (!b) return;
+    $$(".chip", this).forEach(function (c) { c.classList.toggle("is-on", c === b); });
+    filterKind = b.dataset.kind;
+    applyFilter();
+  });
+
+  /* ── 节点详情 ── */
+  var detailEl = $("#detail"), pickedId = null;
+  function dstat(label, value, unit, title) {
+    return '<div class="dstat"' + (title ? ' title="' + esc(title) + '"' : "") + "><dt>" + esc(label) +
+      "</dt><dd>" + value + (unit ? "<small>" + esc(unit) + "</small>" : "") + "</dd></div>";
+  }
+  function ioBlock(title, body, meta, cls) {
+    if (body == null || body === "") return "";
+    return '<div class="io' + (cls ? " " + cls : "") + '"><div class="io__h">' + esc(title) +
+      (meta ? "<b>" + esc(meta) + "</b>" : "") + "</div><pre>" + esc(pretty(body)) + "</pre></div>";
+  }
+  function renderDetail(s) {
+    if (!s) {
+      detailEl.innerHTML = '<div class="detail__empty">' +
+        '<svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><path d="M4 6h6M4 12h10M4 18h7" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/><circle cx="17" cy="6" r="2.4" fill="currentColor"/></svg>' +
+        "<div>在上方轨迹树或明细表中选择一个节点<br>这里会展示它的入参、出参与性能指标</div></div>";
+      $("#detailPath").textContent = "未选择节点";
+      return;
+    }
+    var path = [], p = s, guard = 0;
+    while (p && guard++ < 60) { path.unshift(p.name); p = p.parentId ? byId(p.parentId) : null; }
+    $("#detailPath").textContent = path.join("  ›  ");
+
+    var parent = s.parentId ? byId(s.parentId) : null;
+    var base = parent ? num(parent.durationMs) : M.durationMs;
+    var share = base > 0 ? Math.min(100, (num(s.durationMs) / base) * 100) : 0;
+    var shareTotal = M.durationMs > 0 ? Math.min(100, (num(s.durationMs) / M.durationMs) * 100) : 0;
+
+    var stats = '<dl class="detail__stats">' +
+      dstat("类型", kindLabel(s.kind)) +
+      dstat("状态", '<span class="st" data-s="' + esc(s.status || "ok") + '">' + stLabel(s.status) + "</span>") +
+      dstat("轮次", typeof s.round === "number" ? String(s.round) : "—", typeof s.round === "number" ? "round" : "") +
+      dstat("层级", "L" + (depthOf[s.id] + 1)) +
+      dstat("相对开始", fmtS(s.startMs), "s", "相对会话起点") +
+      dstat("耗时", fmtMs(s.durationMs)) +
+      (s.kind === "llm" ? dstat("TTFT", fmtMs(s.ttftMs)) : dstat("子节点", String((kids[s.id] || []).length), "个")) +
+      (s.kind === "llm"
+        ? dstat("Tokens", fmtInt(s.totalTokens), "", "prompt " + fmtInt(s.promptTokens) + " / completion " + fmtInt(s.completionTokens))
+        : dstat("工具", s.tool ? esc(s.tool) : "—")) +
+      "</dl>" +
+      '<div class="meter"><div class="meter__t"><span>占父节点耗时</span><span>' + share.toFixed(1) + "%</span></div>" +
+        '<div class="meter__b"><i data-w="' + share.toFixed(1) + '"></i></div></div>' +
+      '<div class="meter"><div class="meter__t"><span>占会话总时长</span><span>' + shareTotal.toFixed(1) + "%</span></div>" +
+        '<div class="meter__b"><i data-w="' + shareTotal.toFixed(1) + '"></i></div></div>';
+
+    var io = '<div class="detail__io">' +
+      (s.model ? '<div class="io"><div class="io__h">模型<b>' + esc(s.model) + "</b></div><pre>" +
+        esc("model: " + s.model + "\nround: " + (s.round == null ? "-" : s.round) + "\nid: " + s.id) + "</pre></div>" : "") +
+      ioBlock("Input · 入参", s.input, s.input ? String(pretty(s.input)).length + " chars" : "") +
+      ioBlock(s.status === "error" ? "Output · 错误栈" : "Output · 出参", s.output,
+        s.output ? String(pretty(s.output)).length + " chars" : "", s.status === "error" ? "io--err" : "") +
+      ioBlock("Note · 观测备注", s.note, "", s.status === "warn" ? "io--note" : "") +
+      "</div>";
+
+    detailEl.innerHTML = stats + io;
+    requestAnimationFrame(function () {
+      $$(".meter__b i", detailEl).forEach(function (i) { i.style.width = i.dataset.w + "%"; });
+    });
+  }
+
+  function selectNode(id, scroll) {
+    pickedId = id;
+    $$(".t-row", treeEl).forEach(function (r) { r.classList.toggle("is-picked", r.dataset.id === id); });
+    $$("#tblBody tr").forEach(function (tr) { tr.classList.toggle("is-picked", tr.dataset.id === id); });
+    renderDetail(byId(id));
+    if (scroll) {
+      var row = treeEl.querySelector('.t-row[data-id="' + id + '"]');
+      if (row && row.scrollIntoView) row.scrollIntoView({ block: "nearest", behavior: REDUCED ? "auto" : "smooth" });
+    }
+  }
+  renderDetail(null);
+
+  /* ── 明细表 ── */
+  var tblBody = $("#tblBody");
+  var sortKey = "durationMs", sortDir = "desc";
+  function fmtDurCell(ms) {
+    ms = num(ms);
+    var hot = ms >= SLOW_MS;
+    return '<span style="' + (hot ? "color:var(--error);font-weight:700" : "") + '">' + fmtMs(ms) + "</span>";
+  }
+  function renderTable() {
+    var rows = SPANS.slice().sort(function (a, b) {
+      var va = a[sortKey], vb = b[sortKey];
+      if (sortKey === "status") {
+        var ord = { error: 0, warn: 1, ok: 2 };
+        va = ord[a.status] != null ? ord[a.status] : 2; vb = ord[b.status] != null ? ord[b.status] : 2;
+      }
+      if (va == null) va = sortKey === "name" ? "" : -1;
+      if (vb == null) vb = sortKey === "name" ? "" : -1;
+      if (typeof va === "string") return sortDir === "asc" ? va.localeCompare(vb) : vb.localeCompare(va);
+      return sortDir === "asc" ? va - vb : vb - va;
+    });
+    tblBody.innerHTML = rows.map(function (s) {
+      return '<tr data-id="' + esc(s.id) + '"' + (s.id === pickedId ? ' class="is-picked"' : "") + ">" +
+        '<td><span class="kind-tag" data-k="' + esc(s.kind) + '"><i></i>' + kindLabel(s.kind) + "</span></td>" +
+        '<td style="max-width:330px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink);font-weight:600" title="' +
+          esc(s.name) + '">' + esc(s.name) + "</td>" +
+        '<td class="num">' + (typeof s.round === "number" ? s.round : "—") + "</td>" +
+        '<td class="num">' + fmtS(s.startMs) + "</td>" +
+        "<td class=\"num\">" + fmtDurCell(s.durationMs) + "</td>" +
+        '<td class="num">' + (num(s.totalTokens) ? fmtInt(s.totalTokens) : "—") + "</td>" +
+        '<td class="num">' + (num(s.ttftMs) ? fmtS(s.ttftMs) + "s" : "—") + "</td>" +
+        '<td><span class="st" data-s="' + esc(s.status || "ok") + '">' + stLabel(s.status) + "</span></td>" +
+        "</tr>";
+    }).join("");
+    $("#tableCount").textContent = rows.length + " / " + SPANS.length + " 个节点";
+  }
+  renderTable();
+  tblBody.addEventListener("click", function (e) {
+    var tr = e.target.closest("tr");
+    if (!tr) return;
+    selectNode(tr.dataset.id, true);
+  });
+  $$("#tbl thead th").forEach(function (th) {
+    th.addEventListener("click", function () {
+      var k = th.dataset.sort;
+      if (sortKey === k) sortDir = sortDir === "asc" ? "desc" : "asc";
+      else { sortKey = k; sortDir = (k === "name" || k === "kind" || k === "status") ? "asc" : "desc"; }
+      $$("#tbl thead th").forEach(function (o) {
+        o.classList.toggle("is-sorted", o === th);
+        if (o === th) o.dataset.dir = sortDir;
+      });
+      th.setAttribute("aria-sort", sortDir === "asc" ? "ascending" : "descending");
+      renderTable();
+    });
+  });
+
+  /* CSV 导出 */
+  $("#btnCsv").addEventListener("click", function () {
+    var head = ["id", "parentId", "kind", "name", "round", "startMs", "durationMs",
+      "model", "totalTokens", "promptTokens", "completionTokens", "ttftMs", "tool", "status", "note"];
+    var lines = [head.join(",")].concat(SPANS.map(function (s) {
+      return head.map(function (k) {
+        var v = s[k] == null ? "" : String(s[k]);
+        return '"' + v.replace(/"/g, '""') + '"';
+      }).join(",");
+    }));
+    var blob = new Blob(["\ufeff" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "agent-trace-" + (META.sessionId || "session") + ".csv";
+    document.body.appendChild(a); a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 400);
+  });
+
+  /* ══════════════════════════════════════════════════════════
+     各板块「分析总结」引擎
+     —— 由 spans 实时推导，原「观测结论 + 改进建议」的内容拆进各板块。
+        每条结论可带「依据节点」chip，点击跳到附录轨迹树并选中。
+     ══════════════════════════════════════════════════════════ */
+  function truncName(s, n) {
+    s = String(s == null ? "" : s);
+    return s.length > n ? s.slice(0, n) + "…" : s;
+  }
+  function evChips(list) {
+    return (list || []).map(function (s) {
+      return '<button class="summary__ev" type="button" data-goto="' + esc(s.id) + '">' +
+        esc(truncName(s.name, 26)) + "</button>";
+    }).join("");
+  }
+  /* lead 为加粗结论句；items 为 [{tone, html}] */
+  function renderSummary(sel, opts) {
+    var box = $(sel);
+    if (!box) return;
+    var o = opts || {};
+    box.className = "summary" + (o.tone ? " summary--" + o.tone : "");
+    var h = '<h3 class="summary__h">' + esc(o.title || "分析总结") +
+      (o.tag ? '<span class="tag">' + esc(o.tag) + "</span>" : "") + "</h3>";
+    if (o.empty) {
+      box.innerHTML = h + '<p class="summary__empty">' + esc(o.empty) + "</p>";
+      return;
+    }
+    var lead = o.lead ? '<p class="summary__lead">' + o.lead + "</p>" : "";
+    var ul = (o.items && o.items.length)
+      ? "<ul>" + o.items.map(function (it) {
+          return '<li' + (it.tone ? ' data-tone="' + it.tone + '"' : "") + ">" + it.html +
+            (it.ev && it.ev.length ? " " + evChips(it.ev) : "") + "</li>";
+        }).join("") + "</ul>"
+      : "";
+    box.innerHTML = h + lead + ul;
+  }
+
+  /* 公共派生量 */
+  var pool = SPANS.filter(function (s) { return s.kind !== "agent" && depthOf[s.id] > 0; });
+  var topNode = pool.length ? pool.slice().sort(function (a, b) { return num(b.durationMs) - num(a.durationMs); })[0] : null;
+  var maxTokLlm = llmSpans.slice().sort(function (a, b) { return num(b.totalTokens) - num(a.totalTokens); })[0] || null;
+  var maxPromptLlm = llmSpans.slice().sort(function (a, b) { return num(b.promptTokens) - num(a.promptTokens); })[0] || null;
+  var slowTtftLlm = llmSpans.filter(function (s) { return num(s.ttftMs) >= 3000; });
+  var aborted = SPANS.filter(function (s) {
+    return s.status === "error" && /截断|abort|budget|中断|exhaust/i.test([s.note, s.output].join(" "));
+  });
+  /* 工具按名聚合（成功/失败计数 + 耗时） */
+  var byTool = {};
+  toolSpans.forEach(function (s) {
+    var k = s.tool || s.name;
+    byTool[k] = byTool[k] || { all: [], bad: [], ok: [], total: 0, max: 0, inC: 0, outC: 0 };
+    var b = byTool[k];
+    b.all.push(s); b.total += num(s.durationMs);
+    b.max = Math.max(b.max, num(s.durationMs));
+    b.inC += ioChars(s, "in"); b.outC += ioChars(s, "out");
+    if (s.status === "error" || s.status === "warn") b.bad.push(s); else b.ok.push(s);
+  });
+  var repeatFailTools = Object.keys(byTool).filter(function (k) { return byTool[k].bad.length >= 2; });
+
+  function blockSummaries() {
+    if (!SPANS.length) {
+      ["#sumInfo", "#sumLink", "#sumPerf", "#sumLlm", "#sumTool"].forEach(function (sel) {
+        renderSummary(sel, { title: sel === "#sumInfo" ? "链路调用总结" : "分析总结",
+          empty: "本次链路没有采集到执行节点，无可推导的结论。" });
+      });
+      return;
+    }
+
+    /* ── 链路调用总结（板块 1，输出卡下方）：一句话概括本次调用的输入 → 执行 → 结果 ── */
+    var infoItems = [];
+    var stTxt = META.status === "ok" ? "<b>正常完成</b>"
+      : META.status === "warn" ? "<b>带告警完成</b>"
+      : META.status === "error" ? "<b>异常终止</b>" : "状态未知";
+    infoItems.push({ tone: META.status === "error" ? "bad" : META.status === "warn" ? "warn" : "ok", html:
+      stTxt + "：「" + esc(thumbTitle(META.query || META.title || "")) + "」共执行 <b>" + fmtMs(M.durationMs) +
+      "</b>，" + M.rounds + " 轮 react · " + M.nodes + " 个节点（LLM " + M.llmCalls + " / TOOL " + M.toolCalls +
+      " / SKILL " + M.skillCalls + "），消耗 <b>" + fmtK(M.totalTokens) + "</b> tokens。" });
+    if (M.errors || M.warns) {
+      var badNodes = SPANS.filter(function (s) { return s.status === "error" || s.status === "warn"; });
+      infoItems.push({ tone: M.errors ? "bad" : "warn", html:
+        "链路中出现 <b>" + M.errors + "</b> 个异常、<b>" + M.warns + "</b> 个告警节点" +
+        (aborted.length ? "，最终输出被截断，未完整交付" : "") + "。", ev: badNodes.slice(0, 4) });
+    } else {
+      infoItems.push({ tone: "ok", html: "全链路无异常节点，输出已完整返回。" });
+    }
+    renderSummary("#sumInfo", {
+      title: "链路调用总结", tone: (M.errors ? "err" : M.warns ? "warn" : ""),
+      tag: (META.startTime || "").slice(0, 19),
+      items: infoItems
+    });
+
+    /* ── 链路分析总结 ── */
+    var llmShare = pct(M.llmMs, M.durationMs), toolShare = pct(M.toolMs, M.durationMs);
+    var linkItems = [];
+    linkItems.push({ tone: "ok", html:
+      "端到端 <b>" + fmtMs(M.durationMs) + "</b>，共 <b>" + M.rounds + "</b> 轮 react，平均每轮 " +
+      fmtMs(M.rounds ? M.durationMs / M.rounds : M.durationMs) + "；调用构成：LLM " + M.llmCalls +
+      " 次 / TOOL " + M.toolCalls + " 次 / SKILL " + M.skillCalls + " 次。" });
+    linkItems.push({ html:
+      "Token 累计 <b>" + fmtInt(M.totalTokens) + "</b>（输入 " + fmtInt(M.promptTokens) + " · 输出 " +
+      fmtInt(M.completionTokens) + "），输入占 " + pct(M.promptTokens, M.totalTokens) +
+      "%，缓存命中 " + (M.cacheHitRate * 100).toFixed(1) + "%。" });
+    if (M.errors || M.warns) {
+      linkItems.push({ tone: "bad", html:
+        "链路以 <b>" + (META.status === "error" ? "异常" : "告警") + "</b> 收尾：异常节点 " + M.errors +
+        " 个、告警 " + M.warns + " 个。" + (aborted.length
+          ? "最终输出在生成途中被截断，用户拿到的是残缺回复。" : ""), ev: aborted });
+    } else {
+      linkItems.push({ tone: "ok", html: "全链路 <b>无异常或告警</b>，" + M.nodes + " 个节点均正常返回。" });
+    }
+    renderSummary("#sumLink", {
+      title: "链路分析总结", tone: (M.errors ? "err" : M.warns ? "warn" : ""),
+      tag: M.rounds + " 轮 / " + M.nodes + " 节点",
+      lead: "本链路 " + (M.errors ? "<b>未正常收敛</b>" : "<b>正常完成</b>") +
+        "，时间主要消耗在 " + (llmShare >= toolShare ? "LLM 推理" : "工具执行") + "（" +
+        Math.max(llmShare, toolShare) + "%）。",
+      items: linkItems
+    });
+
+    /* ── 性能分析总结 ── */
+    var perfItems = [];
+    perfItems.push({ html:
+      "耗时构成：LLM <b>" + fmtMs(M.llmMs) + "</b>（" + llmShare + "%） · TOOL <b>" + fmtMs(M.toolMs) +
+      "</b>（" + toolShare + "%）" + (M.skillMs ? " · SKILL " + fmtMs(M.skillMs) : "") +
+      "，其余为编排与等待。注：工具并行执行时累计值可能超过墙钟时长。" });
+    if (topNode) {
+      var share = num(topNode.durationMs) / (M.durationMs || 1) * 100;
+      perfItems.push({ tone: share > 40 ? "bad" : "warn", html:
+        "耗时瓶颈为 <code>" + esc(topNode.name) + "</code>，独占 <b>" + fmtMs(topNode.durationMs) +
+        "</b>（占总时长 " + share.toFixed(1) + "%）。" + (topNode.note ? esc(topNode.note) : ""),
+        ev: [topNode] });
+    }
+    if (repeatFailTools.length) {
+      var rt = repeatFailTools.map(function (k) { return k; }).join("、");
+      perfItems.push({ tone: "bad", html:
+        "<b>" + esc(rt) + "</b> 反复失败/告警，每次失败都耗尽完整超时预算才返回，是拖慢链路的主因。",
+        ev: repeatFailTools.reduce(function (a, k) { return a.concat(byTool[k].bad); }, []) });
+    } else if (toolSpans.length) {
+      var slowTool = toolSpans.slice().sort(function (a, b) { return num(b.durationMs) - num(a.durationMs); })[0];
+      perfItems.push({ tone: "ok", html:
+        "工具均一次性成功，最慢为 <code>" + esc(slowTool.tool || slowTool.name) + "</code>（" +
+        fmtMs(slowTool.durationMs) + "）。", ev: [slowTool] });
+    }
+    renderSummary("#sumPerf", {
+      title: "性能分析总结", tone: (topNode && num(topNode.durationMs) / (M.durationMs || 1) > 0.4) ? "err" : (M.errors ? "warn" : ""),
+      tag: "瓶颈占比 " + (topNode ? (num(topNode.durationMs) / (M.durationMs || 1) * 100).toFixed(0) + "%" : "—"),
+      lead: "性能瓶颈集中在 <b>" + (toolShare >= llmShare ? "工具执行" : "LLM 推理") + "</b>，最慢单节点占总时长 " +
+        (topNode ? (num(topNode.durationMs) / (M.durationMs || 1) * 100).toFixed(0) : "0") + "%。",
+      items: perfItems
+    });
+
+    /* ── LLM 调用分析总结 ── */
+    if (!llmSpans.length) {
+      renderSummary("#sumLlm", { title: "LLM调用分析总结", empty: "本次链路没有 LLM 调用节点。" });
+    } else {
+      var llmItems = [];
+      var avgDur = M.llmMs / llmSpans.length;
+      llmItems.push({ html:
+        "共 <b>" + M.llmCalls + "</b> 次 LLM 调用，累计 " + fmtMs(M.llmMs) + "，单次均 " + fmtMs(avgDur) +
+        "；平均 TTFT <b>" + fmtMs(M.ttftAvg) + "</b>，峰值 " + fmtMs(M.ttftMax) + "。" });
+      if (maxPromptLlm) {
+        llmItems.push({ tone: (M.totalTokens && num(maxPromptLlm.promptTokens) / M.totalTokens > 0.25) ? "warn" : "", html:
+          "单次峰值出现在 <code>" + esc(maxPromptLlm.name) + "</code>：输入 " + fmtInt(maxPromptLlm.promptTokens) +
+          " / 输出 " + fmtInt(maxPromptLlm.completionTokens) + " tokens。prompt 占比高会同时抬高 TTFT 与费用。",
+          ev: [maxPromptLlm] });
+      }
+      if (slowTtftLlm.length) {
+        llmItems.push({ tone: "bad", html:
+          "有 <b>" + slowTtftLlm.length + "</b> 次调用 TTFT ≥ 3s（峰值 " + fmtMs(M.ttftMax) +
+          "），用户侧表现为「界面卡住」，共同点是 prompt 体量大。", ev: slowTtftLlm });
+      } else {
+        llmItems.push({ tone: "ok", html: "全部 LLM 调用 TTFT 均低于 3s，首包延迟处于可接受区间。" });
+      }
+      /* 缓存 */
+      if (cachedTokens > 0) {
+        llmItems.push({ tone: "ok", html:
+          "缓存命中 <b>" + (M.cacheHitRate * 100).toFixed(1) + "%</b>（" + fmtInt(M.cachedTokens) +
+          " / " + fmtInt(M.promptTokens) + " 输入 tokens），有效降低了重复历史的计费与延迟。" });
+      } else {
+        llmItems.push({ tone: "warn", html:
+          "<b>缓存命中率为 0</b>：每轮都在重复携带全量历史，建议对 system/历史观测开启前缀缓存。" });
+      }
+      var rateVals = llmSpans.map(function (s) { return outRate(s); }).filter(function (v) { return v > 0; });
+      if (rateVals.length) {
+        var avgRate = rateVals.reduce(function (a, b) { return a + b; }, 0) / rateVals.length;
+        llmItems.push({ html:
+          "平均输出速率约 <b>" + avgRate.toFixed(1) + " token/s</b>（completion / 生成耗时）。" });
+      }
+      renderSummary("#sumLlm", {
+        title: "LLM调用分析总结", tone: slowTtftLlm.length ? "warn" : "",
+        tag: M.llmCalls + " 次调用",
+        lead: "LLM 侧 " + (slowTtftLlm.length ? "存在 <b>高 TTFT</b> 调用需治理" : "延迟表现 <b>正常</b>") +
+          "，缓存命中率 " + (M.cacheHitRate * 100).toFixed(1) + "%。",
+        items: llmItems
+      });
+    }
+
+    /* ── TOOL 调用分析总结 ── */
+    if (!toolSpans.length) {
+      renderSummary("#sumTool", { title: "TOOL调用分析总结", empty: "本次链路没有工具调用节点。" });
+    } else {
+      var toolItems = [];
+      var names = Object.keys(byTool);
+      toolItems.push({ html:
+        "共 <b>" + M.toolCalls + "</b> 次工具调用，涉及 " + names.length + " 个工具（" +
+        names.map(function (k) { return esc(k) + "×" + byTool[k].all.length; }).join("、") + "），累计 " + fmtMs(M.toolMs) + "。" });
+      var failCnt = toolSpans.filter(function (s) { return s.status === "error"; }).length;
+      var warnCnt = toolSpans.filter(function (s) { return s.status === "warn"; }).length;
+      toolItems.push({ tone: failCnt ? "bad" : warnCnt ? "warn" : "ok", html:
+        failCnt || warnCnt
+          ? "其中 <b>失败 " + failCnt + " 次、告警 " + warnCnt + " 次</b>，成功率 " +
+            (toolSpans.length ? ((toolSpans.length - failCnt) / toolSpans.length * 100).toFixed(0) : "0") + "%。"
+          : "全部工具调用 <b>一次成功</b>，无失败或超时。",
+        ev: toolSpans.filter(function (s) { return s.status === "error"; }) });
+      if (repeatFailTools.length) {
+        var lost = repeatFailTools.reduce(function (a, k) {
+          return a + byTool[k].bad.reduce(function (x, s) { return x + num(s.durationMs); }, 0); }, 0);
+        toolItems.push({ tone: "bad", html:
+          "<b>" + esc(repeatFailTools.join("、")) + "</b> 反复失败，建议设比会话预算更短的超时 + 降级返回 + 连续失败熔断，可省约 " +
+          fmtMs(lost) + "。", ev: repeatFailTools.reduce(function (a, k) { return a.concat(byTool[k].bad); }, []) });
+      }
+      /* 输入输出体量 */
+      var bigOut = toolSpans.slice().sort(function (a, b) { return ioChars(b, "out") - ioChars(a, "out"); })[0];
+      var bigIn = toolSpans.slice().sort(function (a, b) { return ioChars(b, "in") - ioChars(a, "in"); })[0];
+      if (bigOut) {
+        toolItems.push({ html:
+          "输出体量最大的是 <code>" + esc(bigOut.tool || bigOut.name) + "</code>（约 " + fmtInt(ioChars(bigOut, "out")) +
+          " 字符），输入最大约 " + fmtInt(ioChars(bigIn, "in")) + " 字符；超大回包会回灌进上下文，建议加 <code>limit</code>/<code>fields</code> 白名单。",
+          ev: [bigOut] });
+      }
+      renderSummary("#sumTool", {
+        title: "TOOL调用分析总结", tone: failCnt ? "err" : warnCnt ? "warn" : "",
+        tag: M.toolCalls + " 次调用",
+        lead: "工具侧成功率 " + (toolSpans.length ? ((toolSpans.length - failCnt) / toolSpans.length * 100).toFixed(0) : "0") +
+          "%，" + (repeatFailTools.length ? "<b>存在反复失败的工具</b>需熔断降级" : "整体 <b>稳定</b>") + "。",
+        items: toolItems
+      });
+    }
+  }
+  blockSummaries();
+
+  /* 总结里的「依据节点」chip：点击跳到附录轨迹树并选中 */
+  ["#sumInfo", "#sumLink", "#sumPerf", "#sumLlm", "#sumTool"].forEach(function (sel) {
+    var box = $(sel);
+    if (!box) return;
+    box.addEventListener("click", function (e) {
+      var t = e.target.closest("[data-goto]");
+      if (t) selectNode(t.dataset.goto, true);
+    });
+  });
+
+  /* ── 入场动画（IntersectionObserver）── */
+  $$(".card, .blk").forEach(function (el, i) {
+    el.classList.add("reveal");
+    el.style.transitionDelay = Math.min(i * 40, 240) + "ms";
+  });
+  var counted = false;
+  if ("IntersectionObserver" in window && !REDUCED) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (!en.isIntersecting) return;
+        en.target.classList.add("is-in");
+        if (en.target.id === "sec-link" && !counted) { counted = true; runCounters(); }
+        io.unobserve(en.target);
+      });
+    }, { threshold: 0.08, rootMargin: "0px 0px -40px 0px" });
+    $$(".reveal").forEach(function (el) { io.observe(el); });
+  } else {
+    $$(".reveal").forEach(function (el) { el.classList.add("is-in"); });
+    runCounters();
+  }
+
+  /* ── 板块折叠：点击标题左侧箭头收起/展开 ── */
+  $$("[data-fold]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var blk = $(btn.getAttribute("data-fold"));
+      if (!blk) return;
+      var folded = blk.classList.toggle("is-fold");
+      btn.setAttribute("aria-expanded", folded ? "false" : "true");
+      if (!folded && window.__REDRAW) setTimeout(window.__REDRAW, 30);   /* 展开后重算图表宽度 */
+    });
+  });
+
+  /* ── 导航高亮 + 滚动进度条 ── */
+  var bar = document.createElement("div");
+  bar.className = "scrollbar"; bar.setAttribute("aria-hidden", "true");
+  document.body.appendChild(bar);
+  var navLinks = $$(".topbar__nav a");
+  var secs = navLinks.map(function (a) { return $(a.getAttribute("href")); }).filter(Boolean);
+  function onScroll() {
+    var h = document.documentElement;
+    bar.style.width = (h.scrollTop / Math.max(1, h.scrollHeight - h.clientHeight) * 100) + "%";
+    var pos = h.scrollTop + 120, cur = null;
+    secs.forEach(function (s) { if (s.offsetTop <= pos) cur = s.id; });
+    navLinks.forEach(function (a) { a.classList.toggle("is-active", a.getAttribute("href") === "#" + cur); });
+  }
+  window.addEventListener("scroll", onScroll, { passive: true });
+  onScroll();
+
+  /* ── 耗时占比条：进入视口后从左向右生长 ── */
+  function growBars() {
+    $$(".t-bar", treeEl).forEach(function (b) { b.style.width = (b.dataset.w || 0) + "%"; });
+  }
+  if (REDUCED) {
+    growBars();
+  } else {
+    var barIO = ("IntersectionObserver" in window)
+      ? new IntersectionObserver(function (en) {
+          en.forEach(function (e) { if (e.isIntersecting) { growBars(); barIO.disconnect(); } });
+        }, { threshold: 0.05 })
+      : null;
+    if (barIO) barIO.observe(treeEl); else growBars();
+  }
+  /* 筛选/排序后新渲染的行也补上占比条 */
+  var mo = new MutationObserver(function () {
+    $$(".t-bar", treeEl).forEach(function (b) { if (!b.style.width) b.style.width = (b.dataset.w || 0) + "%"; });
+  });
+  mo.observe(treeEl, { childList: true, subtree: true });
+
+  /* ── 页脚 ── */
+  $("#footMeta").textContent =
+    "session " + (META.sessionId || "-") + " · " + M.nodes + " nodes · " + M.rounds + " rounds · " +
+    fmtMs(M.durationMs) + " · " + fmtInt(M.totalTokens) + " tokens · 报告生成于 " +
+    new Date().toLocaleString("zh-CN", { hour12: false });
+
+  /* 默认选中首个异常叶子节点（跳过根编排节点），没有则选最慢执行节点 */
+  var firstBad = SPANS.filter(function (s) { return s.status === "error" && s.kind !== "agent"; })[0] ||
+    SPANS.filter(function (s) { return s.kind !== "agent"; })
+      .sort(function (a, b) { return num(b.durationMs) - num(a.durationMs); })[0] || SPANS[0];
+  if (firstBad) selectNode(firstBad.id, false);
+
+  /* 暴露给图表模块 */
+  window.__TRACE = {
+    M: M, SPANS: SPANS, META: META, kids: kids, byId: byId, num: num, fmtMs: fmtMs,
+    fmtS: fmtS, fmtInt: fmtInt, fmtK: fmtK, kindLabel: kindLabel, stLabel: stLabel, esc: esc,
+    llmSpans: llmSpans, toolSpans: toolSpans, skillSpans: skillSpans,
+    ioChars: ioChars, outRate: outRate, byTool: byTool, RANGE: RANGE_TXT,
+    depthOf: depthOf, pct: pct,
+    selectNode: selectNode
+  };
+  window.dispatchEvent(new CustomEvent("trace:ready"));
+})();
+
+/* ══════════════════════════════════════════════════════════
+   ③ 图表：内联手写 SVG 渲染，零外部依赖（离线可用）
+      每张图都附带 <details> 数据表作为文本替代（无障碍）
+   ══════════════════════════════════════════════════════════ */
+(function () {
+  "use strict";
+  var T = window.__TRACE;
+  if (!T) return;
+
+  var SPANS = T.SPANS, M = T.M, num = T.num, esc = T.esc;
+  var REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ── 公共绘图工具 ── */
+  var NS = "http://www.w3.org/2000/svg";
+  function el(tag, attrs, txt) {
+    var n = document.createElementNS(NS, tag);
+    if (attrs) Object.keys(attrs).forEach(function (k) {
+      if (attrs[k] != null && attrs[k] !== false) n.setAttribute(k, attrs[k]);
+    });
+    if (txt != null) n.textContent = txt;
+    return n;
+  }
+  /* 文本按字符宽度截断（中文按 1 字宽、ASCII 按 0.55 字宽估算）*/
+  function trunc(s, maxChars) {
+    s = String(s == null ? "" : s);
+    var w = 0, out = "";
+    for (var i = 0; i < s.length; i++) {
+      w += s.charCodeAt(i) > 255 ? 1 : 0.56;
+      if (w > maxChars) return out + "…";
+      out += s[i];
+    }
+    return out;
+  }
+  /* 取「好看」的刻度上限：1/2/2.5/5 × 10^n */
+  function niceMax(v, ticks) {
+    if (!(v > 0)) return 1;
+    var raw = v / (ticks || 4);
+    var mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    var n = raw / mag;
+    var step = n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10;
+    return step * mag * (ticks || 4);
+  }
+  function axisVals(max, ticks) {
+    var out = [];
+    for (var i = 0; i <= ticks; i++) out.push(max * i / ticks);
+    return out;
+  }
+  function fmtAxis(v) {
+    if (Math.abs(v) >= 1000000) return (v / 1000000).toFixed(1).replace(/\.0$/, "") + "M";
+    if (Math.abs(v) >= 1000) return (v / 1000).toFixed(1).replace(/\.0$/, "") + "k";
+    return String(Math.round(v * 100) / 100);
+  }
+
+  /* ── 浮动 tooltip（单例，全图共用）── */
+  var tip = document.createElement("div");
+  tip.className = "tip";
+  tip.setAttribute("role", "tooltip");
+  tip.setAttribute("aria-hidden", "true");
+  document.body.appendChild(tip);
+  function showTip(html, ev) {
+    tip.innerHTML = html;
+    tip.classList.add("is-on");
+    moveTip(ev);
+  }
+  function moveTip(ev) {
+    if (!ev) return;
+    var pad = 14, w = tip.offsetWidth, h = tip.offsetHeight;
+    var x = ev.clientX + pad, y = ev.clientY + pad;
+    if (x + w > window.innerWidth - 8) x = ev.clientX - w - pad;
+    if (y + h > window.innerHeight - 8) y = ev.clientY - h - pad;
+    tip.style.left = Math.max(6, x) + "px";
+    tip.style.top = Math.max(6, y) + "px";
+  }
+  function hideTip() { tip.classList.remove("is-on"); }
+  function bindTip(node, htmlFn) {
+    node.addEventListener("mouseenter", function (e) { showTip(htmlFn(), e); });
+    node.addEventListener("mousemove", moveTip);
+    node.addEventListener("mouseleave", hideTip);
+    node.addEventListener("focus", function () {
+      var r = node.getBoundingClientRect();
+      showTip(htmlFn(), { clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 });
+    });
+    node.addEventListener("blur", hideTip);
+  }
+
+  /* ── 挂载：建 SVG + 可选数据表替代 ── */
+  function mount(id, h, build, altRows) {
+    var box = document.getElementById(id);
+    if (!box) return null;
+    box.innerHTML = "";
+    var W = Math.max(280, box.clientWidth || 600);
+    var svg = el("svg", {
+      viewBox: "0 0 " + W + " " + h, width: "100%", height: h,
+      preserveAspectRatio: "xMinYMin meet", role: "img"
+    });
+    box.appendChild(svg);
+    var api = build(svg, W, h);
+    if (api && api.label) svg.setAttribute("aria-label", api.label);
+
+    /* 数据表替代：屏幕阅读器 / 无图环境可读（重绘前先清掉旧的，避免叠加）*/
+    var prevAlt = box.parentElement.querySelector(".chart__alt");
+    if (prevAlt) prevAlt.remove();
+    if (altRows && altRows.length) {
+      var det = document.createElement("details");
+      det.className = "chart__alt";
+      var sm = document.createElement("summary");
+      sm.textContent = "查看数据表（" + altRows.length + " 行）";
+      det.appendChild(sm);
+      var tb = document.createElement("table");
+      tb.innerHTML = "<thead><tr>" + api.head.map(function (c, i) {
+        return '<th scope="col"' + (i > 0 ? ' class="n"' : "") + ">" + esc(c) + "</th>";
+      }).join("") + "</tr></thead><tbody>" + altRows.map(function (r) {
+        return "<tr>" + r.map(function (c, i) {
+          return "<td" + (i > 0 ? ' class="n"' : "") + ">" + esc(c) + "</td>";
+        }).join("") + "</tr>";
+      }).join("") + "</tbody>";
+      det.appendChild(tb);
+      box.parentElement.appendChild(det);
+    }
+    box.classList.add("is-ready");
+    return { svg: svg, W: W, h: h };
+  }
+
+  /* 折线路径长度（用于描线动画）*/
+  function pathLen(pathEl) {
+    try { return pathEl.getTotalLength(); } catch (e) { return 2000; }
+  }
+
+  /* 图表空态占位（诚实提示，不画假数据）*/
+  function chartEmpty(box, msg) {
+    box.innerHTML = '<div style="display:grid;place-items:center;height:100%;min-height:180px;' +
+      'color:var(--ink-3);font-size:12.5px;text-align:center;padding:20px;line-height:1.7">' + esc(msg) + "</div>";
+  }
+
+  /* ── 1. 执行时序甘特图（横向条 + round 分隔线）── */
+  function drawGantt() {
+    var rows = SPANS.slice().sort(function (a, b) {
+      return num(a.startMs) - num(b.startMs) || num(b.durationMs) - num(a.durationMs);
+    });
+    if (!rows.length) { chartEmpty(document.getElementById("chartGantt"), "本次会话没有采集到执行节点，无法绘制时序图"); return; }
+
+    var box = document.getElementById("chartGantt");
+    var ROWH = 23, PADT = 26, PADB = 26;
+    var h = PADT + rows.length * ROWH + PADB;
+    box.dataset.h = h;
+
+    var alt = rows.map(function (s) {
+      return [s.name, T.kindLabel(s.kind), s.round == null ? "-" : s.round,
+        T.fmtS(s.startMs) + "s", T.fmtMs(s.durationMs), T.fmtInt(s.totalTokens) || "-", s.status];
+    });
+
+    mount("chartGantt", h, function (svg, W, H) {
+      var LBL = Math.min(300, Math.max(150, Math.round(W * 0.30)));
+      var x0 = LBL + 10, x1 = W - 116;   /* 右侧留白给「耗时 · token」尾标签 */
+      var maxMs = niceMax(M.t1 || 1, 5);
+      var sx = function (ms) { return x0 + (num(ms) / maxMs) * (x1 - x0); };
+      var TICKS = 5;
+
+      /* 网格 + X 轴刻度 */
+      axisVals(maxMs, TICKS).forEach(function (v) {
+        svg.appendChild(el("line", { class: "grid-line", x1: sx(v), x2: sx(v), y1: PADT - 8, y2: H - PADB }));
+        svg.appendChild(el("text", { class: "ax-txt ax-txt--x", x: sx(v), y: H - PADB + 16 },
+          (v / 1000).toFixed(v % 1000 ? 1 : 0) + "s"));
+      });
+
+      /* round 分隔竖线 */
+      var seen = {};
+      rows.forEach(function (s) {
+        if (typeof s.round !== "number" || seen[s.round]) return;
+        seen[s.round] = true;
+        var x = sx(s.startMs);
+        svg.appendChild(el("line", { x1: x, x2: x, y1: PADT - 12, y2: H - PADB,
+          style: "stroke:var(--line)", "stroke-width": 1, "stroke-dasharray": "2 3" }));
+        svg.appendChild(el("text", { class: "ax-txt", x: x + 4, y: PADT - 14, "font-size": "9.5" }, "round:" + s.round));
+      });
+
+      rows.forEach(function (s, i) {
+        var y = PADT + i * ROWH, cy = y + ROWH / 2;
+        var tone = s.status === "error" ? "var(--error)"
+          : s.status === "warn" ? "var(--warn)" : "var(--" + (s.kind === "agent" ? "accent" : s.kind) + ")";
+        var isContainer = s.kind === "react" || s.kind === "agent";
+
+        /* Y 轴标签 */
+        svg.appendChild(el("text", {
+          class: "ax-txt lbl--cat", x: 4, y: cy + 4, "text-anchor": "start",
+          "font-size": "11"
+        }, trunc(s.name, LBL / 7.2)));
+
+        var g = el("g", { class: "g-bar", tabindex: "0", role: "button",
+          "aria-label": s.name + "，耗时 " + T.fmtMs(s.durationMs) });
+        /* hover 行底纹 */
+        g.appendChild(el("rect", { class: "row-hl", x: 0, y: y, width: W, height: ROWH }));
+
+        var bx = sx(s.startMs);
+        var bw = Math.max(2, sx(s.startMs + s.durationMs) - bx);
+        var bh = isContainer ? 7 : 11;
+        var bar = el("rect", {
+          class: "bar-h", x: bx, y: cy - bh / 2, width: bw, height: bh, rx: 2.5,
+          style: "fill:" + tone + ";opacity:" + (isContainer ? 0.42 : 0.92) +
+            ";animation-delay:" + (REDUCED ? 0 : Math.min(i * 26, 520)) + "ms"
+        });
+        g.appendChild(bar);
+
+        /* 条右侧数值：耗时 + token/TTFT */
+        var tail = T.fmtMs(s.durationMs);
+        if (s.kind === "llm" && num(s.totalTokens)) tail += " · " + T.fmtInt(s.totalTokens) + "tk";
+        if (s.kind === "tool" && s.status === "error") tail = "✕ " + tail;
+        svg.appendChild(el("text", { class: "lbl lbl--val", x: bx + bw + 7, y: cy + 4, "font-size": "10" }, tail));
+
+        bindTip(g, function () {
+          return "<b>" + esc(s.name) + "</b>\n" +
+            '<span class="t-k">type</span> ' + T.kindLabel(s.kind) +
+            (s.round != null ? ' <span class="t-k">· round</span> ' + s.round : "") + "\n" +
+            '<span class="t-k">start</span> ' + T.fmtS(s.startMs) + "s" +
+            ' <span class="t-k">dur</span> ' + T.fmtMs(s.durationMs) + "\n" +
+            (num(s.totalTokens) ? '<span class="t-k">tokens</span> ' + T.fmtInt(s.totalTokens) + "\n" : "") +
+            (num(s.ttftMs) ? '<span class="t-k">ttft</span> ' + T.fmtMs(s.ttftMs) + "\n" : "") +
+            (s.tool ? '<span class="t-k">tool</span> ' + esc(s.tool) + "\n" : "") +
+            (s.status === "ok" ? '<span class="t-k">status</span> ok'
+              : '<span class="t-err">status ' + esc(s.status) + "</span>");
+        });
+        /* 点击 → 联动选中节点 */
+        g.addEventListener("click", function () { T.selectNode(s.id, true); });
+        g.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); T.selectNode(s.id, true); }
+        });
+        svg.appendChild(g);
+      });
+
+      /* X 轴基线 */
+      svg.appendChild(el("line", { class: "ax-line", x1: x0, x2: x1, y1: H - PADB, y2: H - PADB }));
+      return { label: "执行时序甘特图，共 " + rows.length + " 个节点",
+        head: ["节点", "类型", "轮次", "开始", "耗时", "Tokens", "状态"] };
+    }, alt);
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     板块 3/4/5 新图表：通用绘图助手
+     ══════════════════════════════════════════════════════════ */
+  /* 参考图配色序列 */
+  var C1 = "var(--s1)", C2 = "var(--s2)", C3 = "var(--s3)", C4 = "var(--s4)";
+  var C_SKILL = "var(--skill)";
+
+  /* 起始时间 + 相对毫秒 → "HH:mm:ss"（参考图 X 轴格式）*/
+  function clockOf(ms) {
+    var base = T.META.startTime ? Date.parse(String(T.META.startTime).replace(" ", "T")) : NaN;
+    if (!isFinite(base)) {
+      var s = Math.round(num(ms) / 1000);
+      return String(Math.floor(s / 3600)).padStart(2, "0") + ":" +
+        String(Math.floor(s % 3600 / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
+    }
+    var d = new Date(base + num(ms));
+    return [d.getHours(), d.getMinutes(), d.getSeconds()].map(function (v) {
+      return String(v).padStart(2, "0");
+    }).join(":");
+  }
+
+  /* 面板空态：诚实提示，不画假数据 */
+  function panelEmpty(id, msg) {
+    var box = document.getElementById(id);
+    if (!box) return true;
+    box.innerHTML = "";
+    var d = document.createElement("div");
+    d.className = "pcard__empty";
+    d.textContent = msg || "暂无数据";
+    box.appendChild(d);
+    return true;
+  }
+
+  /* 底部图例（参考图：方点 + 序列名） */
+  function plegend(id, items) {
+    var box = document.getElementById(id);
+    if (!box) return;
+    box.innerHTML = (items || []).map(function (it) {
+      return '<span><i style="--c:' + it.c + '"></i>' + esc(it.n) +
+        (it.v != null ? ' <em>' + esc(it.v) + "</em>" : "") + "</span>";
+    }).join("");
+  }
+
+  /* Catmull-Rom → 三次贝塞尔，得到参考图那样的平滑曲线 */
+  function smoothPath(pts) {
+    if (pts.length < 2) return pts.length ? "M" + pts[0][0] + " " + pts[0][1] : "";
+    var d = "M" + pts[0][0] + " " + pts[0][1];
+    for (var i = 0; i < pts.length - 1; i++) {
+      var p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
+      var c1x = p1[0] + (p2[0] - p0[0]) / 6, c1y = p1[1] + (p2[1] - p0[1]) / 6;
+      var c2x = p2[0] - (p3[0] - p1[0]) / 6, c2y = p2[1] - (p3[1] - p1[1]) / 6;
+      d += " C" + c1x.toFixed(2) + " " + c1y.toFixed(2) + "," + c2x.toFixed(2) + " " + c2y.toFixed(2) +
+        "," + p2[0].toFixed(2) + " " + p2[1].toFixed(2);
+    }
+    return d;
+  }
+
+  /* 渐变填充定义（参考图面积图） */
+  function gradient(svg, idName, color) {
+    var defs = svg.querySelector("defs") || svg.appendChild(el("defs"));
+    var lg = el("linearGradient", { id: idName, x1: "0", y1: "0", x2: "0", y2: "1" });
+    lg.appendChild(el("stop", { offset: "0%", style: "stop-color:" + color + ";stop-opacity:.28" }));
+    lg.appendChild(el("stop", { offset: "100%", style: "stop-color:" + color + ";stop-opacity:0" }));
+    defs.appendChild(lg);
+    return "url(#" + idName + ")";
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     板块 3 · 性能分析
+     ══════════════════════════════════════════════════════════ */
+
+  /* 3-1 LLM与工具调用耗时占比（饼图 + 右侧图例 + 引导线百分比）*/
+  function drawPie() {
+    var box = document.getElementById("chartPie");
+    if (!box) return;
+    var parts = [
+      { k: "LLM", ms: M.llmMs, c: C1 },
+      { k: "TOOL", ms: M.toolMs, c: C2 },
+      { k: "SKILL", ms: M.skillMs, c: C_SKILL }
+    ].filter(function (d) { return d.ms > 0; });
+
+    if (!parts.length) { panelEmpty("chartPie", "暂无数据"); return; }
+
+    var total = parts.reduce(function (a, d) { return a + d.ms; }, 0);
+    box.innerHTML = "";
+    var wrap = document.createElement("div");
+    wrap.className = "pie-wrap";
+    var svgHost = document.createElement("div");
+    svgHost.style.cssText = "flex:1 1 auto;min-width:0;height:100%";
+    var lg = document.createElement("div");
+    lg.className = "pie-legend";
+    lg.innerHTML = parts.map(function (d) {
+      return '<span><i style="--c:' + d.c + '"></i>' + esc(d.k) + ": <em>" +
+        T.fmtMs(d.ms) + "</em> · " + (d.ms / total * 100).toFixed(1) + "%</span>";
+    }).join("");
+    wrap.appendChild(svgHost); wrap.appendChild(lg);
+    box.appendChild(wrap);
+
+    var W = Math.max(180, svgHost.clientWidth || 220), H = 240;
+    var svg = el("svg", { viewBox: "0 0 " + W + " " + H, width: "100%", height: H,
+      preserveAspectRatio: "xMidYMid meet", role: "img",
+      "aria-label": "LLM与工具调用耗时占比饼图" });
+    svgHost.appendChild(svg);
+
+    var cx = W / 2, cy = H / 2 - 14, R = Math.min(cx - 8, cy - 8, 78);
+    var start = -90;
+    parts.forEach(function (d, i) {
+      var frac = d.ms / total, sweep = frac * 360;
+      var a0 = start * Math.PI / 180, a1 = (start + sweep) * Math.PI / 180;
+      var large = sweep > 180 ? 1 : 0;
+      var x0 = cx + R * Math.cos(a0), y0 = cy + R * Math.sin(a0);
+      var x1 = cx + R * Math.cos(a1), y1 = cy + R * Math.sin(a1);
+      /* 单一成分时画整圆，避免 A 弧退化 */
+      var dPath = parts.length === 1
+        ? "M" + (cx - R) + " " + cy + "a" + R + " " + R + " 0 1,0 " + (R * 2) + " 0a" + R + " " + R + " 0 1,0 " + (-R * 2) + " 0Z"
+        : "M" + cx + " " + cy + "L" + x0.toFixed(2) + " " + y0.toFixed(2) +
+          "A" + R + " " + R + " 0 " + large + ",1 " + x1.toFixed(2) + " " + y1.toFixed(2) + "Z";
+      var path = el("path", { d: dPath, class: "donut-seg",
+        style: "fill:" + d.c + ";animation-delay:" + (REDUCED ? 0 : i * 80) + "ms" });
+      var g = el("g", { tabindex: "0", role: "img",
+        "aria-label": d.k + " 耗时 " + T.fmtMs(d.ms) + "，占 " + (frac * 100).toFixed(2) + "%" });
+      g.appendChild(path);
+      bindTip(g, function () {
+        return "<b>" + esc(d.k) + "</b>\n" +
+          '<span class="t-k">耗时</span> ' + T.fmtMs(d.ms) + "\n" +
+          '<span class="t-k">占比</span> ' + (frac * 100).toFixed(2) + "%";
+      });
+      svg.appendChild(g);
+      /* 引导线 + 百分比标签（参考图：扇区外侧引线接 100.00%）*/
+      var mid = (start + sweep / 2) * Math.PI / 180;
+      var lx0 = cx + R * Math.cos(mid), ly0 = cy + R * Math.sin(mid);
+      var lx1 = cx + (R + 14) * Math.cos(mid), ly1 = cy + (R + 14) * Math.sin(mid);
+      var toRight = Math.cos(mid) >= 0;
+      var lx2 = lx1 + (toRight ? 16 : -16);
+      svg.appendChild(el("path", { d: "M" + lx0.toFixed(1) + " " + ly0.toFixed(1) +
+        "L" + lx1.toFixed(1) + " " + ly1.toFixed(1) + "L" + lx2.toFixed(1) + " " + ly1.toFixed(1),
+        style: "fill:none;stroke:" + d.c + ";stroke-width:1;opacity:.7" }));
+      svg.appendChild(el("text", { class: "lbl lbl--val", x: lx2 + (toRight ? 4 : -4), y: ly1 + 4,
+        "text-anchor": toRight ? "start" : "end", "font-size": "11" },
+        (frac * 100).toFixed(2) + "%"));
+      start += sweep;
+    });
+  }
+
+  /* 3-2 / 3-3 调用耗时 TOP 表（可排序 + 分页 + 总数，参考图中部表格）*/
+  var TOP_PAGE = 5;
+  function makeTopTable(cfg) {
+    var box = document.getElementById(cfg.box), foot = document.getElementById(cfg.foot);
+    if (!box) return;
+    var rows = cfg.rows.slice();
+    if (!rows.length) {
+      panelEmpty(cfg.box, "暂无数据");
+      if (foot) foot.innerHTML = '<span class="top-foot__total">总数: 0</span>';
+      return;
+    }
+    var st = { key: cfg.defKey, dir: "desc", page: 1 };
+
+    function sorted() {
+      var r = rows.slice();
+      r.sort(function (a, b) {
+        var va = a[st.key], vb = b[st.key];
+        if (va == null) va = st.key === "spanName" ? "" : -1;
+        if (vb == null) vb = st.key === "spanName" ? "" : -1;
+        if (typeof va === "string") return st.dir === "asc" ? va.localeCompare(vb) : vb.localeCompare(va);
+        return st.dir === "asc" ? va - vb : vb - va;
+      });
+      return r;
+    }
+    function draw() {
+      var r = sorted();
+      var pages = Math.max(1, Math.ceil(r.length / TOP_PAGE));
+      if (st.page > pages) st.page = pages;
+      var slice = r.slice((st.page - 1) * TOP_PAGE, st.page * TOP_PAGE);
+      box.innerHTML = '<div class="top-tbl-wrap"><table class="top-tbl">' +
+        "<caption class=\"sr\">" + esc(cfg.cap) + "</caption><thead><tr>" +
+        cfg.cols.map(function (c) {
+          var on = c.k === st.key;
+          return '<th scope="col" data-k="' + esc(c.k) + '"' + (c.n ? ' class="num"' : "") +
+            (on ? ' aria-sort="' + (st.dir === "asc" ? "ascending" : "descending") + '"' : "") +
+            ' title="点击按此列排序">' + esc(c.t) +
+            '<span class="sarr" aria-hidden="true">' + (on ? (st.dir === "asc" ? "▲" : "▼") : "⇅") + "</span></th>";
+        }).join("") + "</tr></thead><tbody>" +
+        slice.map(function (row) {
+          return '<tr data-id="' + esc(row.id) + '">' + cfg.cols.map(function (c) {
+            var v = row[c.k];
+            var txt = c.fmt ? c.fmt(v, row) : (v == null ? "—" : v);
+            return "<td" + (c.n ? ' class="num"' : "") + (c.cls ? ' class="' + c.cls + '"' : "") +
+              ' title="' + esc(String(v == null ? "" : v)) + '">' + esc(String(txt)) + "</td>";
+          }).join("") + "</tr>";
+        }).join("") + "</tbody></table></div>";
+      if (foot) {
+        foot.innerHTML = '<span class="top-foot__total">总数: ' + r.length + "</span>" +
+          '<span class="pager">' +
+          '<button type="button" data-pg="prev"' + (st.page <= 1 ? " disabled" : "") + ' aria-label="上一页">‹</button>' +
+          '<span class="pager__n"><b>' + st.page + "</b>/" + pages + "</span>" +
+          '<button type="button" data-pg="next"' + (st.page >= pages ? " disabled" : "") + ' aria-label="下一页">›</button>' +
+          "</span>";
+      }
+    }
+    box.addEventListener("click", function (e) {
+      var th = e.target.closest("th[data-k]");
+      if (th) {
+        var k = th.dataset.k;
+        if (st.key === k) st.dir = st.dir === "asc" ? "desc" : "asc";
+        else { st.key = k; st.dir = k === "spanName" || k === "spanId" ? "asc" : "desc"; }
+        draw(); return;
+      }
+      var tr = e.target.closest("tr[data-id]");
+      if (tr) T.selectNode(tr.dataset.id, true);
+    });
+    if (foot) {
+      foot.addEventListener("click", function (e) {
+        var b = e.target.closest("button[data-pg]");
+        if (!b || b.disabled) return;
+        st.page += b.dataset.pg === "next" ? 1 : -1;
+        draw();
+      });
+    }
+    draw();
+  }
+
+  function drawTopTables() {
+    var llmRows = T.llmSpans.map(function (s) {
+      return { id: s.id, spanName: s.model || s.name, spanId: s.id,
+        dur: num(s.durationMs), ttft: num(s.ttftMs), inTok: num(s.promptTokens),
+        outTok: num(s.completionTokens), st: s.status };
+    });
+    var toolRows = T.toolSpans.map(function (s) {
+      return { id: s.id, spanName: s.tool || s.name, spanId: s.id,
+        dur: num(s.durationMs), inC: T.ioChars(s, "in"), outC: T.ioChars(s, "out"), st: s.status };
+    });
+    var stFmt = function (v) { return T.stLabel(v || "ok"); };
+    makeTopTable({
+      box: "boxLlmTop", foot: "footLlmTop", cap: "LLM 调用耗时排行", rows: llmRows, defKey: "dur",
+      cols: [
+        { k: "spanName", t: "spanName", cls: "nm" },
+        { k: "spanId", t: "spanId", cls: "sid" },
+        { k: "dur", t: "耗时", n: true, fmt: function (v) { return (v / 1000).toFixed(3); } },
+        { k: "ttft", t: "TTFT", n: true, fmt: function (v) { return v ? (v / 1000).toFixed(3) : "—"; } },
+        { k: "inTok", t: "输入Token", n: true, fmt: function (v) { return v ? T.fmtInt(v) : "—"; } },
+        { k: "st", t: "状态", fmt: stFmt }
+      ]
+    });
+    makeTopTable({
+      box: "boxToolTop", foot: "footToolTop", cap: "TOOL 调用耗时排行", rows: toolRows, defKey: "dur",
+      cols: [
+        { k: "spanName", t: "spanName", cls: "nm" },
+        { k: "spanId", t: "spanId", cls: "sid" },
+        { k: "dur", t: "耗时", n: true, fmt: function (v) { return (v / 1000).toFixed(3); } },
+        { k: "inC", t: "输入字符", n: true, fmt: function (v) { return T.fmtInt(v); } },
+        { k: "outC", t: "输出字符", n: true, fmt: function (v) { return T.fmtInt(v); } },
+        { k: "st", t: "状态", fmt: stFmt }
+      ]
+    });
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     通用：多序列折线/面积图（参考图板块 4/5 风格）
+     cfg: { id, h, cats[], series:[{name,color,vals[],area}], yFmt, unit,
+            tipFn(catIdx,si), xFmt }
+     ══════════════════════════════════════════════════════════ */
+  function drawLineChart(cfg) {
+    var box = document.getElementById(cfg.id);
+    if (!box) return;
+    var hasData = cfg.series.some(function (s) {
+      return s.vals.some(function (v) { return v != null && isFinite(v) && v > 0; });
+    });
+    if (!cfg.cats.length || !hasData) { panelEmpty(cfg.id, cfg.emptyMsg || "暂无数据"); return; }
+
+    var H = cfg.h || 220, PADL = 46, PADR = 14, PADT = 16, PADB = 30;
+    var W = Math.max(220, box.clientWidth || 300);
+    var x0 = PADL, x1 = W - PADR, y0 = PADT, y1 = H - PADB;
+    var n = cfg.cats.length;
+
+    var allVals = [];
+    cfg.series.forEach(function (s) { s.vals.forEach(function (v) { if (v != null && isFinite(v)) allVals.push(v); }); });
+    var maxV = niceMax(Math.max.apply(null, allVals.concat([0])) || 1, 4);
+    var TICKS = 4;
+
+    box.innerHTML = "";
+    var svg = el("svg", { viewBox: "0 0 " + W + " " + H, width: "100%", height: H,
+      preserveAspectRatio: "xMinYMin meet", role: "img", "aria-label": cfg.label || "趋势图" });
+    box.appendChild(svg);
+
+    function sx(i) { return n === 1 ? (x0 + x1) / 2 : x0 + (x1 - x0) * i / (n - 1); }
+    function sy(v) { return y1 - (num(v) / maxV) * (y1 - y0); }
+
+    /* 横向网格 + Y 刻度 */
+    axisVals(maxV, TICKS).forEach(function (v) {
+      svg.appendChild(el("line", { class: "grid-line", x1: x0, x2: x1, y1: sy(v), y2: sy(v) }));
+      svg.appendChild(el("text", { class: "ax-txt ax-txt--y", x: x0 - 8, y: sy(v) + 4 },
+        (cfg.yFmt ? cfg.yFmt(v) : fmtAxis(v)) + (cfg.unit || "")));
+    });
+    /* 纵向网格 + X 刻度（参考图双向网格线）*/
+    cfg.cats.forEach(function (c, i) {
+      svg.appendChild(el("line", { class: "grid-line", x1: sx(i), x2: sx(i), y1: y0, y2: y1,
+        style: "opacity:.45" }));
+      if (n <= 8 || i % Math.ceil(n / 8) === 0) {
+        svg.appendChild(el("text", { class: "ax-txt ax-txt--x", x: sx(i), y: y1 + 18 },
+          cfg.xFmt ? cfg.xFmt(c, i) : c));
+      }
+    });
+
+    /* 各序列：面积 + 平滑线 + 数据点 */
+    cfg.series.forEach(function (s, si) {
+      var pts = [];
+      s.vals.forEach(function (v, i) { if (v != null && isFinite(v)) pts.push([sx(i), sy(v), i, v]); });
+      if (!pts.length) return;
+      var coord = pts.map(function (p) { return [p[0], p[1]]; });
+      if (s.area && pts.length >= 2) {
+        var gid = cfg.id + "-g" + si;
+        svg.appendChild(el("path", {
+          class: "area-path",
+          d: smoothPath(coord) + "L" + coord[coord.length - 1][0].toFixed(1) + " " + y1 +
+            "L" + coord[0][0].toFixed(1) + " " + y1 + "Z",
+          style: "fill:" + gradient(svg, gid, s.color) + ";animation-delay:" + (REDUCED ? 0 : 200) + "ms"
+        }));
+      }
+      if (pts.length >= 2) {
+        var line = el("path", { class: "line-path", d: smoothPath(coord), style: "stroke:" + s.color });
+        svg.appendChild(line);
+        if (!REDUCED) line.style.setProperty("--len", pathLen(line));
+      }
+      pts.forEach(function (p, i) {
+        var g = el("g", { class: "g-col", tabindex: "0", role: "img",
+          "aria-label": cfg.cats[p[2]] + " " + s.name + " " + p[3] });
+        g.appendChild(el("circle", { class: "pt", cx: p[0], cy: p[1], r: 4.2,
+          style: "fill:" + s.color + ";stroke:#fff;stroke-width:2;animation-delay:" +
+            (REDUCED ? 0 : 240 + i * 50) + "ms" }));
+        bindTip(g, function () {
+          return cfg.tipFn ? cfg.tipFn(p[2], si, p[3]) :
+            "<b>" + esc(cfg.cats[p[2]]) + "</b>\n" + esc(s.name) + " " + p[3];
+        });
+        svg.appendChild(g);
+      });
+    });
+
+    /* 底部图例 */
+    plegend(cfg.legendId, cfg.series.map(function (s) { return { n: s.name, c: s.color }; }));
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     板块 4 · LLM调用分析（按轮次聚合）
+     ══════════════════════════════════════════════════════════ */
+  function llmRounds() {
+    /* X 轴为时间（HH:mm:ss）：有 round 时按轮聚合、取该轮首个 LLM 调用的开始时间；
+       无 round 时退化为每次调用一个点，同样以开始时间标注 */
+    var groups = [];
+    var hasRound = T.llmSpans.some(function (s) { return typeof s.round === "number"; });
+    if (hasRound) {
+      var byR = {};
+      T.llmSpans.forEach(function (s) {
+        var r = typeof s.round === "number" ? s.round : 0;
+        (byR[r] = byR[r] || []).push(s);
+      });
+      Object.keys(byR).map(Number).sort(function (a, b) { return a - b; }).forEach(function (r) {
+        var sp = byR[r].slice().sort(function (a, b) { return num(a.startMs) - num(b.startMs); });
+        groups.push({ label: clockOf(num(sp[0].startMs)), round: r, spans: sp });
+      });
+    } else {
+      T.llmSpans.slice().sort(function (a, b) { return num(a.startMs) - num(b.startMs); })
+        .forEach(function (s) {
+          groups.push({ label: clockOf(num(s.startMs)), round: null, spans: [s] });
+        });
+    }
+    return groups;
+  }
+
+  function drawLlmCharts() {
+    var groups = llmRounds();
+    if (!groups.length) {
+      ["chartLlmDur", "chartLlmTok", "chartLlmRate", "chartLlmCache"].forEach(function (id) {
+        panelEmpty(id, "本次链路没有 LLM 调用节点");
+      });
+      ["lgLlmDur", "lgLlmTok", "lgLlmRate", "lgLlmCache"].forEach(function (id) { plegend(id, []); });
+      return;
+    }
+    var cats = groups.map(function (g) { return g.label; });
+    function agg(fn) { return groups.map(function (g) { return fn(g.spans); }); }
+    var sum = function (arr, k) { return arr.reduce(function (a, s) { return a + num(s[k]); }, 0); };
+    /* tooltip 头部：时间 + 轮次（轮次仅作辅助信息）*/
+    var tipHead = function (ci) {
+      var g = groups[ci];
+      return "<b>" + esc(cats[ci]) + "</b>" +
+        (g.round != null ? ' <span class="t-k">round ' + g.round + "</span>" : "") + "\n";
+    };
+
+    /* 4-1 单轮耗时趋势：ttft(均) + total_duration(累计) */
+    var ttftVals = agg(function (sp) {
+      var t = sp.map(function (s) { return num(s.ttftMs); }).filter(function (v) { return v > 0; });
+      return t.length ? t.reduce(function (a, b) { return a + b; }, 0) / t.length : 0;
+    });
+    var durVals = agg(function (sp) { return sum(sp, "durationMs"); });
+    drawLineChart({
+      id: "chartLlmDur", legendId: "lgLlmDur", h: 220, cats: cats, unit: " s",
+      yFmt: function (v) { return (v / 1000).toFixed(v >= 10000 ? 0 : 1); },
+      label: "LLM 单轮耗时趋势折线图",
+      series: [
+        { name: "total_duration", color: C2, vals: durVals.map(function (v) { return v / 1000; }), area: true },
+        { name: "ttft", color: C1, vals: ttftVals.map(function (v) { return v / 1000; }), area: false }
+      ],
+      tipFn: function (ci, si, v) {
+        return tipHead(ci) +
+          '<span class="t-k">total_duration</span> ' + T.fmtMs(durVals[ci]) + "\n" +
+          '<span class="t-k">ttft(均)</span> ' + T.fmtMs(ttftVals[ci]) + "\n" +
+          '<span class="t-k">调用数</span> ' + groups[ci].spans.length;
+      }
+    });
+
+    /* 4-2 单轮 Token 消耗趋势：input + output */
+    var inVals = agg(function (sp) { return sum(sp, "promptTokens"); });
+    var outVals = agg(function (sp) { return sum(sp, "completionTokens"); });
+    drawLineChart({
+      id: "chartLlmTok", legendId: "lgLlmTok", h: 220, cats: cats, unit: " k",
+      yFmt: function (v) { return (v).toFixed(v >= 10 ? 0 : 1); },
+      label: "LLM 单轮 Token 消耗趋势折线图",
+      series: [
+        { name: "input_tokens", color: C1, vals: inVals.map(function (v) { return v / 1000; }), area: true },
+        { name: "output_tokens", color: C2, vals: outVals.map(function (v) { return v / 1000; }), area: true }
+      ],
+      tipFn: function (ci) {
+        return tipHead(ci) +
+          '<span class="t-k">input_tokens</span> ' + T.fmtInt(inVals[ci]) + "\n" +
+          '<span class="t-k">output_tokens</span> ' + T.fmtInt(outVals[ci]);
+      }
+    });
+
+    /* 4-3 单轮 Token 输出速率（token/s，按轮平均）*/
+    var rateVals = agg(function (sp) {
+      var rs = sp.map(function (s) { return T.outRate(s); }).filter(function (v) { return v > 0; });
+      return rs.length ? rs.reduce(function (a, b) { return a + b; }, 0) / rs.length : 0;
+    });
+    drawLineChart({
+      id: "chartLlmRate", legendId: "lgLlmRate", h: 220, cats: cats, unit: " t/s",
+      yFmt: function (v) { return v.toFixed(0); },
+      label: "LLM 单轮 Token 输出速率折线图",
+      series: [{ name: "output_rate", color: C1, vals: rateVals, area: true }],
+      tipFn: function (ci) {
+        return tipHead(ci) +
+          '<span class="t-k">输出速率</span> ' + rateVals[ci].toFixed(1) + " token/s";
+      }
+    });
+
+    /* 4-4 缓存命中率（%，cachedTokens/promptTokens 按轮）*/
+    var cacheVals = agg(function (sp) {
+      var p = sum(sp, "promptTokens"), c = sum(sp, "cachedTokens");
+      return p > 0 ? (c / p) * 100 : 0;
+    });
+    var anyCache = cacheVals.some(function (v) { return v > 0; });
+    drawLineChart({
+      id: "chartLlmCache", legendId: "lgLlmCache", h: 220, cats: cats, unit: " %",
+      emptyMsg: anyCache ? "暂无数据" : "暂无缓存命中数据（cachedTokens 均为 0）",
+      yFmt: function (v) { return v.toFixed(0); },
+      label: "LLM 缓存命中率折线图",
+      series: [{ name: "cache_hit", color: C1, vals: cacheVals, area: true }],
+      tipFn: function (ci) {
+        return tipHead(ci) +
+          '<span class="t-k">cache_hit</span> ' + cacheVals[ci].toFixed(1) + "%";
+      }
+    });
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     板块 5 · TOOL调用分析
+     ══════════════════════════════════════════════════════════ */
+  function drawToolCharts() {
+    var tools = T.toolSpans.slice().sort(function (a, b) { return num(a.startMs) - num(b.startMs); });
+    if (!tools.length) {
+      panelEmpty("chartToolDur", "本次链路没有工具调用节点");
+      panelEmpty("chartToolIO", "本次链路没有工具调用节点");
+      panelEmpty("chartToolCnt", "本次链路没有工具调用节点");
+      ["lgToolDur", "lgToolIO", "lgToolCnt"].forEach(function (id) { plegend(id, []); });
+      return;
+    }
+    var cats = tools.map(function (s) { return num(s.startMs); });   /* 相对毫秒 */
+    var xFmt = function (ms) { return clockOf(ms); };
+
+    /* 5-1 调用耗时趋势（duration，平滑面积）*/
+    drawLineChart({
+      id: "chartToolDur", legendId: "lgToolDur", h: 220, cats: cats, xFmt: xFmt, unit: " s",
+      yFmt: function (v) { return v.toFixed(v >= 10 ? 0 : 2); },
+      label: "TOOL 调用耗时趋势面积图",
+      series: [{ name: "duration", color: C1,
+        vals: tools.map(function (s) { return num(s.durationMs) / 1000; }), area: true }],
+      tipFn: function (ci) {
+        var s = tools[ci];
+        return "<b>" + esc(s.tool || s.name) + "</b>\n" +
+          '<span class="t-k">duration</span> ' + T.fmtMs(s.durationMs) + "\n" +
+          '<span class="t-k">时间</span> ' + clockOf(s.startMs) + "\n" +
+          '<span class="t-k">状态</span> ' + T.stLabel(s.status);
+      }
+    });
+
+    /* 5-2 输入输出大小（input_chars + output_chars）*/
+    drawLineChart({
+      id: "chartToolIO", legendId: "lgToolIO", h: 220, cats: cats, xFmt: xFmt, unit: "",
+      yFmt: function (v) { return fmtAxis(v); },
+      label: "TOOL 调用输入输出字符数面积图",
+      series: [
+        { name: "input_chars", color: C1, vals: tools.map(function (s) { return T.ioChars(s, "in"); }), area: true },
+        { name: "output_chars", color: C2, vals: tools.map(function (s) { return T.ioChars(s, "out"); }), area: true }
+      ],
+      tipFn: function (ci) {
+        var s = tools[ci];
+        return "<b>" + esc(s.tool || s.name) + "</b>\n" +
+          '<span class="t-k">input_chars</span> ' + T.fmtInt(T.ioChars(s, "in")) + "\n" +
+          '<span class="t-k">output_chars</span> ' + T.fmtInt(T.ioChars(s, "out"));
+      }
+    });
+
+    /* 5-3 各工具调用次数（堆叠柱：success 靛蓝 + fail 红）*/
+    drawToolCount();
+  }
+
+  function drawToolCount() {
+    var box = document.getElementById("chartToolCnt");
+    if (!box) return;
+    var names = Object.keys(T.byTool);
+    if (!names.length) { panelEmpty("chartToolCnt", "暂无数据"); plegend("lgToolCnt", []); return; }
+    names.sort(function (a, b) { return T.byTool[b].all.length - T.byTool[a].all.length; });
+
+    var H = 220, PADL = 34, PADR = 12, PADT = 22, PADB = 46;
+    var W = Math.max(220, box.clientWidth || 300);
+    var x0 = PADL, x1 = W - PADR, y0 = PADT, y1 = H - PADB;
+    var maxCnt = niceMax(Math.max.apply(null, names.map(function (k) { return T.byTool[k].all.length; }).concat([1])), 3);
+    var TICKS = 3;
+
+    box.innerHTML = "";
+    var svg = el("svg", { viewBox: "0 0 " + W + " " + H, width: "100%", height: H,
+      preserveAspectRatio: "xMinYMin meet", role: "img", "aria-label": "各工具调用次数堆叠柱状图" });
+    box.appendChild(svg);
+    function sy(v) { return y1 - (v / maxCnt) * (y1 - y0); }
+
+    axisVals(maxCnt, TICKS).forEach(function (v) {
+      svg.appendChild(el("line", { class: "grid-line", x1: x0, x2: x1, y1: sy(v), y2: sy(v) }));
+      svg.appendChild(el("text", { class: "ax-txt ax-txt--y", x: x0 - 7, y: sy(v) + 4 }, String(Math.round(v))));
+    });
+
+    var bandW = (x1 - x0) / names.length;
+    var barW = Math.min(54, bandW * 0.56);
+    names.forEach(function (k, i) {
+      var b = T.byTool[k];
+      var cx = x0 + bandW * i + bandW / 2;
+      var okN = b.all.length - b.bad.length, failN = b.bad.length;
+      var g = el("g", { class: "g-col", tabindex: "0", role: "img",
+        "aria-label": k + " 调用 " + b.all.length + " 次，失败 " + failN + " 次" });
+      g.appendChild(el("rect", { class: "row-hl", x: x0 + bandW * i, y: y0 - 6, width: bandW, height: (y1 - y0) + 6 }));
+      /* success 段（底）*/
+      var okH = (okN / maxCnt) * (y1 - y0), failH = (failN / maxCnt) * (y1 - y0);
+      if (okN) g.appendChild(el("rect", { class: "bar-v", x: cx - barW / 2, y: y1 - okH, width: barW, height: okH,
+        rx: 2, style: "fill:" + C1 + ";animation-delay:" + (REDUCED ? 0 : i * 70) + "ms" }));
+      /* fail 段（顶，叠在 success 上）*/
+      if (failN) g.appendChild(el("rect", { class: "bar-v", x: cx - barW / 2, y: y1 - okH - failH, width: barW, height: failH,
+        rx: 2, style: "fill:" + C4 + ";animation-delay:" + (REDUCED ? 0 : i * 70) + "ms" }));
+      /* 顶部总数标签 */
+      svg.appendChild(el("text", { class: "lbl lbl--val", x: cx, y: y1 - okH - failH - 6,
+        "text-anchor": "middle", "font-size": "11", style: "font-weight:700;fill:var(--ink)" }, String(b.all.length)));
+      /* X 轴工具名（长名截断）*/
+      svg.appendChild(el("text", { class: "ax-txt ax-txt--x", x: cx, y: y1 + 17, "font-size": "10.5" }, trunc(k, bandW / 6.4)));
+      bindTip(g, function () {
+        return "<b>" + esc(k) + "</b>\n" +
+          '<span class="t-k">调用</span> ' + b.all.length + " 次\n" +
+          '<span class="t-k">成功</span> ' + okN + " 次\n" +
+          (failN ? '<span class="t-err">失败/告警 ' + failN + " 次</span>\n" : "") +
+          '<span class="t-k">累计</span> ' + T.fmtMs(b.total);
+      });
+      svg.appendChild(g);
+    });
+    svg.appendChild(el("line", { class: "ax-line", x1: x0, x2: x1, y1: y1, y2: y1 }));
+    plegend("lgToolCnt", [{ n: "success", c: C1 }, { n: "fail", c: C4 }]);
+  }
+
+  /* ── 渲染 + 响应式重绘 ── */
+  function renderAll() {
+    drawGantt();
+    drawPie(); drawTopTables(); drawLlmCharts(); drawToolCharts();
+  }
+  renderAll();
+
+  var rt = null, lastW = 0;
+  function onResize() {
+    var w = document.getElementById("chartGantt") ? document.getElementById("chartGantt").clientWidth : 0;
+    if (Math.abs(w - lastW) < 24) return;   /* 阈值内不重绘，避免抖动 */
+    lastW = w;
+    clearTimeout(rt);
+    rt = setTimeout(renderAll, 180);
+  }
+  lastW = document.getElementById("chartGantt") ? document.getElementById("chartGantt").clientWidth : 0;
+  window.addEventListener("resize", onResize);
+  /* 供核心 IIFE 在板块展开后强制重绘（宽度未变也要重算）*/
+  window.__REDRAW = function () { lastW = 0; clearTimeout(rt); rt = setTimeout(renderAll, 60); };
+  /* 字体加载完成后宽度可能变化，补一次重绘 */
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(function () { setTimeout(onResize, 60); }).catch(function () {});
+  }
+})();
+</script>
+</body>
+</html>
