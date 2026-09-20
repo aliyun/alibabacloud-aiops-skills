@@ -21,96 +21,309 @@ def _consume_start_chat(
     *,
     summary_mode: Optional[str] = None,
     on_payload: Optional[Any] = None,
+    worker_role: str = "primary",
+    permission_response: Optional[Dict[str, Any]] = None,
+    can_reconnect: Optional[Any] = None,
 ) -> Dict[str, Any]:
     summary = StreamSummary(args.session_id, mode=summary_mode or args.mode)
     diagnostics = []  # type: List[str]
+    stream_cursor = None  # type: Optional[str]
+    stream_identity = None  # type: Optional[str]
+    stream_sequence = 0
+    pending_applied_stream_event_id = None  # type: Optional[str]
+    reconnect_attempt = 0
 
-    if getattr(args, "transport", "aliyun_cli") == "code":
-        response = _open_code_request(
-            "StartChat",
-            build_start_chat_parameters(args, prompt, client_context, attachments),
-            str(args.endpoint),
-            args.profile,
-            args.region_id,
-            args.aliyun_path,
-            int(args.connect_timeout),
-            int(args.read_timeout),
-            credential_source=getattr(args, "credential_source", None),
+    def boundary_is_immediate() -> bool:
+        if summary.state in TERMINAL_STATES:
+            return False
+        if summary.input_required is not None and not summary.input_required_from_pending:
+            return True
+        if summary.assistant_final or (summary.mode == "normal" and summary.state == "input-required"):
+            return True
+        return (
+            worker_role == "sideband"
+            and isinstance(permission_response, dict)
+            and isinstance(summary.permission_ack, dict)
+            and _permission_response_is_acknowledged(permission_response, summary.permission_ack)
         )
-        try:
-            content_type = str(response.headers.get("Content-Type", "")).lower()
-            if "text/event-stream" not in content_type:
-                raw = response.read(MAX_DIAGNOSTIC_BYTES + 1)
-                detail = sanitize_text(raw.decode("utf-8", "replace"), 2000)
-                raise BridgeError(
-                    "stream_failed",
-                    detail or "Alibaba Cloud ROS StartChat did not return an SSE stream.",
-                    True,
-                )
-            for payload, raw in iter_sse_payloads(_response_text_lines(response)):
-                if payload is None:
-                    summary.malformed_event_count += 1
-                    if raw:
-                        diagnostics.append(raw)
-                    continue
-                summary.apply(payload)
-                if on_payload is not None:
-                    on_payload(payload, summary)
-        except BridgeError:
-            raise
-        except Exception as exc:
+
+    def process_event(event: Dict[str, Any], invocation_id: Optional[str] = None) -> bool:
+        nonlocal stream_cursor, stream_identity, stream_sequence, pending_applied_stream_event_id
+        bootstrap = event.get("bootstrap")
+        bootstrap_session_id = None  # type: Optional[str]
+        if isinstance(bootstrap, dict):
+            if bootstrap.get("invocationId") != invocation_id:
+                return True
+            nested = bootstrap.get("event")
+            if not isinstance(nested, dict) or not isinstance(nested.get("data"), dict):
+                return True
+            candidate = bootstrap.get("sessionId")
+            if isinstance(candidate, str) and candidate:
+                bootstrap_session_id = candidate
+
+        payload = event.get("payload")
+        raw = event.get("raw")
+        if not isinstance(payload, dict):
+            summary.malformed_event_count += 1
+            if isinstance(raw, str) and raw:
+                diagnostics.append(raw)
+            return True
+        payload_session_id = _find_first(payload, "contextId", "context_id", "SessionId")
+        if (
+            isinstance(payload_session_id, str)
+            and payload_session_id
+            and bootstrap_session_id is not None
+            and payload_session_id != bootstrap_session_id
+        ):
+            raise BridgeError("stream_session_mismatch", "StartChat bootstrap returned a different SessionId.")
+        observed_session_id = (
+            payload_session_id
+            if isinstance(payload_session_id, str) and payload_session_id
+            else bootstrap_session_id
+        )
+        if (
+            isinstance(observed_session_id, str)
+            and observed_session_id
+            and summary.session_id
+            and observed_session_id != summary.session_id
+        ):
+            raise BridgeError("stream_session_mismatch", "StartChat returned a different SessionId.")
+        if can_reconnect is not None and can_reconnect() is False:
+            if isinstance(observed_session_id, str) and observed_session_id:
+                summary.session_id = observed_session_id
+            if on_payload is not None:
+                on_payload(None, payload, summary, False)
+            return False
+        event_id = event.get("id")
+        heartbeat = str(payload.get("object", "")).lower() in {"heartbeat", "keepalive"}
+        if heartbeat:
+            summary.apply(payload)
+            return True
+        if event_id is None:
+            raise BridgeError("missing_stream_event_id", "StartChat returned a business event without an SSE ID.")
+        identity, sequence = parse_stream_event_id(event_id)
+        if stream_identity is not None and identity != stream_identity:
             raise BridgeError(
-                "stream_failed",
-                "Alibaba Cloud ROS StartChat stream ended unexpectedly.",
-                True,
-            ) from exc
-        finally:
-            response.close()
+                "stream_event_identity_mismatch",
+                "StartChat returned an event from a different stream during reconnect.",
+            )
+        if stream_identity is None:
+            stream_identity = identity
+        if sequence <= stream_sequence:
+            return True
+
+        already_applied = pending_applied_stream_event_id == event_id
+        if not already_applied:
+            if not (isinstance(payload_session_id, str) and payload_session_id) and bootstrap_session_id is not None:
+                summary.session_id = bootstrap_session_id
+            summary.apply(payload)
+            if not isinstance(summary.session_id, str) or not summary.session_id:
+                raise BridgeError(
+                    "missing_stream_session_id",
+                    "StartChat did not provide the SessionId required for reconnect.",
+                )
+            pending_applied_stream_event_id = event_id
+
+        if on_payload is not None and on_payload(event_id, payload, summary, already_applied) is False:
+            return False
+        stream_cursor = event_id
+        stream_sequence = sequence
+        pending_applied_stream_event_id = None
+        return True
+
+    def result() -> Dict[str, Any]:
         return summary.to_result(0, "\n".join(diagnostics))
 
-    command = build_command(args, prompt, client_context, attachments)
-    with tempfile.TemporaryFile(mode="w+b") as stderr_file:
-        try:
-            process = subprocess.Popen(
-                command,
-                cwd=str(workspace),
-                stdin=subprocess.DEVNULL,
-                stdout=subprocess.PIPE,
-                stderr=stderr_file,
-                text=True,
-                encoding="utf-8",
-                errors="replace",
+    while True:
+        reconnecting = stream_cursor is not None
+        if reconnecting and can_reconnect is not None and can_reconnect() is False:
+            return {"ok": True, "state": "worker-stopped", "_workerStopped": True}
+        immediate = False
+        transport_error = None  # type: Optional[BridgeError]
+        cli_return_code = 0
+        cli_stderr = ""
+        cli_failure_seen = False
+
+        if getattr(args, "transport", "aliyun_cli") == "code":
+            parameters = (
+                build_reconnect_start_chat_parameters(str(summary.session_id), stream_cursor)
+                if reconnecting
+                else build_start_chat_parameters(args, prompt, client_context, attachments)
             )
-        except OSError as exc:
-            raise BridgeError("cli_start_failed", "Alibaba Cloud CLI could not be started.", True) from exc
-        assert process.stdout is not None
-        try:
-            for payload, raw in iter_cli_plugin_payloads(process.stdout):
-                if payload is None:
-                    summary.malformed_event_count += 1
-                    if raw:
-                        diagnostics.append(raw)
-                else:
-                    summary.apply(payload)
-                    if on_payload is not None:
-                        on_payload(payload, summary)
-            return_code = process.wait()
-        except KeyboardInterrupt as exc:
-            _stop_process(process)
+            response = None
+            try:
+                response = _open_code_request(
+                    "StartChat",
+                    parameters,
+                    str(args.endpoint),
+                    args.profile,
+                    args.region_id,
+                    args.aliyun_path,
+                    int(args.connect_timeout),
+                    int(args.read_timeout),
+                    args.user_agent,
+                    credential_source=getattr(args, "credential_source", None),
+                )
+                content_type = str(response.headers.get("Content-Type", "")).lower()
+                if "text/event-stream" not in content_type:
+                    raw = response.read(MAX_DIAGNOSTIC_BYTES + 1)
+                    detail = sanitize_text(raw.decode("utf-8", "replace"), 2000)
+                    raise BridgeError(
+                        "stream_failed",
+                        detail or "Alibaba Cloud ROS StartChat did not return an SSE stream.",
+                        True,
+                    )
+                for event in iter_sse_payloads(_response_text_lines(response)):
+                    if not process_event(event):
+                        return {"ok": True, "state": "worker-stopped", "_workerStopped": True}
+                    if boundary_is_immediate():
+                        immediate = True
+                        break
+            except KeyboardInterrupt as exc:
+                raise BridgeError(
+                    "interrupted",
+                    "StartChat was interrupted locally; remote cancellation is not confirmed.",
+                ) from exc
+            except BridgeError as exc:
+                transport_error = exc
+            except Exception as exc:
+                transport_error = BridgeError(
+                    "stream_failed", "Alibaba Cloud ROS StartChat stream ended unexpectedly.", True
+                )
+                transport_error.__cause__ = exc
+            finally:
+                if response is not None:
+                    response.close()
+        else:
+            command = (
+                build_reconnect_command(args, str(summary.session_id), stream_cursor)
+                if reconnecting
+                else build_command(args, prompt, client_context, attachments)
+            )
+            invocation_id = (
+                uuid.uuid4().hex if getattr(args, "aliyun_cli_execution_mode", "local") == "remote" else None
+            )
+            with tempfile.TemporaryDirectory() as bootstrap_root, tempfile.TemporaryFile(mode="w+b") as stderr_file:
+                process_environment = None  # type: Optional[Dict[str, str]]
+                ack_path = None  # type: Optional[pathlib.Path]
+                if invocation_id is not None:
+                    ack_path = pathlib.Path(bootstrap_root) / "bootstrap-ack.json"
+                    process_environment = dict(os.environ)
+                    process_environment[REMOTE_BOOTSTRAP_INVOCATION_ENV] = invocation_id
+                    process_environment[REMOTE_BOOTSTRAP_ACK_FILE_ENV] = str(ack_path)
+                    process_environment[REMOTE_BOOTSTRAP_PROTOCOL_ENV] = REMOTE_BOOTSTRAP_CAPABILITY
+                try:
+                    process = subprocess.Popen(
+                        command,
+                        cwd=str(workspace),
+                        stdin=subprocess.DEVNULL,
+                        stdout=subprocess.PIPE,
+                        stderr=stderr_file,
+                        text=True,
+                        encoding="utf-8",
+                        errors="replace",
+                        env=process_environment,
+                    )
+                except OSError as exc:
+                    process = None
+                    transport_error = BridgeError("cli_start_failed", "Alibaba Cloud CLI could not be started.", True)
+                    transport_error.__cause__ = exc
+                if process is not None:
+                    assert process.stdout is not None
+                    try:
+                        for event in iter_cli_plugin_payloads(process.stdout):
+                            if event.get("cliFailure") is True:
+                                cli_failure_seen = True
+                                raw = event.get("raw")
+                                if isinstance(raw, str) and raw:
+                                    diagnostics.append(raw)
+                                continue
+                            bootstrap = event.get("bootstrap")
+                            if isinstance(bootstrap, dict) and (
+                                bootstrap.get("invocationId") != invocation_id
+                                or not isinstance(bootstrap.get("event"), dict)
+                                or not isinstance(bootstrap["event"].get("id"), str)
+                                or not isinstance(bootstrap["event"].get("data"), dict)
+                            ):
+                                continue
+                            if not process_event(event, invocation_id):
+                                _stop_process(process)
+                                return {"ok": True, "state": "worker-stopped", "_workerStopped": True}
+                            if (
+                                isinstance(bootstrap, dict)
+                                and ack_path is not None
+                                and isinstance(event.get("id"), str)
+                            ):
+                                _atomic_json(
+                                    ack_path,
+                                    {
+                                        "invocationId": invocation_id,
+                                        "eventId": event["id"],
+                                        "committed": True,
+                                    },
+                                )
+                            if boundary_is_immediate():
+                                immediate = True
+                                _stop_process(process)
+                                break
+                        cli_return_code = process.wait()
+                    except KeyboardInterrupt as exc:
+                        _stop_process(process)
+                        raise BridgeError(
+                            "interrupted",
+                            "StartChat was interrupted locally; remote cancellation is not confirmed.",
+                        ) from exc
+                    except BridgeError as exc:
+                        _stop_process(process)
+                        transport_error = exc
+                    except BaseException as exc:
+                        _stop_process(process)
+                        transport_error = BridgeError(
+                            "stream_failed", "Alibaba Cloud CLI StartChat output ended unexpectedly.", True
+                        )
+                        transport_error.__cause__ = exc
+                    finally:
+                        process.stdout.close()
+                stderr_file.seek(0)
+                cli_stderr = stderr_file.read(MAX_DIAGNOSTIC_BYTES).decode("utf-8", "replace")
+
+        if immediate:
+            return result()
+        if transport_error is None and cli_return_code == 0 and cli_failure_seen:
             raise BridgeError(
-                "interrupted",
-                "StartChat was interrupted locally; remote cancellation is not confirmed.",
-            ) from exc
-        except BaseException:
-            _stop_process(process)
-            raise
-        finally:
-            process.stdout.close()
-        stderr_file.seek(0)
-        stderr_text = stderr_file.read(MAX_DIAGNOSTIC_BYTES).decode("utf-8", "replace")
-    if diagnostics and not stderr_text:
-        stderr_text = "\n".join(diagnostics)
-    return summary.to_result(return_code, stderr_text)
+                "aliyun_cli_failed",
+                sanitize_text("\n".join(diagnostics[-8:]), 3000) or "Alibaba Cloud CLI StartChat failed.",
+            )
+        if transport_error is None and cli_return_code != 0:
+            diagnostic_text = "\n".join(diagnostics[-8:])
+            if is_retryable_cli_failure(cli_return_code, cli_stderr, diagnostic_text):
+                transport_error = BridgeError(
+                    "aliyun_cli_failed",
+                    sanitize_text(cli_stderr, 3000) or "Alibaba Cloud CLI StartChat was interrupted.",
+                    True,
+                )
+            else:
+                return summary.to_result(cli_return_code, cli_stderr or diagnostic_text)
+        if transport_error is not None:
+            if not transport_error.retryable:
+                raise transport_error
+            if stream_cursor is None or not isinstance(summary.session_id, str) or not summary.session_id:
+                raise BridgeError(
+                    "missing_recovery_anchor",
+                    "StartChat was interrupted before a complete recovery anchor was committed.",
+                ) from transport_error
+        elif summary.state in TERMINAL_STATES:
+            return result()
+        elif stream_cursor is None or not isinstance(summary.session_id, str) or not summary.session_id:
+            raise BridgeError(
+                "missing_recovery_anchor",
+                "StartChat ended before a complete recovery anchor was committed.",
+            )
+
+        if can_reconnect is not None and can_reconnect() is False:
+            return {"ok": True, "state": "worker-stopped", "_workerStopped": True}
+        reconnect_attempt += 1
+        time.sleep(min(0.1 * (2 ** min(reconnect_attempt - 1, 6)), MAX_RECONNECT_BACKOFF_SECONDS))
 
 
 def run_chat(args: argparse.Namespace) -> Dict[str, Any]:
@@ -237,8 +450,10 @@ def _request_from_job(job: Dict[str, Any], prompt: str) -> Dict[str, Any]:
         "connectTimeout": job.get("connectTimeout", 10),
         "readTimeout": job.get("readTimeout", DEFAULT_READ_TIMEOUT_SECONDS),
         "aliyunPath": job.get("aliyunPath", "aliyun"),
+        "userAgent": job["userAgent"],
         "clientContext": None,
         "attachments": [],
+        "streamCursor": None,
     }
 
 
@@ -279,6 +494,8 @@ def _start_job_local(payload: Dict[str, Any]) -> Dict[str, Any]:
     else:
         _load_code_sdk()
     job_id = uuid.uuid4().hex
+    skill_session_id = uuid.uuid4().hex
+    user_agent = _skill_user_agent(skill_session_id)
     root, job_path, spool = _job_paths(job_id)
     _secure_directory(root)
     spool.touch()
@@ -300,6 +517,8 @@ def _start_job_local(payload: Dict[str, Any]) -> Dict[str, Any]:
         "connectTimeout": int(payload.get("connectTimeout") or 10),
         "readTimeout": int(payload.get("readTimeout") or DEFAULT_READ_TIMEOUT_SECONDS),
         "aliyunPath": aliyun_path,
+        "skillSessionId": skill_session_id,
+        "userAgent": user_agent,
         "preferredLanguage": _preferred_language(prompt),
         "state": "submitted",
         "turn": 1,
@@ -371,6 +590,8 @@ def _continue_job_local(payload: Dict[str, Any]) -> Dict[str, Any]:
             job["conversationMode"] = "normal"
             job.pop("pipelineResult", None)
         job["activeRequestSeq"] = int(job.get("activeRequestSeq") or 0) + 1
+        for key in ("streamCursor", "streamIdentity", "streamSequence"):
+            job.pop(key, None)
         job["state"] = "submitted"
         job.pop("inputRequired", None)
         job.pop("error", None)
@@ -525,10 +746,14 @@ def _respond_job_local(payload: Dict[str, Any]) -> Dict[str, Any]:
             job["sidebandResponseInputId"] = response.get("inputId")
             job["sidebandResponse"] = pending
             job["state"] = "working"
+            for key in ("sidebandStreamCursor", "sidebandStreamIdentity", "sidebandStreamSequence"):
+                job.pop(key, None)
         else:
             if primary_worker_alive:
                 raise BridgeError("job_busy", "The current StartChat request is still running.", True)
             job["activeRequestSeq"] = int(job.get("activeRequestSeq") or 0) + 1
+            for key in ("streamCursor", "streamIdentity", "streamSequence"):
+                job.pop(key, None)
             job["state"] = "submitted"
             job["permissionResponseInput"] = pending
         job["lastPermissionResponse"] = response
@@ -579,6 +804,7 @@ def _run_stop_chat(job: Dict[str, Any], session_id: str) -> Dict[str, Any]:
             str(job.get("aliyunPath") or "aliyun"),
             max(1, min(int(job.get("connectTimeout") or 10), 30)),
             int(STOP_REQUEST_TIMEOUT_SECONDS),
+            str(job["userAgent"]),
             credential_source=(
                 job.get("credentialSource") if job.get("credentialSource") == "profile" else None
             ),
@@ -634,32 +860,168 @@ def _run_stop_chat(job: Dict[str, Any], session_id: str) -> Dict[str, Any]:
     return result
 
 
+def _claim_stop_dispatch(job_id: str, session_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    root, job_path, _spool = _job_paths(job_id)
+    with StateLock(root / ".job.lock"):
+        job = _load_state_json(job_path)
+        if job.get("stopRequestedAt") is None:
+            return None
+        if isinstance(session_id, str) and session_id:
+            existing = job.get("sessionId")
+            if isinstance(existing, str) and existing and existing != session_id:
+                return None
+            job["sessionId"] = session_id
+        effective_session_id = job.get("sessionId")
+        if (
+            not isinstance(effective_session_id, str)
+            or not effective_session_id
+            or job.get("stopDispatchStartedAt") is not None
+        ):
+            if isinstance(session_id, str) and session_id:
+                _atomic_json(job_path, job)
+            return None
+        job["stopDispatchStartedAt"] = int(time.time())
+        _atomic_json(job_path, job)
+        return dict(job)
+
+
+def _settle_stop_dispatch(
+    job_id: str,
+    stopped: Optional[Dict[str, Any]] = None,
+    error: Optional[BridgeError] = None,
+) -> Dict[str, Any]:
+    root, job_path, _spool = _job_paths(job_id)
+    with StateLock(root / ".job.lock"):
+        job = _load_state_json(job_path)
+        job.setdefault("stopRequestedAt", int(time.time()))
+        stop_status = stopped.get("status") if isinstance(stopped, dict) else None
+        if error is not None or stop_status == "Failed" or stop_status not in {"Stopped", "Stopping", "NoActiveStream"}:
+            job["stopStatus"] = "Failed"
+            job["state"] = "failed"
+            job["error"] = {
+                "code": "stop_chat_failed",
+                "message": sanitize_text(error.message, 2000)
+                if isinstance(error, BridgeError)
+                else "Alibaba Cloud ROS could not stop the active chat.",
+                "retryable": True,
+            }
+        else:
+            job["stopStatus"] = stop_status
+            job["state"] = {
+                "Stopped": "canceled",
+                "Stopping": "canceling",
+                "NoActiveStream": "not-active",
+            }[stop_status]
+            job.pop("inputRequired", None)
+            job.pop("pendingPermissions", None)
+        if isinstance(stopped, dict) and isinstance(stopped.get("requestId"), str):
+            job["stopRequestId"] = stopped["requestId"]
+        _atomic_json(job_path, job)
+        return job
+
+
+def _dispatch_claimed_stop(job_id: str, claimed_job: Dict[str, Any]) -> Dict[str, Any]:
+    session_id = claimed_job.get("sessionId")
+    if not isinstance(session_id, str) or not session_id:
+        return _settle_stop_dispatch(
+            job_id,
+            error=BridgeError("stop_chat_failed", "Alibaba Cloud ROS StopChat has no SessionId.", True),
+        )
+    stop_job = dict(claimed_job)
+    try:
+        stop_job["_transientEnvironment"] = _capture_remote_cli_environment(
+            stop_job.get("aliyunCLIForwardEnv", [])
+        )
+        stopped = _run_stop_chat(stop_job, session_id)
+    except BridgeError as exc:
+        return _settle_stop_dispatch(job_id, error=exc)
+    except BaseException as exc:
+        error = BridgeError("stop_chat_failed", "Alibaba Cloud ROS StopChat failed.", True)
+        error.__cause__ = exc
+        return _settle_stop_dispatch(job_id, error=error)
+    return _settle_stop_dispatch(job_id, stopped=stopped)
+
+
+def _record_stopped_worker_exit(
+    job_id: str,
+    request_seq: int,
+    worker_role: Any,
+    worker_token: Any,
+    worker_pid: int,
+) -> None:
+    root, job_path, _spool = _job_paths(job_id)
+    with StateLock(root / ".job.lock"):
+        job = _load_state_json(job_path)
+        if job.get("activeRequestSeq") != request_seq:
+            return
+        if worker_role == "sideband":
+            if job.get("sidebandWorkerToken") != worker_token:
+                return
+            if job.get("sidebandWorkerPid") == worker_pid:
+                job.pop("sidebandWorkerPid", None)
+            job.pop("sidebandWorkerToken", None)
+        elif job.get("workerPid") == worker_pid:
+            job.pop("workerPid", None)
+        _atomic_json(job_path, job)
+
+
 def _cancel_job_local(payload: Dict[str, Any]) -> Dict[str, Any]:
     job_id = str(payload.get("jobId") or "")
     root, job_path, spool = _job_paths(job_id)
+    with StateLock(root / ".job.lock"):
+        job = _load_state_json(job_path)
+        job.setdefault("stopRequestedAt", int(time.time()))
+        _atomic_json(job_path, job)
+
     deadline = time.monotonic() + STOP_SESSION_WAIT_SECONDS
+    claimed_job = _claim_stop_dispatch(job_id)
     while True:
         job = _load_state_json(job_path)
-        session_id = job.get("sessionId")
-        if isinstance(session_id, str) and session_id:
+        if claimed_job is not None or job.get("stopStatus") is not None:
+            break
+        claimed_job = _claim_stop_dispatch(job_id)
+        if claimed_job is not None:
             break
         if time.monotonic() >= deadline:
-            raise BridgeError("job_not_ready", "The ROS Agent job has not received a SessionId yet.", True)
+            with StateLock(root / ".job.lock"):
+                latest = _load_state_json(job_path)
+                if latest.get("stopStatus") is None and latest.get("state") not in TERMINAL_STATES | {"failed"}:
+                    latest["state"] = "canceling"
+                    _atomic_json(job_path, latest)
+            return {
+                "ok": True,
+                "jobId": job_id,
+                "state": "canceling",
+                "mode": latest.get("mode"),
+                "preferredLanguage": latest.get("preferredLanguage", "en"),
+                "cursor": len(_read_spool(spool)),
+                "turn": int(latest.get("turn") or 1),
+                "presentationRequired": True,
+            }
         time.sleep(0.1)
 
-    stop_job = dict(job)
-    stop_job["_transientEnvironment"] = _remote_cli_environment_from_payload(job, payload)
-    stopped = _run_stop_chat(stop_job, session_id)
-    stop_status = stopped["status"]
-    with StateLock(root / ".job.lock"):
-        latest = _load_state_json(job_path)
-        latest["stopStatus"] = stop_status
-        latest["stopRequestedAt"] = int(time.time())
-        if stop_status == "Stopped":
-            latest["state"] = "canceled"
-            latest.pop("inputRequired", None)
-            latest.pop("pendingPermissions", None)
-        _atomic_json(job_path, latest)
+    if claimed_job is not None:
+        claimed_job["_transientEnvironment"] = _remote_cli_environment_from_payload(claimed_job, payload)
+        try:
+            stopped = _run_stop_chat(claimed_job, str(claimed_job["sessionId"]))
+        except BridgeError as exc:
+            latest = _settle_stop_dispatch(job_id, error=exc)
+        except BaseException as exc:
+            error = BridgeError("stop_chat_failed", "Alibaba Cloud ROS StopChat failed.", True)
+            error.__cause__ = exc
+            latest = _settle_stop_dispatch(job_id, error=error)
+        else:
+            latest = _settle_stop_dispatch(job_id, stopped=stopped)
+    else:
+        while time.monotonic() < deadline:
+            latest = _load_state_json(job_path)
+            if latest.get("stopStatus") is not None:
+                break
+            time.sleep(0.1)
+        else:
+            latest = _load_state_json(job_path)
+
+    stop_status = str(latest.get("stopStatus") or "Stopping")
     state_by_status = {
         "Stopped": "canceled",
         "Stopping": "canceling",
@@ -675,13 +1037,15 @@ def _cancel_job_local(payload: Dict[str, Any]) -> Dict[str, Any]:
         "preferredLanguage": latest.get("preferredLanguage", "en"),
         "cursor": len(_read_spool(spool)),
         "turn": int(latest.get("turn") or 1),
-        "sessionId": session_id,
         "presentationRequired": True,
     }  # type: Dict[str, Any]
+    session_id = latest.get("sessionId")
+    if isinstance(session_id, str) and session_id:
+        result["sessionId"] = session_id
     if latest.get("conversationMode") in SUPPORTED_AGENT_MODES:
         result["conversationMode"] = latest["conversationMode"]
-    if isinstance(stopped.get("requestId"), str):
-        result["requestId"] = stopped["requestId"]
+    if isinstance(latest.get("stopRequestId"), str):
+        result["requestId"] = latest["stopRequestId"]
     if stop_status == "Failed":
         result["error"] = {
             "code": "stop_chat_failed",
@@ -728,6 +1092,7 @@ def run_worker(job_id: str, request_token: str) -> int:
         no_thinking=request.get("noThinking") is True,
         mode=request.get("mode"),
         session_id=request.get("sessionId"),
+        user_agent=request.get("userAgent"),
     )
     prompt = request.get("prompt")
     if not isinstance(prompt, str):
@@ -738,8 +1103,23 @@ def run_worker(job_id: str, request_token: str) -> int:
     attachments = request.get("attachments") if isinstance(request.get("attachments"), list) else []
     summary_mode = request.get("summaryMode") if request.get("summaryMode") in SUPPORTED_AGENT_MODES else args.mode
 
-    def project(payload: Dict[str, Any], summary: StreamSummary) -> None:
-        _append_projection(
+    def worker_can_continue() -> bool:
+        _current_root, current_job_path, _current_spool = _job_paths(job_id)
+        with StateLock(_current_root / ".job.lock"):
+            current = _load_state_json(current_job_path)
+            if current.get("activeRequestSeq") != request_seq or current.get("stopRequestedAt") is not None:
+                return False
+            if worker_role == "sideband" and current.get("sidebandWorkerToken") != worker_token:
+                return False
+            return True
+
+    def project(
+        stream_event_id: Optional[str],
+        payload: Dict[str, Any],
+        summary: StreamSummary,
+        _already_applied: bool,
+    ) -> bool:
+        return _append_projection(
             job_id,
             _project_managed_stream_event(
                 payload,
@@ -749,6 +1129,7 @@ def run_worker(job_id: str, request_token: str) -> int:
                 str(worker_role or "primary"),
                 worker_token,
             ),
+            stream_event_id,
         )
 
     try:
@@ -760,18 +1141,50 @@ def run_worker(job_id: str, request_token: str) -> int:
             attachments,
             summary_mode=summary_mode,
             on_payload=project,
+            worker_role=str(worker_role or "primary"),
+            permission_response=(
+                request.get("permissionResponse")
+                if isinstance(request.get("permissionResponse"), dict)
+                else None
+            ),
+            can_reconnect=worker_can_continue,
         )
     except BaseException as exc:
         error = exc if isinstance(exc, BridgeError) else BridgeError("stream_failed", str(exc), True)
+        if not worker_can_continue():
+            claimed_job = _claim_stop_dispatch(job_id)
+            if claimed_job is not None:
+                _dispatch_claimed_stop(job_id, claimed_job)
+            _record_stopped_worker_exit(job_id, request_seq, worker_role, worker_token, worker_pid)
+            latest = _load_state_json(_job_paths(job_id)[1])
+            return 1 if latest.get("state") == "failed" else 0
         fail_worker(error)
         return 1
+    if result.get("_workerStopped") is True:
+        claimed_job = _claim_stop_dispatch(job_id)
+        if claimed_job is not None:
+            _dispatch_claimed_stop(job_id, claimed_job)
+        _record_stopped_worker_exit(job_id, request_seq, worker_role, worker_token, worker_pid)
+        latest = _load_state_json(_job_paths(job_id)[1])
+        return 1 if latest.get("state") == "failed" else 0
+
     permission_response = request.get("permissionResponse")
     if isinstance(permission_response, dict):
         result["permissionResponse"] = permission_response
     if worker_role == "sideband" and isinstance(worker_token, str):
         _finish_sideband_job(job_id, request_seq, worker_token, result, worker_pid)
+        if not worker_can_continue():
+            claimed_job = _claim_stop_dispatch(job_id)
+            if claimed_job is not None:
+                _dispatch_claimed_stop(job_id, claimed_job)
+            _record_stopped_worker_exit(job_id, request_seq, worker_role, worker_token, worker_pid)
     else:
-        _finish_job(job_id, request_seq, result, worker_pid)
+        finished = _finish_job(job_id, request_seq, result, worker_pid)
+        if not finished:
+            claimed_job = _claim_stop_dispatch(job_id)
+            if claimed_job is not None:
+                _dispatch_claimed_stop(job_id, claimed_job)
+            _record_stopped_worker_exit(job_id, request_seq, worker_role, worker_token, worker_pid)
     return 0 if result.get("ok") is True else 1
 
 
@@ -1148,11 +1561,26 @@ def run_check(args: argparse.Namespace) -> Dict[str, Any]:
 
     plugin_status = None  # type: Optional[Dict[str, Any]]
     plugin_auto_install = None  # type: Optional[bool]
+    reconnect_ready = args.transport == "code"
+    reconnect_blockers = []  # type: List[str]
     if args.transport == "aliyun_cli" and cli_execution_mode == "remote":
         resolve_aliyun(args.aliyun_path)
         current_profile = {"configured": True, "mode": "RemoteSandbox"}
         cli = "aliyun"
         version = None
+        executor_version = sanitize_text(os.environ.get(REMOTE_EXECUTOR_VERSION_ENV, ""), 120)
+        raw_capabilities = os.environ.get(REMOTE_EXECUTOR_CAPABILITIES_ENV, "")
+        executor_capabilities = {
+            value.strip() for value in raw_capabilities.split(",") if value.strip()
+        }
+        reconnect_ready = bool(
+            executor_version
+            and REMOTE_BOOTSTRAP_CAPABILITY in executor_capabilities
+        )
+        if not executor_version:
+            reconnect_blockers.append("remote_executor_version_unavailable")
+        if REMOTE_BOOTSTRAP_CAPABILITY not in executor_capabilities:
+            reconnect_blockers.append("remote_bootstrap_capability_unavailable")
     elif args.transport == "code" and not args.profile_pinned:
         assert sdk is not None
         region_id = _environment_region() or "cn-hangzhou"
@@ -1202,6 +1630,9 @@ def run_check(args: argparse.Namespace) -> Dict[str, Any]:
             version = sanitize_text((version_result.stdout or b"").decode("utf-8", "replace"), 200)
             plugin_status = _local_ros_plugin_status()
             plugin_auto_install = bool(selected.get("autoPluginInstall"))
+            reconnect_ready = plugin_status.get("reconnectReady") is True
+            if not reconnect_ready:
+                reconnect_blockers.append("ros_cli_plugin_reconnect_version_unavailable")
 
     result = {
         "ok": True,
@@ -1215,18 +1646,22 @@ def run_check(args: argparse.Namespace) -> Dict[str, Any]:
         "enableThinking": args.enable_thinking,
         "aliyunCLIProfile": args.aliyun_cli_profile,
         "currentProfile": current_profile,
+        "startChatReconnectReady": reconnect_ready,
     }  # type: Dict[str, Any]
+    if reconnect_blockers:
+        result["startChatReconnectBlockers"] = reconnect_blockers
     if args.transport == "aliyun_cli" and cli_execution_mode == "remote":
         result["aliyunCLIForwardEnv"] = args.aliyun_cli_forward_env
         result["aliyunCLIForwardEnvPresent"] = [
             name for name in args.aliyun_cli_forward_env if os.environ.get(name) is not None
         ]
+        if executor_version:
+            result["remoteExecutorVersion"] = executor_version
+        result["remoteExecutorCapabilities"] = sorted(executor_capabilities)
     if plugin_status is not None:
         result["rosPluginReady"] = plugin_status["ready"]
         result["pluginAutoInstallEnabled"] = plugin_auto_install
-        result["pluginInstallRequired"] = bool(plugin_status["installed"] and not plugin_status["ready"]) or bool(
-            not plugin_status["installed"] and not plugin_auto_install
-        )
+        result["pluginInstallRequired"] = plugin_status.get("reconnectReady") is not True
         if plugin_status.get("version"):
             result["rosPluginVersion"] = plugin_status["version"]
     return result

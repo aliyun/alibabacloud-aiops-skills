@@ -12,6 +12,7 @@ import os
 import pathlib
 import re
 import secrets
+import shlex
 import shutil
 import socket
 import subprocess
@@ -32,6 +33,10 @@ MAX_CLI_CONFIG_BYTES = 2 * 1024 * 1024
 MAX_PLUGIN_MANIFEST_BYTES = 2 * 1024 * 1024
 MAX_SSE_LINE_BYTES = 16 * 1024 * 1024
 MAX_SSE_EVENT_BYTES = 16 * 1024 * 1024
+MAX_SERVER_REPLAY_BYTES = 64 * 1024 * 1024
+# A JSON wrapper can expand a server event through escaping. This is a parser
+# bound, not a claim about the as-yet unpublished remote executor contract.
+MAX_CLI_BATCH_BYTES = (6 * MAX_SERVER_REPLAY_BYTES) + (1024 * 1024)
 MAX_FINAL_TEXT_BYTES = 10 * 1024
 MAX_DIAGNOSTIC_BYTES = 64 * 1024
 MAX_RESULT_BYTES = 32 * 1024
@@ -48,6 +53,7 @@ DEFAULT_READ_TIMEOUT_SECONDS = 1800
 MANAGER_START_TIMEOUT_SECONDS = 10.0
 STOP_SESSION_WAIT_SECONDS = 10.0
 STOP_REQUEST_TIMEOUT_SECONDS = 60.0
+MAX_RECONNECT_BACKOFF_SECONDS = 5.0
 MANAGER_IDLE_SECONDS = 60
 MAX_MANAGER_IDLE_SECONDS = 24 * 60 * 60
 MANAGER_SCHEMA_VERSION = 3
@@ -67,21 +73,44 @@ MAX_REMOTE_CLI_ENV_VALUE_BYTES = 16 * 1024
 MAX_REMOTE_CLI_ENV_BYTES = 64 * 1024
 SKILL_DISTRIBUTION = "agenthub"
 SKILL_NAME = "alibabacloud-ros-agent"
-USER_AGENT_TEMPLATE = "AlibabaCloud-Agent-Skills/alibabacloud-ros-agent/{session-id}"
+SKILL_MANIFEST_PATH = pathlib.Path(__file__).resolve().parent.parent / "references" / "manifest.json"
+USER_AGENT_TEMPLATE = (
+    "AlibabaCloud-Agent-Skills/alibabacloud-ros-agent/{session-id} skill-version/{skill-version}"
+)
 REQUIREMENTS_FILE = "scripts/requirements.txt"
+REMOTE_EXECUTOR_VERSION_ENV = "ALICLOUD_ROS_AGENT_EXECUTOR_VERSION"
+REMOTE_EXECUTOR_CAPABILITIES_ENV = "ALICLOUD_ROS_AGENT_EXECUTOR_CAPABILITIES"
+MIN_ROS_PLUGIN_VERSION = (0, 9, 1)
+REMOTE_BOOTSTRAP_CAPABILITY = "startchat-reconnect-bootstrap-v1"
+REMOTE_BOOTSTRAP_INVOCATION_ENV = "ALICLOUD_ROS_AGENT_INVOCATION_ID"
+REMOTE_BOOTSTRAP_ACK_FILE_ENV = "ALICLOUD_ROS_AGENT_BOOTSTRAP_ACK_FILE"
+REMOTE_BOOTSTRAP_PROTOCOL_ENV = "ALICLOUD_ROS_AGENT_BOOTSTRAP_PROTOCOL"
 
 
-def _skill_user_agent() -> str:
+def _skill_version() -> str:
+    try:
+        with SKILL_MANIFEST_PATH.open("r", encoding="utf-8") as handle:
+            manifest = json.load(handle)
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise BridgeError(
+            "invalid_skill_manifest",
+            "The AgentHub Skill manifest is unavailable or invalid.",
+        ) from exc
+    version = manifest.get("version") if isinstance(manifest, dict) else None
+    if not isinstance(version, str) or not version.strip():
+        raise BridgeError(
+            "invalid_skill_manifest",
+            "The AgentHub Skill manifest does not contain a valid version.",
+        )
+    return version.strip()
+
+
+def _skill_user_agent(session_id: str) -> str:
     if SKILL_DISTRIBUTION != "agenthub":
         return USER_AGENT_TEMPLATE
-    value = os.environ.get("SKILL_SESSION_ID", "").strip().lower()
-    if re.fullmatch(r"[0-9a-f]{32}", value) is None:
-        value = uuid.uuid4().hex
-        os.environ["SKILL_SESSION_ID"] = value
-    return USER_AGENT_TEMPLATE.replace("{session-id}", value)
-
-
-USER_AGENT = _skill_user_agent()
+    if re.fullmatch(r"[0-9a-f]{32}", session_id) is None:
+        raise BridgeError("invalid_skill_session", "The AgentHub Skill session identifier is invalid.")
+    return USER_AGENT_TEMPLATE.replace("{session-id}", session_id).replace("{skill-version}", _skill_version())
 PROFILE_ENV_NAMES = (
     "ALIBABACLOUD_PROFILE",
     "ALIBABA_CLOUD_PROFILE",

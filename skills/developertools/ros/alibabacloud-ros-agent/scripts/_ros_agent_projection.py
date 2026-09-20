@@ -1127,7 +1127,7 @@ def _project_managed_stream_event(
     return projection
 
 
-def _append_projection(job_id: str, projection: Dict[str, Any]) -> None:
+def _append_projection(job_id: str, projection: Dict[str, Any], stream_event_id: Optional[str] = None) -> bool:
     root, job_path, spool = _job_paths(job_id)
     _secure_directory(root)
     projection = _bound_projection(projection)
@@ -1135,11 +1135,17 @@ def _append_projection(job_id: str, projection: Dict[str, Any]) -> None:
         job = _load_state_json(job_path)
         request_seq = projection.get("requestSeq")
         if isinstance(request_seq, int) and request_seq != job.get("activeRequestSeq"):
-            return
+            return False
         worker_role = projection.get("workerRole")
         worker_token = projection.get("workerToken")
         if worker_role == "sideband" and worker_token != job.get("sidebandWorkerToken"):
-            return
+            return False
+        if job.get("stopRequestedAt") is not None:
+            session_id = projection.get("sessionId")
+            if isinstance(session_id, str) and session_id and not isinstance(job.get("sessionId"), str):
+                job["sessionId"] = session_id
+                _atomic_json(job_path, job)
+            return False
         projection_error = projection.get("error")
         if (
             worker_role != "sideband"
@@ -1314,18 +1320,38 @@ def _append_projection(job_id: str, projection: Dict[str, Any]) -> None:
         wire_projection.pop("workerRole", None)
         wire_projection.pop("workerToken", None)
         meaningful = wire_projection.get("type") != "status" or identity_changed
+        already_spooled = False
+        if meaningful and isinstance(stream_event_id, str):
+            wire_projection["streamEventId"] = stream_event_id
+            already_spooled = any(
+                value.get("streamEventId") == stream_event_id
+                and value.get("requestSeq") == request_seq
+                for value in _read_spool(spool)
+            )
         if meaningful:
             data = _json_bytes(wire_projection) + b"\n"
             current_size = spool.stat().st_size if spool.exists() else 0
-            if current_size + len(data) > MAX_SPOOL_BYTES:
+            if not already_spooled and current_size + len(data) > MAX_SPOOL_BYTES:
                 raise BridgeError("stream_failed", "The bounded ROS Agent event spool is full.")
-            with spool.open("ab") as handle:
-                handle.write(data)
-                handle.flush()
-                os.fsync(handle.fileno())
-            if os.name != "nt":
-                os.chmod(str(spool), 0o600)
+            if not already_spooled:
+                with spool.open("ab") as handle:
+                    handle.write(data)
+                    handle.flush()
+                    os.fsync(handle.fileno())
+                if os.name != "nt":
+                    os.chmod(str(spool), 0o600)
+        if isinstance(stream_event_id, str):
+            identity, sequence = parse_stream_event_id(stream_event_id)
+            if worker_role == "sideband":
+                job["sidebandStreamCursor"] = stream_event_id
+                job["sidebandStreamIdentity"] = identity
+                job["sidebandStreamSequence"] = sequence
+            else:
+                job["streamCursor"] = stream_event_id
+                job["streamIdentity"] = identity
+                job["streamSequence"] = sequence
         _atomic_json(job_path, job)
+    return True
 
 
 def _finish_job(
@@ -1339,6 +1365,8 @@ def _finish_job(
     with StateLock(root / ".job.lock"):
         job = _load_state_json(job_path)
         if job.get("activeRequestSeq") != request_seq:
+            return False
+        if job.get("stopRequestedAt") is not None:
             return False
         if expected_worker_pid is not None:
             current_worker_pid = job.get("workerPid")
@@ -1481,6 +1509,8 @@ def _finish_sideband_job(
     with StateLock(root / ".job.lock"):
         job = _load_state_json(job_path)
         if job.get("activeRequestSeq") != request_seq or job.get("sidebandWorkerToken") != worker_token:
+            return
+        if job.get("stopRequestedAt") is not None:
             return
         for key in ("sessionId", "taskId", "iacCodeSessionId", "requestId", "wireState"):
             value = result.get(key)
@@ -1860,8 +1890,9 @@ def _job_result(
             seen.add(signature)
             milestones.append(milestone)
     job_state = str(job.get("state") or "unknown")
-    has_result_gate = job_state in TERMINAL_STATES | {"turn-completed", "failed"} or isinstance(
-        job.get("inputRequired"), dict
+    has_result_gate = (
+        job_state in TERMINAL_STATES | {"turn-completed", "failed", "canceling", "not-active"}
+        or isinstance(job.get("inputRequired"), dict)
     )
     state = job_state if has_result_gate else ("working" if boundary_reached else job_state)
     result = {
@@ -1952,7 +1983,7 @@ def _follow_ready_result(job_id: str, start_cursor: int) -> Tuple[Optional[Dict[
         state = job.get("state")
         if (
             has_step_boundary
-            or state in TERMINAL_STATES | {"turn-completed", "failed"}
+            or state in TERMINAL_STATES | {"turn-completed", "failed", "canceling", "not-active"}
             or isinstance(job.get("inputRequired"), dict)
             or isinstance(job.get("sidebandError"), dict)
         ):

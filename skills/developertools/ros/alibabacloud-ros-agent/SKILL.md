@@ -1,6 +1,6 @@
 ---
 name: alibabacloud-ros-agent
-description: Use Alibaba Cloud ROS Agent through its StartChat API for remote infrastructure conversations. Trigger when the user explicitly asks for the ROS Agent, its StartChat API, or a remote iac-code conversation through Alibaba Cloud. Supports normal and selling Pipeline conversations, questions, candidate selection, correlated permission approval or denial, and explicit StopChat cancellation. Do not trigger for ordinary Alibaba Cloud infrastructure work that can use the local iac-code Skill, or for unrelated ROS API operations.
+description: Use Alibaba Cloud ROS Agent to plan, review, validate, and iteratively refine Alibaba Cloud infrastructure, and to guide users through solution choices or approved deployments. Trigger when the user explicitly asks to use ROS Agent or wants a remote ROS-assisted infrastructure workflow. Do not trigger for ordinary local iac-code work or unrelated ROS API operations.
 ---
 
 # Alibaba Cloud ROS Agent
@@ -33,7 +33,7 @@ The selected credential must be allowed to call `ros:StartChat`. Explicit cancel
 python3 <absolute-bridge-path>/ros_agent.py check
 ```
 
-The bounded JSON result includes the effective `transport`, `aliyunCLIExecutionMode`, endpoint, Agent modes, Thinking policy, configured Profile policy, effective region when locally available, and only non-secret credential metadata. `cli` and `version` are null when the code transport does not need the CLI. In unpinned code mode, `mode: DefaultCredentialChain` means the Credentials SDK resolved the identity without bridge-level credential parsing. In local CLI mode, `rosPluginReady`, `pluginAutoInstallEnabled`, and `pluginInstallRequired` describe plugin readiness. If and only if `pluginInstallRequired` is true, visibly report that the required ROS CLI plugin is being installed, run exactly `aliyun plugin install --name ros`, and then rerun `check`; never add a version, package URL, mirror, or source override. If the plugin is absent but CLI automatic plugin installation is enabled, `pluginInstallRequired` is false and the first `start-chat` invocation may install it. In remote CLI mode, `check` deliberately does not run CLI management commands or inspect local Profiles/plugins; it reports only the configured forwarded environment names and which names are currently present, never their values.
+The bounded JSON result includes the effective `transport`, `aliyunCLIExecutionMode`, endpoint, Agent modes, Thinking policy, configured Profile policy, effective region when locally available, and only non-secret credential metadata. `cli` and `version` are null when the code transport does not need the CLI. `startChatReconnectReady` is the release gate for this workflow; if it is false, report the returned `startChatReconnectBlockers` and stop before `start`. In unpinned code mode, `mode: DefaultCredentialChain` means the Credentials SDK resolved the identity without bridge-level credential parsing. In local CLI mode, `rosPluginReady`, `pluginAutoInstallEnabled`, and `pluginInstallRequired` describe plugin readiness. If and only if `pluginInstallRequired` is true, visibly report that the required reconnect-capable ROS CLI plugin is being installed, run exactly `aliyun plugin install --name ros`, and then rerun `check`; never add a version, package URL, mirror, or source override. This explicit install-and-recheck step is required when the reconnect capability is missing even if CLI automatic plugin installation is enabled. In remote CLI mode, `check` deliberately does not run CLI management commands or inspect local Profiles/plugins; it reports only non-secret executor version/capability metadata and configured forwarded environment names, never their values.
 
 Use the check result as the sole readiness source. Except for the one local-mode plugin install command directed by `pluginInstallRequired`, never run `aliyun configure`, `aliyun plugin`, or other discovery/management commands, enumerate profiles, or read Alibaba Cloud CLI configuration files yourself. The check deliberately excludes credential values and does not prove that a token is still accepted by ROS; the StartChat response is authoritative for authentication and authorization failures.
 
@@ -75,11 +75,12 @@ Unknown fields, invalid values, and duplicate modes fail closed. Never edit `con
 2. Start a normal managed job from the target workspace. The bridge uses its process working directory only for local prompt-file isolation; it never sends a workspace or `cwd` field to StartChat:
 
    ```text
-   python3 <absolute-bridge-path>/ros_agent.py start --prompt-file <prompt-file> --mode normal --follow
+   python3 <absolute-bridge-path>/ros_agent.py start --prompt-file <prompt-file> --mode normal
+   python3 <absolute-bridge-path>/ros_agent.py follow --job-id <jobId> --cursor 0 --wait-seconds 60
    ```
 
    Pass `--region-id` only when the user explicitly supplied a region. Otherwise the bridge uses the first supported region environment variable, then an explicitly pinned Profile region, then `cn-hangzhou`; do not query CLI configuration to fill it. Use `--mode pipeline` only when the user explicitly wants the candidate-architecture, cost-comparison, confirmation, and deployment Pipeline. Thinking is installation policy from `config.json`, not an Agent choice. Forward underspecified infrastructure requirements to ROS Agent as written so its own `ask_user_question` can gather them.
-3. Preserve the returned `jobId` and newest `cursor`. A temporary authenticated loopback manager owns the job, and a detached worker keeps the selected StartChat transport open after the outer tool call returns. In the default code transport, each SSE event is projected as it arrives. `--follow` returns at every step start, step completion/failure, input boundary, completed turn, terminal state, or its bounded wait window so the user can see the Pipeline progressing. A result can contain multiple ordered `userUpdates` when events were already queued, and can also contain `inputRequired` or a terminal result; present all updates first, then handle that result without an extra drain-only `follow`.
+3. Preserve the returned `jobId` and newest `cursor`. Submit `start`, `continue`, and `respond` first, then call `follow`; the legacy `--follow` option remains compatible but is not the recommended Skill flow. A temporary authenticated loopback manager owns the job, and a detached worker keeps the selected StartChat transport open after the outer tool call returns. The worker automatically reconnects the same StartChat stream from the last committed server event ID after a retryable transport failure. Keep the same `jobId`; never start a replacement job or resend the user message to recover a stream. In the default code transport, each SSE event is projected as it arrives. `follow` returns at every step start, step completion/failure, input boundary, completed turn, terminal state, or its bounded wait window so the user can see the Pipeline progressing. A result can contain multiple ordered `userUpdates` when events were already queued, and can also contain `inputRequired` or a terminal result; present all updates first, then handle that result without an extra drain-only `follow`.
 4. When the result has `boundaryReached: true`, present every `userUpdates` string to the user, then immediately follow from the returned cursor:
 
    ```text
@@ -90,7 +91,7 @@ Unknown fields, invalid values, and duplicate modes fail closed. Never edit `con
 5. For every natural-language follow-up, answer to `ask_user_question`, or `candidate_selection`, write a new prompt file and continue the same job:
 
    ```text
-   python3 <absolute-bridge-path>/ros_agent.py continue --job-id <jobId> --prompt-file <prompt-file> --follow
+   python3 <absolute-bridge-path>/ros_agent.py continue --job-id <jobId> --prompt-file <prompt-file>
    ```
 
    Do not invent a `SessionId`; the job binds the remote session, mode, endpoint, region, Profile, and workspace. When a completed Pipeline returns `normalHandoffReady: true` or `conversationMode: normal`, its next user message is a Normal chat turn reached through this same `continue` command and `jobId`; the bridge intentionally keeps the StartChat mode while the remote A2A context performs the handoff. Never replace that handoff with `start --mode normal`. Do not start a new job merely to continue the same task.
@@ -102,7 +103,7 @@ Unknown fields, invalid values, and duplicate modes fail closed. Never edit `con
 
    This invokes the ROS `StopChat` OpenAPI through the job's selected transport; it does not send a StartChat query or a natural-language cancellation message. Present the returned status immediately. `Stopped` means cancellation completed, `Stopping` means it was accepted and the existing job should be observed with `follow` from its current cursor, and `NoActiveStream` means there was no active remote stream to stop. Never call `cancel` merely because `follow` timed out, a local tool call was interrupted, or the outer Agent turn ended.
 
-Without a configured endpoint, the bridge defaults to `ros.aliyuncs.com`. Use `--endpoint <ROS endpoint>` only when the user's ROS region or network requires a different endpoint and `config.json` does not fix one. The code transport sends a generic ROS RPC with API version `2019-09-10` and `ACS3-HMAC-SHA256` signing, so it does not depend on generated StartChat metadata. The `aliyun_cli` transport uses the installed/remote ROS plugin's published `start-chat` and `stop-chat` commands and does not bypass plugin validation. Both transports identify every StartChat and StopChat request with the user-agent segment `AlibabaCloud-Agent-Skills/alibabacloud-ros-agent`.
+Without a configured endpoint, the bridge defaults to `ros.aliyuncs.com`. Use `--endpoint <ROS endpoint>` only when the user's ROS region or network requires a different endpoint and `config.json` does not fix one. The code transport sends a generic ROS RPC with API version `2019-09-10` and `ACS3-HMAC-SHA256` signing, so it does not depend on generated StartChat metadata. The `aliyun_cli` transport uses the installed/remote ROS plugin's published `start-chat` and `stop-chat` commands and does not bypass plugin validation. Both transports identify every StartChat and StopChat request with the versioned user-agent described under Observability.
 
 ## Architecture before deployment confirmation
 
@@ -165,13 +166,13 @@ The event classes have different execution behavior:
 Do not answer a permission with natural language or create a permission JSON file. The managed job already owns the exact correlation identifiers. When exactly one permission is waiting, call `respond` with only the job and the user's decision:
 
 ```text
-python3 <absolute-bridge-path>/ros_agent.py respond --job-id <jobId> --decision <allow_once|deny> --follow
+python3 <absolute-bridge-path>/ros_agent.py respond --job-id <jobId> --decision <allow_once|deny>
 ```
 
 If multiple `pendingPermissions` are waiting, keep each returned `permissionRef` associated with the action shown to the user and include only the selected short reference:
 
 ```text
-python3 <absolute-bridge-path>/ros_agent.py respond --job-id <jobId> --permission-ref <permissionRef> --decision <allow_once|deny> --follow
+python3 <absolute-bridge-path>/ros_agent.py respond --job-id <jobId> --permission-ref <permissionRef> --decision <allow_once|deny>
 ```
 
 Never type, copy, reconstruct, transform, or save `requestTaskId`, `contextId`, `inputId`, or `toolUseId`. Do not use a shell or another script to extract `inputRequired`; `respond` resolves those fields atomically from the current job. Without `--permission-ref`, it fails closed if more than one permission is waiting. A supplied reference must match exactly one still-pending permission.
@@ -222,13 +223,66 @@ Never use `continue` to poll a working Pipeline after `respond`. StartChat has n
 
 ## Input/output examples
 
-Input: "Review this ROS template, explain validation errors, and propose a corrected version."
+### Review and correct a template
 
-Expected output: the bridge returns the authoritative ROS Agent response and preserves the same session for follow-up questions, permissions, and final artifacts.
+User input:
+
+```text
+Review this ROS template, explain validation errors, and propose a corrected version. Do not deploy it.
+```
+
+Execution:
+
+1. Run `check` and report readiness without exposing credentials or opaque IDs.
+2. Start a Normal conversation with the complete request and follow the same job to its turn boundary.
+3. Present the returned validation findings, corrected template artifact, and explicit no-deployment result.
+
+Expected visible output:
+
+```text
+ROS Agent completed the static review. It found the invalid VSwitch reference, corrected it to the declared VPC resource, and returned the validated template artifact. No cloud resources were created or changed.
+```
+
+### Compare plans and wait for a choice
+
+User input:
+
+```text
+Compare three architectures for a small highly available web service in cn-hangzhou. Show cost and trade-offs, but do not deploy anything until I choose a plan and confirm deployment.
+```
+
+Execution:
+
+1. Run `check`, start Pipeline mode, and use `follow` with the same `jobId` and newest `cursor`.
+2. Present ordered progress updates as they arrive.
+3. At `candidate_selection`, show every returned option, cost field, trade-off, and non-empty architecture diagram, then stop for the user's choice.
+4. After the user chooses, send only the exact returned option ID with `continue`; before any deployment, show the selected plan and Mermaid diagram and request confirmation.
+
+Expected visible output before the user chooses:
+
+```text
+ROS Agent prepared three candidate architectures. Each candidate is shown below with its returned monthly cost, trade-offs, and architecture diagram. The workflow is paused at candidate selection; no candidate has been selected and no resources have been deployed.
+```
+
+### Resume after a transient stream interruption
+
+Runtime condition: `follow` returns `followTimedOut: true` while the managed job is still running.
+
+Execution:
+
+1. Show the returned heartbeat as an in-progress update.
+2. Call `follow` again with the same `jobId` and newest `cursor`; do not send `continue` and do not create another job.
+3. When the turn completes, present `finalText` and the returned artifacts once.
+
+Expected visible output while waiting:
+
+```text
+ROS Agent is still working; the latest bounded wait ended without a terminal result. I am continuing to observe the same task from its latest confirmed progress point.
+```
 
 ## Edge cases
 
-If credentials, endpoint metadata, or permissions are unavailable, stop with the returned actionable error. Reuse the returned session ID for follow-ups and StopChat. If a stream is interrupted, resume the frozen job instead of silently creating a second cloud session.
+If credentials, endpoint metadata, or permissions are unavailable, stop with the returned actionable error. Reuse the managed `jobId` for follow-ups, permission responses, observation, and cancellation; keep remote session identifiers opaque. If a stream is interrupted, continue observing the same managed job instead of silently creating a second cloud session or resending the user's request.
 
 ## RAM permissions
 
@@ -240,11 +294,13 @@ the selected credential has only the exact ROS actions required for the requeste
 All outbound HTTP requests made by this AgentHub Skill carry this `User-Agent` template:
 
 ```text
-AlibabaCloud-Agent-Skills/alibabacloud-ros-agent/{session-id}
+--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ros-agent/{session-id} skill-version/{skill-version}"
 ```
 
 - `alibabacloud-ros-agent` is the fixed AgentHub Skill identifier and matches the frontmatter `name`.
+- The skill version is read from the top-level `version` field in `references/manifest.json`. If that manifest is
+  missing, invalid, or has no non-empty version, the bridge fails before making a cloud request.
 - The session ID must be a 32-character lowercase hexadecimal string generated exactly once per session.
-  It must be reused unchanged for every outbound HTTP request in that session. The bridge reads `SKILL_SESSION_ID`
-  after validation; if it is absent or invalid, the bridge generates the session ID with `uuid.uuid4().hex` and stores
-  it for that session.
+  The bridge generates it internally with `uuid.uuid4().hex` when a managed job is created, stores it in that job's
+  private state, and reuses it unchanged for every StartChat and StopChat request in the job. It is never imported
+  from an environment variable, prior conversation, or example.

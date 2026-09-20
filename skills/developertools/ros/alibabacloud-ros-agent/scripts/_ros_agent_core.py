@@ -682,6 +682,21 @@ def build_start_chat_parameters(
     return parameters
 
 
+def build_reconnect_start_chat_parameters(session_id: str, cursor: str) -> Dict[str, str]:
+    return {
+        "AgentVersion": "V2",
+        "SessionId": session_id,
+        "StreamOptions.Action": "Reconnect",
+        "StreamOptions.Cursor": cursor,
+    }
+
+
+def _cli_user_agent_arguments(user_agent: str) -> List[str]:
+    # Preserve the exact shell rendering required by AgentHub while returning
+    # two argv values so quote characters are not sent to the CLI plugin.
+    return shlex.split('--user-agent "{}"'.format(user_agent))
+
+
 def build_command(
     args: argparse.Namespace,
     prompt: str,
@@ -706,8 +721,7 @@ def build_command(
         str(args.connect_timeout),
         "--read-timeout",
         str(args.read_timeout),
-        "--user-agent",
-        USER_AGENT,
+        *_cli_user_agent_arguments(args.user_agent),
         "--yes",
     ]
     if endpoint_kind == "loopback":
@@ -743,6 +757,50 @@ def build_command(
     return command
 
 
+def build_reconnect_command(args: argparse.Namespace, session_id: str, cursor: str) -> List[str]:
+    endpoint_kind = _endpoint_kind(args.endpoint or "")
+    execution_mode = getattr(args, "aliyun_cli_execution_mode", DEFAULT_ALIYUN_CLI_EXECUTION_MODE)
+    if execution_mode == "remote" and endpoint_kind != "aliyun":
+        raise BridgeError("invalid_input", "Remote aliyun CLI execution requires a public aliyuncs.com endpoint.")
+    if execution_mode == "remote" and args.profile:
+        raise BridgeError("invalid_input", "Remote aliyun CLI execution does not accept a local Profile.")
+    command = [
+        resolve_aliyun(args.aliyun_path),
+        "ros",
+        "start-chat",
+        "--endpoint",
+        args.endpoint,
+        "--connect-timeout",
+        str(args.connect_timeout),
+        "--read-timeout",
+        str(args.read_timeout),
+        *_cli_user_agent_arguments(args.user_agent),
+        "--yes",
+    ]
+    if endpoint_kind == "loopback":
+        command.extend(["--secure", "--skip-secure-verify"])
+    if args.profile:
+        command.extend(["--profile", args.profile])
+    if args.region_id:
+        command.extend(["--region", args.region_id])
+    command.extend(
+        [
+            "--agent-version",
+            "V2",
+            "--session-id",
+            session_id,
+            "--body",
+            _json_bytes(
+                {
+                    "StreamOptions.Action": "Reconnect",
+                    "StreamOptions.Cursor": cursor,
+                }
+            ).decode("utf-8"),
+        ]
+    )
+    return command
+
+
 def build_stop_command(job: Dict[str, Any], session_id: str) -> List[str]:
     endpoint = str(job.get("endpoint") or "")
     endpoint_kind = _endpoint_kind(endpoint)
@@ -761,8 +819,7 @@ def build_stop_command(job: Dict[str, Any], session_id: str) -> List[str]:
         str(max(1, min(int(job.get("connectTimeout") or 10), 30))),
         "--read-timeout",
         "45",
-        "--user-agent",
-        USER_AGENT,
+        *_cli_user_agent_arguments(str(job["userAgent"])),
         "--yes",
     ]
     if endpoint_kind == "loopback":
@@ -834,6 +891,15 @@ def _read_cli_configuration() -> Dict[str, Any]:
     return value
 
 
+def _ros_plugin_supports_reconnect(version: Any) -> bool:
+    if not isinstance(version, str):
+        return False
+    match = re.fullmatch(r"([0-9]+)\.([0-9]+)\.([0-9]+)", version)
+    if match is None:
+        return False
+    return tuple(int(part) for part in match.groups()) >= MIN_ROS_PLUGIN_VERSION
+
+
 def _local_ros_plugin_status() -> Dict[str, Any]:
     configured_root = os.environ.get("ALIBABA_CLOUD_CLI_PLUGINS_DIR")
     root = (
@@ -877,6 +943,7 @@ def _local_ros_plugin_status() -> Dict[str, Any]:
     version = plugin.get("version")
     if isinstance(version, str) and version:
         result["version"] = sanitize_text(version, 80)
+    result["reconnectReady"] = result["ready"] and _ros_plugin_supports_reconnect(version)
     return result
 
 
@@ -968,6 +1035,7 @@ def _build_v3_request(
     parameters: Dict[str, str],
     endpoint: str,
     credentials: Tuple[str, str, Optional[str]],
+    user_agent: str,
 ) -> Tuple[str, Dict[str, str]]:
     access_key_id, access_key_secret, security_token = credentials
     signature_algorithm = "ACS3-HMAC-SHA256"
@@ -977,7 +1045,7 @@ def _build_v3_request(
         "accept": "text/event-stream" if operation == "StartChat" else "application/json",
         "accept-encoding": "identity",
         "host": endpoint,
-        "user-agent": USER_AGENT,
+        "user-agent": user_agent,
         "x-acs-action": operation,
         "x-acs-content-sha256": payload_hash,
         "x-acs-date": utils.get_timestamp(),
@@ -1034,13 +1102,14 @@ def _open_code_request(
     aliyun_path: str,
     connect_timeout: int,
     read_timeout: int,
+    user_agent: str,
     credential_source: Optional[str] = None,
     error_code: str = "start_chat_failed",
 ) -> Any:
     sdk = _load_code_sdk()
     try:
         credentials = _code_credentials(sdk, aliyun_path, profile, region_id, credential_source)
-        url, headers = _build_v3_request(sdk, operation, parameters, endpoint, credentials)
+        url, headers = _build_v3_request(sdk, operation, parameters, endpoint, credentials, user_agent)
     except BridgeError:
         raise
     except Exception as exc:
@@ -1082,7 +1151,8 @@ def _open_code_request(
                     detail = value.get("Message", value.get("message"))
                     if isinstance(code, str) or isinstance(detail, str):
                         message = "{}: {}".format(code or "{}Failed".format(operation), detail or "Request failed")
-        raise BridgeError(error_code, sanitize_text(message, 2000), response.status_code >= 500)
+        retryable = response.status_code == 429 or response.status_code >= 500
+        raise BridgeError(error_code, sanitize_text(message, 2000), retryable)
     return wrapped
 
 
@@ -1093,20 +1163,41 @@ def _response_text_lines(response: Any) -> Iterator[str]:
         yield raw_line.decode("utf-8", "replace")
 
 
-def iter_sse_payloads(lines: Iterable[str]) -> Iterator[Tuple[Optional[Dict[str, Any]], str]]:
+def parse_stream_event_id(value: Any) -> Tuple[str, int]:
+    if not isinstance(value, str) or not value:
+        raise BridgeError("invalid_stream_event_id", "StartChat returned an invalid SSE event ID.")
+    identity, separator, raw_sequence = value.rpartition(".")
+    if (
+        not separator
+        or not identity.startswith("v1.")
+        or len(identity) <= 3
+        or not raw_sequence.isdigit()
+    ):
+        raise BridgeError("invalid_stream_event_id", "StartChat returned an invalid SSE event ID.")
+    try:
+        sequence = int(raw_sequence)
+    except ValueError as exc:
+        raise BridgeError("invalid_stream_event_id", "StartChat returned an invalid SSE event ID.") from exc
+    if sequence <= 0:
+        raise BridgeError("invalid_stream_event_id", "StartChat returned an invalid SSE event ID.")
+    return identity, sequence
+
+
+def iter_sse_payloads(lines: Iterable[str]) -> Iterator[Dict[str, Any]]:
     data_lines = []  # type: List[str]
     raw_lines = []  # type: List[str]
+    event_id = None  # type: Optional[str]
     event_bytes = 0
 
-    def decode(data: List[str], raw: List[str]) -> Tuple[Optional[Dict[str, Any]], str]:
+    def decode(data: List[str], raw: List[str], current_event_id: Optional[str]) -> Dict[str, Any]:
         payload_text = "\n".join(data).strip() if data else "\n".join(raw).strip()
         if len(payload_text.encode("utf-8")) > MAX_SSE_EVENT_BYTES:
-            raise BridgeError("stream_failed", "A StartChat SSE event exceeded the bridge limit.")
+            raise BridgeError("stream_event_too_large", "A StartChat SSE event exceeded the bridge limit.")
         try:
             value = json.loads(payload_text)
         except ValueError:
-            return None, payload_text
-        return (value if isinstance(value, dict) else None), payload_text
+            value = None
+        return {"id": current_event_id, "payload": value if isinstance(value, dict) else None, "raw": payload_text}
 
     for raw_line in lines:
         event_bytes += len(raw_line.encode("utf-8"))
@@ -1115,19 +1206,22 @@ def iter_sse_payloads(lines: Iterable[str]) -> Iterator[Tuple[Optional[Dict[str,
         line = raw_line.rstrip("\r\n")
         if not line:
             if data_lines or raw_lines:
-                yield decode(data_lines, raw_lines)
+                yield decode(data_lines, raw_lines, event_id)
                 data_lines = []
                 raw_lines = []
+                event_id = None
             event_bytes = 0
             continue
         if line.startswith(":"):
             continue
         if line.startswith("data:"):
             data_lines.append(line[5:].lstrip())
+        elif line.startswith("id:"):
+            event_id = line[3:].lstrip()
         elif not data_lines:
             raw_lines.append(line)
     if data_lines or raw_lines:
-        yield decode(data_lines, raw_lines)
+        yield decode(data_lines, raw_lines, event_id)
 
 
 def _cli_plugin_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -1135,24 +1229,67 @@ def _cli_plugin_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
     return data if isinstance(data, dict) else payload
 
 
-def iter_cli_plugin_payloads(lines: Iterable[str]) -> Iterator[Tuple[Optional[Dict[str, Any]], str]]:
+def _is_cli_failure_envelope(value: Any) -> bool:
+    if not isinstance(value, dict) or any(key in value for key in ("id", "data", "event")):
+        return False
+    candidates = [value]
+    nested = value.get("error")
+    if isinstance(nested, dict):
+        candidates.append(nested)
+    return any(
+        isinstance(candidate.get("statusCode", candidate.get("httpStatus")), int)
+        or isinstance(candidate.get("code", candidate.get("Code")), str)
+        for candidate in candidates
+    )
+
+
+def iter_cli_plugin_payloads(lines: Iterable[str]) -> Iterator[Dict[str, Any]]:
     decoder = json.JSONDecoder()
     buffer = ""
+    raw_bytes = 0
+    decoded_bytes = 0
 
-    def projected(value: Any, raw: str) -> Iterator[Tuple[Optional[Dict[str, Any]], str]]:
+    def projected(value: Any, raw: str) -> Iterator[Dict[str, Any]]:
+        nonlocal decoded_bytes
         if isinstance(value, list):
             for item in value:
                 item_raw = json.dumps(item, ensure_ascii=False, separators=(",", ":"))
-                yield (_cli_plugin_payload(item) if isinstance(item, dict) else None), item_raw
+                yield from projected(item, item_raw)
             return
-        yield (_cli_plugin_payload(value) if isinstance(value, dict) else None), raw
+        if not isinstance(value, dict):
+            yield {"id": None, "payload": None, "raw": raw}
+            return
+        if _is_cli_failure_envelope(value):
+            yield {"id": None, "payload": None, "raw": raw, "cliFailure": True}
+            return
+        bootstrap = value if isinstance(value.get("event"), dict) and "invocationId" in value else None
+        envelope = value.get("event") if isinstance(bootstrap, dict) else value
+        assert isinstance(envelope, dict)
+        payload = _cli_plugin_payload(envelope)
+        payload_bytes = len(_json_bytes(payload))
+        if payload_bytes > MAX_SSE_EVENT_BYTES:
+            raise BridgeError("stream_event_too_large", "A StartChat CLI event exceeded the bridge limit.")
+        if bootstrap is None:
+            decoded_bytes += payload_bytes
+            if decoded_bytes > MAX_SERVER_REPLAY_BYTES:
+                raise BridgeError("server_replay_too_large", "StartChat replay exceeded the server replay limit.")
+        yield {
+            "id": envelope.get("id"),
+            "payload": payload,
+            "raw": raw,
+            "bootstrap": bootstrap,
+        }
 
     for raw_line in lines:
-        if len(raw_line.encode("utf-8")) > MAX_SSE_LINE_BYTES:
-            raise BridgeError("stream_failed", "A StartChat CLI output line exceeded the bridge limit.")
+        line_bytes = len(raw_line.encode("utf-8"))
+        if line_bytes > MAX_CLI_BATCH_BYTES:
+            raise BridgeError("cli_output_too_large", "A StartChat CLI output line exceeded the batch limit.")
+        raw_bytes += line_bytes
+        if raw_bytes > MAX_CLI_BATCH_BYTES:
+            raise BridgeError("cli_output_too_large", "StartChat CLI output exceeded the batch limit.")
         buffer += raw_line
-        if len(buffer.encode("utf-8")) > MAX_SSE_EVENT_BYTES:
-            raise BridgeError("stream_failed", "Buffered StartChat CLI output exceeded the bridge limit.")
+        if len(buffer.encode("utf-8")) > MAX_CLI_BATCH_BYTES:
+            raise BridgeError("cli_output_too_large", "Buffered StartChat CLI output exceeded the batch limit.")
         while buffer.strip():
             leading = len(buffer) - len(buffer.lstrip())
             try:
@@ -1168,11 +1305,49 @@ def iter_cli_plugin_payloads(lines: Iterable[str]) -> Iterator[Tuple[Optional[Di
                     break
                 if remainder[remainder_end:].strip():
                     break
-                yield None, first_line.strip()
+                yield {"id": None, "payload": None, "raw": first_line.strip()}
                 buffer = remainder
                 continue
             raw = buffer[leading:end]
             yield from projected(value, raw)
             buffer = buffer[end:]
     if buffer.strip():
-        yield None, buffer.strip()
+        yield {"id": None, "payload": None, "raw": buffer.strip()}
+
+
+def is_retryable_cli_failure(return_code: int, *diagnostics: str) -> bool:
+    if return_code == 0:
+        return False
+    stable_timeout_codes = {
+        "executortimeout",
+        "readtimeout",
+        "connectiontimeout",
+        "connectionreset",
+    }
+
+    def values(item: Any) -> Iterator[Tuple[Optional[int], Optional[str]]]:
+        if isinstance(item, dict):
+            raw_status = item.get("statusCode", item.get("httpStatus"))
+            status = raw_status if isinstance(raw_status, int) else None
+            raw_code = item.get("code", item.get("Code"))
+            code = raw_code.lower() if isinstance(raw_code, str) else None
+            yield status, code
+            for nested in item.values():
+                yield from values(nested)
+        elif isinstance(item, list):
+            for nested in item:
+                yield from values(nested)
+
+    for text in diagnostics:
+        if not text:
+            continue
+        try:
+            value = json.loads(text)
+        except ValueError:
+            continue
+        for status, code in values(value):
+            if status == 429 or (isinstance(status, int) and 500 <= status <= 599):
+                return True
+            if code in stable_timeout_codes:
+                return True
+    return False
