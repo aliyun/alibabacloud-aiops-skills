@@ -1,0 +1,5 @@
+# Direct runtime dependencies for Python 3.10+; pip resolves transitive dependencies.
+alibabacloud-sls20201230==5.15.1
+alibabacloud-credentials==1.0.12
+alibabacloud-tea-openapi==0.4.6
+darabonba-core==1.0.9
