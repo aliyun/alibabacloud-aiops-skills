@@ -1,6 +1,8 @@
 # Manual Workflow: Step-by-Step Execution
 
 > Only reference this document when `health-inspect.py` is unavailable. The recommended approach is the one-command script.
+>
+> **Note on `--user-agent`:** Markdown examples below use the placeholder `{session-id}` and `{skill-version}`. When actually executing, the Agent MUST replace them with the real session ID and skill version per the Observability section in SKILL.md.
 
 ## Step 0: Auto-Discover Instance Region
 
@@ -16,7 +18,7 @@ python3 scripts/find-instance-region.py {DBClusterId}
 aliyun polardb describe-db-cluster-attribute \
   --region {RegionId} \
   --db-cluster-id {DBClusterId} \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-polardb-mysql-inspection
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-polardb-mysql-inspection/{session-id} skill-version/{skill-version}"
 ```
 
 **Key fields to extract:**
@@ -34,7 +36,7 @@ Get node information to determine max connections (determined by node spec):
 aliyun polardb describe-db-nodes \
   --region {RegionId} \
   --db-cluster-id {DBClusterId} \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-polardb-mysql-inspection
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-polardb-mysql-inspection/{session-id} skill-version/{skill-version}"
 ```
 
 ## Step 1.5: Get Version Information
@@ -43,7 +45,7 @@ aliyun polardb describe-db-nodes \
 aliyun polardb describe-db-cluster-version \
   --region {RegionId} \
   --db-cluster-id {DBClusterId} \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-polardb-mysql-inspection
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-polardb-mysql-inspection/{session-id} skill-version/{skill-version}"
 ```
 
 **Return fields:**
@@ -79,7 +81,7 @@ aliyun polardb describe-db-cluster-performance \
   --key "PolarDBCPU" \
   --start-time "{StartTime}" \
   --end-time "{EndTime}" \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-polardb-mysql-inspection
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-polardb-mysql-inspection/{session-id} skill-version/{skill-version}"
 
 # Node-level CPU (query each node separately)
 aliyun polardb describe-db-node-performance \
@@ -88,7 +90,7 @@ aliyun polardb describe-db-node-performance \
   --key "PolarDBCPU" \
   --start-time "{StartTime}" \
   --end-time "{EndTime}" \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-polardb-mysql-inspection
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-polardb-mysql-inspection/{session-id} skill-version/{skill-version}"
 ```
 
 **Performance data parsing:**
@@ -113,7 +115,7 @@ The API returns `PerformanceKeys.PerformanceItem[]`, each Item contains:
 aliyun das create-storage-analysis-task \
   --instance-id {DBClusterId} \
   --endpoint das.cn-shanghai.aliyuncs.com \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-polardb-mysql-inspection
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-polardb-mysql-inspection/{session-id} skill-version/{skill-version}"
 ```
 
 **Example response:**
@@ -134,7 +136,7 @@ aliyun das get-storage-analysis-result \
   --instance-id {DBClusterId} \
   --task-id {TaskId} \
   --endpoint das.cn-shanghai.aliyuncs.com \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-polardb-mysql-inspection
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-polardb-mysql-inspection/{session-id} skill-version/{skill-version}"
 ```
 
 **Extract TOP20 table space information:**
@@ -156,7 +158,7 @@ aliyun polardb describe-slow-logs \
   --biz-region-id {RegionId} \
   --start-time "{StartDate}" \
   --end-time "{EndDate}" \
-  --user-agent AlibabaCloud-Agent-Skills/alibabacloud-polardb-mysql-inspection
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-polardb-mysql-inspection/{session-id} skill-version/{skill-version}"
 ```
 
 > **Time format**: `describe-slow-logs` uses date format `yyyy-MM-ddZ` (e.g., `2026-05-14Z`)

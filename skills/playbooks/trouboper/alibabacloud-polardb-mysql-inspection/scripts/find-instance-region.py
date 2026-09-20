@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-查询 PolarDB 集群所在 Region
-使用 aliyun CLI 调用，无需手动配置 AK/SK
+Find the region of a PolarDB cluster.
+Uses aliyun CLI — no manual AK/SK configuration required.
 
 Usage:
     python3 find-instance-region.py <cluster_id> [--profile <profile_name>]
@@ -57,48 +57,48 @@ def find_polardb_cluster(cluster_id, profile=None):
                         region, profile, **{'db-cluster-id': cluster_id})
         if data and data.get('DBClusterId'):
             actual_region = data.get('RegionId', region)
-            print(f'\n✅ 找到 PolarDB 集群！')
+            print(f'\n✅ PolarDB cluster found!')
             print(f'   Region: {actual_region}')
-            print(f'   集群 ID: {data.get("DBClusterId")}')
-            print(f'   集群状态: {data.get("DBClusterStatus")}')
-            print(f'   引擎: {data.get("DBType")} {data.get("DBVersion")}')
-            print(f'   集群规格: {data.get("DBNodeClass")}')
+            print(f'   Cluster ID: {data.get("DBClusterId")}')
+            print(f'   Cluster status: {data.get("DBClusterStatus")}')
+            print(f'   Engine: {data.get("DBType")} {data.get("DBVersion")}')
+            print(f'   Node class: {data.get("DBNodeClass")}')
             return actual_region
     return None
 
 
 def main():
-    parser = argparse.ArgumentParser(description='查找 PolarDB 集群所在 Region')
+    parser = argparse.ArgumentParser(description='Find the region of a PolarDB cluster')
     parser.add_argument('cluster_id', metavar='CLUSTER_ID',
-                        help='PolarDB 集群 ID (pc-xxx)')
+                        help='PolarDB cluster ID (pc-xxx)')
     parser.add_argument('-p', '--profile',
-                        help='aliyun CLI profile 名称')
+                        help='aliyun CLI profile name')
     args = parser.parse_args()
 
     cluster_id = args.cluster_id
 
-    # 检查 aliyun CLI 是否可用
+    # Check if aliyun CLI is available
     try:
         result = subprocess.run(['aliyun', 'version'], capture_output=True, text=True, timeout=5)
         if result.returncode != 0:
             raise FileNotFoundError
     except (FileNotFoundError, subprocess.TimeoutExpired):
-        print('❌ 未找到 aliyun CLI，请先安装：https://help.aliyun.com/zh/cli/')
+        print('❌ aliyun CLI not found. Please install: https://help.aliyun.com/zh/cli/')
         sys.exit(1)
 
-    print(f'🔍 查找集群 {cluster_id} 所在的 Region...')
+    print(f'🔍 Searching for cluster {cluster_id} region...')
     print('=' * 80)
 
     region = find_polardb_cluster(cluster_id, args.profile)
 
     if not region:
-        print(f'\n❌ 未找到集群 {cluster_id}')
-        print('可能原因:')
-        print('  1. 集群 ID 错误')
-        print('  2. 当前凭证无权访问该集群（运行 aliyun configure list 检查）')
-        print('  3. 集群已被释放')
+        print(f'\n❌ Cluster {cluster_id} not found')
+        print('Possible reasons:')
+        print('  1. Incorrect cluster ID')
+        print('  2. Current credentials have no access to this cluster (run aliyun configure list to check)')
+        print('  3. Cluster has been released')
         if args.profile:
-            print(f'  4. profile "{args.profile}" 配置的凭证无权限')
+            print(f'  4. Profile "{args.profile}" credentials lack permission')
         sys.exit(1)
 
 
