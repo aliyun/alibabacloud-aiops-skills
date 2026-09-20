@@ -32,16 +32,17 @@ import urllib.request
 import uuid
 import zipfile
 
-SKILL_VERSION = "0.4.0"
-RUNTIME_TAG = "v0.15.0"
-IAC_CODE_VERSION = "0.15.0"
+RUNTIME_TAG = "v0.16.0"
+IAC_CODE_VERSION = "0.16.0"
 RUNTIME_PYTHON = "cp312"
 SKILL_DISTRIBUTION = "agenthub"
 SKILL_NAME = "alibabacloud-iac-code"
-USER_AGENT_TEMPLATE = "AlibabaCloud-Agent-Skills/alibabacloud-iac-code/{session-id}"
-MANIFEST_URL = "https://ros-public-tools.oss-cn-beijing.aliyuncs.com/github-releases/aliyun/iac-code/skill-runtime/releases/v0.15.0/runtime-manifest.json"
+USER_AGENT_TEMPLATE = (
+    "AlibabaCloud-Agent-Skills/alibabacloud-iac-code/{session-id} skill-version/{skill-version}"
+)
+MANIFEST_URL = "https://ros-public-tools.oss-cn-beijing.aliyuncs.com/github-releases/aliyun/iac-code/skill-runtime/releases/v0.16.0/runtime-manifest.json"
 # Replaced in a temporary staging directory by skill-runtime/package_skill.py.
-MANIFEST_SHA256 = "50b819fb372ad3ea8171fe5556af5c187680f06c95e3e89226b1c190955482b9"
+MANIFEST_SHA256 = "7180f1a51b5f4c48cb4dadfebfb4ce387d4fa62d4c94e452f8a09620956a537f"
 SCHEMA_VERSION = 1
 MAX_MANIFEST_BYTES = 1024 * 1024
 MAX_ARCHIVE_BYTES = 2 * 1024 * 1024 * 1024
@@ -105,6 +106,7 @@ PROGRESS_BOUNDARY_EVENT_TYPES = STEP_BOUNDARY_EVENT_TYPES | CLEANUP_EVENT_TYPES
 CACHE_RESERVED_DIRECTORIES = {"jobs", "servers"}
 SUPPORTED_LANGUAGES = ("en", "zh", "es", "fr", "de", "ja", "pt")
 SKILL_ROOT = pathlib.Path(__file__).resolve().parent.parent
+SKILL_MANIFEST = SKILL_ROOT / "references" / "manifest.json"
 _ACTIVE_LANGUAGE = "en"
 _SECRET_PATTERN = re.compile(
     r"(?i)(authorization\s*:\s*bearer\s+|access[_-]?key[_-]?(?:secret|id)?\s*[=:]\s*|"
@@ -115,6 +117,21 @@ _SENSITIVE_KEY_PATTERN = re.compile(
 )
 
 
+def _load_skill_version():
+    try:
+        with SKILL_MANIFEST.open("r", encoding="utf-8") as handle:
+            manifest = json.load(handle)
+    except (OSError, ValueError) as exc:
+        raise RuntimeError("Skill manifest is unavailable or invalid: {}".format(SKILL_MANIFEST)) from exc
+    version = manifest.get("version") if isinstance(manifest, dict) else None
+    if not isinstance(version, str) or not version.strip():
+        raise RuntimeError("Skill manifest version must be a non-empty string: {}".format(SKILL_MANIFEST))
+    return version.strip()
+
+
+SKILL_VERSION = _load_skill_version()
+
+
 def _skill_user_agent():
     if SKILL_DISTRIBUTION != "agenthub":
         return USER_AGENT_TEMPLATE
@@ -122,7 +139,7 @@ def _skill_user_agent():
     if re.fullmatch(r"[0-9a-f]{32}", value) is None:
         value = uuid.uuid4().hex
         os.environ["SKILL_SESSION_ID"] = value
-    return USER_AGENT_TEMPLATE.replace("{session-id}", value)
+    return USER_AGENT_TEMPLATE.replace("{session-id}", value).replace("{skill-version}", SKILL_VERSION)
 
 
 _SKILL_USER_AGENT = _skill_user_agent()
