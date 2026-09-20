@@ -1,0 +1,9 @@
+{
+  "task_id": "",
+  "lhm": {
+    "endpoint": "lhm-pre.cn-hangzhou.aliyuncs.com",
+    "region_id": "cn-hangzhou"
+  },
+  "poll_interval_seconds": 15,
+  "timeout_seconds": 1800
+}

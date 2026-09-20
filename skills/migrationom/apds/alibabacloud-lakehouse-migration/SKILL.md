@@ -32,14 +32,14 @@ echo $SKILL_HOME  # confirm the path is correct before any command
 
 All subsequent `${SKILL_HOME}/...` paths must be expanded to this absolute path before execution; never leave the literal `${SKILL_HOME}` token in a shell command.
 
-**Sub-skill location**: all three sub-skill packages reside under the `subSkill/` subdirectory within `SKILL_HOME`. The canonical path for a sub-skill's SKILL.md is:
+**Sub-skill location**: all three sub-skill packages reside under the `references/` subdirectory within `SKILL_HOME`. The canonical path for a sub-skill's SKILL.md is:
 ```
-${SKILL_HOME}/subSkill/<sub-skill-dir>/SKILL.md
+${SKILL_HOME}/references/<sub-skill-dir>/SKILL.md
 ```
 For example:
-- SQL Conversion: `${SKILL_HOME}/subSkill/lhm-sql-conversion/SKILL.md`
-- Data Validation: `${SKILL_HOME}/subSkill/lhm-data-validation-skill/SKILL.md`
-- Workflow Migration: `${SKILL_HOME}/subSkill/lhm-bigdata-workflow-migration-skill/SKILL.md`
+- SQL Conversion: `${SKILL_HOME}/references/lhm-sql-conversion/SKILL.md`
+- Data Validation: `${SKILL_HOME}/references/lhm-data-validation-skill/SKILL.md`
+- Workflow Migration: `${SKILL_HOME}/references/lhm-bigdata-workflow-migration-skill/SKILL.md`
 
 **Sub-agent dispatch rule**: when delegating a task to a sub-agent (Task/subagent mechanism of the current platform), the task description must contain **fully resolved absolute paths** — expand every `${SKILL_HOME}` before dispatching. A sub-agent runs in an independent context and cannot resolve this variable on its own.
 
@@ -167,11 +167,11 @@ Once the target sub-skill is identified, proceed to Step 2.
 
 ### Step 2: Environment Initialization
 
-Prepare the runtime environment before executing any cloud service calls. This step includes two sub-steps that must both succeed.
+Prepare the runtime environment before executing any cloud service calls: ensure the `aliyun` CLI and the `lhm` plugin are properly installed and meet version requirements.
 
 #### 2.1 Aliyun CLI & LHM Plugin Initialization
 
-Use the unified initialization script to ensure both the `aliyun` CLI and the `lhm` plugin are properly installed and meet version requirements. The `lhm` plugin is public, so the script installs it straight from the public plugin index (`aliyun plugin install --names lhm`) and automatically falls back to an offline package provisioned by the runtime environment when the index is unreachable, then validates the resulting version.
+Use the unified initialization script to ensure both the `aliyun` CLI and the `lhm` plugin are properly installed and meet version requirements. The `lhm` plugin is public, so the script always installs the latest version straight from the public plugin index (`aliyun plugin install --names lhm`) and then validates the resulting version.
 
 ```bash
 bash ${SKILL_HOME}/scripts/install_lhm_plugin.sh
@@ -193,99 +193,53 @@ Capture the script's exit code and treat ANY non-zero value as a gate failure �
 The script performs the following automatically:
 1. Checks if `aliyun` CLI is installed; if not, prints installation instructions and exits
 2. **Always** installs/updates the `lhm` plugin from the public plugin index — an already-installed plugin is *never* skipped, so every run picks up the latest published version instead of staying on a stale one
-3. Falls back to an offline package provisioned **outside** the skill package if the public index is unreachable (lookup order below)
-4. Validates the resulting installation against the minimum version (>= 0.1.1)
-5. If **both** the online and the offline path fail but a locally installed version >= 0.1.1 already exists, keeps that version, prints a warning, and still exits `0` — a network-restricted yet functional environment must not be reported as broken
+3. Validates the resulting installation against the minimum version (>= 0.1.1)
+4. If the online install fails but a locally installed version >= 0.1.1 already exists, keeps that version, prints a warning, and still exits `0` — a network-restricted yet functional environment must not be reported as broken
 
-To force offline installation directly (skip online attempt):
-```bash
-bash ${SKILL_HOME}/scripts/install_lhm_plugin.sh --offline
-```
-
-> ⚠️ **Offline packages are NOT distributed inside the skill package** — the package carries no binaries. The runtime environment (image, install pipeline, or evaluation platform) must provision `aliyun-cli-lhm-<platform>.tar.gz` (>= 0.1.1) at one of the following locations, which the script searches in this order:
+> ⚠️ **The plugin is only ever installed from the public plugin index** — the skill package carries no binaries and the script has no offline-package path. The runtime environment must be able to reach the public index (`https://aliyuncli.alicdn.com/plugins`) on at least the first run; if the plugin is already pre-installed in the image (`~/.aliyun/plugins/aliyun-cli-lhm/manifest.json` exists with version >= 0.1.1), a later run that cannot reach the index still keeps the pre-installed version and exits `0`.
 >
-> | Priority | Location | Purpose |
-> |----------|----------|---------|
-> | 1 | `$LHM_PLUGIN_PACKAGE` | explicit full path to the package file |
-> | 2 | `$LHM_PLUGIN_DIR/<platform-package>` | explicit directory |
-> | 3 | `/eval/data/<platform-package>` | evaluation-environment provisioning directory — same convention as the `/eval/data/credentials.json` fallback in Step 4 |
-> | 4 | `${SKILL_HOME}/vendor/<platform-package>` | deployment-provisioned directory |
->
-> `<platform-package>` is resolved from `uname`: `aliyun-cli-lhm-darwin-amd64.tar.gz`, `-darwin-arm64.tar.gz`, `-linux-amd64.tar.gz`, or `-linux-arm64.tar.gz`. If the plugin is pre-installed in the image (`~/.aliyun/plugins/aliyun-cli-lhm/manifest.json` exists with version >= 0.1.1), provisioning a package is optional: the script still attempts an update, and when that update cannot reach any source it keeps the pre-installed version and exits `0`.
->
-> When the public plugin index is unreachable, no package is provisioned, **and** no usable local version (>= 0.1.1) exists, the script exits non-zero and the run terminates at the Hard Stop Gate below. **This is the intended behaviour** — an environment without the plugin genuinely cannot serve any LHM request, so the skill reports the environment failure instead of pretending to work.
+> When the public plugin index is unreachable **and** no usable local version (>= 0.1.1) exists, the script exits non-zero and the run terminates at the Hard Stop Gate below. **This is the intended behaviour** — an environment without the plugin genuinely cannot serve any LHM request, so the skill reports the environment failure instead of pretending to work.
 
 ##### ⛔ Hard Stop Gate (Mandatory Interruption)
 
 This initialization is a **blocking gate for the entire skill run**. The `lhm` plugin is the only network path to every LHM API, so without it no sub-skill can do anything except fail. `install_lhm_plugin.sh` signals every failure by exiting non-zero. If ANY of the following conditions holds, the whole skill MUST stop immediately:
 
 1. **`aliyun` CLI is not installed** — neither `aliyun_real` nor `aliyun` is found on PATH
-2. **The `lhm` plugin is not installed and cannot be installed** — the public plugin index fails, no offline package is provisioned in any of the four lookup locations, and no locally installed version >= 0.1.1 exists
+2. **The `lhm` plugin is not installed and cannot be installed** — the public plugin index is unreachable and no locally installed version >= 0.1.1 exists
 3. **Installation or post-install validation fails** — the plugin manifest is missing after install, or the installed version is below `0.1.1`
 
 **On a gate failure you MUST do exactly this, and nothing else:**
 
-1. Report the script's error output to the user **verbatim** (in the user's language), including its printed installation instructions and the offline-package lookup locations it searched
+1. Report the script's error output to the user **verbatim** (in the user's language), including its printed installation instructions
 2. State that the run terminated at Step 2.1, and list the steps that were therefore **not** executed
 3. Stop — issue no further tool call of any kind
 
 **What the gate forbids.** These are not hypothetical; every one of them has been observed in a real run that ignored the gate:
 
-- Continuing to Step 2.2 or any later step (credential check, session ID, config dispatch)
+- Continuing to any later step (session ID generation, config dispatch, sub-skill loading)
 - Reading or loading any sub-skill `SKILL.md`, playbook, template, or reference document
 - **Asking the user for business parameters** — data source name/type, source/target dialect, SQL text, table names, config file path, sampling rate. A clarification question is *not* a harmless step: the user answers it, the flow then dies at the first cloud call, and the entire round trip is wasted. While the environment is broken, collect nothing and ask nothing
 - Installing or running any sub-skill CLI (`uv tool install`, `pip install`, `lhm-sch-ds`, `lhm-sch-env`, `lhm-sch-deploy`, `lhm-sch-read-exec`, the data-validation scripts, `lookup_rules.py`). **A successful CLI install is never proof that the cloud path works** — every one of them shells out to `aliyun lhm` through its `aliyun_cli.py` layer and fails at the first call. Never tell the user that the flow "proceeds through the self-contained CLI"
 - Any `aliyun` / `aliyun_real` `lhm ...` command, and any cloud resource create/modify/delete
 - Reporting any count, status, comparison, or conversion result that would have come from a cloud call — never fabricate, estimate, or infer it
-- **Self-recovery attempts**: no repeated online retries, no filesystem-wide search for an offline package, no hand-rolled `aliyun plugin install` variants, no SDK fallback, no "alternative install path". At most one immediate retry with `--offline`; if that also fails, the gate is confirmed — report and stop
+- **Self-recovery attempts**: no repeated online retries, no hand-rolled `aliyun plugin install` variants, no SDK fallback, no "alternative install path". At most one immediate retry of the script; if that also fails, the gate is confirmed — report and stop
 
 Resume only after the environment is fixed and the script exits with status `0`.
 
 > This gate binds the dispatcher and, transitively, every sub-skill: since all cloud calls flow through the `aliyun` CLI + `lhm` plugin, a failed initialization renders the entire skill inoperable and must halt it end-to-end. Halting before collecting parameters is deliberate — it tells the user the truth on the first turn instead of after a wasted round trip.
 
-#### 2.2 Credential Check
-
-Verify that Alibaba Cloud credentials are available through the default credential chain. Check in the following order:
-
-1. **Environment variables**: `ALIBABA_CLOUD_ACCESS_KEY_ID` and `ALIBABA_CLOUD_ACCESS_KEY_SECRET`
-2. **Credentials file**: `~/.alibabacloud/credentials` exists and contains valid profile
-3. **ECS RAM Role**: running on an ECS instance with a bound RAM role (metadata service available)
-
-```bash
-echo "AK=${ALIBABA_CLOUD_ACCESS_KEY_ID:+SET}" && echo "SK=${ALIBABA_CLOUD_ACCESS_KEY_SECRET:+SET}"
-test -f ~/.alibabacloud/credentials && echo "Credentials file: EXISTS" || echo "Credentials file: NOT FOUND"
-```
-
-**If no credentials are detected**, guide the user to configure them using ONE of the following methods (present in the user's language):
-
-```
-No Alibaba Cloud credentials detected. Please configure credentials using one of the following methods:
-
-1. (Recommended for production) Bind a RAM Role to your ECS/ACK/FC instance — no manual configuration needed
-2. Set environment variables:
-     export ALIBABA_CLOUD_ACCESS_KEY_ID=<your-ak>
-     export ALIBABA_CLOUD_ACCESS_KEY_SECRET=<your-sk>
-3. Run `aliyun configure` to interactively set up credentials
-4. Create ~/.alibabacloud/credentials manually
-
-⚠️ Never put credentials in config files or pass them as command-line arguments.
-See: https://help.aliyun.com/document_detail/378657.html
-```
-
-**Do not proceed until credentials are confirmed available.** The sub-skills rely on the default credential chain and will fail with authentication errors if credentials are missing.
-
-> **Note**: This check only verifies credential *availability*; it does not validate credential *correctness*. Invalid credentials will be caught by the sub-skill's API calls with clear error messages.
-
 ### Step 3: Session ID Generation (Mandatory — never skip, never defer)
 
-Generate a session-scoped identifier for observability. This is a **required step of the linear execution flow**: before loading any sub-skill in Step 5 you MUST actually run the command below and export `LHM_SESSION_ID` into the environment. Do not skip it, do not fold it silently into another step, and do not rely on the sub-skills to generate it for you — the full-chain User-Agent audit described in the "Observability" section only works when the dispatcher sets this value first. **Generate it only once per session** and reuse it for all cloud service calls:
+Generate a session-scoped identifier for observability. This is a **required step of the linear execution flow**: before loading any sub-skill in Step 5 you MUST actually run the command below and export both `LHM_SESSION_ID` and `LHM_SKILL_VERSION` into the environment. Do not skip it, do not fold it silently into another step, and do not rely on the sub-skills to generate it for you — the full-chain User-Agent audit described in the "Observability" section only works when the dispatcher sets this value first. **Generate it only once per session** and reuse it for all cloud service calls:
 
 ```bash
 export LHM_SESSION_ID=$(python3 -c "import uuid; print(uuid.uuid4().hex)")
 echo "Session ID: $LHM_SESSION_ID"
+export LHM_SKILL_VERSION=$(python3 -c "import json,os; print(json.load(open(os.path.join('${SKILL_HOME}','references','manifest.json')))['version'])")
+echo "Skill version: $LHM_SKILL_VERSION"
 ```
 
-This ID is used in the UA header (`AlibabaCloud-Agent-Skills/alibabacloud-lakehouse-migration/{version}/{session-id}`) for all subsequent cloud service calls (see "Observability" section). Sub-skill scripts read `LHM_SESSION_ID` from the environment; their built-in per-process random fallback is a last-resort safety net for standalone sub-skill use only — it is **not** a substitute for the dispatcher exporting `LHM_SESSION_ID` here, and depending on it breaks full-chain traceability. A Step 3 without an actual `export LHM_SESSION_ID=...` is incomplete: proceed to Step 5 only after it has run.
+This ID and the skill version are used in the UA header (`AlibabaCloud-Agent-Skills/alibabacloud-lakehouse-migration/{session-id} skill-version/{skill-version}`) for all subsequent cloud service calls (see "Observability" section). Sub-skill scripts read `LHM_SESSION_ID` and `LHM_SKILL_VERSION` from the environment; their built-in per-process random fallback (and hardcoded `1.0.0` version fallback) is a last-resort safety net for standalone sub-skill use only — it is **not** a substitute for the dispatcher exporting `LHM_SESSION_ID` here, and depending on it breaks full-chain traceability. A Step 3 without an actual `export LHM_SESSION_ID=...` is incomplete: proceed to Step 5 only after it has run.
 
 ### Step 4: Config Dispatch
 
@@ -330,7 +284,7 @@ All LHM skills read their **business configuration** from `~/.lhm/credentials.js
 - SQL conversion database connection settings (maxcompute, hologres, clickhouse, etc.)
 - Schedule migration data source names
 
-> **Alibaba Cloud API credentials are NOT stored in or read from this file.** Authentication for every `aliyun lhm` call is resolved through the default credential chain verified in Step 2.2 (environment variables / `~/.alibabacloud/credentials` / RAM Role). The per-database login fields inside the SQL-conversion profiles belong to the DryRun database connection only and are never used to authenticate LHM API calls. Therefore the schedule-migration and data-validation flows must **never** look for cloud credentials in this file, **never** treat their absence as a blocker, and **never** prompt the user for cloud credentials — if the default credential chain is unavailable, Step 2.2 already handles it before any sub-skill is loaded.
+> **Alibaba Cloud API credentials are NOT stored in or read from this file.** Authentication for every `aliyun lhm` call is resolved through the default credential chain (environment variables / `~/.alibabacloud/credentials` / RAM Role). The per-database login fields inside the SQL-conversion profiles belong to the DryRun database connection only and are never used to authenticate LHM API calls. Therefore the schedule-migration and data-validation flows must **never** look for cloud credentials in this file, **never** treat their absence as a blocker, and **never** prompt the user for cloud credentials — if the default credential chain is unavailable, the `aliyun` CLI reports the authentication error at the first cloud call.
 
 Each sub-skill reads the relevant sections from this file automatically. No manual configuration dispatch is needed.
 
@@ -348,13 +302,13 @@ Based on the routing decision from Step 1, **read the sub-skill's SKILL.md file 
 **⚠️ Critical**: Do NOT attempt to invoke the sub-skill by name or through any skill invocation mechanism. The sub-skill is NOT a registered invokable skill — it is a document that you must read and execute yourself. Always use file reading (e.g., `read_file`) to load the sub-skill's SKILL.md at the absolute path:
 
 ```
-${SKILL_HOME}/subSkill/<sub-skill-dir>/SKILL.md
+${SKILL_HOME}/references/<sub-skill-dir>/SKILL.md
 ```
 
 For example:
-- SQL Conversion: `${SKILL_HOME}/subSkill/lhm-sql-conversion/SKILL.md`
-- Data Validation: `${SKILL_HOME}/subSkill/lhm-data-validation-skill/SKILL.md`
-- Workflow Migration: `${SKILL_HOME}/subSkill/lhm-bigdata-workflow-migration-skill/SKILL.md`
+- SQL Conversion: `${SKILL_HOME}/references/lhm-sql-conversion/SKILL.md`
+- Data Validation: `${SKILL_HOME}/references/lhm-data-validation-skill/SKILL.md`
+- Workflow Migration: `${SKILL_HOME}/references/lhm-bigdata-workflow-migration-skill/SKILL.md`
 
 **Loading constraints**:
 - **File-read only**: always load by absolute file path. Never attempt invocation by skill name.
@@ -409,29 +363,29 @@ The dispatcher MUST have exported `LHM_SESSION_ID` in Step 3 before any sub-skil
 The UA is **version-derived**: it must embed the skill version, which is read from the top-level `version` field of [`references/manifest.json`](references/manifest.json) — a non-empty string. This file MUST be read **before the first cloud call** so every `aliyun lhm` / SDK request carries the correct version segment.
 
 ```bash
-SKILL_VERSION=$(python3 -c "import json,os; print(json.load(open(os.path.join('${SKILL_HOME}','references','manifest.json')))['version'])")
-echo "Skill version: $SKILL_VERSION"
+export LHM_SKILL_VERSION=$(python3 -c "import json,os; print(json.load(open(os.path.join('${SKILL_HOME}','references','manifest.json')))['version'])")
+echo "Skill version: $LHM_SKILL_VERSION"
 ```
 
-- The `version` in `references/manifest.json` is the authoritative source for the UA version segment and is kept in sync with the frontmatter `version`.
-- Read it once per session and reuse the value for all cloud service calls.
+- The `version` in `references/manifest.json` is the authoritative source for the UA `skill-version` segment and is kept in sync with the frontmatter `version`.
+- Read it once per session, export it as `LHM_SKILL_VERSION`, and reuse the value for all cloud service calls. Sub-skill scripts read `LHM_SKILL_VERSION` from the environment when constructing their UA, falling back to a hardcoded `1.0.0` only when it is unset (standalone use).
 
 ### UA template declaration
 
 When calling cloud services via the aliyun CLI / SDK, attach the following UA identifier (placeholder form):
 
 ```
---user-agent AlibabaCloud-Agent-Skills/{SKILL_NAME}/{version}/{session-id}
+--user-agent "AlibabaCloud-Agent-Skills/{SKILL_NAME}/{session-id} skill-version/{skill-version}"
 ```
 
 - `{SKILL_NAME}`: replace with the `name` field of this skill's frontmatter, i.e. `alibabacloud-lakehouse-migration`
-- `{version}`: replace with the `version` field read from `references/manifest.json` (see the rule above), i.e. `1.0.0`
 - `{session-id}`: replace with the 32-character hexadecimal ID generated by the rule above
+- `{skill-version}`: replace with the `version` field read from `references/manifest.json` (see the rule above), i.e. `1.0.0`
 
 Example:
 
 ```bash
-aliyun lhm <command> --endpoint <lhm.endpoint> --region <lhm.region_id> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-lakehouse-migration/1.0.0/0af1c3e6b2d94a7f8c1e2b3d4a5f6071
+aliyun lhm <command> --endpoint <lhm.endpoint> --region <lhm.region_id> --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-lakehouse-migration/0af1c3e6b2d94a7f8c1e2b3d4a5f6071 skill-version/1.0.0"
 ```
 
 > Besides the UA, every `aliyun lhm` call also carries the fixed connection parameters `--endpoint` / `--region`, whose values are read from the `lhm` section of `~/.lhm/credentials.json` (`lhm.endpoint` / `lhm.region_id`, see Step 4); the environment variables `LHM_ENDPOINT` / `REGION_ID` and built-in defaults are only fallbacks, and explicit CLI arguments take the highest precedence. The sub-skill CLI wrappers attach them automatically.
@@ -448,7 +402,7 @@ aliyun lhm <command> --endpoint <lhm.endpoint> --region <lhm.region_id> --user-a
 > ```
 > The `aliyun_cli.py` Python module already includes this detection logic (via the `find_aliyun_binary()` function), but manual handling is required when invoking directly through Bash.
 
-When calling cloud services through an Alibaba Cloud SDK, set the same UA identifier via the `user_agent` field of the SDK `Config` object (e.g., `alibabacloud_tea_openapi.models.Config(user_agent=...)`), using the same `AlibabaCloud-Agent-Skills/{SKILL_NAME}/{version}/{session-id}` form with each sub-skill's own `{SKILL_NAME}` and the `{version}` read from `references/manifest.json`. All sub-skill SDK clients and CLI wrappers in this repository already attach the session-id automatically based on `LHM_SESSION_ID`.
+When calling cloud services through an Alibaba Cloud SDK, set the same UA identifier via the `user_agent` field of the SDK `Config` object (e.g., `alibabacloud_tea_openapi.models.Config(user_agent=...)`), using the same `AlibabaCloud-Agent-Skills/{SKILL_NAME}/{session-id} skill-version/{skill-version}` form with each sub-skill's own `{SKILL_NAME}` and the `{skill-version}` read from `references/manifest.json`. All sub-skill SDK clients and CLI wrappers in this repository already attach the session-id and skill-version automatically based on `LHM_SESSION_ID` and `LHM_SKILL_VERSION`.
 
 Each sub-skill that the request is routed to reuses the same `session-id` when making its own cloud service calls, ensuring full-chain traceability.
 
@@ -458,17 +412,17 @@ This skill is classified in the AIOps domain because it orchestrates Alibaba Clo
 
 ## Skill Package Layout
 
-This dispatcher and the three sub-skills are **independent Skill packages**. In this monorepo, the dispatcher resides at the repository root (`SKILL_HOME`), while all sub-skill packages are organized under the `subSkill/` subdirectory:
+This dispatcher and the three sub-skills are **independent Skill packages**. In this monorepo, the dispatcher resides at the repository root (`SKILL_HOME`), while all sub-skill packages are organized under the `references/` subdirectory:
 
 ```
 <repo-root>/                                      # = ${SKILL_HOME} of this dispatcher
 ├── SKILL.md                                      # This dispatcher (unified entry point)
-├── references/manifest.json                      # Skill manifest (authoritative `version` for the UA)
-├── references/ram-policies.md                    # RAM permission declarations
 ├── scripts/                                      # Utility scripts, dependency declaration
 │   ├── install_lhm_plugin.sh
 │   └── requirements.txt
-└── subSkill/                                     # Sub-skill packages directory
+└── references/                                   # References + sub-skill packages directory
+    ├── manifest.json                            # Skill manifest (authoritative `version` for the UA)
+    ├── ram-policies.md                          # RAM permission declarations
     ├── lhm-sql-conversion/                       # SQL conversion skill (registered name: lhm-sql-conversion)
     │   └── skills/sql-atomic-conversion/         # Nested — NOT discoverable by name; load via file path
     ├── lhm-data-validation-skill/                # Data validation skill (registered name: lhm-data-validation-skill)
@@ -477,7 +431,7 @@ This dispatcher and the three sub-skills are **independent Skill packages**. In 
         └── skill/lhm-sch-{ds,env,deploy,read-exec}/  # Nested — NOT discoverable by name; load via file path
 ```
 
-Routing prerequisite: the three sub-skills must be accessible to the Agent via `${SKILL_HOME}/subSkill/<sub-skill-dir>/SKILL.md` path. Read this file directly and follow its instructions. Never attempt invocation by skill name. Never implement sub-skill business logic yourself.
+Routing prerequisite: the three sub-skills must be accessible to the Agent via `${SKILL_HOME}/references/<sub-skill-dir>/SKILL.md` path. Read this file directly and follow its instructions. Never attempt invocation by skill name. Never implement sub-skill business logic yourself.
 
 ## When to use
 

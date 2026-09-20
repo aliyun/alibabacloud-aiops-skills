@@ -1,0 +1,113 @@
+{
+  "_comment": "SQL Migration Tools — 配置模板",
+  "_usage": [
+    "cp config_template.json local_config.json",
+    "编辑 local_config.json，填入真实凭证",
+    "优先级：local_config.json > 环境变量 > 硬编码默认值",
+    "local_config.json 已在 .gitignore 中，不会提交到仓库"
+  ],
+  "maxcompute": {
+    "access_id": "",
+    "access_key": "",
+    "project": "",
+    "endpoint": "",
+    "region": ""
+  },
+  "hologres": {
+    "endpoint": "",
+    "access_id": "",
+    "access_key": "",
+    "db_name": "",
+    "host": "",
+    "port": ""
+  },
+  "clickhouse": {
+    "host": "",
+    "port": 8123,
+    "user": "",
+    "password": "",
+    "database": "default"
+  },
+  "redshift": {
+    "workgroup": "",
+    "database": "dev",
+    "region": "ap-southeast-1"
+  },
+  "starrocks": {
+    "host": "",
+    "port": 9030,
+    "user": "",
+    "password": "",
+    "database": ""
+  },
+  "hive": {
+    "host": "",
+    "port": 10000,
+    "user": "",
+    "password": "",
+    "database": "default",
+    "auth": "NONE"
+  },
+  "mysql": {
+    "host": "",
+    "port": 3306,
+    "user": "",
+    "password": "",
+    "database": ""
+  },
+  "sqlserver": {
+    "host": "",
+    "port": 1433,
+    "user": "",
+    "password": "",
+    "database": ""
+  },
+  "bigquery": {
+    "credentials_file": "",
+    "project": "",
+    "dataset": "",
+    "location": "US"
+  },
+  "presto": {
+    "host": "",
+    "port": 8889,
+    "user": "",
+    "catalog": "hive",
+    "schema": "default"
+  },
+  "kyuubi": {
+    "host": "",
+    "port": 443,
+    "scheme": "https",
+    "username": "",
+    "password": "",
+    "default_catalog": "",
+    "default_database": ""
+  },
+  "spark_emr": {
+    "access_key_id": "",
+    "access_key_secret": "",
+    "endpoint": "emr-serverless-spark.cn-hangzhou.aliyuncs.com",
+    "region_id": "cn-hangzhou",
+    "workspace_id": "",
+    "sql_compute_id": "",
+    "default_catalog": "",
+    "default_database": "default"
+  },
+  "spark": {
+    "backend": "kyuubi"
+  },
+  "placeholders": {
+    "mappings": {
+      "tdate-yyyymmdd": "20260101",
+      "bizdate": "20260101",
+      "yyyy-mm-dd": "2026-01-01",
+      "tdate-yyyy": "20260101",
+      "tdate-yyyy-mm-dd": "2026-01-01",
+      "tdate-yyyy-mm": "20260101",
+      "tdate-yyyymm": "202601",
+      "stat_date": "20260101"
+    },
+    "default": "20260101"
+  }
+}
