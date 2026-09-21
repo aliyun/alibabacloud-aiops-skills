@@ -89,7 +89,7 @@ Expected for SELECT/search:
 Confirm that every `aliyun agentloop` invocation, including dry runs and verification calls, used the same session-scoped user agent:
 
 ```bash
---user-agent "AlibabaCloud-Agent-Skills/alibabacloud-agentloop-management/${SESSION_ID}"
+--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-agentloop-management/skill-version/${SKILL_VERSION}/${SESSION_ID}"
 ```
 
 `SESSION_ID` must be the single 32-character lowercase hexadecimal value generated once for this skill session. Do not regenerate it for retries or mutate global Aliyun CLI configuration to set the user agent.

@@ -48,6 +48,7 @@ Security rules:
 - Never ask the user to pass literal credentials in a command or conversation.
 - Never run `aliyun configure set` with literal credential values.
 - Use only `aliyun configure list` to check whether a usable identity and region are configured.
+- This restriction also applies while diagnosing `403 Forbidden`: do not run `aliyun configure get`, read `.aliyun/config.json`, or dump credential environment variables. A permission denial is not permission to inspect secret values; use the denied action and request ID for diagnosis.
 
 ```bash
 aliyun configure list
@@ -87,17 +88,20 @@ Confirm user-customizable values before executing a cloud request. Reuse explici
 
 ## Observability
 
+Before generating the User-Agent or issuing any cloud request, apply the root [skill version gate](../../SKILL.md#shared-conventions): read `references/manifest.json`, require its non-empty string `version`, and stop on any read or validation failure. Use that exact value as `SKILL_VERSION`; never infer a fallback.
+
 Generate one session ID before the first AgentLoop API request in a skill session. Generate it once, require exactly 32 lowercase hexadecimal characters, and reuse it for the entire session:
 
 ```bash
+SKILL_VERSION="{version}"
 SESSION_ID="$(openssl rand -hex 16)"
-USER_AGENT="AlibabaCloud-Agent-Skills/alibabacloud-agentloop-management/${SESSION_ID}"
+USER_AGENT="AlibabaCloud-Agent-Skills/alibabacloud-agentloop-management/skill-version/${SKILL_VERSION}/${SESSION_ID}"
 ```
 
 The canonical CLI template is:
 
 ```bash
---user-agent "AlibabaCloud-Agent-Skills/alibabacloud-agentloop-management/{session-id}"
+--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-agentloop-management/skill-version/{version}/{session-id}"
 ```
 
 Observability rules:

@@ -152,18 +152,20 @@ and do not require the confirmation protocol.
 
 ## Observability (MUST follow for every aliyun command)
 
+Before generating the User-Agent or issuing any cloud request, apply the root [skill version gate](../../SKILL.md#shared-conventions): read `references/manifest.json`, require its non-empty string `version`, and stop on any read or validation failure. Use that exact value as `{version}`; never infer a fallback.
+
 Upon loading this skill, generate a random session ID (32-char lowercase hex string) once for the entire session. Use it as `{session-id}` below.
 
 **Rule: Every `aliyun` CLI command that calls a cloud API MUST include the `--user-agent` flag.**
 Local utility commands (e.g. `configure`, `plugin`, `version`) do not support this flag and should be excluded.
 
 ```
---user-agent AlibabaCloud-Agent-Skills/alibabacloud-agentloop-management/{session-id}
+--user-agent AlibabaCloud-Agent-Skills/alibabacloud-agentloop-management/skill-version/{version}/{session-id}
 ```
 
 Example (assuming session-id is `a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6`):
 ```bash
-aliyun agentloop list-evaluators --agent-space my-space --user-agent AlibabaCloud-Agent-Skills/alibabacloud-agentloop-management/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6
+aliyun agentloop list-evaluators --agent-space my-space --user-agent AlibabaCloud-Agent-Skills/alibabacloud-agentloop-management/skill-version/1.0.0/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6
 ```
 
 Do not skip, alter the format, or omit `--user-agent` on any `aliyun` API command invocation.
@@ -297,17 +299,17 @@ This skill does not automate delete, cancel, or terminate operations. To clean u
 
 1. **Terminate a running task** (explicit user authorization required):
    ```bash
-   aliyun agentloop update-evaluation-task --agent-space <space> --task-id <task-id> --status Terminated --user-agent AlibabaCloud-Agent-Skills/alibabacloud-agentloop-management/{session-id}
+   aliyun agentloop update-evaluation-task --agent-space <space> --task-id <task-id> --status Terminated --user-agent AlibabaCloud-Agent-Skills/alibabacloud-agentloop-management/skill-version/{version}/{session-id}
    ```
 
 2. **Delete a task** (explicit user authorization required):
    ```bash
-   aliyun agentloop delete-evaluation-task --agent-space <space> --task-id <task-id> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-agentloop-management/{session-id}
+   aliyun agentloop delete-evaluation-task --agent-space <space> --task-id <task-id> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-agentloop-management/skill-version/{version}/{session-id}
    ```
 
 3. **Delete a saved evaluator** (explicit user authorization required):
    ```bash
-   aliyun agentloop delete-evaluator --agent-space <space> --name <evaluator-name> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-agentloop-management/{session-id}
+   aliyun agentloop delete-evaluator --agent-space <space> --name <evaluator-name> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-agentloop-management/skill-version/{version}/{session-id}
    ```
 
 > **Warning:** These are destructive operations. Always require explicit user permission before execution. One-shot task and run records are automatically cleaned by the backend after 24 hours.

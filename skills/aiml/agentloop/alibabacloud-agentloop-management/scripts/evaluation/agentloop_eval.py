@@ -10,6 +10,8 @@ import argparse
 import copy
 import json
 import os
+import re
+import secrets
 import shlex
 import shutil
 import subprocess
@@ -22,6 +24,7 @@ from typing import Any, Iterable
 
 PLUGIN_NAME = "aliyun-cli-agentloop"
 SKILL_NAME = "alibabacloud-agentloop-management"
+MANIFEST_PATH = Path(__file__).resolve().parents[2] / "references" / "manifest.json"
 LOCAL_SUBCOMMANDS = {"version", "plugin", "configure"}
 JSON_FLAGS = {
     "--config",
@@ -62,6 +65,37 @@ MAX_DISCOVERY_PAGES = 100
 
 class WorkflowError(RuntimeError):
     """A user-actionable workflow failure."""
+
+
+def _skill_version() -> str:
+    """Load the canonical skill version, failing before any cloud API call."""
+    try:
+        manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise WorkflowError(f"skill manifest not found: {MANIFEST_PATH}") from exc
+    except (OSError, json.JSONDecodeError) as exc:
+        raise WorkflowError(f"skill manifest is unreadable or invalid: {MANIFEST_PATH}: {exc}") from exc
+    version = manifest.get("version") if isinstance(manifest, dict) else None
+    if not isinstance(version, str) or not version.strip():
+        raise WorkflowError(f"skill manifest has no non-empty string version: {MANIFEST_PATH}")
+    return version.strip()
+
+
+_CACHED_SESSION_ID: str | None = None
+
+
+def _session_id() -> str:
+    global _CACHED_SESSION_ID
+    if _CACHED_SESSION_ID is not None:
+        return _CACHED_SESSION_ID
+    configured = os.environ.get("SKILL_SESSION_ID", "")
+    if configured:
+        if not re.fullmatch(r"[a-f0-9]{32}", configured):
+            raise WorkflowError("SKILL_SESSION_ID must be exactly 32 lowercase hexadecimal characters")
+        _CACHED_SESSION_ID = configured
+    else:
+        _CACHED_SESSION_ID = secrets.token_hex(16)
+    return _CACHED_SESSION_ID
 
 
 def compact_json(value: Any) -> str:
@@ -138,27 +172,29 @@ def _is_cloud_api_command(command: list[str]) -> bool:
 
 
 def _ensure_user_agent(command: list[str]) -> list[str]:
-    """Inject --user-agent into aliyun cloud API commands when SKILL_SESSION_ID is set."""
+    """Inject the manifest-derived versioned User-Agent into cloud API calls."""
     if not _is_cloud_api_command(command):
         return command
+    version = _skill_version()
+    session_id = _session_id()
+    expected_user_agent = (
+        f"AlibabaCloud-Agent-Skills/{SKILL_NAME}/skill-version/{version}/{session_id}"
+    )
     if "--user-agent" in command:
+        index = command.index("--user-agent")
+        if index + 1 >= len(command) or command[index + 1] != expected_user_agent:
+            raise WorkflowError(
+                "cloud API command has a User-Agent that does not match the manifest-derived "
+                "skill version and workflow session"
+            )
         return command
-    session_id = os.environ.get("SKILL_SESSION_ID", "")
-    if not session_id:
-        print(
-            "WARNING: SKILL_SESSION_ID is not set; --user-agent omitted from cloud API command. "
-            "Set SKILL_SESSION_ID for observability compliance.",
-            file=sys.stderr,
-        )
-        return command
-    user_agent = f"AlibabaCloud-Agent-Skills/{SKILL_NAME}/{session_id}"
     result = list(command)
     for i, token in enumerate(result):
         if token in ("--region", "--endpoint"):
-            result.insert(i, user_agent)
+            result.insert(i, expected_user_agent)
             result.insert(i, "--user-agent")
             return result
-    result.extend(["--user-agent", user_agent])
+    result.extend(["--user-agent", expected_user_agent])
     return result
 
 

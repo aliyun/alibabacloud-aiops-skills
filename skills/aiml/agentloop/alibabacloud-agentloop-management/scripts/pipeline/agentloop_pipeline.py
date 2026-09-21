@@ -18,6 +18,7 @@ from typing import Any
 
 
 SKILL_NAME = "alibabacloud-agentloop-management"
+MANIFEST_PATH = Path(__file__).resolve().parents[2] / "references" / "manifest.json"
 ALLOWED_BINARIES = {"aliyun"}
 PIPELINE_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$")
 DATASET_NAME_RE = re.compile(r"^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$")
@@ -113,8 +114,25 @@ def _session_id() -> str:
     return _CACHED_SESSION_ID
 
 
+def _skill_version() -> str:
+    """Load the canonical skill version, failing before any cloud API call."""
+    try:
+        manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise PipelineError(f"skill manifest not found: {MANIFEST_PATH}") from exc
+    except (OSError, json.JSONDecodeError) as exc:
+        raise PipelineError(f"skill manifest is unreadable or invalid: {MANIFEST_PATH}: {exc}") from exc
+    version = manifest.get("version") if isinstance(manifest, dict) else None
+    if not isinstance(version, str) or not version.strip():
+        raise PipelineError(f"skill manifest has no non-empty string version: {MANIFEST_PATH}")
+    return version.strip()
+
+
 def _user_agent() -> str:
-    return f"AlibabaCloud-Agent-Skills/{SKILL_NAME}/{_session_id()}"
+    return (
+        f"AlibabaCloud-Agent-Skills/{SKILL_NAME}/skill-version/"
+        f"{_skill_version()}/{_session_id()}"
+    )
 
 
 def _redact(value: Any) -> Any:

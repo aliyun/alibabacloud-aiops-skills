@@ -156,13 +156,15 @@ and redacted samples.
 
 ## Observability
 
+Before generating the User-Agent or issuing any cloud request, apply the root [skill version gate](../../SKILL.md#shared-conventions): read `references/manifest.json`, require its non-empty string `version`, and stop on any read or validation failure. Use that exact value as `{version}`; never infer a fallback.
+
 Generate one 32-character lowercase hex session ID for the skill session and
 reuse it for every command. Use it as `{session-id}`.
 
 Every `aliyun agentloop` cloud API command must include:
 
 ```bash
---user-agent "AlibabaCloud-Agent-Skills/alibabacloud-agentloop-management/{session-id}"
+--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-agentloop-management/skill-version/{version}/{session-id}"
 ```
 
 Local utility commands such as `aliyun version`, `aliyun configure`, and
@@ -344,6 +346,12 @@ Inspect and summarize these fields for the user:
 - global-dedup warning
 - sink dataset
 
+When the user ends the workflow after dry-run or declines real creation, make
+the final response self-contained: repeat the Pipeline name, dry-run outcome,
+node types and their relevant fields or mappings, sink Dataset, and remaining
+risks. State that no Pipeline was created. Retain this summary after a
+confirmation exchange rather than replacing it with a bare acknowledgement.
+
 ### 5. Validate SPL semantics with `preview` (required)
 
 Wrapper dry-run only checks payload shape and casing. It does NOT validate that
@@ -434,7 +442,7 @@ aliyun agentloop get-pipeline \
   --agent-space <space> \
   --pipeline-name <name> \
   --region <region> \
-  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-agentloop-management/{session-id}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-agentloop-management/skill-version/{version}/{session-id}"
 ```
 
 For runs:
@@ -444,7 +452,7 @@ aliyun agentloop list-pipeline-runs \
   --agent-space <space> \
   --pipeline-name <name> \
   --region <region> \
-  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-agentloop-management/{session-id}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-agentloop-management/skill-version/{version}/{session-id}"
 ```
 
 `list-pipeline-runs` returns the run array in the top-level `runs` field. When
@@ -471,7 +479,7 @@ List Pipelines:
 aliyun agentloop list-pipelines \
   --agent-space <space> \
   --region <region> \
-  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-agentloop-management/{session-id}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-agentloop-management/skill-version/{version}/{session-id}"
 ```
 
 Get one Pipeline:
@@ -481,7 +489,7 @@ aliyun agentloop get-pipeline \
   --agent-space <space> \
   --pipeline-name <name> \
   --region <region> \
-  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-agentloop-management/{session-id}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-agentloop-management/skill-version/{version}/{session-id}"
 ```
 
 Get stats:
@@ -491,7 +499,7 @@ aliyun agentloop get-pipeline-stats \
   --agent-space <space> \
   --pipeline-name <name> \
   --region <region> \
-  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-agentloop-management/{session-id}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-agentloop-management/skill-version/{version}/{session-id}"
 ```
 
 ### Preview processing
@@ -526,7 +534,7 @@ aliyun agentloop preview-pipeline \
   --from-time <unix-seconds> \
   --to-time <unix-seconds> \
   --region <region> \
-  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-agentloop-management/{session-id}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-agentloop-management/skill-version/{version}/{session-id}"
 ```
 
 Require a bounded time window. Warn before AI nodes.
@@ -554,7 +562,7 @@ aliyun agentloop run-pipeline \
   --from-time <unix-seconds> \
   --to-time <unix-seconds> \
   --region <region> \
-  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-agentloop-management/{session-id}"
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-agentloop-management/skill-version/{version}/{session-id}"
 ```
 
 `409 ResourceExist: A run already exists` means a run already covers that window.

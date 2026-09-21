@@ -43,7 +43,7 @@ Required RAM permissions - see [references/ram-policies.md](ram-policies.md).
 ```bash
 export ARMS_LICENSE_KEY="$(aliyun cms2 apm configuration get \
  --workspace {workspace} --region {regionId} -o json \
- --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-agentloop-management/{session-id}" \
+ --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-agentloop-management/skill-version/{version}/{session-id}" \
  | jq -r '.data.entryPointInfo.authToken')"
 ```
 
@@ -66,13 +66,15 @@ aliyun cms2 apm configuration get --workspace {workspace} --region {regionId} -o
 
 ## Observability
 
+Before generating the User-Agent or issuing any cloud request, apply the root [skill version gate](../SKILL.md#shared-conventions): read `references/manifest.json`, require its non-empty string `version`, and stop on any read or validation failure. Use that exact value as `{version}`; never infer a fallback.
+
 ### User-Agent Template
 
 Every `aliyun` CLI command (`aliyun cms2`, `aliyun sts`, `aliyun cs`, etc.) in
 this skill **MUST** include the `--user-agent` flag:
 
 ```text
---user-agent "AlibabaCloud-Agent-Skills/alibabacloud-agentloop-management/{session-id}"
+--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-agentloop-management/skill-version/{version}/{session-id}"
 ```
 
 Replace `{session-id}` with the session identifier for the current workflow.
@@ -83,7 +85,7 @@ Example:
 aliyun cms2 apm configuration get \
  --workspace agentloop-2694ecf8****************1f84542d \
  --region cn-hangzhou \
- --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-agentloop-management/3f2a8b1c4d5e6f709182a3b4c5d6e7f8"
+ --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-agentloop-management/skill-version/1.0.0/3f2a8b1c4d5e6f709182a3b4c5d6e7f8"
 ```
 
 ### session-id Rule
