@@ -1,0 +1,2 @@
+# Dependencies for LHM skills
+# Note: pyyaml is no longer needed as config_dispatcher.py has been removed

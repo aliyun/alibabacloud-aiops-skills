@@ -1,0 +1,21 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "lhm-sch-read-exec-cli"
+version = "0.1.0"
+description = "LHM Scheduler Read Exec CLI tool for schedule migration"
+readme = "SKILL.md"
+requires-python = ">=3.9"
+dependencies = [
+    "click>=8.0",
+]
+
+[project.scripts]
+lhm-sch-read-exec = "lhm_read_exec_cli.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["scripts/lhm_read_exec_cli"]
+
+

@@ -1,0 +1,19 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "lhm-sch-deploy-cli"
+version = "0.1.0"
+description = "LHM Scheduler deployment CLI tool (trigger -> poll -> result -> report)"
+readme = "SKILL.md"
+requires-python = ">=3.9"
+dependencies = []
+
+[project.scripts]
+lhm-sch-deploy = "lhm_deploy_cli.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["scripts/lhm_deploy_cli"]
+
+
