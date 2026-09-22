@@ -12,7 +12,7 @@
 - **Onboarding exceptions to [Uncertain parameters](../SKILL.md#global-conventions)**: (1) region scope for `aliyun cms2 entity query --source CloudResource` follows [CloudResource Query Region Handling](#cloudresource-query-region-handling); (2) addon selection follows [Addon Selection Gate](#addon-selection-gate-hard-requirement); (3) policy name follows [Policy Name Defaulting](#policy-name-defaulting-hard-requirement). Never fabricate or guess values outside these exceptions.
 - **Workspace must be explicitly selected** before policy or addon-release creation, per [Workspace Selection Gate](#workspace-selection-gate-hard-requirement).
 - **Before onboarding concrete resource IDs**, verify them per [Resource Identity Verification](#resource-identity-verification).
-- **`aliyun cms2 entity query` time range**: always pass `--from`/`--to` (Unix seconds); default last 7 days when the user does not specify. Compute the pair once per task with `date` and reuse it.
+- **`aliyun cms2 entity query` time range**: always pass `--from`/`--to` (unix or RFC3339); when the user does not specify a range, default to the last 7 days. Compute the pair once per task with `date` and reuse those values — do not re-pass `now-7d` / `近1h`.
 - **`--sql` region injection, columnar `header`/`data` JSON, no `stats`, and `project` before `limit`**: `aliyun cms2 entity query --help`. Under `--sql`, write `where region_id = '<region>'` yourself — do not rely on `--region`. `--entity-type` mode still uses the flag as a filter.
 - **Map columns by header** after every `--source CloudResource` call. `__entity_id__` vs `instance_id` disambiguation is in `aliyun cms2 entity query --help`. Use `instance_id` as the cloud resource ID.
 
@@ -43,8 +43,8 @@ A policy with a healthy release still does not prove a given resource is covered
 |------|--------|
 | 1. Identify addons | Resource type → `aliyun cms2 integration addon list --entity-type <entityType>`; instance ID → `aliyun cms2 entity query --source CloudResource` to resolve the type first. This is Step 0 of the [Addon Selection Gate](#addon-selection-gate-hard-requirement) — run the whole gate before using any `addonName`. |
 | 2. Find candidate policies | `aliyun cms2 integration policy list --addon-name <addonName>`. ACK/CS: `--policy-type CS --bind-resource-id <clusterId>` (see [Policy Lookup Rules](#policy-lookup-rules)). Cloud sub-types: `--addon-name` is primary; verify each policy with a target release before counting as evidence. |
-| 3. Check addon releases | `aliyun cms2 integration addon-release list --policy-id <policyId>` per policy, **without** `--addon-name`: an entry addon fans out one release per enabled child, and filtering by the entry name leaves every child unverified. Group by `parentAddonReleaseId` — one group per entry release, since a policy can hold several with different scopes — and evaluate the entry addon together with its children. CS/ACK children leave that field empty; there the children are every non-entry release under the policy. Cloud children also leave it empty even while the entry exists, so that field cannot split generations after an entry update: previous children stay listed, and a leftover of a closed child is not present — isolate per [Addon Release Config Update](#addon-release-config-update-hard-requirement). |
-| 4. Collector status | CS/ECS: `aliyun cms2 integration collector list --policy-id --collector-type ClusterCollector`. ECS additionally: NodeCollector when the addon requires node-level collection. Cloud: skip. |
+| 3. Check addon releases | `aliyun cms2 integration addon-release list --policy-id <policyId>` per policy, **without** `--addon-name` (that filter is in `--help` examples): an entry addon fans out one release per enabled child, and filtering by the entry name leaves every child unverified. Group by `parentAddonReleaseId` — one group per entry release, since a policy can hold several with different scopes — and evaluate the entry addon together with its children. CS/ACK children leave that field empty; there the children are every non-entry release under the policy. Cloud children also leave it empty even while the entry exists, so that field cannot split generations after an entry update: previous children stay listed, and a leftover of a closed child is not present — isolate per [Addon Release Config Update](#addon-release-config-update-hard-requirement). |
+| 4. Collector status | CS/ECS: `aliyun cms2 integration collector list --policy-id --collector-type ClusterCollector`. Pick `collectorName: metric-agent`. ECS additionally: NodeCollector when the addon requires node-level collection. Cloud: skip. |
 
 **Step 3 scope.** The monitored scope lives on the release, not on the policy. A policy's `entityGroup` is populated only for CS cluster binding (`clusterId`) and cross-account (`entityUserId`) — on ECS and Cloud it is normally `{}`. Its `resourceGroupId` and `acs:rm:rgId` tag describe where the policy object sits in Resource Management; reading either as the monitored scope narrows an audit to the wrong set.
 
@@ -163,7 +163,7 @@ A key the schema does not declare is stored as sent and never read — see [Addo
 
 **Fan-out.** Parent `addons.<child>` is only `{enable, values}`; child fields live on each child's own catalog. A child left out of `values.addons` is created from the entry schema's `defaultValue.enable`, not withheld: `values: "{}"` and a map that names only some children both fan out every child whose `defaultValue.enable` is `true`. An entry with no `element: addon` fields fans out nothing without an explicit `addons` map. Suppressing a default-enabled child takes `{"enable": false, "values": {}}` under its name — that omits it from the next fan-out; child `config` has no `enable`. The previous child release stays in the unfiltered list and is not proof the child is still on. `once: true` does not cap a child at one release per account/workspace.
 
-**Resolve each user setting against that child's `.fields` before writing `enable` or any field.** A request that names only a setting adds those named keys; unnamed fields stay **unsent**. That is not an instruction to drop the rest, and not permission to copy remembered `defaultValue`s into the body. Never rewrite a setting as `entityRules`, and never copy `entityRules` into `values`: the two objects share names (`tags` is the usual collision) and nothing else. A selector array on a string field was written to the wrong object, not a type to ask about.
+**Resolve each user setting against that child's `.fields` before writing `enable` or any field.** A request that names only a setting adds those named keys; unnamed fields stay **unsent**. Unsent is not off: a collection switch whose `defaultValue` is true still provisions when the key is absent from stored `config`. That is not an instruction to drop the rest, and not permission to copy remembered `defaultValue`s into the body. Never rewrite a setting as `entityRules`, and never copy `entityRules` into `values`: the two objects share names (`tags` is the usual collision) and nothing else. A selector array on a string field was written to the wrong object, not a type to ask about.
 
 1. **Scan set.** Every child the entry schema will fan out (`defaultValue.enable`, plus any the user explicitly enabled). Inventory, instance type, and alias resemblance do not shrink this set. `aliyun cms2 integration addon get` each with its `--env-type` (`environments[].name`) and read `.data.schema.fields`.
 2. **Match** against `.fields` (`label` and `name`; `fieldPath` is the write key only). Skip `element: addon` rows. A phrase that names a scope mode from [Resource Scope Selection Gate](#resource-scope-selection-gate-hard-requirement) occupies `entityRules` — do not test it against field `label`s.
@@ -307,7 +307,7 @@ Present the grouping plan before proceeding.
 Module-specific steps for the global [Workspace Confirmation Gate](../SKILL.md#workspace-confirmation-gate-hard-requirement). Before creating policy or addon release without an explicit workspace:
 
 1. Determine the target region from resource metadata.
-2. `aliyun cms2 workspace list --region <targetRegion> -o json` paginated to completion.
+2. `aliyun cms2 workspace list --region <targetRegion> -o json` paginated to completion. This `--region` is that command's region filter, not the Region Confirmation Gate's global `--region`.
 3. Present candidates; recommend when evidence supports (user-provided > same-region with relevant policies > `default-cms-{userId}-{regionId}` as a discovery hint only). If the list is empty, ask for the exact workspace.
 4. Wait for an explicit choice, including when step 2 returned a single candidate — present it as the recommended option instead of adopting it.
 
@@ -315,22 +315,43 @@ If the user provided a workspace, verify it exists in the target region. Stop pa
 
 ### Existing Policy Reuse Gate (Hard Requirement)
 
-Before `aliyun cms2 integration policy create` or `aliyun cms2 integration addon-release create`, check for reusable policies via `aliyun cms2 integration policy list` (paginate to completion):
+Before `aliyun cms2 integration policy create` or `aliyun cms2 integration addon-release create`, list candidates with `aliyun cms2 integration policy list` (paginate to completion). Classify from the selected addon's live `environments[]` object whose `policyType` matches the policy being created (ask if more than one). `policyType` vs `environments[].name`: [Addon Values Defaults](#addon-values-defaults-hard-requirement). Declared vs top-level `policyType`: [Policy Type Classification](#policy-type-classification).
 
-- User-provided: `--policy-id` or resolve `--policy-name` to one `policyId`.
-- CS: `--policy-type CS --bind-resource-id <clusterId>`.
-- ECS: `--policy-type ECS --workspace <ws> --filter-region-ids <region>`; cross-check with `--addon-name`.
-- Cloud: `--addon-name <addonName>`; cross-check with `--policy-type`.
+User-provided `--policy-id`, or a `--policy-name` that resolves to one `policyId`, wins.
 
-Verify each candidate: `policyType`, workspace/region, scope, existing target releases. Reuse only after confirmed compatible; existing healthy release covering scope → do not duplicate unless the user confirms; both paths possible → ask; no reusable → create after write confirmation. Confirmation must state path, policyId (if reuse), workspace, region, addon, scope.
+| Environment metadata | Reuse key | List filter | Create when none match |
+|----------------------|-----------|-------------|------------------------|
+| `policies.bindDefaultPolicy == true` | same `policyType` in the workspace | `--policy-type <policyType> --workspace <ws>` | `policyType` + `workspace` + `policyName`; no cluster bind |
+| `name` or `policyType` is `CS` | `bindResource.clusterId` = target cluster `instance_id` | `--policy-type CS --bind-resource-id <clusterId>` | `policyType=CS` + `workspace` + cluster bind |
+| `policies.bindEntity.entityGroupMode == true` | same `policyType` in the workspace | `--policy-type <policyType> --workspace <ws>`; ECS also `--filter-region-ids` | `policyType` + `workspace` + `policyName`; scope on the release `entityRules` |
+
+Schema `.fields` and release `values` are not match keys.
+
+Verify each candidate: `policyType`, workspace/region, bound resource or scope, existing target releases.
+
+- **CS**: matching `clusterId` must be reused (type-file uniqueness). Another addon release on that policy is a separate decision.
+- **`bindDefaultPolicy`**: reuse an existing policy of that `policyType` in the workspace unless the user asks to create. Present hits and wait — a single hit is still a candidate, not an auto-pick.
+- **`entityGroupMode`**: reuse only if confirmed compatible. Healthy release already covering the confirmed scope → do not duplicate unless the user confirms. Both paths possible → ask.
+- **`addon.once == true`** with a healthy release of that addon on the chosen policy → do not create another release unless the user confirms. Absent `once` is false; release name must stay unique on the policy.
+- None reusable → create after write confirmation and [Policy Name Defaulting](#policy-name-defaulting-hard-requirement).
+
+Confirmation must state path, policyId (if reuse), workspace, region, addon, scope.
 
 ### Policy Name Defaulting (Hard Requirement)
 
-`policyName` is required for `aliyun cms2 integration policy create`. If the user provides one, use it. If omitted and the new-policy path is chosen, generate deterministically (`date -u +%Y%m%d%H%M%S` once): **CS** `ACK:{clusterName}`; **Cloud** `{Cloud}-{regionId}-Policy-{UTC timestamp}`; **ECS** `ECS-{regionId}-Policy-{UTC timestamp}`; **BatchMetric** `BatchMetric-{regionId}-Policy-{UTC timestamp}`. Freeze before confirmation; reuse on retry. API rejection → stop, ask the user. Does not permit defaulting other parameters. Sub-types (RDS/SLB etc.) are under Cloud, declared per addon (`environments[].policyType`).
+`policyName` is required for `aliyun cms2 integration policy create`. If the user provides one, use it. If omitted and the new-policy path is chosen, generate deterministically (`date -u +%Y%m%d%H%M%S` once):
+
+- **CS**: `ACK:{clusterName}`
+- **`bindDefaultPolicy`**: `{policyType}-可观测策略` when answering in Chinese; `{policyType}-IntegrationPolicy` when answering in English. Language follows [Output Language and Terminology](../SKILL.md#output-language-and-terminology).
+- **Cloud** (not `bindDefaultPolicy`): `{Cloud}-{regionId}-策略-{UTC timestamp}` when answering in Chinese; `{Cloud}-{regionId}-Policy-{UTC timestamp}` when answering in English (e.g. `RDS-cn-hangzhou-Policy-20260622123045`)
+- **ECS**: `ECS-{regionId}-Policy-{UTC timestamp}`
+- **BatchMetric**: `BatchMetric-{regionId}-Policy-{UTC timestamp}`
+
+Freeze before confirmation; reuse on retry. API rejection → stop, ask the user. Does not permit defaulting other parameters.
 
 ### Policy Type Classification
 
-Top-level categories: **Default**, **System**, **CS**, **ECS**, **Cloud**, **Flink**, **BatchMetric**. Sub-types (RDS/SLB etc.) are under Cloud, declared per addon (`environments[].policyType`).
+Top-level categories: **Default**, **System**, **CS**, **ECS**, **Cloud**, **Flink**, **BatchMetric**. Sub-types (RDS/SLB etc.) are declared per addon (`environments.*.policyType`). List, create, and reuse with that declared value — do not rewrite a sub-type to a top-level category.
 
 - **Default policy**: addons with no bound entity (`integrate-metric-store`, `security-actiontrail`, etc.)
 - **System policy**: cloud-service probes (`metric-agent`), etc.

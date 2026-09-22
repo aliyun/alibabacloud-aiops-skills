@@ -51,9 +51,9 @@ Parse `-o json` by field name: `userId`, `regionId`, `version`, `status`, the id
 
 **Same account** (`userId` omitted or equals current): run the loop below without `--member-account-id`. **Cross-account** (named `userId` ≠ current): the same loop, plus `--member-account-id <userId>`, grouped by that `userId`. Credentials must belong to the management account (`aliyun cms2 prometheus instance list --help`). If the resource-directory proxy is unsupported → ask the user to switch credentials; do not retry as current-account list.
 
-Identify each child the way the user did. Mix is allowed: split ids and names; do not put `--prometheus-ids` and `--prometheus-instance-name` on the same call.
+Identify each child the way the user did. Mix is allowed: split ids and names; do not put `--instance-ids` and `--prometheus-instance-name` on the same call.
 
-**By id:** one batched `aliyun cms2 prometheus instance list --prometheus-ids` per catalog `regionId` as `--region` (flags from `--help`).
+**By id:** one batched `aliyun cms2 prometheus instance list --instance-ids` per catalog `regionId` as `--region` (flags from `--help`).
 
 **By instance name:** `aliyun cms2 prometheus instance list --prometheus-instance-name` (one user-supplied name per call; the flag is a single string, not a comma list; `--region` is the catalog `regionId` in the loop). `--help` says partial match — keep only **exact** name matches after list ([Name-to-ID lookup](../SKILL.md) must match exactly). Zero exact hits under the current catalog `regionId` → continue the loop. Only after every catalog `regionId` has been queried with no exact match is it not-found. More than one exact hit → report the rows and ask; never pick a partial or near match.
 
@@ -87,7 +87,7 @@ Fill ids from the fetch in this workflow, not from example placeholders.
 `workspace` is in schema `required[]` and must be the workspace chosen by the Workspace Confirmation Gate.
 `version` is always `"V2"`. Validate with `jq`.
 
-Create returns `prometheusViewId`. Do not invent a view id.
+Create returns `prometheusViewId`.
 
 ### Verify
 
@@ -116,17 +116,17 @@ Trigger when the user asks to diagnose, health-check, or troubleshoot a Promethe
 | Workspace | Yes | [Workspace Confirmation Gate](../SKILL.md#workspace-confirmation-gate-hard-requirement). Then `aliyun cms2 workspace get` for `regionId` — that value is `--region` on `aliyun cms2 prometheus view list` / `aliyun cms2 prometheus view get`. |
 | View | Yes | User-stated **id**: `aliyun cms2 prometheus view get` directly. User-stated **name**: resolve with `aliyun cms2 prometheus view list` (below). |
 
-**By id:** `aliyun cms2 prometheus view get --prometheus-id <view-id> --region <workspace-regionId>`. `aliyun cms2 prometheus view list --prometheus-ids` is not required.
+**By id:** `aliyun cms2 prometheus view get --view-id <view-id> --region <workspace-regionId>`. `aliyun cms2 prometheus view list --view-ids` is not required.
 
-**By name:** `aliyun cms2 prometheus view list --prometheus-view-name <name> --workspace <workspace> --region <workspace-regionId>`. The flag is a partial match — keep only **exact** name matches ([Name-to-ID lookup](../SKILL.md) must match exactly). Zero exact hits → not found. More than one exact hit → report the rows and ask. Do not put `--prometheus-ids` and `--prometheus-view-name` on the same call. Then `aliyun cms2 prometheus view get` with the resolved id.
+**By name:** `aliyun cms2 prometheus view list --prometheus-view-name <name> --workspace <workspace> --region <workspace-regionId>`. The flag is a partial match — keep only **exact** name matches ([Name-to-ID lookup](../SKILL.md) must match exactly). Zero exact hits → not found. More than one exact hit → report the rows and ask. Do not put `--view-ids` and `--prometheus-view-name` on the same call. Then `aliyun cms2 prometheus view get` with the resolved id.
 
 ### Check items
 
 1. View basics from the `aliyun cms2 prometheus view get` above: name, ID, status, associated instances. Parse child ids / `regionId` / `userId` by field name.
 
 2. Sub-instance info: name, ID, home region, status, storage fields.
-   - When the view already returned a child's `regionId`: `aliyun cms2 prometheus instance get --prometheus-id <id> --region <instance-regionId>` (skip the catalog loop for that child).
-   - Otherwise batch with `aliyun cms2 prometheus instance list --prometheus-ids` as in [Fetch every named child instance](#3-fetch-every-named-child-instance) (still do not pass `--version`).
+   - When the view already returned a child's `regionId`: `aliyun cms2 prometheus instance get --instance-id <id> --region <instance-regionId>` (skip the catalog loop for that child).
+   - Otherwise batch with `aliyun cms2 prometheus instance list --instance-ids` as in [Fetch every named child instance](#3-fetch-every-named-child-instance) (still do not pass `--version`).
 
 3. Underlying SLS Project / MetricStore: read those fields by name from the `aliyun cms2 prometheus instance get` (or list) JSON. Do not call an SLS CLI. Absent keys → `Unknown`. Ignore `isMoved2MetricStore` and `basicMetricQueryLimit` on every sub-instance; both are internal and have no diagnostic meaning.
 

@@ -34,7 +34,7 @@ This write targets that collector `releaseName`. Keywords are `HideReleaseName:t
 | Region | Yes | [Region Confirmation Gate](../SKILL.md#region-confirmation-gate-hard-requirement), then policy `regionId` |
 | Workspace | Only to resolve a policy by list | Skip when the user already gave a `policyId` |
 | Policy | Yes | `aliyun cms2 integration policy get` / exact `aliyun cms2 integration policy list` name / CS bind / ECS type |
-| Metric names | When setting or adding | User-named names. Never invent. Not required to inspect or to clear |
+| Metric names | When setting or adding | User-named names. Not required to inspect or to clear |
 
 ### `dropMetrics`
 

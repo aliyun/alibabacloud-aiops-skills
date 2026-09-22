@@ -45,7 +45,7 @@ NodeCollector returns one collector per enabled exporter.
 
 If node collection is required and no NodeCollector is returned, classify as `MISSING_NODE_COLLECTOR`; unhealthy states classify as `NODE_COLLECTOR_NOT_READY`.
 
-The workload namespace is `{vpcId}-{policyId}` truncated to 63 characters, so match it by prefix instead of comparing the full policy ID.
+The workload namespace is `{vpcId}-{policyId}` (may be truncated); match it by prefix, not the full policy ID.
 
 ## Changing Collection Settings on an Existing ECS Release
 

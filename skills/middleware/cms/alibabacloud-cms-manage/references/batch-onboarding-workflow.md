@@ -154,7 +154,7 @@ What the request already named fills only the matching **question**, never 1a or
 - **Break the distribution down by cloud service (hard requirement)**: a row reading `cn-hangzhou | 131` names no cloud service, leaving the user to choose regions without knowing what is in them. Every region offered MUST be shown with the cloud services it holds, each carrying its own instance count and named as the user knows it (ECS, EBS 云盘, RDS) rather than by entity type — either a region × cloud service table, or one line per region listing `<cloud service>(<n>)`. A region total may sit alongside that breakdown but never replace it.
   - Both the services shown and any region total cover the Step 1b supported set only: a dropped service folded into a total is recoverable by subtraction, per [Confidentiality: Out-of-Scope Services](#confidentiality-out-of-scope-services-hard-requirement).
   - Label the counts as the resources each region holds today, not as the onboarding target — Step 2's un-onboarded counts come out lower wherever something is already onboarded.
-  - Leave a region with no supported-set instances out of the options entirely — confirming it widens the scope with nothing to onboard. The raw Step 1a inventory is what makes such a region look populated: per-region infrastructure objects like the default VPC, its vSwitches, and the default security group exist alike in every region.
+  - Leave a region with no supported-set instances out of the options entirely — confirming it widens the scope with nothing to onboard. Do not build those options from the raw Step 1a per-region object counts: VPC and security-group rows make a region look populated with nothing in the supported set.
 - **Shape the options by `Feature:CrossRegion` on `cloud-batch-metrics`** (read in Step 1b), following the keyword table in [Resource Scope Selection Gate](integration-common.md#resource-scope-selection-gate-hard-requirement). Judge by that addon alone — the release is created on it, and the per-service addons' own keywords have no bearing here. If that keyword cannot be read, ask the user which regions to onboard rather than assuming either branch, and do not pre-select "all regions".
 - **`Feature:CrossRegion` present — 全部地域 is required and recommended (hard requirement)**: the first option MUST be 全部地域 / all regions, marked recommended and pre-selected. It covers every region in the presented distribution (the supported-set regions that were offered), not an unscoped sweep of empty Alibaba Cloud regions. Keep the per-region rows so the user can narrow. Selecting 全部地域 confirms that whole list as the Step 1c output. Do not offer only the per-region rows plus 其他.
 
@@ -381,12 +381,6 @@ Run both pre-send gates over the report as well. A probe failure is reported as 
 business-level next step, never as a spec or collector error.
 
 ---
-
-## Error Handling
-
-- On failure of any step, record the error message and pause the workflow.
-- Report the failure reason to the user, offering retry or skip options.
-- Flag all failed items and their reasons in the final report.
 
 ## Deliverables
 
