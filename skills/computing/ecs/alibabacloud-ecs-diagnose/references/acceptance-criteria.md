@@ -10,6 +10,7 @@
 ### Product Validation
 
 #### ✅ CORRECT - Valid product names
+
 ```bash
 aliyun ecs describe-instances --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 aliyun vpc describe-vpcs --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
@@ -17,6 +18,7 @@ aliyun cms describe-metric-last --user-agent "AlibabaCloud-Agent-Skills/alibabac
 ```
 
 #### ❌ INCORRECT - Invalid product names
+
 ```bash
 aliyun ec2 describe-instances  # Wrong: "ec2" is AWS, not Aliyun
 aliyun elastic-compute describe-instances  # Wrong: Use "ecs" not full name
@@ -30,6 +32,7 @@ aliyun cloudmonitor describe-metric-last  # Wrong: Use "cms" not "cloudmonitor"
 ### Command/Action Validation
 
 #### ✅ CORRECT - Valid actions in plugin mode
+
 ```bash
 # ECS actions
 aliyun ecs describe-instances --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
@@ -49,6 +52,7 @@ aliyun cms describe-metric-last --user-agent "AlibabaCloud-Agent-Skills/alibabac
 ```
 
 #### ❌ INCORRECT - Wrong action format or non-existent actions
+
 ```bash
 # Wrong: Using API-style PascalCase instead of plugin mode kebab-case
 aliyun ecs DescribeInstances  # Should be: describe-instances
@@ -67,6 +71,7 @@ aliyun ecs show-instance  # Should be: describe-instances
 ### Parameter Validation
 
 #### ✅ CORRECT - Valid parameter names and formats
+
 ```bash
 # Instance query with correct parameters
 aliyun ecs describe-instances \
@@ -101,18 +106,18 @@ aliyun ecs describe-instance-history-events \
   --instance-event-cycle-status.2 Inquiring \
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 
-# Cloud Assistant command execution
+# Cloud Assistant command execution (--instance-id is a list: space-separated;
+# --command-content is PLAINTEXT — the plugin base64-encodes it automatically)
 aliyun ecs run-command \
   --biz-region-id cn-hangzhou \
-  --instance-id.1 i-xxxxx \
+  --instance-id i-xxxxx \
   --type RunShellScript \
-  --command-content "dXB0aW1l" \
+  --command-content "uptime" \
   --timeout 60 \
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 
-# Monitoring metrics query
+# Monitoring metrics query (cms plugin 0.9.x has NO --biz-region-id flag)
 aliyun cms describe-metric-last \
-  --biz-region-id cn-hangzhou \
   --namespace acs_ecs_dashboard \
   --metric-name CPUUtilization \
   --dimensions '[{"instanceId":"i-xxxxx"}]' \
@@ -120,6 +125,7 @@ aliyun cms describe-metric-last \
 ```
 
 #### ❌ INCORRECT - Invalid parameter names or formats
+
 ```bash
 # Wrong parameter names (API-style PascalCase)
 aliyun ecs describe-instances \
@@ -131,20 +137,20 @@ aliyun ecs describe-instances \
   --biz-region-id cn-hangzhou \
   --instance-ids i-xxxxx  # Should be: '["i-xxxxx"]' (JSON array)
 
-# Wrong multiple instance specification
-aliyun ecs run-command \
-  --biz-region-id cn-hangzhou \
-  --instance-ids '["i-xxxxx","i-yyyyy"]' \  # Wrong parameter name
-  --type RunShellScript \
-  --command-content "dXB0aW1l"
-
-# Correct way for multiple instances
+# Wrong multiple instance specification (indexed .1/.2 syntax was REMOVED in plugin 0.9.x)
 aliyun ecs run-command \
   --biz-region-id cn-hangzhou \
   --instance-id.1 i-xxxxx \
-  --instance-id.2 i-yyyyy \  # Correct: use .1, .2, .3, etc.
+  --instance-id.2 i-yyyyy \
   --type RunShellScript \
-  --command-content "dXB0aW1l"
+  --command-content "uptime"   # Wrong: --instance-id.1 fails with `unknown flag`
+
+# Correct way for multiple instances (list, space-separated values)
+aliyun ecs run-command \
+  --biz-region-id cn-hangzhou \
+  --instance-id i-xxxxx i-yyyyy \
+  --type RunShellScript \
+  --command-content "uptime"
 
 # Wrong dimensions format
 aliyun cms describe-metric-last \
@@ -154,16 +160,21 @@ aliyun cms describe-metric-last \
 ```
 
 **Explanation**:
+
 1. Plugin mode uses kebab-case for parameter names (--biz-region-id, not --RegionId)
 2. Array parameters use JSON format with quotes
-3. Repeated parameters use .1, .2, .3 suffix notation
+3. List parameters take space-separated values (`--instance-id i-xxx i-yyy`); the indexed
+   `.1`/`.2` suffix syntax was REMOVED for instance IDs in plugin 0.9.x (some enums such
+   as `--instance-event-cycle-status.1` still use it — check each command's `--help`)
 4. Dimensions parameter requires JSON format
+5. cms commands take NO `--biz-region-id` flag (plugin 0.9.x)
 
 ---
 
 ### User-Agent Header
 
 #### ✅ CORRECT - Always include user-agent
+
 ```bash
 aliyun ecs describe-instances \
   --biz-region-id cn-hangzhou \
@@ -172,6 +183,7 @@ aliyun ecs describe-instances \
 ```
 
 #### ❌ INCORRECT - Missing user-agent
+
 ```bash
 aliyun ecs describe-instances \
   --biz-region-id cn-hangzhou \
@@ -180,6 +192,17 @@ aliyun ecs describe-instances \
 
 **Explanation**: All commands in this skill MUST include `--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"` for tracking and analytics.
 
+**`{session-id}` / `{skill-version}` specification:**
+
+- `{session-id}`: a random 32-character lowercase hex string, generated ONCE at skill
+  load and reused unchanged for every CLI invocation in that session (e.g. an
+  `openssl rand -hex 16` output). Two invocations within one session MUST carry the
+  identical `{session-id}`; a new session gets a new one.
+- `{skill-version}`: the skill's published version, read once at skill load following
+  the skill's Observability rules (current published version: `1.0.0`).
+- Local utility commands (`configure`, `plugin`, `version`) do not support `--user-agent`
+  and are excluded.
+
 ---
 
 ## 2. Enum Value Validation
@@ -187,6 +210,7 @@ aliyun ecs describe-instances \
 ### Instance Event Cycle Status
 
 #### ✅ CORRECT - Valid enum values
+
 ```bash
 # Valid status values
 --instance-event-cycle-status.1 Executing
@@ -198,6 +222,7 @@ aliyun ecs describe-instances \
 ```
 
 #### ❌ INCORRECT - Invalid enum values
+
 ```bash
 --instance-event-cycle-status.1 Running  # Wrong: Use "Executing"
 --instance-event-cycle-status.1 Pending  # Wrong: Use "Scheduled"
@@ -209,12 +234,14 @@ aliyun ecs describe-instances \
 ### Security Group Direction
 
 #### ✅ CORRECT
+
 ```bash
 --direction ingress  # Inbound rules
 --direction egress   # Outbound rules
 ```
 
 #### ❌ INCORRECT
+
 ```bash
 --direction inbound   # Wrong: Use "ingress"
 --direction outbound  # Wrong: Use "egress"
@@ -226,12 +253,14 @@ aliyun ecs describe-instances \
 ### Cloud Assistant Command Type
 
 #### ✅ CORRECT
+
 ```bash
 --type RunShellScript      # For Linux
 --type RunPowerShellScript # For Windows
 ```
 
 #### ❌ INCORRECT
+
 ```bash
 --type ShellScript        # Wrong: Add "Run" prefix
 --type Bash               # Wrong: Use "RunShellScript"
@@ -243,6 +272,7 @@ aliyun ecs describe-instances \
 ## 3. Parameter Confirmation Patterns
 
 ### ✅ CORRECT - Confirm before use
+
 ```
 Agent: I'll help diagnose your ECS instance. Please confirm the following parameters:
 - Region ID: cn-hangzhou
@@ -254,6 +284,7 @@ Agent: [Proceeds with diagnostics using the confirmed values]
 ```
 
 ### ❌ INCORRECT - Using hardcoded defaults
+
 ```
 Agent: I'll diagnose the instance in cn-hangzhou region with default VPC settings.
 [Proceeds without user confirmation]
@@ -266,12 +297,14 @@ Agent: I'll diagnose the instance in cn-hangzhou region with default VPC setting
 ## 4. Credential Handling Patterns
 
 ### ✅ CORRECT - Check credential status only
+
 ```bash
 # Check if credentials are configured
 aliyun configure list
 ```
 
 ### ❌ INCORRECT - Reading or displaying credentials
+
 ```bash
 # NEVER do this - reads credential values
 echo $ALIBABA_CLOUD_ACCESS_KEY_ID
@@ -291,6 +324,7 @@ read -p "Enter your AccessKey ID: " AK
 ### Base64 Decoding for Cloud Assistant
 
 #### ✅ CORRECT - Decode output properly
+
 ```bash
 # Get invocation result and decode
 aliyun ecs describe-invocation-results \
@@ -302,6 +336,7 @@ aliyun ecs describe-invocation-results \
 ```
 
 #### ❌ INCORRECT - Display without decoding
+
 ```bash
 # Wrong: Shows Base64 encoded string
 aliyun ecs describe-invocation-results \
@@ -313,30 +348,39 @@ aliyun ecs describe-invocation-results \
 
 ---
 
-### Base64 Encoding for Command Content
+### Command Content Encoding (input plaintext, output Base64)
 
-#### ✅ CORRECT - Encode commands before sending
+> **[MUST] In plugin 0.7.x+ (including 0.9.x), `--command-content` takes the PLAINTEXT
+> command string — the plugin Base64-encodes it automatically.** Pre-encoding the input
+> causes double encoding: the guest executes the literal Base64 text, the invocation
+> still reports `Success` / `ExitCode 0`, and the output is empty — a silent false
+> negative that misreports a broken system as healthy. The **response `Output` field**
+> is the only part that IS Base64-encoded and must be decoded after retrieval.
+
+#### ✅ CORRECT - Send the plaintext command
+
 ```bash
-# Encode command content
-COMMAND=$(echo 'df -h' | base64)
-
 aliyun ecs run-command \
   --biz-region-id cn-hangzhou \
-  --instance-id.1 i-xxxxx \
+  --instance-id i-xxxxx \
   --type RunShellScript \
-  --command-content "$COMMAND" \
+  --command-content "df -h" \
   --timeout 60 \
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 ```
 
-#### ❌ INCORRECT - Send plain text commands
+#### ❌ INCORRECT - Base64-encode the command before sending
+
 ```bash
-# Wrong: Command content must be Base64 encoded
+# Wrong: double encoding — guest runs the literal base64 string,
+# returns Success/ExitCode 0 with EMPTY output (silent false negative)
+COMMAND=$(echo 'df -h' | base64)
+
 aliyun ecs run-command \
   --biz-region-id cn-hangzhou \
-  --instance-id.1 i-xxxxx \
+  --instance-id i-xxxxx \
   --type RunShellScript \
-  --command-content "df -h" \
+  --command-content "$COMMAND" \
   --timeout 60 \
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 ```
@@ -348,6 +392,7 @@ aliyun ecs run-command \
 ### Permission Errors
 
 #### ✅ CORRECT - Handle permission failures
+
 ```
 Error: Forbidden.RAM - User not authorized to operate on the specified resource
 
@@ -359,6 +404,7 @@ Action:
 ```
 
 #### ❌ INCORRECT - Ignore or skip
+
 ```
 Error: Forbidden.RAM
 
@@ -367,23 +413,33 @@ Action: Skip this check and continue
 
 ---
 
-### Invalid Instance ID
+### Invalid Instance ID / Empty Result
+
+> **[MUST] Follow the Phase 0 empty-result protocol in `SKILL.md` (single source of truth).**
+> Cross-region lookup is allowed ONLY with the SAME instance ID (traverse candidate
+> regions with BOTH `--region` and `--biz-region-id`). Once the region is confirmed
+> and the instance is still not found, STOP — do not enumerate other instances in the
+> account and do not suggest the user pick a different one.
 
 #### ✅ CORRECT - Validate and inform
-```
-Error: InvalidInstanceId.NotFound
+
+```text
+Error: InvalidInstanceId.NotFound / DescribeInstances returns TotalCount = 0
 
 Action:
-1. Inform user the instance ID does not exist in the specified region
-2. Ask user to verify the instance ID and region
-3. Suggest checking the console or listing instances
+1. Traverse candidate regions with the SAME instance ID (BOTH --region and --biz-region-id per query)
+2. If still not found after traversal: follow the Phase 0 empty-result protocol verbatim
+   (terminate workflow, output the fixed message template, ask user to re-check the ID/region)
+3. Do NOT list other instances in the account; do NOT switch the diagnostic target
 ```
 
-#### ❌ INCORRECT - Assume and guess
-```
+#### ❌ INCORRECT - Assume, guess, or substitute
+
+```text
 Error: InvalidInstanceId.NotFound
 
-Action: Try with a different region automatically
+Action: Try with a different region automatically            # Wrong: blind region hopping without the SAME-ID rule
+Action: List the account's instances and pick one to diagnose # Wrong: never substitute the user's target
 ```
 
 ---
@@ -393,6 +449,7 @@ Action: Try with a different region automatically
 ### Basic and Deep Diagnostics Separation
 
 #### ✅ CORRECT - Execute Basic Diagnostics first, ask for Deep Diagnostics
+
 ```
 1. Execute all Basic Diagnostics (read-only APIs)
 2. Present Basic Diagnostics results to user
@@ -401,6 +458,7 @@ Action: Try with a different region automatically
 ```
 
 #### ❌ INCORRECT - Execute everything without asking
+
 ```
 1. Execute Basic Diagnostics
 2. Automatically execute Deep Diagnostics
@@ -414,6 +472,7 @@ Action: Try with a different region automatically
 ### Command Execution Order
 
 #### ✅ CORRECT - Follow diagnostic workflow
+
 ```
 Basic Diagnostics:
 1. Identify instance
@@ -434,6 +493,7 @@ Deep Diagnostics (if approved):
 ```
 
 #### ❌ INCORRECT - Random order or skipping steps
+
 ```
 1. Query monitoring data
 2. Check security groups
@@ -446,6 +506,7 @@ Deep Diagnostics (if approved):
 ## 8. Regional Parameters
 
 ### ✅ CORRECT - Always specify region
+
 ```bash
 aliyun ecs describe-instances \
   --biz-region-id cn-hangzhou \
@@ -454,6 +515,7 @@ aliyun ecs describe-instances \
 ```
 
 ### ❌ INCORRECT - Omit region or use wrong format
+
 ```bash
 # Missing region
 aliyun ecs describe-instances \
@@ -474,6 +536,7 @@ aliyun ecs describe-instances \
 ## 9. JSON Output Parsing
 
 ### ✅ CORRECT - Use jq for reliable parsing
+
 ```bash
 # Extract instance ID
 aliyun ecs describe-instances \
@@ -492,6 +555,7 @@ aliyun cms describe-metric-last \
 ```
 
 ### ❌ INCORRECT - Use grep/sed/awk on JSON
+
 ```bash
 # Wrong: Fragile parsing
 aliyun ecs describe-instances --biz-region-id cn-hangzhou \
@@ -507,42 +571,44 @@ aliyun ecs describe-instances --biz-region-id cn-hangzhou \
 ### Cloud Assistant Command Timeout
 
 #### ✅ CORRECT - Set appropriate timeout
+
 ```bash
-# Short command: 30-60 seconds
+# Short command: 30-60 seconds (command content is PLAINTEXT)
 aliyun ecs run-command \
   --biz-region-id cn-hangzhou \
-  --instance-id.1 i-xxxxx \
+  --instance-id i-xxxxx \
   --type RunShellScript \
-  --command-content "$(echo 'uptime' | base64)" \
+  --command-content "uptime" \
   --timeout 60 \
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 
 # Long command: 120-600 seconds
 aliyun ecs run-command \
   --biz-region-id cn-hangzhou \
-  --instance-id.1 i-xxxxx \
+  --instance-id i-xxxxx \
   --type RunShellScript \
-  --command-content "$(echo 'du -sh /*' | base64)" \
+  --command-content "du -sh /*" \
   --timeout 600 \
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 ```
 
 #### ❌ INCORRECT - No timeout or too short
+
 ```bash
 # Missing timeout (may use default)
 aliyun ecs run-command \
   --biz-region-id cn-hangzhou \
-  --instance-id.1 i-xxxxx \
+  --instance-id i-xxxxx \
   --type RunShellScript \
-  --command-content "$(echo 'du -sh /*' | base64)" \
+  --command-content "du -sh /*" \
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 
 # Timeout too short for long operation
 aliyun ecs run-command \
   --biz-region-id cn-hangzhou \
-  --instance-id.1 i-xxxxx \
+  --instance-id i-xxxxx \
   --type RunShellScript \
-  --command-content "$(echo 'find / -name "*.log"' | base64)" \
+  --command-content "find / -name \"*.log\"" \
   --timeout 10 \  # Too short!
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 ```
@@ -561,8 +627,8 @@ Before considering the skill complete, verify:
 - [ ] Region ID is always specified
 - [ ] User parameters are confirmed before execution
 - [ ] Credentials are checked via `aliyun configure list` only
-- [ ] Cloud Assistant output is Base64 decoded
-- [ ] Cloud Assistant input is Base64 encoded
+- [ ] Cloud Assistant output is Base64 decoded (and polled until per-instance `InvocationStatus` is `Success` first)
+- [ ] Cloud Assistant input (`--command-content`) is PLAINTEXT — never pre-encoded
 - [ ] Basic and Deep Diagnostics are properly separated
 - [ ] Permission errors trigger help workflow
 - [ ] JSON output parsed with `jq`

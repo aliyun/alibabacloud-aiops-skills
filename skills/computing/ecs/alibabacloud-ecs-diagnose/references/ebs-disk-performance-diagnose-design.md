@@ -12,7 +12,7 @@ recommendations into the unified ECS diagnostic report.
 **EBS API basics** (invoked through the `aliyun` CLI, `aliyun-cli-ebs` plugin):
 
 | Item | Value |
-|------|-------|
+| ------ | ------- |
 | popCode | `ebs` |
 | API Version | `2021-07-30` |
 | Endpoint | `ebs.{region}.aliyuncs.com` |
@@ -40,6 +40,7 @@ aliyun ebs create-diagnose-report --help
 If the command prints its parameter list, the CLI path is ready — proceed to Step 1.
 
 > **[MUST] Degradation order** — never abandon the scenario at the first obstacle:
+>
 > 1. **CLI (primary).** If the plugin is missing, run
 >    `aliyun configure set --auto-plugin-install true` and `aliyun plugin update`, then retry.
 > 2. **Python SDK (fallback).** Only if the plugin still cannot be installed:
@@ -58,6 +59,7 @@ If the command prints its parameter list, the CLI path is ready — proceed to S
 Credentials follow the same security rules as `SKILL.md` (never read/echo AK/SK;
 only `aliyun configure list` to check status). The CLI path uses the CLI profile
 directly. The Python SDK fallback auto-discovers credentials from:
+
 1. Environment variables: `ALIBABA_CLOUD_ACCESS_KEY_***` / `ALIBABA_CLOUD_ACCESS_KEY_***`
 2. Credentials file: `~/.alibabacloud/credentials`
 3. ECS RAM role (when running on Alibaba Cloud ECS)
@@ -90,13 +92,14 @@ generate a new ID on its own.
 > values without explicit user approval.
 
 | Parameter Name | Required/Optional | Description | Default Value |
-|----------------|-------------------|-------------|---------------|
+| ---------------- | ------------------- | ------------- | --------------- |
 | `RegionId` | Required | The region where the disk is located | User must specify |
 | `DiskId` | Required | The ID of the disk to diagnose | User must specify or select from list |
 | `StartTime` | Optional | Diagnosis start time (ISO 8601 format, e.g. `2026-08-20T00:00:00Z`) | Last 12 hours |
 | `EndTime` | Optional | Diagnosis end time (ISO 8601 format) | Current time |
 
 **Time range constraints:**
+
 - If `StartTime` and `EndTime` are omitted, diagnosis covers the last 12 hours
 - Maximum diagnosis period: 3 days
 - `StartTime` can be up to 30 days in the past
@@ -115,13 +118,13 @@ an `InstanceId`**, filter by that instance so only its disks are shown.
 ```bash
 # CloudLens-monitored disks (preferred — same data source as the diagnosis service)
 aliyun ebs describe-lens-monitor-disks \
-  --biz-region-id <region> \
+  --region <region> --biz-region-id <region> \
   --max-results 100 \
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 
 # Fallback listing (also used to verify a user-supplied DiskId exists)
 aliyun ecs describe-disks \
-  --biz-region-id <region> \
+  --region <region> --biz-region-id <region> \
   --disk-ids '["d-xxx"]' \
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 ```
@@ -153,7 +156,7 @@ call `CreateDiagnoseReport`:
 
 ```bash
 aliyun ebs create-diagnose-report \
-  --biz-region-id <region> \
+  --region <region> --biz-region-id <region> \
   --diagnose-type Performance \
   --resource-type Disk \
   --resource-id <disk-id> \
@@ -161,7 +164,7 @@ aliyun ebs create-diagnose-report \
 ```
 
 | Parameter | CLI flag | Value |
-|-----------|----------|-------|
+| ----------- | ---------- | ------- |
 | `RegionId` | `--biz-region-id` | Confirmed region |
 | `DiagnoseType` | `--diagnose-type` | `Performance` |
 | `ResourceType` | `--resource-type` | `Disk` (note the capital 'D') |
@@ -179,7 +182,7 @@ Poll `DescribeDiagnoseReport` **every 1 second**, with a client-side timeout of
 REPORT_ID=<report-id>
 for i in $(seq 1 300); do
   STATUS=$(aliyun ebs describe-diagnose-report \
-    --biz-region-id <region> \
+    --region <region> --biz-region-id <region> \
     --diagnose-type Performance \
     --report-ids "$REPORT_ID" \
     --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}" \
@@ -196,7 +199,7 @@ cat /tmp/ebs_report.json
 **Status values:**
 
 | Status | Meaning | Action |
-|--------|---------|--------|
+| -------- | --------- | -------- |
 | `Running` | Diagnosis in progress | Continue polling |
 | `Success` | Diagnosis completed | Proceed to Step 4 |
 | `Fail` | Diagnosis failed | Inform user and terminate this scenario |
@@ -209,7 +212,7 @@ Once status is `Success`, parse the report's `Severity` and `Events` fields.
 **Severity levels:**
 
 | Severity | Meaning | User Action |
-|----------|---------|-------------|
+| ---------- | --------- | ------------- |
 | **Normal** | No issues detected | Inform user disk performance is healthy |
 | **Info** | Related information, may be associated with anomalies | Highlight for user attention (cost, alignment, etc.) |
 | **Warn** | Warning, may cause performance issues | Provide optimization recommendations |
@@ -218,7 +221,7 @@ Once status is `Success`, parse the report's `Severity` and `Events` fields.
 **Common diagnosis events (quick reference):**
 
 | EventName | Severity | Recommendation |
-|-----------|----------|----------------|
+| ----------- | ---------- | ---------------- |
 | InstanceIOPSExceedInstanceMaxLimit / InstanceBPSExceedInstanceMaxLimit | Warn | Monitor business impact; upgrade instance if needed |
 | DiskIOPSExceedInstanceMaxLimit / DiskBPSExceedInstanceMaxLimit | Warn | Monitor business impact |
 | DiskIOPSExceedDiskMaxLimit / DiskBPSExceedDiskMaxLimit | Warn | Reduce IO frequency or upgrade disk type / expand capacity |
@@ -249,6 +252,7 @@ rest of the report is localized:
 ```
 
 Recommendation guidance by event category:
+
 1. **IOPS/BPS limit issues**: consider upgrading instance or disk specifications
 2. **Spec mismatch**: recommend matching instance and disk specs
 3. **Cost optimization**: suggest adjusting ESSD AutoPL performance levels
@@ -270,7 +274,7 @@ Also merge `Warn`/`Critical` findings into the report's 【Issue Summary】 and
 template back to the broken forms):
 
 | Pitfall | Wrong | Correct |
-|---------|-------|---------|
+| --------- | ------- | --------- |
 | `RuntimeOptions` location | `open_api_models.RuntimeOptions(...)` → `AttributeError` | `from alibabacloud_tea_util import models as util_models` → `util_models.RuntimeOptions()` |
 | User-Agent injection | `RuntimeOptions(headers={'User-Agent': ...})` → `TypeError: unexpected keyword argument 'headers'` | `open_api_models.Config(..., user_agent=UA)` |
 | Query value types | `{'MaxResults': 100}` (int) → `TypeError: quote() doesn't support 'encoding' for bytes` | every value a **string**: `{'MaxResults': '100'}` |
@@ -373,7 +377,7 @@ except TeaException as e:
 **Common errors:**
 
 | Error Code | Cause | Handling |
-|------------|-------|----------|
+| ------------ | ------- | ---------- |
 | `unknown flag: --region-id` (CLI) | Wrong region flag | Use `--biz-region-id`; confirm via `aliyun ebs <command> --help` |
 | `InvalidParameter` / `MissingParameter` | Wrong `ResourceType` casing (must be `Disk`), missing `--diagnose-type`, invalid ISO 8601 time, range > 3 days, or StartTime > 30 days old | Fix parameters and retry |
 | `NoSuchResource` (404) / `InvalidDiskId.NotFound` | DiskId does not exist in this region/account | Verify with `aliyun ecs describe-disks --biz-region-id <region> --disk-ids '["d-xxx"]'`. If `TotalCount = 0`, STOP and report that the disk does not exist — **do NOT substitute another disk** (same rationale as the Phase 0 empty-result protocol in `SKILL.md`) |
@@ -385,6 +389,7 @@ except TeaException as e:
 > **[MUST] Permission Failure Handling:** When any EBS API call fails due to
 > permission errors (`Forbidden.RAM`, `Forbidden.Unauthorized`), follow the existing
 > process defined in `SKILL.md`:
+>
 > 1. Identify the missing EBS permission from the required permissions listed below
 > 2. Use `ram-permission-diagnose` skill to guide the user through requesting it
 > 3. Pause and wait until the user confirms that the permission has been granted

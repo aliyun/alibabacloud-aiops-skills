@@ -7,11 +7,13 @@ This document provides detailed verification steps to confirm the success of eac
 ### Step 1: Instance Identification Verification
 
 **Success Criteria:**
+
 - Command returns HTTP 200 status
 - Response contains `Instances.Instance` array with at least one element
 - Instance details include required fields: `InstanceId`, `Status`, `InstanceName`
 
 **Verification Command:**
+
 ```bash
 aliyun ecs describe-instances \
   --biz-region-id <region-id> \
@@ -23,6 +25,7 @@ aliyun ecs describe-instances \
 **Expected Output:** A number >= 1
 
 **Failure Indicators:**
+
 - Error: `InvalidInstanceId.NotFound` - Instance ID does not exist in specified region
 - Error: `Forbidden.RAM` - Insufficient permissions
 - Output: `0` - No instances found matching criteria
@@ -32,10 +35,12 @@ aliyun ecs describe-instances \
 ### Step 2: Instance Status Verification
 
 **Success Criteria:**
+
 - `Status` field is present in response
 - Status value is one of: `Running`, `Stopped`, `Starting`, `Stopping`, `Expired`, `Locked`
 
 **Verification Command:**
+
 ```bash
 aliyun ecs describe-instances \
   --biz-region-id <region-id> \
@@ -47,6 +52,7 @@ aliyun ecs describe-instances \
 **Expected Output:** One of the valid status values
 
 **Status Interpretation:**
+
 - `Running` ✅ - Instance is operational
 - `Stopped` ⚠️ - Instance is shut down
 - `Starting` ⏳ - Instance is booting
@@ -59,11 +65,13 @@ aliyun ecs describe-instances \
 ### Step 3: System Events Verification
 
 **Success Criteria:**
+
 - Command executes successfully
 - Response contains `InstanceSystemEventSet.InstanceSystemEventType` array
 - Each event has `EventCycleStatus`, `EventType`, `NotBefore` fields
 
 **Verification Command:**
+
 ```bash
 aliyun ecs describe-instance-history-events \
   --biz-region-id <region-id> \
@@ -75,10 +83,12 @@ aliyun ecs describe-instance-history-events \
 ```
 
 **Expected Output:**
+
 - `0` - No active events (good)
 - `>0` - Active events present (requires attention)
 
 **Event Impact Assessment:**
+
 - `SystemMaintenance.Reboot` ⚠️ - System maintenance reboot scheduled
 - `SystemFailure.Reboot` ❌ - System failure recovery reboot
 - `InstanceFailure.Reboot` ❌ - Instance failure recovery reboot
@@ -90,11 +100,13 @@ aliyun ecs describe-instance-history-events \
 ### Step 4: Security Group Rules Verification
 
 **Success Criteria:**
+
 - Command returns security group permissions array
 - Response contains `Permissions.Permission` with rules
 - Each rule has `Direction`, `IpProtocol`, `PortRange`, `Policy` fields
 
 **Verification Command:**
+
 ```bash
 aliyun ecs describe-security-group-attribute \
   --biz-region-id <region-id> \
@@ -107,6 +119,7 @@ aliyun ecs describe-security-group-attribute \
 **Expected Output:** Number of rules >= 0
 
 **Key Checks:**
+
 - ✅ SSH (port 22) allowed from trusted IPs for Linux instances
 - ✅ RDP (port 3389) allowed from trusted IPs for Windows instances
 - ✅ Application ports allowed as needed
@@ -114,6 +127,7 @@ aliyun ecs describe-security-group-attribute \
 - ❌ No explicit `Drop` rules blocking required traffic
 
 **Rule Validation Example:**
+
 ```bash
 # Check if SSH port 22 is open
 aliyun ecs describe-security-group-attribute \
@@ -131,10 +145,12 @@ aliyun ecs describe-security-group-attribute \
 **VPC Verification:**
 
 **Success Criteria:**
+
 - VPC status is `Available`
 - VPC ID matches instance's VPC
 
 **Verification Command:**
+
 ```bash
 aliyun vpc describe-vpcs \
   --biz-region-id <region-id> \
@@ -148,14 +164,17 @@ aliyun vpc describe-vpcs \
 **EIP Verification:**
 
 **Success Criteria:**
+
 - If instance requires public access, EIP should be bound
 - EIP status is `InUse`
 
 **Verification Command:**
+
 ```bash
 aliyun vpc describe-eip-addresses \
-  --biz-region-id <region-id> \
+  --region <region-id> --biz-region-id <region-id> \
   --associated-instance-id <instance-id> \
+  --associated-instance-type EcsInstance \
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}" \
   | jq -r '.EipAddresses.EipAddress[0].Status'
 ```
@@ -167,16 +186,22 @@ aliyun vpc describe-eip-addresses \
 ### Step 6: Monitoring Metrics Verification
 
 **Success Criteria:**
+
 - Command returns metric data points
 - `Datapoints` field contains at least one measurement
 - Values are within expected ranges
 
+**Empty-data semantics ([MUST]):** if the API succeeds but `Datapoints` is `[]`, the
+metric status is **UNKNOWN — not healthy**. Report "no monitoring data, cannot
+determine from CMS" and fall back to GuestOS evidence (Cloud Assistant: `top` / `free` /
+`df`). Never report the metric as normal based on an empty array.
+
 #### CPU Utilization Verification
 
 **Verification Command:**
+
 ```bash
 aliyun cms describe-metric-last \
-  --biz-region-id <region-id> \
   --namespace acs_ecs_dashboard \
   --metric-name CPUUtilization \
   --dimensions '[{"instanceId":"<instance-id>"}]' \
@@ -185,6 +210,7 @@ aliyun cms describe-metric-last \
 ```
 
 **Thresholds:**
+
 - ✅ 0-70%: Normal
 - ⚠️ 70-90%: High
 - ❌ 90-100%: Critical
@@ -192,9 +218,9 @@ aliyun cms describe-metric-last \
 #### Memory Utilization Verification
 
 **Verification Command:**
+
 ```bash
 aliyun cms describe-metric-last \
-  --biz-region-id <region-id> \
   --namespace acs_ecs_dashboard \
   --metric-name memory_usedutilization \
   --dimensions '[{"instanceId":"<instance-id>"}]' \
@@ -203,6 +229,7 @@ aliyun cms describe-metric-last \
 ```
 
 **Thresholds:**
+
 - ✅ 0-70%: Normal
 - ⚠️ 70-90%: High
 - ❌ 90-100%: Critical
@@ -210,9 +237,9 @@ aliyun cms describe-metric-last \
 #### Disk Utilization Verification
 
 **Verification Command:**
+
 ```bash
 aliyun cms describe-metric-last \
-  --biz-region-id <region-id> \
   --namespace acs_ecs_dashboard \
   --metric-name diskusage_utilization \
   --dimensions '[{"instanceId":"<instance-id>"}]' \
@@ -221,6 +248,7 @@ aliyun cms describe-metric-last \
 ```
 
 **Thresholds:**
+
 - ✅ 0-80%: Normal
 - ⚠️ 80-90%: High
 - ❌ 90-100%: Critical
@@ -228,9 +256,9 @@ aliyun cms describe-metric-last \
 #### Network Traffic Verification
 
 **Inbound Traffic:**
+
 ```bash
 aliyun cms describe-metric-last \
-  --biz-region-id <region-id> \
   --namespace acs_ecs_dashboard \
   --metric-name InternetInRate \
   --dimensions '[{"instanceId":"<instance-id>"}]' \
@@ -239,9 +267,9 @@ aliyun cms describe-metric-last \
 ```
 
 **Outbound Traffic:**
+
 ```bash
 aliyun cms describe-metric-last \
-  --biz-region-id <region-id> \
   --namespace acs_ecs_dashboard \
   --metric-name InternetOutRate \
   --dimensions '[{"instanceId":"<instance-id>"}]' \
@@ -250,6 +278,7 @@ aliyun cms describe-metric-last \
 ```
 
 **Assessment:**
+
 - Compare current traffic to baseline patterns
 - Check for unexpected spikes or drops
 - Verify traffic doesn't exceed bandwidth limits
@@ -261,26 +290,29 @@ aliyun cms describe-metric-last \
 ### Step 7: System Load Verification
 
 **Success Criteria:**
-- Command execution status is `Finished`
+
+- Per-instance command execution status is `Success` (values: `Running` / `Success` / `Failed` / `Timeout` / `Stopped`; the record-level `InvokeRecordStatus` reports `Finished` — do not confuse the two)
 - Output is successfully decoded from Base64
 - `top`, `uptime`, and `free` commands all return data
 
 **Verification Command:**
+
 ```bash
 aliyun ecs describe-invocation-results \
-  --biz-region-id <region-id> \
+  --region <region-id> --biz-region-id <region-id> \
   --invoke-id <invoke-id> \
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}" \
   | jq -r '.Invocation.InvocationResults.InvocationResult[0].InvocationStatus'
 ```
 
-**Expected Output:** `Finished`
+**Expected Output:** `Success`
 
 **Output Analysis:**
+
 ```bash
 # Decode and view output
 aliyun ecs describe-invocation-results \
-  --biz-region-id <region-id> \
+  --region <region-id> --biz-region-id <region-id> \
   --invoke-id <invoke-id> \
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}" \
   | jq -r '.Invocation.InvocationResults.InvocationResult[0].Output' \
@@ -288,6 +320,7 @@ aliyun ecs describe-invocation-results \
 ```
 
 **Load Average Thresholds:**
+
 - ✅ Load < CPU cores: Normal
 - ⚠️ Load = 1-2x CPU cores: High
 - ❌ Load > 2x CPU cores: Critical
@@ -297,27 +330,31 @@ aliyun ecs describe-invocation-results \
 ### Step 8: Disk Usage Verification
 
 **Success Criteria:**
+
 - Command completes successfully
 - `df -h` shows all mounted filesystems
 - `lsblk` shows all block devices
 
 **Verification Command:**
+
 ```bash
 aliyun ecs describe-invocation-results \
-  --biz-region-id <region-id> \
+  --region <region-id> --biz-region-id <region-id> \
   --invoke-id <invoke-id> \
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}" \
   | jq -r '.Invocation.InvocationResults.InvocationResult[0].InvocationStatus'
 ```
 
-**Expected Output:** `Finished`
+**Expected Output:** `Success`
 
 **Disk Usage Thresholds:**
+
 - ✅ 0-80%: Normal
 - ⚠️ 80-90%: High
 - ❌ 90-100%: Critical
 
 **Critical Checks:**
+
 - Root partition `/` usage
 - `/var` partition usage (logs)
 - `/tmp` partition usage
@@ -328,14 +365,16 @@ aliyun ecs describe-invocation-results \
 ### Step 9: Network Connectivity Verification
 
 **Success Criteria:**
+
 - `ss -tlnp` shows listening ports
 - `ip addr` shows network interfaces
 - Required ports are in LISTEN state
 
 **Verification Command:**
+
 ```bash
 aliyun ecs describe-invocation-results \
-  --biz-region-id <region-id> \
+  --region <region-id> --biz-region-id <region-id> \
   --invoke-id <invoke-id> \
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}" \
   | jq -r '.Invocation.InvocationResults.InvocationResult[0].Output' \
@@ -343,12 +382,14 @@ aliyun ecs describe-invocation-results \
 ```
 
 **Port Checks:**
+
 - ✅ SSH (22) listening for Linux
 - ✅ RDP (3389) listening for Windows
 - ✅ Application ports listening as expected
 - ❌ Unexpected ports listening (security concern)
 
 **Interface Checks:**
+
 - ✅ Primary interface is UP
 - ✅ IP address correctly assigned
 - ⚠️ Interface is DOWN or no IP
@@ -358,14 +399,16 @@ aliyun ecs describe-invocation-results \
 ### Step 10: System Logs Verification
 
 **Success Criteria:**
+
 - `dmesg` returns recent kernel messages
 - `journalctl` returns systemd logs (if available)
 - No critical errors in logs
 
 **Verification Command:**
+
 ```bash
 aliyun ecs describe-invocation-results \
-  --biz-region-id <region-id> \
+  --region <region-id> --biz-region-id <region-id> \
   --invoke-id <invoke-id> \
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}" \
   | jq -r '.Invocation.InvocationResults.InvocationResult[0].Output' \
@@ -373,6 +416,7 @@ aliyun ecs describe-invocation-results \
 ```
 
 **Critical Error Patterns:**
+
 - ❌ `Out of memory: Kill process` - OOM killer activated
 - ❌ `I/O error` - Disk hardware failure
 - ❌ `segfault` - Application crashes
@@ -384,14 +428,16 @@ aliyun ecs describe-invocation-results \
 ### Step 11: Process Status Verification
 
 **Success Criteria:**
+
 - `ps aux` returns process list
 - Top CPU processes are identified
 - No excessive zombie processes
 
 **Verification Command:**
+
 ```bash
 aliyun ecs describe-invocation-results \
-  --biz-region-id <region-id> \
+  --region <region-id> --biz-region-id <region-id> \
   --invoke-id <invoke-id> \
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}" \
   | jq -r '.Invocation.InvocationResults.InvocationResult[0].Output' \
@@ -399,6 +445,7 @@ aliyun ecs describe-invocation-results \
 ```
 
 **Process Checks:**
+
 - ✅ Critical services running (sshd, systemd, etc.)
 - ⚠️ High CPU processes identified
 - ❌ Zombie processes (state Z) > 10
@@ -411,10 +458,12 @@ aliyun ecs describe-invocation-results \
 ### Scenario 1: Cloud Assistant Not Available
 
 **Symptoms:**
+
 - Deep Diagnostics fail to execute
 - Error: `The CloudAssistant is not installed on the instance`
 
 **Verification:**
+
 ```bash
 aliyun ecs describe-instance-attribute \
   --biz-region-id <region-id> \
@@ -425,7 +474,13 @@ aliyun ecs describe-instance-attribute \
 
 **Expected Output:** `true`
 
+> **Reliability note (verified live):** this field is unreliable in BOTH directions —
+> it can report `true` for a Stopped instance, and `false` for a running instance where
+> Cloud Assistant actually works. Do NOT gate Deep Diagnostics on this field; gate on an
+> actual `run-command` probe (e.g. `echo PROBE_OK`) returning `PROBE_OK` instead.
+
 **Resolution:**
+
 - Install Cloud Assistant agent on the instance
 - Verify agent is running: `systemctl status aliyun.service` (Linux)
 
@@ -434,13 +489,15 @@ aliyun ecs describe-instance-attribute \
 ### Scenario 2: Command Timeout
 
 **Symptoms:**
+
 - Command invocation status is `Timeout`
 - No output returned
 
 **Verification:**
+
 ```bash
 aliyun ecs describe-invocation-results \
-  --biz-region-id <region-id> \
+  --region <region-id> --biz-region-id <region-id> \
   --invoke-id <invoke-id> \
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}" \
   | jq -r '.Invocation.InvocationResults.InvocationResult[0].InvocationStatus'
@@ -449,6 +506,7 @@ aliyun ecs describe-invocation-results \
 **Output:** `Timeout`
 
 **Resolution:**
+
 - Increase timeout value in `run-command`
 - Check if instance is overloaded
 - Simplify command for faster execution
@@ -458,19 +516,22 @@ aliyun ecs describe-invocation-results \
 ### Scenario 3: Permission Denied in Guest OS
 
 **Symptoms:**
+
 - Command status is `Failed`
 - Error message contains `Permission denied`
 
 **Verification:**
+
 ```bash
 aliyun ecs describe-invocation-results \
-  --biz-region-id <region-id> \
+  --region <region-id> --biz-region-id <region-id> \
   --invoke-id <invoke-id> \
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}" \
   | jq -r '.Invocation.InvocationResults.InvocationResult[0].ErrorInfo'
 ```
 
 **Resolution:**
+
 - Cloud Assistant runs as root by default
 - Check file permissions in error message
 - Verify SELinux/AppArmor policies
@@ -480,6 +541,7 @@ aliyun ecs describe-invocation-results \
 ## End-to-End Diagnostics Verification
 
 **Complete Success Criteria:**
+
 1. ✅ All Basic Diagnostics API calls complete successfully
 2. ✅ Instance status is `Running`
 3. ✅ No critical system events active
@@ -492,11 +554,13 @@ aliyun ecs describe-invocation-results \
 10. ✅ Resource usage within acceptable limits
 
 **Partial Success:**
+
 - Some checks pass, others fail or return warnings
 - Diagnostic report should clearly indicate which checks failed
 - Provide specific recommendations for each failure
 
 **Complete Failure:**
+
 - Multiple critical checks fail
 - Instance may be in non-running state
 - Immediate intervention required
@@ -522,7 +586,7 @@ echo ""
 # Basic Diagnostics Checks
 echo "[1/6] Verifying instance exists..."
 INSTANCE_COUNT=$(aliyun ecs describe-instances \
-  --biz-region-id "$REGION_ID" \
+  --region "$REGION_ID" --biz-region-id "$REGION_ID" \
   --instance-ids "[\"$INSTANCE_ID\"]" \
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}" \
   | jq '.Instances.Instance | length')
@@ -536,7 +600,7 @@ fi
 
 echo "[2/6] Verifying instance status..."
 INSTANCE_STATUS=$(aliyun ecs describe-instances \
-  --biz-region-id "$REGION_ID" \
+  --region "$REGION_ID" --biz-region-id "$REGION_ID" \
   --instance-ids "[\"$INSTANCE_ID\"]" \
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}" \
   | jq -r '.Instances.Instance[0].Status')
@@ -550,7 +614,7 @@ fi
 
 echo "[3/6] Checking system events..."
 EVENT_COUNT=$(aliyun ecs describe-instance-history-events \
-  --biz-region-id "$REGION_ID" \
+  --region "$REGION_ID" --biz-region-id "$REGION_ID" \
   --instance-id "$INSTANCE_ID" \
   --instance-event-cycle-status.1 Executing \
   --instance-event-cycle-status.2 Inquiring \
@@ -565,7 +629,6 @@ fi
 
 echo "[4/6] Checking CPU utilization..."
 CPU_UTIL=$(aliyun cms describe-metric-last \
-  --biz-region-id "$REGION_ID" \
   --namespace acs_ecs_dashboard \
   --metric-name CPUUtilization \
   --dimensions "[{\"instanceId\":\"$INSTANCE_ID\"}]" \
@@ -576,7 +639,6 @@ echo "CPU: $CPU_UTIL%"
 
 echo "[5/6] Checking memory utilization..."
 MEM_UTIL=$(aliyun cms describe-metric-last \
-  --biz-region-id "$REGION_ID" \
   --namespace acs_ecs_dashboard \
   --metric-name memory_usedutilization \
   --dimensions "[{\"instanceId\":\"$INSTANCE_ID\"}]" \
@@ -587,7 +649,6 @@ echo "Memory: $MEM_UTIL%"
 
 echo "[6/6] Checking disk utilization..."
 DISK_UTIL=$(aliyun cms describe-metric-last \
-  --biz-region-id "$REGION_ID" \
   --namespace acs_ecs_dashboard \
   --metric-name diskusage_utilization \
   --dimensions "[{\"instanceId\":\"$INSTANCE_ID\"}]" \
@@ -601,6 +662,7 @@ echo "=== Verification Complete ==="
 ```
 
 **Usage:**
+
 ```bash
 chmod +x verify-diagnostics.sh
 ./verify-diagnostics.sh cn-hangzhou i-xxxxx

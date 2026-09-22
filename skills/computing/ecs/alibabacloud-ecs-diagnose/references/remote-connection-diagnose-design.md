@@ -41,18 +41,27 @@ When the user says "find it for me" or the information is incomplete, switch str
 > do NOT enumerate/switch instances, output the fixed message template). This document
 > does not repeat the rule, to keep a single source of truth.
 
-**Region-traversal commands:**
+**Region-traversal commands ([MUST] pass BOTH region flags — verified live):**
 
 ```bash
 # Get the list of all regions
 aliyun ecs describe-regions --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 
 # Look up the instance in a specific region
+# --region routes the request to that region's endpoint; --biz-region-id is the API's
+# RegionId. When the target region differs from the CLI profile's configured region,
+# passing only --biz-region-id gets the request rejected with
+# InvalidOperation.NotSupportedEndpoint and the instance falsely looks "not found".
 aliyun ecs describe-instances \
-  --biz-region-id cn-hangzhou \
+  --region cn-hangzhou --biz-region-id cn-hangzhou \
   --instance-ids '["i-xxx"]' \
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 ```
+
+> **Cross-region rule:** every candidate-region query in the traversal uses the same
+> instance ID with BOTH `--region <candidate>` and `--biz-region-id <candidate>`.
+> Only when the instance is found (or all candidates are exhausted) does the search
+> stop. The empty-result protocol (Phase 0 of `SKILL.md`) then applies.
 
 ---
 
@@ -167,8 +176,8 @@ aliyun ecs describe-security-group-attribute \
 ```bash
 # Check instance status
 aliyun ecs describe-instance-status \
-  --biz-region-id <region> \
-  --instance-id.1 <instance-id> \
+  --region <region> --biz-region-id <region> \
+  --instance-id <instance-id> \
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 
 # Check system events (planned maintenance, anomalies, etc.)
@@ -182,10 +191,16 @@ aliyun ecs describe-instance-history-events \
 
 ```bash
 aliyun ecs describe-cloud-assistant-status \
-  --biz-region-id <region> \
-  --instance-id.1 <instance-id> \
+  --region <region> --biz-region-id <region> \
+  --instance-id <instance-id> \
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 ```
+
+> **Reliability note (verified live):** the returned `CloudAssistantStatus` field is
+> unreliable in BOTH directions — it may report `true` for a stopped instance, or
+> `false` for a running instance where Cloud Assistant actually works. Never gate Deep
+> Diagnostics on this field; instead send an actual probe (`run-command` with
+> `echo PROBE_OK`) and treat a decoded `PROBE_OK` as the only proof the channel works.
 
 #### Step 5: Provide solutions based on findings
 
@@ -213,7 +228,7 @@ cause of 80% of connection issues.
 ### 3.2 Common Problem Patterns and Priority
 
 | Priority | Problem Type | Proportion | Check Method |
-|----------|--------------|------------|--------------|
+| ---------- | -------------- | ------------ | -------------- |
 | 1 | Security group port not open | 80% | DescribeSecurityGroupAttribute |
 | 2 | Instance not running | 8% | DescribeInstances → Status |
 | 3 | No public IP | 5% | Check PublicIpAddress and EipAddress |
@@ -285,6 +300,14 @@ aliyun ecs authorize-security-group \
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 ```
 
+> **Platform-managed Drop rules ([verified live]):** some security groups contain a
+> Drop rule created by "Alibaba Cloud Security Team". These rules **auto-restore after
+> being revoked** — do NOT try to remove them. If such a Drop rule blocks the port you
+> need, the correct fix is to add a **higher-priority (lower priority-number) Accept
+> rule scoped to the user's IP** (`--priority` lower than the Drop's), not to fight the
+> platform rule. Before proposing `revoke-security-group`, always check whether the rule
+> was platform-created.
+
 ### 4.2 Solution for Instance Without Public IP
 
 **Option A: Bind an Elastic IP**
@@ -306,6 +329,12 @@ aliyun vpc associate-eip-address \
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 ```
 
+> **EIP binding limitation ([verified live]):** an EIP cannot be bound
+> (`associate-eip-address`) to an instance that already has a public IP assigned at
+> creation — the call is rejected. Before proposing this fix, confirm from
+> `describe-instances` that `PublicIpAddress` is empty. Any test EIP created during
+> diagnosis must be released (`release-eip-address`) in the session cleanup.
+
 **Option B: Use a NAT gateway (private-network instance)**
 
 ```bash
@@ -326,8 +355,8 @@ aliyun ecs start-instance \
 
 # Check startup status
 aliyun ecs describe-instance-status \
-  --biz-region-id <region> \
-  --instance-id.1 <instance-id> \
+  --region <region> --biz-region-id <region> \
+  --instance-id <instance-id> \
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 ```
 
@@ -351,26 +380,39 @@ aliyun ecs reboot-instance \
 When neither SSH nor RDP is usable:
 
 ```bash
-# 1. Check Cloud Assistant status
+# 1. Check Cloud Assistant status (field is unreliable — confirm with a probe, see Step 4 note)
 aliyun ecs describe-cloud-assistant-status \
-  --biz-region-id <region> \
-  --instance-id.1 <instance-id> \
+  --region <region> --biz-region-id <region> \
+  --instance-id <instance-id> \
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 
-# 2. Send a diagnostic command (command content must be Base64-encoded)
+# 2. Send a diagnostic command — command content is PLAINTEXT (the plugin encodes it;
+#    pre-encoding causes silent empty-output false negatives)
 aliyun ecs run-command \
-  --biz-region-id <region> \
-  --instance-id.1 <instance-id> \
+  --region <region> --biz-region-id <region> \
+  --instance-id <instance-id> \
   --type RunShellScript \
-  --command-content '<base64-encoded-command>' \
+  --command-content 'ss -tlnp | grep -E ":(22|3389|80|443)\b" ; systemctl is-active sshd || systemctl is-active ssh' \
   --timeout 60 \
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 
-# 3. View command execution results
+# 3. View command execution results — poll until per-instance InvocationStatus is
+#    `Success`, then decode the Base64 Output field
 aliyun ecs describe-invocation-results \
-  --biz-region-id <region> \
+  --region <region> --biz-region-id <region> \
   --invoke-id <invoke-id> \
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
+```
+
+**Windows instances — validated probe command set (verified live on Windows Server):**
+
+```powershell
+# Run as RunPowerShellScript via run-command (content in plaintext)
+Write-Output "PROBE_OK"
+Get-Service TermService                          # RDP service state
+Get-NetTCPConnection -LocalPort 3389 -State Listen   # RDP listening
+Get-NetFirewallProfile | Select-Object Name,Enabled  # firewall profiles
+Get-Volume                                       # disk volumes
 ```
 
 ### 4.6 Use the VNC Console (last resort)
@@ -501,7 +543,7 @@ Parallel task 4: nc -zv -w 10 <ip> 22                    # Port test (10s timeou
 Infer the required ports from the instance name/tags:
 
 | Instance Name Keyword | Recommended Ports to Open |
-|-----------------------|---------------------------|
+| ----------------------- | --------------------------- |
 | web, nginx, httpd | 80, 443 |
 | mysql, mariadb | 3306 |
 | redis | 6379 |
@@ -526,7 +568,7 @@ aliyun ecs describe-instances \
 # Query instance status
 aliyun ecs describe-instance-status \
   --biz-region-id <region> \
-  --instance-id.1 <id> \
+  --instance-id <id> \
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 
 # Start instance
@@ -610,33 +652,33 @@ aliyun vpc unassociate-eip-address \
 ### 8.4 Cloud Assistant Operations
 
 ```bash
-# Check Cloud Assistant status
+# Check Cloud Assistant status (--instance-id is a list: space-separated values)
 aliyun ecs describe-cloud-assistant-status \
-  --biz-region-id <region> \
-  --instance-id.1 <id> \
+  --region <region> --biz-region-id <region> \
+  --instance-id <id> \
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 
-# Run a Shell command (Linux) - command content must be Base64-encoded
+# Run a Shell command (Linux) - command content is PLAINTEXT, plugin encodes it
 aliyun ecs run-command \
-  --biz-region-id <region> \
-  --instance-id.1 <id> \
+  --region <region> --biz-region-id <region> \
+  --instance-id <id> \
   --type RunShellScript \
-  --command-content '<base64-encoded-command>' \
+  --command-content 'uptime' \
   --timeout 60 \
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 
-# Run a PowerShell command (Windows) - command content must be Base64-encoded
+# Run a PowerShell command (Windows) - command content is PLAINTEXT, plugin encodes it
 aliyun ecs run-command \
-  --biz-region-id <region> \
-  --instance-id.1 <id> \
+  --region <region> --biz-region-id <region> \
+  --instance-id <id> \
   --type RunPowerShellScript \
-  --command-content '<base64-encoded-command>' \
+  --command-content 'Write-Output "PROBE_OK"' \
   --timeout 60 \
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 
-# View command execution results
+# View command execution results (Output is Base64 — decode after InvocationStatus is Success)
 aliyun ecs describe-invocation-results \
-  --biz-region-id <region> \
+  --region <region> --biz-region-id <region> \
   --invoke-id <invoke-id> \
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 ```

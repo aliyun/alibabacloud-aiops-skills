@@ -7,7 +7,7 @@ This document lists all RAM permissions required by the `alibabacloud-ecs-diagno
 ### Basic Diagnostics: Cloud Platform Checks (Read-Only)
 
 | API Action | Permission | Purpose |
-|------------|------------|---------|
+| ------------ | ------------ | --------- |
 | `DescribeInstances` | `ecs:DescribeInstances` | Query instance details |
 | `DescribeInstanceAttribute` | `ecs:DescribeInstanceAttribute` | Query instance attributes |
 | `DescribeInstanceStatus` | `ecs:DescribeInstanceStatus` | Query instance status |
@@ -16,7 +16,8 @@ This document lists all RAM permissions required by the `alibabacloud-ecs-diagno
 | `DescribeSecurityGroupAttribute` | `ecs:DescribeSecurityGroupAttribute` | Query security group rules |
 | `DescribeVpcs` | `vpc:DescribeVpcs` | Query VPC information |
 | `DescribeEipAddresses` | `vpc:DescribeEipAddresses` | Query EIP binding status |
-| `DescribeMetricLast` | `cms:DescribeMetricLast` | Query monitoring metrics |
+| `DescribeMetricLast` (API) | `cms:QueryMetricLast` | Query latest monitoring metrics — ⚠️ **the RAM action differs from the API name**: granting `cms:DescribeMetricLast` does NOT authorize this API |
+| `DescribeMetricList` (API) | `cms:QueryMetricList` | Query time-range monitoring metrics — same API-name/action-name mismatch (only needed if `describe-metric-list` is used) |
 
 ### Deep Diagnostics: System & Service Checks
 
@@ -31,7 +32,7 @@ These permissions are only needed when using the **Disk Performance / IO Bottlen
 diagnosis scenario. All three actions are L1 low-risk read-only operations.
 
 | API Action | Permission | Purpose |
-|------------|------------|---------|
+| ------------ | ------------ | --------- |
 | `DescribeLensMonitorDisks` | `ebs:DescribeLensMonitorDisks` | List disks monitored by CloudLens for EBS |
 | `CreateDiagnoseReport` | `ebs:CreateDiagnoseReport` | Initiate a disk performance diagnosis report |
 | `DescribeDiagnoseReport` | `ebs:DescribeDiagnoseReport` | Poll diagnosis status and retrieve results |
@@ -67,7 +68,8 @@ diagnosis scenario. All three actions are L1 low-risk read-only operations.
     {
       "Effect": "Allow",
       "Action": [
-        "cms:DescribeMetricLast"
+        "cms:QueryMetricLast",
+        "cms:QueryMetricList"
       ],
       "Resource": "*"
     }
@@ -106,13 +108,61 @@ diagnosis scenario. All three actions are L1 low-risk read-only operations.
     {
       "Effect": "Allow",
       "Action": [
-        "cms:DescribeMetricLast"
+        "cms:QueryMetricLast",
+        "cms:QueryMetricList"
       ],
       "Resource": "*"
     }
   ]
 }
 ```
+
+### Repair Execution Policy (Optional Add-on — paired write permissions only)
+
+> **[MUST] Repair permissions are granted ONLY in pairs.** Every write permission below
+> is listed together with its rollback permission — an account that can authorize a
+> security group rule but cannot revoke it (or can allocate an EIP but cannot release
+> one) must NOT run repairs, because a change it cannot undo must not be made. Attach
+> this add-on **only** when the user has explicitly opted into repair execution; pure
+> diagnosis never needs it. See `SKILL.md` "Cleanup / Write-Operation Protocol".
+
+```json
+{
+  "Version": "1",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ecs:AuthorizeSecurityGroup",
+        "ecs:RevokeSecurityGroup",
+        "ecs:StartInstance",
+        "ecs:StopInstance",
+        "ecs:RebootInstance",
+        "ecs:ModifyInstanceAttribute"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "vpc:AllocateEipAddress",
+        "vpc:ReleaseEipAddress",
+        "vpc:AssociateEipAddress",
+        "vpc:UnassociateEipAddress"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+```
+
+| Write operation | Rollback (paired) permission |
+| --------------- | ---------------------------- |
+| `ecs:AuthorizeSecurityGroup` | `ecs:RevokeSecurityGroup` |
+| `vpc:AllocateEipAddress` | `vpc:ReleaseEipAddress` |
+| `vpc:AssociateEipAddress` | `vpc:UnassociateEipAddress` |
+| `ecs:StartInstance` | `ecs:StopInstance` |
+| `ecs:RebootInstance` / `ecs:StopInstance` / `ecs:ModifyInstanceAttribute` (password reset) | cannot be reverted by an API pair — requires explicit user confirmation each time, plus recording in the session report |
 
 ### EBS Performance Diagnosis Policy (Optional Add-on)
 
@@ -218,6 +268,7 @@ aliyun ecs describe-invocation-results \
 **Cause**: Current account lacks required permissions
 
 **Solution**:
+
 1. Check which API action failed
 2. Verify the corresponding permission exists in your policy
 3. Re-attach the policy or add missing permissions

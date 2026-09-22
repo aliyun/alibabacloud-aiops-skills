@@ -21,6 +21,7 @@ This skill provides comprehensive diagnostics for Alibaba Cloud ECS instances ex
 **Architecture**: ECS + VPC + Security Group + Cloud Monitor (CMS) + Cloud Assistant
 
 **Use Cases**:
+
 - Instance unreachable / inaccessible
 - SSH connection timeout or refused
 - Instance performance degradation / lag
@@ -34,16 +35,22 @@ This skill provides comprehensive diagnostics for Alibaba Cloud ECS instances ex
 
 > **Pre-check: Aliyun CLI >= 3.3.3 required**
 > Run `aliyun version` to verify >= 3.3.3. If not installed or version too low,
-> run `curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash` to install/update,
-> or see `references/cli-installation-guide.md` for installation instructions.
+> prefer the **signed package** path from `references/cli-installation-guide.md`
+> (download the official universal binary, verify it, and install into your user
+> directory — no remote script, no sudo, no system-level writes; you can see the
+> full scope of changes before running anything).
+> The one-line remote installer `curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash`
+> is a **manual fallback only** — it pipes a remote script into bash and may write
+> into system directories via sudo, so do not run it unless you have reviewed it
+> and explicitly accepted that risk.
+>
+> **Tested with:** Aliyun CLI 3.5.0 and 3.3.3, plugin versions ecs/vpc/cms 0.9.x.
+> Minimum required CLI version: 3.3.3.
 
-> **Pre-check: Aliyun CLI plugin update required**
-> [MUST] run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
-> [MUST] run `aliyun plugin update` to ensure that any existing plugins on your local machine are always up-to-date.
-
-> **Pre-check: Alibaba Cloud Credentials Required**
+> **Pre-check: Alibaba Cloud Credentials AND Region Required (run BEFORE any plugin setup)**
 >
 > **Security Rules:**
+>
 > - **NEVER** read, echo, or print AK/SK values (e.g., `echo $ALIBABA_CLOUD_ACCESS_KEY_ID` is FORBIDDEN)
 > - **NEVER** ask the user to input AK/SK directly in the conversation or command line
 > - **NEVER** use `aliyun configure set` with literal credential values
@@ -52,12 +59,22 @@ This skill provides comprehensive diagnostics for Alibaba Cloud ECS instances ex
 > ```bash
 > aliyun configure list
 > ```
-> Check the output for a valid profile (AK, STS, or OAuth identity).
 >
-> **If no valid profile exists, STOP here.**
+> Check the output for a valid profile (AK, STS, or OAuth identity) **and a non-empty Region**.
+>
+> **If no valid profile or no region is configured, STOP here.**
+>
 > 1. Obtain credentials from [Alibaba Cloud Console](https://ram.console.aliyun.com/manage/ak)
 > 2. Configure credentials **outside of this session** (via `aliyun configure` in terminal or environment variables in shell profile)
-> 3. Return and re-run after `aliyun configure list` shows a valid profile
+> 3. Return and re-run after `aliyun configure list` shows a valid profile **with a region**
+>
+> **Why credentials and region come first:** `aliyun configure set --auto-plugin-install true`
+> fails with `region can't be empty` when no region is configured. Plugin setup MUST
+> follow the credential/region gate, never precede it.
+
+> **Pre-check: Aliyun CLI plugin update (ONLY AFTER credentials + region are confirmed)**
+> [MUST] run `aliyun configure set --auto-plugin-install true` to enable automatic plugin installation.
+> [MUST] run `aliyun plugin update` to ensure that any existing plugins on your local machine are always up-to-date.
 
 > **Pre-check: EBS plugin (only for Disk Performance Diagnosis)**
 > The EBS diagnosis APIs are exposed by the `aliyun-cli-ebs` plugin, which the
@@ -98,14 +115,19 @@ and must be excluded.
 > **[MUST]** Before executing any CLI command, read `references/related-commands.md` for command format standards.
 >
 > **Key Rules:**
+>
 > - Use kebab-case command names: `run-command` (not `RunCommand`)
-> - Region parameter is `--biz-region-id` for **all** products (`ecs` / `ebs` / `vpc` / `cms`).
->   `--region-id` does NOT exist and fails with `unknown flag`. `--region` is a global
->   flag that only overrides the service endpoint (use it as a retry on
->   `InvalidOperation.NotSupportedEndpoint`).
+> - Region parameter is **product-specific**:
+>   - `ecs` / `ebs` / `vpc` commands: `--biz-region-id <region>` (the API's RegionId). `--region-id` does NOT exist and fails with `unknown flag`.
+>   - `cms` commands (plugin 0.9.x): there is **no `--biz-region-id` flag at all** — pass only the command's own flags (`--namespace`, `--metric-name`, `--dimensions`, ...). Use the global `--region <region>` flag if you need to override the endpoint.
+>   - The global `--region <region>` flag overrides the service endpoint. **Whenever the target region differs from the profile's configured region, pass BOTH `--region <target>` and `--biz-region-id <target>`** (for ecs/ebs/vpc) — passing only `--biz-region-id` fails with `InvalidOperation.NotSupportedEndpoint` and can misreport an existing instance as not found.
 > - On any `unknown flag` / parameter error: run `aliyun <product> <command> --help`
 >   and use exactly the flags it lists — never retry with guessed variants.
-> - Instance ID format varies: `--instance-id.1`, `--instance-ids '["..."]'`, or `--instance-id`
+> - Instance ID format is command-specific — **`--instance-id.1` indexed syntax is REMOVED in plugin 0.9.x** (fails with `unknown flag`). Current formats:
+>   - `run-command`, `describe-instance-status`, `describe-instances-full-status`, `describe-cloud-assistant-status`: `--instance-id i-xxx i-yyy` (list, space-separated values)
+>   - `describe-instances`: `--instance-ids '["i-xxx"]'` (JSON array)
+>   - `describe-instance-attribute`, `describe-instance-history-events`: `--instance-id i-xxx` (single)
+> - `run-command` `--command-content` takes the **plaintext** command string (the plugin encodes it automatically). Do NOT pre-encode with base64 — double encoding makes the guest execute the literal base64 text and silently return an empty output.
 > - Always include `--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"`
 
 **[MUST] CLI User-Agent** — Every `aliyun` CLI command invocation must include:
@@ -123,7 +145,8 @@ This skill requires the following RAM permissions:
 - `ecs:DescribeInstanceHistoryEvents`
 - `vpc:DescribeVpcs`
 - `vpc:DescribeEipAddresses`
-- `cms:DescribeMetricLast`
+- `cms:QueryMetricLast` (RAM action for the `DescribeMetricLast` API — the API name and the RAM action differ!)
+- `cms:QueryMetricList` (RAM action for the `DescribeMetricList` API — only if time-range metric queries are used)
 - `ecs:RunCommand` (for Deep Diagnostics)
 - `ecs:DescribeInvocationResults` (for Deep Diagnostics)
 - `ebs:DescribeLensMonitorDisks` (Optional — for Disk Performance Diagnosis)
@@ -132,10 +155,18 @@ This skill requires the following RAM permissions:
 
 See `references/ram-policies.md` for detailed policy configuration.
 
-> **[MUST] Permission Failure Handling:** When any command or API call fails due to permission errors at any point during execution, follow this process:
-> 1. Read `references/ram-policies.md` to get the full list of permissions required by this SKILL
-> 2. Use `ram-permission-diagnose` skill to guide the user through requesting the necessary permissions
-> 3. Pause and wait until the user confirms that the required permissions have been granted
+> **[MUST] Permission Failure Handling — decision table:** When any command or API call fails
+> due to permission errors (403 / `Forbidden.RAM` / `NoPermission`) at any point during execution,
+> classify the failed check FIRST, then follow the matching row — do not mix the two behaviors:
+>
+> | Failed check | Classification | Action |
+> | ------------- | ---------------- | -------- |
+> | `DescribeInstances` (Phase 0 instance location) | **Required** | STOP the whole workflow. Read `references/ram-policies.md`, guide the user through requesting permissions (optionally via the `ram-permission-diagnose` skill), and wait for explicit confirmation before retrying. |
+> | Instance status / system events / security group / VPC-EIP / CMS metrics used by the **matched scenario's mandatory checklist** | **Required** | Same as above: STOP, guide, wait for confirmation. |
+> | Supplementary evidence outside the mandatory checklist (e.g. an extra CMS metric, EIP info in a non-connection scenario) | **Optional evidence** | Log the failure, mark that section of the report as "permission denied — not checked", and continue the workflow. Never present the skipped check as "normal". |
+>
+> In every case the diagnostic report MUST state which checks could not run and why. A missing
+> permission is never silently dropped, and never reported as a healthy result.
 
 ## Parameter Confirmation
 
@@ -145,7 +176,7 @@ See `references/ram-policies.md` for detailed policy configuration.
 > values without explicit user approval.
 
 | Parameter Name | Required/Optional | Description | Default Value |
-|----------------|-------------------|-------------|---------------|
+| ---------------- | ------------------- | ------------- | --------------- |
 | `InstanceId` | Required | ECS instance ID to diagnose | N/A |
 | `RegionId` | Required | Region where the instance is located | N/A |
 | `InstanceName` | Optional | Instance name (alternative to InstanceId) | N/A |
@@ -178,10 +209,12 @@ See `references/ram-policies.md` for detailed policy configuration.
 > unlocatable instance must NOT abort the scenario.
 >
 > - **With an explicit DiskId** — verify the disk instead of terminating:
+>
 >   ```bash
 >   aliyun ecs describe-disks --biz-region-id <region> --disk-ids '["d-xxx"]' \
 >     --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 >   ```
+>
 >   - **Disk found** → continue to the **Disk Performance / IO Bottleneck** row of
 >     Scenario-Based Routing. Record the instance as "not located" in 【Basic Information】
 >     and skip instance-level checks; run the EBS disk performance diagnosis workflow
@@ -197,6 +230,7 @@ See `references/ram-policies.md` for detailed policy configuration.
 >   when the user has authorized the selection.
 
 > **[MUST] Empty-result protocol**
+>
 > 1. **STOP.** Terminate the diagnostic workflow. Do NOT proceed to routing or any
 >    diagnostic step. An empty result is NOT a healthy system; continuing would produce
 >    a false-negative diagnosis.
@@ -210,6 +244,14 @@ See `references/ram-policies.md` for detailed policy configuration.
 >    InstanceId / RegionId for typos, or to provide another explicit, valid standard ECS instance.
 
 **Empty-result message template:**
+
+> **[MUST] Language requirement for automated verification:** output this template
+> **verbatim in English — do not translate it**, even when the conversation language is
+> not English. The fixed English phrases `not found` and `-> Diagnostic workflow
+> terminated.` are matched verbatim by automated evaluation. If the user's language is
+> not English, you MAY append a short localized explanation AFTER the template — but
+> the English template lines above must appear exactly as written.
+
 ```
 Instance <InstanceId> not found (region <RegionId>, searched <N> regions). Possible causes:
 1. Non-standard Alibaba Cloud ECS: hybrid-cloud / third-party managed (TRIPARTITE) servers
@@ -220,7 +262,6 @@ This skill only supports troubleshooting of standard Alibaba Cloud ECS instances
 re-check the identifier and region and retry, or provide a valid standard ECS instance ID.
 -> Diagnostic workflow terminated.
 ```
-
 
 ---
 
@@ -234,7 +275,7 @@ re-check the identifier and region and retry, or provide a valid standard ECS in
 Based on the user's problem description, route to the appropriate diagnostic approach:
 
 | Problem Scenario | Trigger Keywords | Diagnostic Approach |
-|-----------------|------------------|---------------------|
+| ----------------- | ------------------ | --------------------- |
 | **Remote Connection Failure / Service Inaccessible** | "cannot connect", "SSH timeout", "RDP failure", "connection refused", "port unreachable", "website inaccessible", "service unavailable", "HTTP/HTTPS not working", "workbench" | **STEP 1:** Read `references/remote-connection-diagnose-design.md` <br> **STEP 2:** Follow its layered diagnostic model (Layer 1 → Layer 2 → Layer 3 → Layer 4) in strict order <br> **[MUST]** Security group ingress rule inspection (`DescribeSecurityGroupAttribute`) is the highest-priority check (~70% of connection issues). Never skip this step. <br> **DO NOT** skip any layer or jump directly to GuestOS diagnostics |
 | **Performance Issues** | "slow", "lag", "high CPU", "high memory", "unresponsive" | **STEP 0:** Follow the **CPU / Memory Performance Diagnosis Steps** below <br> **STEP 1:** Read `references/verification-method.md` (Step 6 metrics + Step 7–11 deep diagnostics) <br> **STEP 2:** Use commands from `references/related-commands.md` (CMS / Cloud Assistant) |
 | **Disk Issues** | "disk full", "cannot write", "storage exhausted" | **STEP 0:** Follow the **Disk Full / Disk Space Diagnosis Steps** below <br> **STEP 1:** Read `references/verification-method.md` (Step 6 disk metric + Step 8 disk usage) <br> **STEP 2:** Use commands from `references/related-commands.md` |
@@ -287,8 +328,7 @@ for additional confirmation before completing the mandatory read-only checks.
 1. `aliyun ecs describe-instances` — locate and validate the instance.
 2. `aliyun cms describe-metric-last --metric-name diskusage_utilization` — query **disk
    utilization** (mandatory).
-3. `aliyun ecs run-command` with `df -h` and `du -sh /var/* /tmp/* /home/*` (base64-encoded)
-   — analyze disk usage inside the instance.
+3. `aliyun ecs run-command` with `df -h` and `du -sh /var/* /tmp/* /home/*` (command content in **plaintext** — the plugin encodes it automatically; do NOT pre-encode)
 4. `aliyun ecs describe-invocation-results` — retrieve, decode, and analyze the output.
 5. Produce the diagnostic report sections required by this skill.
 
@@ -339,10 +379,11 @@ These three steps are MANDATORY for any disk-full diagnosis. Do NOT skip Cloud A
 
 When the scenario involves CPU or memory performance issues:
 
-1. **Query CMS CPU/Memory metrics** — Call `aliyun cms describe-metric-last` with `--metric-name CPUUtilization` (and/or `memory_usedutilization`) `--namespace acs_ecs_dashboard` to get current utilization values.
+1. **Query CMS CPU/Memory metrics** — Call `aliyun cms describe-metric-last` with `--metric-name CPUUtilization` (and/or `memory_usedutilization`) `--namespace acs_ecs_dashboard` to get current utilization values. Note: cms plugin 0.9.x has **no `--biz-region-id` flag** — pass only `--namespace` / `--metric-name` / `--dimensions` (plus global `--region <region>` if the endpoint needs overriding).
 2. **Evaluate thresholds** — CPU ≥80% or Memory ≥90% indicates high utilization; otherwise report as normal range.
-3. **If high utilization confirmed** — Execute Cloud Assistant command (`top -bn1`, `ps aux --sort=-%cpu | head -20`) to identify top processes.
-4. **Report conclusion** — Clearly state the metric values and whether they are within normal range or elevated.
+3. **Empty `Datapoints` means UNKNOWN, not healthy** — if the CMS response succeeds but `Datapoints` is `[]`, output "no monitoring data, cannot determine from CMS" and fall back to GuestOS evidence via Cloud Assistant (`top`, `free`); never report the metric as normal.
+4. **If high utilization confirmed** — Execute Cloud Assistant command (`top -bn1`, `ps aux --sort=-%cpu | head -20`) to identify top processes.
+5. **Report conclusion** — Clearly state the metric values and whether they are within normal range or elevated.
 
 > **Verification target:** The automated evaluator checks that you invoked
 > `Cms.DescribeMetricLast` with `CPUUtilization` (or `memory_usedutilization`) for
@@ -371,9 +412,36 @@ Required for Disk Performance / IO Bottleneck scenarios: Disk ID, Severity, Diag
 
 See `references/verification-method.md` for detailed verification steps for each diagnostic stage.
 
-## Cleanup
+## Cleanup / Write-Operation Protocol
 
-This diagnostic skill does not create any cloud resources and therefore requires no cleanup operations.
+> **[MUST] Distinguish read-only diagnosis from repair execution.**
+>
+> **Pure diagnosis is read-only**: the checks in this skill (Describe*, Query* APIs, Cloud
+> Assistant probes such as `uptime` / `df -h` / `ss -tlnp`) create no billable cloud
+> resources and need no cleanup. Cloud Assistant probe commands are the only operations
+> that touch the instance, and they leave no persistent state.
+>
+> **Repairs are NOT covered by that guarantee.** The remediation flows referenced by
+> `references/remote-connection-diagnose-design.md` (§4 Solution Library) and
+> `references/related-commands.md` (security group authorize/revoke, EIP allocate/bind,
+> instance start/stop/reboot, password reset) are **write operations**. For every write
+> operation:
+>
+> 1. **Confirm first** — present the exact command and its scope to the user and get
+>    explicit approval for that single operation. Never batch multiple writes into one
+>    approval.
+> 2. **Record it** — log the command, the resource it changed, and the exact parameters,
+>    so the change can be undone.
+> 3. **Pair with rollback** — before executing, state the rollback command and verify the
+>    user has the paired permission (e.g. `ecs:AuthorizeSecurityGroup` needs
+>    `ecs:RevokeSecurityGroup`; `vpc:AllocateEipAddress` needs `vpc:ReleaseEipAddress`).
+>    A repair you cannot roll back must not be executed.
+> 4. **Verify then report** — after the write, re-check the actual effect (describe the
+>    resource again) and report the change in the final report.
+>
+> At the end of a session in which any write was executed, list every change made and its
+> rollback status (reverted / deliberately kept). A session with no writes reports
+> "read-only session — no cleanup needed".
 
 ## Best Practices
 
@@ -381,14 +449,15 @@ This diagnostic skill does not create any cloud resources and therefore requires
 2. **Deep Diagnostics requires confirmation** - Always get user approval before executing system commands
 
 > **Exception**: When the user's initial request explicitly describes symptoms that require system-level diagnosis (e.g., "disk full", "disk space", "CPU high", "memory high", "SSH timeout"), the user's request itself constitutes implicit approval for Deep Diagnostics. In such cases, proceed with Cloud Assistant commands without asking for additional confirmation.
-3. **Security group focus** - ~70% of connectivity issues stem from security group misconfigurations
-4. **Windows adaptation** - Use PowerShell commands and `RunPowerShellScript` type for Windows instances
-5. **Security awareness** - Report mining processes, abnormal connections immediately; never expose AK/SK
+
+1. **Security group focus** - ~70% of connectivity issues stem from security group misconfigurations
+2. **Windows adaptation** - Use PowerShell commands and `RunPowerShellScript` type for Windows instances
+3. **Security awareness** - Report mining processes, abnormal connections immediately; never expose AK/SK
 
 ## Reference Links
 
 | Document | Description |
-|----------|-------------|
+| ---------- | ------------- |
 | [Related Commands](references/related-commands.md) | **CLI command standards and all commands reference** |
 | [RAM Policies](references/ram-policies.md) | Required RAM permissions list |
 | [Verification Method](references/verification-method.md) | Success verification method for each step |

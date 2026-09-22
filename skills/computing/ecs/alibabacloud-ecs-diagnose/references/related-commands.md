@@ -15,28 +15,42 @@ This document provides a comprehensive reference of all Aliyun CLI commands used
 | **Command name** | `run-command` (kebab-case) | `RunCommand` (PascalCase) |
 | **User agent** | Always include `--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"` | Missing user-agent |
 
-### Region Parameter — use `--biz-region-id` for ALL products
+### Region Parameter — product-specific rules
 
-> **[MUST]** Current Aliyun CLI (>= 3.4, and any CLI where the product plugin is
-> installed — which this skill's pre-check enforces via `--auto-plugin-install`)
-> exposes the API's `RegionId` parameter as **`--biz-region-id`** for **every**
-> product (`ecs`, `ebs`, `vpc`, `cms`). `--region-id` is **not** a valid flag and
-> fails immediately with `Error: unknown flag: --region-id`.
+> **[MUST]** In current Aliyun CLI (>= 3.4 with 0.9.x plugins), the region parameter differs
+> by product. `--region-id` is **not** a valid flag on any product and fails immediately
+> with `Error: unknown flag: --region-id`.
 
 | Flag | Meaning | Use |
-|------|---------|-----|
-| `--biz-region-id <region>` | The API's own `RegionId` parameter | **Always** — ECS / EBS / VPC / CMS / Cloud Assistant commands |
-| `--region <region>` | Global flag; overrides only the **service endpoint** region | Only as a retry when endpoint resolution fails (see below) |
+| ---- | ------- | --- |
+| `--biz-region-id <region>` | The API's own `RegionId` parameter | **Always** on `ecs` / `ebs` / `vpc` commands |
+| `--region <region>` | Global flag; overrides the **service endpoint** region | Pass **together with** `--biz-region-id` whenever the target region differs from the profile's configured region (see cross-region rule below) |
+| `--biz-region-id` on `cms` | ❌ Does not exist on cms plugin 0.9.x (`unknown flag`) | Never — cms commands take only their own flags (`--namespace`, `--metric-name`, `--dimensions`, ...); use global `--region` only to override the endpoint |
 | `--region-id <region>` | ❌ Does not exist | Never |
+
+**[MUST] Cross-region rule (verified live):** when the target region differs from the
+CLI profile's configured region, passing only `--biz-region-id <target>` sends the request
+to the **profile region's endpoint**, which rejects it with
+`InvalidOperation.NotSupportedEndpoint` — the instance then looks "not found". For every
+query whose target region may differ from the profile region (region traversal in Phase 0,
+any cross-region lookup), pass **BOTH** flags:
+
+```bash
+aliyun ecs describe-instances --region <region> --biz-region-id <region> \
+  --instance-ids '["i-xxxxx"]' \
+  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
+```
+
+This applies to `ecs` / `ebs` / `vpc` commands. `cms` metric queries are region-agnostic
+(no region parameter; the endpoint serves metrics for all regions).
 
 **[MUST] Flag self-correction rule:** if a command fails with `unknown flag` or
 `Missing/Invalid parameter`, do **not** retry blindly with guessed variants. Run
 `aliyun <product> <command> --help` once and use exactly the flags it lists.
 
-**Newer-region endpoint fallback:** if a per-region call fails with
-`InvalidOperation.NotSupportedEndpoint` (common for newly launched regions), retry
-the same command with the global `--region <region>` flag added to force the
-regional endpoint:
+**Newer-region endpoint fallback:** if a same-region call still fails with
+`InvalidOperation.NotSupportedEndpoint` (possible for newly launched regions), retry
+with the global `--region <region>` flag added — and keep `--biz-region-id`:
 
 ```bash
 aliyun ecs describe-instances --biz-region-id <region> --region <region> \
@@ -46,10 +60,15 @@ aliyun ecs describe-instances --biz-region-id <region> --region <region> \
 
 ### Instance ID Parameter (Command-Specific)
 
+> **`--instance-id.1` indexed syntax is REMOVED in plugin 0.9.x** — it fails with
+> `unknown flag: --instance-id.1`. List parameters now take space-separated values.
+
 | Command | Parameter Format | Example |
-|---------|------------------|---------|
-| `run-command` | `--instance-id.1` (indexed) | `--instance-id.1 i-xxxxx` |
-| `describe-instances-full-status` | `--instance-id.1` (indexed) | `--instance-id.1 i-xxxxx` |
+| ------- | ---------------- | ------- |
+| `run-command` | `--instance-id` (list, space-separated) | `--instance-id i-xxx i-yyy` |
+| `describe-instance-status` | `--instance-id` (list, space-separated) | `--instance-id i-xxx` |
+| `describe-instances-full-status` | `--instance-id` (list, space-separated) | `--instance-id i-xxx` |
+| `describe-cloud-assistant-status` | `--instance-id` (list, space-separated) | `--instance-id i-xxx` |
 | `describe-instances` | `--instance-ids` (JSON array) | `--instance-ids '["i-xxxxx"]'` |
 | `describe-instance-attribute` | `--instance-id` (single) | `--instance-id i-xxxxx` |
 | `describe-instance-history-events` | `--instance-id` (single) | `--instance-id i-xxxxx` |
@@ -60,22 +79,28 @@ aliyun ecs describe-instances --biz-region-id <region> --region <region> \
 
 ### RunCommand Standard Format
 
+> **[MUST] `--command-content` takes the PLAINTEXT command string.** The plugin
+> base64-encodes it automatically. If you pre-encode, the guest executes the literal
+> base64 text: the invocation reports `Success` / `ExitCode 0` with **empty output** —
+> a silent false negative (verified live). The **response** `Output` field, however,
+> IS Base64-encoded and must be decoded after retrieval.
+
 ```bash
 # Linux instance
 aliyun ecs run-command \
-  --biz-region-id <region-id> \
-  --instance-id.1 <instance-id> \
+  --region <region-id> --biz-region-id <region-id> \
+  --instance-id <instance-id> \
   --type RunShellScript \
-  --command-content '<base64-encoded-command>' \
+  --command-content 'uptime' \
   --timeout 60 \
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 
 # Windows instance
 aliyun ecs run-command \
-  --biz-region-id <region-id> \
-  --instance-id.1 <instance-id> \
+  --region <region-id> --biz-region-id <region-id> \
+  --instance-id <instance-id> \
   --type RunPowerShellScript \
-  --command-content '<base64-encoded-command>' \
+  --command-content 'Write-Output "PROBE_OK"' \
   --timeout 60 \
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 ```
@@ -84,12 +109,18 @@ aliyun ecs run-command \
 
 ```bash
 aliyun ecs describe-invocation-results \
-  --biz-region-id <region-id> \
+  --region <region-id> --biz-region-id <region-id> \
   --invoke-id <invoke-id> \
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 ```
 
-> **Note:** The `Output` field in response is Base64 encoded. Decode before analysis.
+> **Note 1:** The `Output` field in the response is Base64 encoded — decode it before analysis.
+>
+> **Note 2:** Poll until the per-instance `InvocationStatus` is **`Success`** (values:
+> `Running` / `Success` / `Failed` / `Timeout` / `Stopped`) before reading `Output` — an
+> early read returns an empty string, which must NOT be interpreted as "system normal".
+> The invocation-record-level status (`InvokeRecordStatus`) is `Finished` — do not confuse
+> the two levels.
 
 ---
 
@@ -98,11 +129,11 @@ aliyun ecs describe-invocation-results \
 ### Instance Query Commands
 
 | Command | Description | Example |
-|---------|-------------|---------|
+| --------- | ------------- | --------- |
 | `aliyun ecs describe-instances` | Query instance details by various filters | `aliyun ecs describe-instances --biz-region-id cn-hangzhou --instance-ids '["i-xxxxx"]' --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"` |
 | `aliyun ecs describe-instance-attribute` | Query detailed attributes of a single instance | `aliyun ecs describe-instance-attribute --biz-region-id cn-hangzhou --instance-id i-xxxxx --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"` |
 | `aliyun ecs describe-instance-status` | Query runtime status of instances | `aliyun ecs describe-instance-status --biz-region-id cn-hangzhou --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"` |
-| `aliyun ecs describe-instances-full-status` | Query full status including scheduled events | `aliyun ecs describe-instances-full-status --biz-region-id cn-hangzhou --instance-id.1 i-xxxxx --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"` |
+| `aliyun ecs describe-instances-full-status` | Query full status including scheduled events | `aliyun ecs describe-instances-full-status --region cn-hangzhou --biz-region-id cn-hangzhou --instance-id i-xxxxx --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"` |
 
 ### System Event Commands
 
@@ -113,7 +144,7 @@ aliyun ecs describe-invocation-results \
 ### Security Group Commands
 
 | Command | Description | Example |
-|---------|-------------|---------|
+| --------- | ------------- | --------- |
 | `aliyun ecs describe-security-group-attribute` | Query security group rules | `aliyun ecs describe-security-group-attribute --biz-region-id cn-hangzhou --security-group-id sg-xxxxx --direction ingress --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"` |
 | `aliyun ecs describe-security-groups` | List all security groups | `aliyun ecs describe-security-groups --biz-region-id cn-hangzhou --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"` |
 | `aliyun ecs authorize-security-group` | Add ingress rule to security group | See detailed example below |
@@ -122,6 +153,7 @@ aliyun ecs describe-invocation-results \
 #### Security Group Rule Operations
 
 **Add ingress rule (allow SSH from specific IP):**
+
 ```bash
 aliyun ecs authorize-security-group \
   --biz-region-id cn-hangzhou \
@@ -133,6 +165,7 @@ aliyun ecs authorize-security-group \
 ```
 
 **Add ingress rule (allow HTTP from anywhere):**
+
 ```bash
 aliyun ecs authorize-security-group \
   --biz-region-id cn-hangzhou \
@@ -144,6 +177,7 @@ aliyun ecs authorize-security-group \
 ```
 
 **Remove ingress rule (MUST specify all matching parameters):**
+
 ```bash
 aliyun ecs revoke-security-group \
   --biz-region-id cn-hangzhou \
@@ -159,8 +193,8 @@ aliyun ecs revoke-security-group \
 ### Cloud Assistant Commands
 
 | Command | Description | Example |
-|---------|-------------|---------|
-| `aliyun ecs run-command` | Execute command on instance via Cloud Assistant | `aliyun ecs run-command --biz-region-id cn-hangzhou --instance-id.1 i-xxxxx --type RunShellScript --command-content "dXB0aW1l" --timeout 60 --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"` |
+| --------- | ------------- | --------- |
+| `aliyun ecs run-command` | Execute command on instance via Cloud Assistant | `aliyun ecs run-command --region cn-hangzhou --biz-region-id cn-hangzhou --instance-id i-xxxxx --type RunShellScript --command-content "uptime" --timeout 60 --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"` |
 | `aliyun ecs describe-invocation-results` | Query command execution results | `aliyun ecs describe-invocation-results --biz-region-id cn-hangzhou --invoke-id t-xxxxx --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"` |
 | `aliyun ecs describe-invocations` | Query command invocation records | `aliyun ecs describe-invocations --biz-region-id cn-hangzhou --instance-id i-xxxxx --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"` |
 
@@ -177,7 +211,7 @@ aliyun ecs revoke-security-group \
 
 | Command | Description | Example |
 |---------|-------------|---------|
-| `aliyun vpc describe-eip-addresses` | Query Elastic IP addresses | `aliyun vpc describe-eip-addresses --biz-region-id cn-hangzhou --associated-instance-id i-xxxxx --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"` |
+| `aliyun vpc describe-eip-addresses` | Query Elastic IP addresses | `aliyun vpc describe-eip-addresses --region cn-hangzhou --biz-region-id cn-hangzhou --associated-instance-id i-xxxxx --associated-instance-type EcsInstance --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"` |
 
 ## Cloud Monitor (CMS) Commands
 
@@ -185,13 +219,13 @@ aliyun ecs revoke-security-group \
 
 | Command | Description | Example |
 |---------|-------------|---------|
-| `aliyun cms describe-metric-last` | Query the latest monitoring data point | `aliyun cms describe-metric-last --biz-region-id cn-hangzhou --namespace acs_ecs_dashboard --metric-name CPUUtilization --dimensions '[{"instanceId":"i-xxxxx"}]' --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"` |
-| `aliyun cms describe-metric-list` | Query monitoring data within a time range | `aliyun cms describe-metric-list --biz-region-id cn-hangzhou --namespace acs_ecs_dashboard --metric-name CPUUtilization --dimensions '[{"instanceId":"i-xxxxx"}]' --start-time 1640000000000 --end-time 1640086400000 --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"` |
+| `aliyun cms describe-metric-last` | Query the latest monitoring data point | `aliyun cms describe-metric-last --namespace acs_ecs_dashboard --metric-name CPUUtilization --dimensions '[{"instanceId":"i-xxxxx"}]' --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"` |
+| `aliyun cms describe-metric-list` | Query monitoring data within a time range | `aliyun cms describe-metric-list --namespace acs_ecs_dashboard --metric-name CPUUtilization --dimensions '[{"instanceId":"i-xxxxx"}]' --start-time 1640000000000 --end-time 1640086400000 --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"` |
 
 ### Common Monitoring Metrics
 
 | Metric Name | Namespace | Description | Dimensions |
-|-------------|-----------|-------------|------------|
+| ------------- | ----------- | ------------- | ------------ |
 | `CPUUtilization` | `acs_ecs_dashboard` | CPU utilization (%) | `{"instanceId":"i-xxxxx"}` |
 | `memory_usedutilization` | `acs_ecs_dashboard` | Memory utilization (%) | `{"instanceId":"i-xxxxx"}` |
 | `diskusage_utilization` | `acs_ecs_dashboard` | Disk utilization (%) | `{"instanceId":"i-xxxxx","device":"/dev/vda1"}` |
@@ -210,12 +244,13 @@ aliyun ecs revoke-security-group \
 > the report, poll it to completion, and interpret its events and recommendations.
 
 | Command | Description | Example |
-|---------|-------------|---------|
+| --------- | ------------- | --------- |
 | `aliyun ebs describe-lens-monitor-disks` | List disks monitored by CloudLens for EBS | `aliyun ebs describe-lens-monitor-disks --biz-region-id cn-hangzhou --max-results 100 --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"` |
 | `aliyun ebs create-diagnose-report` | Start a disk performance diagnosis, returns `ReportId` | `aliyun ebs create-diagnose-report --biz-region-id cn-hangzhou --diagnose-type Performance --resource-type Disk --resource-id d-xxxxx --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"` |
 | `aliyun ebs describe-diagnose-report` | Poll diagnosis status / fetch results | `aliyun ebs describe-diagnose-report --biz-region-id cn-hangzhou --diagnose-type Performance --report-ids <report-id> --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"` |
 
 **Parameter notes:**
+
 - `--resource-type Disk` — capital `D`, exactly this casing.
 - `--diagnose-type Performance` — required on `create-diagnose-report`, and also pass
   it to `describe-diagnose-report`.
@@ -229,6 +264,7 @@ aliyun ecs revoke-security-group \
 ### Query Instance by Different Identifiers
 
 **By Instance ID:**
+
 ```bash
 aliyun ecs describe-instances \
   --biz-region-id cn-hangzhou \
@@ -237,6 +273,7 @@ aliyun ecs describe-instances \
 ```
 
 **By Instance Name:**
+
 ```bash
 aliyun ecs describe-instances \
   --biz-region-id cn-hangzhou \
@@ -245,6 +282,7 @@ aliyun ecs describe-instances \
 ```
 
 **By Private IP:**
+
 ```bash
 aliyun ecs describe-instances \
   --biz-region-id cn-hangzhou \
@@ -253,6 +291,7 @@ aliyun ecs describe-instances \
 ```
 
 **By Public IP:**
+
 ```bash
 aliyun ecs describe-instances \
   --biz-region-id cn-hangzhou \
@@ -261,6 +300,7 @@ aliyun ecs describe-instances \
 ```
 
 **By VPC ID:**
+
 ```bash
 aliyun ecs describe-instances \
   --biz-region-id cn-hangzhou \
@@ -269,6 +309,7 @@ aliyun ecs describe-instances \
 ```
 
 **By Security Group ID:**
+
 ```bash
 aliyun ecs describe-instances \
   --biz-region-id cn-hangzhou \
@@ -279,76 +320,82 @@ aliyun ecs describe-instances \
 ### Execute Cloud Assistant Commands
 
 **Execute Shell script (Linux):**
+
 ```bash
 aliyun ecs run-command \
-  --biz-region-id cn-hangzhou \
-  --instance-id.1 i-xxxxx \
+  --region cn-hangzhou --biz-region-id cn-hangzhou \
+  --instance-id i-xxxxx \
   --type RunShellScript \
-  --command-content "$(echo 'df -h' | base64)" \
+  --command-content 'df -h' \
   --timeout 60 \
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 ```
 
 **Execute PowerShell script (Windows):**
+
 ```bash
 aliyun ecs run-command \
-  --biz-region-id cn-hangzhou \
-  --instance-id.1 i-xxxxx \
+  --region cn-hangzhou --biz-region-id cn-hangzhou \
+  --instance-id i-xxxxx \
   --type RunPowerShellScript \
-  --command-content "$(echo 'Get-Volume' | base64)" \
+  --command-content 'Get-Volume' \
   --timeout 60 \
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 ```
 
 **Execute with parameters:**
+
 ```bash
 aliyun ecs run-command \
-  --biz-region-id cn-hangzhou \
-  --instance-id.1 i-xxxxx \
+  --region cn-hangzhou --biz-region-id cn-hangzhou \
+  --instance-id i-xxxxx \
   --type RunShellScript \
-  --command-content "$(echo 'echo {{param1}} {{param2}}' | base64)" \
+  --command-content 'echo {{param1}} {{param2}}' \
   --parameters '{"param1":"value1","param2":"value2"}' \
   --timeout 60 \
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 ```
 
 **Execute on multiple instances:**
+
 ```bash
 aliyun ecs run-command \
-  --biz-region-id cn-hangzhou \
-  --instance-id.1 i-xxxxx \
-  --instance-id.2 i-yyyyy \
-  --instance-id.3 i-zzzzz \
+  --region cn-hangzhou --biz-region-id cn-hangzhou \
+  --instance-id i-xxxxx i-yyyyy i-zzzzz \
   --type RunShellScript \
-  --command-content "$(echo 'uptime' | base64)" \
+  --command-content 'uptime' \
   --timeout 60 \
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 ```
 
 ### Query Monitoring with Time Range
 
+> **macOS note:** GNU `date -d '15 minutes ago'` is NOT available on macOS (BSD date
+> rejects `-d`). Use the Python epoch-milliseconds snippets below — they work on both
+> GNU/Linux and macOS. CMS commands (plugin 0.9.x) take **no** `--biz-region-id` flag.
+
 **Last 15 minutes:**
+
 ```bash
 aliyun cms describe-metric-list \
-  --biz-region-id cn-hangzhou \
   --namespace acs_ecs_dashboard \
   --metric-name CPUUtilization \
   --dimensions '[{"instanceId":"i-xxxxx"}]' \
-  --start-time $(date -d '15 minutes ago' +%s)000 \
-  --end-time $(date +%s)000 \
+  --start-time $(python3 -c 'import time; print(int((time.time()-900)*1000))') \
+  --end-time $(python3 -c 'import time; print(int(time.time()*1000))') \
   --period 60 \
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 ```
 
 **Last 1 hour:**
+
 ```bash
 aliyun cms describe-metric-list \
-  --biz-region-id cn-hangzhou \
   --namespace acs_ecs_dashboard \
   --metric-name CPUUtilization \
   --dimensions '[{"instanceId":"i-xxxxx"}]' \
-  --start-time $(date -d '1 hour ago' +%s)000 \
-  --end-time $(date +%s)000 \
+  --start-time $(python3 -c 'import time; print(int((time.time()-3600)*1000))') \
+  --end-time $(python3 -c 'import time; print(int(time.time()*1000))') \
   --period 300 \
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 ```
@@ -378,6 +425,7 @@ aliyun ecs describe-instances \
 ### Output Formatting
 
 **JSON format (default):**
+
 ```bash
 aliyun ecs describe-instances \
   --biz-region-id cn-hangzhou \
@@ -386,6 +434,7 @@ aliyun ecs describe-instances \
 ```
 
 **Table format:**
+
 ```bash
 aliyun ecs describe-instances \
   --biz-region-id cn-hangzhou \
@@ -395,6 +444,7 @@ aliyun ecs describe-instances \
 ```
 
 **Extract specific fields with jq:**
+
 ```bash
 aliyun ecs describe-instances \
   --biz-region-id cn-hangzhou \
@@ -410,8 +460,8 @@ aliyun ecs describe-instances \
 ```bash
 # Check if Cloud Assistant is installed
 aliyun ecs describe-cloud-assistant-status \
-  --biz-region-id cn-hangzhou \
-  --instance-id.1 i-xxxxx \
+  --region cn-hangzhou --biz-region-id cn-hangzhou \
+  --instance-id i-xxxxx \
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-ecs-diagnose/{session-id} skill-version/{skill-version}"
 
 # List Cloud Assistant agents
