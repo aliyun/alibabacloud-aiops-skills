@@ -12,9 +12,25 @@ readonly CFW_PRODUCT_CODE="Cloudfw"
 readonly DEFAULT_READ_TIMEOUT=30
 readonly DEFAULT_CONNECT_TIMEOUT=10
 
+# Observability: every cloud API call is tagged with a session-scoped User-Agent
+# so cloud-side logs can correlate all actions back to one Agent session.
+# The session-id comes from SKILL_SESSION_ID (see the Observability section of
+# SKILL.md). Both it and the manifest-derived skill-version are mandatory: a
+# call that cannot be attributed is refused rather than sent anonymously.
+readonly SKILL_UA_PREFIX="AlibabaCloud-Agent-Skills/alibabacloud-cfw-internet-firewall-protect"
+
+# Skill root, used to locate references/manifest.json.
+readonly SKILL_ROOT_DIR="$(cd "${BASH_SOURCE[0]%/*}/.." && pwd)"
+
+# Safety cap for --all-pages iteration, guards against an unbounded loop
+# if TotalCount and the returned page contents ever disagree.
+readonly MAX_QUERY_PAGES=200
+
 # Valid resource types for Internet Firewall (auto-protect + query-only BastionHostAll)
 # Source: DescribeResourceTypeAutoEnable API + DescribeAssetList query-only types
-readonly VALID_RESOURCE_TYPES="AiGatewayEIP AiGatewayEIPv6 AlbEIP AlbIPv6 ApiGatewayEIP ApiGatewayEIPv6 BastionHostAll BastionHostEgressIP BastionHostIngressIP BastionHostIP EIP EcdEIP EcsEIP EcsIPv6 EcsPublicIP EniEIP EniEIPv6 GaEIP GaEIPV6 HAVIP NatEIP NatPublicIP NlbEIP NlbIPv6 SlbEIP SlbIPv6 SlbPublicIP SwasEIP"
+# Note: BastionHostAll is query-only (not accepted by write/auto-protect APIs);
+#       VpnEIP is auto-protect-only (not a DescribeAssetList query filter type).
+readonly VALID_RESOURCE_TYPES="AiGatewayEIP AiGatewayEIPv6 AlbEIP AlbIPv6 ApiGatewayEIP ApiGatewayEIPv6 BastionHostAll BastionHostEgressIP BastionHostIngressIP BastionHostIP EIP EcdEIP EcsEIP EcsIPv6 EcsPublicIP EniEIP EniEIPv6 GaEIP GaEIPV6 HAVIP NatEIP NatPublicIP NlbEIP NlbIPv6 SlbEIP SlbIPv6 SlbPublicIP SwasEIP VpnEIP"
 
 # --- Logging (all to stderr) ---
 
@@ -43,10 +59,23 @@ validate_required() {
 
 validate_ip() {
   local ip="$1"
-  if [[ ! "$ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-    log_error "Invalid IP address format: ${ip}"
+  if [[ ! "$ip" =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+    log_error "Invalid IP address format: ${ip}. Expected IPv4 dotted-quad (e.g. 192.168.1.1)"
     return 1
   fi
+
+  # Each octet must be within 0-255. The 10# prefix forces decimal —
+  # a bare octet like 08 would otherwise be read as invalid octal under bash 3.2.
+  local saved_ifs="${IFS-$' \t\n'}"
+  IFS='.'
+  for octet in $ip; do
+    IFS="$saved_ifs"
+    if (( 10#$octet > 255 )); then
+      log_error "Invalid IP address: ${ip}. Octet '${octet}' is out of the 0-255 range"
+      return 1
+    fi
+  done
+  IFS="$saved_ifs"
 }
 
 validate_region() {
@@ -93,6 +122,20 @@ validate_status() {
   case "$status" in
     open|opening|closed|closing) ;;
     *) log_error "Invalid status: ${status}. Must be one of: open, opening, closed, closing"; return 1 ;;
+  esac
+}
+
+# NewResourceTag filters by asset discovery time, not by a user-defined tag.
+# Only the three enumerated values below are accepted by DescribeAssetList.
+validate_new_resource_tag() {
+  local tag="$1"
+  case "$tag" in
+    "discovered in 1 hour"|"discovered in 1 day"|"discovered in 7 days") ;;
+    *)
+      log_error "Invalid new resource tag: ${tag}"
+      log_error "Must be one of: 'discovered in 1 hour', 'discovered in 1 day', 'discovered in 7 days'"
+      return 1
+      ;;
   esac
 }
 
@@ -169,6 +212,68 @@ extract_api_request_id() {
   printf '%s' "$rid"
 }
 
+# Cache so a paginated query does not spawn python3 once per page.
+RESOLVED_SKILL_VERSION=""
+
+# Resolve the skill-version segment of the User-Agent. references/manifest.json is
+# the only accepted source. Returns non-zero instead of exiting: this function is
+# called through command substitution, where an `exit` would only terminate the
+# subshell and let the caller proceed to make an unattributed API call anyway.
+resolve_skill_version() {
+  if [[ -n "$RESOLVED_SKILL_VERSION" ]]; then
+    printf '%s' "$RESOLVED_SKILL_VERSION"
+    return 0
+  fi
+
+  local manifest="${SKILL_ROOT_DIR}/references/manifest.json" version
+  if [[ ! -f "$manifest" ]]; then
+    log_error "Cannot resolve skill-version: ${manifest} is missing"
+    return 1
+  fi
+  if ! command -v python3 &>/dev/null; then
+    log_error "python3 is required to read ${manifest} but not found in PATH"
+    return 1
+  fi
+
+  if ! version=$(python3 -c '
+import json, sys
+try:
+    with open(sys.argv[1], encoding="utf-8") as fh:
+        data = json.load(fh)
+except ValueError as exc:
+    sys.exit("references/manifest.json is not valid JSON: %s" % exc)
+except OSError as exc:
+    sys.exit("cannot read references/manifest.json: %s" % exc)
+version = data.get("version") if isinstance(data, dict) else None
+if not isinstance(version, str) or not version.strip():
+    sys.exit("references/manifest.json must declare a non-empty string \"version\"")
+print(version.strip())
+' "$manifest"); then
+    log_error "Refusing to call the API: skill-version could not be resolved from references/manifest.json"
+    return 1
+  fi
+
+  RESOLVED_SKILL_VERSION="$version"
+  printf '%s' "$version"
+}
+
+# Fail-fast gate for cloud-call attribution. Call it from an entry script's top
+# level, after argument parsing and before dispatch: `exit` only terminates the
+# whole script when it runs in the main shell, never inside a command substitution.
+# Read-only previews (--dry-run, --help) never reach a cloud call, so they stay usable
+# without a session-id.
+require_attribution() {
+  if [[ -z "${SKILL_SESSION_ID:-}" ]]; then
+    log_error "SKILL_SESSION_ID is not set; this operation calls a cloud API and cannot run unattributed"
+    log_error "  Fix: pass SKILL_SESSION_ID={session-id} when invoking this script (see Observability in SKILL.md)"
+    exit 1
+  fi
+  if ! resolve_skill_version >/dev/null; then
+    log_error "Cannot proceed without a manifest-derived skill-version"
+    exit 1
+  fi
+}
+
 # --- CLI Wrapper ---
 
 # Call CFW API via aliyun CLI.
@@ -178,10 +283,25 @@ call_cfw_api() {
   local api_name="$1"
   shift
 
+  # Attribution is resolved before any network call. Returns 3 rather than exiting,
+  # because this function runs inside a command substitution whose subshell would
+  # swallow an `exit`; callers propagate 3 as a fatal, non-API error.
+  if [[ -z "${SKILL_SESSION_ID:-}" ]]; then
+    log_error "SKILL_SESSION_ID is not set; refusing to call the API without session attribution"
+    log_error "  Fix: pass SKILL_SESSION_ID={session-id} when invoking this script (see Observability in SKILL.md)"
+    return 3
+  fi
+
+  local skill_version
+  if ! skill_version=$(resolve_skill_version); then
+    return 3
+  fi
+
   local cmd=(
     aliyun "$CFW_PRODUCT_CODE" "$api_name"
     --read-timeout "$DEFAULT_READ_TIMEOUT"
     --connect-timeout "$DEFAULT_CONNECT_TIMEOUT"
+    --user-agent "${SKILL_UA_PREFIX}/${SKILL_SESSION_ID} skill-version/${skill_version}"
     "$@"
   )
 

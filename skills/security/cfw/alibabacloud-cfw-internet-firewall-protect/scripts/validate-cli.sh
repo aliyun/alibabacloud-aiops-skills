@@ -41,17 +41,22 @@ if [[ "$INSTALL_GUIDE" == "true" ]]; then
 === Alibaba Cloud CLI Installation & Setup Guide ===
 
 1. Install CLI (>= 3.3.3):
-   curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash
+   /bin/bash -c "$(curl -fsSL --connect-timeout 10 --max-time 120 https://aliyuncli.alicdn.com/setup.sh)"
+   Routine updates afterwards: aliyun upgrade --yes
 
 2. Verify installation:
    aliyun version
 
-3. Configure credentials:
+3. Configure credentials (do this outside the Agent session):
    aliyun configure
-   (AccessKey from https://ram.console.aliyun.com/manage/ak)
+   Obtain credentials from the RAM console: https://ram.console.aliyun.com/manage/ak
+   The CLI then resolves them automatically via its default credential chain —
+   this Skill never reads, echoes, or handles credentials itself.
 
-4. Enable auto plugin install:
+4. Optional — auto-install missing plugins (local, idempotent convenience switch):
    aliyun configure set --auto-plugin-install true
+   The CLI cannot read this setting back, so validate-cli.sh reports it as
+   "unknown" rather than "false"; not enabling it does not break this Skill.
 
 5. Update all plugins:
    aliyun plugin update
@@ -101,23 +106,26 @@ if command -v aliyun &>/dev/null; then
       CLI_VERSION_OK="true"
     else
       CLI_VERSION_OK="false"
-      log_warn "CLI version ${CLI_VERSION} is below minimum ${MIN_CLI_VERSION}. Run: curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash"
+      log_warn "CLI version ${CLI_VERSION} is below minimum ${MIN_CLI_VERSION}. Run: aliyun upgrade --yes (or reinstall via the setup.sh command in --install-guide)"
     fi
   fi
 else
-  log_warn "Alibaba Cloud CLI not installed. Install with: curl -fsSL https://aliyuncli.alicdn.com/setup.sh | bash"
+  log_warn "Alibaba Cloud CLI not installed. Install it with the setup.sh command shown by: bash scripts/validate-cli.sh --install-guide"
 fi
 
 # --- Check auto plugin install ---
+# NOTE: this setting cannot actually be read back. It lives per-profile inside
+# ~/.aliyun/config.json, but `aliyun configure list` only prints the profile
+# table (Profile | Credential | Valid | Region | Language) and never mentions it,
+# and `aliyun configure get` returns empty for both the kebab and snake spelling.
+# Grepping the config file directly would be ambiguous across profiles, so rather
+# than always reporting a wrong "false" (which made every run re-apply the set
+# command), report "unknown" and let the caller decide. Enabling it is a local,
+# idempotent convenience setting — not a prerequisite for this Skill.
 AUTO_PLUGIN_INSTALL="not_checked"
 if [[ "$CLI_INSTALLED" == "true" ]]; then
-  auto_plugin=$(aliyun configure list 2>/dev/null | grep -i 'auto-plugin-install' || true)
-  if printf '%s' "$auto_plugin" | grep -qi 'true'; then
-    AUTO_PLUGIN_INSTALL="true"
-  else
-    AUTO_PLUGIN_INSTALL="false"
-    log_warn "Auto plugin install is not enabled. Run: aliyun configure set --auto-plugin-install true"
-  fi
+  AUTO_PLUGIN_INSTALL="unknown"
+  log_info "Auto plugin install state is not readable from the CLI (reported as unknown). To enable it once: aliyun configure set --auto-plugin-install true"
 fi
 
 # --- Check profile ---
@@ -157,11 +165,43 @@ if [[ "$CLI_INSTALLED" == "true" ]]; then
 fi
 
 # --- Check CFW permission (optional, also doubles as real credential check) ---
+# This is a real cloud call, so it carries the same session-scoped User-Agent as
+# every other call: a permission probe missing from the session trace would leave
+# a gap in exactly the diagnostic trail this script exists to produce.
+check_cfw_permission() {
+  if [[ -z "${SKILL_SESSION_ID:-}" ]]; then
+    log_warn "SKILL_SESSION_ID is not set; skipping the CFW permission check rather than issuing an unattributed API call"
+    printf 'skipped_no_session'
+    return 0
+  fi
+
+  local skill_version
+  if ! skill_version=$(resolve_skill_version); then
+    printf 'skipped_no_version'
+    return 0
+  fi
+
+  local out rc=0
+  out=$(aliyun "$CFW_PRODUCT_CODE" DescribeAssetList \
+    --CurrentPage 1 --PageSize 1 --Lang zh \
+    --read-timeout "$DEFAULT_READ_TIMEOUT" \
+    --connect-timeout "$DEFAULT_CONNECT_TIMEOUT" \
+    --user-agent "${SKILL_UA_PREFIX}/${SKILL_SESSION_ID} skill-version/${skill_version}" 2>&1) || rc=$?
+  printf '%s' "$out"
+  return $rc
+}
+
 PERMISSION_OK="not_checked"
 ACCOUNT_ID=""
 if [[ "$CHECK_PERMISSION" == "true" ]]; then
   if [[ "$CREDENTIAL_VALID" == "true" ]]; then
-    perm_result=$(aliyun "$CFW_PRODUCT_CODE" DescribeAssetList --CurrentPage 1 --PageSize 1 --Lang zh 2>&1) || true
+    perm_result=$(check_cfw_permission) || true
+    case "$perm_result" in
+      skipped_no_session|skipped_no_version)
+        PERMISSION_OK="skipped"
+        CREDENTIAL_ERROR="AttributionUnavailable"
+        ;;
+      *)
     if printf '%s' "$perm_result" | grep -q '"RequestId"'; then
       PERMISSION_OK="true"
       # Pull AliUid from the first asset if present (best-effort, optional)
@@ -174,6 +214,8 @@ if [[ "$CHECK_PERMISSION" == "true" ]]; then
       log_warn "This usually means invalid/expired credentials or missing yundun-cloudfirewall:DescribeAssetList permission."
       log_warn "Run 'aliyun configure' to reconfigure, or see references/ram-policies.md."
     fi
+        ;;
+    esac
   else
     PERMISSION_OK="skipped"
     log_warn "Skipping CFW permission check — no profile configured."

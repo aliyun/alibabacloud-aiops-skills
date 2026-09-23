@@ -65,8 +65,17 @@ cmd_query() {
     exit 0
   fi
 
+  require_attribution
+
   local response exit_code=0
   response=$(call_cfw_api "DescribeResourceTypeAutoEnable" --Lang zh) || exit_code=$?
+
+  # 3 is call_cfw_api's "no attribution" code: a local configuration fault, not an
+  # API failure, so surface it as such instead of running error-code diagnosis on it.
+  if [[ $exit_code -eq 3 ]]; then
+    output_error "AttributionRequired" "SKILL_SESSION_ID or references/manifest.json version is unavailable"
+    exit 1
+  fi
 
   if [[ $exit_code -ne 0 ]]; then
     local err_code err_msg
@@ -82,14 +91,13 @@ cmd_query() {
 
 # --- Subcommand: modify ---
 cmd_modify() {
-  local ENABLE_TYPES="" DISABLE_TYPES="" CONFIG_JSON="" REGION="" YES=false DRY_RUN=false
+  local ENABLE_TYPES="" DISABLE_TYPES="" CONFIG_JSON="" YES=false DRY_RUN=false
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --enable) ENABLE_TYPES="$2"; shift 2 ;;
       --disable) DISABLE_TYPES="$2"; shift 2 ;;
       --config) CONFIG_JSON="$2"; shift 2 ;;
-      --region) REGION="$2"; shift 2 ;;
       --yes) YES=true; shift ;;
       --dry-run) DRY_RUN=true; shift ;;
       --help|-h)
@@ -99,7 +107,6 @@ cmd_modify() {
           "  --enable <t1,t2,...>   Resource types to enable auto-protection
   --disable <t1,t2,...>  Resource types to disable auto-protection
   --config <json>        Full JSON config (mutually exclusive with --enable/--disable)
-  --region <id>          Region filter (optional)
   --yes                  Confirm execution (required)
   --dry-run              Preview the merged config and CLI command
   --help, -h             Show this help
@@ -145,8 +152,6 @@ cmd_modify() {
     IFS="$_ifs_save"
   fi
 
-  [[ -n "$REGION" ]] && validate_region "$REGION"
-
   # Determine final config JSON
   local final_config=""
 
@@ -155,6 +160,9 @@ cmd_modify() {
     final_config="$CONFIG_JSON"
   else
     # Incremental mode: read current → merge → write
+    # require_attribution runs in the main shell here, so the read below can never
+    # be unattributed and call_cfw_api's rc=3 is unreachable on this path.
+    require_attribution
     log_info "Reading current auto-protection settings..."
     local current_response current_exit=0
     current_response=$(call_cfw_api "DescribeResourceTypeAutoEnable" --Lang zh) || current_exit=$?
@@ -213,8 +221,12 @@ print(json.dumps(config, separators=(',', ':')))
   fi
 
   # Build CLI args
+  # No RegionNo: ModifyResourceTypeAutoEnable accepts it, but
+  # DescribeResourceTypeAutoEnable does not declare it and returns an empty map
+  # when it is passed. A region-scoped config could therefore be written but never
+  # read back, and the read-merge-write cycle would submit a partial map that wipes
+  # the other resource types. Both read and write stay on the default scope.
   local CLI_ARGS=(--ResourceTypeAutoEnable "$final_config" --Lang zh)
-  [[ -n "$REGION" ]] && CLI_ARGS+=(--RegionNo "$REGION")
 
   # Dry-run
   if [[ "$DRY_RUN" == "true" ]]; then
@@ -223,7 +235,6 @@ print(json.dumps(config, separators=(',', ':')))
     echo "aliyun ${CFW_PRODUCT_CODE} ModifyResourceTypeAutoEnable \\"
     echo "  --ResourceTypeAutoEnable '${final_config}' \\"
     echo "  --Lang 'zh' \\"
-    [[ -n "$REGION" ]] && echo "  --RegionNo '${REGION}' \\"
     exit 0
   fi
 
@@ -235,9 +246,21 @@ print(json.dumps(config, separators=(',', ':')))
   fi
 
   # Execute
+  # Both branches converge here, so attribution is enforced for the direct --config
+  # mode too: the incremental branch already gated above, but --config reaches this
+  # point without having called a cloud API yet.
+  [[ "$DRY_RUN" == "true" ]] || require_attribution
+
   log_info "Modifying auto-protection settings..."
   local response exit_code=0
   response=$(call_cfw_api "ModifyResourceTypeAutoEnable" "${CLI_ARGS[@]}") || exit_code=$?
+
+  # 3 is call_cfw_api's "no attribution" code: a local configuration fault, not an
+  # API failure, so surface it as such instead of running error-code diagnosis on it.
+  if [[ $exit_code -eq 3 ]]; then
+    output_error "AttributionRequired" "SKILL_SESSION_ID or references/manifest.json version is unavailable"
+    exit 1
+  fi
 
   if [[ $exit_code -ne 0 ]]; then
     local err_code err_msg

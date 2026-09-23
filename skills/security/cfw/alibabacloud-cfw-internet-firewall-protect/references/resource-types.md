@@ -1,7 +1,38 @@
 # Resource Types
 
 Valid resource types for Cloud Firewall Internet Firewall.
-Source: `DescribeResourceTypeAutoEnable` API + `DescribeAssetList` query results.
+Source: `DescribeResourceTypeAutoEnable` API + `DescribeAssetList` query results,
+cross-checked against `aliyun Cloudfw <action> --help`.
+
+The CLI's own `--help` enum for `DescribeAssetList.ResourceType` is a shorter list than
+what the API actually returns: it omits the `*IPv6` variants and `BastionHostAll`, and it
+lists both `BastionHostEgressIP` and `BastionHostIP`. The tables below follow the observed
+API behaviour, which is the authority for what a filter value actually matches — treat the
+CLI help enum as a lower bound, not as the full set.
+
+## Mapping User Wording to Filter Values
+
+Users may name products with informal wording, while the filters accept only the
+exact values listed in this file. `validate_resource_type` compares
+case-sensitively against a fixed allowlist, so a plausible-looking value is
+rejected rather than corrected. Resolve the product name before building a command.
+
+The following reference data maps common user phrases to the API values:
+
+```text
+"ECS 公网IP" / "ECS 固定公网 IP"       -> EcsPublicIP
+"ECS 弹性公网 IP" / "ECS EIP"          -> EcsEIP
+"EIP" / "弹性公网 IP"                  -> EIP
+"NAT 网关" / "NAT EIP"                 -> NatEIP (EIP form) or NatPublicIP (public IP form)
+"负载均衡" / "SLB" / "CLB 公网IP"      -> SlbPublicIP (public IP form) or SlbEIP (EIP form)
+"应用型负载均衡" / "ALB"                -> AlbEIP
+"网络型负载均衡" / "NLB"                -> NlbEIP
+"IPv6 地址"                              -> the *IPv6 variant of the matching product
+```
+
+> When the user says a product name without specifying the address class ("所有负载均衡的公网IP"),
+> both the `*PublicIP` and the `*EIP` form can apply. Query both and report what exists rather than
+> picking one silently — a wrong guess returns an empty set that reads as "no assets to protect".
 
 ## Query API (DescribeAssetList)
 
@@ -51,7 +82,7 @@ The ResourceTypeList parameter uses slightly different names for bastion host:
 
 ## Auto-Protect API (ModifyResourceTypeAutoEnable)
 
-All 27 types from `DescribeResourceTypeAutoEnable` are accepted (excluding `BastionHostAll`):
+All 28 types from `DescribeResourceTypeAutoEnable` are accepted (excluding `BastionHostAll`):
 
 | ResourceType | Description |
 |---|---|
@@ -82,3 +113,6 @@ All 27 types from `DescribeResourceTypeAutoEnable` are accepted (excluding `Bast
 | `SlbIPv6` | CLB IPv6 address |
 | `SlbPublicIP` | CLB (SLB) public IP |
 | `SwasEIP` | Simple Application Server (SWAS) EIP |
+| `VpnEIP` | VPN Gateway EIP |
+
+> **Note:** `VpnEIP` is an auto-protect-only type. It is returned by `DescribeResourceTypeAutoEnable` but is NOT a valid `--resource-type` filter for the `DescribeAssetList` query API.
