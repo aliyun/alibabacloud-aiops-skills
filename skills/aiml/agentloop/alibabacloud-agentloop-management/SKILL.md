@@ -1,7 +1,7 @@
 ---
 name: alibabacloud-agentloop-management
 description: |
-  The skill should be used when the user asks about Alibaba Cloud AgentLoop platform for onboarding applications into observability, Live-Debug runtime diagnostics, managing Datasets, building pipelines, and evaluating. Live-Debug covers ServiceTask dynamic logging, snapshots, metrics, spans, and JVM inspection.
+  The skill should be used when the user asks about Alibaba Cloud AgentLoop platform for onboarding applications into observability, high-code instrumentation with loongsuite-genai-utils and OpenTelemetry SDK (高代码埋点、LLM Trace 字段、上下文传递与链路串联), Live-Debug runtime diagnostics, managing Datasets, building pipelines, and evaluating. Live-Debug covers ServiceTask dynamic logging, snapshots, metrics, spans, and JVM inspection.
 license: Apache-2.0
 metadata:
   domain: aiops
@@ -11,9 +11,9 @@ metadata:
 
 # AgentLoop Skill Router
 
-> **Positioning**: This skill is the single entry point for Alibaba Cloud **AgentLoop** requests. It only classifies the user's intent and dispatches to one of the five domain playbooks below. All executable rules - prerequisites, credentials, RAM policies, parameter confirmation, safety protocols, command usage, and verification - live inside the domain files. Do not run any cloud operation before reading the matched domain file.
+> **Positioning**: This skill is the single entry point for Alibaba Cloud **AgentLoop** requests. It only classifies the user's intent and dispatches to one of the six domain playbooks below. All executable rules - prerequisites, credentials, RAM policies, parameter confirmation, safety protocols, command usage, and verification - live inside the domain files. Do not run any cloud operation before reading the matched domain file.
 
-**Compatibility**: cloud-operation domains require Aliyun CLI 3.3.15 or later; Pipeline requires `aliyun-cli-agentloop` 0.7.4 or later; bundled evaluation and Pipeline scripts require Python 3.8 or later.
+**Compatibility**: cloud-operation domains require Aliyun CLI 3.3.15 or later; Pipeline requires `aliyun-cli-agentloop` 0.7.4 or later; bundled evaluation, Pipeline, and public-document retrieval scripts require Python 3.8 or later. Instrumentation guidance and public-document retrieval do not require Aliyun CLI, cloud credentials, or a browser.
 
 ## Routing Table
 
@@ -24,10 +24,12 @@ metadata:
 | 3 | Dataset | Store and retrieve structured rows: Dataset lifecycle and schema, append rows with `add-dataset-data`, read-only queries with `execute-query`, SQL or SearchExpr, semantic search, embedding fields | [references/dataset/dataset.md](references/dataset/dataset.md) |
 | 4 | Pipeline | Transform source data into a Dataset once or on a schedule: import Logstore/SLS data into a Dataset, import traces, design specs, preview/create/run, inspect runs, control the lifecycle, configure processing nodes, and map OT AI traces | [references/pipeline/pipeline.md](references/pipeline/pipeline.md) |
 | 5 | Live-Debug runtime diagnostics | Diagnose an already-running Java or Python application with CMS ServiceTask: dynamic log/snapshot/metric/span probes, JVM commands (OGNL, decompile, thread/memory/runtime inspection), disable/clear probes, and query capture results through SLS | [references/live-debug-runtime.md](references/live-debug-runtime.md) |
+| 6 | High-code instrumentation | Teach, implement, or troubleshoot manual instrumentation for AgentLoop with loongsuite-genai-utils / language-specific GenAI Utils and OpenTelemetry SDK: Java, Go, Python, Node.js; LLM/Agent/Tool/Retrieval spans, LLM Trace field formats, async/cross-process context propagation, business attributes and broken traces | [references/instrumentation/instrumentation.md](references/instrumentation/instrumentation.md) — dynamically retrieves official documentation without a browser |
 
 ## Dispatch Rules
 
 1. Classify the request into one or more domains using the routing table, then read **only** the matched domain entry file(s). Never preload all domains.
+   For high-code/manual instrumentation, GenAI field semantics, or context propagation, dispatch to **High-code instrumentation first**. Only add Application onboarding when cloud setup, endpoint discovery, or service registration is actually needed; code guidance must not be blocked by onboarding's CLI/workspace prerequisites.
 2. Follow the matched domain file completely. Each domain defines its own prerequisites, credentials check, RAM policies, parameter confirmation, execution-safety protocol, and verification method.
    For Live-Debug, the migrated entry file preserves the original skill contract and is authoritative for that domain wherever its module-specific rules differ from the shared conventions below.
    For a vague Live-Debug request, apply its parameter-completeness gate immediately after reading the entry file: state which target information is missing and stop. Treat the clarification as a completed final response for this run, not a request for another message. Use only declarative wording such as `Required inputs for a future run: ...`. The response MUST NOT contain a question mark or any request/invitation phrase, including `please provide`, `provide`, `send`, `reply`, `tell me`, `can you`, `could you`, `请提供`, `请补充`, `提供`, `补充`, `告知`, or `回复`. End exactly with `No diagnostic or cloud action was executed; this run is complete.` Do not run prerequisite checks, discover workspaces/services, inspect credentials, create output files, or issue any cloud call until a future request already supplies the required information.

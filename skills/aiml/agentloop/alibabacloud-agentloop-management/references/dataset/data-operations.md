@@ -39,6 +39,8 @@ Rules:
 - Omit `__time__` to use the current Unix time. A supplied value must be non-null and a non-negative integer in seconds.
 - Never supply `__dataset_seq`.
 
+Before dry-run, compare every row's keys and nested values with the user's requested data, separately from schema validation. The payload may contain only user-authorized fields supported by the schema, plus system fields the user explicitly supplied. Existing optional schema fields may remain omitted; their presence is not permission to populate them. If the user requests a marker in `agentloop_annotations`, keep it inside that object, even if the schema also has a top-level `marker_id`. Do not add or duplicate a field to make verification easier.
+
 Dry-run complex row-array structure and inspect that booleans, numbers, objects, arrays, and null values retain their JSON types. If rows contain real prompts, outputs, tokens, PII, or other sensitive content, use a shape-equivalent synthetic array for dry-run; do not print the real request body into terminal history or conversation output:
 
 ```bash
@@ -52,6 +54,8 @@ aliyun agentloop add-dataset-data \
 ```
 
 Success returns `requestId` and `affectedRows`. Verify `affectedRows` equals the submitted row count, then query a narrow sample.
+
+Use the same authorized field structure for the serialized dry-run body and the real write. Successful serialization or API acceptance does not prove that extra fields were requested. When the requested readback predicate cannot select a nested marker, use the user's authorized predicate and inspect the marker in returned rows; do not change the write payload or schema to create a more convenient filter.
 
 ### Numeric-looking strings in `text` fields
 

@@ -8,6 +8,8 @@
 
 Guided workflow to onboard AI applications (LLM-based services, AI Agents, custom instrumented apps) into AgentLoop application observability. Uses `aliyun cms2` CLI to initialize APM infrastructure, retrieve access credentials, and generate framework-specific configuration.
 
+For high-code instrumentation with GenAI Utils / OpenTelemetry SDK, field-format questions, or broken async/cross-process traces, use [instrumentation/instrumentation.md](instrumentation/instrumentation.md) before this cloud workflow. That module dynamically retrieves the language guides, field specification, and all relevant best-practice candidates without requiring a browser or cloud credentials. Return here only when cloud setup is needed.
+
 **In-Scope**: Initialize APM infra, retrieve LicenseKey/Endpoint, register app services, generate startup configuration for all supported AI frameworks.
 
 **Out-of-Scope**: Model fine-tuning or training observability; GPU monitoring (see `cloud-acs-ecs-gpu` addon); general CloudMonitor (CMS) management; `default-cms-*` or other non-`agentloop-*` workspaces; alerts, RUM, Prometheus rules, and other non-onboarding CMS features.
@@ -239,9 +241,10 @@ aliyun cms2 apm service list --workspace {workspace} --service-name {appName} --
 
 ### custom instrumentation
 
-- `agent-extension`: Based on the ARMS agent extension (`loongsuite-util-genai`). Requires the proprietary Python agent to be installed first.
-- `manual`: Manual OTel SDK instrumentation without depending on the ARMS agent.
-- Both protocols provide concrete code examples via the addon template.
+- Read [instrumentation/instrumentation.md](instrumentation/instrumentation.md) for language-specific dependencies, APIs, field formats, and context propagation; `loongsuite-genai-utils` is a capability name, not a universal package/import name.
+- `agent-extension`: Reuse the supported agent's provider and context integration according to the matching language and agent version. Do not initialize a second exporter/provider merely to add spans.
+- `manual`: Configure the standard OpenTelemetry SDK and exporter when the application does not already have a provider.
+- Addon templates supply platform configuration when cloud onboarding is needed. They do not replace the current language guide, LLM Trace field specification, or related best-practice documents.
 
 ---
 

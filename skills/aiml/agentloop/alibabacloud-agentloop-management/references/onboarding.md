@@ -4,6 +4,10 @@
 
 > **Product scope**: This skill onboards applications into **AgentLoop** only. It is **not** a general CloudMonitor (CMS) management skill. Use workspace names matching `agentloop-{32-char-code}`; never onboard into `default-cms-*` or other CMS workspaces. The underlying CLI is `aliyun cms2`.
 
+## High-code Instrumentation Routing
+
+For loongsuite-genai-utils, manual OpenTelemetry SDK spans, LLM Trace fields, async/cross-process context propagation, or code-level trace troubleshooting, read [instrumentation/instrumentation.md](instrumentation/instrumentation.md) first. Public documentation retrieval, teaching, and local code work do not require the CLI, credentials, workspace discovery, infrastructure creation, or service registration below. Apply the following onboarding workflow only to cloud setup requested as part of the task.
+
 ## Prerequisite Check
 
 1. **Check `aliyun` exists** - `which aliyun` (macOS/Linux) or `where aliyun` (Windows).

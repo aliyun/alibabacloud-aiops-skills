@@ -151,6 +151,7 @@ Execute the workflow:
 Prefer `add-dataset-data` for row appends. It avoids SQL quoting errors and validates values against the Dataset schema.
 
 - `dataArray` must be non-empty and every entry must be an object.
+- Build rows from the user's authorized field contract, then check those fields against the current schema. An additional field in the schema does not authorize populating it. Preserve requested nesting; for example, a marker requested inside `agentloop_annotations` stays there and must not also become a top-level `marker_id` for easier queries. See `references/dataset/data-operations.md` for the pre-write check.
 - Field matching is case-insensitive, but do not send duplicate case variants.
 - Unknown fields fail the request; omitted schema fields become `null`.
 - `text` values must be strings, `long` values integers, `double` values finite numbers, and `json` values valid JSON.
