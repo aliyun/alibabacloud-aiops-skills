@@ -1,47 +1,37 @@
-# Verification Method
+# Local Checks
 
-Use the strongest applicable checks supported by the repository and confirmed local environment.
+Choose checks appropriate to the change. `ververica-flink` supplies API inspection, not a supported local VVR runtime.
 
-## Record evidence
+## Local
 
-Record one entry per check with scope, command or fixture, status, and supporting output. Use only these statuses:
+- Run applicable repository checks and [Pyright](#pyright) on job source for syntax, imports, symbols, call signatures, and types.
+- Test pure-Python helpers with representative fixtures, including types/nulls and file parsing where relevant. Keep these independent of DataFrame construction or a Flink gateway.
+- Check generated shell syntax and built ZIP integrity/root layout; confirm Entry Module resolves from the code archive.
+- Reconcile dependency builds with the [runtime-provided/job-provided split](python-dependencies.md#exclude-runtime-packages-before-downloading), including download steps and the final package list.
+- Reconcile runtime-file paths and README deployment fields with the delivered files; check [ordinary placeholders versus secret variables](platform-runtime.md#credentials-and-service-setup).
 
-- `passed`: the check ran and met its stated expectation;
-- `failed`: the check ran and did not meet its expectation;
-- `not run`: the check was inapplicable or blocked, with the reason recorded.
+[Related commands](related-commands.md) provides syntax and archive inspection commands. Report checks actually performed and meaningful gaps.
 
-Keep local evidence separate from VVR-only checks. A missing tool, unavailable target, or unexecuted command is `not run`.
+### Pyright
 
-## 1. Static and repository checks
+Run `pyright --project pyrightconfig.json` (or the project's equivalent). Match `pythonVersion` to the job, set `pythonPlatform` to `Linux`, and scope `include` to job source. Point `extraPaths` at the directory containing the matching [extracted `pyflink` source](product-contract.md#obtain-api-source). Use available source/stubs without installing the full VVR dependency stack.
 
-Run configured formatting, linting, type checks, and tests. Compile every changed Python file with `python -m py_compile <changed-python-file>`. Search changed job code for hardcoded credentials, unresolved placeholders, private APIs, and Table bridges not recorded in the documented path.
+Example `pyrightconfig.json` for VVR 11.8 and Python 3.11; adapt paths and versions to the job:
 
-Complete this section when every configured applicable check has an evidence entry and each intentional exception has a reason.
+```json
+{
+  "include": ["src"],
+  "extraPaths": [".cache/vvr-api/11.8.0/source"],
+  "pythonVersion": "3.11",
+  "pythonPlatform": "Linux"
+}
+```
 
-## 2. Version and import checks
+Review every diagnostic: fix confirmed defects and explain typing limitations, missing local dependencies, or unresolved findings. A nonzero result alone does not block delivery; report an unavailable checker as unperformed.
 
-After the exact package version is confirmed, inspect or install that version in an isolated environment. Import every selected public symbol and match it to the exact versioned symbol page collected through [official-docs.md](official-docs.md).
+Reserve manual source/docstring checks for unresolved diagnostics, dynamic APIs, and semantics Pyright cannot establish, such as connector options and version-specific behavior.
 
-Complete this section when the target VVR, local package, documentation version, and selected API surface agree, or each mismatch is reported. Label `ververica-flink` results as local API checks because target execution remains VVR-only.
+### Don't do
 
-## 3. Bounded behavior checks
-
-Use finite fixtures for schema, expression, callback, dependency, and runtime-file behavior. Replace external connectors with bounded in-memory records when that preserves the behavior under test. Streaming-source checks use a bounded test path rather than an unbounded `collect`, `iter_rows`, or equivalent operation.
-
-Complete this section when output schema, keys, null behavior, changelog expectations, and representative values match the target contract or each mismatch is recorded.
-
-## 4. Deployment artifact checks
-
-1. Confirm each applicable project-side script matches the selected project layout and syntax-check it with `bash -n`.
-2. For modular code, run `scripts/package_code.sh` when safe, test and list the ZIP, and verify that Entry Module resolves at the archive root.
-3. For non-pre-installed packages, apply [python-dependencies.md](python-dependencies.md). Run `scripts/build_dependencies.sh` when its Docker and compatibility conditions are met, then test and list `deps.zip`.
-4. Compare the filesystem and README with [handoff-deliverables.md](handoff-deliverables.md) and [platform-runtime.md](platform-runtime.md). Verify every console-field mapping and reject raw `{{...}}` placeholders.
-5. When code uses or mentions DataFrame LLM functions such as `llm.predict` or `llm.ai_*`, verify that the README points to Flink AI Service at `https://help.aliyun.com/zh/flink/realtime-flink/flink-ai-service`.
-
-Complete this section when every selected artifact exists and passes its applicable check, or has a recorded blocker; every omitted conditional artifact has a reason; and the README matches the checked filesystem.
-
-## 5. Target VVR checks
-
-List checks that require the Alibaba Cloud workspace: connector reachability, attachment resolution, secret resolution, checkpoints, state restore, resource sizing, and production-like throughput. Give each check an owner, expected observation, and rollback or cleanup instruction.
-
-Complete this section when every target-only assumption has a corresponding check and none is reported as locally passed.
+- Do not attempt DataFrame construction/planning/execution, connector discovery or I/O, or AI/multimodal calls in the API-only local environment.
+- Do not treat successful imports, syntax checks, or helper tests as proof of VVR runtime behavior, including deployed dependency, file, or secret resolution.

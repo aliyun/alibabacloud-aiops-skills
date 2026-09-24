@@ -1,55 +1,32 @@
-# Upload-Ready Deployment Artifacts
+# Deployment Artifacts and README
 
-Use this reference after implementation and local code validation. Produce artifacts in the layout selected by [project-layout.md](project-layout.md); an existing project keeps its established layout.
+Use from [prepare deployment](workflows/prepare-deployment.md). Keep outputs in the job's [selected layout](project-layout.md).
 
-## Select the artifact set
+## Select and build artifacts
 
-| Condition | Required project output |
+| Job needs | Output |
 |---|---|
-| Single-file job | Source `.py` only |
-| Modular job | All imported project modules, `scripts/package_code.sh`, and the code ZIP when packaging succeeds |
-| Non-pre-installed Python package | Pinned `requirements.txt`, `scripts/build_dependencies.sh`, and `deps.zip` when the build succeeds |
-| Runtime file or connector JAR | The file plus its documented upload field and target path |
+| A single Python file | The source `.py` |
+| Multiple project modules | Code ZIP plus a reproducible packaging command/script |
+| Packages absent or incompatible in the target runtime | Pinned requirements, dependency build script, and `deps.zip` when built |
+| Runtime files or custom JARs | Available resource files plus their deployment mapping |
 
-Retain only artifacts selected by this table. Record a not-applicable or blocked reason for every conditional artifact the implementation identified but did not produce.
+For modular code, generate `scripts/package_code.sh` or use the existing project tooling. Preserve Python import paths at the ZIP root and ensure Entry Module resolves there. Package deployable code; keep environments, caches, secrets, generated archives, and non-runtime tests out.
 
-## Package modular code
+Run packaging and check the ZIP's integrity and layout. Follow [Python dependencies](python-dependencies.md) for dependency builds. When a build cannot complete, retain the usable script and report the missing archive and cause.
 
-Generate `scripts/package_code.sh` directly in the target project from this contract. The generated script must:
+## Write the README
 
-- accept source root, output ZIP, and Entry Module as arguments;
-- package deployable project code while preserving import paths at the ZIP root;
-- exclude environments, caches, runtime dependencies, secrets, tests not used at runtime, and generated artifacts;
-- confirm that the Entry Module resolves to a module or package at the ZIP root;
-- call the system `zip` utility, avoid privilege escalation, and refuse an existing output path instead of overwriting it.
+For new jobs, write `README.md` in the user's language, honoring any explicit documentation-language preference. Localize the template's headings, prose, and table labels; preserve executable commands, code identifiers, file paths, configuration keys, and product/API names.
 
-Run the script when the local environment supports it. Include the code ZIP only after the script exits successfully and its integrity and root layout are verified; otherwise retain the script and record the blocker.
+Adapt [the README template](../assets/handoff/README.md.template), or update the existing deployment documentation. Include what this job needs:
 
-## Package third-party dependencies
+- Purpose, source/sink behavior, target VVR/Python, and any meaningful API fallback.
+- Entry point, delivered files, and commands to rebuild applicable artifacts.
+- Artifact-to-console-field mapping and runtime settings from [platform runtime](platform-runtime.md).
+- Runtime arguments, file paths, model/service setup, and remaining environment-specific values.
+- For jobs using [Flink AI Service](https://help.aliyun.com/zh/flink/realtime-flink/flink-ai-service), explain its role in the job, identify the models/tasks used, and describe required service activation/configuration based on the official documentation. A documentation link alone does not satisfy this requirement.
+- Manual upload/deployment/start instructions, usable by a job-submission skill as well.
+- Completed local checks, outstanding VVR checks, and any blocked build or missing resource.
 
-Apply [python-dependencies.md](python-dependencies.md) whenever a reachable import is not pre-installed in the target VVR runtime. That reference is the single source for `requirements.txt`, `scripts/build_dependencies.sh`, compatibility, Docker image, and `deps.zip` requirements.
-
-## Write deployment documentation
-
-For a new project, adapt `assets/handoff/README.md.template` into the project-root `README.md`. For an existing project, merge the applicable sections into its established deployment documentation, or use the root `README.md` when none exists.
-
-The final documentation must contain:
-
-- the actual directory tree and purpose of each file;
-- exact commands for building and inspecting applicable ZIPs;
-- the artifact-to-console-field mapping from [platform-runtime.md](platform-runtime.md);
-- every applicable deployment field with a confirmed value or explicit unresolved marker;
-- confirmed source and sink contracts plus each labeled example awaiting replacement;
-- each Table or API fallback with its reason and location;
-- runtime settings, built-in connector/format/catalog identifiers, and JAR classpaths;
-- completed local checks, remaining VVR checks, known limitations, and rollback owner;
-- omitted conditional artifacts with their not-applicable or blocked reasons;
-- the official Python development, dependency, and deployment URLs from [official-docs.md](official-docs.md).
-
-Replace every template placeholder and keep credential values out of project artifacts. Claims about a generated ZIP must cite the successful build and ZIP checks.
-
-When code uses or mentions DataFrame LLM functions such as `llm.predict` or `llm.ai_*`, guide the user to consider Flink AI Service for zero-configuration managed-model calls and include `https://help.aliyun.com/zh/flink/realtime-flink/flink-ai-service`.
-
-## Completion criterion
-
-Complete artifact preparation when every selected artifact exists or has a recorded blocker; each generated script is syntax-checked; each built ZIP passes integrity and layout checks; the deployment documentation matches the filesystem and [platform-runtime.md](platform-runtime.md); and no raw placeholder or credential value remains.
+Replace template markers with actual values or clearly labeled unresolved parameters. The documented files and commands should match the delivered project. A missing deployment endpoint need not prevent code delivery, but its required value must be clear to whoever submits the job.

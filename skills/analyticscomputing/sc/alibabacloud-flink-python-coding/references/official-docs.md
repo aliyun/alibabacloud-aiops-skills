@@ -1,54 +1,36 @@
-# Official Documentation Routing
+# Official Documentation
 
-Use live primary sources to build the exact-version evidence set before selecting an API or platform behavior.
+Use these entry points to reach product knowledge directly. Alibaba Cloud's Chinese documentation describes VVR availability and managed-runtime behavior; `ververica-flink` source/docstrings and its ReadTheDocs site describe the Python API.
 
-## Record evidence
+## Source precedence
 
-For each result-affecting claim, record the claim, target version, direct URL, and what the page proves. Index and overview pages route the search; the linked versioned symbol or behavior page supplies the evidence. Mark conflicts and unresolved claims explicitly.
+Alibaba Cloud's Flink documentation spans multiple API generations and may contain outdated information, especially feature limitations in articles outside the DataFrame API documentation. When claims about PyFlink capabilities or usage conflict, the **selected VVR version's PyFlink ReadTheDocs documentation or matching `ververica-flink` source/docstrings take precedence**. If those disagree, inspect the exact-version implementation.
 
-The evidence set is complete only for the active workflow branch. Read-only work needs evidence for the requested answer or finding; implementation additionally needs evidence for every selected API, connector behavior, dependency rule, runtime-file path, and deployment field.
+Before stating that a feature is unsupported, verify the restriction against that version's API evidence. A limitation described for Table/DataStream or an older tutorial does not establish the same limitation for DataFrame. Use product documentation for release availability, connector configuration, and deployment requirements; keep unverified API compatibility explicit.
 
-## Resolve versions
+## Product documentation
 
-- Treat the VVR release, base Flink/JDK identity, Python version, local `ververica-flink` package, and documentation version as separate values.
-- Confirm the target VVR and its supported Python runtime in the [Python job development documentation](https://help.aliyun.com/zh/flink/realtime-flink/user-guide/develop-a-pyflink-job) and target release notes.
-- Use Python 3.9, 3.10, or 3.11; record one exact target version.
-- Resolve an exact `ververica-flink` version from official package or release evidence. A VVR label alone does not prove the local package version.
-- For DataFrame APIs, use the target release's versioned ReadTheDocs pages; `/latest/`, a synthesized version, or a category page is not exact-version evidence.
+| Need | Entry point |
+|---|---|
+| Formal releases and engine versions | [VVR release notes](https://help.aliyun.com/zh/flink/realtime-flink/product-overview/release-notes) |
+| Local DataFrame setup and first deployment | [DataFrame quickstart](https://help.aliyun.com/zh/flink/realtime-flink/quickstart) |
+| DataFrame capability map and links to symbols | [Python DataFrame API](https://help.aliyun.com/zh/flink/realtime-flink/api-reference) |
+| Source/sink support, options, and limitations | [Capability index](dataframe-api.md#source-and-sink-selection) for OSS object scans, URI content retrieval, and TM logs; [connector catalog](https://help.aliyun.com/zh/flink/realtime-flink/developer-reference/connectors) for other systems |
+| Managed model access | [Flink AI Service](https://help.aliyun.com/zh/flink/realtime-flink/flink-ai-service) |
+| Python runtimes, settings, pre-installed packages, and logs | [Python job development](https://help.aliyun.com/zh/flink/realtime-flink/user-guide/develop-a-pyflink-job) |
+| Python packages, archives, files, and JARs | [Use Python dependencies](https://help.aliyun.com/zh/flink/realtime-flink/developer-reference/use-python-dependencies) |
+| Deployment fields and console operations | [Create a deployment](https://help.aliyun.com/zh/flink/realtime-flink/user-guide/create-a-deployment) |
 
-Start release-note routing at `https://help.aliyun.com/zh/flink/realtime-flink/product-overview/`, then select the target VVR release.
+## Python API documentation and source
 
-## Route Python APIs
+- [DataFrame API](https://ververica-flink-docs.readthedocs.io/en/latest/reference/pyflink.dataframe/index.html): transformations, I/O, UDFs, types, catalog, GPU, AI/LLM, and multimodal expressions.
+- [UDF / UDTF](https://ververica-flink-docs.readthedocs.io/en/stable/reference/pyflink.dataframe/udf.html): decorators, synchronous/asynchronous and row/vectorized functions, and usage examples.
+- [AI/LLM](https://ververica-flink-docs.readthedocs.io/en/latest/reference/pyflink.dataframe/ai.html): model providers and inference functions.
+- [Multimodal operators](https://ververica-flink-docs.readthedocs.io/en/latest/reference/pyflink.multimodal/index.html): image, audio, and video processing.
+- [Full API reference](https://ververica-flink-docs.readthedocs.io/en/latest/): also includes Table, DataStream, and common APIs.
 
-Use these Alibaba Cloud pages as the only entry points to the recommended Python API surface:
+For API behavior, read the actual symbol's signature, docstring, version notes, and linked implementation source when available. With a local package, search its source for the symbol; without one, follow ReadTheDocs symbol and source links.
 
-- **DataFrame API index:** `https://help.aliyun.com/en/flink/realtime-flink/api-reference`
-- **Multimodal operator index:** `https://help.aliyun.com/zh/flink/realtime-flink/multimodal-operator`
+The `latest` and `stable` URLs are discovery entry points, not version guarantees. Check the page's build/version and available version links against the [selected target](product-contract.md). Community documentation is supplementary and does not establish VVR-only API availability.
 
-For DataFrame APIs, open the **DataFrame API index**, follow its **PyFlink DataFrame** link to the root of the versioned ReadTheDocs API, then navigate to the category and exact symbol page.
-
-For multimodal operators, use the **Multimodal operator index** and its Alibaba Cloud documentation. Confirm availability for the target VVR through the operator and product documentation. The multimodal index is not a ReadTheDocs router.
-
-DataFrame APIs and multimodal operators listed by these two entry pages, plus `pyflink.table.expressions` accepted by documented DataFrame methods, form the recommended surface.
-
-Use these pages for examples after the exact API has been resolved:
-
-- DataFrame quickstart: `https://help.aliyun.com/zh/flink/realtime-flink/quickstart`
-- DataFrame feature overview: `https://help.aliyun.com/zh/flink/realtime-flink/overview`
-- DataFrame multimodal tutorial: `https://help.aliyun.com/zh/flink/realtime-flink/dataframe-api`
-
-## Resolve connector contracts
-
-Start from the [supported connector index](https://help.aliyun.com/zh/flink/realtime-flink/developer-reference/connectors), then open the direct page for each selected connector and format. Record the built-in identifier, schema mapping, authentication reference, startup behavior, and delivery semantics. Keep local example resource identifiers and schemas visibly labeled for replacement.
-
-## Route platform behavior
-
-- Python dependency and runtime-file handling: `https://help.aliyun.com/zh/flink/realtime-flink/developer-reference/use-python-dependencies`
-- Python job development and pre-installed packages: `https://help.aliyun.com/zh/flink/realtime-flink/user-guide/develop-a-pyflink-job`
-- Create a deployment: `https://help.aliyun.com/zh/flink/realtime-flink/user-guide/create-a-deployment`
-
-Use product documentation for VVR availability, built-in packages, connector packaging, attachment fields, runtime paths, and deployment behavior.
-
-## Completion criterion
-
-Complete documentation resolution when every version required by the branch is explicit; every DataFrame symbol has direct exact-version ReadTheDocs evidence; every multimodal operator has direct Alibaba Cloud documentation and target-VVR availability evidence; every platform behavior has direct product evidence; and every conflict or unresolved claim is recorded.
+Every API answer should cite the relevant online page or identify the inspected local package version and symbol. Examples illustrate a pattern; recheck their APIs for the selected target.

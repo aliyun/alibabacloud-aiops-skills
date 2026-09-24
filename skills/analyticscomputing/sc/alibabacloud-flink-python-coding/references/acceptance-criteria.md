@@ -1,143 +1,138 @@
-# Acceptance Criteria: alibabacloud-flink-python-coding
+# Acceptance Criteria
 
-Apply every criterion relevant to the active workflow branch.
+Apply every criterion relevant to the selected workflow.
 
-## Contents
+## Routing and interface gate
 
-- Version contract
-- API path
-- Source and sink contracts
-- Credentials
-- Dependencies and runtime files
-- Documentation routing
-- Deployment artifacts
-- Validation evidence
-- Cloud-operation boundary
+### Pass
 
-## Version contract
+- Routes a read-only answer, new job, and existing-job change to distinct workflows.
+- For a new job, selects exactly one public method for every required source, transformation, and sink before writing files.
+- Consolidates missing interface selectors into a blocking question and creates no artifact before the answer.
+- Treats real-time/streaming language and business entities as pipeline semantics, not connector evidence.
+- On a failed interface gate, returns only a brief reason and the consolidated question, with no code, pseudocode, API sample, or file plan.
+- Uses labeled placeholders only for parameters of an already-selected method.
+- Consults new-job examples only after the interface gate passes, then adapts their parameters without changing the confirmed methods.
+- Delivers complete source-to-sink code with defined symbols and an entry point, plus the full contents and deployment mapping of every selected companion file.
 
-### Correct
+### Fail
 
-- Defaults a new job with no declared VVR version to VVR 11.8.
-- For an existing job earlier than VVR 11.8, explains that the skill supports VVR 11.8 or later, recommends VVR 11.8, and finishes without implementation artifacts.
-- Records VVR, base Flink/JDK, Python, local `ververica-flink`, and documentation versions independently.
-- Uses Python 3.9, 3.10, or 3.11 and an exact local package version supported by direct evidence.
+- Chooses an example source or sink when the source/sink system is unknown.
+- Starts implementation while `read_kafka`, `read_hologres`, and `read_generic` are still plausible.
+- Defaults to Kafka or another connector because the request says real-time, streaming, continuously arriving, or names an event type.
+- Loads new-job examples during an API inquiry or existing-job modification.
+- Delivers a fragment with an undefined source, omitted sink, ellipsis, or referenced companion file whose contents are absent.
 
-### Incorrect
+## Versions and packages
 
-- Infers the local package or documentation version from a VVR label.
-- Implements against `/latest/`, an unresolved preview, an unsupported Python version, or a target earlier than VVR 11.8.
+### Pass
 
-## API path
+- Keeps VVR, community Flink, Python, documentation, distribution, and import versions separate.
+- Keeps VVR 11.8 as the fixed minimum supported release.
+- Defaults an unspecified target to the newest formal, non-Preview release resolved directly from the live Chinese VVR release notes.
+- Records the short VVR release, full deployment engine version, and matching `ververica-flink` package version as separate identities.
+- Treats `ververica-flink` as optional read-only API evidence and `pyflink` as the runtime-provided import namespace.
 
-### Correct
+### Fail
 
-```python
-import pyflink.dataframe as pf
-from pyflink.dataframe import col
+- Treats community Flink 1.20 or 2.3 as VVR 11.8.
+- Uses a fixed VVR release for an unspecified target without resolving the live Chinese release notes for that request.
+- Selects a Preview release by default or derives deployment/package versions from the short VVR label without exact evidence.
+- Attempts to run a VVR job locally through the API-only distribution.
+- Adds `ververica-flink`, `pyflink`, `flink`, or `apache-flink` to VVR deployment requirements.
 
-result = source.filter(col("amount") > 0)
-```
+## DataFrame path
 
-- Verifies DataFrame symbols against exact versioned ReadTheDocs pages reached from the DataFrame API index, and verifies multimodal operators against Alibaba Cloud operator documentation plus target-VVR availability evidence.
-- Uses direct DataFrame methods first, expressions accepted by those methods second, and the smallest documented Table bridge only when required.
-- Records the reason and location of each Table bridge and converts back through documented `pf.from_table(...)`.
+### Pass
 
-### Incorrect
+- Uses the dedicated DataFrame connector wrapper when one exists.
+- Uses `read_generic` or `write_generic` for a confirmed SQL connector without a dedicated wrapper.
+- Relies on DataFrame automatic built-in artifact loading.
+- Maps operations through DataFrame expressions, built-in AI, and multimodal functions before selecting a callback.
+- Keeps each callback scoped to one unavailable leaf operation.
 
-- Selects an API because it exists in another release, module, or memory rather than the target documentation.
-- Passes an unsupported expression type to a DataFrame method or constructs `pf.DataFrame(table_result)`.
+### Fail
 
-## Source and sink contracts
+- Adds manual `pipeline.used-builtin-connectors` for a DataFrame connector.
+- Claims a SQL connector requires a Table/SQL pipeline solely because it lacks a dedicated wrapper.
+- Puts parsing, model calls, business logic, and sink shaping into one callback when built-ins cover those stages.
+- Constructs `pf.DataFrame(table_result)` as a bridge.
 
-### Correct
+## Documentation
 
-- Preserves confirmed schemas, keys, nullability, precision, time semantics, changelog mode, startup behavior, and delivery expectations.
-- Uses centralized, visibly labeled local examples when a source or sink detail is unavailable, with every replacement condition documented.
+### Pass
 
-### Incorrect
+- Uses the directly opened Chinese VVR release-notes page to resolve an unspecified target and records the lookup date.
+- After resolving the target release, uses the bundled static VVR 11.8 Markdown snapshot first when its manifest version applies, and checks the resolved package version and source commit.
+- Uses `ververica-flink-docs.readthedocs.io` for live DataFrame symbol fallback.
+- Uses Chinese Alibaba Cloud product documentation for VVR availability, pre-installed packages, runtime paths, connectors, and deployment behavior.
+- Records the target version and provenance of every live fallback.
 
-- Presents an example topic, endpoint, table, schema, primary key, startup offset, or delivery mode as confirmed or deployment-ready.
-- Changes a confirmed contract silently.
+### Fail
 
-## Credentials
+- Uses a cached search-result snippet or an English Alibaba Cloud page to choose the newest VVR release when the Chinese release notes differ or have not been opened.
+- Repeatedly searches overview pages for a snapshot-covered symbol.
+- Uses `pyflink.readthedocs.io`, a synthesized version URL, or a live mutable `latest` page as immutable evidence without recording a snapshot or source revision.
+- Selects a Table API example over a documented DataFrame method because the overview is stale.
 
-### Correct
+## AI and multimodal work
 
-- Uses a connector- or model-appropriate entry-point argument whose value is supplied through `${secret_values.<VARIABLE_NAME>}` in **Entry Point Main Arguments**.
-- Tells the user to create the named variable under **Security > Variables** and keeps credential values out of source, README, logs, examples, git, and conversation text.
+### Pass
 
-### Incorrect
+- Uses documented built-in functions and routes new model access through Flink AI Service.
+- Keeps model operations visible in the DataFrame graph.
 
-- Embeds a credential value or `${secret_values.<VARIABLE_NAME>}` expression in Python source.
-- Requests that the user paste AK/SK, passwords, API keys, or tokens into the conversation or a committed file.
+### Fail
 
-## Dependencies and runtime files
+- Documents a new-job model-access path other than Flink AI Service.
+- Hides supported AI or multimodal operations inside a general-purpose UDF.
 
-### Correct
+## Python dependencies
 
-- Distinguishes local API packages from VVR runtime packages and checks the exact target's pre-installed package list.
-- Pins every non-pre-installed distribution and records CPU, Python ABI, and glibc compatibility.
-- Generates `scripts/build_dependencies.sh` with the `quay.io/pypa/manylinux_2_28_x86_64` Docker image only for a compatible x86-64 target.
-- Maps every reachable file read to its source, consumer, local fixture, attachment mode, target path, and validation status.
+### Pass
 
-### Incorrect
+- Traces every reachable third-party import to its distribution and consumer.
+- Separates pre-installed packages from exact-pinned packaged dependencies.
+- Records Python ABI, CPU, and glibc compatibility.
+- Generates a dependency build script only when required and maps a successfully verified `deps.zip` to Python Libraries.
+- Reports an unavailable build as `deps.zip: not built`.
 
-- Treats a successful local import as proof of target availability.
-- Adds an unpinned package, silently selects Python, uses the build image for an incompatible target, or leaves target code bound to a workstation path.
+### Fail
 
-## Documentation routing
+- Treats a local package as target-preinstalled evidence.
+- Adds an unpinned dependency, reuses an incompatible build image, or claims an archive without successful build and ZIP checks.
+- Removes an existing pin while reachable code still imports it.
 
-### Correct
+## Runtime files and connector JARs
 
-- Uses `https://help.aliyun.com/zh/flink/realtime-flink/user-guide/develop-a-pyflink-job` for Python job development and pre-installed packages.
-- Names `https://help.aliyun.com/en/flink/realtime-flink/api-reference` the **DataFrame API index**.
-- Follows the **PyFlink DataFrame** link on the DataFrame API index to the exact versioned ReadTheDocs root, then opens category and symbol pages.
-- Uses the multimodal operator index as an Alibaba Cloud documentation entry point rather than as a ReadTheDocs router.
+### Pass
 
-### Incorrect
+- Maps every reachable file/JAR to source, consumer, format, local path, deployment artifact, console field, target path, and status.
+- Maps independent files and custom connector JARs to Additional Dependency Files and documented `/flink/usrlib` paths.
+- Maps extracted archives to Python Archives.
+- Attaches a connector JAR only when the selected connector is confirmed non-built-in.
 
-- Uses the obsolete Python job-development URL.
-- Treats an index, category, synthesized version, or `/latest/` page as exact DataFrame symbol evidence, or expects the multimodal operator index to provide ReadTheDocs links.
+### Fail
 
-## Deployment artifacts
+- Fabricates a missing file, binds target code to a workstation path, or packages credentials.
+- Attaches a JAR for an automatically loaded built-in connector.
+- Mixes runtime files, connector JARs, Python Libraries, and code archives into one undifferentiated ZIP.
 
-### Correct
+## Validation and handoff
 
-- Places new-project outputs directly in the project root and preserves an existing project's established layout.
-- Includes source code and deployment documentation whose directory tree matches the filesystem.
-- For modular code, generates and checks `scripts/package_code.sh`, preserves import paths in the code ZIP, and records a resolvable Entry Module.
-- For non-pre-installed packages, includes exact pins and `scripts/build_dependencies.sh`; includes `deps.zip` only after a successful build with the documented Docker image.
-- Maps code to Python File Path, `deps.zip` to Python Libraries, archives to Python Archives, and independent files or connector JARs to Additional Dependency Files.
-- When DataFrame LLM functions are used or mentioned, points the README to Flink AI Service.
+### Pass
 
-### Incorrect
+- Runs static/repository checks and pure-Python helper tests without starting Flink.
+- Separates local checks from DataFrame, connector, AI, runtime-file, and operational VVR checks.
+- Produces only conditionally selected artifacts and maps each to one console field.
+- Stops at upload-ready local artifacts unless cloud operations are explicitly requested.
 
-- Returns only a prose summary, creates an extra delivery wrapper, omits source or README, leaves raw placeholders, or mixes code and dependency ZIPs.
-- Claims a ZIP was built without successful build and ZIP evidence.
+### Fail
 
-## Validation evidence
-
-### Correct
-
-- Records every applicable check as `passed`, `failed`, or `not run`, with command or fixture and supporting evidence.
-- Compiles changed Python, runs repository checks, validates exact-version imports when available, and uses bounded fixtures.
-- Separates local evidence from target VVR checks.
-
-### Incorrect
-
-- Collects an unbounded stream, reports a blocked check as passed, claims connector reachability without target evidence, or treats a local API import as VVR execution.
-
-## Cloud-operation boundary
-
-### Correct
-
-The normal skill path edits and validates code, then produces upload-ready local artifacts. It invokes no Alibaba Cloud API and needs no observability block.
-
-### Incorrect
-
-Uploads files, mutates a workspace, creates or starts a deployment, or calls Alibaba Cloud APIs without a separate request and the added parameter, permission, observability, verification, and cleanup controls.
+- Reports DataFrame construction, collection, or connector reachability as locally passed.
+- Leaves raw template markers, hardcoded credentials, or undocumented artifacts.
+- Uploads or starts a deployment from a coding-only request.
 
 ## Completion criterion
 
-Acceptance passes only when every criterion applicable to the selected branch is satisfied and every exception has explicit evidence.
+Acceptance passes only when every applicable pass criterion is satisfied, no fail criterion is present, and each unresolved target value or blocked artifact is explicit.
