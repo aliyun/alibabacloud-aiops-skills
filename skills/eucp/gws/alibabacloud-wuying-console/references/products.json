@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "products": [
+    {
+      "code": "ecd",
+      "name": "Elastic Desktop Service",
+      "plugin_package": "aliyun-cli-ecd",
+      "minimum_plugin_version": "0.9.4",
+      "required_api_versions": [
+        "2020-09-30",
+        "2020-10-02",
+        "2021-06-02",
+        "2023-06-27"
+      ]
+    },
+    {
+      "code": "appstream-center",
+      "name": "App Stream",
+      "plugin_package": "aliyun-cli-appstream-center",
+      "minimum_plugin_version": "0.9.6",
+      "required_api_versions": [
+        "2021-09-01"
+      ]
+    },
+    {
+      "code": "eds-user",
+      "name": "WUYING User Service",
+      "plugin_package": "aliyun-cli-eds-user",
+      "minimum_plugin_version": "0.9.3",
+      "required_api_versions": [
+        "2021-03-08"
+      ]
+    },
+    {
+      "code": "wyota",
+      "name": "WUYING OTA",
+      "plugin_package": "aliyun-cli-wyota",
+      "minimum_plugin_version": "0.9.0",
+      "required_api_versions": [
+        "2021-04-20"
+      ]
+    },
+    {
+      "code": "wss",
+      "name": "WUYING Security Service",
+      "plugin_package": "aliyun-cli-wss",
+      "minimum_plugin_version": "0.9.1",
+      "required_api_versions": [
+        "2021-12-21"
+      ]
+    }
+  ]
+}

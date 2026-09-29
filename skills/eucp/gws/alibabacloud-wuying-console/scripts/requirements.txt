@@ -1,0 +1,7 @@
+# Alibaba Cloud WUYING Console Skill - Python dependencies
+#
+# The scripts in this directory use only the Python 3.10+ standard library.
+# No external Python packages are required.
+#
+# Standard library modules used include:
+# argparse, datetime, json, os, pathlib, re, shutil, subprocess, tempfile, typing

@@ -1,0 +1,3660 @@
+{
+  "schema_version": 2,
+  "source": "official aliyun CLI WUYING product plugins --help-all",
+  "aliyun_cli_version": "3.5.0",
+  "catalog_complete": false,
+  "configured_product_count": 5,
+  "configured_products": [
+    "appstream-center",
+    "ecd",
+    "eds-user",
+    "wss",
+    "wyota"
+  ],
+  "product_count": 2,
+  "command_count": 394,
+  "missing_products": [
+    {
+      "product": "eds-user",
+      "product_name": "WUYING User Service",
+      "plugin_package": "aliyun-cli-eds-user",
+      "minimum_plugin_version": "0.9.3",
+      "required_api_versions": [
+        "2021-03-08"
+      ],
+      "reason": "ERROR: plugin eds-user not found in local manifest (not installed)"
+    },
+    {
+      "product": "wss",
+      "product_name": "WUYING Security Service",
+      "plugin_package": "aliyun-cli-wss",
+      "minimum_plugin_version": "0.9.1",
+      "required_api_versions": [
+        "2021-12-21"
+      ],
+      "reason": "ERROR: plugin wss not found in local manifest (not installed)"
+    },
+    {
+      "product": "wyota",
+      "product_name": "WUYING OTA",
+      "plugin_package": "aliyun-cli-wyota",
+      "minimum_plugin_version": "0.9.0",
+      "required_api_versions": [
+        "2021-04-20"
+      ],
+      "reason": "ERROR: plugin wyota not found in local manifest (not installed)"
+    }
+  ],
+  "risk_note": "Risk is a conservative name-based hint. Inspect live command help before execution; unknown and non-read patterns require confirmation.",
+  "products": [
+    {
+      "product": "appstream-center",
+      "product_name": "App Stream",
+      "plugin_package": "aliyun-cli-appstream-center",
+      "plugin_version": "0.9.6",
+      "plugin_type": "meta",
+      "plugin_minimum_cli_version": "3.5.0",
+      "default_api_version": "2021-09-03",
+      "supported_api_versions": [
+        "2021-02-18",
+        "2021-02-20",
+        "2021-09-01",
+        "2021-09-03"
+      ],
+      "command_counts_by_version": {
+        "2021-02-18": 3,
+        "2021-02-20": 5,
+        "2021-09-01": 92,
+        "2021-09-03": 9
+      },
+      "unique_command_count": 106,
+      "risk_note": "Risk is a conservative name-based hint. Inspect live command help before execution; unknown and non-read patterns require confirmation.",
+      "commands": [
+        {
+          "name": "approve-ota-task",
+          "description": "Sets the execution time for an OTA upgrade",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "assign-wuying-server-private-addresses",
+          "description": "Assigns secondary private IP addresses to a development host",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "authorize-instance-group",
+          "description": "Adds or removes assigned users for a delivery group. Only users added as assigned users can access cloud applications",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "authorize-users-for-app",
+          "description": "Adds or removes authorized users for a specified application deployed in a delivery group. Only authorized users can access the application",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "batch-create-llm-templates",
+          "description": "Creates LLM templates in batches",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "client-user-logout",
+          "description": "Log out the client and destroy the login credentials",
+          "api_versions": [
+            "2021-02-20"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-02-20"
+        },
+        {
+          "name": "config-resource-group-model-template",
+          "description": "Configures the model group for a resource group",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "config-runtime-channel",
+          "description": "Configures a third-party channel for Agent runtime",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "config-runtime-model-template",
+          "description": "Configures model groups for Agent runtime resources",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "create-app-instance-group",
+          "description": "Creates a delivery group",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "create-browser-instance-group",
+          "description": "Creates a cloud browser group that is billed by monthly active users (MAU)",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "create-image-by-instance",
+          "description": "Creates a custom image from a deployed WUYING instance. You can use the custom image to quickly create more WUYING instances with the same configurations, without having to repeatedly configure the instance environment each time",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "create-image-from-app-instance-group",
+          "description": "Creates a new image from a debug delivery group",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "create-model-provider-template",
+          "description": "Creates a model provider template for model creation",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "create-model-template",
+          "description": "Creates a model template",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "create-wuying-server",
+          "description": "Creates one or more workstations",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "delete-app-instance-group",
+          "description": "Deletes a pay-as-you-go delivery group of the resource-based type",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "destructive",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "delete-app-instances",
+          "description": "Deletes a specified application instance",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "destructive",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "delete-image",
+          "description": "Deletes a custom WUYING image",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "destructive",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "delete-llm-template",
+          "description": "Deletes an LLM template",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "destructive",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "delete-model-provider-template",
+          "description": "Deletes a model provider template",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "destructive",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "delete-model-template",
+          "description": "Deletes a model template",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "destructive",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "delete-wuying-server",
+          "description": "Deletes a cloud graphics workstation",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "destructive",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "deliver-to-user-sls",
+          "description": "Configures SLS log delivery",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "describe-wuying-server",
+          "description": "Queries the details of a development host",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "describe-wuying-server-eip-info",
+          "description": "Queries the Elastic IP Address (EIP) information of a Wuying workspace",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "expire-login-token",
+          "description": "Manually invalidates a China Office logon session before it naturally expires",
+          "api_versions": [
+            "2021-02-18"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-02-18"
+        },
+        {
+          "name": "find-idp-list-by-login-identifier",
+          "description": "Queries the logon configuration of an office network or enterprise identifier for the client",
+          "api_versions": [
+            "2021-02-20"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-02-20"
+        },
+        {
+          "name": "get-app-instance-group",
+          "description": "Queries the details of a specified delivery group",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "get-auth-code",
+          "description": "Obtains an authorization code that contains user identity and permission information. The authorization code can be used to launch a cloud application in integration scenarios",
+          "api_versions": [
+            "2021-02-18"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-02-18"
+        },
+        {
+          "name": "get-browser-instance-group",
+          "description": "Queries the configuration, status, and authorization statistics of a specified cloud browser group",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "get-connection-ticket",
+          "description": "Retrieves the connection credential for a cloud application",
+          "api_versions": [
+            "2021-09-01",
+            "2021-09-03"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-09-03"
+        },
+        {
+          "name": "get-debug-app-instance",
+          "description": "Retrieves the information about a debug application instance",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "get-file-upload-info",
+          "description": "Retrieves file upload information",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "get-login-token",
+          "description": "Retrieve login credentials using an enterprise identifier",
+          "api_versions": [
+            "2021-02-20"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-02-20"
+        },
+        {
+          "name": "get-model-provider-template",
+          "description": "Queries the details of a model provider template",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "get-ota-task-by-task-id",
+          "description": "Queries the details of an over-the-air update task, including the available version and release notes",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "get-resource-price",
+          "description": "Queries the price information of a resource",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "get-resource-renew-price",
+          "description": "Queries the renewal price of WUYING Cloud Application resources",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "get-runtime-channel",
+          "description": "Queries the third-party channel configurations of an Agent runtime",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "get-runtime-model-config",
+          "description": "Queries the model configuration details of a cloud computer",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "get-sts-token",
+          "description": "Gets a Security Token Service (STS) token",
+          "api_versions": [
+            "2021-02-18",
+            "2021-02-20"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-02-20"
+        },
+        {
+          "name": "list-app-instance-group",
+          "description": "Queries the details of multiple delivery groups. This operation queries all delivery groups that meet the specified conditions instead of a specific delivery group",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "list-app-instances",
+          "description": "Queries the details of session instances in a delivery group, including instance IDs, instance statuses, creation time, update time, session statuses, and public IP addresses of primary network interface controllers (NICs)",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "list-apps-by-app-instance-group-id",
+          "description": "Queries the deployed applications in the image used by a specified delivery group with paging and returns the number of users with per-application authorization for each application",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "list-authorized-app-instance-group-by-user",
+          "description": "Queries the delivery groups for which a specified user has obtained access permissions through delivery group-level authorization by paging, with support for fuzzy filtering by delivery group ID, delivery group name, application ID, or application name",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "list-authorized-apps-by-user",
+          "description": "Queries the applications for which a specified user has obtained access permissions through per-application authorization by paging. You can filter results by delivery group ID, delivery group name, application ID, or application name using fuzzy match",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "list-authorized-user-groups",
+          "description": "Queries the list of user groups authorized by a specified delivery group",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "list-authorized-users",
+          "description": "Queries the list of authorized users for a specified delivery group or delivery group set by using paging. Supports exact or fuzzy filtering by username",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "list-bind-info",
+          "description": "Queries the bindng information between users and resources",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "list-browser-instance-group",
+          "description": "Queries cloud browser groups and their current status by paging",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "list-desktop-agent-runtime",
+          "description": "Queries the list of desktop agent runtimes",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "list-image",
+          "description": "Queries image information",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "list-llm-templates",
+          "description": "Queries the list of LLM templates",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "list-model-provider-endpoints",
+          "description": "Queries the list of model provider endpoints",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "list-model-provider-templates",
+          "description": "Queries the list of model provider templates",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "list-model-template-resource-group",
+          "description": "Queries the list of resource groups associated with a model group",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "list-model-templates",
+          "description": "Queries a list of model templates",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "list-node-instance-type",
+          "description": "Queries the resource specifications available for selection when creating a delivery group",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "list-nodes",
+          "description": "Queries the list of resource nodes",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "list-ota-task",
+          "description": "Queries the history of over-the-air updates",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "list-persistent-app-instances",
+          "description": "Queries the list of persistent session application instances in a delivery group",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "list-published-app-info",
+          "description": "Retrieves a list of published application information",
+          "api_versions": [
+            "2021-09-03"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-09-03"
+        },
+        {
+          "name": "list-published-app-instance-group",
+          "description": "Queries published delivery groups and their application information for a specified product type under the current Alibaba Cloud account by using paging. Supports filtering by delivery group, application, and user authorization status",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "list-published-apps",
+          "description": "Queries deployed applications in published delivery groups under the current Alibaba Cloud account for a specified product type by paging, and returns each application along with its delivery group and the number of authorized users by application. Supports filtering by delivery group, application, and user authorization status",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "list-regions",
+          "description": "Queries the regions supported by WUYING Cloud Application",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "list-running-apps",
+          "description": "Queries running applications",
+          "api_versions": [
+            "2021-09-03"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-09-03"
+        },
+        {
+          "name": "list-tag-cloud-resources",
+          "description": "Queries the tags of one or more specified cloud resources",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "list-tag-resources",
+          "description": "Queries tags bound to one or more delivery groups, or filters delivery groups that have specific tags bound by tag key-value pairs",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "list-tenant-config",
+          "description": "Queries the configuration information of an administrator account, such as whether resource expiration reminders are enabled",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "list-wuying-server",
+          "description": "Queries a list of workstations",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "list-zones",
+          "description": "Queries the list of available zone IDs for a specified region, product type, and operating system type",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "log-off-all-sessions-in-app-instance-group",
+          "description": "Logs off all sessions in a pay-as-you-go delivery group that has scheduled auto scaling enabled",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "modify-app-instance-group-attribute",
+          "description": "Modifies the General Policy of a delivery group, including the number of concurrent sessions and the session retention duration after disconnection",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "modify-app-policy",
+          "description": "Modifies the display policy of a delivery group, including settings such as frame rate, resolution, and protocol type",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "modify-browser-instance-group",
+          "description": "Modifies the attributes of a Wuying Cloud Browser",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "modify-node-pool-amount",
+          "description": "Upgrades the number of nodes in a subscription delivery group",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "modify-node-pool-attribute",
+          "description": "Modifies the elastic mode of a delivery group, including fixed quantity (no elastic scaling), scheduled scaling, and automatic scaling",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "modify-tenant-config",
+          "description": "Modifies the administrator account configuration, such as whether to enable resource expiration reminders",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "modify-wuying-server-attribute",
+          "description": "Modifies the properties of a workstation",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "page-list-app-instance-group-user",
+          "description": "Queries the allocated users added to a delivery group by paging",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "refresh-login-token",
+          "description": "Refresh the login token",
+          "api_versions": [
+            "2021-02-20"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-02-20"
+        },
+        {
+          "name": "remove-resource-group-model-template",
+          "description": "Removes model groups from a resource group",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "remove-runtime-channel",
+          "description": "Removes a third-party channel configuration from the Agent runtime",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "remove-runtime-model-template",
+          "description": "Removes a model group from an Agent runtime resource",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "renew-app-instance-group",
+          "description": "Renews a delivery group",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "renew-wuying-server",
+          "description": "Renews a workstation",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "reset-app-resources",
+          "description": "Resets application resources",
+          "api_versions": [
+            "2021-09-03"
+          ],
+          "risk": "destructive",
+          "preferred_api_version": "2021-09-03"
+        },
+        {
+          "name": "restart-app-resources",
+          "description": "Restart application resources",
+          "api_versions": [
+            "2021-09-03"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-03"
+        },
+        {
+          "name": "restart-wuying-server",
+          "description": "Restarts a workstation",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "start-app-resources",
+          "description": "Start application resources",
+          "api_versions": [
+            "2021-09-03"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-03"
+        },
+        {
+          "name": "start-task-for-distribute-image",
+          "description": "Initiates a task to copy an image to other regions",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "start-wuying-server",
+          "description": "Starts a workstation",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "stop-app",
+          "description": "Stops a specified application",
+          "api_versions": [
+            "2021-09-03"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-03"
+        },
+        {
+          "name": "stop-app-resources",
+          "description": "Shuts down application resources",
+          "api_versions": [
+            "2021-09-03"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-03"
+        },
+        {
+          "name": "stop-wuying-server",
+          "description": "Stops a workstation",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "tag-cloud-resources",
+          "description": "Creates and attaches tags to cloud resources. For resources that already have the specified tags, updates the tag values",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "tag-resources",
+          "description": "Creates and binds tags to specified China Office (Chinese: Wuying) delivery groups in compliance with Alibaba Cloud tag specifications. If a tag key already exists on a resource, the tag value is updated to the value specified in the current request. Currently, only delivery group (`APPINSTANCEGROUP`) resource types are supported",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "unassign-wuying-server-private-addresses",
+          "description": "Unbinds secondary private IP addresses from a development host",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "unbind",
+          "description": "Unbinds a user from a session",
+          "api_versions": [
+            "2021-09-01",
+            "2021-09-03"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-03"
+        },
+        {
+          "name": "untag-cloud-resources",
+          "description": "Unbinds tags from cloud resources in a unified manner",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "untag-resources",
+          "description": "Unbinds tags from specified Wuying delivery groups in compliance with Alibaba Cloud tagging standards. You can unbind specific tags by tag key or unbind all custom tags from a resource at once by setting `All=true` without specifying tag keys. Currently, only the delivery group (`APPINSTANCEGROUP`) resource type is supported",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "update-app-instance-group-image",
+          "description": "Updates the image of a delivery group",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "update-model-provider-template",
+          "description": "Updates a model provider template",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "update-model-template",
+          "description": "Updates a model template",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-01"
+        },
+        {
+          "name": "update-wuying-server-image",
+          "description": "Updates a workstation image",
+          "api_versions": [
+            "2021-09-01"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-09-01"
+        }
+      ]
+    },
+    {
+      "product": "ecd",
+      "product_name": "Elastic Desktop Service",
+      "plugin_package": "aliyun-cli-ecd",
+      "plugin_version": "0.9.4",
+      "plugin_type": "meta",
+      "plugin_minimum_cli_version": "3.5.0",
+      "default_api_version": "2023-06-27",
+      "supported_api_versions": [
+        "2020-09-30",
+        "2020-10-02",
+        "2021-06-02",
+        "2023-06-27"
+      ],
+      "command_counts_by_version": {
+        "2020-09-30": 257,
+        "2020-10-02": 26,
+        "2021-06-02": 12,
+        "2023-06-27": 3
+      },
+      "unique_command_count": 288,
+      "risk_note": "Risk is a conservative name-based hint. Inspect live command help before execution; unknown and non-read patterns require confirmation.",
+      "commands": [
+        {
+          "name": "activate-office-site",
+          "description": "Unlocks an office network based on a convenience account that has been automatically locked after being idle for a certain period",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "add-devices",
+          "description": "Adds trusted devices",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "add-file-permission",
+          "description": "Creates a shared folder in a cloud disk",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "add-user-to-desktop-group",
+          "description": "Adds authorized users to a shared cloud computer. Cloud computers within the shared cloud computer are automatically assigned to authorized users based on rules set by the administrator",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "apply-auto-snapshot-policy",
+          "description": "Attaches an automatic snapshot policy to cloud computers. After the policy is attached, cloud computers perform automatic creation of snapshots at the times specified in the automatic snapshot policy",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "apply-coordinate-privilege",
+          "description": "Requests permissions for stream coordination operations",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "apply-coordination-for-monitoring",
+          "description": "Sends a remote assistance request from an administrator to an end user. This operation is mainly used in administrator assistance scenarios and education scenarios",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "approve-fota-update",
+          "description": "Allows an image upgrade",
+          "api_versions": [
+            "2020-09-30",
+            "2020-10-02"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-10-02"
+        },
+        {
+          "name": "associate-network-package",
+          "description": "Associates a premium Internet bandwidth plan with an office network. A premium Internet bandwidth plan has a one-to-one relationship with an office network",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "attach-cen",
+          "description": "Associates an advanced office network with a Cloud Enterprise Network (CEN) instance",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "attach-end-user",
+          "description": "If you want a hardware terminal to be accessible only to specified end users, you need to enable the trusted device authentication feature and add bound users to the hardware terminal",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "batch-modify-entitlement",
+          "description": "Assigns users to multiple cloud computers in a batch",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "bind-config-group",
+          "description": "Associates a configuration group with a cloud computer or resource group",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "cancel-auto-snapshot-policy",
+          "description": "Cancels an automatic snapshot policy for cloud computers",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "cancel-cds-file-share-link",
+          "description": "Cancels file sharing",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "cancel-coordination-for-monitoring",
+          "description": "Cancels a remote assistance request initiated to an end user",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "cancel-copy-image",
+          "description": "Cancels an ongoing image copy operation to another region",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "change-password",
+          "description": "Modifies the password of a user",
+          "api_versions": [
+            "2020-10-02"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-10-02"
+        },
+        {
+          "name": "clone-center-policy",
+          "description": "Clones a policy based on an existing region-independent policy",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "clone-policy-group",
+          "description": "Clones a cloud computer policy to quickly create a custom cloud computer policy",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "complete-cds-file",
+          "description": "Completes the file upload action after a file upload task is created",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "config-ad-connector-trust",
+          "description": "Configures a trust relationship for an AD office network. For office networks (formerly workspaces) that use the HDX protocol, you must configure conditional forwarders and trust relationships before the networks can function properly",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "config-ad-connector-user",
+          "description": "Specifies the organizational unit (OU) and administrator for an AD office network (formerly workspace)",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "copy-cds-file",
+          "description": "Creates a copy of a file or folder in a cloud drive",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "copy-image",
+          "description": "Copies an image to another region. To share an image across regions, call this operation to copy the image to the destination region first, and then share it",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "create-ad-connector-directory",
+          "description": "Creates an AD directory",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "create-ad-connector-office-site",
+          "description": "Creates an office network (formerly workspace) based on an enterprise Active Directory (AD) account system. Elastic Desktop Service supports convenient accounts and enterprise AD accounts",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "create-and-bind-nas-file-system",
+          "description": "Creates a NAS file system and binds it to the office network of a shared cloud computer",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "create-auto-snapshot-policy",
+          "description": "Creates an automatic snapshot policy that enables cloud computers to perform automatic creation of snapshots based on the schedule specified by a Cron expression",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "create-bandwidth-resource-packages",
+          "description": "Creates data transfer plans",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "create-bundle",
+          "description": "Creates a custom cloud computer template",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "create-cds-file",
+          "description": "Create a folder or initiate a file upload task in the cloud disk",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "create-cds-file-share-link",
+          "description": "Creates a file share",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "create-center-policy",
+          "description": "Creates a region-independent Cloud Desktop policy",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "create-cloud-drive-group",
+          "description": "Disk organization authorization",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "create-cloud-drive-service",
+          "description": "Creates an enterprise network-attached storage (NAS) drive (formerly Wuying CloudDisk)",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "create-cloud-drive-users",
+          "description": "Adds a personal drive for a user in an enterprise network drive",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "create-config-group",
+          "description": "Creates a configuration group. A configuration group contains the configuration information of scheduled tasks in a Cloud Desktop center",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "create-desktop-group",
+          "description": "Creates a shared cloud computer",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "create-desktops",
+          "description": "Creates one or more cloud computers. If user information is provided during creation, the cloud computers are assigned directly",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "create-disk-encryption-service",
+          "description": "Enables the disk encryption feature and adds the service-linked role (SLR) for enterprise cloud disk encryption under the RAM user",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "create-drive",
+          "description": "Creates a user-level storage resource",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "create-ecd-report-task",
+          "description": "Creates a data report export task",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "create-image",
+          "description": "Creates a custom image from a deployed cloud computer to quickly create more cloud computers with the same configuration, avoiding repeated configuration each time",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "create-nas-file-system",
+          "description": "Creates a NAS file system",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "create-network-package",
+          "description": "Creates a premium bandwidth plan for an office network",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "create-office-site-accelerator",
+          "description": "Enables Global Accelerator (GA) for an office network",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "create-policy-group",
+          "description": "Creates a cloud computer policy",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "create-qos-rule",
+          "description": "Creates a rate limiting rule",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "create-ram-directory",
+          "description": "Creates a RAM-type directory",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "create-simple-office-site",
+          "description": "Elastic Desktop Service supports two account systems: convenience accounts and enterprise AD accounts. Creates an office network (formerly workspace) based on convenience accounts",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "create-snapshot",
+          "description": "Create a snapshot for a disk of a cloud computer to back up or restore the data on the disk",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "create-template",
+          "description": "Creates a custom cloud computer template. A cloud computer template is a collection of cloud computer configurations that reduces the configuration steps and accelerates the creation of cloud computers",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "create-tenant-skill",
+          "description": "Creates a tenant skill",
+          "api_versions": [
+            "2021-06-02"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-06-02"
+        },
+        {
+          "name": "create-virtual-bridge",
+          "description": "Creates a virtual bridge",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "delete-auto-snapshot-policy",
+          "description": "Deletes an automatic snapshot policy",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "destructive",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "delete-bundles",
+          "description": "Deletes custom cloud computer templates",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "destructive",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "delete-cds-file",
+          "description": "Deletes a file or folder from a cloud drive",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "destructive",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "delete-center-policy",
+          "description": "Deletes a non-region-specific policy",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "destructive",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "delete-cloud-drive-groups",
+          "description": "Deletes a team shared drive",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "destructive",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "delete-cloud-drive-users",
+          "description": "Delete the personal drive of a user in WUYING Workspace",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "destructive",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "delete-config-group",
+          "description": "Deletes a configuration group",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "destructive",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "delete-desktop-group",
+          "description": "Releases a shared Cloud Desktop",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "destructive",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "delete-desktops",
+          "description": "Releases one or more pay-as-you-go cloud computers or expired subscription cloud computers",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "destructive",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "delete-devices",
+          "description": "Deletes trusted devices",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "destructive",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "delete-directories",
+          "description": "Deletes one or more directories",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "destructive",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "delete-drive",
+          "description": "Deletes a cloud drive",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "destructive",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "delete-finger-print-template",
+          "description": "Deletes a specified fingerprint template",
+          "api_versions": [
+            "2020-10-02"
+          ],
+          "risk": "destructive",
+          "preferred_api_version": "2020-10-02"
+        },
+        {
+          "name": "delete-images",
+          "description": "Deletes one or more custom images",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "destructive",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "delete-nas-file-systems",
+          "description": "Deletes NAS file systems",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "destructive",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "delete-network-packages",
+          "description": "Deletes one or more premium Internet bandwidth plans",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "destructive",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "delete-office-site-accelerator",
+          "description": "Deletes a Global Accelerator (GA) configuration",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "destructive",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "delete-office-sites",
+          "description": "Deletes office networks (formerly workspaces)",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "destructive",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "delete-policy-groups",
+          "description": "Deletes one or more custom cloud computer policies",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "destructive",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "delete-qos-rules",
+          "description": "Delete a rate-limiting rule",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "destructive",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "delete-snapshot",
+          "description": "Deletes one or more snapshots",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "destructive",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "delete-templates",
+          "description": "Deletes a custom cloud computer template",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "destructive",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "delete-tenant-skills",
+          "description": "Deletes skills in batches",
+          "api_versions": [
+            "2021-06-02"
+          ],
+          "risk": "destructive",
+          "preferred_api_version": "2021-06-02"
+        },
+        {
+          "name": "delete-virtual-bridge",
+          "description": "Modifies the status of a virtual bridge",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "destructive",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "delete-virtual-mfa-device",
+          "description": "Removes a virtual multi-factor authentication (MFA) device that is associated with an Active Directory (AD) account",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "destructive",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-acl-entries",
+          "description": "Queries the details of an access control list (ACL) of an office network or a cloud computer",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-auto-snapshot-policy",
+          "description": "Queries automatic snapshot policies",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-benefits",
+          "description": "Queries information about the privilege quota specifications and quantities associated with a channel. The returned information can be used to distribute channel privileges",
+          "api_versions": [
+            "2023-06-27"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2023-06-27"
+        },
+        {
+          "name": "describe-bundles",
+          "description": "Queries the details of cloud computer templates",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-cds-file-share-links",
+          "description": "Queries file sharing links of a cloud disk in Cloud Drive Service",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-cens",
+          "description": "Queries information about all Cloud Enterprise Network (CEN) instances under the current account",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-center-policy-list",
+          "description": "Queries the details of regionless policies",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-client-events",
+          "description": "Queries the operation logs of end users, including events such as cloud computer startup, shutdown, and session disconnection",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-cloud-disk-group-drives",
+          "description": "Queries the list of cloud disk team spaces",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-cloud-disk-groups",
+          "description": "Queries the list of cloud disk teams",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-cloud-drive-groups",
+          "description": "Queries the list and basic information of all team shared drives in an enterprise cloud drive",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-cloud-drive-permissions",
+          "description": "Queries the permission settings of an enterprise cloud drive",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-cloud-drive-users",
+          "description": "Retrieves a list of personal drives and their basic information for all users in an enterprise network drive",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-config-group",
+          "description": "Queries the list of configuration groups",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-customized-list-headers",
+          "description": "Obtain the table header information of the WUYING Workspace list page.",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-desktop-group-sessions",
+          "description": "Queries the session monitoring details of shared cloud computers",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-desktop-groups",
+          "description": "Queries the list and details of shared cloud computers",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-desktop-info",
+          "description": "Queries the basic information of cloud computers",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-desktop-metadata",
+          "description": "Queries the list and metadata of cloud desktops across all regions",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-desktop-sessions",
+          "description": "Queries the detailed session information of cloud computers",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-desktop-types",
+          "description": "Queries the details of cloud computer specifications",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-desktops",
+          "description": "Queries the details of cloud computers",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-desktops-in-group",
+          "description": "Queries the list of cloud desktops in a shared cloud desktop by billing method",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-devices",
+          "description": "Queries the list of trusted devices",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-directories",
+          "description": "Queries the details of a directory",
+          "api_versions": [
+            "2020-09-30",
+            "2020-10-02"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-10-02"
+        },
+        {
+          "name": "describe-drives",
+          "description": "Queries user-level storage resources",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-ecd-report-tasks",
+          "description": "Queries the list of data report export tasks",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-finger-print-templates",
+          "description": "Queries fingerprint templates",
+          "api_versions": [
+            "2020-10-02"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-10-02"
+        },
+        {
+          "name": "describe-flow-metric",
+          "description": "Queries the inbound and outbound bandwidth monitoring data of a cloud computer, or the public inbound and outbound bandwidth monitoring data of a premium public bandwidth instance",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-fota-pending-desktops",
+          "description": "Queries information about the cloud computers whose images can be and are pending to be updated to the specified version",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-fota-tasks",
+          "description": "Retrieves a list of image upgrade tasks",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-global-desktop-records",
+          "description": "Queries the basic information of all recent cloud desktops and their corresponding usage duration records",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-global-desktops",
+          "description": "Query detailed information about cloud desktops across multiple regions. You can query only regions in the Chinese mainland (excluding Nanjing – Local Region – Shutting Down)",
+          "api_versions": [
+            "2020-10-02"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-10-02"
+        },
+        {
+          "name": "describe-global-timer-batches",
+          "description": "Queries the batch information of scheduled task execution history and returns aggregated execution results",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-global-timer-records",
+          "description": "Queries the execution records of scheduled tasks for cloud computers across regions",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-guest-applications",
+          "description": "Queries the applications and their processes of an end user",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-image-modified-records",
+          "description": "Queries the image change records of a cloud computer",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-image-permission",
+          "description": "Queries the recipient Alibaba Cloud accounts with which an image is shared",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-images",
+          "description": "Queries the details of images",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-invocations",
+          "description": "Queries the execution list and status of Cloud Assistant scripts",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-kms-keys",
+          "description": "Queries Key Management Service (KMS) keys of users. The first time you call this operation, you can try to create a service key for Elastic Desktop Service (EDS) and call the operation to return results",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-modification-price",
+          "description": "Queries the price for upgrading or downgrading a monthly subscription (unlimited duration) cloud computer or premium Internet bandwidth",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-nas-file-systems",
+          "description": "Queries NAS file system information",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-network-packages",
+          "description": "Queries the details of one or more premium Internet bandwidth plans",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-office-site-bridge-info",
+          "description": "Queries virtual bridge information",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-office-sites",
+          "description": "Queries all attributes of an office network, including the ID, name, status, and creation time",
+          "api_versions": [
+            "2020-09-30",
+            "2020-10-02"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-10-02"
+        },
+        {
+          "name": "describe-online-user-count",
+          "description": "Queries metrics such as the number of online users and the number of users with assigned desktops",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-peripheral-drivers",
+          "description": "Queries peripheral drivers visible to the current account, with support for filtering by ownership, brand, device type, driver ID, and keyword, and returns paginated results",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-policy-groups",
+          "description": "Queries the details of cloud computer policies",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-price",
+          "description": "Queries the purchase price of Elastic Desktop Service products",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-printer-events",
+          "description": "Queries printer event information",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-qos-rules",
+          "description": "Queries QoS rules",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-record-file",
+          "description": "Queries the list of screen recording files across all regions",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-recordings",
+          "description": "Queries the details of screen recording files",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-refund-price",
+          "description": "Queries the unsubscription price of cloud computers purchased on a monthly basis",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-regions",
+          "description": "Queries the Alibaba Cloud regions supported by WUYING Workspace",
+          "api_versions": [
+            "2020-09-30",
+            "2020-10-02"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-10-02"
+        },
+        {
+          "name": "describe-renewal-price",
+          "description": "Queries the renewal price of a Wuying product",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-resource-by-center-policy-id",
+          "description": "Queries cloud resources that are associated with a global policy",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-session-statistic",
+          "description": "Queries session statistics information across all regions",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-snapshots",
+          "description": "Queries the snapshot list and detailed snapshot information of a cloud computer",
+          "api_versions": [
+            "2020-09-30",
+            "2020-10-02"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-10-02"
+        },
+        {
+          "name": "describe-templates",
+          "description": "Queries the details of cloud computer templates",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-timer-group",
+          "description": "Queries the details of a specified configuration group",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-user-connection-records",
+          "description": "Queries the connection records of authorized users connecting to pooled cloud computers in a cloud computer pool",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-user-resources",
+          "description": "Queries the list of resources owned by a user",
+          "api_versions": [
+            "2020-10-02"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-10-02"
+        },
+        {
+          "name": "describe-users-in-group",
+          "description": "Queries the details of all authorized users of a shared cloud computer, including the username, email address, phone number, and authorized cloud computer ID",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-users-password",
+          "description": "Queries the password of an account in a cloud computer image. For example, when querying the query cache of passwords in the Chrome browser on a cloud computer, the end user is required to enter this password to authenticate",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-virtual-mfa-devices",
+          "description": "Queries the virtual MFA devices bound to AD accounts",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-vul-desktops",
+          "description": "Retrieves cloud computer information for a vulnerability",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-vulnerability",
+          "description": "Retrieves vulnerability information",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "describe-zones",
+          "description": "Queries the zones supported by Alibaba Cloud Workspace in a specified Alibaba Cloud region",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "detach-cen",
+          "description": "Unbinds an advanced office network from a CEN instance",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "detach-end-user",
+          "description": "Unbinds a hardware client from a user",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "disable-desktops-in-group",
+          "description": "Disables cloud computers in a shared cloud computer group. After a cloud computer is disabled, its status changes to unavailable",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "disconnect-desktop-sessions",
+          "description": "Disconnects cloud computer sessions",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "dissociate-network-package",
+          "description": "Disassociates a premium Internet bandwidth plan from the office network to which it was previously bound",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "download-cds-file",
+          "description": "Retrieves the download URL of a specified file",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "encrypt-password",
+          "description": "Encrypts a user password",
+          "api_versions": [
+            "2020-10-02"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-10-02"
+        },
+        {
+          "name": "export-client-events",
+          "description": "Exports events that occur on a cloud desktop from an Alibaba Cloud Workspace client",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "export-desktop-group-info",
+          "description": "Exports the list of shared cloud computers to an XLSX file. Each record includes the shared cloud computer ID and name, office network ID and name, shared cloud computer template, security policy name, and other details",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "export-desktop-list-info",
+          "description": "Exports the cloud desktop list as a CSV file",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "get-async-task",
+          "description": "Retrieves the details of a folder copy asynchronous node based on the AsyncTaskId parameter returned by the CopyCdsFile operation",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "get-cloud-drive-service-mount-token",
+          "description": "Obtain the logon credential for Enterprise File Gateway",
+          "api_versions": [
+            "2020-10-02"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-10-02"
+        },
+        {
+          "name": "get-connection-ticket",
+          "description": "Retrieves the connection credential for a cloud computer",
+          "api_versions": [
+            "2020-09-30",
+            "2020-10-02"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-10-02"
+        },
+        {
+          "name": "get-coordinate-ticket",
+          "description": "Retrieves the coordination flow ticket used for remote assistance or shared coordination",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "get-desktop-group-detail",
+          "description": "Retrieves the details of a shared cloud computer",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "get-login-token",
+          "description": "Retrieves logon credentials",
+          "api_versions": [
+            "2020-10-02"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-10-02"
+        },
+        {
+          "name": "get-office-site-sso-status",
+          "description": "Queries whether single sign-on (SSO) is enabled for an office network",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "get-oss-sts-token",
+          "description": "Retrieves a temporary OSS token for authentication",
+          "api_versions": [
+            "2021-06-02"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-06-02"
+        },
+        {
+          "name": "get-parse-progress",
+          "description": "Retrieves the parsed content of a skill package",
+          "api_versions": [
+            "2021-06-02"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-06-02"
+        },
+        {
+          "name": "get-redeem-codes",
+          "description": "Retrieves redemption codes for channel privileges. Channel privileges are distributed and transferred in the form of redemption codes. After redemption codes are generated, the corresponding privilege quota is deducted",
+          "api_versions": [
+            "2023-06-27"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2023-06-27"
+        },
+        {
+          "name": "get-request-token",
+          "description": "Retrieves a one-time credential for a channel service request. The credential can be used for authentication in channel-related API operations and becomes invalid after use",
+          "api_versions": [
+            "2023-06-27"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2023-06-27"
+        },
+        {
+          "name": "get-sp-metadata",
+          "description": "Obtains the metadata of a Security Assertion Markup Language (SAML) 2.0-based service provider (SP)",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "hibernate-desktops",
+          "description": "Hibernates cloud computers",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "list-cds-files",
+          "description": "Queries the file list in a cloud drive and retrieves download URLs for files",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "list-directory-users",
+          "description": "Retrieves user information from an enterprise Active Directory (AD) if you use an AD directory to connect to your enterprise AD",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "list-file-permission",
+          "description": "Queries the permissions on a shared file on a drive",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "list-installed-apps",
+          "description": "Queries applications installed on a cloud computer",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "list-office-site-overview",
+          "description": "Queries information about an office network, including its status, cloud computer quantity, virtual private cloud (VPC) type, and more",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "list-office-site-users",
+          "description": "Queries the AD account information obtained after an AD office network (formerly workspace) is connected to an AD domain",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "list-secure-skill-identities",
+          "description": "Queries the list of identities for which security policies are enabled",
+          "api_versions": [
+            "2021-06-02"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-06-02"
+        },
+        {
+          "name": "list-skill-authed-identities",
+          "description": "Queries the list of identities authorized for a skill",
+          "api_versions": [
+            "2021-06-02"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-06-02"
+        },
+        {
+          "name": "list-skills",
+          "description": "Queries the list of skills",
+          "api_versions": [
+            "2021-06-02"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-06-02"
+        },
+        {
+          "name": "list-tag-resources",
+          "description": "Queries the list of tags that are added to cloud computers",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "list-tenant-app",
+          "description": "Performs a paging query of desktop applications visible to the current tenant, with support for filtering by application name and source",
+          "api_versions": [
+            "2021-06-02"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2021-06-02"
+        },
+        {
+          "name": "list-transfer-file-download-url",
+          "description": "Retrieves the download URLs of transfer files",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "list-transfer-files",
+          "description": "Queries the file information of a file transmission task",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "list-user-ad-organization-units",
+          "description": "Obtains the organizational units (OUs) of an Active Directory (AD) domain that is connected to an enterprise AD office network (formerly workspace)",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "list-virtual-bridges",
+          "description": "Queries a list of virtual bridges",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "lock-virtual-mfa-device",
+          "description": "Locks a virtual MFA device that is in Normal state",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "migrate-desktops",
+          "description": "Migrates cloud computers from the current office network to a new office network",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "migrate-image-protocol",
+          "description": "Update the protocols of images to Adaptive Streaming Protocol (ASP)",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "modify-acl-entries",
+          "description": "Modifies the public network access control policy at the office network or cloud computer granularity",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "modify-ad-connector-directory",
+          "description": "Modifies an Active Directory (AD) directory",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "modify-ad-connector-office-site",
+          "description": "Modifies the basic properties of an AD office network (formerly workspace), such as the office network name and the domain name of the enterprise AD subdomain",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "modify-auto-snapshot-policy",
+          "description": "Modifies the configuration items of an automatic snapshot policy, including the policy name and snapshot retention period",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "modify-bundle",
+          "description": "Modifies a custom cloud computer template",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "modify-cds-file",
+          "description": "Modifies the attributes of a cloud disk file or folder, such as the file name",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "modify-cds-file-share-link",
+          "description": "Modifies the link for file sharing",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "modify-center-policy",
+          "description": "Modifies the configuration of a region-free policy",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "modify-cloud-drive-groups",
+          "description": "Modifies team spaces",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "modify-cloud-drive-permission",
+          "description": "The default policy for the enterprise file storage is that all users can upload files from on-premises devices to the enterprise file storage, but cannot download files from the enterprise file storage to on-premises devices. You can invoke this API to add users with exception permissions",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "modify-cloud-drive-users",
+          "description": "Modify basic properties of a user's personal disk, such as the status and storage capacity limit",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "modify-config-group",
+          "description": "Modifies the basic information of a configuration group, including the name and description",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "modify-customized-list-headers",
+          "description": "Modifies the layouts of cloud computer list headers, such as the required fields and the display and hide settings",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "modify-desktop-charge-type",
+          "description": "Converts the billing method of cloud desktops to subscription or pay-as-you-go",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "modify-desktop-group",
+          "description": "Modifies a shared cloud computer",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "modify-desktop-host-name",
+          "description": "Modifies the hostname of a Windows cloud desktop in an AD office network",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "modify-desktop-name",
+          "description": "Renames a specified cloud computer to a new name",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "modify-desktop-spec",
+          "description": "Changes the instance type of a cloud computer and expands the system cloud disk and data cloud disk of the cloud computer",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "modify-desktop-timer",
+          "description": "Creates or modifies scheduled tasks on cloud computers, such as starting, stopping, restarting, and resetting cloud computers on schedule",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "modify-desktops-policy-group",
+          "description": "Changes an existing cloud computer policy for cloud computers",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "modify-disk-spec",
+          "description": "Modifies the performance level (PL) of the system cloud disk or data cloud disk of a cloud computer",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "modify-entitlement",
+          "description": "Assigns a cloud computer to end users and removes all original end users of the cloud computer",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "modify-image-attribute",
+          "description": "Modifies the attributes of an image, including the name and description of the image",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "modify-image-permission",
+          "description": "Shares an image with other Alibaba Cloud accounts, or unshares an image from the recipient Alibaba Cloud accounts",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "modify-nas-default-mount-target",
+          "description": "Modifies the mount target of a NAS file system",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "modify-network-package-bandwidth",
+          "description": "Modifies the bandwidth of a premium Internet bandwidth plan",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "modify-network-package-enabled",
+          "description": "Restores or disables a premium bandwidth plan",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "modify-office-site-accelerator",
+          "description": "Modifies the Global Accelerator (GA) configuration",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "modify-office-site-attribute",
+          "description": "Modifies the basic attributes of an office network (formerly workspace), such as the office network name and whether to grant local administrator permissions to cloud computer users",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "modify-office-site-bridge-info",
+          "description": "Modifies the bridge information for behavior management",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "modify-office-site-cross-desktop-access",
+          "description": "Enables or disables the communication between cloud computers in an office network (formerly workspace). If you enable the communication between cloud computers in an office network, the cloud computers can access each other",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "modify-office-site-dns-info",
+          "description": "Modifies the DNS information of an office network",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "modify-office-site-mfa-enabled",
+          "description": "Enables or disables multi-factor authentication (MFA) for an enterprise Active Directory (AD) office network (formerly workspace)",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "modify-policy-group",
+          "description": "Modifies a cloud computer policy",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "modify-qos-entries",
+          "description": "Modifies the resource binding relationship of a rate limiting rule",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "modify-qos-rule",
+          "description": "You can modify a rate limiting rule",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "modify-resource-center-policy",
+          "description": "Modifies a global policy that is associated with a cloud resource",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "modify-template",
+          "description": "Modifies all parameters of a custom cloud computer template",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "modify-template-base-info",
+          "description": "Modifies the basic information of a custom cloud computer template, including the template name and description",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "modify-timer-group",
+          "description": "Modifies the settings of a configuration group, such as scheduled task configurations",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "modify-user-entitlement",
+          "description": "Adds or removes the authorization of one or more cloud computers for one or more users",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "modify-user-to-desktop-group",
+          "description": "Replaces the existing authorized users of a cloud computer share with different users",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "modify-virtual-bridge-level",
+          "description": "Changes the specifications of a virtual bridge",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "modify-virtual-bridge-status",
+          "description": "Modifies the status of a virtual bridge",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "move-cds-file",
+          "description": "Moves a file or folder in a cloud disk to a new location",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "parse-skill-package",
+          "description": "Parses a skill package",
+          "api_versions": [
+            "2021-06-02"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-06-02"
+        },
+        {
+          "name": "query-active-user-statistic",
+          "description": "Queries the trend of active user count statistics within a specified time range. Returns the deduplicated active user count at each time slice based on the specified aggregation interval (Period), which can be used to plot online user trend charts",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "query-end-user-history-usage",
+          "description": "Queries the usage duration ranking and details of each end user under a tenant within a specified date range. Aggregates offline statistical data, summarizes connection duration by user dimension, and populates basic information and per-desktop usage duration details for users on the current page",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "query-history-active-user-count",
+          "description": "Queries the historical daily active user count and monthly active user count for a specified date",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "query-history-active-user-statistic",
+          "description": "Queries the daily historical active user count for a tenant within a specified time range. Based on offline statistical data, this operation aggregates and deduplicates active users by date to calculate daily active users (DAU). Filtering by user group and workspace is supported",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "query-history-avg-metric-list",
+          "description": "Queries the historical average monitoring metrics of desktop resources within a specified date range",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "query-history-metric-distribution",
+          "description": "Queries the historical distribution of a specific metric within a specified time range",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "query-history-usage-duration-rank",
+          "description": "Queries and sorts historical usage duration by user or desktop dimension",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "read",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "reboot-desktops",
+          "description": "Restarts one or more cloud computers",
+          "api_versions": [
+            "2020-09-30",
+            "2020-10-02"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-10-02"
+        },
+        {
+          "name": "rebuild-desktops",
+          "description": "Changes the image for one or more cloud computers",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "destructive",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "refresh-login-token",
+          "description": "Purge the logon credential",
+          "api_versions": [
+            "2020-10-02"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-10-02"
+        },
+        {
+          "name": "remove-file-permission",
+          "description": "Unshares a folder in a cloud disk",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "remove-user-from-desktop-group",
+          "description": "Removes specified authorized users from a shared cloud computer. Removed users can no longer connect to cloud computers within the shared cloud computer",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "renew-desktop-group",
+          "description": "Renews a subscription shared cloud computer",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "renew-desktops",
+          "description": "Renews one or more monthly subscription cloud computers",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "renew-network-packages",
+          "description": "Renews subscription premium Internet bandwidth",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "renew-virtual-bridge",
+          "description": "Renews a virtual bridge",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "report-session-status",
+          "description": "Reports the session status",
+          "api_versions": [
+            "2020-10-02"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-10-02"
+        },
+        {
+          "name": "reset-desktops",
+          "description": "Resets cloud computers within a shared cloud computer",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "destructive",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "reset-nas-default-mount-target",
+          "description": "Resets the mount point of a NAS file system",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "destructive",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "reset-password",
+          "description": "Resets a user password",
+          "api_versions": [
+            "2020-10-02"
+          ],
+          "risk": "destructive",
+          "preferred_api_version": "2020-10-02"
+        },
+        {
+          "name": "reset-snapshot",
+          "description": "Recovers disk data from a snapshot",
+          "api_versions": [
+            "2020-09-30",
+            "2020-10-02"
+          ],
+          "risk": "destructive",
+          "preferred_api_version": "2020-10-02"
+        },
+        {
+          "name": "revoke-coordinate-privilege",
+          "description": "Cancels the permissions for stream coordination operations",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "run-command",
+          "description": "Executes a PowerShell or Bat script on one or more cloud computers that run Windows",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "send-token-code",
+          "description": "Sends a logon verification code",
+          "api_versions": [
+            "2020-10-02"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-10-02"
+        },
+        {
+          "name": "send-verify-code",
+          "description": "Retrieves a verification code required when adding a premium office network to a Cloud Enterprise Network (CEN) instance that belongs to a different Alibaba Cloud account",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "set-desktop-group-scale-timer",
+          "description": "Sets an automatic scaling policy for multi-session cloud computers. Multi-session cloud computers allow multiple users to connect to the same cloud computer simultaneously, which reduces costs",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "set-desktop-group-timer",
+          "description": "Configures a scheduled start, stop, restart, or reset task for a cloud computer share",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "set-desktop-group-timer-status",
+          "description": "Sets the status of a scheduled task for a shared cloud computer, such as enabling or disabling the scheduled task",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "set-desktop-maintenance",
+          "description": "Sets the maintenance mode for cloud computers",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "set-directory-sso-status",
+          "description": "Enables or shuts down the single sign-on (SSO) feature for an AD-based office network",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "set-finger-print-template",
+          "description": "Sets a fingerprint template",
+          "api_versions": [
+            "2020-10-02"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-10-02"
+        },
+        {
+          "name": "set-finger-print-template-description",
+          "description": "Sets the description of a fingerprint template",
+          "api_versions": [
+            "2020-10-02"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-10-02"
+        },
+        {
+          "name": "set-identity-skill-auth",
+          "description": "Sets skill permissions for an identity",
+          "api_versions": [
+            "2021-06-02"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-06-02"
+        },
+        {
+          "name": "set-identity-skill-security",
+          "description": "Sets the security policy for identity skills",
+          "api_versions": [
+            "2021-06-02"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-06-02"
+        },
+        {
+          "name": "set-idp-metadata",
+          "description": "Uploads metadata for a SAML 2.0-based identity provider (IdP)",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "set-office-site-sso-status",
+          "description": "Enables or disables single sign-on (SSO) for an office network",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "set-tenant-skill-enabled",
+          "description": "Sets the enabling status of skills at the tenant level",
+          "api_versions": [
+            "2021-06-02"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2021-06-02"
+        },
+        {
+          "name": "start-desktops",
+          "description": "Starts one or more stopped cloud computers. After the operation is called successfully, the cloud computers enter the Running state",
+          "api_versions": [
+            "2020-09-30",
+            "2020-10-02"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-10-02"
+        },
+        {
+          "name": "stop-desktops",
+          "description": "Stops one or more running cloud computers. After the operation is called, the cloud computers enter the Stopped state",
+          "api_versions": [
+            "2020-09-30",
+            "2020-10-02"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-10-02"
+        },
+        {
+          "name": "stop-invocation",
+          "description": "Stop a process that executes the Cloud Assistant script in one or more cloud computers",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "tag-resources",
+          "description": "Adds tags to specified cloud desktops. This makes it easier to filter and manage cloud desktops by tag",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "transfer-task-approval-callback",
+          "description": "Submits the approval result for a file transfer task",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "unbind-config-group",
+          "description": "Unbinds configuration groups from resources",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "unbind-user-desktop",
+          "description": "Unbinds end users from cloud computers",
+          "api_versions": [
+            "2020-10-02"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-10-02"
+        },
+        {
+          "name": "unlock-virtual-mfa-device",
+          "description": "Unlocks a virtual multi-factor authentication (MFA) device that is in the LOCKED state",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "untag-resources",
+          "description": "Removes tags from cloud desktops. After a tag is removed, if the tag is not added to any cloud desktop, the tag is automatically deleted",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "update-fota-task",
+          "description": "Enables or disables the auto-push feature for an image update task",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "upload-image",
+          "description": "Uploads a custom Windows image",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "verify-cen",
+          "description": "Verifies whether the Cloud Enterprise Network (CEN) instance ID and the associated Alibaba Cloud account ID are correct, and whether CIDR block conflicts exist between the instance routes and the office network IPv4 CIDR block",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        },
+        {
+          "name": "verify-credential",
+          "description": "Verifies the credential used to unlock a local session on the client",
+          "api_versions": [
+            "2020-10-02"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-10-02"
+        },
+        {
+          "name": "wakeup-desktops",
+          "description": "Wakes up cloud computers from hibernation",
+          "api_versions": [
+            "2020-09-30"
+          ],
+          "risk": "mutation",
+          "preferred_api_version": "2020-09-30"
+        }
+      ]
+    }
+  ]
+}
