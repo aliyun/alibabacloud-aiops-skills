@@ -458,9 +458,10 @@ If the user explicitly names the operator or asks to skip interaction, output `O
 
 1. **Identify Operations** — list required transformations
 2. **Find Operators** — `python scripts/lookup_operator.py search "<operation>"`
-3. **Present Options** — show operator name, description, trade-offs
-4. **Get User Confirmation** — confirm operator and parameters, or emit the user-prompt confirmation line above
-5. **Implement** — use confirmed operator
+3. **Classify UDF Tasks by Data Shape** — for custom-function (UDF) tasks, classify data organization (single-table / grouped / two-table) and row cardinality (1→1, N→M, 1→0..N), then pick the UDF operator from the scenario table in `references/operators-and-modules/operator-selection-rules.md` Rule 5; never default to `apply`/`apply_chunk`
+4. **Present Options** — show operator name, description, trade-offs
+5. **Get User Confirmation** — confirm operator and parameters, or emit the user-prompt confirmation line above
+6. **Implement** — use confirmed operator
 
 **See:** `references/operators-and-modules/operator-selector.md` for detailed guidance.
 
@@ -472,11 +473,9 @@ Before finishing, validate:
 - [ ] Session created before operations
 - [ ] Session destroyed in `finally` block
 - [ ] No hardcoded credentials
-- [ ] Operator selection confirmed with user
+- [ ] Operator selection confirmed with user; UDF operator matches data shape (Rule 5 scenario table: organization + row cardinality)
 - [ ] Documentation answers cite the official docs URL first, or the local doc path if used as fallback or cross-check
-- [ ] Error handling with logview URL (remote)
-- [ ] `debug=True` used (local debug)
-- [ ] `MF_PYTHON_EXECUTABLE` set (custom runtime)
+- [ ] Scenario checks — remote: error handling with logview URL; local: `debug=True`; custom runtime: `MF_PYTHON_EXECUTABLE`
 
 ## Resources
 

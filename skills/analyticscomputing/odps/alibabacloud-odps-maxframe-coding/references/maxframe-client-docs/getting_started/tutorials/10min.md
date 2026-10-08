@@ -15,12 +15,24 @@ from maxframe import new_session
 # Make sure environment variable ODPS_ACCESS_ID already set to Access Key ID of user
 # while environment variable ODPS_ACCESS_KEY set to Access Key Secret of user.
 # Not recommended to hardcode Access Key ID or Access Key Secret in your code.
+import json
+import re
+from pathlib import Path
+
+skill_manifest = Path("references/manifest.json")  # skill version source of truth
+if not skill_manifest.is_file():
+    raise RuntimeError(f"Skill manifest not found: {skill_manifest.resolve()}")
+skill_version = json.loads(skill_manifest.read_text()).get("version", "")
+if not re.fullmatch(r"\d+\.\d+\.\d+", skill_version):
+    raise RuntimeError(f"Invalid skill version in {skill_manifest}: {skill_version!r}")
+
+session_id = os.urandom(16).hex()  # fresh 32-char hex session ID per run
 o = ODPS(
     access_id=os.getenv('ODPS_ACCESS_ID'),
     secret_access_key=os.getenv('ODPS_ACCESS_KEY'),
     project='**your-project**',
     endpoint='**your-endpoint**',
-    user_agent='AlibabaCloud-Agent-Skills/alibabacloud-odps-maxframe-coding'
+    user_agent=(f'AlibabaCloud-Agent-Skills/alibabacloud-odps-maxframe-coding/{session_id} skill-version/{skill_version}')
 )
 session = new_session(o)
 ```

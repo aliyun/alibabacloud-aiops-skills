@@ -18,6 +18,8 @@ For processing large datasets, prioritize batch operations:
 - Use `.mf.map_reduce()` for map-reduce patterns
 - Process data in chunks to distribute workload
 
+Batch-first applies only when the task fits batch semantics. When it does not (one row expands to many, whole groups needed at once, two tables must be paired), choose the UDF operator by data shape instead — see Rule 5.
+
 ### 3. Pandas Compatibility First
 
 MaxFrame provides pandas-compatible APIs. When multiple options exist, prefer pandas-compatible operators that users are already familiar with.
@@ -30,13 +32,37 @@ When recommending operators, always provide fallback options:
 - Alternative 2 (if primary is not supported on current engine)
 - UDF approach (if no native operator is available)
 
-### 5. UDF Fallback for Unsupported Operators
+### 5. UDF Operator Selection by Scenario
 
-When an operator is not supported or has significant limitations, provide a UDF-based solution:
-- Use `.apply()` with a custom function
-- Use `.mf.apply_chunk()` for distributed UDF execution
-- Prefer `dataframe.mf.apply_chunk` than `dataframe.apply` than `series.apply`.
-- Document any performance implications of the UDF approach
+When no native operator fits, recommend a UDF operator by **data shape**, not by a flat performance ranking. UDF operators differ in what the function receives (scalar / row / chunk / whole group / chunk pairs) and in how row counts change (1→1, N→M, 1→0..N). Pick the operator whose semantics match the task first; use performance only to break ties between operators with the same semantics.
+
+#### Step 1: Classify Data Organization
+
+- **Single table** — one input DataFrame/Series
+- **Grouped** — logic runs per group (`groupby` keys)
+- **Two tables** — logic pairs or compares rows from two DataFrames
+
+#### Step 2: Match Row Cardinality and Semantics
+
+| Branch | Task shape | Recommended operator | Key notes |
+|--------|-----------|----------------------|-----------|
+| Single | Element-wise 1→1 (value → value) | `Series.map` / `DataFrame.map` | Dict lookup via `Series.map(dict)` is native, not a UDF |
+| Single | Row-wise scalar (1 row → 1 value) | `DataFrame.apply(func, axis=1)` | Avoid `Series.apply` (generates a join, see below) |
+| Single | Batch N→M: vectorizable logic, batch inference, amortized per-call init | `DataFrame.mf.apply_chunk(func, batch_rows=)` | func receives a pandas DataFrame of ≤ `batch_rows`; if type inference fails, specify `output_type` + `dtypes`/`dtype` |
+| Single | One row → 0..N rows (explode / generate) | `DataFrame.mf.flatmap(func, dtypes=)` | func returns an iterable per row; `dtypes` is REQUIRED — flatmap has no type inference |
+| Grouped | Output keeps input shape | `GroupBy.transform(func)` | like-indexed result |
+| Grouped | Custom aggregation: map rows, then aggregate by key | `DataFrame.mf.map_reduce(mapper, reducer, group_cols=)` | Shortcut for `apply_chunk(mapper).groupby(group_cols).mf.apply_chunk(reducer)`; add `combiner` to pre-aggregate mapper output and cut shuffle on high-cardinality keys; reducer may be a class with `__call__(batch, end=False)` + `close()` |
+| Grouped | Batch processing inside large groups, in-group ordering | `GroupBy.mf.apply_chunk(func, batch_rows=, order_cols=)` | A group may be split into multiple batches; do not assume the whole group arrives in one call |
+| Grouped | Whole group needed in one call | `GroupBy.apply(func)` | Most flexible, slowest; last resort |
+| Two tables | Pairwise comparison / custom join logic | `DataFrame.mf.cartesian_chunk(other, func)` | func receives one chunk from each side and runs on EVERY chunk pair (cartesian); if inference fails, `output_type` + `dtypes` are required. Not covered by `lookup_operator.py` — see `references/practical-guides/udf-development-guide.md` |
+
+#### Performance Tie-breakers (Same Semantics Only)
+
+- When a task can be expressed both row-wise (`DataFrame.apply`) and batch-wise (`mf.apply_chunk`), prefer batch-wise on large data.
+- Prefer vectorized pandas/numpy inside the UDF over Python row loops.
+- Size CPU/memory/GU to batch size with `with_running_options` (see `key-modules.md`).
+
+After selecting the operator, retrieve its signature and examples before writing code: `python scripts/lookup_operator.py info <operator> -s signature` and `-s examples`.
 
 ## Engine Support Priority
 
@@ -105,7 +131,7 @@ Sections can be empty.
 1. **Search** for operators matching the task description
 2. **Validate** operator existence and engine support
 3. **Check for known issues** (e.g., Series.apply generates joins)
-4. **Prepare alternative options** with different operators or UDF approaches
+4. **Prepare alternative options** with different operators or UDF approaches — UDF alternatives must come from the same branch of the Rule 5 scenario table (same data shape), never from a different cardinality family (e.g., do not offer `apply_chunk` as the fallback for a one-row-to-many task)
 5. **Retrieve** only the sections needed (signature, examples, etc.)
 6. **Recommend** with primary choice and fallbacks
 
@@ -132,7 +158,7 @@ grep "rolling" references/maxframe-client-docs/user_guide/dataframe/supported_pd
 - **Always verify** operator existence before recommending
 - **Check engine support** in supported_pd_apis.md for compatibility
 - **Provide alternatives** - always give backup options if primary has limitations
-- **Include UDF fallback** - provide custom function approach when native operators are unavailable
+- **Include UDF fallback** - provide custom function approach when native operators are unavailable, selected via the Rule 5 scenario table
 - **Use section extraction** to avoid loading large documentation files
 - **Reference actual documentation** for accurate information
 

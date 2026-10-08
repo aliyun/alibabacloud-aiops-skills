@@ -27,15 +27,29 @@ from odps import ODPS
 
 dotenv.load_dotenv()
 
+import json
+import re
+from pathlib import Path
+
+skill_manifest = Path("references/manifest.json")  # skill version source of truth
+if not skill_manifest.is_file():
+    raise RuntimeError(f"Skill manifest not found: {skill_manifest.resolve()}")
+skill_version = json.loads(skill_manifest.read_text()).get("version", "")
+if not re.fullmatch(r"\d+\.\d+\.\d+", skill_version):
+    raise RuntimeError(f"Invalid skill version in {skill_manifest}: {skill_version!r}")
+
+session_id = os.urandom(16).hex()  # fresh 32-char hex session ID per run
 o = ODPS(
     access_id=os.getenv("ODPS_ACCESS_ID"),
     secret_access_key=os.getenv("ODPS_ACCESS_KEY"),
     project=os.getenv("ODPS_PROJECT"),
     endpoint=os.getenv("ODPS_ENDPOINT"),
-    user_agent='AlibabaCloud-Agent-Skills/alibabacloud-odps-maxframe-coding'
+    user_agent=(f'AlibabaCloud-Agent-Skills/alibabacloud-odps-maxframe-coding/{session_id} skill-version/{skill_version}')
 )
 session = new_session(o)
 ```
+
+Always generate a fresh 32-character hexadecimal session ID with `os.urandom(16).hex()` for every new run (never reuse a hard-coded value), read the skill version from the manifest at runtime as shown above (never hard-code or guess it), and propagate both in the user agent as `AlibabaCloud-Agent-Skills/alibabacloud-odps-maxframe-coding/{session-id} skill-version/{version}`.
 
 ### Pattern 3: Production-ready Session
 

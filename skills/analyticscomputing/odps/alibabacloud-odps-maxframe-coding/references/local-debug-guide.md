@@ -57,12 +57,25 @@ import pandas as pd
 # Initialize ODPS object
 # Note: In local debug mode, ODPS object is only used for schema validation
 # Actual credentials are not used for execution
+import os
+import json
+import re
+from pathlib import Path
+
+skill_manifest = Path("references/manifest.json")  # skill version source of truth
+if not skill_manifest.is_file():
+    raise RuntimeError(f"Skill manifest not found: {skill_manifest.resolve()}")
+skill_version = json.loads(skill_manifest.read_text()).get("version", "")
+if not re.fullmatch(r"\d+\.\d+\.\d+", skill_version):
+    raise RuntimeError(f"Invalid skill version in {skill_manifest}: {skill_version!r}")
+
+session_id = os.urandom(16).hex()  # fresh 32-char hex session ID per run
 o = ODPS(
     access_id=os.getenv('ODPS_ACCESS_ID', 'dummy_access_id'),
     secret_access_key=os.getenv('ODPS_ACCESS_KEY', 'dummy_secret_key'),
     project=os.getenv('ODPS_PROJECT', 'dummy_project'),
     endpoint=os.getenv('ODPS_ENDPOINT', 'dummy_endpoint'),
-    user_agent='AlibabaCloud-Agent-Skills/alibabacloud-odps-maxframe-coding'
+    user_agent=(f'AlibabaCloud-Agent-Skills/alibabacloud-odps-maxframe-coding/{session_id} skill-version/{skill_version}')
 )
 
 # Enable local debug mode

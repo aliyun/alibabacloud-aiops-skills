@@ -175,7 +175,7 @@ python .../lookup_operator.py info DataFrame.merge --section examples
 ### Step 5: Analyze and Recommend
 
 Based on the retrieved information:
-1. **Select the best operators** for the user's task
+1. **Select the best operators** for the user's task — for custom-function (UDF) tasks, first classify the data shape per the scenario table in `operator-selection-rules.md` Rule 5
 2. **Consider performance implications** (e.g., vectorized operations vs apply)
 3. **Suggest operator combinations** for complex tasks
 4. **Provide clear usage examples** with relevant parameters
@@ -251,7 +251,8 @@ Be familiar with these MaxFrame operator categories:
 
 **MaxFrame-Specific (mf) Operations:**
 - Distributed processing: `mf.map_reduce`, `mf.apply_chunk`, `mf.rebalance`, `mf.reshuffle`
-- Complex operations: `mf.flatmap`, `mf.collect_kv`, `mf.extract_kv`
+- Complex operations: `mf.flatmap`, `mf.cartesian_chunk`, `mf.collect_kv`, `mf.extract_kv`
+- UDF / custom functions: never default to `apply`/`apply_chunk`. First classify the data shape (single-table vs grouped vs two-table; 1→1 vs N→M vs 1→N rows) with the scenario table in `operator-selection-rules.md` Rule 5, then recommend
 
 **Time Series Operations:**
 - Resampling: `resample`
@@ -315,26 +316,28 @@ All four operators are available in MaxFrame.
 
 **Signature**:
 ```python
-DataFrame.mf.apply_chunk(func, args=(), meta=None, **kwargs)
+DataFrame.mf.apply_chunk(func, batch_rows=None, dtypes=None, output_type=None, args=(), **kwargs)
 ```
 
 **Parameters**:
-- func: The function to apply to each chunk
-- args: Additional positional arguments to pass to func
-- meta: Metadata for the output (required for certain operations)
-- kwargs: Additional keyword arguments
+- func: The function to apply to each chunk; receives a pandas DataFrame of at most `batch_rows` rows
+- batch_rows: Expected number of rows per chunk
+- output_type / dtypes: Output type (`'dataframe'` or `'series'`) and column dtypes, required when type inference fails
+- args / kwargs: Extra arguments passed to func
 
 **Example**:
 ```python
-import maxframe as mf
+import maxframe.dataframe as md
 
 # Read data
-df = mf.read_parquet('path/to/data.parquet')
+df = md.read_parquet('path/to/data.parquet')
 
 # Apply custom function to chunks
 result = df.mf.apply_chunk(
     lambda chunk: chunk.groupby('category').sum(),
-    meta={'value': 'float64'}
+    batch_rows=1024,
+    output_type='dataframe',
+    dtypes={'value': 'float64'},
 )
 ```
 

@@ -2,6 +2,19 @@
 
 This guide covers best practices and patterns for developing User-Defined Functions (UDFs) in MaxFrame.
 
+## Choosing the Right UDF Operator
+
+Pick the UDF operator by data shape BEFORE writing any function. Full decision table and tie-breakers: `references/operators-and-modules/operator-selection-rules.md` Rule 5.
+
+- Element-wise / row-wise 1→1: `Series.map`, `DataFrame.map`, `DataFrame.apply(axis=1)`
+- Batch N→M (vectorized logic, model inference, amortized init): `df.mf.apply_chunk`
+- One row → 0..N rows: `df.mf.flatmap` (requires explicit `dtypes`; no type inference)
+- Grouped, output keeps input shape: `groupby.transform`
+- Grouped custom aggregation: `df.mf.map_reduce` (add `combiner` for high-cardinality keys)
+- Grouped batch processing / in-group ordering: `groupby(...).mf.apply_chunk(order_cols=...)`
+- Whole group needed in one call: `groupby.apply` (slow, last resort)
+- Two-table pairwise logic: `df.mf.cartesian_chunk` (see below)
+
 ## Resource Reuse in UDFs
 
 In some UDF scenarios, you may need to create or destroy resources multiple times (e.g., initializing database connections, loading models). You can leverage Python's function parameter default value initialization behavior to achieve resource reuse.
@@ -120,7 +133,7 @@ Without network access enabled, this will fail with:
 ConnectionRefusedError: [Errno 111] Connection refused
 ```
 
-**Solution:** Enable network access through the network开通 process. Contact your administrator for network configuration.
+**Solution:** Enable network access through the network activation process. Contact your administrator for network configuration.
 
 ## UDF Timeout Handling
 
@@ -160,6 +173,35 @@ For AI Functions, set memory in the function call:
 ```python
 result = ai_function(..., running_options={"memory": "8GB"})
 ```
+
+## Pairwise Processing with cartesian_chunk
+
+`df.mf.cartesian_chunk(other, func)` applies `func` to **every pair of chunks** from the two inputs (cartesian product of chunks, confirmed by the DPE tiler). `func` receives two pandas DataFrames — one chunk from the left input, one from the right — and returns a DataFrame or Series.
+
+Use it for two-table logic that `merge`/`join` cannot express, e.g. scoring every row of table A against every candidate row of table B.
+
+```python
+def score_pairs(left_chunk, right_chunk):
+    # left_chunk / right_chunk: pandas DataFrames from each input
+    merged = left_chunk.merge(right_chunk, how="cross")
+    merged["score"] = (merged["value_a"] - merged["value_b"]).abs()
+    return merged[["id_a", "id_b", "score"]]
+
+
+result = df_a.mf.cartesian_chunk(
+    df_b,
+    score_pairs,
+    output_type="dataframe",
+    dtypes={"id_a": "str", "id_b": "str", "score": "float64"},
+)
+```
+
+**Notes:**
+
+- Signature: `df.mf.cartesian_chunk(other, func, output_type=..., dtypes=..., args=(), **kwargs)`. This operator is NOT covered by `lookup_operator.py` or the bundled API docs.
+- Type inference runs `func` on 2-row mock inputs; if that fails, `output_type="dataframe"` + `dtypes` are required.
+- Default `memory_scale` is 2.0. Attach `with_running_options` to `func` to size resources.
+- The number of `func` invocations is (#left chunks × #right chunks) and output can grow quadratically — filter aggressively inside `func`.
 
 ## Debugging UDF Errors
 
