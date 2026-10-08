@@ -1,0 +1,32 @@
+{
+  "dashboardName": "example-markdownpro",
+  "displayName": "Markdown note example",
+  "attribute": {
+    "type": "grid"
+  },
+  "charts": [
+    {
+      "title": "markdownpro",
+      "type": "markdownpro",
+      "display": {
+        "version": 2,
+        "xPos": 0,
+        "yPos": 0,
+        "width": 24,
+        "height": 8,
+        "basicOptions": {
+          "displayName": "Markdown note",
+          "showTitle": true,
+          "showBorder": true,
+          "showBackground": true,
+          "showTime": false
+        },
+        "markdownStr": "### Service overview\n\n- Review the request trend.\n- Compare traffic across services.\n\n**Data:** illustrative values for chart examples."
+      },
+      "search": {
+        "chartQueries": []
+      },
+      "action": {}
+    }
+  ]
+}

@@ -1,0 +1,74 @@
+{
+  "dashboardName": "example-linepro",
+  "displayName": "Request trend example",
+  "attribute": {
+    "type": "grid"
+  },
+  "charts": [
+    {
+      "title": "linepro",
+      "type": "linepro",
+      "display": {
+        "version": 2,
+        "xPos": 0,
+        "yPos": 0,
+        "width": 24,
+        "height": 8,
+        "basicOptions": {
+          "displayName": "Request trend",
+          "showTitle": true,
+          "showBorder": true,
+          "showBackground": true,
+          "showTime": true
+        },
+        "standardOption": {
+          "format": "none",
+          "decimals": 0
+        },
+        "yAxisOption": {
+          "show": true,
+          "position": 3,
+          "label": "Requests",
+          "softMin": 0
+        },
+        "isTimeSeries": true,
+        "queryOptionMap": {
+          "A": {
+            "xAxisKey": "time",
+            "yAxisKeys": [
+              "requests"
+            ]
+          }
+        },
+        "graphOptions": {
+          "seriesStyle": "lines",
+          "showPoint": "always"
+        },
+        "xAxisOption": {
+          "show": true,
+          "timeRangeMode": "dataTime",
+          "label": "Time"
+        },
+        "legendOption": {
+          "show": false
+        }
+      },
+      "search": {
+        "chartQueries": [
+          {
+            "name": "A",
+            "datasource": "logstore",
+            "region": "cn-hangzhou",
+            "project": "example-project",
+            "logstore": "example-logstore",
+            "query": "* | select cast(to_unixtime(now()) as bigint) - minutes_ago * 60 as time, requests from unnest(array[20,15,10,5,0], array[32,48,41,65,59]) as t(minutes_ago,requests) order by time"
+          }
+        ],
+        "start": "-3600s",
+        "end": "now",
+        "dataSourceType": "mixed"
+      },
+      "action": {}
+    }
+  ]
+}

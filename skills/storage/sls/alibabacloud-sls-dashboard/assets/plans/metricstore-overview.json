@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "dashboard": {
+    "displayName": "metricstore-overview"
+  },
+  "sources": [
+    {
+      "id": "logs",
+      "type": "metricstore",
+      "region": "cn-hangzhou",
+      "project": "example-project",
+      "name": "example-logstore"
+    }
+  ],
+  "charts": [
+    {
+      "id": "traffic",
+      "title": "Request trend",
+      "type": "linepro",
+      "layout": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 8
+      },
+      "queries": [
+        {
+          "name": "requests",
+          "source": "logs",
+          "query": "rate(http_requests_total[5m])",
+          "queryType": "range",
+          "interval": "60s"
+        }
+      ]
+    }
+  ]
+}

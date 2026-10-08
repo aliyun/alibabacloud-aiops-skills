@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "dashboard": {
+    "displayName": "storeview-overview"
+  },
+  "sources": [
+    {
+      "id": "logs",
+      "type": "logstore_storeview",
+      "region": "cn-hangzhou",
+      "project": "example-project",
+      "name": "example-logstore"
+    }
+  ],
+  "charts": [
+    {
+      "id": "traffic",
+      "title": "Request trend",
+      "type": "linepro",
+      "layout": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 8
+      },
+      "queries": [
+        {
+          "name": "requests",
+          "source": "logs",
+          "query": "* | select __time__ - __time__ % 60 as time, count(*) as requests group by time order by time limit 10000",
+          "fields": [
+            {
+              "name": "time",
+              "type": "time"
+            },
+            {
+              "name": "requests",
+              "type": "number"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

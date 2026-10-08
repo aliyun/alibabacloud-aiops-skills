@@ -1,0 +1,51 @@
+{
+  "dashboardName": "example-tablepro",
+  "displayName": "Service request table example",
+  "attribute": {
+    "type": "grid"
+  },
+  "charts": [
+    {
+      "title": "tablepro",
+      "type": "tablepro",
+      "display": {
+        "version": 2,
+        "xPos": 0,
+        "yPos": 0,
+        "width": 24,
+        "height": 8,
+        "basicOptions": {
+          "displayName": "Service request table",
+          "showTitle": true,
+          "showBorder": true,
+          "showBackground": true,
+          "showTime": true
+        },
+        "tableOptions": {
+          "showMode": "pagination",
+          "pageSize": 5
+        },
+        "standardOption": {
+          "format": "none",
+          "decimals": 0
+        }
+      },
+      "search": {
+        "chartQueries": [
+          {
+            "name": "A",
+            "datasource": "logstore",
+            "region": "cn-hangzhou",
+            "project": "example-project",
+            "logstore": "example-logstore",
+            "query": "* | select service, requests from unnest(array['API','Worker','Web'], array[40,25,15]) as t(service,requests) order by requests desc"
+          }
+        ],
+        "start": "-3600s",
+        "end": "now",
+        "dataSourceType": "mixed"
+      },
+      "action": {}
+    }
+  ]
+}

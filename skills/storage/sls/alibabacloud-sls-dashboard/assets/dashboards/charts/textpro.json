@@ -1,0 +1,35 @@
+{
+  "dashboardName": "example-textpro",
+  "displayName": "Rich text note example",
+  "attribute": {
+    "type": "grid"
+  },
+  "charts": [
+    {
+      "title": "textpro",
+      "type": "textpro",
+      "display": {
+        "version": 2,
+        "xPos": 0,
+        "yPos": 0,
+        "width": 24,
+        "height": 8,
+        "basicOptions": {
+          "displayName": "Rich text note",
+          "showTitle": true,
+          "showBorder": true,
+          "showBackground": true,
+          "showTime": false
+        },
+        "contentOption": {
+          "mode": "html",
+          "content": "<h3>Runbook</h3><p>Owner: <strong>Platform team</strong></p><p>Review traffic before investigating errors.</p>"
+        }
+      },
+      "search": {
+        "chartQueries": []
+      },
+      "action": {}
+    }
+  ]
+}

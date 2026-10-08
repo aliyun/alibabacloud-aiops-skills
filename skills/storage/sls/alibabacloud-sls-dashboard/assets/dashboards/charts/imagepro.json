@@ -1,0 +1,45 @@
+{
+  "dashboardName": "example-imagepro",
+  "displayName": "Static image example",
+  "attribute": {
+    "type": "grid"
+  },
+  "charts": [
+    {
+      "title": "imagepro",
+      "type": "imagePro",
+      "display": {
+        "version": 2,
+        "xPos": 0,
+        "yPos": 0,
+        "width": 24,
+        "height": 8,
+        "basicOptions": {
+          "displayName": "Static image",
+          "showTitle": true,
+          "showBorder": true,
+          "showBackground": true,
+          "showTime": false
+        },
+        "imageOption": {
+          "imageSrc": "https://img.alicdn.com/imgextra/i4/O1CN01hBvNoN24ZXwG5RKdT_!!6000000007405-0-tps-502-502.jpg",
+          "imageAlt": "Example illustration",
+          "imageFill": "scale"
+        }
+      },
+      "search": {
+        "chartQueries": [
+          {
+            "name": "A",
+            "datasource": "builtin",
+            "type": "random_time_line"
+          }
+        ],
+        "start": "-900s",
+        "end": "now",
+        "dataSourceType": "current"
+      },
+      "action": {}
+    }
+  ]
+}

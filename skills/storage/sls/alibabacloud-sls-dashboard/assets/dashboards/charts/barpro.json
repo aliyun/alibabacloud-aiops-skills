@@ -1,0 +1,73 @@
+{
+  "dashboardName": "example-barpro",
+  "displayName": "Service comparison example",
+  "attribute": {
+    "type": "grid"
+  },
+  "charts": [
+    {
+      "title": "barpro",
+      "type": "barpro",
+      "display": {
+        "version": 2,
+        "xPos": 0,
+        "yPos": 0,
+        "width": 24,
+        "height": 8,
+        "basicOptions": {
+          "displayName": "Service comparison",
+          "showTitle": true,
+          "showBorder": true,
+          "showBackground": true,
+          "showTime": true
+        },
+        "queryOptionMap": {
+          "A": {
+            "xAxisKey": "service",
+            "yAxisKeys": [
+              "requests"
+            ]
+          }
+        },
+        "barOptions": {
+          "orientation": "vertical",
+          "showValues": "always",
+          "labelLocation": "xAxis"
+        },
+        "xAxisOption": {
+          "show": true,
+          "label": "Service"
+        },
+        "yAxisOption": {
+          "show": true,
+          "position": 3,
+          "label": "Requests",
+          "softMin": 0
+        },
+        "legendOption": {
+          "show": false
+        },
+        "standardOption": {
+          "format": "none",
+          "decimals": 0
+        }
+      },
+      "search": {
+        "chartQueries": [
+          {
+            "name": "A",
+            "datasource": "logstore",
+            "region": "cn-hangzhou",
+            "project": "example-project",
+            "logstore": "example-logstore",
+            "query": "* | select service, requests from unnest(array['API','Worker','Web'], array[40,25,15]) as t(service,requests) order by requests desc"
+          }
+        ],
+        "start": "-3600s",
+        "end": "now",
+        "dataSourceType": "mixed"
+      },
+      "action": {}
+    }
+  ]
+}

@@ -1,0 +1,516 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SLS dashboard build plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "dashboard",
+    "sources",
+    "charts"
+  ],
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "dashboard": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "displayName"
+      ],
+      "properties": {
+        "displayName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string"
+        },
+        "layout": {
+          "enum": [
+            "grid",
+            "free"
+          ]
+        }
+      }
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/source"
+      }
+    },
+    "controls": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/control"
+      }
+    },
+    "charts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/chart"
+      }
+    }
+  },
+  "$defs": {
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "region",
+        "project",
+        "name"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "enum": [
+            "logstore",
+            "metricstore",
+            "metricsql",
+            "logstore_storeview",
+            "metricstore_storeview"
+          ]
+        },
+        "region": {
+          "type": "string",
+          "minLength": 1
+        },
+        "project": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "type"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "enum": [
+            "string",
+            "number",
+            "time",
+            "boolean",
+            "object",
+            "unknown"
+          ]
+        }
+      }
+    },
+    "query": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "source",
+        "query"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "query": {
+          "type": "string",
+          "minLength": 1
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "type"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "type": {
+                "enum": [
+                  "string",
+                  "number",
+                  "time",
+                  "boolean",
+                  "object",
+                  "unknown"
+                ]
+              }
+            }
+          }
+        },
+        "queryType": {
+          "enum": [
+            "range",
+            "instant"
+          ]
+        },
+        "interval": {
+          "type": "string",
+          "minLength": 1
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "format": {
+          "enum": [
+            "time_series",
+            "table"
+          ]
+        },
+        "legendFormat": {
+          "type": "string"
+        },
+        "hide": {
+          "type": "boolean"
+        }
+      }
+    },
+    "control": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "mode",
+        "key"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "mode": {
+          "enum": [
+            "filter",
+            "token",
+            "adhoc"
+          ]
+        },
+        "key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "aliases": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "defaults": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "query": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "source",
+            "query"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "source": {
+              "type": "string",
+              "minLength": 1
+            },
+            "query": {
+              "type": "string",
+              "minLength": 1
+            },
+            "fields": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "name",
+                  "type"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "type": {
+                    "enum": [
+                      "string",
+                      "number",
+                      "time",
+                      "boolean",
+                      "object",
+                      "unknown"
+                    ]
+                  }
+                }
+              }
+            },
+            "queryType": {
+              "enum": [
+                "range",
+                "instant"
+              ]
+            },
+            "interval": {
+              "type": "string",
+              "minLength": 1
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "format": {
+              "enum": [
+                "time_series",
+                "table"
+              ]
+            },
+            "legendFormat": {
+              "type": "string"
+            },
+            "hide": {
+              "type": "boolean"
+            }
+          }
+        },
+        "multiSelect": {
+          "type": "boolean"
+        },
+        "includeAll": {
+          "type": "boolean"
+        },
+        "allValue": {
+          "type": "string"
+        },
+        "customTemplate": {
+          "type": "string"
+        },
+        "valueField": {
+          "type": "string",
+          "minLength": 1
+        },
+        "inheritFilter": {
+          "type": "boolean"
+        }
+      }
+    },
+    "chart": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "type",
+        "layout"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "layout": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "x",
+            "y",
+            "w",
+            "h"
+          ],
+          "properties": {
+            "x": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "y": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "w": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "h": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "queries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "source",
+              "query"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source": {
+                "type": "string",
+                "minLength": 1
+              },
+              "query": {
+                "type": "string",
+                "minLength": 1
+              },
+              "fields": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "name",
+                    "type"
+                  ],
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "type": {
+                      "enum": [
+                        "string",
+                        "number",
+                        "time",
+                        "boolean",
+                        "object",
+                        "unknown"
+                      ]
+                    }
+                  }
+                }
+              },
+              "queryType": {
+                "enum": [
+                  "range",
+                  "instant"
+                ]
+              },
+              "interval": {
+                "type": "string",
+                "minLength": 1
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "format": {
+                "enum": [
+                  "time_series",
+                  "table"
+                ]
+              },
+              "legendFormat": {
+                "type": "string"
+              },
+              "hide": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "control": {
+          "type": "string",
+          "minLength": 1
+        },
+        "display": {
+          "type": "object"
+        },
+        "search": {
+          "type": "object"
+        },
+        "transformers": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "config": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "stat": {
+              "type": "object"
+            },
+            "pie": {
+              "type": "object"
+            },
+            "gauge": {
+              "type": "object"
+            },
+            "agg": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    }
+  }
+}
