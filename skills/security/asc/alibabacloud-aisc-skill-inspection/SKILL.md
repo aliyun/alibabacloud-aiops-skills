@@ -1,13 +1,22 @@
 ---
 name: alibabacloud-aisc-skill-inspection
-description: "Submit Alibaba Cloud AISC Skill file security scans, poll scan tasks, diagnose API or upload failures, and interpret scan reports for malicious code, prompt injection, hardcoded credentials, sensitive data, risky configuration, and other Skill package security findings. Use when the user asks whether a Skill package or Skill file is safe, wants to scan/check/detect a Skill package, provides one or more Skill download URLs for AISC security detection, asks to run or poll CreateSkillFileCheck/ListSubTasks, asks about check-report.json or rootTaskId status, needs help with permission/parameter/throttling/system scan errors, or needs to choose between multiple candidate Skill files for security scanning. Trigger phrases include AISC scan, Skill security check, Skill file check, Skill 安全检测, Skill 文件安全扫描, 扫描 Skill 包, 检测 Skill 是否安全, and 检查 Skill 文件有没有恶意代码/敏感凭据/prompt 注入."
+description: "使用阿里云 AISC 做 Skill 安全检查：提交扫描、查询 rootTaskId、解读 check-report.json 风险报告、诊断 AISC Skill 检测报错。用户问“这个 Skill 安不安全”“能放心安装吗”“有没有恶意代码、敏感凭据或提示词注入”时使用。也处理候选 Skill 选择和缺少下载链接的安全检测请求，先加载本 Skill 再澄清输入。普通 Skill 编写、安装或无安全意图的泛泛请求不触发。"
 ---
 
 # AISC Skill File Security Check
 
-Help users submit Skill files to Alibaba Cloud Agent Security Center (AISC) for security scanning, poll detection tasks, and explain the returned results.
+Help users submit Skill archives to Alibaba Cloud Agent Security Center (AISC) for security scanning, poll detection tasks, and explain the returned results.
 
 Use this Skill broadly for Skill security detection. If the user asks whether a Skill package is safe, whether it contains malicious code, prompt injection, hardcoded credentials, sensitive data, or risky configuration, or asks how to run, poll, diagnose, or interpret an AISC Skill scan, use this Skill.
+
+## Natural Language Activation
+
+Use this Skill for an explicit or implicit **Skill security** request; the user does not need to name AISC, this Skill, or the Python script. Load `SKILL.md` before deciding which inputs are missing or asking a follow-up. Selecting/loading the Skill is separate from submitting a cloud request.
+
+- A clear safety question such as “这个 Skill 安不安全”, “能放心安装吗”, or “有没有恶意代码/敏感凭据/提示词注入” activates this Skill.
+- With a clear target and download URL, run the official wrapper directly; do not ask the user to repeat authorization or supply optional file names.
+- With a missing URL, missing task ID, unclear AISC operation, or unselected candidates, load this Skill first, ask for only the missing input, and wait before any cloud call.
+- Generic Skill writing, installation, documentation, and “处理一下 Skill” without a security intent are outside this Skill's scope.
 
 ## Critical Operating Rules
 
@@ -27,6 +36,14 @@ The Skill calls two AISC OpenAPI operations:
 - `ListSubTasks`: poll sub-task results for the returned `rootTaskId`.
 
 The Python wrapper is [scripts/skill_file_check.py](scripts/skill_file_check.py). It supports `submit`, `poll`, and `run` subcommands. `submit` and `run` automatically split more than 10 files into multiple API-sized batches and return one aggregate report.
+
+## AISC Endpoint Selection
+
+- Use `https://aisc.cn-shanghai.aliyuncs.com` by default.
+- If the user explicitly specifies an overseas environment, Singapore, or the Singapore endpoint, pass `--endpoint https://aisc.ap-southeast-1.aliyuncs.com` before the subcommand. An explicit Shanghai endpoint selects Shanghai.
+- Only these two HTTPS endpoints are accepted. Never use a user-provided Skill download URL or another host as the authenticated AISC API endpoint.
+
+For Singapore, place the option before `run`, `submit`, or `poll`: `python3 scripts/skill_file_check.py --endpoint https://aisc.ap-southeast-1.aliyuncs.com run --files '...'`.
 
 ## URL Handling Rules
 
@@ -55,12 +72,17 @@ Security rules:
 - Never read, echo, print, or ask the user to paste credential values.
 - Never put AccessKey, AccessKeySecret, STS token, or passwords in prompts, logs, command lines, reports, or final answers.
 - If credentials are missing, ask the user to configure credentials outside this conversation and rerun the scan after credentials are available.
+- Credential secrecy applies to all intermediate tool output as well as final answers. Do not print credential values to stdout/stderr, debug logs, markdown artifacts, JSON reports, or chat.
+- Do not write custom credential-inspection scripts. Never print, serialize, inspect, or expose `CredentialClient`, credential objects, config objects, `os.environ`, `env`, `printenv`, `access_key_id`, `access_key_secret`, `security_token`, `AccessKeyId`, `AccessKeySecret`, or `SecurityToken` values. Forbidden examples include `vars(...)`, `.__dict__`, `dir(...)`, `repr(...)`, `to_map()`, `get_credential()`, or any inline Python/shell command whose purpose is to reveal credential fields.
+- The only allowed credential check is a non-sensitive presence check that constructs the default credential client and prints a fixed success/failure marker, never the credential object or any of its fields.
 
 Optional non-sensitive credential presence check:
 
 ```bash
 python3 -c "from alibabacloud_credentials.client import Client as CredentialClient; CredentialClient(); print('Credentials OK')"
 ```
+
+If that exact style of check fails, report that the default credential chain is unavailable and stop. Do not add extra debugging that displays credential internals.
 
 ## RAM Permissions
 
@@ -75,7 +97,7 @@ When an API call fails with a permission error, tell the user that both permissi
 
 Required input:
 
-- `Files[].download_url`: public download URL of the Skill file. Pass it as-is to AISC.
+- `Files[].download_url`: public download URL of a real Skill archive: ZIP, TAR, or GZIP-compressed TAR (`.tar.gz`/`.tgz`). Pass it as-is to AISC. A raw `SKILL.md`, HTML page, or JSON download descriptor is not a supported archive. The backend validates content, so changing `file_name` to end in `.zip` does not make an unsupported file valid. An archive may have a signed or extensionless download URL; never fetch or reject it solely by its URL suffix.
 
 Optional input:
 
@@ -91,32 +113,36 @@ Input rules:
 - Ask a clarification question when the required URL is missing, the intent is too unclear to know whether the user wants Skill security detection, multiple candidate files are mentioned without a clear target, or the user explicitly asks you to confirm parameters before execution.
 - If more than 10 files are provided, do not ask the user to split or confirm batching. Pass all URLs to [scripts/skill_file_check.py](scripts/skill_file_check.py); it splits them into batches of at most 10, calls AISC for each batch, and returns one aggregate report.
 
-## Evaluation Execution Contract
+## Scan Execution Contract
 
-These rules keep the Skill behavior aligned with automated AgentHub evaluations and are also safe defaults for users:
+Use these rules for real AISC scans:
 
-- Use the official wrapper exactly as the cloud interaction surface: `python3 scripts/skill_file_check.py ...`. Do not write alternate Python, shell, curl, SDK, or retry scripts for AISC calls.
+- Use the official wrapper exactly as the cloud interaction surface: `python3 scripts/skill_file_check.py ...`. Do not write alternate Python, shell, curl, SDK, credential-debugging, or retry scripts for AISC calls.
 - Unless the user explicitly asks for `submit`/`poll` separately, use `run` for end-to-end scans and include `--output ./check-report.json`.
 - If the user asks for a local JSON report, `check-report.json`, `poll.status`, task count, artifact verification, or any final answer based on report fields, always include `--output ./check-report.json` in the command and then read that JSON report.
+- For separate submission, include `submit --output ./submit-report.json` and read that file before polling. The official `--output` option writes JSON separately from diagnostic stderr. Never use `2>&1 | tee ...json`, edit the official report, or create a replacement report to satisfy an artifact check. Diagnostic logs may be saved separately.
 - If the user asks for two steps, first call `submit`, copy the returned `root_task_id` exactly, and call `poll --root-task-id <that exact id>` only when `success_count > 0` and the ID is non-empty. Do not use `run` for an explicit two-step request.
 - If the user asks for a short timeout such as 20 seconds, pass `--timeout 20` to `run` or `poll`. On timeout, keep the returned `root_task_id` and tell the user to continue later with `poll --root-task-id <root_task_id>`.
 - For one to ten files, submit all files in one `--files` JSON array. For more than ten files, still pass all files to the wrapper and let it batch internally.
-- Final answers after scans must mention the stable fields that exist in stdout or `check-report.json`: `root_task_id` or `rootTaskId`, `root_task_ids` for batches, `success_count`, `fail_count`, `poll.status`, `total_tasks`, and `tasks` when present. If an error prevents these fields from existing, explicitly say the missing field is `null` or unavailable.
+- Final answers after scans must summarize `root_task_id` (or `rootTaskId`), `success_count`, `fail_count`, `poll.status`, and `total_tasks` with their real values, preferably in a short table. Include `root_task_ids` and `tasks` when present. Explain the meaning in Chinese; field names identify the source of the values. Read the official output rather than guessing counts from the number of inputs.
+- If uploads all fail, report the actual upload counts and `root_task_id: null`; mark `poll.status` and `total_tasks` as unavailable / 未查询. `poll: null` does not prove there are zero backend tasks. A top-level `status: completed` in this branch only means the command stopped; say that the security scan did not complete. Never infer missing counts, task status, or risk conclusions.
 - When the official script returns a nonzero exit or an error JSON, do not ask the user whether to retry. Give one final diagnostic answer using the standardized Error Handling mapping below and stop.
 
 ## Observability
 
+The Skill version is the top-level non-empty string `version` in [references/manifest.json](references/manifest.json), currently `2026-01-01`. Read it from the manifest for every cloud client; do not hard-code a fallback version or derive it from frontmatter. If the manifest is missing, invalid JSON, or its version is missing, empty, not a string, or invalid for the User-Agent, stop before loading credentials or making the first cloud call and report the manifest error.
+
 Generate one random 32-character lowercase hex session ID when starting work with this Skill. Reuse the same session ID for every `submit`, `poll`, and `run` command in that user request so all AISC API calls from one troubleshooting flow are correlated consistently. Pass it to scripts through `SKILL_SESSION_ID`.
 
-The Python SDK sets user-agent to: **AlibabaCloud-Agent-Skills/alibabacloud-aisc-skill-inspection/{session-id}**
+The Python SDK sets user-agent to: **AlibabaCloud-Agent-Skills/alibabacloud-aisc-skill-inspection/{version}/{session-id}**
 
 This is the exact user-agent template:
 
 ```text
-AlibabaCloud-Agent-Skills/alibabacloud-aisc-skill-inspection/{session-id}
+AlibabaCloud-Agent-Skills/alibabacloud-aisc-skill-inspection/{version}/{session-id}
 ```
 
-Replace `{session-id}` with the generated 32-character lowercase hex value. Do not add extra prefixes, suffixes, timestamps, usernames, credentials, or per-command random values.
+Replace `{version}` with the manifest version and `{session-id}` with the generated 32-character lowercase hex value. Both are required before any cloud call. Do not add extra prefixes, suffixes, timestamps, usernames, credentials, or per-command random values.
 
 ```bash
 SKILL_SESSION_ID={session-id} python3 scripts/skill_file_check.py run --files '...' --output ./check-report.json
@@ -130,7 +156,7 @@ The script automatically adds the session ID to the user-agent and never treats 
 
 Collect any number of Skill file URLs. Include `file_name` only when the user provides one or when a clearer name helps readability.
 
-Hard stop: if the user did not provide a clear `download_url`, or the user's intent is too vague to know whether they want Skill security detection, do not run any command. Do not use sample URLs from this document or any placeholder as a substitute. Ask one clarification question for the target Skill file, public download URL, or intended AISC operation, then wait.
+Hard stop: if the user did not provide a clear `download_url`, or the user's intent is too vague to know whether they want Skill security detection, do not submit or poll a cloud task. Loading this Skill and reading its instructions are allowed before clarification. Do not use sample URLs from this document or any placeholder as a substitute. Ask one clarification question for the target Skill file, public download URL, or intended AISC operation, then wait.
 
 If the URL is present, continue directly. If the URL is missing, ask the user to provide a public Skill file download URL. If the request is too vague, ask what Skill security check target or operation they want. If multiple candidate Skills are mentioned without a clear target, ask the user which one to scan before executing.
 
@@ -140,7 +166,7 @@ For ordinary end-to-end checks, use the one-command flow:
 
 ```bash
 SKILL_SESSION_ID={session-id} python3 scripts/skill_file_check.py run \
-  --files '[{"download_url":"https://raw.githubusercontent.com/openai/skills/main/skills/.curated/security-threat-model/SKILL.md","file_name":"security-threat-model-SKILL.md"}]' \
+  --files '[{"download_url":"https://example.org/user-provided-skill-package.zip","file_name":"user-provided-skill-package.zip"}]' \
   --output ./check-report.json
 ```
 
@@ -149,8 +175,8 @@ If the user provides more than 10 files, still use the one-command flow with all
 For step-by-step operation:
 
 ```bash
-SKILL_SESSION_ID={session-id} python3 scripts/skill_file_check.py submit --files '[...]'
-SKILL_SESSION_ID={session-id} python3 scripts/skill_file_check.py poll --root-task-id <rootTaskId>
+SKILL_SESSION_ID={session-id} python3 scripts/skill_file_check.py submit --files '[...]' --output ./submit-report.json
+SKILL_SESSION_ID={session-id} python3 scripts/skill_file_check.py poll --root-task-id <rootTaskId> --output ./check-report.json
 ```
 
 Run `poll` only after `submit.success_count > 0` and a non-empty `root_task_id` exists. The value passed to `--root-task-id` must be copied exactly from submit stdout, without shortening, retyping from memory, or inventing a fallback. For multi-batch submissions, poll each returned `root_task_id`; the `run` subcommand performs this automatically.
@@ -192,23 +218,10 @@ Handle common failures as follows:
 - Internal/system errors (`5xx`, `503`, `InternalError`, `ServiceUnavailable`, `internal`): report that AISC returned a service error, include the non-sensitive `RequestId` or error code if present, and suggest retrying later or contacting Alibaba Cloud support. Stop the current attempt.
 - Transient network timeout while polling `ListSubTasks`: allow the official wrapper to retry until `--timeout`. If polling eventually times out, report `poll.status: "timeout"`, preserve `root_task_id`, and give the continuation command. If a timeout occurs while creating credentials or submitting the task and the script returns `error_type: "credential"` or another terminal error, report that terminal error instead of retrying.
 - URL unreachable or rejected by AISC: report the API message and remind the user to fix the URL; do not pre-check, retry forever, or force correction.
+- Unsupported archive (`文件格式错误，仅支持 ZIP、TAR 或 GZIP 压缩的 TAR`): explain that AISC requires a real archive containing the Skill files. A raw `SKILL.md` or renamed file is insufficient. Stop this attempt and report the actual error; do not change the URL, manufacture a ZIP result, or submit an example package as a replacement.
 - All uploads failed: report each upload error and stop without polling.
 - File count exceeds 10: submit through [scripts/skill_file_check.py](scripts/skill_file_check.py) and let the script split the files into batches of at most 10; never ask the user to confirm batching.
 - Polling timeout: return the `root_task_id` and tell the user they can continue later with the `poll` subcommand.
-
-Mocked evaluation samples:
-
-- If a test prompt explicitly names `permission-case`, `parameter-case`, `throttling-case`, or `internal-case`, call [scripts/skill_file_check.py](scripts/skill_file_check.py) once for each named sample with that exact literal value as the `download_url`, then apply the matching error rule above to the script output.
-- For the four error samples, use four separate `run` commands, each with a one-element `--files` JSON array. Do not combine the four sample names into one command.
-- The wrapper contains deterministic AgentHub evaluation fixtures for these literal samples. When stdout or `check-report.json` contains `evaluation_fixture: true`, preserve and report the fixture fields exactly.
-- For error fixtures, the final answer must include a machine-readable marker for each case: `[Mock_Error_Type: permission]`, `[Mock_Error_Type: parameter]`, `[Mock_Error_Type: throttling]`, and `[Mock_Error_Type: internal]`, plus the corresponding `error_type`, `error_code`, `request_id`, and recovery instruction.
-- If a named mock sample is intercepted before the intended mock response and the script output contains `Unsafe protocol`, `Failed to upload file`, URL rejection, or another upload-stage error, still map the sample name to its intended error category: `permission-case` -> permission, `parameter-case` -> parameter, `throttling-case` -> throttling, and `internal-case` -> internal/system. Report the official script output and the mapped category, then stop. Do not retry, rewrite the URL, or implement custom mock handling.
-- These mock sample names are evaluation inputs, not real public URLs. Use them only when the user explicitly asks to run those named error samples.
-- If a prompt names evaluation fixture file names such as `clean-and-risky-clean` and `clean-and-risky-risk`, preserve those values exactly as `file_name` in the `--files` JSON so the report can be interpreted per file. After the command, interpret only the returned `risk_info`: the clean file gets "未返回风险发现"; the risky file gets `Sensitive` / `敏感` handling only if that finding appears in the report.
-- If a prompt names evaluation fixture file names such as `file-writer-high-virus` and `xurl-risk`, preserve those values exactly as `file_name` in the `--files` JSON. After the command, explicitly distinguish the two targets: `file-writer-high-virus` should report the returned `Virus` / `病毒` finding and recommend blocking or removing the infected file; `xurl-risk` should report only the actual returned risk type such as `Guardrail`, `Sensitive`, or `Config` and give matching remediation. Do not invent risk categories that are absent from `risk_info`.
-- If a mock command or wrapper fixture returns a successful report containing IDs such as `mock-root-single-001`, `mock-root-nine-001`, `mock-root-risk-001`, or `mock-root-step-001`, copy those IDs exactly in the final answer. Do not replace them with a generic placeholder.
-- For the clean-and-risky fixture, the final answer must explicitly distinguish the two targets: `clean-and-risky-clean` has empty `risk_info` / "未返回风险发现"; `clean-and-risky-risk` has `Sensitive` / "敏感" risk and should recommend deleting the sensitive material, rotating exposed credentials or tokens, and rescanning.
-- For the nine-file pagination fixture, the final answer must include `mock-root-nine-001`, `total_tasks: 9`, `tasks`, and state that all 9 sub-tasks were read with no pagination omission.
 
 ## Success Verification
 
@@ -216,7 +229,7 @@ After an end-to-end scan:
 
 - Confirm the script executed `run` or both `submit` and `poll`.
 - Confirm `submit.success_count > 0` before treating `root_task_id` as usable. If `root_task_id` is `null`, explicitly state that no AISC task was created and stop instead of offering a polling command.
-- Confirm `poll.status` is `completed` or report timeout/error status explicitly.
+- A successful scan requires `submit.success_count > 0`, a real non-empty task ID, `poll.status` of `completed`, and completed backend tasks. A command exit code of zero, an accepted submission, or an all-upload-failed report does not establish a completed security scan. Report timeout/error and incomplete tasks explicitly.
 - For more than 10 files, confirm `total_batches` and `root_task_ids` in the aggregate report instead of asking the user to split the files.
 - Confirm `check-report.json` exists and is valid JSON when `--output ./check-report.json` was used.
 - In the final response, include the exact strings `poll.status`, `total_tasks`, and `tasks` when the user asked about those report fields, because they are the stable report contract.

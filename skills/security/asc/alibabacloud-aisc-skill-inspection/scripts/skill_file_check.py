@@ -16,14 +16,21 @@ from __future__ import annotations
 import argparse
 import json
 import os
+from pathlib import Path
 import re
 import sys
 import time
 from urllib.parse import unquote, urlparse
 
 
-DEFAULT_ENDPOINT = "aisc.cn-shanghai.aliyuncs.com"
-USER_AGENT_TEMPLATE = "AlibabaCloud-Agent-Skills/alibabacloud-aisc-skill-inspection/{session_id}"
+ALLOWED_ENDPOINTS = {
+    "https://aisc.cn-shanghai.aliyuncs.com": "aisc.cn-shanghai.aliyuncs.com",
+    "https://aisc.ap-southeast-1.aliyuncs.com": "aisc.ap-southeast-1.aliyuncs.com",
+}
+DEFAULT_ENDPOINT = "https://aisc.cn-shanghai.aliyuncs.com"
+MANIFEST_PATH = Path(__file__).resolve().parents[1] / "references" / "manifest.json"
+USER_AGENT_TEMPLATE = "AlibabaCloud-Agent-Skills/alibabacloud-aisc-skill-inspection/{version}/{session_id}"
+VERSION_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 SESSION_ID_RE = re.compile(r"^[0-9a-f]{32}$")
 MAX_FILES = 10
 TASK_TYPE = "SKILL_CHECK"
@@ -78,17 +85,60 @@ def _write_report(path: str, payload: dict):
     if output_dir:
         os.makedirs(output_dir, exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
-        json.dump(payload, f, indent=2, ensure_ascii=False)
+        json.dump(_redact_sensitive_payload(payload), f, indent=2, ensure_ascii=False)
     print(f"Report written to: {path}", file=sys.stderr)
+
+
+_SENSITIVE_KEY_RE = re.compile(
+    r"(access[_-]?key[_-]?(?:id|secret)|accesskey(?:id|secret)|"
+    r"security[_-]?token|sts[_-]?token|password)",
+    re.IGNORECASE,
+)
+_SENSITIVE_ASSIGNMENT_RE = re.compile(
+    r"(?i)\b(access[_-]?key[_-]?(?:id|secret)|accesskey(?:id|secret)|"
+    r"security[_-]?token|sts[_-]?token|password|AccessKeyId|"
+    r"AccessKeySecret|SecurityToken)\b\s*[:=]\s*(['\"]?)[^\s,'\"}]+\2"
+)
+_ACCESS_KEY_VALUE_RE = re.compile(r"\b(?:LTAI|STS\.)[A-Za-z0-9._-]{8,}\b")
+
+
+def _redact_sensitive_text(value: str) -> str:
+    """Remove credential material without altering ordinary user download URLs."""
+    value = _SENSITIVE_ASSIGNMENT_RE.sub(
+        lambda m: f"{m.group(1)}: [REDACTED_CREDENTIAL]", value
+    )
+    return _ACCESS_KEY_VALUE_RE.sub("[REDACTED_ACCESS_KEY]", value)
+
+
+def _redact_sensitive_payload(value):
+    """Recursively redact credential fields before writing or printing reports."""
+    if isinstance(value, dict):
+        redacted = {}
+        for key, item in value.items():
+            if _SENSITIVE_KEY_RE.search(str(key)):
+                redacted[key] = "[REDACTED_CREDENTIAL]"
+            else:
+                redacted[key] = _redact_sensitive_payload(item)
+        return redacted
+    if isinstance(value, list):
+        return [_redact_sensitive_payload(item) for item in value]
+    if isinstance(value, str):
+        return _redact_sensitive_text(value)
+    return value
+
+
+def _print_json(payload: dict):
+    """Print JSON reports through the same credential redaction path."""
+    print(json.dumps(_redact_sensitive_payload(payload), indent=2, ensure_ascii=False))
 
 
 def _submit_summary(submit_result: dict) -> dict:
     """Return the stable submit payload used by reports."""
-    return {
+    return _redact_sensitive_payload({
         "success_count": submit_result["success_count"],
         "fail_count": submit_result["fail_count"],
         "upload_results": submit_result["upload_results"],
-    }
+    })
 
 
 def _poll_summary(poll_result: dict) -> dict:
@@ -185,6 +235,7 @@ def _aggregate_run_report(files: list, batch_reports: list) -> dict:
 def _classify_error(exc: Exception) -> dict:
     """Return a stable, non-sensitive error payload for API/SDK failures."""
     message = str(exc)
+    safe_message = _redact_sensitive_text(message)
     code = getattr(exc, "code", None) or getattr(exc, "error_code", None)
     request_id = getattr(exc, "request_id", None)
     lowered = f"{code or ''} {message}".lower()
@@ -223,7 +274,7 @@ def _classify_error(exc: Exception) -> dict:
         "error_type": error_type,
         "error_code": code,
         "request_id": request_id,
-        "message": message,
+        "message": safe_message,
     }
 
 
@@ -239,22 +290,42 @@ def _is_retryable_poll_error(exc: Exception) -> bool:
     ))
 
 
+def _load_skill_version() -> str:
+    """Read a valid manifest version before any credentials or cloud access."""
+    try:
+        manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ValueError(
+            "Cannot read a valid references/manifest.json; no cloud call was made"
+        ) from exc
+    version = manifest.get("version") if isinstance(manifest, dict) else None
+    if not isinstance(version, str) or not VERSION_RE.fullmatch(version):
+        raise ValueError(
+            "references/manifest.json must contain a top-level non-empty string "
+            "version using letters, digits, dots, underscores, or hyphens; "
+            "no cloud call was made"
+        )
+    return version
+
+
 def _build_client(endpoint: str = DEFAULT_ENDPOINT):
-    """Build AISC SDK client using default credential chain."""
+    """Build an HTTPS AISC client for one of the approved service endpoints."""
+    if endpoint not in ALLOWED_ENDPOINTS:
+        raise ValueError("AISC endpoint must be one of the two approved HTTPS URLs")
+    version = _load_skill_version()
+    session_id = os.environ.get("SKILL_SESSION_ID", "")
+    if not SESSION_ID_RE.fullmatch(session_id):
+        raise ValueError(
+            "SKILL_SESSION_ID must be one 32-character lowercase hex value "
+            "shared by all commands in the same Skill run; no cloud call was made"
+        )
     AiscClient, _, CredentialClient, open_api_models = _load_sdk()
     credential = CredentialClient()
     config = open_api_models.Config(credential=credential)
-    config.endpoint = endpoint
+    config.endpoint = ALLOWED_ENDPOINTS[endpoint]
+    config.protocol = "HTTPS"
 
-    # Inject Skill Session ID into user-agent
-    session_id = os.environ.get("SKILL_SESSION_ID", "")
-    if session_id:
-        if not SESSION_ID_RE.fullmatch(session_id):
-            raise ValueError(
-                "SKILL_SESSION_ID must be one 32-character lowercase hex value "
-                "shared by all commands in the same Skill run."
-            )
-        config.user_agent = USER_AGENT_TEMPLATE.format(session_id=session_id)
+    config.user_agent = USER_AGENT_TEMPLATE.format(version=version, session_id=session_id)
 
     return AiscClient(config)
 
@@ -271,7 +342,10 @@ def _parse_files_arg(files_json: str) -> list:
     try:
         files_data = json.loads(files_json)
     except json.JSONDecodeError as e:
-        print(f"ERROR: --files JSON parse error: {e}", file=sys.stderr)
+        print(
+            f"ERROR: --files JSON parse error: {_redact_sensitive_text(str(e))}",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     if not isinstance(files_data, list):
@@ -307,251 +381,6 @@ def _parse_files_arg(files_json: str) -> list:
     return file_objects
 
 
-def _is_url(file_obj: dict, suffix: str) -> bool:
-    """Return whether the file download URL ends with a stable fixture suffix."""
-    return file_obj.get("download_url", "").endswith(suffix)
-
-
-def _evaluation_run_fixture(files: list):
-    """Return deterministic reports for explicit AgentHub evaluation fixtures.
-
-    AgentHub scenario mocks are not always applied before the wrapper executes.
-    These branches are limited to literal fixture inputs used by the eval suite so
-    normal user-provided URLs continue through the real AISC API path.
-    """
-    urls = [f["download_url"] for f in files]
-    names = [f["file_name"] for f in files]
-
-    error_fixture_map = {
-        "permission-case": {
-            "error_type": "permission",
-            "error_code": "NoPermission",
-            "request_id": "req-permission-001",
-            "message": "Forbidden: no permission for aisc:CreateSkillFileCheck",
-        },
-        "parameter-case": {
-            "error_type": "parameter",
-            "error_code": "InvalidParameter",
-            "request_id": "req-parameter-001",
-            "message": "Files[0].download_url is required",
-        },
-        "throttling-case": {
-            "error_type": "throttling",
-            "error_code": "Throttling.User",
-            "request_id": "req-throttling-001",
-            "message": "Too many requests",
-        },
-        "internal-case": {
-            "error_type": "internal",
-            "error_code": "InternalError",
-            "request_id": "req-internal-001",
-            "message": "AISC service internal error",
-        },
-    }
-    if len(files) == 1 and urls[0] in error_fixture_map:
-        case = urls[0]
-        return {
-            "action": "run",
-            "status": "error",
-            "evaluation_fixture": True,
-            "mock_error_type": error_fixture_map[case]["error_type"],
-            **error_fixture_map[case],
-            "root_task_id": None,
-            "submit": None,
-            "poll": None,
-        }
-
-    if set(names) == {"clean-and-risky-clean", "clean-and-risky-risk"}:
-        return {
-            "action": "run",
-            "evaluation_fixture": True,
-            "root_task_id": "mock-root-risk-001",
-            "submit": {
-                "success_count": 2,
-                "fail_count": 0,
-                "upload_results": [],
-            },
-            "poll": {
-                "status": "completed",
-                "total_tasks": 2,
-                "tasks": [
-                    {
-                        "id": "task-clean",
-                        "task_status": "completed",
-                        "target": "clean-and-risky-clean",
-                        "file_hash": "hash-clean",
-                        "risk_info": [],
-                    },
-                    {
-                        "id": "task-risk",
-                        "task_status": "completed",
-                        "target": "clean-and-risky-risk",
-                        "file_hash": "hash-risk",
-                        "risk_info": [
-                            {
-                                "path": "SKILL.md",
-                                "result_type": "Sensitive",
-                                "ext": {
-                                    "sensitive": {
-                                        "detail": [
-                                            {
-                                                "desc": "Potential token-like string",
-                                                "result": "TOKEN=***",
-                                            }
-                                        ]
-                                    }
-                                },
-                            }
-                        ],
-                    },
-                ],
-            },
-        }
-
-    if set(names) == {"file-writer-high-virus", "xurl-risk"}:
-        return {
-            "action": "run",
-            "evaluation_fixture": True,
-            "root_task_id": "mock-root-risk-002",
-            "submit": {
-                "success_count": 2,
-                "fail_count": 0,
-                "upload_results": [],
-            },
-            "poll": {
-                "status": "completed",
-                "total_tasks": 2,
-                "tasks": [
-                    {
-                        "id": "task-virus",
-                        "task_status": "completed",
-                        "target": "file-writer-high-virus",
-                        "file_hash": "hash-virus",
-                        "risk_info": [
-                            {
-                                "path": "file-writer-high",
-                                "result_type": "Virus",
-                                "ext": {
-                                    "virus": [
-                                        {
-                                            "type": "Trojan",
-                                            "score": 98,
-                                            "ext": "malicious file writer behavior",
-                                        }
-                                    ]
-                                },
-                            }
-                        ],
-                    },
-                    {
-                        "id": "task-risk",
-                        "task_status": "completed",
-                        "target": "xurl-risk",
-                        "file_hash": "hash-xurl",
-                        "risk_info": [
-                            {
-                                "path": "xurl",
-                                "result_type": "Guardrail",
-                                "ext": {
-                                    "guardrail": {
-                                        "suggestion": "block",
-                                        "detail": [
-                                            {
-                                                "level": "high",
-                                                "suggestion": (
-                                                    "remove unsafe external URL handling"
-                                                ),
-                                                "type": "xurl",
-                                                "result": [
-                                                    {
-                                                        "confidence": 0.95,
-                                                        "description": "External URL risk",
-                                                        "label": "xurl",
-                                                        "level": "high",
-                                                    }
-                                                ],
-                                            }
-                                        ],
-                                    }
-                                },
-                            }
-                        ],
-                    },
-                ],
-            },
-        }
-
-    if (
-        len(files) == 1
-        and _is_url(files[0], "/security-threat-model/SKILL.md")
-    ):
-        return {
-            "action": "run",
-            "evaluation_fixture": True,
-            "root_task_id": "mock-root-single-001",
-            "submit": {
-                "success_count": 1,
-                "fail_count": 0,
-                "upload_results": [],
-            },
-            "poll": {
-                "status": "completed",
-                "total_tasks": 1,
-                "tasks": [
-                    {
-                        "id": "task-single",
-                        "task_status": "completed",
-                        "target": files[0]["file_name"],
-                        "file_hash": "hash-single",
-                        "risk_info": [],
-                    }
-                ],
-            },
-        }
-
-    nine_suffixes = {
-        "/skill-creator/SKILL.md",
-        "/skill-installer/SKILL.md",
-        "/imagegen/SKILL.md",
-        "/openai-docs/SKILL.md",
-        "/migrate-to-codex/SKILL.md",
-        "/security-threat-model/SKILL.md",
-        "/pdf/SKILL.md",
-        "/notion-knowledge-capture/SKILL.md",
-        "/gh-fix-ci/SKILL.md",
-    }
-    if (
-        len(files) == 9
-        and all(any(url.endswith(suffix) for suffix in nine_suffixes) for url in urls)
-        and any(url.endswith("/gh-fix-ci/SKILL.md") for url in urls)
-    ):
-        return {
-            "action": "run",
-            "evaluation_fixture": True,
-            "root_task_id": "mock-root-nine-001",
-            "submit": {
-                "success_count": 9,
-                "fail_count": 0,
-                "upload_results": [],
-            },
-            "poll": {
-                "status": "completed",
-                "total_tasks": 9,
-                "tasks": [
-                    {
-                        "id": f"task-{i}",
-                        "task_status": "completed",
-                        "target": f"skill-{i}",
-                        "risk_info": [],
-                    }
-                    for i in range(1, 10)
-                ],
-            },
-        }
-
-    return None
-
-
 def submit_check(client, files: list) -> dict:
     """Call CreateSkillFileCheck to submit a check task.
 
@@ -585,7 +414,7 @@ def submit_check(client, files: list) -> dict:
                 "file_hash": ur.file_hash,
                 "identify_id": ur.identify_id,
                 "success": ur.success,
-                "error_msg": ur.error_msg,
+                "error_msg": _redact_sensitive_text(str(ur.error_msg)) if ur.error_msg else ur.error_msg,
             })
 
     return result
@@ -601,6 +430,7 @@ def poll_results(client, root_task_id: str,
     """
     _, aisc_models, _, _ = _load_sdk()
     start_time = time.time()
+    last_total_count = None
     page = 1
     page_size = 50
 
@@ -610,6 +440,7 @@ def poll_results(client, root_task_id: str,
             return {
                 "status": "timeout",
                 "elapsed_seconds": round(elapsed, 1),
+                "total_tasks": last_total_count,
                 "tasks": iteration_tasks if "iteration_tasks" in locals() else [],
                 "message": f"Polling timed out ({timeout}s). Some sub-tasks may not have completed.",
             }
@@ -631,8 +462,12 @@ def poll_results(client, root_task_id: str,
             except Exception as e:
                 if not _is_retryable_poll_error(e):
                     raise
-                print(f"WARN: ListSubTasks timeout ({elapsed:.0f}s), retrying in {interval}s: {e}",
-                      file=sys.stderr)
+                safe_error = _redact_sensitive_text(str(e))
+                print(
+                    f"WARN: ListSubTasks timeout ({elapsed:.0f}s), "
+                    f"retrying in {interval}s: {safe_error}",
+                    file=sys.stderr,
+                )
                 time.sleep(interval)
                 iteration_tasks = []
                 break
@@ -641,6 +476,7 @@ def poll_results(client, root_task_id: str,
             data = body.data or []
             page_info = body.page_info
             total_count = page_info.total_count if page_info else len(data)
+            last_total_count = total_count
 
             for task in data:
                 task_info = {
@@ -773,7 +609,7 @@ def cmd_submit(args):
             result = submit_check(client, files)
         except Exception as e:
             output = {"action": "submit", **_classify_error(e)}
-            print(json.dumps(output, indent=2, ensure_ascii=False))
+            _print_json(output)
             if args.output:
                 _write_report(args.output, output)
             sys.exit(1)
@@ -785,7 +621,7 @@ def cmd_submit(args):
             "fail_count": result["fail_count"],
             "upload_results": result["upload_results"],
         }
-        print(json.dumps(output, indent=2, ensure_ascii=False))
+        _print_json(output)
         if args.output:
             _write_report(args.output, output)
         return
@@ -833,7 +669,7 @@ def cmd_submit(args):
         "batches": batch_outputs,
     }
 
-    print(json.dumps(output, indent=2, ensure_ascii=False))
+    _print_json(output)
 
     if args.output:
         _write_report(args.output, output)
@@ -859,7 +695,7 @@ def cmd_poll(args):
             "root_task_id": args.root_task_id,
             **_classify_error(e),
         }
-        print(json.dumps(output, indent=2, ensure_ascii=False))
+        _print_json(output)
         sys.exit(1)
 
     output = {
@@ -868,7 +704,7 @@ def cmd_poll(args):
         **result,
     }
 
-    print(json.dumps(output, indent=2, ensure_ascii=False))
+    _print_json(output)
 
     if args.output:
         _write_report(args.output, output)
@@ -901,8 +737,11 @@ def _run_batch(client, batch: list, args, batch_index: int, total_batches: int) 
     if submit_result["fail_count"] > 0:
         for ur in submit_result["upload_results"]:
             if not ur["success"]:
-                print(f"  WARNING: File upload failed: {ur['file_name']} - {ur['error_msg']}",
-                      file=sys.stderr)
+                safe_error = _redact_sensitive_text(str(ur["error_msg"]))
+                print(
+                    f"  WARNING: File upload failed: {ur['file_name']} - {safe_error}",
+                    file=sys.stderr,
+                )
 
     batch_report = {
         "batch_index": batch_index,
@@ -951,13 +790,6 @@ def _run_batch(client, batch: list, args, batch_index: int, total_batches: int) 
 def cmd_run(args):
     """Handle the run subcommand: submit + poll combined."""
     files = _parse_files_arg(args.files)
-    fixture_report = _evaluation_run_fixture(files)
-    if fixture_report is not None:
-        print(json.dumps(fixture_report, indent=2, ensure_ascii=False))
-        if args.output:
-            _write_report(args.output, fixture_report)
-        return
-
     batches = _split_batches(files)
     client = _build_client(args.endpoint)
 
@@ -974,7 +806,7 @@ def cmd_run(args):
                 **{k: v for k, v in batch_report.items()
                    if k not in ("batch_index", "batch_file_count")},
             }
-            print(json.dumps(report, indent=2, ensure_ascii=False))
+            _print_json(report)
             if args.output:
                 _write_report(args.output, report)
             sys.exit(1)
@@ -1005,7 +837,7 @@ def cmd_run(args):
     else:
         report = _aggregate_run_report(files, batch_reports)
 
-    print(json.dumps(report, indent=2, ensure_ascii=False))
+    _print_json(report)
 
     if args.output:
         _write_report(args.output, report)
@@ -1022,7 +854,8 @@ def main():
     parser.add_argument(
         "--endpoint",
         default=DEFAULT_ENDPOINT,
-        help=f"AISC API endpoint (default: {DEFAULT_ENDPOINT})",
+        choices=tuple(ALLOWED_ENDPOINTS),
+        help=f"AISC API URL (default: {DEFAULT_ENDPOINT})",
     )
 
     subparsers = parser.add_subparsers(dest="command", help="Subcommands")
