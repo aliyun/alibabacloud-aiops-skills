@@ -61,7 +61,7 @@ aliyun sts get-caller-identity
 
 All OpenAPI calls (invoked through the aliyun CLI) include:
 
-- **User-Agent**: `--user-agent AlibabaCloud-Agent-Skills/{SKILL_NAME}/{session-id}`
+- **User-Agent**: `--user-agent AlibabaCloud-Agent-Skills/{SKILL_NAME}/{session-id}/skill-version/{skill-version}` (`skill-version` resolves from the `SKILL_VERSION` env var, else `references/manifest.json`)
 - **SKILL_NAME**: `alibabacloud-live-assistant`
 - **session-id**: a 32-character hex string generated once per session (one `uuid.uuid4().hex` per script run) and attached to every CLI command in the same run.
 
@@ -161,7 +161,8 @@ Call order inside a combined investigation: confirm the target with the user, ru
 2. **Parameter error (InvalidParameter):** Fix the parameter (e.g. adjust time-window format, correct domain name) and retry. This is **auto_fix**.
 3. **Throttling error (Throttling):** Wait ~3 seconds, then retry the same command. This is **retry**.
 4. **Internal/System error (InternalError):** Wait ~3 seconds cooldown, then retry the same command. This is **retry**.
-5. **Never stop the whole diagnosis on a single failed query** — record the error, recover, and continue.
+5. **Service not activated / not found (InvalidIdentity.ServiceDisabled, LiveServiceNotFound):** NOT recoverable by retrying or switching approaches — ApsaraVideo Live is not activated for the account (or the domain is not under it). Do **not** retry; report the activation guidance plainly to the user, record the error, and stop that query path.
+6. **Never stop the whole diagnosis on a single failed query** — record the error, recover, and continue. (Exception: rule 5's service-not-activated errors make every further Live call fail identically; report and stop that path.)
 
 **Domain-type ambiguity (IC scenarios):** When the user provides a root domain (e.g. `example.com`) without specifying whether it is a push (ingest) or pull (playback) domain, you MUST **explicitly state your assumption before running any analysis** — e.g. "I will assume this is a playback (pull) domain and proceed with analysis." Never defer the assumption to a post-hoc remark at the end of the report. Alternatively, ask the user to clarify the domain type before proceeding.
 

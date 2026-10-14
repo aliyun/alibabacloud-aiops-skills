@@ -29,7 +29,32 @@ from datetime import datetime, timezone
 
 # Per-run session id for platform-level tracing (Observability)
 _SESSION_ID = uuid.uuid4().hex
-_USER_AGENT = f"AlibabaCloud-Agent-Skills/alibabacloud-live-assistant/{_SESSION_ID}"
+def _resolve_skill_version():
+    """Skill version for the User-Agent (rule UA-SKILL-VERSION).
+
+    Resolution: the SKILL_VERSION env var (non-empty), else the top-level
+    'version' string of references/manifest.json. An unresolvable version
+    raises before any cloud call -- unversioned calls must never be made.
+    """
+    import json as _json, os as _os
+    v = (_os.environ.get("SKILL_VERSION") or "").strip()
+    if not v:
+        p = _os.path.join(_os.path.dirname(_os.path.dirname(
+            _os.path.abspath(__file__))), "references", "manifest.json")
+        try:
+            with open(p, encoding="utf-8") as f:
+                v = str((_json.load(f) or {}).get("version") or "").strip()
+        except (OSError, ValueError):
+            v = ""
+    if not v:
+        raise RuntimeError(
+            "skill version unresolved: set SKILL_VERSION or restore "
+            "references/manifest.json (unversioned cloud calls are forbidden)")
+    return v
+
+
+_SKILL_VERSION = _resolve_skill_version()
+_USER_AGENT = f"AlibabaCloud-Agent-Skills/alibabacloud-live-assistant/{_SESSION_ID}/skill-version/{_SKILL_VERSION}"
 CLI_TIMEOUT = 60
 
 
@@ -114,6 +139,17 @@ def friendly_cli_error(err_msg):
     msg = redact_secrets(err_msg)
     if "InvalidDomain.NotFound" in msg:
         return "The domain does not exist or does not belong to the current account."
+    if "InvalidIdentity.ServiceDisabled" in msg:
+        return (
+            "ApsaraVideo Live is not activated (or is disabled) for this "
+            "account; activate the service in the console before diagnosing."
+        )
+    if "LiveServiceNotFound" in msg:
+        return (
+            "The live service (or the specified domain) was not found for "
+            "this account; confirm the domain is added to ApsaraVideo Live "
+            "and belongs to the current account."
+        )
     if "Forbidden" in msg or "NoPermission" in msg or "Unauthorized" in msg:
         return (
             "The current credentials lack permission for this operation; "
