@@ -31,11 +31,14 @@ Do not read on: a nonexistent ID makes `aliyun cms2 integration storage list` re
 
 Run only the collection-path commands the [type gate](#policy-type-gate-hard-pre-check) kept. Per-job fields and target-location combinations: that command's `--help`.
 
-Three overrides `--help` does not settle:
+Overrides `--help` does not settle:
 
 - **scrapeUrl** comes from `aliyun cms2 integration check-scrape-config` `results[].targets[].scrapeUrl`, not from `job-target list` (even though that `--help` says to) and never assembled from an `instance` label.
 - Collector identity is `aliyun cms2 integration collector list --collector-type ClusterCollector` `collectors[].releaseName`. Pick `collectorName: metric-agent`, not `entity-collector`. Read `releaseName` from the response; never reconstruct it from the policy ID.
-- `aliyun cms2 integration check-scrape-config` re-renders the config server-side; the collector consumes what was **delivered**. `passed: true` with a matching `results[]` row proves the dry-run can load; it does not prove the collector is running that job, and it does not overrule a rejecting `message` on the delivered rule. `passed: false` → `failedPhase` from that `--help`.
+- `aliyun cms2 integration check-scrape-config` re-renders the config server-side; the collector consumes what was **delivered**. A job can appear in `results[]` with no list row. `passed: true` with a matching `results[]` row proves the dry-run can load; it does not prove the collector is running that job, and it does not overrule a rejecting `message` on the delivered rule. `passed: false` → `failedPhase` from that `--help`.
+- Unscoped `service-monitor list` / `pod-monitor list` (`--policy-id` only) is the policy-visible CR set, including empty `addonReleaseName`. That command's `--help` does not define identity.
+- Scrape job identity on `check-scrape-config` is `results[].jobName`.
+- `job-target list` dual-mode on that `--help`: empty `--job-name` → `jobs[]`; set → `targets[]`.
 
 `status 400: The target url is insecure` is the probe service declining the URL — record `QueryFailed`, keep `scheme: http` out of the root cause and the fix, and fall back to [`up`](#up-is-the-reachability-oracle). Any other failure: `QueryFailed` per [Pagination & Query Failure Handling](../SKILL.md#pagination--query-failure-handling). A failed check does not license `kubectl`.
 
@@ -43,9 +46,9 @@ Three overrides `--help` does not settle:
 
 The collector synthesizes `up` for every target it **actually scrapes**. No `up{job="<resolvedJobName>"}` series means this job produced no scrape. That is **not** by itself a config-load verdict — read it against step 4:
 
-- Step 4 shows the job in `results[]` and `relabelKept` omitted or `0`, or `discoveryTargets: 0` → empty `up` is the data-plane echo of branch 3 or 4. Do not reclassify it as "the job is not in the runtime config".
+- Step 4 shows the job in `results[]` and `relabelKept` omitted or `0`, or `discoveryTargets: 0` → empty `up` is the data-plane echo of branch 3 or 4.
 - Step 4 shows `finalTargets ≥ 1` and `up` is still empty → the dry-run kept targets the running collector never scraped (branch 5), once `--prometheus-id` is confirmed.
-- Job absent from `results[]` and `up` empty → still branch 1 or 2; `up` does not add a third story.
+- Job absent from `results[]` and `up` empty → still branch 1 or 2.
 
 Query with the **resolved scrape job name** from [Rule identity vs scrape job identity](#rule-identity-vs-scrape-job-identity-hard), never the user's collection-rule token and never a fuzzy `job=~".*<token>.*"`. Confirm the instance with `aliyun cms2 integration storage list` first — a wrong `--prometheus-id` also yields empty. This is the fallback whenever `check-collector-target` came back `QueryFailed`.
 
@@ -59,15 +62,15 @@ Report what each command returned, quoting `passed`, `summary`, `failedPhase`, a
 |-----------------|--------------------------------------------------------------------------------|
 | Release status and the **submitted** values (`config`) | `aliyun cms2 integration addon-release list --policy-id <policyId>` |
 | **Delivered** custom collection | `aliyun cms2 integration custom-job list --policy-id <policyId> --addon-release-name <releaseName>` |
-| Delivered ServiceMonitor / PodMonitor | `aliyun cms2 integration service-monitor list` / `pod-monitor list --policy-id <policyId> --addon-release-name <releaseName>`. Named ServiceMonitor: `matchedServiceCount` and `endpoints[].matchedTargetCount` (not in that `--help`; omitted is 0). Named PodMonitor: `matchedPodCount` (omitted is 0); do not read the ServiceMonitor counts. What those counts mean: [branch 4](#differential-diagnosis) |
+| ServiceMonitor / PodMonitor | `aliyun cms2 integration service-monitor list` / `pod-monitor list --policy-id <policyId>`. Named ServiceMonitor: `matchedServiceCount` and `endpoints[].matchedTargetCount` (not in that `--help`; omitted is 0). Named PodMonitor: `matchedPodCount` (omitted is 0); do not read the ServiceMonitor counts. What those counts mean: [branch 4](#differential-diagnosis) |
 | Targets the collector discovered | `aliyun cms2 integration job-target list --policy-id <policyId> --collector-release-name <collectorReleaseName>` | 
 | Whether a job would load | `aliyun cms2 integration check-scrape-config --policy-id <policyId>` |
 | Collector health | `aliyun cms2 integration collector list --policy-id <policyId> --collector-type ClusterCollector` |
-| Policy-scoped Service | `aliyun cms2 integration resource list --policy-id <policyId> --kind Service --namespace <ns>` once the rule's namespace is known. Without `--namespace`, an empty `200` with no `resources[]` matches an unsupported kind — inconclusive, not zero Services. Endpoints / Pod / Deployment: [branch 4](#differential-diagnosis). Not `aliyun cms2 entity query --source CloudResource`. |
-| Metric samples | `aliyun cms2 integration storage list --policy-id --addon-release-name --storage-type Prometheus` → `aliyun cms2 metric promql query --prometheus-id <status.instanceId>` |
+| Policy-scoped Service | `aliyun cms2 integration resource list --policy-id <policyId> --kind Service --namespace <ns>` once the rule's namespace is known. Without `--namespace`, an empty `200` with no `resources[]` matches an unsupported kind — inconclusive. Endpoints / Pod / Deployment: [branch 4](#differential-diagnosis). Not `aliyun cms2 entity query --source CloudResource`. |
+| Metric samples | `aliyun cms2 integration storage list --policy-id --storage-type Prometheus` → `aliyun cms2 metric promql query --prometheus-id <status.instanceId>` |
 | Dashboards | `aliyun cms2 integration dashboard list --policy-id <policyId>` |
 
-**Targeted filter lock.** Named-rule diagnosis: `--addon-release-name` is the owning release (`custom-job list --help` already requires this so `cs-default` stays out). `--job-name` is a **resolved scrape job name**. A miss, a 400, or `passed: true` with no matching `results[]` row → re-resolve; do not drop `--addon-release-name` or read other jobs (that is unfilter). Omitting `--job-name` while `--addon-release-name` already scopes the call is step 4, not unfilter. Ignore other `results[]` / target rows even if an unfiltered body happens to contain the job.
+**Targeted filter lock.** After [identity](#rule-identity-vs-scrape-job-identity-hard) locked the rule: `--addon-release-name` only when that lock set an owning release. `custom-job list --help` already requires the flag (keeps `cs-default` out). `--job-name` is a **resolved** scrape job name (`results[].jobName`). A miss, a 400, or `passed: true` with no matching `results[]` row → re-resolve. Omitting `--job-name` while `--addon-release-name` already scopes the call is step 4. Ignore other `results[]` / target rows even if an unfiltered body happens to contain the job.
 
 ### `kubectl` is not the default path
 
@@ -77,9 +80,10 @@ Use `kubectl` when any of these holds:
 
 - the user explicitly asked, or
 - the matching `resource list --kind` returned `QueryFailed`, or
-- [branch 4](#differential-diagnosis) needs Endpoints / Pod / Deployment facts and `resource list` for those kinds is empty `200` / omitted `resources[]` (inconclusive, not zero).
+- [branch 4](#differential-diagnosis) needs Service / Endpoints / Pod / Deployment facts and `resource list` for those kinds is empty `200` / omitted `resources[]` / the needed object is absent (inconclusive), or
+- [Absence](#rule-identity-vs-scrape-job-identity-hard) needs the cluster ServiceMonitor / PodMonitor CR after an unscoped-list miss.
 
-Stay on the named rule's Service / Endpoints (or EndpointSlice) / Pods / owning Deployment. Do not list those kinds cluster-wide after the named object is in hand. `command not found` → the continuation is `QueryFailed`; keep the finding already classified. Label `kubectl` as side evidence when `resource list` did not confirm the same fact, and do not rest a CMS release-values fix on `kubectl` alone.
+Stay on the named rule's Service / Endpoints (or EndpointSlice) / Pods / owning Deployment. Do not list those kinds cluster-wide after the named object is in hand. `kubectl` that returns no object (`command not found` included) is `QueryFailed` on that object; keep the finding already classified. Label `kubectl` as side evidence when `resource list` did not confirm the same fact, and do not rest a CMS release-values fix on `kubectl` alone.
 
 ## Input
 
@@ -92,17 +96,21 @@ The user names a **collection rule**. Prometheus scrape `job` labels — and `--
 
 | User names | Resolve from |
 |------------|--------------|
-| ServiceMonitor / PodMonitor name | `service-monitor list` / `pod-monitor list` → `name` + `namespace` |
-| Custom collection name / embedded `job_name` | `custom-job list` → `scrapeConfigs[].jobName` or the `job_name:` in `configYaml` |
-| Addon release name (`custom-discover-<id>` included) | `addon-release list` → that release's submitted `discoverType`, then the matching rule list. An empty `custom-job list` is expected when `discoverType` is `PodMonitor` / `ServiceMonitor` |
+| ServiceMonitor / PodMonitor name | `service-monitor list` / `pod-monitor list` with `--policy-id` only. Exact `name` (and namespace if given). Empty `addonReleaseName` is a hit; owning release = that field when non-empty, else unset. Miss → step 2 |
+| Custom collection name / embedded `job_name` | `custom-job list` per that `--help` (requires `--addon-release-name`). Scan the policy's releases. `scrapeConfigs[].jobName` or the `job_name:` in `configYaml` |
+| Addon release name (`custom-discover-<id>` included) | `addon-release list` first → that release's submitted `discoverType`, then the matching rule list with `--addon-release-name`. An empty `custom-job list` is expected when `discoverType` is `PodMonitor` / `ServiceMonitor` |
 
 Operator-generated monitor jobs are typically `serviceMonitor/<namespace>/<name>/<endpointIndex>` and `podMonitor/<namespace>/<name>/<endpointIndex>`.
 
 Resolve once, then lock:
 
-1. Find the delivered rule. Token is a rule name → exact `name` (and namespace if given) in the three rule lists. Token is a release name → that release's `discoverType`, then the `--addon-release-name` row(s); do not require `name` to equal the release name. Diagnose that rule only.
-2. Derive scrape job names: custom-job → each `scrapeConfigs[].jobName` / `job_name:`; ServiceMonitor / PodMonitor → every `check-scrape-config` `results[]` row whose job belongs to this rule (`serviceMonitor/<ns>/<name>/` or `podMonitor/<ns>/<name>/` prefix). Diagnose those rows only.
-3. `--job-name <userToken>` with no matching `results[]` row, or `job-target list` 400 / empty: the token was the rule name — re-resolve from step 2, then apply the [filter lock](#evidence-sources--use-these-not-kubectl). A `passed: true` with no matching row is a **filter miss**, not proof the job loaded.
+1. Token is a ServiceMonitor / PodMonitor name → the unscoped lists in the table. Token is a custom-job name → `custom-job list` with `--addon-release-name` per release. Token is a release name → that release's `discoverType`, then the `--addon-release-name` row(s); do not require `name` to equal the release name. Diagnose that rule only.
+2. **Unscoped SM/PM miss (and custom-job miss when that path applied) → fallback.** `check-scrape-config --policy-id <policyId>` with `--config-source-type servicemonitor`, then `podmonitor`. Omit `--addon-release-name` and `--job-name`. Client-keep `results[]` whose `jobName` has prefix `serviceMonitor/<ns>/<token>/` or `podMonitor/<ns>/<token>/` (`<ns>` any). A hit **is** the rule: type and namespace from the path, scrape jobs = the kept rows, owning release = unset. Continue the targeted steps on those jobs.
+3. A stem-related Exporter / addon / Helm release (`collector list --collector-type Exporter`) is [branch 4](#differential-diagnosis) workload evidence only. Do not search the addon catalog for a collection-rule token.
+4. Derive scrape job names: custom-job → each `scrapeConfigs[].jobName` / `job_name:`; ServiceMonitor / PodMonitor → every kept `check-scrape-config` `results[].jobName` with `serviceMonitor/<ns>/<name>/` or `podMonitor/<ns>/<name>/`. Diagnose those rows only.
+5. `--job-name <userToken>` with no matching `results[]` row, or `job-target list` 400 / empty: the token was the rule name — re-resolve from step 1, 2, or 4, then apply the [filter lock](#evidence-sources--use-these-not-kubectl). A `passed: true` with no matching row is a **filter miss**.
+
+**Absence.** Named rule does not exist only after: step 1 miss, fallback `jobName` keep-set empty, and `kubectl get servicemonitor,podmonitor` for that name returns nothing. An empty list that used `--addon-release-name` is not this. `resource list` has no ServiceMonitor / PodMonitor kind. Catalog miss, exact-name Exporter miss, and `--job-name <userToken>` filter miss are not absence.
 
 ## Check Items (whole policy)
 
@@ -111,7 +119,7 @@ Resolve once, then lock:
 3. Storage / datasource instance IDs (`storage list`).
 4. Dashboards (`dashboard list`).
 5. Collector / exporter health (`collector list --collector-type` values from that `--help`: ClusterCollector, NodeCollector, Exporter).
-6. ServiceMonitor / PodMonitor / custom-job configuration and status.
+6. ServiceMonitor / PodMonitor / custom-job configuration and status. SM/PM: unscoped list (`--policy-id` only). Custom-job: `--addon-release-name` per that `--help`.
 7. [Collection Config Content Validation](#collection-config-content-validation) for every rule from item 6.
 8. Scrape config load across all config sources.
 9. Discovered targets, live reachability, and data-plane `up` plus one expected series per job.
@@ -122,14 +130,16 @@ Run these steps in order.
 
 Commands take `--policy-id` and `-o json`; full forms sit in [Evidence sources](#evidence-sources--use-these-not-kubectl). The [type gate](#policy-type-gate-hard-pre-check) decides which apply.
 
-Collector health (step 1) is policy-level. Steps 2–6 stay on the **one** rule [identity](#rule-identity-vs-scrape-job-identity-hard) resolved.
+Collector health (step 1) is policy-level. Steps 2–6 stay on the **one** rule [identity](#rule-identity-vs-scrape-job-identity-hard) resolved. Add `--addon-release-name` only when identity set an owning release.
+
+When owning release is unset: step 2 reports no CMS-delivered owner (ClusterCollector is the scraper, not the deliverer); step 3 reads the list row identity already holds; step 4 and step 6 pin with `--job-name` / `storage list --policy-id --storage-type Prometheus`.
 
 1. **Collector identity and health** — `collector list --collector-type ClusterCollector`: judge `state` / `workloads[]` per that `--help`, keep `collectors[].releaseName` for step 5 (the *collector's* release name, distinct from the addon release in steps 2-4).
 2. **Release status** — `addon-release list`: the **one** release that owns the named rule. Read `conditions` per that `--help`, plus version, `message`, and submitted `config`.
-3. **Config content** — fetch the matching rule type with `--addon-release-name` (`discoverType` picks the list; an empty `custom-job list` is not "no rule"). Token is a rule name → keep the row whose `name` equals it. Token is a release name → keep the row(s) that `--addon-release-name` returned; do not require `name` to equal the release name. Validate that rule's `configYaml` **and** `message` per [Collection Config Content Validation](#collection-config-content-validation). A `Ready` / `Success` condition only proves **rendered and delivered**, never **valid**.
-4. **Scrape config load** — `check-scrape-config --addon-release-name <releaseName>` with `--job-name` set to each **resolved scrape job name**. If the CLI misses or 400s on the user's collection-rule token, omit `--job-name` **only** when `--addon-release-name` already scopes the call, then **client-keep** `results[]` rows that belong to this rule. Read `passed`, `summary`, `targets[]`, and `drops[]` on the kept rows only; note each kept `targets[].scrapeUrl` for step 5.
+3. **Config content** — the matching rule row from identity (unscoped SM/PM list, or `--addon-release-name` when the owner is set / the token is a custom-job or release name). Token is a rule name → keep the row whose `name` equals it. Token is a release name → keep the row(s) that `--addon-release-name` returned. Validate that rule's `configYaml` **and** `message` per [Collection Config Content Validation](#collection-config-content-validation). A `Ready` / `Success` condition only proves **rendered and delivered**, never **valid**.
+4. **Scrape config load** — `check-scrape-config` with `--job-name` set to each **resolved scrape job name**. If the CLI misses or 400s on the user's collection-rule token, omit `--job-name` **only** when `--addon-release-name` already scopes the call, then **client-keep** `results[]` rows that belong to this rule. Read `passed`, `summary`, `targets[]`, and `drops[]` on the kept rows only; note each kept `targets[].scrapeUrl` for step 5.
 5. **Target status** — `job-target list --collector-release-name <collectorReleaseName> --job-name <resolvedJobName>`, then `check-collector-target --collector-release-name <collectorReleaseName> --scrape-url <scrapeUrl>` on a kept target of this rule. On 400 / empty after a name miss: retry with the resolved name, or mark `QueryFailed`.
-6. **Data plane** — `storage list --addon-release-name <releaseName> --storage-type Prometheus`, then `promql query --prometheus-id <status.instanceId> --query 'up{job="<resolvedJobName>"}'` once per resolved job, plus one expected series, read per [`up`](#up-is-the-reachability-oracle).
+6. **Data plane** — `storage list --storage-type Prometheus`, then `promql query --prometheus-id <status.instanceId> --query 'up{job="<resolvedJobName>"}'` once per resolved job, plus one expected series, read per [`up`](#up-is-the-reachability-oracle).
 7. **Root cause** — apply [Differential Diagnosis](#differential-diagnosis). Cluster-object evidence belongs here; do not replace step 5 with a cluster-object heading.
 
 ## Collection Config Content Validation
@@ -143,28 +153,28 @@ A rule reports `Ready` as soon as it is rendered and delivered. Two artefacts ar
 
 **Judge the delivered artefact by reading it.** For `discoverType: PrometheusYaml`, a delivered `configYaml` that is a bare job list (`- job_name: ...`) is a defect — it needs a `scrape_configs:` root (the `cs-default` row in the same `custom-job list`). Submitted values do not excuse it.
 
-**The rule's `message` is the backend's verdict on what it delivered.** `ScrapeConfigs Invalid: scrape_configs is empty` is a rejection, not a hint. A passing dry-run does not overrule it — the two read different documents. The same exception: a PrometheusYaml custom-job missing the `scrape_configs:` root key. Any other lint finding that the dry-run contradicts (job present, `passed: true`) is a note; keep going down the branches. ServiceMonitor/PodMonitor selectors: [branch 4](#differential-diagnosis) for **that** rule type — do not borrow the other type's counts.
+**The rule's `message` is the backend's verdict on what it delivered.** `ScrapeConfigs Invalid: scrape_configs is empty` is a rejection. A passing dry-run does not overrule it — the two read different documents. The same exception: a PrometheusYaml custom-job missing the `scrape_configs:` root key. Any other lint finding that the dry-run contradicts (job present, `passed: true`) is a note; keep going down the branches. ServiceMonitor/PodMonitor selectors: [branch 4](#differential-diagnosis) for **that** rule type — do not borrow the other type's counts. No delivered-list row — skip this section.
 
 ## Differential Diagnosis
 
 Walk the branches in order against the step 3-6 results. The first match is the root cause.
 
-1. **Job absent from `check-scrape-config` `results[]`, or `passed: false` with `failedPhase` validation** → read `failedPhase`, then the delivered content. Content invalid → config is the root cause; fix release values, do not restart. Content valid → config did not reach the collector; check collector health, then reload. `failedPhase: relabel` / `ALL_DROPPED` with the job in `results[]` is branch 4, not this branch.
+1. **Job absent from `check-scrape-config` `results[]`, or `passed: false` with `failedPhase` validation** → read `failedPhase`, then the delivered content. Content invalid → config is the root cause; fix release values, do not restart. Content valid → config did not reach the collector; check collector health, then reload. `failedPhase: relabel` / `ALL_DROPPED` with the job in `results[]` is branch 4.
 2. **Dry-run passed, yet the delivered rule carries a rejecting `message`, or a PrometheusYaml custom-job lacks the `scrape_configs:` root key** → the backend rejected what it delivered. Fix the release values so the delivered artefact is a valid document. Quote the `message` and `configYaml`; a passing dry-run does not clear the rule. A PodMonitor / ServiceMonitor has no `scrape_configs:` root — do not take its absence as this branch.
-3. **Job loaded, `summary.discoveryTargets: 0` / `targets[]` empty** → service discovery matched nothing.
+3. **Job loaded, `summary.discoveryTargets: 0` / `targets[]` empty** → service discovery matched nothing. For ServiceMonitor / PodMonitor, continue the branch 4 object walk on **that** rule type.
 4. **Job loaded, every discovered target in `drops[]` (`relabelKept` omitted or `0`)** → quote the dropping rule. Then split **on the delivered rule type** (do not borrow another type's fields):
-   - **ServiceMonitor** — the named row on `service-monitor list` (those fields are not in that `--help`):
-     - `matchedServiceCount` is Endpoints objects matching the selector, not addresses. `≥ 1` is not scrapeable targets.
-     - Read `endpoints[].matchedTargetCount` (omitted is 0; the count includes NotReady). Do not treat `discoveryTargets` or a generated port-name `keep` as that Service's endpoint count.
-     - Then `resource list --kind Service --namespace <rule namespace>` for `ports[].name` / `spec.selector`. Do not call `--kind Service` without `--namespace`. Do not invent `--kind` values, and do not take empty `--kind Endpoints` / `--kind Pod` as zero objects.
-     - `matchedTargetCount` omitted or `0` + port name does not match `endpoints[].port` → port-name miss. Same `0` + port name already matches → **this Service has no endpoints** (no addresses, including NotReady — do not call this "no ready backends"). Report that first; `spec.selector` is the Pod filter, not a cause — do not name a key from that map as the root cause from the Service object. Then quote, in order: Endpoints / EndpointSlice for that Service name; Pods matching `spec.selector`; the owning Deployment if a controller owns those labels. Prefer `resource list` for kinds `--help` lists; empty `200` → `kubectl` per [kubectl is not the default path](#kubectl-is-not-the-default-path). Missing Pods, a selector-key mismatch on live Pods, or not-Ready is the *why* after that finding, not instead of it.
-     - If `drops[]` has per-target labels, keep rows whose `__meta_kubernetes_service_name` equals the matched Service and read `__meta_kubernetes_endpoint_port_name` on **that subset only**; empty subset → the Service never entered SD (no endpoints) — still not a port miss. ≠ `endpoints[].port` → port mismatch. Only `droppedCount` → do not infer the Service from the count. A user-written `relabel_configs` (not the generated port `keep`) that dropped the matched object → quote that rule.
-   - **PodMonitor** — the named row on `pod-monitor list` (not in that `--help`):
-     - `matchedPodCount` omitted or `0` is a selector miss. `discoveryTargets ≥ 1` with a generated `keep` whose `regex` equals a `matchLabels` value is that miss, not a port miss.
+   - **ServiceMonitor** — the named row on `service-monitor list` when present (those fields are not in that `--help`). No row: skip `matched*`; namespace from the resolved job path; Service name is the rule name unless the CR says otherwise; then the same walk:
+     - `matchedServiceCount` is Endpoints objects matching the selector, not addresses.
+     - This Service's endpoint count is `endpoints[].matchedTargetCount` (omitted is 0; includes NotReady). `discoveryTargets` and a generated port `keep` are the cluster-wide filter.
+     - Then `resource list --kind Service --namespace <rule namespace>`. Keep the Service whose labels match the SM `selector` and read `ports[].name` / `spec.selector`. Do not call `--kind Service` without `--namespace`. Do not invent `--kind` values. That Service absent / empty `200` → `kubectl` per [kubectl is not the default path](#kubectl-is-not-the-default-path). Same for `--kind Endpoints` / `--kind Pod`.
+     - `matchedTargetCount` omitted or `0` + `ports[].name` ≠ `endpoints[].port` → port-name miss. Same `0` + `ports[].name` equals `endpoints[].port` → **this Service has no endpoints** (no addresses, including NotReady). `ports[].name` unread → continue the Endpoints walk; that list / kubectl miss is `QueryFailed`. Report the no-endpoints finding first; `spec.selector` is the Pod filter, not a cause — do not name a key from that map as the root cause from the Service object. Then quote, in order: Endpoints / EndpointSlice for that Service name; Pods matching `spec.selector`; the owning Deployment if a controller owns those labels. Prefer `resource list` for kinds `--help` lists; empty `200` → `kubectl`. Missing Pods, a selector-key mismatch on live Pods, or not-Ready is the *why* after that finding, not instead of it.
+     - If `drops[]` has per-target labels, keep rows whose `__meta_kubernetes_service_name` equals the matched Service and read `__meta_kubernetes_endpoint_port_name` on **that subset only**; empty subset → the Service never entered SD (no endpoints). ≠ `endpoints[].port` → port mismatch. Only `droppedCount` → `ports[].name` is still unread. A user-written `relabel_configs` (not the generated port `keep`) that dropped the matched object → quote that rule.
+   - **PodMonitor** — the named row on `pod-monitor list` when present (not in that `--help`). No row: skip `matched*`; namespace from the resolved job path:
+     - `matchedPodCount` omitted or `0` is a selector miss. `discoveryTargets ≥ 1` with a generated `keep` whose `regex` equals a `matchLabels` value is that miss.
      - `endpoints[]` omitted when the endpoint is a numeric `targetPort` or `matchedPodCount` is 0 is not a port-name miss. `endpoints[].matchedTargetCount` omitted or `0` is a container port-name miss only after `matchedPodCount ≥ 1` and a named `port` is present.
      - Do not read `matchedServiceCount`. Do not call `--kind Service`. `--kind Pod` empty `200` is inconclusive — SD can still report `discoveryTargets ≥ 1`.
      - If `drops[]` has per-target labels, read `__meta_kubernetes_pod_*` on that subset, not `__meta_kubernetes_service_name`.
-   - **Custom-job** — stop at the quoted drop rule. No `matched*` counts. `scrape_configs:` belongs to branch 2, not this branch.
+   - **Custom-job** — stop at the quoted drop rule. No `matched*` counts. `scrape_configs:` belongs to branch 2.
 5. **Job loaded with `finalTargets ≥ 1`, yet `up` has no series** — branch 2 has cleared the content → delivery or reload gap. Report both results; check collector `workloads[]` start times against the release `updateTime`.
 6. **Targets kept and `up == 0`, or the probe ran and failed** → target-side. `The target url is insecure` is not this branch.
 7. **Targets kept, probe `result.metrics[]` empty while `up == 1`** → inspect with `--include-raw-metrics`.
@@ -172,7 +182,10 @@ Walk the branches in order against the step 3-6 results. The first match is the 
 
 **Anti-patterns — do not do these:**
 
-- Using the collection-rule token as `--job-name` or PromQL `job=`, or dropping `--addon-release-name` / reading `up{job=~"..."}` after a miss or 400. Resolve the scrape job name; do not widen.
+- Starting **rule-name** diagnosis by listing addon releases to find an owner.
+- Adding `--addon-release-name` on `service-monitor list` / `pod-monitor list` before identity set an owner.
+- Using the collection-rule token as `--job-name` or PromQL `job=`, or reading `up{job=~"..."}` after a miss or 400. Resolve the scrape job name; do not widen.
+- Reporting the named rule does not exist before [Absence](#rule-identity-vs-scrape-job-identity-hard).
 - Treating `custom-discover-<id>` as a custom-job, or reading ServiceMonitor `matched*` / `--kind Service` on a PodMonitor (same-namespace Services can be unrelated).
 - Calling port mismatch from a generated `keep` or from `matchedServiceCount ≥ 1` — classify from [branch 4](#differential-diagnosis) for **that** rule type.
 - Using `job-target list` QueryFailed as a licence to `kubectl get` Services, Endpoints, or Pods, or listing those kinds cluster-wide after the named object is already in hand.
@@ -185,7 +198,7 @@ Whole-policy report follows [Check Items](#check-items-whole-policy) in order, t
 
 Targeted report — these headings, in this order; do not rename or swap:
 
-- **Summary** — policy id / type / region, release, addon version, rule type / name / namespace, **resolved** scrape job names. Not one jammed line.
+- **Summary** — policy id / type / region, release (or unset), addon version if any, rule type / name / namespace, **resolved** scrape job names. Not one jammed line.
 - The seven steps under their titles in [Targeted Collection Rule Diagnosis](#targeted-collection-rule-diagnosis). A `job-target list` 400 or ALL_DROPPED still keeps **Target status**; cluster-object evidence belongs in **Root cause**. Write the finding in product language; do not cite numbered items from [Differential Diagnosis](#differential-diagnosis).
 - Close with the evidence chain and the fix pending confirmation per `integration-common.md`.
 
