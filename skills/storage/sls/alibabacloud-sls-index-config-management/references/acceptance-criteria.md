@@ -3,6 +3,9 @@
 **Scenario**: SLS Index Configuration Management
 **Purpose**: Skill testing acceptance criteria
 
+Cloud API examples below assume `SLS_INDEX_USER_AGENT` was initialized once using
+[Observability](../SKILL.md#observability).
+
 ---
 
 ## Correct CLI Invocation Patterns
@@ -12,15 +15,15 @@
 #### CORRECT
 
 ```bash
-aliyun sls get-index --project my-project --logstore my-logstore
+aliyun sls get-index --user-agent "$SLS_INDEX_USER_AGENT" --project my-project --logstore my-logstore
 
-aliyun sls create-index \
+aliyun sls create-index --user-agent "$SLS_INDEX_USER_AGENT" \
   --project my-project --logstore my-logstore \
   --line "$(cat /tmp/line.json)" \
   --keys "$(cat /tmp/keys.json)"
 
 
-aliyun sls delete-index --project my-project --logstore my-logstore
+aliyun sls delete-index --user-agent "$SLS_INDEX_USER_AGENT" --project my-project --logstore my-logstore
 ```
 
 #### INCORRECT — Wrong product name
@@ -37,7 +40,7 @@ aliyun logservice create-index --project p --logstore l
 #### CORRECT — Kebab-case sub-command and flags
 
 ```bash
-aliyun sls update-index \
+aliyun sls update-index --user-agent "$SLS_INDEX_USER_AGENT" \
   --project my-project --logstore my-logstore \
   --line "$(cat /tmp/line.json)" \
   --keys "$(cat /tmp/keys.json)" \
@@ -56,64 +59,33 @@ aliyun sls GetIndex --Project p
 #### INCORRECT — JSON `--params` blob
 
 ```bash
-aliyun sls update-index --params '{"Project":"p","Logstore":"l","Keys":{...}}'
+aliyun sls update-index --user-agent "$SLS_INDEX_USER_AGENT" --params '{"Project":"p","Logstore":"l","Keys":{...}}'
 ```
 
 **Why**: The CLI takes individual flags, not a JSON `--params` blob.
 
-### 3. Index Body Passing — always via file
+### 3. Index Body Passing — prefer files
 
-#### CORRECT — Write JSON to file, then pass with `$(cat ...)`
+Prefer JSON files for complex `line` and `keys` values to simplify quoting. Correctly quoted
+inline JSON or serialized variables are also acceptable.
 
 ```bash
-cat > /tmp/line.json <<'EOF'
-{
-  "caseSensitive": false,
-  "chn": false,
-  "token": [",", " ", ";", "=", "(", ")", "[", "]", "{", "}", "?", "&", "/", ":", "\n", "\t", "\r"]
-}
-EOF
-
-cat > /tmp/keys.json <<'EOF'
-{
-  "status": { "type": "long", "doc_value": true },
-  "request_uri": {
-    "type": "text",
-    "doc_value": true,
-    "caseSensitive": false,
-    "chn": false,
-    "token": [",", " ", ";", "=", "(", ")", "[", "]", "{", "}", ":", "/", "\n", "\t", "\r"]
-  }
-}
-EOF
-
-aliyun sls create-index \
+aliyun sls create-index --user-agent "$SLS_INDEX_USER_AGENT" \
   --project my-project --logstore my-logstore \
   --line "$(cat /tmp/line.json)" \
   --keys "$(cat /tmp/keys.json)"
 ```
-
-#### INCORRECT — Inline multi-line JSON with shell-special characters
-
-```bash
-aliyun sls create-index --project p --logstore l \
-  --keys '{
-    "request_uri": {"type":"text","token":[",", " ", "\n", "\t"]}
-  }'
-```
-
-**Why**: Tokenizer arrays usually contain backslash escapes (`\n`, `\t`, `\r`) and quotes. Inline multi-line JSON in the shell breaks quoting; always serialize to a file first.
 
 ### 4. UpdateIndex — complete config replacement
 
 #### CORRECT — Submit the complete final config
 
 ```bash
-aliyun sls get-index --project my-project --logstore my-logstore > /tmp/current.json
+aliyun sls get-index --user-agent "$SLS_INDEX_USER_AGENT" --project my-project --logstore my-logstore > /tmp/current.json
 
 # Prepare /tmp/line.json and /tmp/keys.json as the final complete config.
 
-aliyun sls update-index \
+aliyun sls update-index --user-agent "$SLS_INDEX_USER_AGENT" \
   --project my-project --logstore my-logstore \
   --line "$(cat /tmp/line.json)" \
   --keys "$(cat /tmp/keys.json)" \
@@ -123,7 +95,7 @@ aliyun sls update-index \
 #### INCORRECT — Sending only a partial field fragment
 
 ```bash
-aliyun sls update-index \
+aliyun sls update-index --user-agent "$SLS_INDEX_USER_AGENT" \
   --project my-project --logstore my-logstore \
   --keys '{"new_field":{"type":"long","doc_value":true}}'
 ```
@@ -135,14 +107,14 @@ aliyun sls update-index \
 #### CORRECT — Branch on whether `get-index` succeeds
 
 ```bash
-if aliyun sls get-index --project p --logstore l > /tmp/cur.json 2>/tmp/err; then
-  aliyun sls update-index \
+if aliyun sls get-index --user-agent "$SLS_INDEX_USER_AGENT" --project p --logstore l > /tmp/cur.json 2>/tmp/err; then
+  aliyun sls update-index --user-agent "$SLS_INDEX_USER_AGENT" \
     --project p --logstore l \
     --line "$(cat /tmp/line.json)" \
     --keys "$(cat /tmp/keys.json)"
 else
   grep -q IndexConfigNotExist /tmp/err && \
-    aliyun sls create-index \
+    aliyun sls create-index --user-agent "$SLS_INDEX_USER_AGENT" \
       --project p --logstore l \
       --line "$(cat /tmp/line.json)" \
       --keys "$(cat /tmp/keys.json)"
@@ -152,30 +124,25 @@ fi
 #### INCORRECT — Always calling create-index
 
 ```bash
-aliyun sls create-index --project p --logstore l --line "..." --keys "..."
+aliyun sls create-index --user-agent "$SLS_INDEX_USER_AGENT" --project p --logstore l --line "..." --keys "..."
 ```
 
 **Why**: If an index already exists, `create-index` fails with `IndexAlreadyExist`. Always inspect first.
 
-### 6. DeleteIndex — explicit confirmation required
+### 6. DeleteIndex — dangerous operation
+
+Deleting an index removes full-text and field indexes and restricts indexed search and SQL
+analytics. Explain the impact, obtain explicit authorization for the target, and save a backup.
+Do not request confirmation again when the user has already explicitly authorized deletion.
 
 #### CORRECT — Confirm and capture a snapshot before deleting
 
 ```bash
-aliyun sls get-index --project p --logstore l > /tmp/index-backup-$(date +%s).json
+aliyun sls get-index --user-agent "$SLS_INDEX_USER_AGENT" --project p --logstore l > /tmp/index-backup-$(date +%s).json
 
 # After explicit user confirmation:
-aliyun sls delete-index --project p --logstore l
+aliyun sls delete-index --user-agent "$SLS_INDEX_USER_AGENT" --project p --logstore l
 ```
-
-#### INCORRECT — Chaining delete-index after a write
-
-```bash
-aliyun sls update-index --project p --logstore l --line "..."
-aliyun sls delete-index --project p --logstore l
-```
-
-**Why**: `delete-index` removes the entire index and breaks query / SQL on that Logstore. The skill never chains it after other writes and must obtain explicit user confirmation.
 
 ### 7. Authentication — never expose credentials
 
@@ -188,7 +155,7 @@ aliyun configure list
 #### INCORRECT — Passing AK/SK directly in the command
 
 ```bash
-aliyun sls update-index \
+aliyun sls update-index --user-agent "$SLS_INDEX_USER_AGENT" \
   --access-key-id LTAI5tXXXX \
   --access-key-secret 8dXXXX \
   --project p --logstore l --line "..."
@@ -211,56 +178,21 @@ printenv | grep -i credential           # FORBIDDEN
 env | grep -i access_key                # FORBIDDEN
 ```
 
-### 8. API Names — verify exact sub-command
+### 8. Region Parameter
 
-#### CORRECT
+Use the global `--region` flag with a full region ID, for example `--region cn-hangzhou`.
 
-```
-get-index        # OpenAPI Action: GetIndex
-create-index     # OpenAPI Action: CreateIndex
-update-index     # OpenAPI Action: UpdateIndex
-delete-index     # OpenAPI Action: DeleteIndex
-```
+### 9. Versioned User-Agent
 
-#### INCORRECT
-
-```
-GetIndex            # PascalCase is the Action name, not the CLI sub-command
-getIndex            # Wrong casing
-get_index           # Wrong separator (snake_case)
-getindex            # Missing separator
-describe-index      # Wrong verb — SLS uses get-, not describe-
-put-index           # Wrong verb — use update-index
-modify-index        # Not a real sub-command
-get-log-index       # Not a real sub-command — use get-index
-```
-
-### 9. Region Parameter
-
-#### CORRECT
-
-```bash
---region cn-hangzhou
---region cn-shanghai
---region ap-southeast-1
-```
-
-#### INCORRECT
-
-```bash
---region hangzhou       # Missing country prefix
---region cn-hangzhou-1  # Not a real region ID
---region-id cn-hangzhou # CLI global flag is --region, not --region-id
-```
+Use the manifest-derived version and a fresh random 32-character
+lowercase hexadecimal session ID. Reuse this skill's UA for all calls and retries in the
+conversation. Every cloud API command and request-only dry run must pass it as one quoted
+`--user-agent` value. Missing/invalid manifest data must fail before any cloud call; do not
+guess a version. Local help, version, plugin and configure commands are exempt.
 
 ## Workflow Checklist
 
 When the skill executes a write, it must satisfy all of:
 
-- [ ] `aliyun configure list` was run and returned a configured profile.
-- [ ] AI mode was enabled (`aliyun configure ai-mode enable`).
-- [ ] `get-index` was called and the response was captured to a file before any write.
-- [ ] Index body was written to `/tmp/<name>.json` (not inlined).
 - [ ] `update-index` body is the **full** desired configuration, not a partial fragment.
 - [ ] For `delete-index`, the user gave explicit confirmation and a backup file was written.
-- [ ] AI mode was disabled at the end of the session (`aliyun configure ai-mode disable`).

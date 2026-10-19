@@ -18,11 +18,14 @@ Use `aliyun help sls <subcommand>` for command-specific flags and examples, such
 - `create-index` and `update-index` use nearly the same flags. Use `create-index` when no index
   exists; use `update-index` when replacing an existing config.
 - `update-index` overwrites the whole index config. The submitted `line` / `keys` files must
-  represent the complete final config, not a partial fragment.
+  represent the complete final config, not a partial fragment. Read and back up the current
+  config first; preserve unrelated settings, including `line.auto_text_keys`.
 - At least one of `line`, `keys`, or `scan_index` must be present.
-- Object-valued parameters such as `line` and `keys` should be written to `/tmp/*.json` and
-  passed with `$(cat /tmp/file.json)`.
+- Prefer passing object-valued parameters such as `line` and `keys` from JSON files. Correctly
+  quoted inline JSON or serialized variables are also acceptable.
 - Index writes apply only to new logs after propagation, usually within ~1 minute.
+- Initialize the UA as described in [Observability](../SKILL.md#observability) before using the
+  examples below; retain the same value for all API calls.
 
 ## Index Basics
 
@@ -47,9 +50,28 @@ Common field options:
 - `doc_value`: enable SQL analytics for the field. Use it for fields in `SELECT`, `WHERE`,
   `GROUP BY`, `ORDER BY`, or aggregations.
 - `caseSensitive`: case-sensitive text matching.
-- `chn`: Chinese tokenization. Keep `false` unless Chinese keyword search is needed and user requires it.
+- `chn`: Chinese tokenization, disabled by default. Enabling it substantially reduces
+  tokenization and write throughput.
 - `token`: token delimiters for full-text/text fields.
 - `index_all`, `max_depth`, `json_keys`: JSON indexing controls.
+
+## Automatic Index Discovery
+
+Automatic index discovery is configured inside `line` and submitted through `--line`:
+
+- `auto_key_detect` (boolean, default `false`): when enabled, the server continuously discovers
+  unindexed fields and adds their names to `auto_text_keys`.
+- `auto_text_keys` (string[]): field names returned by `get-index`, all indexed as `text` with
+  analytics enabled. Token delimiters and case sensitivity inherit `line.token` and
+  `line.caseSensitive`; changes to those settings also affect these fields.
+
+Disabling automatic index discovery stops adding new fields; existing discovered indexes remain
+effective. On updates, preserve `line.auto_text_keys` exactly as returned unless the user explicitly
+requests a change. Read back to verify the requested settings and retention of existing fields;
+additional names may appear while automatic index discovery is enabled.
+
+For new configs, enable automatic index discovery only when requested and do not invent discovered
+names. See the [API schema](related-apis.md#index-configuration-schema) for the official reference.
 
 ## Examples
 
@@ -70,6 +92,7 @@ commands.
 
 ```bash
 aliyun sls create-index \
+  --user-agent "$SLS_INDEX_USER_AGENT" \
   --project <project> --logstore <logstore> \
   --line "$(cat /tmp/sls-index-line.json)" \
   --max-text-len 2048
@@ -105,6 +128,7 @@ aliyun sls create-index \
 
 ```bash
 aliyun sls update-index \
+  --user-agent "$SLS_INDEX_USER_AGENT" \
   --project <project> --logstore <logstore> \
   --line "$(cat /tmp/sls-index-line.json)" \
   --keys "$(cat /tmp/sls-index-keys.json)" \

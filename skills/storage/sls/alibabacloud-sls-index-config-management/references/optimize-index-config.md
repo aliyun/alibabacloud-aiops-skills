@@ -7,21 +7,23 @@ Adjust an existing SLS index config for a query, SQL statement, write throughput
 1. Run `get-index` and save the current index config as a backup.
 2. Analyze the user's requirement, the current index config, and any relevant context such as
    query statements, SQL statements, sample fields, cost concerns, or write-throughput concerns.
-3. Generate the complete optimized `line` / `keys` config.
-4. Produce an optimization report explaining what changed and why.
-5. Provide the `update-index` CLI command that submits the complete optimized config.
+3. Generate the complete optimized config, following the
+   [shared update rules](manage-index-config.md#automatic-index-discovery).
+4. Explain meaningful changes and apply the config when requested.
 
 ## Principles
 
-- **Missing fields in query**: if a query references a field that is not in `keys`, add that field
-  to the field index.
+- **Missing fields in query**: check both `keys` and `line.auto_text_keys`. Add a field index
+  only when the existing indexes do not meet the query's requirements.
 - **Missing SQL fields**: if SQL uses a field in `SELECT`, `WHERE`, `GROUP BY`, `ORDER BY`, or an
   aggregation, the field index needs `doc_value: true`.
+  Fields in `line.auto_text_keys` already support analytics; do not duplicate them in `keys`.
 - **No-token fields**: for identifier-like fields that do not need tokenization, such as
   `request_id`, `trace_id`, `span_id`, `user_id`, or exact-match IDs, remove unnecessary token
   delimiters. Keep tokenization minimal for exact-match fields.
 - **Chinese indexing**: prefer `chn: false`. Enable Chinese tokenization only when the user
-  explicitly needs Chinese keyword search on that field.
+  needs Chinese keyword search on that field; it substantially reduces tokenization and
+  write throughput.
 - **Long unstructured text**: for long, unstructured fields that are unlikely to be used in SQL
   analysis, such as `content`, `message`, or `raw_payload`, set `doc_value: false` to reduce
   storage overhead.
@@ -37,9 +39,3 @@ Adjust an existing SLS index config for a query, SQL statement, write throughput
   only the optimized field.
 - Explain any behavior change, especially removing tokenization, disabling `doc_value`, reducing
   JSON depth, or turning off Chinese tokenization.
-
-## Output
-
-- Optimized `line` / `keys` JSON files.
-- Brief optimization report: only list meaningful changes and why.
-- Complete `aliyun sls update-index ...` command.

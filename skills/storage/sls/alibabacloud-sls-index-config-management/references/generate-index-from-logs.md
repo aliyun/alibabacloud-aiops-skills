@@ -9,29 +9,32 @@ existing index, see [optimize-index-config.md](optimize-index-config.md).
 
 ## Workflow
 
-1. Run `get-index` and save the current index config as a backup if an index exists. If `IndexConfigNotExist` is returned, skip the backup and plan to use `create-index`.
-2. Analyze the user-provided samples and infer each field's SLS index type.
-3. Generate the complete final index config.
-4. Output the final index config and the matching `create-index` or `update-index` CLI command.
+1. Analyze the user-provided samples and infer each field's SLS index type.
+2. Generate the index config without accessing cloud resources.
+
+If the user also asks to apply the config, follow [manage-index-config.md](manage-index-config.md)
+for the cloud operation.
 
 ## Generation Rules
 
 Use user-provided structured log samples. The expected shape is a single-level key/value map:
 `{ "field": value, ... }`.
 
-Generate `keys` only by default. Do not generate a full-text `line` index unless the user asks for
-full-text keyword search.
+For a new index, generate `keys` only by default. Add `line` only when the user requests full-text
+keyword search or automatic index discovery. For automatic index discovery and updates to existing
+configs, follow the [shared rules](manage-index-config.md#automatic-index-discovery); do not
+regenerate `line.auto_text_keys` from samples.
 
 For each top-level field:
 
 1. Inspect all non-empty sample values for that field.
 2. Infer the narrowest compatible SLS type.
 3. Add one `keys.<field>` entry.
-4. Set `doc_value: false` unless the user explicitly says the field is needed for SQL analytics
-   (`SELECT`, `WHERE`, `GROUP BY`, `ORDER BY`, aggregations).
+4. Enable analytics (`doc_value: true`) by default unless the user requests otherwise.
 
-Do not make assumptions from field names alone. For example, do not set `doc_value: true` just
-because a field is named `status`, `request_time`, or `user_id`.
+For text/JSON indexes, default to case-insensitive matching (`caseSensitive: false`) and no
+Chinese tokenization (`chn: false`). Enabling Chinese tokenization substantially reduces
+tokenization and write throughput. Honor explicit user settings.
 
 ## Type Inference
 
@@ -47,7 +50,7 @@ Text defaults:
 ```json
 {
   "type": "text",
-  "doc_value": false,
+  "doc_value": true,
   "caseSensitive": false,
   "chn": false,
   "token": [",", " ", ";", "=", "(", ")", "[", "]", "{", "}", "?", "&", "/", ":", "\n", "\t", "\r"]
@@ -72,35 +75,30 @@ Example for field `extra`:
 ```json
 {
   "type": "json",
-  "doc_value": false,
+  "doc_value": true,
   "caseSensitive": false,
   "chn": false,
   "token": [",", " ", ":", "-", "\n", "\t", "\r"],
   "json_keys": {
     "trace_id": {
       "type": "text",
-      "doc_value": false,
+      "doc_value": true,
       "caseSensitive": false,
       "chn": false
     },
     "region": {
       "type": "text",
-      "doc_value": false,
+      "doc_value": true,
       "caseSensitive": false,
       "chn": false
     },
     "cost": {
       "type": "double",
-      "doc_value": false
+      "doc_value": true
     }
   }
 }
 ```
-
-## Output
-
-Return a concise field inference summary, the complete generated index config, and the matching
-`create-index` or `update-index` command from [manage-index-config.md](manage-index-config.md).
 
 ## Example Output
 
@@ -110,24 +108,24 @@ Example `keys` config (three representative field types):
 {
   "request_uri": {
     "type": "text",
-    "doc_value": false,
+    "doc_value": true,
     "caseSensitive": false,
     "chn": false,
     "token": [",", " ", ";", "=", "(", ")", "[", "]", "{", "}", "?", "&", "/", ":", "\n", "\t", "\r"]
   },
   "status": {
     "type": "long",
-    "doc_value": false
+    "doc_value": true
   },
   "extra": {
     "type": "json",
-    "doc_value": false,
+    "doc_value": true,
     "caseSensitive": false,
     "chn": false,
     "token": [",", " ", ":", "-", "\n", "\t", "\r"],
     "json_keys": {
-      "trace_id": { "type": "text", "doc_value": false, "caseSensitive": false, "chn": false },
-      "cost": { "type": "double", "doc_value": false }
+      "trace_id": { "type": "text", "doc_value": true, "caseSensitive": false, "chn": false },
+      "cost": { "type": "double", "doc_value": true }
     }
   }
 }

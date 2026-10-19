@@ -17,9 +17,11 @@ index-management endpoints: `GetIndex`, `CreateIndex`, `UpdateIndex`, and `Delet
 ## CLI Conventions
 
 - Always use the product namespace `aliyun sls` and kebab-case subcommands / flags.
+- Include `--user-agent "$SLS_INDEX_USER_AGENT"` on every cloud API command and request-only dry run;
+  initialize it once using [Observability](../SKILL.md#observability).
 - Do not use PascalCase OpenAPI action names (`UpdateIndex`) as CLI subcommands.
 - Do not pass a JSON `--params` blob. The SLS plugin exposes request fields as individual flags.
-- For object-valued index parameters, write compact JSON to files and pass them with `$(cat ...)`, for example `--line "$(cat /tmp/sls-index-line.json)"` and `--keys "$(cat /tmp/sls-index-keys.json)"`.
+- Prefer JSON files for object-valued parameters, for example `--line "$(cat /tmp/sls-index-line.json)"`. Correctly quoted inline JSON and serialized variables are also supported.
 - Pass scalar body properties directly, for example `--max-text-len 2048`, `--scan-index true`, or `--log-reduce false`.
 
 ---
@@ -33,7 +35,9 @@ The same JSON object is shared by `CreateIndex`, `UpdateIndex`, and the response
 | `line`                  | object   | conditional             | Full-text index. At least one of `line` / `keys` / `scan_index` must be present.                                |
 | `line.token`            | string[] | yes (if `line` present) | Tokenizer delimiters, e.g. `[",", " ", ";", "=", "(", ")", "[", "]", "{", "}", ":", "\n", "\t", "\r"]`.         |
 | `line.caseSensitive`    | boolean  | no                      | Default `false`.                                                                                                |
-| `line.chn`              | boolean  | no                      | Enable Chinese tokenization. Default `false`. Enabling reduces write throughput.                                |
+| `line.chn`              | boolean  | no                      | Enable Chinese tokenization. Default `false`; enabling substantially reduces tokenization and write throughput. |
+| `line.auto_key_detect`  | boolean  | no                      | Enable automatic index discovery. Default `false`; discovered names are added to `line.auto_text_keys`. |
+| `line.auto_text_keys`   | string[] | no                      | Discovered text indexes with analytics enabled; inherit `line.token` and `line.caseSensitive`. Returned by `GetIndex` and preserved on updates. |
 | `line.include_keys`     | string[] | no                      | Restrict full-text index to these fields. Mutually exclusive with `exclude_keys`.                               |
 | `line.exclude_keys`     | string[] | no                      | Exclude these fields from full-text index. Mutually exclusive with `include_keys`.                              |
 | `keys`                  | object   | conditional             | Field index map: `{ <fieldName>: <IndexKey> }`. At least one of `line` / `keys` / `scan_index` must be present. |
@@ -47,6 +51,9 @@ The same JSON object is shared by `CreateIndex`, `UpdateIndex`, and the response
 | `lastModifyTime`        | integer  | response-only           | Last modification time in Unix seconds. Read via `GetIndex`.                                                    |
 | `storage`               | string   | response-only           | Storage type, fixed to `pg`. Read via `GetIndex`.                                                               |
 
+See [Automatic Index Discovery](manage-index-config.md#automatic-index-discovery) for update rules and the
+[official index schema](https://help.aliyun.com/zh/sls/developer-reference/api-sls-2020-12-30-struct-index).
+
 ### `IndexKey` (entry value of `keys`)
 
 | Field           | Type     | Required | Description                                                                                       |
@@ -55,7 +62,7 @@ The same JSON object is shared by `CreateIndex`, `UpdateIndex`, and the response
 | `doc_value`     | boolean  | no       | `true` enables SQL analytics (`SELECT`, `GROUP BY`, `WHERE`) on this field. **Required for SQL.** |
 | `alias`         | string   | no       | Field alias, optional.                                                                            |
 | `caseSensitive` | boolean  | no       | For `text` / `json`. Default `false`.                                                             |
-| `chn`           | boolean  | no       | For `text` / `json`. Default `false`. Enable only when content contains Chinese.                  |
+| `chn`           | boolean  | no       | For `text` / `json`. Default `false`; enabling substantially reduces tokenization and write throughput. |
 | `token`         | string[] | no       | Tokenizer delimiters for `text` / `json`.                                                         |
 | `index_all`     | boolean  | no       | For `json`. Auto-index all leaf text fields under the JSON.                                       |
 | `max_depth`     | integer  | no       | For `json`. Max recursion depth.                                                                  |
@@ -131,7 +138,8 @@ tokenizer.
 
 ### Output
 
-The full index configuration object (see schema above) plus response-only fields `ttl`, `index_mode`, `lastModifyTime`, `storage`.
+The full index configuration object, including `line.auto_text_keys` when returned, plus
+response-only fields `ttl`, `index_mode`, `lastModifyTime`, `storage`.
 
 ### Common Errors
 
@@ -189,7 +197,8 @@ Same as `CreateIndex`.
 
 The request body **replaces** the entire index configuration. Any field not included in the body is **dropped**. Treat `update-index` like `create-index` against an existing Logstore: prepare the complete final config, then submit it.
 
-Call `get-index` first when you need a backup or a reference for the existing config.
+Call `get-index` first and save a backup; follow the
+[shared update rules](manage-index-config.md#automatic-index-discovery).
 
 ### Common Errors
 
@@ -214,9 +223,11 @@ Same set as `CreateIndex`, plus:
 
 ### Effect & Risk
 
-- Removes **all** field indexes and full-text indexes; query / SQL / SPL on this Logstore will stop working.
+- **Dangerous operation:** removes all field and full-text indexes, restricting indexed searches
+  and SQL analytics on this Logstore. Explain this impact before deletion.
 - The deletion takes effect within ~1 minute; in-flight queries may continue to succeed during the propagation window.
-- **Always confirm with the user before invoking.** This skill never chains `delete-index` after another write.
+- Obtain explicit authorization for the target and save a backup before deletion. Existing
+  explicit authorization is sufficient; do not ask for it again.
 
 ### Common Errors
 

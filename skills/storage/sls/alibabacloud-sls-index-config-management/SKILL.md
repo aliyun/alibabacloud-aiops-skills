@@ -18,19 +18,11 @@ reference document needed for the user's request.
 
 ## Prerequisites
 
+These checks apply when executing cloud operations; log-sample generation can run offline.
+
 ### Install Aliyun CLI
 
 Run `aliyun version` to verify the version is `>= 3.3.8`. If not installed or outdated, follow [references/cli-installation-guide.md](references/cli-installation-guide.md) to install or update.
-
-### Ensure AI Mode Enabled
-
-Before executing any SLS API commands, enable AI-Mode, set User-Agent, and update plugins:
-
-```bash
-aliyun configure ai-mode enable
-aliyun configure ai-mode set-user-agent --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-sls-index-config-management"
-aliyun plugin update
-```
 
 ### Check Alibaba Cloud credentials configured
 
@@ -51,13 +43,32 @@ On `Unauthorized` error, surface [references/ram-policies.md](references/ram-pol
 
 ---
 
+## Observability
+
+Run [scripts/user_agent.py](scripts/user_agent.py) once per session to generate the UA, then reuse
+it for all cloud API commands, including request-only dry runs:
+
+```bash
+SLS_INDEX_USER_AGENT="$(python3 scripts/user_agent.py)" || exit 1
+aliyun sls get-index --project <project> --logstore <logstore> \
+  --user-agent "$SLS_INDEX_USER_AGENT"
+```
+
+Example generated UA:
+
+```text
+AlibabaCloud-Agent-Skills/alibabacloud-sls-index-config-management/59ae5afe2075fc3dc1f0e7e39539c902 skill-version/0.0.1
+```
+
+---
+
 ## Routing the Request
 
-After environment and credential checks, classify the user's request and follow the matching reference:
+Follow the reference matching the user's request:
 
 | If the user wants to …                                                                                                      | Go to                                                                            |
 | --------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| View / create / update / delete an index, or change a single field, TTL, `max_text_len`, full-text on-off, log_reduce, etc. | [references/manage-index-config.md](references/manage-index-config.md)           |
+| View / create / update / delete an index, or change a field, TTL, `max_text_len`, full-text, automatic index discovery, log_reduce, etc. | [references/manage-index-config.md](references/manage-index-config.md)           |
 | Build an index for a Logstore that has none, or rebuild from scratch using user-provided structured log samples             | [references/generate-index-from-logs.md](references/generate-index-from-logs.md) |
 | Adjust an existing index to support a new query / SQL, reduce cost, or improve write throughput                             | [references/optimize-index-config.md](references/optimize-index-config.md)       |
 
@@ -68,31 +79,8 @@ Mixed requests are common (e.g. "generate an index for these logs and then updat
 ## Global Rules
 
 - **No writes without the scenario reference.** Before any write operation, read the relevant reference document and follow its confirmation, full-body, rollback, and timing rules.
+- **Preserve discovered indexes.** Keep `line.auto_text_keys` unchanged on updates unless explicitly requested otherwise; see [automatic index discovery](references/manage-index-config.md#automatic-index-discovery).
 - **Use exact SLS CLI names.** Product is `sls`; subcommands and flags are kebab-case. Use [references/acceptance-criteria.md](references/acceptance-criteria.md) only when validating command shape or debugging CLI invocation issues.
-
-### Output Format
-
-Every time you present an index configuration to the user — whether from a read (`get-index`), after a
-write (`create-index` / `update-index`), or during generation/optimization — output **both**:
-
-1. **Complete JSON** — the full `get-index` JSON response (or the equivalent JSON body you are about
-   to submit for a write). Wrap it in a fenced `json` code block so the user can copy-paste it
-   directly.
-2. **Human-readable summary**
-
-Put the Complete JSON first, then the summary. The summary helps the user understand the config at a glance;
-the JSON is the authoritative, machine-readable reference they can use for scripting, version control,
-or future `update-index` calls.
-
----
-
-## Cleanup
-
-**Whether operations succeed or fail, you MUST disable AI-Mode before ending the session:**
-
-```bash
-aliyun configure ai-mode disable
-```
 
 ---
 

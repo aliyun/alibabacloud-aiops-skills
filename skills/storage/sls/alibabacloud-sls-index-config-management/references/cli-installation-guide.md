@@ -2,6 +2,9 @@
 
 Complete guide for installing and configuring Aliyun CLI for the index configuration manager skill.
 
+Before cloud API examples, initialize `SLS_INDEX_USER_AGENT` using
+[Observability](../SKILL.md#observability). Local installation and configuration commands do not need it.
+
 > **Aliyun CLI 3.3.8+**: Supports installing and using all published Alibaba Cloud product plugins.
 > Make sure to upgrade to 3.3.8 or later for full plugin ecosystem coverage, including the `sls` plugin used by this skill.
 
@@ -119,7 +122,7 @@ When multiple profiles are configured, use a profile-specific command rather tha
 state:
 
 ```bash
-aliyun sls get-index --profile projectA --project p --logstore l
+aliyun sls get-index --user-agent "$SLS_INDEX_USER_AGENT" --profile projectA --project p --logstore l
 ```
 
 Do not run commands that display secret values, such as `aliyun configure get`,
@@ -130,7 +133,7 @@ Do not run commands that display secret values, such as `aliyun configure get`,
 ### Test Authentication
 
 ```bash
-aliyun ecs describe-regions
+aliyun ecs describe-regions --user-agent "$SLS_INDEX_USER_AGENT"
 ```
 
 Successful invocation returns a JSON list of regions. Any of the following errors indicates a credential issue:
@@ -143,7 +146,7 @@ Successful invocation returns a JSON list of regions. Any of the following error
 ### Test SLS plugin & permissions
 
 ```bash
-aliyun sls get-index --project <project> --logstore <logstore>
+aliyun sls get-index --user-agent "$SLS_INDEX_USER_AGENT" --project <project> --logstore <logstore>
 ```
 
 - Success → both CLI and `log:GetIndex` are working.
@@ -181,7 +184,7 @@ aliyun plugin install --names sls
 
 ```bash
 aliyun configure list
-aliyun ecs describe-regions
+aliyun ecs describe-regions --user-agent "$SLS_INDEX_USER_AGENT"
 ```
 
 ### Issue: Permission Denied (`Forbidden.RAM`)
@@ -191,7 +194,7 @@ Check that the RAM user has the policies described in [ram-policies.md](ram-poli
 ### Issue: Wrong Region
 
 ```bash
-aliyun sls get-index --region cn-shanghai --project <project> --logstore <logstore>
+aliyun sls get-index --user-agent "$SLS_INDEX_USER_AGENT" --region cn-shanghai --project <project> --logstore <logstore>
 ```
 
 A Project lives in exactly one region; a region mismatch returns `ProjectNotExist`.
