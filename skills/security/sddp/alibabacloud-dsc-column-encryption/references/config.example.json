@@ -1,0 +1,20 @@
+{
+  "RegionId": "cn-hangzhou",
+  "TemplateId": 123456,
+  "ProductCode": "RDS",
+  "InstanceId": "rm-xxxxxxxxxxxxxxxxx",
+  "EngineType": "MySQL",
+  "SubRuleList": [
+    {
+      "DbName": "app_db",
+      "TableName": "users",
+      "Columns": "email,phone"
+    }
+  ],
+  "UserList": [
+    {
+      "AccountId": "app_user"
+    }
+  ],
+  "ExpireTimeOperation": "PRESERVE"
+}

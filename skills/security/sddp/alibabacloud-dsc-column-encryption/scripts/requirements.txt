@@ -1,0 +1,4 @@
+# Python 3.10+ standard library only; no third-party Python dependencies.
+# Install Alibaba Cloud CLI separately: >= 3.4.10, or exactly 3.3.23 with StsToken.
+# User/platform configures an explicit OAuth, AK, StsToken or RamRoleArn profile.
+# See references/runtime-constraints.md; never place credentials in the skill.
