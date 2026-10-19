@@ -1,41 +1,48 @@
 # Ticket Categories Reference
 
-> Verified against the web frontend (2026-08-28 screenshots) and the qianwen
-> CLI built-in category list. Two category groups behave differently.
+> **Do not hardcode category IDs.** Always fetch the latest list with:
+> ```bash
+> qianwen support create --list-categories --format json
+> ```
+>
+> This file is for keyword matching guidance only. The category set changes
+> over time; the API is the single source of truth for IDs.
 
-## Group 1: Model categories — CREATE tickets
+## Keyword-to-Category Mapping
 
-These are real ticket categories. Both CLI and API `CreateTicketNew` accept
-these IDs.
+Use these English keywords to select the best category from the dynamic list.
+When the customer writes in another language, translate the intent into the
+closest English keyword before matching; never persist the customer's original
+wording in the category lookup.
 
-| ID | Category | Keywords |
-|----|----------|----------|
-| `582262` | Model > Billing | usage, tokens, quota, cost, charge, bill, fee |
-| `582263` | Model > Invoice | invoice, receipt, tax |
-| `582264` | Model > Feature Inquiry | how to, feature, capability, tutorial, guide |
-| `582265` | Model > API/SDK | API, SDK, 401, 403, 500, 429, timeout, error, call failure |
-| `582266` | Model > Tool Integration | integration, connector, third-party tool |
+| Keywords | Likely Category |
+|----------|----------------|
+| usage, billing, quota, tokens, cost, charge, invoice | Usage and Billing |
+| API, SDK, call failure, timeout, error, 401, 403, 429, 500 | API Issues |
+| how to, tutorial, guide, feature, capability | Feature Guide |
+| purchase, price, pricing, plan, subscribe | Purchase and Pricing |
+| refund, cancel, unsubscribe | Refund and Cancellation |
+| permission, account, login, console | Account and Console |
+| documentation, docs, missing | Documentation |
+| security, violation, content, safety | Safety and Compliance |
+| MiniMax, Kimi, third-party | Third-party Models |
+| discount, promotion, campaign | Promotions |
+| OpenClaw, Cursor, integration, connector | AI Tool Integration |
+| slow, latency, performance, response time | Performance and Latency |
+| concurrency, rate limit, QPS, quota exhausted | Concurrency and Rate Limiting |
+| poor quality, inaccurate, hallucination, wrong answer | Model Quality and Accuracy |
+| training, fine-tune, dataset | Model Training and Fine-tuning |
+| data, privacy, leak | Data and Privacy |
+| downtime, outage, unavailable, service interrupted | Service Availability |
+| upgrade, version, migration | Upgrade and Migration |
+| config, setting, parameter | Configuration |
+| other, uncategorized | Other |
 
-> **Frontend parity note:** The web frontend additionally shows
-> "Arena activity-related consultation" under the Model group. The CLI
-> built-in list does not include it. If the user's issue is Arena-related,
-> guide them to submit via the web portal.
+## Selection Strategy
 
-## Group 2: App categories — REDIRECT to app site (do NOT create tickets)
-
-The web frontend does NOT create tickets for app categories. Selecting an
-app shows "For service support, please visit the app's official site".
-Match this behavior: guide the user to the app's official site instead of
-creating a QianWen ticket.
-
-| ID | Category | Official site (helpUrl) |
-|----|----------|------------------------|
-| `miaowu` | App > MiaoWu | https://meoo.com |
-| `wanxiang` | App > WanXiang | https://tongyi.aliyun.com/wan |
-| `wukong` | App > WuKong | https://wukong.dingtalk.com |
-| `qianwen` | App > QianWen | https://www.qianwen.com |
-| `qoder` | App > Qoder | https://qoder.com |
-| `qoderwork` | App > QoderWork | https://qoder.com |
-
-**ABSOLUTE PROHIBITION:** Do not call `CreateTicketNew` with an App category
-ID. Always redirect the user to the app's official site.
+1. Run `qianwen support create --list-categories --format json`.
+2. Parse the returned category list; treat the API result as authoritative.
+3. Match the customer's issue keywords against the table above.
+4. If multiple categories match, prefer the more specific one.
+5. If nothing matches, use the most generic or "Other" category.
+6. Never reuse a category ID across runs; re-fetch every session.

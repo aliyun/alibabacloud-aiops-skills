@@ -1,20 +1,32 @@
 ---
 name: alibabacloud-qianwenai-support
 description: |
-  Create, track, and manage QianWen support tickets from the conversation:
-  submit a new ticket, check ticket status and engineer replies, follow up,
-  close, and rate — so platform issues get resolved without leaving the chat.
-  Triggers: "submit ticket", "create ticket", "list tickets", "view ticket",
-  "reply ticket", "close ticket", "rate ticket", "transfer to human",
-  "work order", "customer service", "human support", "open ticket",
-  "check ticket", "cancel ticket", "evaluate ticket", "ticket list",
-  "support request", "escalate to agent".
-  Do NOT use for general model usage questions, API Key management,
-  or billing inquiries — only when the user explicitly needs ticket operations.
-compatibility: Works with a QianWen account authenticated via `qianwen auth login` (CLI device flow) or the `QIANWEN_ACCESS_TOKEN` environment variable.
+  Manage QianWen support tickets from the conversation: submit, list, view,
+  follow up, expedite, reply, close and rate — covering QianWen AI, Bailian,
+  DashScope and Alibaba Cloud model-service issues. Triggers: "submit ticket",
+  "create ticket", "list tickets", "view ticket", "reply ticket", "close
+  ticket", "rate ticket", "transfer to human", "work order", "customer
+  service", "human support", "open ticket", "check ticket", "cancel ticket",
+  "evaluate ticket", "ticket list", "ticket status", "support request",
+  "escalate to agent", "follow up on a ticket", "expedite ticket",
+  "after-sales", "report a problem", "file a complaint", "overdue payment",
+  "billing issue", "invoice discrepancy", "quota exhausted", "usage limit
+  reached", "API error, contact official", "account suspended", "account
+  blocked", "contact support". Do NOT trigger for general product knowledge,
+  model usage how-tos, API Key management, or vague feedback without explicit
+  ticket intent — confirm intent first.
+compatibility: Requires QianWen CLI v1.2.0+ (v1.4.0+ for usage logs), authenticated via `qianwen auth login` (CLI device flow) or the `QIANWEN_ACCESS_TOKEN` environment variable. Problem summarization is handled by the calling agent's own model.
 metadata:
-  version: "1.1"
+  version: "3.7.0"
   api_version: "1.0"
+  openclaw:
+    requires:
+      env: []
+      bins: [python3]
+      anyBins: []
+    envVars: []
+    emoji: "🎫"
+    homepage: "https://platform.qianwenai.com/home/support"
   keywords:
     - ticket
     - work order
@@ -35,6 +47,20 @@ metadata:
 # QianWen Support Ticket Management
 
 Manage QianWen support tickets through the full lifecycle: create, list, view, reply, close, and rate. Auto-diagnoses common issues before creating tickets to avoid unnecessary submissions.
+
+## Data Flows and External Calls
+
+The destinations below are the complete set of network endpoints present in this skill's shipped code. There are no others, and no Alibaba Cloud OpenAPI or other cloud API is called.
+
+- `https://cli.qianwenai.com/data/v2/api.json` — the QianWen support (Workorder) API, this skill's own first-party platform. The skill POSTs ticket operation requests here (create, list, view, reply, close, rate, categories) carrying the operation name, paging parameters, and the ticket fields the user supplied and confirmed (category ID, ticket ID, description text, rating), plus a tracing `User-Agent`. Authentication uses the user's own QianWen session credential, which is sent to this first-party endpoint only and never to any third-party destination.
+- `https://meoo.com` — official site of the MiaoWu app. The skill never requests this URL and sends nothing to it; it is only printed as a guidance link, because MiaoWu issues are handled on the app's own site instead of through a ticket.
+- `https://wukong.dingtalk.com` — official site of the WuKong app. The skill never requests this URL and sends nothing to it; it is only printed as a guidance link for WuKong issues.
+- `https://www.qianwen.com` — official QianWen consumer site. The skill never requests this URL and sends nothing to it; it is only printed as a guidance link for QianWen app issues.
+- `https://qoder.com` — official Qoder and QoderWork site. The skill never requests this URL and sends nothing to it; it is only printed as a guidance link for those app issues.
+
+**What data leaves this machine:** only non-credential diagnostic context — hostnames, IP addresses, ports, domain names, timestamps, and resource IDs the user supplies — together with the ticket text the user has reviewed and explicitly confirmed; all of it goes only to the first-party QianWen endpoint above. No credentials, tokens, local file contents or customer data are uploaded to third parties. No attachment, log file, screenshot or archive is ever uploaded by this skill.
+
+**Read-only guarantee:** this skill is read-only with respect to cloud resources — it never creates, modifies, deletes or bills any cloud resource, and it performs no third-party data sharing beyond the destinations listed above. Its only write operations are support-ticket records on the QianWen platform (create, reply, close, rate), and each one requires the user's explicit confirmation of the displayed draft beforehand.
 
 ## Execution Principle
 
@@ -99,6 +125,11 @@ Read-only operations (doctor, list, view, categories) need no confirmation.
 | "close ticket" / "cancel ticket" | Close/cancel ticket |
 | "rate ticket" / "evaluate ticket" | Rate resolved ticket |
 | "transfer to human" / "human support" | Create ticket (escalation) |
+| "follow up on a ticket" / "expedite ticket" | View status and draft a reminder reply |
+| "after-sales" / "report a problem" / "file a complaint" with ticket intent | Create ticket |
+| "overdue payment" / "billing issue" / "invoice discrepancy" | Create billing ticket |
+| "quota exhausted" / "usage limit reached" | Diagnose then create quota ticket |
+| "API error, contact official" / "account suspended" / "account blocked" | Create platform ticket |
 | "ticket" / "work order" with issue context | Create ticket after diagnosis |
 
 **Do NOT trigger for:**
@@ -288,10 +319,13 @@ When reading replies via `view`, first check terminal status. For terminal ticke
 
 - **User-Agent template (mandatory)**: every request issued by the scripts
   carries a User-Agent built from the template
-  `AlibabaCloud-Agent-Skills/{SKILL_NAME}/{session-id}`, where `{SKILL_NAME}`
-  is this skill's frontmatter name — `alibabacloud-qianwenai-support` — and
-  `{session-id}` is the session identifier described below. Resolved example:
-  `AlibabaCloud-Agent-Skills/alibabacloud-qianwenai-support/4eefc3a1be2102b3eb41463c84e98e9b`.
+  `AlibabaCloud-Agent-Skills/{SKILL_NAME}/{session-id} skill-version/{version}`,
+  where `{SKILL_NAME}` is this skill's frontmatter name —
+  `alibabacloud-qianwenai-support` — `{session-id}` is the session identifier
+  described below, and `{version}` is derived exclusively from the top-level
+  `version` field of `references/manifest.json` (never guessed; it must equal
+  the frontmatter version). Resolved example:
+  `AlibabaCloud-Agent-Skills/alibabacloud-qianwenai-support/4eefc3a1be2102b3eb41463c84e98e9b skill-version/3.7.0`.
 - **session-id rule**: generated **once per session**, as a **32-char
   lowercase hex** string, and kept **consistent across all requests** of that
   session. The value is generated per script run (`uuid4().hex`) so that every
@@ -352,6 +386,14 @@ When a ticket has engineer replies, **MUST follow this three-step workflow**:
 ### Batch Operations — Not Supported
 
 **ABSOLUTE PROHIBITION:** This skill MUST NOT perform batch operations (batch create/reply/close/rate/export). Only one ticket at a time.
+
+### Proactive Notification — Not Supported
+
+**ABSOLUTE PROHIBITION:** This skill has no polling, listener or push channel. Never promise the user "I will tell you as soon as there is a new reply" or "I will notify you when the engineer responds". Correct phrasing is on-demand pull: "You can ask me to check the latest status of the ticket at any time." Prohibited forms include: "I will let you know", "I will ping you", "I will watch this ticket", "I will follow up for you automatically". Allowed forms: "ask me to check", "when you come back, I can fetch the latest status", "the ticket link is here for you to view at any time".
+
+### Customer Intent Fidelity
+
+**ABSOLUTE PROHIBITION:** Never rewrite the customer's intent without evidence. Allowed operations: structured formatting, category tagging, attaching diagnostic data, masking sensitive values. Prohibited: colloquial-to-formal paraphrase, adding symptoms the customer did not state, replacing the customer's wording with a "more accurate" phrase, deciding on the customer's behalf (for example, silently downgrading severity). Preserve the customer's original description in `preview-create`; any transformation must be visible in the draft before confirmation.
 
 ### Ticket Language
 

@@ -49,7 +49,48 @@ def _get_session_id() -> str:
 
 
 _SESSION_ID = _get_session_id()
-_USER_AGENT = f"AlibabaCloud-Agent-Skills/alibabacloud-qianwenai-support/{_SESSION_ID}"
+
+# Script version; must equal the top-level "version" in references/manifest.json
+# and the SKILL.md frontmatter (checked by the platform UA-SKILL-VERSION rule).
+VERSION = "3.7.0"
+_UA_SKILL_VERSION_CACHE: Optional[str] = None
+
+
+def _user_agent_skill_version() -> str:
+    """Derive the User-Agent skill-version from references/manifest.json.
+
+    The value is never guessed: an unreadable manifest or a version that
+    disagrees with this script's VERSION aborts the cloud call with a
+    structured error. Cached after the first successful read.
+    """
+    global _UA_SKILL_VERSION_CACHE
+    if _UA_SKILL_VERSION_CACHE is not None:
+        return _UA_SKILL_VERSION_CACHE
+    manifest = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "references", "manifest.json",
+    )
+    try:
+        with open(manifest, encoding="utf-8") as fh:
+            declared = str(json.load(fh).get("version", "")).strip()
+    except (OSError, ValueError, AttributeError):
+        print(json.dumps({"error": "references/manifest.json is unreadable; "
+                                   "the User-Agent skill-version is never guessed"}))
+        sys.exit(1)
+    if (re.fullmatch(r"\d+\.\d+\.\d+(?:-[0-9A-Za-z.]+)?", declared or "") is None
+            or declared != VERSION):
+        print(json.dumps({"error": f"references/manifest.json version {declared!r} "
+                                   f"disagrees with the script VERSION {VERSION!r}"}))
+        sys.exit(1)
+    _UA_SKILL_VERSION_CACHE = declared
+    return declared
+
+
+def build_user_agent() -> str:
+    # Mandatory template (SKILL.md Observability):
+    # AlibabaCloud-Agent-Skills/{skill}/{session-id} skill-version/{version}
+    return (f"AlibabaCloud-Agent-Skills/alibabacloud-qianwenai-support/{_SESSION_ID}"
+            f" skill-version/{_user_agent_skill_version()}")
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -181,7 +222,7 @@ class ApiBackend:
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {self.token}",
-                "User-Agent": _USER_AGENT
+                "User-Agent": build_user_agent()
             },
             method="POST"
         )
@@ -675,9 +716,33 @@ def main():
         parser.print_help()
         sys.exit(1)
 
+    # `doctor` is a pure diagnostic and must run regardless of backend
+    # availability: it reports what the environment is missing and exits 0
+    # so the calling agent can proceed to invoke the actual subcommands.
+    # Non-doctor subcommands still need a working backend.
+    if args.command == "doctor":
+        backend, mode = select_backend(args.backend)
+        if backend is None:
+            result = {
+                "action": "doctor",
+                "backend": "none",
+                "cli_available": False,
+                "token_present": False,
+                "api_reachable": False,
+                "auth_valid": False,
+                "note": mode,
+                "recovery": "Install QianWen CLI (`npm install -g @qianwenai/qianwen-cli`) and run `qianwen auth login`, or export QIANWEN_ACCESS_TOKEN. Ticket operations cannot proceed without one of these; report the failure honestly and do not fabricate results.",
+            }
+            _out(result)
+            sys.exit(0)
+        result = backend.doctor()
+        result["backend"] = mode
+        _out(result)
+        sys.exit(0)
+
     backend, mode = select_backend(args.backend)
     if backend is None:
-        _out({"error": mode, "backend": "none"})
+        _out({"error": mode, "backend": "none", "command": args.command})
         sys.exit(1)
 
     # Pre-flight: terminal status check for reply/close only
@@ -723,8 +788,6 @@ def main():
         result = backend.close_ticket(args.ticket_id)
     elif args.command == "rate":
         result = backend.rate_ticket(args.ticket_id, args.rating, args.comment)
-    elif args.command == "doctor":
-        result = backend.doctor()
     else:
         result = {"error": f"Unknown command: {args.command}"}
 
