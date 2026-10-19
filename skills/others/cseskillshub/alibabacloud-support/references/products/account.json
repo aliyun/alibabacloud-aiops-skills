@@ -1,0 +1,763 @@
+{
+  "product": "account",
+  "aliases": [
+    "账号服务",
+    "账号",
+    "Account Service",
+    "阿里云账号"
+  ],
+  "issueTypes": [
+    {
+      "name": "账号实名认证变更咨询",
+      "keywords": [
+        "实名认证变更",
+        "企业名称变更",
+        "公司注销",
+        "个人转企业",
+        "证件号变更",
+        "营业执照更新",
+        "认证信息变更"
+      ],
+      "categoryKeywords": [
+        "实名认证",
+        "变更",
+        "企业",
+        "注销"
+      ],
+      "categoryHints": [
+        "账号实名认证变更咨询"
+      ],
+      "collect": [
+        {
+          "field": "accountUid",
+          "label": "账号UID",
+          "required": true,
+          "type": "string",
+          "description": "阿里云账号UID",
+          "maxLength": 64
+        },
+        {
+          "field": "changeType",
+          "label": "变更类型",
+          "required": true,
+          "type": "string",
+          "enum": ["企业名称变更", "证件号变更", "个人转企业", "企业注销"],
+          "description": "实名认证变更的具体类型"
+        },
+        {
+          "field": "oldCompanyName",
+          "label": "原企业名称",
+          "required": false,
+          "type": "string",
+          "description": "变更前的企业名称",
+          "maxLength": 200
+        },
+        {
+          "field": "newCompanyName",
+          "label": "新企业名称",
+          "required": false,
+          "type": "string",
+          "description": "变更后的企业名称",
+          "maxLength": 200
+        },
+        {
+          "field": "businessLicenseType",
+          "label": "营业执照类型",
+          "required": false,
+          "type": "string",
+          "enum": ["营业执照副本", "营业执照正本", "统一社会信用代码证", "其他"],
+          "description": "提供的营业执照证件类型"
+        },
+        {
+          "field": "creditCode",
+          "label": "统一社会信用代码",
+          "required": false,
+          "type": "string",
+          "description": "企业统一社会信用代码",
+          "maxLength": 64
+        },
+        {
+          "field": "assetProof",
+          "label": "资产处置证明",
+          "required": false,
+          "type": "string",
+          "description": "企业注销或变更时的资产处置证明材料说明",
+          "maxLength": 500
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "说明变更原因、当前认证状态和期望结果",
+          "maxLength": 1000
+        }
+      ]
+    },
+    {
+      "name": "账号认证审核",
+      "keywords": [
+        "认证审核",
+        "实名认证审核",
+        "审核进度",
+        "审核结果",
+        "认证提交"
+      ],
+      "categoryKeywords": [
+        "认证",
+        "审核"
+      ],
+      "categoryHints": [
+        "账号认证审核"
+      ],
+      "collect": [
+        {
+          "field": "accountUid",
+          "label": "账号UID",
+          "required": true,
+          "type": "string",
+          "description": "阿里云账号UID",
+          "maxLength": 64
+        },
+        {
+          "field": "auditType",
+          "label": "审核类型",
+          "required": true,
+          "type": "string",
+          "enum": ["个人实名认证", "企业实名认证", "学生认证", "认证变更"],
+          "description": "提交审核的认证类型"
+        },
+        {
+          "field": "submitTime",
+          "label": "提交时间",
+          "required": true,
+          "type": "string",
+          "description": "认证审核提交的日期和时间",
+          "maxLength": 64
+        },
+        {
+          "field": "auditStatus",
+          "label": "审核状态",
+          "required": false,
+          "type": "string",
+          "enum": ["审核中", "审核通过", "审核驳回", "需补充材料"],
+          "description": "当前审核状态"
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": false,
+          "type": "string",
+          "description": "审核相关的具体问题或驳回原因",
+          "maxLength": 1000
+        }
+      ]
+    },
+    {
+      "name": "账号变更审核",
+      "keywords": [
+        "账号变更审核",
+        "信息变更审核",
+        "变更审核进度",
+        "变更审核结果"
+      ],
+      "categoryKeywords": [
+        "变更",
+        "审核",
+        "账号"
+      ],
+      "categoryHints": [
+        "账号变更审核"
+      ],
+      "collect": [
+        {
+          "field": "accountUid",
+          "label": "账号UID",
+          "required": true,
+          "type": "string",
+          "description": "阿里云账号UID",
+          "maxLength": 64
+        },
+        {
+          "field": "changeCategory",
+          "label": "变更类别",
+          "required": true,
+          "type": "string",
+          "enum": ["安全手机号变更", "安全邮箱变更", "登录名变更", "企业信息变更", "认证主体变更"],
+          "description": "账号信息变更的类别"
+        },
+        {
+          "field": "auditResult",
+          "label": "审核结果",
+          "required": false,
+          "type": "string",
+          "enum": ["审核中", "审核通过", "审核驳回", "需补充材料"],
+          "description": "变更审核当前结果"
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": false,
+          "type": "string",
+          "description": "变更审核相关的具体问题",
+          "maxLength": 1000
+        }
+      ]
+    },
+    {
+      "name": "修改登录名/密码/手机号/邮箱、解除MFA/登录掩码/密保/三方账号绑定",
+      "keywords": [
+        "修改手机号",
+        "修改邮箱",
+        "修改密码",
+        "解除MFA",
+        "登录掩码",
+        "解除密保",
+        "三方解绑",
+        "修改登录名",
+        "安全信息修改"
+      ],
+      "categoryKeywords": [
+        "修改",
+        "安全",
+        "绑定",
+        "MFA"
+      ],
+      "categoryHints": [
+        "修改登录名/密码/手机号/邮箱、解除MFA/登录掩码/密保/三方账号绑定"
+      ],
+      "collect": [
+        {
+          "field": "accountUid",
+          "label": "账号UID",
+          "required": true,
+          "type": "string",
+          "description": "阿里云账号UID",
+          "maxLength": 64
+        },
+        {
+          "field": "modificationType",
+          "label": "修改类型",
+          "required": true,
+          "type": "string",
+          "enum": ["手机号", "邮箱", "密码", "MFA解除", "登录掩码", "三方解绑"],
+          "description": "需要修改或解除的安全信息类型"
+        },
+        {
+          "field": "currentValue",
+          "label": "当前绑定值",
+          "required": false,
+          "type": "string",
+          "description": "当前绑定的手机号/邮箱/MFA类型等（脱敏）",
+          "maxLength": 200
+        },
+        {
+          "field": "newValue",
+          "label": "期望新值",
+          "required": false,
+          "type": "string",
+          "description": "期望修改后的新手机号/邮箱等（脱敏）",
+          "maxLength": 200
+        },
+        {
+          "field": "modificationReason",
+          "label": "修改原因",
+          "required": true,
+          "type": "string",
+          "description": "说明修改原因，如手机号停用、员工离职、企业变更等",
+          "maxLength": 500
+        },
+        {
+          "field": "appealFormRequired",
+          "label": "是否需表单申诉",
+          "required": false,
+          "type": "boolean",
+          "description": "是否需要通过表单申诉流程处理"
+        }
+      ]
+    },
+    {
+      "name": "账号登录咨询",
+      "keywords": [
+        "无法登录",
+        "登录失败",
+        "IP掩码",
+        "员工离职",
+        "人脸识别失败",
+        "登录异常",
+        "扫码失败"
+      ],
+      "categoryKeywords": [
+        "登录",
+        "IP掩码",
+        "离职"
+      ],
+      "categoryHints": [
+        "账号登录咨询"
+      ],
+      "collect": [
+        {
+          "field": "accountUid",
+          "label": "账号UID",
+          "required": true,
+          "type": "string",
+          "description": "阿里云账号UID",
+          "maxLength": 64
+        },
+        {
+          "field": "loginIssueType",
+          "label": "登录问题类型",
+          "required": true,
+          "type": "string",
+          "enum": ["无法登录", "IP掩码", "员工离职", "人脸识别失败"],
+          "description": "登录问题的具体类型"
+        },
+        {
+          "field": "loginMethod",
+          "label": "登录方式",
+          "required": false,
+          "type": "string",
+          "enum": ["密码", "短信", "MFA", "扫码"],
+          "description": "客户使用的登录方式"
+        },
+        {
+          "field": "errorMessage",
+          "label": "错误信息",
+          "required": false,
+          "type": "string",
+          "description": "登录时页面显示的完整错误信息",
+          "maxLength": 1000
+        },
+        {
+          "field": "ipAddress",
+          "label": "IP地址",
+          "required": false,
+          "type": "string",
+          "description": "登录时的客户端IP地址，排查IP掩码问题",
+          "maxLength": 120
+        },
+        {
+          "field": "employeeStatus",
+          "label": "员工状态",
+          "required": false,
+          "type": "string",
+          "enum": ["在职", "离职", "不确定"],
+          "description": "涉及员工离职导致账号无法登录时填写"
+        }
+      ]
+    },
+    {
+      "name": "账号实名认证申请咨询",
+      "keywords": [
+        "实名认证申请",
+        "企业认证",
+        "学生认证",
+        "学信网",
+        "个人转企业认证",
+        "加急认证"
+      ],
+      "categoryKeywords": [
+        "认证",
+        "申请",
+        "学信网"
+      ],
+      "categoryHints": [
+        "账号实名认证申请咨询"
+      ],
+      "collect": [
+        {
+          "field": "accountUid",
+          "label": "账号UID",
+          "required": true,
+          "type": "string",
+          "description": "阿里云账号UID",
+          "maxLength": 64
+        },
+        {
+          "field": "certType",
+          "label": "认证类型",
+          "required": true,
+          "type": "string",
+          "enum": ["个人", "企业", "学生"],
+          "description": "申请的实名认证类型"
+        },
+        {
+          "field": "enterpriseName",
+          "label": "企业名称",
+          "required": false,
+          "type": "string",
+          "description": "企业认证时填写企业名称",
+          "maxLength": 200
+        },
+        {
+          "field": "studentSchool",
+          "label": "就读学校",
+          "required": false,
+          "type": "string",
+          "description": "学生认证时填写就读学校名称",
+          "maxLength": 200
+        },
+        {
+          "field": "studentId",
+          "label": "学号",
+          "required": false,
+          "type": "string",
+          "description": "学生认证时填写学号",
+          "maxLength": 64
+        },
+        {
+          "field": "expediteRequest",
+          "label": "是否申请加急",
+          "required": false,
+          "type": "boolean",
+          "description": "是否请求加急处理认证申请"
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "说明认证申请的具体问题和期望",
+          "maxLength": 1000
+        }
+      ]
+    },
+    {
+      "name": "找回登录名",
+      "keywords": [
+        "忘记登录名",
+        "找回登录名",
+        "登录名丢失",
+        "不知道登录名"
+      ],
+      "categoryKeywords": [
+        "找回",
+        "登录名"
+      ],
+      "categoryHints": [
+        "找回登录名"
+      ],
+      "collect": [
+        {
+          "field": "accountUid",
+          "label": "账号UID",
+          "required": false,
+          "type": "string",
+          "description": "如已知账号UID则填写",
+          "maxLength": 64
+        },
+        {
+          "field": "knownInfo",
+          "label": "已知信息",
+          "required": true,
+          "type": "string",
+          "enum": ["手机号", "邮箱", "域名"],
+          "description": "客户可提供的用于找回登录名的信息类型"
+        },
+        {
+          "field": "contactPhone",
+          "label": "联系电话",
+          "required": true,
+          "type": "string",
+          "description": "客户联系电话（脱敏）",
+          "maxLength": 64
+        },
+        {
+          "field": "recoveryMethod",
+          "label": "找回方式",
+          "required": false,
+          "type": "string",
+          "enum": ["表单申诉", "电话核实"],
+          "description": "通过表单申诉或电话核实找回登录名"
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": false,
+          "type": "string",
+          "description": "补充说明找回登录名的背景情况",
+          "maxLength": 500
+        }
+      ]
+    },
+    {
+      "name": "账号注销咨询",
+      "keywords": [
+        "注销账号",
+        "批量注销",
+        "取消账号",
+        "账号注销"
+      ],
+      "categoryKeywords": [
+        "注销",
+        "取消"
+      ],
+      "categoryHints": [
+        "账号注销咨询"
+      ],
+      "collect": [
+        {
+          "field": "accountUid",
+          "label": "账号UID",
+          "required": true,
+          "type": "string",
+          "description": "阿里云账号UID",
+          "maxLength": 64
+        },
+        {
+          "field": "cancellationReason",
+          "label": "注销原因",
+          "required": true,
+          "type": "string",
+          "description": "说明注销账号的原因",
+          "maxLength": 500
+        },
+        {
+          "field": "hasArrears",
+          "label": "是否存在欠费",
+          "required": false,
+          "type": "boolean",
+          "description": "账号是否存在未结清欠费，影响注销流程"
+        },
+        {
+          "field": "batchRequest",
+          "label": "是否批量注销",
+          "required": false,
+          "type": "boolean",
+          "description": "是否涉及多个账号批量注销"
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": false,
+          "type": "string",
+          "description": "注销相关的具体问题和期望",
+          "maxLength": 1000
+        }
+      ]
+    },
+    {
+      "name": "表单申诉",
+      "keywords": [
+        "表单申诉",
+        "修改安全手机",
+        "重置密码",
+        "清除IP掩码",
+        "找回登录名表单",
+        "申诉材料"
+      ],
+      "categoryKeywords": [
+        "表单",
+        "申诉",
+        "材料"
+      ],
+      "categoryHints": [
+        "表单申诉"
+      ],
+      "collect": [
+        {
+          "field": "accountUid",
+          "label": "账号UID",
+          "required": true,
+          "type": "string",
+          "description": "阿里云账号UID",
+          "maxLength": 64
+        },
+        {
+          "field": "appealType",
+          "label": "申诉类型",
+          "required": true,
+          "type": "string",
+          "enum": ["修改安全手机", "重置密码", "清除IP掩码", "找回登录名", "其他"],
+          "description": "表单申诉的具体类型"
+        },
+        {
+          "field": "materialStatus",
+          "label": "材料状态",
+          "required": false,
+          "type": "string",
+          "enum": ["正本误传副本", "申请书登录名错误", "材料补交", "材料齐全"],
+          "description": "申诉材料的当前状态"
+        },
+        {
+          "field": "sensitivityLevel",
+          "label": "敏感级别",
+          "required": false,
+          "type": "string",
+          "enum": ["敏感客户", "舆情敏感", "普通"],
+          "description": "客户或问题的敏感级别"
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "说明申诉背景、材料准备情况和期望结果",
+          "maxLength": 1000
+        }
+      ]
+    },
+    {
+      "name": "企业多账号(MA)审核",
+      "keywords": [
+        "企业多账号",
+        "MA审核",
+        "多账号关联",
+        "主子账号关联"
+      ],
+      "categoryKeywords": [
+        "企业多账号",
+        "MA",
+        "关联"
+      ],
+      "categoryHints": [
+        "企业多账号(MA)审核"
+      ],
+      "collect": [
+        {
+          "field": "enterpriseName",
+          "label": "企业名称",
+          "required": true,
+          "type": "string",
+          "description": "申请多账号关联的企业名称",
+          "maxLength": 200
+        },
+        {
+          "field": "mainAccountUid",
+          "label": "主账号UID",
+          "required": true,
+          "type": "string",
+          "description": "企业主账号UID",
+          "maxLength": 64
+        },
+        {
+          "field": "subAccountCount",
+          "label": "子账号数量",
+          "required": true,
+          "type": "string",
+          "description": "需关联的子账号数量",
+          "maxLength": 32
+        },
+        {
+          "field": "auditStatus",
+          "label": "审核状态",
+          "required": false,
+          "type": "string",
+          "enum": ["审核中", "审核通过", "审核驳回", "需补充材料"],
+          "description": "MA关联审核当前状态"
+        }
+      ]
+    },
+    {
+      "name": "学生认证",
+      "keywords": [
+        "学生认证",
+        "高校动手学AI",
+        "学信网认证",
+        "支付宝认证",
+        "学生身份验证"
+      ],
+      "categoryKeywords": [
+        "学生",
+        "认证",
+        "学信网"
+      ],
+      "categoryHints": [
+        "学生认证"
+      ],
+      "collect": [
+        {
+          "field": "accountUid",
+          "label": "账号UID",
+          "required": true,
+          "type": "string",
+          "description": "阿里云账号UID",
+          "maxLength": 64
+        },
+        {
+          "field": "studentProgram",
+          "label": "学生项目",
+          "required": true,
+          "type": "string",
+          "enum": ["高校动手学AI", "其他"],
+          "description": "参与的学生认证项目"
+        },
+        {
+          "field": "schoolName",
+          "label": "学校名称",
+          "required": true,
+          "type": "string",
+          "description": "就读学校名称",
+          "maxLength": 200
+        },
+        {
+          "field": "alipayIssue",
+          "label": "支付宝认证问题",
+          "required": false,
+          "type": "string",
+          "description": "支付宝实名认证遇到的具体问题",
+          "maxLength": 500
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "学生认证过程中遇到的具体问题",
+          "maxLength": 1000
+        }
+      ]
+    },
+    {
+      "name": "账号注册咨询",
+      "keywords": [
+        "账号注册",
+        "新账号",
+        "香港公司认证",
+        "注册问题",
+        "注册失败"
+      ],
+      "categoryKeywords": [
+        "注册",
+        "新账号"
+      ],
+      "categoryHints": [
+        "账号注册咨询"
+      ],
+      "collect": [
+        {
+          "field": "registrationType",
+          "label": "注册类型",
+          "required": true,
+          "type": "string",
+          "enum": ["个人", "企业", "香港公司"],
+          "description": "账号注册的类型"
+        },
+        {
+          "field": "regionRestriction",
+          "label": "区域限制",
+          "required": false,
+          "type": "string",
+          "description": "注册时遇到的区域限制问题说明",
+          "maxLength": 500
+        },
+        {
+          "field": "enterpriseName",
+          "label": "企业名称",
+          "required": false,
+          "type": "string",
+          "description": "企业或香港公司注册时填写企业名称",
+          "maxLength": 200
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "说明注册过程中遇到的具体问题和期望",
+          "maxLength": 1000
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,885 @@
+{
+  "product": "oss",
+  "aliases": [
+    "对象存储 OSS",
+    "对象存储",
+    "OSS",
+    "阿里云OSS"
+  ],
+  "issueTypes": [
+    {
+      "name": "OSS功能咨询",
+      "keywords": [
+        "功能咨询",
+        "Bucket管理",
+        "权限配置",
+        "生命周期",
+        "防盗链",
+        "跨区域复制",
+        "如何使用"
+      ],
+      "categoryKeywords": [
+        "功能",
+        "咨询",
+        "Bucket"
+      ],
+      "categoryHints": [
+        "OSS功能咨询"
+      ],
+      "collect": [
+        {
+          "field": "bucketName",
+          "label": "Bucket名称",
+          "required": true,
+          "type": "string",
+          "description": "涉及的Bucket名称，用于定位具体资源",
+          "maxLength": 64
+        },
+        {
+          "field": "regionId",
+          "label": "地域",
+          "required": true,
+          "type": "string",
+          "description": "Bucket所在地域标识，如cn-hangzhou、cn-beijing、cn-shanghai",
+          "maxLength": 64
+        },
+        {
+          "field": "requestId",
+          "label": "RequestId",
+          "required": false,
+          "type": "string",
+          "description": "请求ID，需在3天内提供（日志保留期限），用于定位请求级问题",
+          "maxLength": 120
+        },
+        {
+          "field": "accessControlType",
+          "label": "Bucket读写权限",
+          "required": false,
+          "type": "string",
+          "enum": ["公共读写", "公共读私有写", "私有"],
+          "description": "Bucket的ACL权限类型，影响安全排查方向"
+        },
+        {
+          "field": "featureName",
+          "label": "咨询功能",
+          "required": true,
+          "type": "string",
+          "description": "希望了解或使用的功能名称，如生命周期规则、防盗链、跨区域复制、RAM权限等",
+          "maxLength": 120
+        },
+        {
+          "field": "questionDescription",
+          "label": "咨询内容",
+          "required": true,
+          "type": "string",
+          "description": "说明目标、当前情况和具体疑问",
+          "maxLength": 1000
+        },
+        {
+          "field": "clientLocation",
+          "label": "客户端地理位置",
+          "required": false,
+          "type": "string",
+          "description": "客户端所在地区，跨域上传慢时需提供，建议从同地域ECS测试",
+          "maxLength": 200
+        },
+        {
+          "field": "documentPreview",
+          "label": "是否需文档预览",
+          "required": false,
+          "type": "boolean",
+          "description": "小程序文档预览需开通IMM WebOffice，并通过x-oss-process=doc/preview参数实现"
+        },
+        {
+          "field": "logRetention",
+          "label": "日志转存状态",
+          "required": false,
+          "type": "string",
+          "enum": ["转存已开启", "未开启", "历史日志不可恢复"],
+          "description": "实时日志查询仅保留近期数据，2025-03之前的日志不可恢复，需确认日志转存是否开启"
+        },
+        {
+          "field": "lifecycleRuleType",
+          "label": "生命周期规则类型",
+          "required": false,
+          "type": "string",
+          "enum": ["最后修改时间", "最后访问时间", "不支持"],
+          "description": "按最后访问时间过期的生命周期规则暂不支持（需单独权限申请），当前仅支持按最后修改时间"
+        }
+      ]
+    },
+    {
+      "name": "购买/续费/欠费/计费/账单问题",
+      "keywords": [
+        "购买",
+        "续费",
+        "欠费",
+        "计费",
+        "账单",
+        "存储包",
+        "流量包",
+        "费用"
+      ],
+      "categoryKeywords": [
+        "购买",
+        "续费",
+        "欠费",
+        "计费",
+        "账单"
+      ],
+      "categoryHints": [
+        "购买/续费/欠费/计费/账单问题"
+      ],
+      "collect": [
+        {
+          "field": "billingConfusionType",
+          "label": "费用疑问类型",
+          "required": true,
+          "type": "string",
+          "enum": ["存储包不覆盖流量费", "欠费原因", "账单查询", "费用争议", "其他"],
+          "description": "客户最常见混淆：存储包不覆盖外网流量费，需明确疑问类型"
+        },
+        {
+          "field": "bucketName",
+          "label": "Bucket名称",
+          "required": false,
+          "type": "string",
+          "description": "查询单个Bucket费用时提供",
+          "maxLength": 64
+        },
+        {
+          "field": "billingPeriod",
+          "label": "账期",
+          "required": false,
+          "type": "string",
+          "description": "涉及费用的具体账期，如2026-09",
+          "maxLength": 64
+        },
+        {
+          "field": "resourcePackType",
+          "label": "资源包类型",
+          "required": false,
+          "type": "string",
+          "enum": ["存储包", "流量包", "无", "不确定"],
+          "description": "客户已购买的资源包类型，存储包和流量包覆盖范围不同"
+        },
+        {
+          "field": "disputedAmount",
+          "label": "争议金额",
+          "required": false,
+          "type": "string",
+          "description": "具体争议的费用金额",
+          "maxLength": 64
+        },
+        {
+          "field": "accountTransferIntent",
+          "label": "跨账号转移意向",
+          "required": false,
+          "type": "boolean",
+          "description": "客户是否有跨账号转移资源包的需求"
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题说明",
+          "required": true,
+          "type": "string",
+          "description": "说明费用疑问、期望核实内容和相关时间",
+          "maxLength": 1000
+        },
+        {
+          "field": "redundancyTypeMismatch",
+          "label": "资源包不抵扣原因",
+          "required": false,
+          "type": "string",
+          "enum": ["资源包冗余类型不匹配", "Bucket存储类型不匹配", "容量超限"],
+          "description": "资源包不抵扣的三大根因：资源包冗余类型（本地/同城/跨区域）与Bucket存储类型不匹配，或资源包容量已用尽"
+        },
+        {
+          "field": "snapshotStorage",
+          "label": "是否涉及快照存储费",
+          "required": false,
+          "type": "boolean",
+          "description": "快照存储费为独立计费项，不能使用OSS资源包抵扣"
+        }
+      ]
+    },
+    {
+      "name": "OSS API/SDK使用",
+      "keywords": [
+        "API",
+        "SDK",
+        "签名",
+        "SignatureDoesNotMatch",
+        "报错",
+        "地域不支持"
+      ],
+      "categoryKeywords": [
+        "API",
+        "SDK",
+        "签名"
+      ],
+      "categoryHints": [
+        "OSS API/SDK使用"
+      ],
+      "collect": [
+        {
+          "field": "sdkLanguage",
+          "label": "SDK语言",
+          "required": true,
+          "type": "string",
+          "enum": [".NET", "Java", "Python", "Go", "Node.js", "PHP", "C++", "其他"],
+          "description": "使用的SDK编程语言，不同语言的签名实现路径不同"
+        },
+        {
+          "field": "sdkVersion",
+          "label": "SDK版本",
+          "required": true,
+          "type": "string",
+          "description": "SDK具体版本号，如aliyun-oss-go-sdk v3.0.2",
+          "maxLength": 64
+        },
+        {
+          "field": "apiEndpoint",
+          "label": "API Endpoint",
+          "required": true,
+          "type": "string",
+          "description": "调用的OSS Endpoint地址，如oss-cn-hangzhou.aliyuncs.com",
+          "maxLength": 200
+        },
+        {
+          "field": "errorCode",
+          "label": "错误码",
+          "required": true,
+          "type": "string",
+          "description": "OSS返回的错误码，如SignatureDoesNotMatch、NoSuchBucket、AccessDenied",
+          "maxLength": 120
+        },
+        {
+          "field": "errorMessage",
+          "label": "错误信息",
+          "required": true,
+          "type": "string",
+          "description": "完整的错误返回信息，用于定位签名或参数问题",
+          "maxLength": 1000
+        },
+        {
+          "field": "requestId",
+          "label": "RequestId",
+          "required": false,
+          "type": "string",
+          "description": "请求ID，需在3天内提供（日志保留期限）",
+          "maxLength": 120
+        },
+        {
+          "field": "regionId",
+          "label": "地域",
+          "required": false,
+          "type": "string",
+          "description": "Bucket所在地域，部分功能在不同地域支持情况不同",
+          "maxLength": 64
+        },
+        {
+          "field": "signatureVersion",
+          "label": "签名版本",
+          "required": false,
+          "type": "string",
+          "enum": ["V1", "V4"],
+          "description": "使用的签名版本，V4签名格式与V1不同，常见签名不匹配问题"
+        },
+        {
+          "field": "refererValidation",
+          "label": "Referer防盗链验证",
+          "required": false,
+          "type": "string",
+          "description": "Referer防盗链配置及客户端IP验证信息，用于排查AccessDenied类问题",
+          "maxLength": 500
+        },
+        {
+          "field": "webpDecode",
+          "label": "是否需WebP解码",
+          "required": false,
+          "type": "boolean",
+          "description": "WebP图片解码需提交白名单开通后才能使用"
+        },
+        {
+          "field": "crossAccountKMS",
+          "label": "是否跨账号KMS加密",
+          "required": false,
+          "type": "boolean",
+          "description": "跨账号KMS加密当前无成熟方案，需提前告知客户"
+        }
+      ]
+    },
+    {
+      "name": "退订问题",
+      "keywords": [
+        "退订",
+        "退款",
+        "释放资源",
+        "取消预留空间",
+        "退费"
+      ],
+      "categoryKeywords": [
+        "退订",
+        "退款",
+        "释放"
+      ],
+      "categoryHints": [
+        "退订问题"
+      ],
+      "collect": [
+        {
+          "field": "resourceType",
+          "label": "资源类型",
+          "required": true,
+          "type": "string",
+          "enum": ["预留空间", "存储包", "流量包", "不确定"],
+          "description": "需退订的资源类型，不同资源退订规则不同"
+        },
+        {
+          "field": "refundReason",
+          "label": "退订原因",
+          "required": true,
+          "type": "string",
+          "description": "说明退订原因及期望结果",
+          "maxLength": 1000
+        },
+        {
+          "field": "orderNumber",
+          "label": "订单号",
+          "required": false,
+          "type": "string",
+          "description": "相关订单号，用于定位退订资源",
+          "maxLength": 120
+        },
+        {
+          "field": "vipCustomerRisk",
+          "label": "客诉风险",
+          "required": false,
+          "type": "boolean",
+          "description": "是否为GC6级别客户投诉风险，影响处理优先级和流程"
+        }
+      ]
+    },
+    {
+      "name": "OSS工具使用",
+      "keywords": [
+        "ossutil",
+        "ossfs",
+        "ossbrowser",
+        "ossftp",
+        "ossimport",
+        "挂载报错",
+        "工具"
+      ],
+      "categoryKeywords": [
+        "工具",
+        "ossutil",
+        "ossfs"
+      ],
+      "categoryHints": [
+        "OSS工具使用"
+      ],
+      "collect": [
+        {
+          "field": "toolName",
+          "label": "工具名称",
+          "required": true,
+          "type": "string",
+          "enum": ["ossutil", "ossfs", "ossbrowser", "ossftp", "ossimport", "其他"],
+          "description": "使用的OSS工具名称"
+        },
+        {
+          "field": "toolVersion",
+          "label": "工具版本",
+          "required": false,
+          "type": "string",
+          "description": "工具版本号，如ossutil 1.7.18",
+          "maxLength": 64
+        },
+        {
+          "field": "errorMessage",
+          "label": "错误信息",
+          "required": true,
+          "type": "string",
+          "description": "完整的报错信息，如ossfs挂载失败、签名region格式错误等",
+          "maxLength": 1000
+        },
+        {
+          "field": "signatureRegionFormat",
+          "label": "签名Region格式",
+          "required": false,
+          "type": "string",
+          "description": "签名中使用的region格式，常见混淆：oss-cn-shanghai vs cn-shanghai",
+          "maxLength": 120
+        },
+        {
+          "field": "regionFormatError",
+          "label": "V4签名Region格式",
+          "required": false,
+          "type": "string",
+          "enum": ["正确格式cn-shanghai", "错误格式oss-cn-shanghai"],
+          "description": "V4签名region格式校验：正确为cn-shanghai，错误为oss-cn-shanghai（V4签名不识别带oss-前缀的格式）"
+        },
+        {
+          "field": "ossutilConfig",
+          "label": "ossutil配置状态",
+          "required": false,
+          "type": "string",
+          "enum": ["配置文件错误", "双配置文件", "未安装"],
+          "description": "ossutil配置问题类型，需检查[default]和访问配置模板是否正确"
+        },
+        {
+          "field": "acsLogDirectory",
+          "label": "是否涉及ACSLog目录",
+          "required": false,
+          "type": "boolean",
+          "description": "Bucket中的ACSLog目录为操作审计日志投递生成，非异常目录"
+        }
+      ]
+    },
+    {
+      "name": "OSS访问异常",
+      "keywords": [
+        "访问异常",
+        "PING异常",
+        "上传慢",
+        "下载慢",
+        "访问失败",
+        "403",
+        "AccessDenied"
+      ],
+      "categoryKeywords": [
+        "访问",
+        "异常",
+        "超时"
+      ],
+      "categoryHints": [
+        "OSS访问异常"
+      ],
+      "collect": [
+        {
+          "field": "accessIssueType",
+          "label": "访问异常类型",
+          "required": true,
+          "type": "string",
+          "enum": ["403 AccessDenied", "上传慢", "下载失败", "PING异常", "其他"],
+          "description": "访问异常的具体类型，决定排查方向"
+        },
+        {
+          "field": "bucketName",
+          "label": "Bucket名称",
+          "required": true,
+          "type": "string",
+          "description": "涉及的Bucket名称",
+          "maxLength": 64
+        },
+        {
+          "field": "errorCode",
+          "label": "错误码",
+          "required": false,
+          "type": "string",
+          "description": "OSS返回的错误码，如AccessDenied、RequestTimeout",
+          "maxLength": 120
+        },
+        {
+          "field": "errorMessage",
+          "label": "错误信息",
+          "required": true,
+          "type": "string",
+          "description": "完整的错误返回信息",
+          "maxLength": 1000
+        },
+        {
+          "field": "requestId",
+          "label": "RequestId",
+          "required": false,
+          "type": "string",
+          "description": "请求ID，需在3天内提供（日志保留期限）",
+          "maxLength": 120
+        },
+        {
+          "field": "operationType",
+          "label": "操作类型",
+          "required": true,
+          "type": "string",
+          "enum": ["PutObject", "GetObject", "HeadObject", "DeleteObject", "其他"],
+          "description": "失败时执行的操作类型"
+        },
+        {
+          "field": "signatureVersionV1",
+          "label": "是否使用V1签名",
+          "required": false,
+          "type": "boolean",
+          "description": "V1签名已全局禁用且不可恢复，需升级V4签名或使用2025-09-01之前创建的Bucket"
+        },
+        {
+          "field": "ossbrowserPermission",
+          "label": "ossbrowser登录问题",
+          "required": false,
+          "type": "string",
+          "enum": ["需ListBuckets权限", "需预设Bucket路径"],
+          "description": "ossbrowser登录需RAM用户具备ListBuckets权限，或在登录时预设具体Bucket路径"
+        }
+      ]
+    },
+    {
+      "name": "未分类",
+      "keywords": [
+        "未分类",
+        "预期外费用",
+        "前置单",
+        "查询助手"
+      ],
+      "categoryKeywords": [
+        "未分类",
+        "前置"
+      ],
+      "categoryHints": [
+        "未分类"
+      ],
+      "collect": [
+        {
+          "field": "selfServiceToolName",
+          "label": "自助工具名称",
+          "required": true,
+          "type": "string",
+          "description": "触发前置单的自助工具名称，如OSS预期外费用查询助手",
+          "maxLength": 120
+        },
+        {
+          "field": "foreTicketId",
+          "label": "前置单号",
+          "required": true,
+          "type": "string",
+          "description": "自助工具生成的前置工单编号",
+          "maxLength": 64
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题说明",
+          "required": true,
+          "type": "string",
+          "description": "说明通过自助工具查询的具体问题和期望结果",
+          "maxLength": 1000
+        }
+      ]
+    },
+    {
+      "name": "对象存储 OSS",
+      "keywords": [
+        "OSS通用",
+        "对象存储通用",
+        "其他问题"
+      ],
+      "categoryKeywords": [
+        "通用",
+        "OSS"
+      ],
+      "categoryHints": [
+        "对象存储 OSS"
+      ],
+      "collect": [
+        {
+          "field": "bucketName",
+          "label": "Bucket名称",
+          "required": false,
+          "type": "string",
+          "description": "涉及的Bucket名称（如有）",
+          "maxLength": 64
+        },
+        {
+          "field": "regionId",
+          "label": "地域",
+          "required": false,
+          "type": "string",
+          "description": "Bucket所在地域标识",
+          "maxLength": 64
+        },
+        {
+          "field": "issueDescription",
+          "label": "问题说明",
+          "required": true,
+          "type": "string",
+          "description": "说明业务目标、当前情况和期望结果",
+          "maxLength": 1000
+        },
+        {
+          "field": "intentType",
+          "label": "咨询意图",
+          "required": false,
+          "type": "string",
+          "enum": ["售前咨询", "售后技术", "商务合作", "其他"],
+          "description": "咨询意图分类，用于快速路由到对应处理团队"
+        }
+      ]
+    },
+    {
+      "name": "OSS权限管理",
+      "keywords": [
+        "权限管理",
+        "ACL权限",
+        "RAM",
+        "STS",
+        "子账号",
+        "跨账号授权",
+        "Bucket Policy"
+      ],
+      "categoryKeywords": [
+        "权限",
+        "RAM",
+        "ACL"
+      ],
+      "categoryHints": [
+        "OSS权限管理（ACL权限/RAM/STS）"
+      ],
+      "collect": [
+        {
+          "field": "bucketName",
+          "label": "Bucket名称",
+          "required": true,
+          "type": "string",
+          "description": "涉及授权的Bucket名称",
+          "maxLength": 64
+        },
+        {
+          "field": "crossAccountPolicy",
+          "label": "跨账号授权方式",
+          "required": false,
+          "type": "string",
+          "enum": ["Bucket授权策略", "子账号授权"],
+          "description": "跨账号授权需通过Bucket Policy添加对方主账号及子账号ID"
+        },
+        {
+          "field": "permissionScope",
+          "label": "授权范围",
+          "required": true,
+          "type": "string",
+          "description": "需授予的具体权限范围，如只读、读写、特定前缀目录等",
+          "maxLength": 500
+        },
+        {
+          "field": "accountIds",
+          "label": "授权账号ID",
+          "required": false,
+          "type": "string",
+          "description": "被授权的对方主账号UID及子账号ID（RAM用户）",
+          "maxLength": 200
+        },
+        {
+          "field": "questionDescription",
+          "label": "咨询内容",
+          "required": true,
+          "type": "string",
+          "description": "说明授权目标、当前配置和遇到的问题",
+          "maxLength": 1000
+        }
+      ]
+    },
+    {
+      "name": "因违规违法等被封禁",
+      "keywords": [
+        "封禁",
+        "违规",
+        "违法",
+        "内容安全",
+        "Webhook",
+        "违规检测",
+        "被封"
+      ],
+      "categoryKeywords": [
+        "违规",
+        "封禁",
+        "违法"
+      ],
+      "categoryHints": [
+        "因违规违法等被封禁"
+      ],
+      "collect": [
+        {
+          "field": "bucketName",
+          "label": "Bucket名称",
+          "required": true,
+          "type": "string",
+          "description": "被封禁或涉及违规检测的Bucket名称",
+          "maxLength": 64
+        },
+        {
+          "field": "violationType",
+          "label": "违规类型",
+          "required": false,
+          "type": "string",
+          "description": "封禁通知中标注的违规违法类型",
+          "maxLength": 200
+        },
+        {
+          "field": "webhookNotification",
+          "label": "是否需配置Webhook回调",
+          "required": false,
+          "type": "boolean",
+          "description": "内容安全控制台的OSS违规检测Webhook回调配置，用于接收违规检测通知"
+        },
+        {
+          "field": "banNotice",
+          "label": "封禁通知内容",
+          "required": true,
+          "type": "string",
+          "description": "封禁通知或站内信的具体内容（脱敏后填写）",
+          "maxLength": 1000
+        },
+        {
+          "field": "appealIntent",
+          "label": "诉求",
+          "required": true,
+          "type": "string",
+          "description": "说明申诉、解封或整改的具体诉求",
+          "maxLength": 1000
+        }
+      ]
+    },
+    {
+      "name": "OSS额度/配置申请",
+      "keywords": [
+        "额度申请",
+        "配置申请",
+        "配额",
+        "白名单",
+        "权限申请",
+        "最后访问时间"
+      ],
+      "categoryKeywords": [
+        "额度",
+        "申请",
+        "配额"
+      ],
+      "categoryHints": [
+        "OSS额度/配置申请"
+      ],
+      "collect": [
+        {
+          "field": "requestType",
+          "label": "申请事项",
+          "required": true,
+          "type": "string",
+          "description": "具体申请的额度或配置项，如最后访问时间转归档权限、WebP白名单等",
+          "maxLength": 200
+        },
+        {
+          "field": "bucketName",
+          "label": "Bucket名称",
+          "required": true,
+          "type": "string",
+          "description": "涉及申请的Bucket名称",
+          "maxLength": 64
+        },
+        {
+          "field": "lastAccessPolicy",
+          "label": "是否申请最后访问时间转归档",
+          "required": false,
+          "type": "boolean",
+          "description": "基于最后访问时间自动转归档需提交权限申请（需提供bucket名）"
+        },
+        {
+          "field": "businessReason",
+          "label": "业务背景",
+          "required": true,
+          "type": "string",
+          "description": "说明申请原因、使用场景和期望结果",
+          "maxLength": 1000
+        }
+      ]
+    },
+    {
+      "name": "OSS控制台操作",
+      "keywords": [
+        "控制台",
+        "控制台操作",
+        "证书托管",
+        "页面操作",
+        "HTTPS证书"
+      ],
+      "categoryKeywords": [
+        "控制台",
+        "操作"
+      ],
+      "categoryHints": [
+        "OSS控制台操作"
+      ],
+      "collect": [
+        {
+          "field": "operationName",
+          "label": "操作名称",
+          "required": true,
+          "type": "string",
+          "description": "在控制台执行的具体操作，如证书托管、Bucket创建等",
+          "maxLength": 200
+        },
+        {
+          "field": "bucketName",
+          "label": "Bucket名称",
+          "required": true,
+          "type": "string",
+          "description": "涉及操作的Bucket名称",
+          "maxLength": 64
+        },
+        {
+          "field": "errorMessage",
+          "label": "错误信息",
+          "required": true,
+          "type": "string",
+          "description": "控制台页面显示的完整错误信息（脱敏后填写）",
+          "maxLength": 1000
+        },
+        {
+          "field": "certResourceGroup",
+          "label": "是否证书资源组不一致",
+          "required": false,
+          "type": "boolean",
+          "description": "证书所在资源组与Bucket所在资源组不一致时，证书托管列表中选不到证书"
+        }
+      ]
+    },
+    {
+      "name": "OSS产品建议",
+      "keywords": [
+        "产品建议",
+        "功能建议",
+        "改进建议",
+        "产品反馈"
+      ],
+      "categoryKeywords": [
+        "建议",
+        "反馈"
+      ],
+      "categoryHints": [
+        "OSS产品建议"
+      ],
+      "collect": [
+        {
+          "field": "suggestionContent",
+          "label": "建议内容",
+          "required": true,
+          "type": "string",
+          "description": "具体的产品或功能改进建议",
+          "maxLength": 1000
+        },
+        {
+          "field": "usageScenario",
+          "label": "使用场景",
+          "required": false,
+          "type": "string",
+          "description": "建议对应的业务使用场景，帮助评估建议价值",
+          "maxLength": 500
+        },
+        {
+          "field": "contactInfo",
+          "label": "联系方式",
+          "required": false,
+          "type": "string",
+          "description": "便于产品团队跟进时联系客户",
+          "maxLength": 120
+        }
+      ]
+    }
+  ]
+}

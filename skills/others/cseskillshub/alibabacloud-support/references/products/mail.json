@@ -1,0 +1,605 @@
+{
+  "product": "mail",
+  "aliases": [
+    "阿里邮箱",
+    "阿里云邮箱",
+    "企业邮箱",
+    "Alibaba Mail",
+    "邮箱"
+  ],
+  "issueTypes": [
+    {
+      "name": "邮箱售卖问题",
+      "keywords": [
+        "售卖",
+        "退款",
+        "扩容",
+        "续费",
+        "版本对比"
+      ],
+      "categoryKeywords": [
+        "售卖",
+        "退款",
+        "续费"
+      ],
+      "categoryHints": [
+        "邮箱售卖问题"
+      ],
+      "collect": [
+        {
+          "field": "accountId",
+          "label": "账号ID",
+          "required": true,
+          "type": "string",
+          "description": "阿里云账号ID或UID",
+          "maxLength": 64
+        },
+        {
+          "field": "saleType",
+          "label": "售卖类型",
+          "required": true,
+          "type": "string",
+          "enum": ["退款取消", "扩容减容", "续费", "版本对比"],
+          "description": "客户具体的售卖相关诉求类型"
+        },
+        {
+          "field": "orderNumber",
+          "label": "订单号",
+          "required": false,
+          "type": "string",
+          "description": "涉及的具体订单编号",
+          "maxLength": 120
+        },
+        {
+          "field": "refundStatus",
+          "label": "退款状态",
+          "required": false,
+          "type": "string",
+          "enum": ["已退款", "待退款", "不可退款"],
+          "description": "当前退款处理状态"
+        },
+        {
+          "field": "renewalPeriod",
+          "label": "续费周期",
+          "required": false,
+          "type": "string",
+          "description": "续费的周期信息，如1年/3年等",
+          "maxLength": 64
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "详细说明售卖相关问题及期望处理方式",
+          "maxLength": 1000
+        }
+      ]
+    },
+    {
+      "name": "邮箱收发信问题",
+      "keywords": [
+        "收不到",
+        "被拦截",
+        "退信",
+        "发送失败",
+        "收发信"
+      ],
+      "categoryKeywords": [
+        "收发信",
+        "退信",
+        "拦截"
+      ],
+      "categoryHints": [
+        "邮箱收发信问题"
+      ],
+      "collect": [
+        {
+          "field": "emailAddress",
+          "label": "邮箱地址",
+          "required": true,
+          "type": "string",
+          "description": "受影响的邮箱完整地址",
+          "maxLength": 253
+        },
+        {
+          "field": "sendReceiveType",
+          "label": "收发信类型",
+          "required": true,
+          "type": "string",
+          "enum": ["收不到", "被拦截", "退信", "发送失败"],
+          "description": "收发信问题的具体类型"
+        },
+        {
+          "field": "senderAddress",
+          "label": "发件人地址",
+          "required": false,
+          "type": "string",
+          "description": "发送方邮箱地址，收不到邮件时填写",
+          "maxLength": 253
+        },
+        {
+          "field": "recipientServer",
+          "label": "收件方服务器",
+          "required": false,
+          "type": "string",
+          "description": "收件方邮件服务器地址或域名",
+          "maxLength": 253
+        },
+        {
+          "field": "domainAuthStatus",
+          "label": "域名认证状态",
+          "required": false,
+          "type": "string",
+          "enum": ["已认证", "未认证", "已过期"],
+          "description": "发信域名的SPF/DKIM等认证状态"
+        },
+        {
+          "field": "deliveryLogStatus",
+          "label": "投递日志状态",
+          "required": false,
+          "type": "string",
+          "enum": ["成功", "失败", "部分成功"],
+          "description": "邮件投递日志中记录的状态"
+        },
+        {
+          "field": "blacklistReason",
+          "label": "黑名单原因",
+          "required": false,
+          "type": "string",
+          "description": "被加入黑名单或被拦截的具体原因",
+          "maxLength": 500
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "详细说明收发信问题的现象、时间和期望",
+          "maxLength": 1000
+        }
+      ]
+    },
+    {
+      "name": "邮箱管理员postmaster功能",
+      "keywords": [
+        "postmaster",
+        "管理员",
+        "归档",
+        "DNS配置",
+        "子账号管理",
+        "邮件组",
+        "密码重置"
+      ],
+      "categoryKeywords": [
+        "管理员",
+        "postmaster",
+        "归档"
+      ],
+      "categoryHints": [
+        "邮箱管理员postmaster功能"
+      ],
+      "collect": [
+        {
+          "field": "domainName",
+          "label": "域名",
+          "required": true,
+          "type": "string",
+          "description": "邮箱绑定的域名",
+          "maxLength": 253
+        },
+        {
+          "field": "adminOperation",
+          "label": "管理操作类型",
+          "required": true,
+          "type": "string",
+          "enum": ["归档", "DNS配置", "子账号管理", "邮件组", "密码重置"],
+          "description": "管理员执行的具体操作类型"
+        },
+        {
+          "field": "affectedAccounts",
+          "label": "受影响账号",
+          "required": false,
+          "type": "string",
+          "description": "受操作影响的邮箱账号列表",
+          "maxLength": 500
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "详细说明管理操作的具体需求和遇到的问题",
+          "maxLength": 1000
+        }
+      ]
+    },
+    {
+      "name": "邮箱登录问题",
+      "keywords": [
+        "登录",
+        "域名过期",
+        "密码遗忘",
+        "黑名单",
+        "跨账号"
+      ],
+      "categoryKeywords": [
+        "登录",
+        "密码",
+        "域名过期"
+      ],
+      "categoryHints": [
+        "邮箱登录问题"
+      ],
+      "collect": [
+        {
+          "field": "emailAddress",
+          "label": "邮箱地址",
+          "required": true,
+          "type": "string",
+          "description": "无法登录的邮箱完整地址",
+          "maxLength": 253
+        },
+        {
+          "field": "loginIssueType",
+          "label": "登录问题类型",
+          "required": true,
+          "type": "string",
+          "enum": ["域名过期", "密码遗忘", "黑名单", "跨账号"],
+          "description": "导致无法登录的具体原因类型"
+        },
+        {
+          "field": "loginMethod",
+          "label": "登录方式",
+          "required": false,
+          "type": "string",
+          "enum": ["webmail", "客户端", "管理员"],
+          "description": "客户尝试登录的方式"
+        },
+        {
+          "field": "domainStatus",
+          "label": "域名状态",
+          "required": false,
+          "type": "string",
+          "enum": ["正常", "过期", "已删除"],
+          "description": "邮箱域名的当前状态"
+        },
+        {
+          "field": "accountRecoverable",
+          "label": "账号是否可恢复",
+          "required": false,
+          "type": "boolean",
+          "description": "账号是否可以通过申诉或重置恢复"
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "详细说明登录问题的现象和期望",
+          "maxLength": 1000
+        }
+      ]
+    },
+    {
+      "name": "邮箱域名配置问题",
+      "keywords": [
+        "域名配置",
+        "域名解绑",
+        "CNAME冲突",
+        "MX冲突",
+        "clientHold",
+        "解析未生效"
+      ],
+      "categoryKeywords": [
+        "域名",
+        "配置",
+        "DNS"
+      ],
+      "categoryHints": [
+        "邮箱域名配置问题"
+      ],
+      "collect": [
+        {
+          "field": "domainName",
+          "label": "域名",
+          "required": true,
+          "type": "string",
+          "description": "需要配置或存在问题的域名",
+          "maxLength": 253
+        },
+        {
+          "field": "dnsIssueType",
+          "label": "DNS问题类型",
+          "required": true,
+          "type": "string",
+          "enum": ["域名解绑", "CNAME冲突", "MX冲突", "clientHold", "解析未生效"],
+          "description": "域名配置问题的具体类型"
+        },
+        {
+          "field": "dnsRecordType",
+          "label": "DNS记录类型",
+          "required": false,
+          "type": "string",
+          "enum": ["CNAME", "MX", "TXT"],
+          "description": "涉及的DNS记录类型"
+        },
+        {
+          "field": "dataLossRisk",
+          "label": "是否有数据丢失风险",
+          "required": false,
+          "type": "boolean",
+          "description": "域名配置变更是否可能导致邮箱数据丢失"
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "详细说明域名配置问题和期望的解决方式",
+          "maxLength": 1000
+        }
+      ]
+    },
+    {
+      "name": "webmail功能使用问题",
+      "keywords": [
+        "webmail",
+        "限制",
+        "备份",
+        "图片不显示",
+        "旧版兼容",
+        "邮件组权限"
+      ],
+      "categoryKeywords": [
+        "webmail",
+        "功能",
+        "使用"
+      ],
+      "categoryHints": [
+        "webmail功能使用问题"
+      ],
+      "collect": [
+        {
+          "field": "emailAddress",
+          "label": "邮箱地址",
+          "required": false,
+          "type": "string",
+          "description": "遇到问题的邮箱地址",
+          "maxLength": 253
+        },
+        {
+          "field": "webmailIssue",
+          "label": "webmail问题",
+          "required": true,
+          "type": "string",
+          "enum": ["限制", "备份", "图片不显示", "旧版兼容", "邮件组权限"],
+          "description": "webmail功能使用的具体问题类型"
+        },
+        {
+          "field": "restrictionType",
+          "label": "限制类型",
+          "required": false,
+          "type": "string",
+          "enum": ["频率", "密码", "封禁"],
+          "description": "当问题类型为限制时，具体的限制类型"
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "详细说明webmail功能使用中遇到的问题",
+          "maxLength": 1000
+        }
+      ]
+    },
+    {
+      "name": "邮箱客户端使用问题",
+      "keywords": [
+        "客户端",
+        "Foxmail",
+        "Outlook",
+        "Thunderbird",
+        "手机端",
+        "POP3",
+        "IMAP",
+        "SMTP"
+      ],
+      "categoryKeywords": [
+        "客户端",
+        "Foxmail",
+        "Outlook"
+      ],
+      "categoryHints": [
+        "邮箱客户端使用问题"
+      ],
+      "collect": [
+        {
+          "field": "emailAddress",
+          "label": "邮箱地址",
+          "required": false,
+          "type": "string",
+          "description": "在客户端中配置的邮箱地址",
+          "maxLength": 253
+        },
+        {
+          "field": "clientType",
+          "label": "客户端类型",
+          "required": true,
+          "type": "string",
+          "enum": ["Foxmail", "Outlook", "Thunderbird", "手机端"],
+          "description": "客户使用的邮件客户端类型"
+        },
+        {
+          "field": "protocolType",
+          "label": "协议类型",
+          "required": false,
+          "type": "string",
+          "enum": ["POP3", "IMAP", "SMTP"],
+          "description": "客户端使用的收发信协议类型"
+        },
+        {
+          "field": "syncIssue",
+          "label": "同步问题",
+          "required": false,
+          "type": "string",
+          "enum": ["POP仅收件箱", "IMAP全同步", "多账号限制"],
+          "description": "客户端同步邮件时遇到的具体问题"
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "详细说明客户端使用中遇到的问题和期望",
+          "maxLength": 1000
+        }
+      ]
+    },
+    {
+      "name": "邮箱子账号相关问题",
+      "keywords": [
+        "子账号",
+        "密码管理",
+        "离职处理",
+        "权限调整"
+      ],
+      "categoryKeywords": [
+        "子账号",
+        "密码",
+        "权限"
+      ],
+      "categoryHints": [
+        "邮箱子账号相关问题"
+      ],
+      "collect": [
+        {
+          "field": "domainName",
+          "label": "域名",
+          "required": true,
+          "type": "string",
+          "description": "子账号所属的邮箱域名",
+          "maxLength": 253
+        },
+        {
+          "field": "subAccountAction",
+          "label": "子账号操作",
+          "required": true,
+          "type": "string",
+          "enum": ["密码管理", "离职处理", "权限调整"],
+          "description": "对子账号执行的具体操作类型"
+        },
+        {
+          "field": "affectedSubAccount",
+          "label": "受影响子账号",
+          "required": false,
+          "type": "string",
+          "description": "受操作影响的子账号邮箱地址",
+          "maxLength": 253
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "详细说明子账号相关问题和期望处理方式",
+          "maxLength": 1000
+        }
+      ]
+    },
+    {
+      "name": "阿里云个人邮箱",
+      "keywords": [
+        "个人邮箱",
+        "免费个人",
+        "付费企业"
+      ],
+      "categoryKeywords": [
+        "个人邮箱",
+        "免费",
+        "付费"
+      ],
+      "categoryHints": [
+        "阿里云个人邮箱"
+      ],
+      "collect": [
+        {
+          "field": "emailAddress",
+          "label": "邮箱地址",
+          "required": true,
+          "type": "string",
+          "description": "个人邮箱的完整地址",
+          "maxLength": 253
+        },
+        {
+          "field": "emailType",
+          "label": "邮箱类型",
+          "required": true,
+          "type": "string",
+          "enum": ["免费个人", "付费企业"],
+          "description": "邮箱的付费类型"
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "详细说明个人邮箱遇到的问题",
+          "maxLength": 1000
+        }
+      ]
+    },
+    {
+      "name": "外贸邮或钉邮",
+      "keywords": [
+        "外贸邮",
+        "钉邮",
+        "企业邮箱",
+        "绑定",
+        "解绑"
+      ],
+      "categoryKeywords": [
+        "外贸邮",
+        "钉邮",
+        "绑定"
+      ],
+      "categoryHints": [
+        "外贸邮或钉邮"
+      ],
+      "collect": [
+        {
+          "field": "integrationType",
+          "label": "集成类型",
+          "required": true,
+          "type": "string",
+          "enum": ["钉邮", "外贸邮", "企业邮箱"],
+          "description": "邮箱与外部系统的集成类型"
+        },
+        {
+          "field": "bindAction",
+          "label": "绑定操作",
+          "required": false,
+          "type": "string",
+          "enum": ["绑定", "解绑", "重新绑定"],
+          "description": "需要执行的绑定相关操作"
+        },
+        {
+          "field": "dingtalkAdminRequired",
+          "label": "是否需要钉钉管理员",
+          "required": false,
+          "type": "boolean",
+          "description": "操作是否需要钉钉管理员权限协助"
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "详细说明外贸邮或钉邮的集成问题和期望",
+          "maxLength": 1000
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,679 @@
+{
+  "product": "sms",
+  "aliases": [
+    "短信服务",
+    "短信",
+    "SMS",
+    "阿里云短信"
+  ],
+  "issueTypes": [
+    {
+      "name": "短信发送问题",
+      "keywords": [
+        "发送失败",
+        "报备待验证",
+        "运营商拦截",
+        "内容违规",
+        "签名问题",
+        "短信发不出",
+        "发送延迟",
+        "送达率低"
+      ],
+      "categoryKeywords": [
+        "发送",
+        "失败",
+        "拦截",
+        "报备"
+      ],
+      "categoryHints": [
+        "短信发送问题（报备待验证/运营商拦截/内容违规/签名问题）"
+      ],
+      "collect": [
+        {
+          "field": "sendFailureType",
+          "label": "发送失败类型",
+          "required": true,
+          "type": "string",
+          "enum": ["报备待验证", "运营商拦截", "内容违规", "签名问题", "其他"],
+          "description": "发送失败的具体原因分类，决定排查方向"
+        },
+        {
+          "field": "phoneNumber",
+          "label": "失败手机号",
+          "required": true,
+          "type": "string",
+          "description": "提供发送失败的手机号码用于后端核实，脱敏格式如 138****1234",
+          "maxLength": 20
+        },
+        {
+          "field": "carrierInfo",
+          "label": "运营商信息",
+          "required": false,
+          "type": "string",
+          "enum": ["中国移动", "中国联通", "中国电信", "广电", "不确定"],
+          "description": "不同运营商的报备和拦截策略不同"
+        },
+        {
+          "field": "smsContent",
+          "label": "短信内容",
+          "required": true,
+          "type": "string",
+          "description": "实际发送的短信正文，用于检查是否含引流内容（链接/IP/联系方式等）",
+          "maxLength": 1000
+        },
+        {
+          "field": "signatureStatus",
+          "label": "签名报备状态",
+          "required": false,
+          "type": "string",
+          "enum": ["已报备待验证", "已通过", "未报备", "不确定"],
+          "description": "签名是否已完成运营商报备及当前验证状态"
+        },
+        {
+          "field": "failureRate",
+          "label": "失败率",
+          "required": false,
+          "type": "string",
+          "description": "发送成功率或失败率，如\"成功率85%\"或\"失败约15%\"",
+          "maxLength": 64
+        },
+        {
+          "field": "occurrenceTime",
+          "label": "发生时间",
+          "required": true,
+          "type": "string",
+          "description": "发送失败的时间，包含日期、时间和时区",
+          "maxLength": 64
+        },
+        {
+          "field": "smsType",
+          "label": "短信类型",
+          "required": false,
+          "type": "string",
+          "enum": ["验证码", "通知", "营销", "国际短信", "不确定"],
+          "description": "不同短信类型的发送策略和限制不同"
+        },
+        {
+          "field": "templateCode",
+          "label": "模板CODE",
+          "required": false,
+          "type": "string",
+          "description": "发送使用的短信模板CODE，如 SMS_123456789",
+          "maxLength": 64
+        },
+        {
+          "field": "signatureName",
+          "label": "签名名称",
+          "required": false,
+          "type": "string",
+          "description": "发送使用的签名名称，如\"阿里云计算有限公司\"",
+          "maxLength": 120
+        }
+      ]
+    },
+    {
+      "name": "购买/续费/计费/账单/退订问题",
+      "keywords": [
+        "套餐购买",
+        "计费",
+        "退款",
+        "账单",
+        "余额查询",
+        "发送中卡住",
+        "续费",
+        "退订"
+      ],
+      "categoryKeywords": [
+        "购买",
+        "续费",
+        "计费",
+        "账单",
+        "退订"
+      ],
+      "categoryHints": [
+        "购买/续费/计费/账单/退订问题"
+      ],
+      "collect": [
+        {
+          "field": "billingType",
+          "label": "计费方式",
+          "required": true,
+          "type": "string",
+          "enum": ["套餐", "按量付费", "不确定"],
+          "description": "客户的短信计费模式，影响费用核算和退费路径"
+        },
+        {
+          "field": "packageBalance",
+          "label": "套餐余额",
+          "required": false,
+          "type": "string",
+          "description": "当前短信套餐包剩余条数，如\"剩余320条\"",
+          "maxLength": 64
+        },
+        {
+          "field": "disputedAmount",
+          "label": "争议金额",
+          "required": false,
+          "type": "string",
+          "description": "具体争议的费用金额，如\"多扣费约85元\"",
+          "maxLength": 64
+        },
+        {
+          "field": "orderNumber",
+          "label": "订单号",
+          "required": false,
+          "type": "string",
+          "description": "涉及的订单编号，用于后端核实",
+          "maxLength": 120
+        },
+        {
+          "field": "sendStatus",
+          "label": "发送状态异常",
+          "required": false,
+          "type": "string",
+          "enum": ["卡在发送中", "状态未更新", "状态正常", "无异常"],
+          "description": "短信发送状态卡在\"发送中\"长时间未更新等异常情况"
+        },
+        {
+          "field": "accountUid",
+          "label": "账号UID",
+          "required": false,
+          "type": "string",
+          "description": "阿里云账号UID，用于后端查询计费记录",
+          "maxLength": 64
+        },
+        {
+          "field": "billingPeriod",
+          "label": "账期",
+          "required": false,
+          "type": "string",
+          "description": "争议费用所属的账期，如\"2025-09\""
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题说明",
+          "required": true,
+          "type": "string",
+          "description": "说明费用疑问、套餐余额问题或期望处理方式",
+          "maxLength": 1000
+        },
+        {
+          "field": "demandType",
+          "label": "诉求类型",
+          "required": false,
+          "type": "string",
+          "enum": ["退款", "调账减免", "费用解释", "套餐变更", "发票", "其他"],
+          "description": "客户期望的处理方式"
+        }
+      ]
+    },
+    {
+      "name": "短信签名审核问题",
+      "keywords": [
+        "签名报备",
+        "签名审核",
+        "签名被拒",
+        "实名制审核",
+        "签名修改",
+        "商标不唯一"
+      ],
+      "categoryKeywords": [
+        "签名",
+        "审核",
+        "报备"
+      ],
+      "categoryHints": [
+        "短信签名审核问题（报备/实名制/审核被拒）"
+      ],
+      "collect": [
+        {
+          "field": "signatureName",
+          "label": "签名名称",
+          "required": true,
+          "type": "string",
+          "description": "申请审核的签名名称，建议使用企业全称如\"阿里云计算有限公司\"",
+          "maxLength": 120
+        },
+        {
+          "field": "signatureSourceType",
+          "label": "签名来源类型",
+          "required": true,
+          "type": "string",
+          "enum": ["企业名称", "商标", "网站", "App", "公众号/小程序", "其他"],
+          "description": "签名的来源依据，影响所需审核材料"
+        },
+        {
+          "field": "reportingStatus",
+          "label": "报备状态",
+          "required": true,
+          "type": "string",
+          "enum": ["已报备待验证", "已通过", "未报备", "审核中", "已拒绝"],
+          "description": "签名在运营商侧的报备和验证状态"
+        },
+        {
+          "field": "rejectReason",
+          "label": "拒绝原因",
+          "required": false,
+          "type": "string",
+          "enum": ["签名不唯一", "缺少地域信息", "材料不符", "商标无效", "签名与资质不符", "其他"],
+          "description": "签名审核被拒的具体原因"
+        },
+        {
+          "field": "enterpriseName",
+          "label": "企业全称",
+          "required": false,
+          "type": "string",
+          "description": "签名关联的企业全称，不可使用简称或缩写",
+          "maxLength": 200
+        },
+        {
+          "field": "trademarkInfo",
+          "label": "商标信息",
+          "required": false,
+          "type": "string",
+          "description": "使用商标作为签名来源时提供商标注册号和类别",
+          "maxLength": 300
+        },
+        {
+          "field": "modificationDetails",
+          "label": "修改说明",
+          "required": false,
+          "type": "string",
+          "description": "签名材料的修改内容，注意修改材料不影响已报备的签名",
+          "maxLength": 500
+        }
+      ]
+    },
+    {
+      "name": "短信模板审核问题",
+      "keywords": [
+        "模板被拒",
+        "模板审核",
+        "营销短信限制",
+        "模板创建失败",
+        "短链接",
+        "推广短信"
+      ],
+      "categoryKeywords": [
+        "模板",
+        "审核",
+        "营销"
+      ],
+      "categoryHints": [
+        "短信模板审核问题（模板被拒/营销短信限制/短链接）"
+      ],
+      "collect": [
+        {
+          "field": "templateType",
+          "label": "模板类型",
+          "required": true,
+          "type": "string",
+          "enum": ["验证码", "通知", "营销", "国际短信", "不确定"],
+          "description": "短信模板的类型，不同类型的审核标准不同"
+        },
+        {
+          "field": "templateStatus",
+          "label": "模板审核状态",
+          "required": true,
+          "type": "string",
+          "enum": ["审核中", "已通过", "已拒绝", "审核失败"],
+          "description": "模板当前的审核状态"
+        },
+        {
+          "field": "rejectReason",
+          "label": "拒绝原因",
+          "required": false,
+          "type": "string",
+          "enum": ["内容违规", "营销短信超限", "短链接不允许", "变量不合规", "签名不符", "缺少资质", "其他"],
+          "description": "模板审核被拒的具体原因"
+        },
+        {
+          "field": "isPromotion",
+          "label": "是否营销短信",
+          "required": false,
+          "type": "boolean",
+          "description": "是否为营销/推广类短信，营销短信每日限50条，仅限8:00-22:00发送，仅限企业账号"
+        },
+        {
+          "field": "dailyLimit",
+          "label": "每日发送限制",
+          "required": false,
+          "type": "string",
+          "description": "营销短信每日发送上限，默认50条/天，如\"已达50条上限\"",
+          "maxLength": 64
+        },
+        {
+          "field": "templateContent",
+          "label": "模板内容",
+          "required": false,
+          "type": "string",
+          "description": "被拒模板的具体内容，用于分析拒绝原因",
+          "maxLength": 1000
+        },
+        {
+          "field": "templateCode",
+          "label": "模板CODE",
+          "required": false,
+          "type": "string",
+          "description": "短信模板CODE，如 SMS_123456789",
+          "maxLength": 64
+        },
+        {
+          "field": "shortLinkUsage",
+          "label": "是否使用短链接",
+          "required": false,
+          "type": "boolean",
+          "description": "模板中是否插入短链接，通知类短信通常不允许插入短链接"
+        }
+      ]
+    },
+    {
+      "name": "API/SDK使用问题",
+      "keywords": [
+        "API报错",
+        "SDK错误",
+        "RegionId错误",
+        "isv.SMS_REQUEST_ILLEGAL",
+        "ServiceUnavailable",
+        "接口调用",
+        "SendSms"
+      ],
+      "categoryKeywords": [
+        "API",
+        "SDK",
+        "接口"
+      ],
+      "categoryHints": [
+        "API/SDK使用问题（API报错/RegionId错误/接口调用）"
+      ],
+      "collect": [
+        {
+          "field": "errorCode",
+          "label": "错误码",
+          "required": true,
+          "type": "string",
+          "description": "API返回的错误码，如 isv.SMS_REQUEST_ILLEGAL、isv.SERVICE_UNAVAILABLE",
+          "maxLength": 120
+        },
+        {
+          "field": "requestId",
+          "label": "请求ID",
+          "required": false,
+          "type": "string",
+          "description": "API调用的RequestId，用于后端全链路追踪",
+          "maxLength": 120
+        },
+        {
+          "field": "apiEndpoint",
+          "label": "API接口",
+          "required": false,
+          "type": "string",
+          "description": "调用的API接口名称，如 SendSms、QuerySendDetails、SendMessageToGlobe",
+          "maxLength": 120
+        },
+        {
+          "field": "regionId",
+          "label": "RegionId",
+          "required": true,
+          "type": "string",
+          "description": "API调用的地域标识，国内短信用 cn-hangzhou，国际短信需设为新加坡（ap-southeast-1）",
+          "maxLength": 64
+        },
+        {
+          "field": "businessScenario",
+          "label": "业务场景",
+          "required": false,
+          "type": "string",
+          "description": "调用API的业务场景说明，如\"调用SendSms发送通知短信\"",
+          "maxLength": 500
+        },
+        {
+          "field": "smsContent",
+          "label": "短信内容",
+          "required": false,
+          "type": "string",
+          "description": "通过API发送的短信内容，用于排查内容合规问题",
+          "maxLength": 1000
+        },
+        {
+          "field": "phoneNumber",
+          "label": "失败手机号",
+          "required": false,
+          "type": "string",
+          "description": "API调用失败涉及的手机号，脱敏格式如 138****1234",
+          "maxLength": 20
+        },
+        {
+          "field": "sdkVersion",
+          "label": "SDK版本",
+          "required": false,
+          "type": "string",
+          "description": "使用的SDK语言和版本，如\"Java SDK 2.0.24\"",
+          "maxLength": 64
+        },
+        {
+          "field": "occurrenceTime",
+          "label": "发生时间",
+          "required": false,
+          "type": "string",
+          "description": "API报错的发生时间，包含日期、时间和时区",
+          "maxLength": 64
+        }
+      ]
+    },
+    {
+      "name": "短信控制台使用问题",
+      "keywords": [
+        "控制台报错",
+        "安全风险",
+        "AccessKey泄露",
+        "恶意注册",
+        "价格查询",
+        "IP查询",
+        "控制台操作"
+      ],
+      "categoryKeywords": [
+        "控制台",
+        "安全",
+        "操作"
+      ],
+      "categoryHints": [
+        "短信控制台使用问题（安全风险/价格查询/IP查询）"
+      ],
+      "collect": [
+        {
+          "field": "securityIssueType",
+          "label": "安全问题类型",
+          "required": false,
+          "type": "string",
+          "enum": ["AccessKey泄露", "恶意注册", "安全风险", "无安全问题"],
+          "description": "安全问题分类，AccessKey泄露需立即暂停接口并冻结签名"
+        },
+        {
+          "field": "pricingQuery",
+          "label": "价格查询内容",
+          "required": false,
+          "type": "string",
+          "description": "客户需查询的短信价格信息，如\"国内短信单价\"或\"国际短信资费\"",
+          "maxLength": 500
+        },
+        {
+          "field": "ipQueryAvailable",
+          "label": "是否需查询客户端IP",
+          "required": false,
+          "type": "boolean",
+          "description": "短信系统不记录客户端IP，IP查询无法提供，需提前告知客户"
+        },
+        {
+          "field": "operationName",
+          "label": "操作名称",
+          "required": true,
+          "type": "string",
+          "description": "控制台执行的操作，如\"创建签名\"\"创建模板\"\"查看发送记录\"",
+          "maxLength": 120
+        },
+        {
+          "field": "errorMessage",
+          "label": "错误信息",
+          "required": false,
+          "type": "string",
+          "description": "控制台显示的错误信息，移除敏感内容后填写",
+          "maxLength": 1000
+        },
+        {
+          "field": "accountUid",
+          "label": "账号UID",
+          "required": false,
+          "type": "string",
+          "description": "阿里云账号UID，用于后端核实安全问题和操作记录",
+          "maxLength": 64
+        },
+        {
+          "field": "actionTrailAvailable",
+          "label": "是否需查ActionTrail",
+          "required": false,
+          "type": "boolean",
+          "description": "AccessKey泄露场景需通过ActionTrail排查操作痕迹"
+        }
+      ]
+    },
+    {
+      "name": "国际短信使用问题",
+      "keywords": [
+        "国际短信",
+        "SenderID",
+        "Sender ID配置",
+        "港台短信",
+        "国际发送",
+        "审核周期长"
+      ],
+      "categoryKeywords": [
+        "国际",
+        "SenderID",
+        "港台"
+      ],
+      "categoryHints": [
+        "国际短信使用问题（SenderID配置/审核周期）"
+      ],
+      "collect": [
+        {
+          "field": "internationalRegion",
+          "label": "国际短信区域",
+          "required": true,
+          "type": "string",
+          "enum": ["香港澳门台湾", "国际", "不确定"],
+          "description": "短信发送的目标区域，不同区域的SenderID审核流程不同"
+        },
+        {
+          "field": "senderIdStatus",
+          "label": "SenderID状态",
+          "required": false,
+          "type": "string",
+          "enum": ["审核中", "报备中", "已通过", "未申请", "不确定"],
+          "description": "SenderID的审核和报备状态，审核周期约8周"
+        },
+        {
+          "field": "reviewDuration",
+          "label": "审核时长",
+          "required": false,
+          "type": "string",
+          "description": "已等待的审核时长，如\"已等待约6周\"，正常周期约8周",
+          "maxLength": 64
+        },
+        {
+          "field": "targetCountry",
+          "label": "目标国家/地区",
+          "required": false,
+          "type": "string",
+          "description": "短信发送的目标国家或地区，如\"新加坡\"\"美国\"\"香港\"",
+          "maxLength": 120
+        },
+        {
+          "field": "phoneNumber",
+          "label": "失败手机号",
+          "required": false,
+          "type": "string",
+          "description": "国际短信发送失败的手机号（含国际区号），脱敏格式",
+          "maxLength": 20
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题说明",
+          "required": true,
+          "type": "string",
+          "description": "国际短信使用问题的具体描述和期望结果",
+          "maxLength": 1000
+        }
+      ]
+    },
+    {
+      "name": "短信查询/导出问题",
+      "keywords": [
+        "发送记录导出",
+        "黑名单查询",
+        "ApplySameTaskIsNotSupported",
+        "导出冲突",
+        "查询失败",
+        "回执查询"
+      ],
+      "categoryKeywords": [
+        "查询",
+        "导出",
+        "黑名单"
+      ],
+      "categoryHints": [
+        "短信查询/导出问题（发送记录导出/黑名单查询）"
+      ],
+      "collect": [
+        {
+          "field": "queryType",
+          "label": "查询类型",
+          "required": true,
+          "type": "string",
+          "enum": ["发送记录导出", "黑名单查询", "回执查询", "其他"],
+          "description": "客户需要查询或导出的数据类型"
+        },
+        {
+          "field": "exportError",
+          "label": "导出报错信息",
+          "required": false,
+          "type": "string",
+          "description": "导出任务失败时的错误信息，如 ApplySameTaskIsNotSupported",
+          "maxLength": 500
+        },
+        {
+          "field": "phoneNumber",
+          "label": "查询手机号",
+          "required": false,
+          "type": "string",
+          "description": "查询发送记录或黑名单时涉及的手机号，脱敏格式如 138****1234",
+          "maxLength": 20
+        },
+        {
+          "field": "queryTimeRange",
+          "label": "查询时间范围",
+          "required": false,
+          "type": "string",
+          "description": "需要查询或导出的时间范围，如\"2025-09-01至2025-09-30\"",
+          "maxLength": 120
+        },
+        {
+          "field": "accountUid",
+          "label": "账号UID",
+          "required": false,
+          "type": "string",
+          "description": "阿里云账号UID，用于后端核实查询权限",
+          "maxLength": 64
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题说明",
+          "required": true,
+          "type": "string",
+          "description": "查询或导出问题的具体描述和期望结果",
+          "maxLength": 1000
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,794 @@
+{
+  "product": "activity",
+  "aliases": [
+    "活动",
+    "活动优惠",
+    "promotion",
+    "阿里云活动"
+  ],
+  "issueTypes": [
+    {
+      "name": "其他活动问题",
+      "keywords": [
+        "99计划",
+        "同价续费",
+        "免费额度",
+        "教育活动风控",
+        "百炼token"
+      ],
+      "categoryKeywords": [
+        "活动",
+        "优惠",
+        "其他"
+      ],
+      "categoryHints": [
+        "其他活动问题"
+      ],
+      "collect": [
+        {
+          "field": "questionDescription",
+          "label": "问题说明",
+          "required": true,
+          "type": "string",
+          "description": "说明遇到的活动问题、当前情况和期望结果",
+          "maxLength": 1000
+        },
+        {
+          "field": "activityName",
+          "label": "活动名称",
+          "required": true,
+          "type": "string",
+          "enum": ["99计划", "云工开物", "飞天加速", "秒杀", "其他"],
+          "description": "客户咨询或参与的具体活动名称，用于路由到对应活动规则"
+        },
+        {
+          "field": "activityIssueType",
+          "label": "活动问题类型",
+          "required": true,
+          "type": "string",
+          "enum": ["资格不符", "扣费规则", "退款", "入口咨询"],
+          "description": "活动问题的具体类型，决定处理路径（规则解释/费用核实/退款流程）"
+        },
+        {
+          "field": "orderNumber",
+          "label": "订单号",
+          "required": false,
+          "type": "string",
+          "description": "涉及扣费或退款时填写相关订单号",
+          "maxLength": 120
+        },
+        {
+          "field": "disputedAmount",
+          "label": "争议金额",
+          "required": false,
+          "type": "string",
+          "description": "活动扣费规则争议涉及的具体金额",
+          "maxLength": 64
+        },
+        {
+          "field": "freeQuotaDetail",
+          "label": "免费额度详情",
+          "required": false,
+          "type": "string",
+          "description": "涉及免费额度资格（如百炼免费token）时说明额度类型和疑问点",
+          "maxLength": 300
+        },
+        {
+          "field": "contactInfo",
+          "label": "联系方式",
+          "required": false,
+          "type": "string",
+          "description": "需回访或跟进时填写客户联系电话或邮箱",
+          "maxLength": 120
+        }
+      ]
+    },
+    {
+      "name": "无法享受活动优惠价或无法参与活动",
+      "keywords": [
+        "无法享受优惠",
+        "无法参与活动",
+        "新客资格",
+        "学生资格被拒",
+        "风控拦截",
+        "售罄"
+      ],
+      "categoryKeywords": [
+        "资格",
+        "优惠价",
+        "参与"
+      ],
+      "categoryHints": [
+        "无法享受活动优惠价或无法参与活动"
+      ],
+      "collect": [
+        {
+          "field": "questionDescription",
+          "label": "问题说明",
+          "required": true,
+          "type": "string",
+          "description": "说明参与的活动、被拒原因提示和期望结果",
+          "maxLength": 1000
+        },
+        {
+          "field": "eligibilityIssueType",
+          "label": "资格问题类型",
+          "required": true,
+          "type": "string",
+          "enum": ["新客资格", "学生认证", "风控拦截", "售罄", "账户异常"],
+          "description": "无法享受优惠的具体原因类型，不同原因对应不同处理路径"
+        },
+        {
+          "field": "newCustomerStatus",
+          "label": "新老客状态",
+          "required": false,
+          "type": "string",
+          "enum": ["新客", "老客", "不确定"],
+          "description": "客户账号的新客资格状态，历史消费记录（如2017年消费）会取消新客资格"
+        },
+        {
+          "field": "riskControlBlocked",
+          "label": "是否被风控拦截",
+          "required": false,
+          "type": "boolean",
+          "description": "页面是否提示账户异常或风控拦截导致无法参与活动"
+        },
+        {
+          "field": "studentCertification",
+          "label": "学生认证状态",
+          "required": false,
+          "type": "string",
+          "enum": ["已认证", "未认证", "认证失败"],
+          "description": "学生优惠资格的学生认证完成情况"
+        },
+        {
+          "field": "appealMethod",
+          "label": "申诉方式",
+          "required": false,
+          "type": "string",
+          "enum": ["自助申诉工具", "手持身份证照片", "转专员"],
+          "description": "客户期望或已尝试的申诉方式，自助申诉工具1个工作日审核"
+        },
+        {
+          "field": "rejectMessage",
+          "label": "被拒提示内容",
+          "required": false,
+          "type": "string",
+          "description": "页面或系统显示的拒绝原因原文，便于定位资格规则",
+          "maxLength": 500
+        },
+        {
+          "field": "contactInfo",
+          "label": "联系方式",
+          "required": false,
+          "type": "string",
+          "description": "需回访或申诉跟进时填写客户联系电话或邮箱",
+          "maxLength": 120
+        }
+      ]
+    },
+    {
+      "name": "云工开物活动咨询",
+      "keywords": [
+        "云工开物",
+        "学生认证",
+        "300元抵扣金",
+        "超星绑定",
+        "university.aliyun.com"
+      ],
+      "categoryKeywords": [
+        "云工开物",
+        "学生",
+        "咨询"
+      ],
+      "categoryHints": [
+        "云工开物活动咨询"
+      ],
+      "collect": [
+        {
+          "field": "questionDescription",
+          "label": "问题说明",
+          "required": true,
+          "type": "string",
+          "description": "说明云工开物活动的具体疑问和期望结果",
+          "maxLength": 1000
+        },
+        {
+          "field": "studentBenefit",
+          "label": "学生权益类型",
+          "required": true,
+          "type": "string",
+          "enum": ["300元抵扣金", "学生优惠券", "免费权益"],
+          "description": "客户咨询的学生权益类型，不同权益的适用规则不同"
+        },
+        {
+          "field": "deductionScope",
+          "label": "抵扣范围",
+          "required": false,
+          "type": "string",
+          "enum": ["指定商品", "非活动页订单不符"],
+          "description": "300元抵扣金只能购买指定规格商品（如非ecs.e-c1m2.xlarge不匹配），非活动页订单不可抵扣"
+        },
+        {
+          "field": "universityPlatform",
+          "label": "涉及平台",
+          "required": false,
+          "type": "string",
+          "enum": ["university.aliyun.com", "超星绑定"],
+          "description": "客户使用的平台入口，购买入口为university.aliyun.com/buycenter"
+        },
+        {
+          "field": "studentCertification",
+          "label": "学生认证状态",
+          "required": false,
+          "type": "string",
+          "enum": ["已认证", "未认证", "认证失败"],
+          "description": "云工开物权益需先完成学生认证"
+        },
+        {
+          "field": "orderNumber",
+          "label": "订单号",
+          "required": false,
+          "type": "string",
+          "description": "涉及抵扣金无法使用时填写相关订单号",
+          "maxLength": 120
+        }
+      ]
+    },
+    {
+      "name": "免费试用额度规则与计费方式咨询",
+      "keywords": [
+        "免费试用",
+        "试用额度",
+        "用完即停",
+        "超时按量扣费",
+        "产品范围"
+      ],
+      "categoryKeywords": [
+        "试用",
+        "额度",
+        "计费"
+      ],
+      "categoryHints": [
+        "免费试用额度/规则/计费方式/产品范围咨询"
+      ],
+      "collect": [
+        {
+          "field": "questionDescription",
+          "label": "问题说明",
+          "required": true,
+          "type": "string",
+          "description": "说明试用的产品、遇到的疑问和期望结果",
+          "maxLength": 1000
+        },
+        {
+          "field": "trialProduct",
+          "label": "试用产品",
+          "required": true,
+          "type": "string",
+          "enum": ["ECS", "轻量", "Lindorm", "万相", "云安全中心", "无影云电脑"],
+          "description": "客户咨询或试用的具体产品，不同产品试用规则差异大"
+        },
+        {
+          "field": "trialIssueType",
+          "label": "试用问题类型",
+          "required": true,
+          "type": "string",
+          "enum": ["额度咨询", "超时扣费", "无法申请", "已用过"],
+          "description": "试用问题的具体类型，额度咨询和超时扣费的处理路径不同"
+        },
+        {
+          "field": "stopWhenExhausted",
+          "label": "用完即停状态",
+          "required": false,
+          "type": "string",
+          "enum": ["已开启", "未开启默认"],
+          "description": "是否开启用完即停，默认不开，额度耗尽后自动转按量扣费（如万相3.0免费额度仅30秒）"
+        },
+        {
+          "field": "oneTimeLimit",
+          "label": "试用次数限制",
+          "required": false,
+          "type": "string",
+          "enum": ["每用户一次", "不限"],
+          "description": "同产品试用是否仅限一次（如Lindorm同产品仅一次）"
+        },
+        {
+          "field": "trialDuration",
+          "label": "试用时长",
+          "required": false,
+          "type": "string",
+          "enum": ["3个月", "30秒", "30天", "其他"],
+          "description": "试用活动的时长规则（如ECS试用固定3个月，万相3.0仅30秒）"
+        }
+      ]
+    },
+    {
+      "name": "活动优惠券代金券领取失败或无法使用",
+      "keywords": [
+        "优惠券领取失败",
+        "代金券无法使用",
+        "券不能抵扣",
+        "学生券",
+        "用券限制"
+      ],
+      "categoryKeywords": [
+        "优惠券",
+        "代金券",
+        "领取"
+      ],
+      "categoryHints": [
+        "活动优惠券/代金券领取失败或无法使用"
+      ],
+      "collect": [
+        {
+          "field": "questionDescription",
+          "label": "问题说明",
+          "required": true,
+          "type": "string",
+          "description": "说明券的类型、领取或使用的具体场景和报错提示",
+          "maxLength": 1000
+        },
+        {
+          "field": "voucherType",
+          "label": "券类型",
+          "required": true,
+          "type": "string",
+          "enum": ["学生券", "新客券", "通用券", "代金券"],
+          "description": "客户领取或使用的优惠券类型，不同券适用范围不同"
+        },
+        {
+          "field": "voucherIssueType",
+          "label": "券问题类型",
+          "required": true,
+          "type": "string",
+          "enum": ["领取失败", "无法使用", "范围不符", "叠加问题"],
+          "description": "券问题的具体类型，范围不符需核对商品清单，叠加问题需查叠加规则"
+        },
+        {
+          "field": "productScope",
+          "label": "适用产品范围",
+          "required": false,
+          "type": "string",
+          "enum": ["指定商品", "Qoder独立支付", "轻量续费不支持"],
+          "description": "券的适用范围限制：学生券仅限学生用券中心指定商品/模型，Qoder CN订阅走独立支付体系通用券不适用，轻量服务器续费不支持用券"
+        },
+        {
+          "field": "stackingRule",
+          "label": "叠加规则",
+          "required": false,
+          "type": "string",
+          "enum": ["需等待20分钟", "不可叠加"],
+          "description": "券领取后需等待约20分钟生效，且与部分优惠不可叠加"
+        },
+        {
+          "field": "orderNumber",
+          "label": "订单号",
+          "required": false,
+          "type": "string",
+          "description": "下单用券失败时填写相关订单号",
+          "maxLength": 120
+        }
+      ]
+    },
+    {
+      "name": "无法参与99计划",
+      "keywords": [
+        "99计划",
+        "99元优惠",
+        "无法参与99",
+        "99元续费"
+      ],
+      "categoryKeywords": [
+        "99计划",
+        "资格",
+        "续费"
+      ],
+      "categoryHints": [
+        "无法参与99计划"
+      ],
+      "collect": [
+        {
+          "field": "questionDescription",
+          "label": "问题说明",
+          "required": true,
+          "type": "string",
+          "description": "说明参与99计划被拒的具体情况和提示内容",
+          "maxLength": 1000
+        },
+        {
+          "field": "plan99Rule",
+          "label": "99计划规则疑问",
+          "required": false,
+          "type": "string",
+          "enum": ["每自然年1次", "每次1年"],
+          "description": "99元优惠续费每自然年最多1次、每次1年，并非锁定3年"
+        },
+        {
+          "field": "eligibilityStatus",
+          "label": "资格状态",
+          "required": true,
+          "type": "string",
+          "enum": ["符合", "不符合", "待审核"],
+          "description": "客户当前参与99计划的资格状态"
+        },
+        {
+          "field": "ecsReleaseWait",
+          "label": "ECS释放状态",
+          "required": false,
+          "type": "string",
+          "enum": ["1-2天", "已释放完成"],
+          "description": "刚释放的ECS需等待1-2天释放完成后才能再参与99计划"
+        },
+        {
+          "field": "enterpriseMaterial",
+          "label": "企业认证材料",
+          "required": false,
+          "type": "string",
+          "enum": ["营业执照手持照", "经营证明材料", "个人材料"],
+          "description": "企业用户参与99计划需营业执照手持照及经营真实性证明材料"
+        },
+        {
+          "field": "rejectMessage",
+          "label": "被拒提示内容",
+          "required": false,
+          "type": "string",
+          "description": "页面显示的无法参与原因原文",
+          "maxLength": 500
+        }
+      ]
+    },
+    {
+      "name": "活动通用咨询",
+      "keywords": [
+        "活动咨询",
+        "秒杀",
+        "活动问题",
+        "优惠活动"
+      ],
+      "categoryKeywords": [
+        "通用",
+        "活动",
+        "咨询"
+      ],
+      "categoryHints": [
+        "活动"
+      ],
+      "collect": [
+        {
+          "field": "questionDescription",
+          "label": "问题说明",
+          "required": true,
+          "type": "string",
+          "description": "说明咨询的活动、当前情况和期望结果",
+          "maxLength": 1000
+        },
+        {
+          "field": "activityName",
+          "label": "活动名称",
+          "required": false,
+          "type": "string",
+          "enum": ["99计划", "云工开物", "飞天加速", "秒杀", "其他"],
+          "description": "涉及的具体活动名称，秒杀售罄和风控拦截是高频场景"
+        },
+        {
+          "field": "soldOutStatus",
+          "label": "售罄状态",
+          "required": false,
+          "type": "boolean",
+          "description": "活动商品是否已售罄，秒杀类活动售罄后无法补货"
+        },
+        {
+          "field": "riskControlBlocked",
+          "label": "是否被风控拦截",
+          "required": false,
+          "type": "boolean",
+          "description": "参与活动时是否被风控拦截"
+        },
+        {
+          "field": "contactInfo",
+          "label": "联系方式",
+          "required": false,
+          "type": "string",
+          "description": "需回访跟进时填写客户联系电话或邮箱",
+          "maxLength": 120
+        }
+      ]
+    },
+    {
+      "name": "云大使返利问题",
+      "keywords": [
+        "云大使返利",
+        "返利",
+        "推广链接",
+        "解绑关联",
+        "绑定商务经理"
+      ],
+      "categoryKeywords": [
+        "云大使",
+        "返利",
+        "推广"
+      ],
+      "categoryHints": [
+        "云大使返利"
+      ],
+      "collect": [
+        {
+          "field": "questionDescription",
+          "label": "问题说明",
+          "required": true,
+          "type": "string",
+          "description": "说明返利相关的问题、关联关系和期望结果",
+          "maxLength": 1000
+        },
+        {
+          "field": "ambassadorAction",
+          "label": "诉求操作",
+          "required": true,
+          "type": "string",
+          "enum": ["绑定", "解绑", "关联查询", "退出"],
+          "description": "客户期望的云大使关联操作类型"
+        },
+        {
+          "field": "bindingTarget",
+          "label": "关联对象",
+          "required": false,
+          "type": "string",
+          "enum": ["商务经理", "推广链接"],
+          "description": "推广链接会自动绑定到商务经理，无自助解绑入口"
+        },
+        {
+          "field": "selfServiceUnbind",
+          "label": "自助解绑支持",
+          "required": false,
+          "type": "string",
+          "enum": ["不支持需人工", "支持"],
+          "description": "解绑需后端专员处理，确认后才能解绑，无自助路径"
+        },
+        {
+          "field": "boundAccount",
+          "label": "被关联账号标识",
+          "required": false,
+          "type": "string",
+          "description": "需解绑或查询关联时填写被推广账号标识（UID/手机号）",
+          "maxLength": 120
+        }
+      ]
+    },
+    {
+      "name": "飞天加速计划咨询",
+      "keywords": [
+        "飞天加速计划",
+        "飞天加速",
+        "学生优惠券365天"
+      ],
+      "categoryKeywords": [
+        "飞天加速",
+        "学生",
+        "加速计划"
+      ],
+      "categoryHints": [
+        "飞天加速计划"
+      ],
+      "collect": [
+        {
+          "field": "questionDescription",
+          "label": "问题说明",
+          "required": true,
+          "type": "string",
+          "description": "说明飞天加速计划的具体疑问和期望结果",
+          "maxLength": 1000
+        },
+        {
+          "field": "studentCouponRule",
+          "label": "学生券规则",
+          "required": true,
+          "type": "string",
+          "enum": ["365天一次性", "需学生认证"],
+          "description": "飞天加速计划学生优惠券为365天一次性发放，非按月发放"
+        },
+        {
+          "field": "studentCertification",
+          "label": "学生认证状态",
+          "required": false,
+          "type": "string",
+          "enum": ["已认证", "未认证", "认证失败"],
+          "description": "参与飞天加速计划学生权益需完成学生认证"
+        },
+        {
+          "field": "entryChannel",
+          "label": "入口渠道",
+          "required": false,
+          "type": "string",
+          "enum": ["云工开物入口", "飞天加速计划官方页"],
+          "description": "客户通过哪个入口参与，云工开物入口权益规则可能不同"
+        }
+      ]
+    },
+    {
+      "name": "云大使提现问题",
+      "keywords": [
+        "云大使提现",
+        "提现无记录",
+        "云气值汇率",
+        "奖励结算"
+      ],
+      "categoryKeywords": [
+        "提现",
+        "云气值",
+        "结算"
+      ],
+      "categoryHints": [
+        "云大使提现"
+      ],
+      "collect": [
+        {
+          "field": "questionDescription",
+          "label": "问题说明",
+          "required": true,
+          "type": "string",
+          "description": "说明提现问题的具体表现和期望结果",
+          "maxLength": 1000
+        },
+        {
+          "field": "withdrawalIssueType",
+          "label": "提现问题类型",
+          "required": true,
+          "type": "string",
+          "enum": ["无记录", "汇率咨询", "结算周期"],
+          "description": "提现记录显示申请无记录、云气值汇率或结算周期疑问"
+        },
+        {
+          "field": "settlementCycle",
+          "label": "结算周期",
+          "required": false,
+          "type": "string",
+          "enum": ["30天滚动", "1-3工作日审批"],
+          "description": "奖励按30天滚动结算，提现申请审批需1-3个工作日"
+        },
+        {
+          "field": "withdrawalAmount",
+          "label": "提现金额",
+          "required": false,
+          "type": "string",
+          "description": "客户申请提现的具体金额或云气值数量",
+          "maxLength": 64
+        },
+        {
+          "field": "applyTime",
+          "label": "申请时间",
+          "required": false,
+          "type": "string",
+          "description": "提现申请提交的时间，包含日期",
+          "maxLength": 64
+        }
+      ]
+    },
+    {
+      "name": "云大使关联用户问题",
+      "keywords": [
+        "云大使关联用户",
+        "解绑商务经理",
+        "退出云大使",
+        "关联用户"
+      ],
+      "categoryKeywords": [
+        "关联用户",
+        "解绑",
+        "退出"
+      ],
+      "categoryHints": [
+        "云大使关联用户"
+      ],
+      "collect": [
+        {
+          "field": "questionDescription",
+          "label": "问题说明",
+          "required": true,
+          "type": "string",
+          "description": "说明关联用户关系的具体问题和期望结果",
+          "maxLength": 1000
+        },
+        {
+          "field": "ambassadorAction",
+          "label": "诉求操作",
+          "required": true,
+          "type": "string",
+          "enum": ["绑定", "解绑", "关联查询", "退出"],
+          "description": "客户期望的操作，解绑商务经理或退出云大使需人工处理"
+        },
+        {
+          "field": "bindingTarget",
+          "label": "关联对象",
+          "required": false,
+          "type": "string",
+          "enum": ["商务经理", "推广链接"],
+          "description": "当前账号绑定的关联对象"
+        },
+        {
+          "field": "selfServiceUnbind",
+          "label": "自助解绑支持",
+          "required": false,
+          "type": "string",
+          "enum": ["不支持需人工", "支持"],
+          "description": "退出云大使或解绑商务经理需专员人工处理"
+        },
+        {
+          "field": "boundAccount",
+          "label": "关联账号标识",
+          "required": false,
+          "type": "string",
+          "description": "需解绑或查询时填写关联账号标识（UID/手机号）",
+          "maxLength": 120
+        }
+      ]
+    },
+    {
+      "name": "免费试用账单欠费退订释放问题",
+      "keywords": [
+        "试用扣费",
+        "试用欠费",
+        "试用退订",
+        "试用释放",
+        "试用转按量"
+      ],
+      "categoryKeywords": [
+        "试用",
+        "账单",
+        "退订"
+      ],
+      "categoryHints": [
+        "免费试用账单/欠费/退订/释放"
+      ],
+      "collect": [
+        {
+          "field": "questionDescription",
+          "label": "问题说明",
+          "required": true,
+          "type": "string",
+          "description": "说明试用产生的费用问题、时间和期望处理方式",
+          "maxLength": 1000
+        },
+        {
+          "field": "trialBillingIssue",
+          "label": "试用账单问题类型",
+          "required": true,
+          "type": "string",
+          "enum": ["超时扣费", "试用转按量", "欠费"],
+          "description": "试用额度耗尽后按量计费产生残留费，或云安全中心试用到期转按量"
+        },
+        {
+          "field": "trialProduct",
+          "label": "涉及产品",
+          "required": true,
+          "type": "string",
+          "enum": ["ECS", "轻量", "Lindorm", "万相", "云安全中心", "无影云电脑"],
+          "description": "产生账单问题的试用产品"
+        },
+        {
+          "field": "disputedAmount",
+          "label": "争议金额",
+          "required": false,
+          "type": "string",
+          "description": "试用超量按量扣费涉及的具体金额",
+          "maxLength": 64
+        },
+        {
+          "field": "refundRequest",
+          "label": "退款诉求",
+          "required": false,
+          "type": "boolean",
+          "description": "客户是否要求退还试用期间产生的费用"
+        },
+        {
+          "field": "billingPeriod",
+          "label": "账期",
+          "required": false,
+          "type": "string",
+          "description": "产生费用的账期，精确到月份",
+          "maxLength": 64
+        }
+      ]
+    }
+  ]
+}

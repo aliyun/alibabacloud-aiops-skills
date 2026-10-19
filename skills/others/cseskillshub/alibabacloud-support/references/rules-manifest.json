@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "skillVersion": "1.8.0",
+  "contentDigest": "75c5588b628ae48153809121cd0036f15dd74f2cec6b93892c1854c418b082a2",
+  "files": {
+    "products/account.json": {
+      "size": 21286,
+      "sha256": "62fc94ad1defadc85ae334caa95fd964dfb2ac6c1f0c0343e3da5dcabc586a6a"
+    },
+    "products/activity.json": {
+      "size": 25164,
+      "sha256": "843b22463f44722118a70a45a66e0c73c130de2238f68898c4d929be105005be"
+    },
+    "products/bailian.json": {
+      "size": 38934,
+      "sha256": "565023acedc27755b08d5ded5d168c31502b9d95b4a974c33239b6af4863677b"
+    },
+    "products/dns.json": {
+      "size": 19371,
+      "sha256": "e448b604119df258c34823ba9a84c06072ff0aceab6a88c7ef18b17c2d3688d7"
+    },
+    "products/domain.json": {
+      "size": 18074,
+      "sha256": "dde8cbe5eb269cafcf8408de68fbc1fc95597d64e99d6bb987cad53f1b6aceea"
+    },
+    "products/ecs.json": {
+      "size": 26220,
+      "sha256": "9cbc15ef6c770f9d90d6b01eb7b7ef19ddf5dcae1264150325093305e5b6ab36"
+    },
+    "products/finance.json": {
+      "size": 41588,
+      "sha256": "1f0fa8e316bbbda777041e05acc9afc343007b5744b463db625ceb48f5d92faa"
+    },
+    "products/mail.json": {
+      "size": 16713,
+      "sha256": "159dcec3e57744ad4530069e1bafc7d0c72791bdf9aee70dafd77964791e9322"
+    },
+    "products/oss.json": {
+      "size": 26388,
+      "sha256": "9ea7299aea0f44231c5b409d98c20efcddccebe65fc8a17a1dfd3c3eafd8860f"
+    },
+    "products/qodercn.json": {
+      "size": 26827,
+      "sha256": "4a4fb8388bbbbd211744d063fbdf7cbe88a5c2b762009203168254f58a77331f"
+    },
+    "products/sms.json": {
+      "size": 21520,
+      "sha256": "2a4bdfc9dff9da7a55700b3124211d49c9d654f1fb7e89ba3457d169b494b4f6"
+    },
+    "products/ssl.json": {
+      "size": 24231,
+      "sha256": "242ddfacdb50fb54208dc54744c65c9323c999447dcd01dc5357fef1b7e55190"
+    },
+    "products/swas.json": {
+      "size": 27444,
+      "sha256": "7e2ace98d7caec18537f167b5ead8c7a9523976bbca2c1df535ada12768787de"
+    }
+  }
+}

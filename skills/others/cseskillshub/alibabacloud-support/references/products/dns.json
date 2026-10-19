@@ -1,0 +1,631 @@
+{
+  "product": "dns",
+  "aliases": [
+    "云解析DNS",
+    "云解析",
+    "DNS",
+    "Alibaba Cloud DNS",
+    "阿里云DNS"
+  ],
+  "issueTypes": [
+    {
+      "name": "解析设置相关咨询",
+      "keywords": [
+        "解析设置",
+        "添加解析",
+        "记录配置",
+        "子域名解析",
+        "NS修改"
+      ],
+      "categoryKeywords": [
+        "解析",
+        "设置",
+        "记录"
+      ],
+      "categoryHints": [
+        "解析设置相关咨询"
+      ],
+      "collect": [
+        {
+          "field": "domainName",
+          "label": "域名",
+          "required": true,
+          "type": "string",
+          "description": "仅填写主域名，不附带协议和路径",
+          "maxLength": 253
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题说明",
+          "required": true,
+          "type": "string",
+          "description": "说明解析目标、当前配置情况和具体疑问",
+          "maxLength": 1000
+        },
+        {
+          "field": "recordType",
+          "label": "解析记录类型",
+          "required": false,
+          "type": "string",
+          "enum": ["A", "CNAME", "MX", "TXT", "NS", "SRV", "AAAA"],
+          "description": "涉及的解析记录类型，不同记录类型的配置规则和生效逻辑不同"
+        },
+        {
+          "field": "recordOperation",
+          "label": "记录操作",
+          "required": false,
+          "type": "string",
+          "enum": ["新增", "修改", "删除", "暂停启用"],
+          "description": "客户要执行的解析记录操作类型"
+        },
+        {
+          "field": "subDomain",
+          "label": "子域名/主机记录",
+          "required": false,
+          "type": "string",
+          "description": "如 @、www、mail 等主机记录，@+www 组合配置是高频咨询场景",
+          "maxLength": 120
+        },
+        {
+          "field": "nsStatus",
+          "label": "DNS服务器状态",
+          "required": false,
+          "type": "string",
+          "enum": ["正常", "不匹配", "clientHold", "过期"],
+          "description": "clientHold 表示域名实名未完成被注册局暂停解析；不匹配指注册商处的 NS 与云解析分配的不一致"
+        },
+        {
+          "field": "freeQuotaExceeded",
+          "label": "是否触发免费版限额",
+          "required": false,
+          "type": "boolean",
+          "description": "免费版存在 10万次/域名/日 查询限额，超限会触发限速告警"
+        }
+      ]
+    },
+    {
+      "name": "云解析功能咨询",
+      "keywords": [
+        "功能咨询",
+        "DNSSEC",
+        "HTTPDNS",
+        "企业版",
+        "重点域名监控"
+      ],
+      "categoryKeywords": [
+        "功能",
+        "咨询",
+        "版本"
+      ],
+      "categoryHints": [
+        "云解析功能咨询"
+      ],
+      "collect": [
+        {
+          "field": "dnsFeatureType",
+          "label": "咨询功能",
+          "required": true,
+          "type": "string",
+          "enum": ["DNSSEC", "HTTPDNS", "GTM", "企业版", "重点域名监控"],
+          "description": "客户希望了解或使用的云解析功能"
+        },
+        {
+          "field": "questionDescription",
+          "label": "咨询内容",
+          "required": true,
+          "type": "string",
+          "description": "说明目标、当前情况和具体疑问",
+          "maxLength": 1000
+        },
+        {
+          "field": "domainName",
+          "label": "域名",
+          "required": false,
+          "type": "string",
+          "description": "涉及具体域名时填写，DNSSEC 排障时为关键信息",
+          "maxLength": 253
+        },
+        {
+          "field": "dnssecStatus",
+          "label": "DNSSEC状态",
+          "required": false,
+          "type": "string",
+          "enum": ["已开启", "配置错误", "未开启"],
+          "description": "DNSSEC 配置错误会导致 SSL 证书签发/验证失败（如 ACME 校验）"
+        },
+        {
+          "field": "enterprisePrice",
+          "label": "企业版价格咨询",
+          "required": false,
+          "type": "string",
+          "description": "咨询企业版计费时填写，如 1168元/域名/年",
+          "maxLength": 120
+        }
+      ]
+    },
+    {
+      "name": "购买/计费/退订咨询",
+      "keywords": [
+        "扣费",
+        "计费",
+        "退订",
+        "退款",
+        "购买咨询"
+      ],
+      "categoryKeywords": [
+        "计费",
+        "退款",
+        "购买"
+      ],
+      "categoryHints": [
+        "购买/计费/退订咨询"
+      ],
+      "collect": [
+        {
+          "field": "billingIssueType",
+          "label": "计费问题类型",
+          "required": true,
+          "type": "string",
+          "enum": ["GTM隐性扣费", "免费限额告警", "企业版购买", "流量分析费"],
+          "description": "GTM 按量付费存在健康探测隐性扣费（10元/万次），是高频争议点"
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题说明",
+          "required": true,
+          "type": "string",
+          "description": "说明费用疑问、扣费时间、期望核实内容和处理诉求",
+          "maxLength": 1000
+        },
+        {
+          "field": "disputedAmount",
+          "label": "争议金额",
+          "required": false,
+          "type": "string",
+          "description": "具体争议的费用金额",
+          "maxLength": 64
+        },
+        {
+          "field": "gtmCharge",
+          "label": "是否GTM扣费",
+          "required": false,
+          "type": "boolean",
+          "description": "是否涉及全局流量管理 GTM 按量付费产生的费用"
+        },
+        {
+          "field": "gtmDeleteRequired",
+          "label": "GTM实例删除状态",
+          "required": false,
+          "type": "string",
+          "enum": ["需自删实例", "已删除", "未使用"],
+          "description": "GTM 停止计费需客户在控制台自行删除 GTM 实例，系统不会自动删除"
+        },
+        {
+          "field": "refundRequest",
+          "label": "是否申请退款",
+          "required": false,
+          "type": "boolean",
+          "description": "客户是否提出退款诉求"
+        }
+      ]
+    },
+    {
+      "name": "解析生效相关咨询",
+      "keywords": [
+        "解析不生效",
+        "未生效",
+        "解析暂停",
+        "域名过期",
+        "实名暂停"
+      ],
+      "categoryKeywords": [
+        "生效",
+        "暂停",
+        "恢复"
+      ],
+      "categoryHints": [
+        "解析生效相关咨询"
+      ],
+      "collect": [
+        {
+          "field": "domainName",
+          "label": "域名",
+          "required": true,
+          "type": "string",
+          "description": "仅填写域名，不附带协议和路径",
+          "maxLength": 253
+        },
+        {
+          "field": "resolutionIssueType",
+          "label": "生效问题类型",
+          "required": true,
+          "type": "string",
+          "enum": ["域名过期", "实名暂停", "记录暂停", "未生效"],
+          "description": "记录被暂停需手动启用并执行 flushdns 清理本地缓存"
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题说明",
+          "required": true,
+          "type": "string",
+          "description": "说明解析现象、期望的解析结果和时间线",
+          "maxLength": 1000
+        },
+        {
+          "field": "domainExpiryStatus",
+          "label": "域名到期状态",
+          "required": false,
+          "type": "string",
+          "enum": ["正常", "已过期已续费", "即将过期"],
+          "description": "域名过期续费后约需 30 分钟重新分配 DNS 服务器"
+        },
+        {
+          "field": "realnameStatus",
+          "label": "实名认证状态",
+          "required": false,
+          "type": "string",
+          "enum": ["已实名", "未实名"],
+          "description": "域名未完成实名认证会被注册局置于 clientHold 状态暂停解析"
+        },
+        {
+          "field": "manualEnableRequired",
+          "label": "是否需手动启用记录",
+          "required": false,
+          "type": "boolean",
+          "description": "解析记录被暂停后需在控制台手动启用，并建议本地执行 ipconfig /flushdns"
+        }
+      ]
+    },
+    {
+      "name": "公网运营商劫持/封堵问题",
+      "keywords": [
+        "劫持",
+        "封堵",
+        "DNS污染",
+        "强制指向",
+        "12321"
+      ],
+      "categoryKeywords": [
+        "运营商",
+        "劫持",
+        "封堵"
+      ],
+      "categoryHints": [
+        "公网运营商劫持/封堵问题"
+      ],
+      "collect": [
+        {
+          "field": "domainName",
+          "label": "受影响域名",
+          "required": true,
+          "type": "string",
+          "description": "被劫持或封堵的域名，仅填写域名本身",
+          "maxLength": 253
+        },
+        {
+          "field": "blockingType",
+          "label": "劫持/封堵类型",
+          "required": true,
+          "type": "string",
+          "enum": ["运营商劫持", "反诈中心", "12321封堵", "DNS污染", "强制指向"],
+          "description": "问题发生在运营商或第三方网络侧，非阿里云解析服务本身"
+        },
+        {
+          "field": "symptom",
+          "label": "异常现象",
+          "required": true,
+          "type": "string",
+          "description": "描述解析返回的异常结果、影响地区和运营商",
+          "maxLength": 1000
+        },
+        {
+          "field": "forcedTarget",
+          "label": "强制指向地址",
+          "required": false,
+          "type": "string",
+          "enum": ["127.0.0.1", "0.0.0.0", "其他"],
+          "description": "联通等运营商侧强制指向 127.0.0.1 或 0.0.0.0 的典型劫持特征"
+        },
+        {
+          "field": "appealChannel",
+          "label": "申诉渠道",
+          "required": false,
+          "type": "string",
+          "enum": ["反诈中心电话", "12321", "运营商"],
+          "description": "反诈中心封禁申诉电话 010-67825169/70；12321 为网络不良与垃圾信息举报渠道"
+        },
+        {
+          "field": "carrierSideIssue",
+          "label": "是否运营商侧问题",
+          "required": false,
+          "type": "boolean",
+          "description": "阿里云解析返回正常但用户侧解析异常时，通常为运营商或第三方封堵"
+        },
+        {
+          "field": "workaroundMethod",
+          "label": "已尝试的规避方式",
+          "required": false,
+          "type": "string",
+          "enum": ["备用域名", "换IP无效", "等运营商处理"],
+          "description": "换 IP 通常无法绕过封堵，需通过申诉渠道解决"
+        }
+      ]
+    },
+    {
+      "name": "云解析DNS通用咨询",
+      "keywords": [
+        "云解析咨询",
+        "DNS咨询",
+        "其他问题"
+      ],
+      "categoryKeywords": [
+        "通用",
+        "咨询"
+      ],
+      "categoryHints": [
+        "云解析DNS通用咨询"
+      ],
+      "collect": [
+        {
+          "field": "issueDescription",
+          "label": "问题说明",
+          "required": true,
+          "type": "string",
+          "description": "说明业务目标、当前情况和期望结果",
+          "maxLength": 1000
+        },
+        {
+          "field": "domainName",
+          "label": "域名",
+          "required": false,
+          "type": "string",
+          "description": "涉及具体域名时填写，如 ACME 证书自动续期依赖的域名",
+          "maxLength": 253
+        },
+        {
+          "field": "accountStatus",
+          "label": "账户状态",
+          "required": false,
+          "type": "string",
+          "enum": ["正常", "欠费", "不确定"],
+          "description": "账户欠费会阻断解析服务，续费后自动恢复"
+        },
+        {
+          "field": "intentType",
+          "label": "咨询意图",
+          "required": false,
+          "type": "string",
+          "enum": ["售前咨询", "售后技术", "证书续期", "商务合作", "其他"],
+          "description": "咨询意图分类，用于快速路由到对应处理团队"
+        }
+      ]
+    },
+    {
+      "name": "全局流量管理GTM问题",
+      "keywords": [
+        "全局流量管理",
+        "GTM",
+        "健康探测",
+        "负载策略"
+      ],
+      "categoryKeywords": [
+        "GTM",
+        "流量管理",
+        "负载"
+      ],
+      "categoryHints": [
+        "全局流量管理GTM问题"
+      ],
+      "collect": [
+        {
+          "field": "gtmIssueType",
+          "label": "GTM问题类型",
+          "required": true,
+          "type": "string",
+          "enum": ["健康探测费", "负载策略", "退款"],
+          "description": "GTM 1.0 运营商级负载策略与健康探测计费是高频问题"
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题说明",
+          "required": true,
+          "type": "string",
+          "description": "说明 GTM 使用场景、遇到的问题和期望结果",
+          "maxLength": 1000
+        },
+        {
+          "field": "gtmInstanceCount",
+          "label": "GTM实例数量",
+          "required": false,
+          "type": "string",
+          "description": "当前账号下的 GTM 实例数量，用于核对计费金额",
+          "maxLength": 64
+        },
+        {
+          "field": "healthCheckCharge",
+          "label": "是否产生健康探测费",
+          "required": false,
+          "type": "boolean",
+          "description": "健康探测按量计费约 10元/万次，客户常未察觉持续扣费"
+        },
+        {
+          "field": "disputedAmount",
+          "label": "争议金额",
+          "required": false,
+          "type": "string",
+          "description": "涉及探测费用争议或退款时填写",
+          "maxLength": 64
+        }
+      ]
+    },
+    {
+      "name": "DNS流量统计分析和日志服务",
+      "keywords": [
+        "流量统计",
+        "查询日志",
+        "解析日志",
+        "流量分析",
+        "查询量"
+      ],
+      "categoryKeywords": [
+        "流量",
+        "日志",
+        "统计"
+      ],
+      "categoryHints": [
+        "DNS流量统计分析和日志服务"
+      ],
+      "collect": [
+        {
+          "field": "trafficQueryType",
+          "label": "流量问题类型",
+          "required": true,
+          "type": "string",
+          "enum": ["免费限额", "流量分析购买", "查询量分析"],
+          "description": "自 2026-06-24 起免费版执行 10万次/域名/日 查询限额"
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题说明",
+          "required": true,
+          "type": "string",
+          "description": "说明流量统计疑问、涉及域名和时间段",
+          "maxLength": 1000
+        },
+        {
+          "field": "freeDailyLimit",
+          "label": "免费日限额状态",
+          "required": false,
+          "type": "string",
+          "enum": ["10万次/域名/日", "已超限"],
+          "description": "超限后解析仍生效但会触发限速告警"
+        },
+        {
+          "field": "trafficAnalysisRequired",
+          "label": "是否需流量分析",
+          "required": false,
+          "type": "boolean",
+          "description": "查看详细子域名查询日志需付费开通 DNS 流量分析（约 2元/10万条/天）"
+        },
+        {
+          "field": "querySourceExplanation",
+          "label": "查询量来源分析",
+          "required": false,
+          "type": "string",
+          "enum": ["爬虫", "健康检查", "LocalDNS缓存", "CDN回源"],
+          "description": "DNS 查询量不等于业务访问量，爬虫/健康检查/LocalDNS 缓存过期/CDN 回源都会产生查询"
+        }
+      ]
+    },
+    {
+      "name": "DNS服务器状态和迁移咨询",
+      "keywords": [
+        "NS服务器",
+        "DNS服务器",
+        "迁移",
+        "解析服务器"
+      ],
+      "categoryKeywords": [
+        "服务器",
+        "迁移",
+        "NS"
+      ],
+      "categoryHints": [
+        "DNS服务器状态和迁移咨询"
+      ],
+      "collect": [
+        {
+          "field": "domainName",
+          "label": "域名",
+          "required": true,
+          "type": "string",
+          "description": "仅填写域名，NS 拼写错误排查需精确比对域名",
+          "maxLength": 253
+        },
+        {
+          "field": "serverIssueType",
+          "label": "服务器问题类型",
+          "required": true,
+          "type": "string",
+          "enum": ["NS拼写错误", "无解析记录", "迁移咨询"],
+          "description": "NS 拼写错误（如 skillsshop.vip 与 skillshop.vip 混淆）是高频场景"
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题说明",
+          "required": true,
+          "type": "string",
+          "description": "说明 DNS 服务器状态疑问或迁移目标",
+          "maxLength": 1000
+        },
+        {
+          "field": "nsVerification",
+          "label": "NS地址核对信息",
+          "required": false,
+          "type": "string",
+          "description": "注册商处填写的 NS 地址（如 ns1.alidns.com）与云解析分配的 NS 地址",
+          "maxLength": 300
+        }
+      ]
+    },
+    {
+      "name": "API/SDK相关问题",
+      "keywords": [
+        "API",
+        "SDK",
+        "接口报错",
+        "调用失败"
+      ],
+      "categoryKeywords": [
+        "API",
+        "SDK",
+        "接口"
+      ],
+      "categoryHints": [
+        "API/SDK相关问题"
+      ],
+      "collect": [
+        {
+          "field": "apiOperation",
+          "label": "API操作类型",
+          "required": true,
+          "type": "string",
+          "enum": ["新增记录", "删除记录", "查询记录"],
+          "description": "调用的云解析 OpenAPI 接口对应的操作"
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题说明",
+          "required": true,
+          "type": "string",
+          "description": "说明调用目标、报错信息和期望结果",
+          "maxLength": 1000
+        },
+        {
+          "field": "apiEndpoint",
+          "label": "API端点",
+          "required": false,
+          "type": "string",
+          "description": "调用的接口名称或端点地址",
+          "maxLength": 300
+        },
+        {
+          "field": "domainName",
+          "label": "域名",
+          "required": false,
+          "type": "string",
+          "description": "API 操作涉及的域名",
+          "maxLength": 253
+        },
+        {
+          "field": "errorCode",
+          "label": "错误码",
+          "required": false,
+          "type": "string",
+          "description": "API 返回的错误码，如 InvalidDomain.NotFound",
+          "maxLength": 120
+        }
+      ]
+    }
+  ]
+}

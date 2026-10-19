@@ -1,0 +1,888 @@
+{
+  "product": "ssl",
+  "aliases": [
+    "数字证书管理服务",
+    "SSL证书",
+    "数字证书",
+    "SSL",
+    "证书管理服务"
+  ],
+  "issueTypes": [
+    {
+      "name": "产品购买/续费/使用咨询和建议",
+      "keywords": [
+        "购买",
+        "续费",
+        "使用咨询",
+        "购买建议",
+        "免费证书",
+        "证书额度",
+        "到期提醒",
+        "部署周期"
+      ],
+      "categoryKeywords": [
+        "购买",
+        "续费",
+        "咨询",
+        "建议"
+      ],
+      "categoryHints": [
+        "产品购买/续费/使用咨询和建议"
+      ],
+      "collect": [
+        {
+          "field": "domainName",
+          "label": "域名",
+          "required": true,
+          "type": "string",
+          "description": "需要绑定证书的域名，如www.example.com",
+          "maxLength": 253
+        },
+        {
+          "field": "certType",
+          "label": "证书类型",
+          "required": true,
+          "type": "string",
+          "enum": [
+            "DV",
+            "OV",
+            "EV",
+            "不确定"
+          ],
+          "description": "DV为域名验证型，OV为组织验证型，EV为扩展验证型，不同类型的审核要求和价格不同"
+        },
+        {
+          "field": "freeOrPaid",
+          "label": "免费或付费",
+          "required": true,
+          "type": "string",
+          "enum": [
+            "免费",
+            "付费",
+            "不确定"
+          ],
+          "description": "免费证书有数量限制且有效期较短，付费证书功能更全面"
+        },
+        {
+          "field": "accountUid",
+          "label": "账号UID",
+          "required": false,
+          "type": "string",
+          "description": "阿里云账号UID，用于查询购买记录和证书归属",
+          "maxLength": 64
+        },
+        {
+          "field": "certVersion",
+          "label": "证书控制台版本",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "v1",
+            "v2.0",
+            "不确定"
+          ],
+          "description": "v1和v2.0控制台的购买入口和操作路径不同"
+        },
+        {
+          "field": "renewalStatus",
+          "label": "续费状态",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "未续费",
+            "已续费",
+            "即将到期",
+            "已到期",
+            "不确定"
+          ],
+          "description": "证书续费当前状态，影响处理路径"
+        },
+        {
+          "field": "questionDescription",
+          "label": "咨询内容",
+          "required": true,
+          "type": "string",
+          "description": "说明购买/续费/使用方面的具体问题和期望",
+          "maxLength": 1000
+        },
+        {
+          "field": "certValidityPeriod",
+          "label": "证书有效期",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "1年",
+            "2年",
+            "199天",
+            "3个月",
+            "不确定"
+          ],
+          "description": "CA/B新政策下证书有效期缩短至199天（2026年2月起）"
+        },
+        {
+          "field": "subscriptionModel",
+          "label": "订阅模式",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "单次购买",
+            "订阅服务",
+            "免费证书",
+            "不确定"
+          ],
+          "description": "SSL证书已从单次购买转为订阅服务模式"
+        }
+      ]
+    },
+    {
+      "name": "证书安装及配置问题",
+      "keywords": [
+        "证书安装",
+        "SSL配置",
+        "HTTPS配置",
+        "Nginx配置",
+        "IIS部署",
+        "证书格式",
+        "证书更新",
+        "WAF证书"
+      ],
+      "categoryKeywords": [
+        "安装",
+        "配置",
+        "部署"
+      ],
+      "categoryHints": [
+        "证书安装及配置问题"
+      ],
+      "collect": [
+        {
+          "field": "domainName",
+          "label": "域名",
+          "required": true,
+          "type": "string",
+          "description": "证书绑定的域名",
+          "maxLength": 253
+        },
+        {
+          "field": "webServerType",
+          "label": "Web服务器类型",
+          "required": true,
+          "type": "string",
+          "enum": [
+            "Nginx",
+            "Apache",
+            "IIS",
+            "宝塔面板",
+            "Tomcat",
+            "其他",
+            "不确定"
+          ],
+          "description": "不同Web服务器的证书安装方式和配置路径不同"
+        },
+        {
+          "field": "certFormat",
+          "label": "证书格式",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "PEM",
+            "PFX",
+            "PKCS12",
+            "JKS",
+            "不确定"
+          ],
+          "description": "不同服务器需要的证书格式不同，Nginx通常用PEM，IIS用PFX"
+        },
+        {
+          "field": "deployPlatform",
+          "label": "部署平台",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "ECS",
+            "CDN",
+            "SLB",
+            "WAF",
+            "OSS",
+            "其他",
+            "不确定"
+          ],
+          "description": "证书部署在哪个阿里云产品上，排查路径不同"
+        },
+        {
+          "field": "symptom",
+          "label": "异常现象",
+          "required": true,
+          "type": "string",
+          "description": "描述SSL过期告警、HTTPS访问报错、证书更新不生效等具体问题",
+          "maxLength": 1000
+        },
+        {
+          "field": "occurrenceTime",
+          "label": "发生时间",
+          "required": false,
+          "type": "string",
+          "description": "问题出现的时间，包含日期、时间和时区",
+          "maxLength": 64
+        },
+        {
+          "field": "browserCacheIssue",
+          "label": "是否浏览器缓存问题",
+          "required": false,
+          "type": "boolean",
+          "description": "证书更新后访问不生效可能是浏览器缓存导致"
+        },
+        {
+          "field": "httpsRedirect",
+          "label": "是否涉及HTTPS跳转",
+          "required": false,
+          "type": "boolean",
+          "description": "HTTP强制跳转HTTPS的配置可能导致访问异常"
+        },
+        {
+          "field": "cacheIssue",
+          "label": "浏览器缓存问题",
+          "required": false,
+          "type": "boolean",
+          "description": "证书已更新但浏览器显示旧证书，需清缓存或用无痕模式"
+        },
+        {
+          "field": "nginxRedirect",
+          "label": "HTTPS强制跳转",
+          "required": false,
+          "type": "boolean",
+          "description": "Nginx是否配置了HTTP到HTTPS的强制跳转，可能导致访问异常"
+        }
+      ]
+    },
+    {
+      "name": "证书审核问题",
+      "keywords": [
+        "证书审核",
+        "审核失败",
+        "DNS验证",
+        "文件验证",
+        "CA审核",
+        "申请卡住",
+        "电话核实",
+        "CAA记录"
+      ],
+      "categoryKeywords": [
+        "审核",
+        "验证",
+        "CA"
+      ],
+      "categoryHints": [
+        "证书审核问题"
+      ],
+      "collect": [
+        {
+          "field": "domainName",
+          "label": "域名",
+          "required": true,
+          "type": "string",
+          "description": "申请证书的域名",
+          "maxLength": 253
+        },
+        {
+          "field": "validationMethod",
+          "label": "域名验证方式",
+          "required": true,
+          "type": "string",
+          "enum": [
+            "DNS验证",
+            "文件验证",
+            "不确定"
+          ],
+          "description": "DNS验证需添加解析记录，文件验证需上传验证文件到服务器"
+        },
+        {
+          "field": "certAuthority",
+          "label": "证书签发机构",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "DigiCert",
+            "GlobalSign",
+            "RapidSSL",
+            "Certum",
+            "不确定"
+          ],
+          "description": "不同CA机构的审核流程和时间不同"
+        },
+        {
+          "field": "certApplicationId",
+          "label": "证书申请ID",
+          "required": false,
+          "type": "string",
+          "description": "用于定位具体的证书申请记录",
+          "maxLength": 120
+        },
+        {
+          "field": "companyName",
+          "label": "公司名称（营业执照全称）",
+          "required": false,
+          "type": "string",
+          "description": "OV/EV证书审核需要验证公司信息，需与营业执照一致",
+          "maxLength": 200
+        },
+        {
+          "field": "orgCode",
+          "label": "统一社会信用代码",
+          "required": false,
+          "type": "string",
+          "description": "OV/EV证书审核需验证组织信息，需与营业执照一致",
+          "maxLength": 64
+        },
+        {
+          "field": "caaRecord",
+          "label": "CAA记录",
+          "required": false,
+          "type": "boolean",
+          "description": "域名DNS中是否配置了CAA记录，CAA记录可能阻止证书签发"
+        },
+        {
+          "field": "auditDuration",
+          "label": "审核耗时",
+          "required": false,
+          "type": "string",
+          "description": "从申请到当前已等待的时间，用于判断是否审核超时",
+          "maxLength": 64
+        },
+        {
+          "field": "symptom",
+          "label": "审核问题描述",
+          "required": true,
+          "type": "string",
+          "description": "描述审核卡住、验证失败、电话核实未通过等具体问题",
+          "maxLength": 1000
+        },
+        {
+          "field": "certPolicy",
+          "label": "CA/B政策变更",
+          "required": false,
+          "type": "boolean",
+          "description": "是否涉及CA/B Forum新政策（如有效期缩短、验证流程变更）"
+        },
+        {
+          "field": "phoneVerification",
+          "label": "电话验证状态",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "成功",
+            "电话停用",
+            "未接到",
+            "不支持该号码",
+            "不确定"
+          ],
+          "description": "OV/EV证书需电话核验，预留电话失效会导致审核失败"
+        }
+      ]
+    },
+    {
+      "name": "证书管理问题（上传、删除、吊销证书等操作）",
+      "keywords": [
+        "证书上传",
+        "证书删除",
+        "证书吊销",
+        "证书导出",
+        "证书替换",
+        "证书管理"
+      ],
+      "categoryKeywords": [
+        "管理",
+        "上传",
+        "删除",
+        "吊销"
+      ],
+      "categoryHints": [
+        "证书管理问题（上传、删除、吊销证书等操作）"
+      ],
+      "collect": [
+        {
+          "field": "domainName",
+          "label": "域名",
+          "required": false,
+          "type": "string",
+          "description": "涉及的证书绑定的域名",
+          "maxLength": 253
+        },
+        {
+          "field": "operationType",
+          "label": "操作类型",
+          "required": true,
+          "type": "string",
+          "enum": [
+            "上传",
+            "删除",
+            "吊销",
+            "导出",
+            "替换",
+            "其他"
+          ],
+          "description": "客户要执行的证书管理操作类型"
+        },
+        {
+          "field": "certVersion",
+          "label": "证书控制台版本",
+          "required": true,
+          "type": "string",
+          "enum": [
+            "v1",
+            "v2.0",
+            "不确定"
+          ],
+          "description": "v2.0控制台不支持删除证书等操作，需确认版本"
+        },
+        {
+          "field": "certId",
+          "label": "证书ID",
+          "required": false,
+          "type": "string",
+          "description": "证书的唯一标识，用于定位具体证书",
+          "maxLength": 120
+        },
+        {
+          "field": "certStatus",
+          "label": "证书状态",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "正常",
+            "已过期",
+            "已吊销",
+            "审核中",
+            "审核失败",
+            "不确定"
+          ],
+          "description": "证书当前状态，影响可执行的操作"
+        },
+        {
+          "field": "usedBy",
+          "label": "证书关联服务",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "CDN",
+            "OSS",
+            "SLB",
+            "ECS",
+            "WAF",
+            "无关联",
+            "不确定"
+          ],
+          "description": "证书是否被其他云产品使用，使用中的证书无法直接删除"
+        },
+        {
+          "field": "symptom",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "描述操作中遇到的问题或报错信息",
+          "maxLength": 1000
+        },
+        {
+          "field": "crossAccountIssue",
+          "label": "跨账号问题",
+          "required": false,
+          "type": "boolean",
+          "description": "证书归属账号与当前操作账号不一致，需确认正确的阿里云账号"
+        }
+      ]
+    },
+    {
+      "name": "账单/退款问题",
+      "keywords": [
+        "退款",
+        "账单",
+        "费用",
+        "买错",
+        "退订",
+        "退款进度"
+      ],
+      "categoryKeywords": [
+        "账单",
+        "退款",
+        "费用"
+      ],
+      "categoryHints": [
+        "账单/退款问题"
+      ],
+      "collect": [
+        {
+          "field": "orderNumber",
+          "label": "订单号",
+          "required": true,
+          "type": "string",
+          "description": "购买证书的订单编号",
+          "maxLength": 120
+        },
+        {
+          "field": "certStatusForRefund",
+          "label": "证书当前状态",
+          "required": true,
+          "type": "string",
+          "enum": [
+            "未申请",
+            "已申请未签发",
+            "已签发",
+            "不确定"
+          ],
+          "description": "证书状态决定是否可退款，已签发的证书通常无法退款"
+        },
+        {
+          "field": "purchaseDate",
+          "label": "购买日期",
+          "required": false,
+          "type": "string",
+          "description": "购买证书的日期，用于判断是否在退款时限内",
+          "maxLength": 64
+        },
+        {
+          "field": "refundTimeLimit",
+          "label": "退款时限",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "7天内",
+            "超过7天",
+            "不确定"
+          ],
+          "description": "阿里云证书退款通常要求在购买后7天内"
+        },
+        {
+          "field": "paymentChannel",
+          "label": "支付渠道",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "支付宝",
+            "原路退回",
+            "银行转账",
+            "不确定"
+          ],
+          "description": "退款方式和退回路径"
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题说明",
+          "required": true,
+          "type": "string",
+          "description": "说明退款原因、买错情况或费用疑问",
+          "maxLength": 1000
+        },
+        {
+          "field": "caPolicyRefund",
+          "label": "CA政策导致退款",
+          "required": false,
+          "type": "boolean",
+          "description": "因CA/B政策变更导致证书无法使用而申请退款"
+        }
+      ]
+    },
+    {
+      "name": "控制台报错问题",
+      "keywords": [
+        "控制台报错",
+        "页面错误",
+        "找不到证书",
+        "控制台异常",
+        "显示错误"
+      ],
+      "categoryKeywords": [
+        "控制台",
+        "报错",
+        "显示"
+      ],
+      "categoryHints": [
+        "控制台报错问题"
+      ],
+      "collect": [
+        {
+          "field": "consoleVersion",
+          "label": "控制台版本",
+          "required": true,
+          "type": "string",
+          "enum": [
+            "v1",
+            "v2.0",
+            "不确定"
+          ],
+          "description": "v1和v2.0控制台的界面和功能入口不同，v1证书在v2.0中可能不可见"
+        },
+        {
+          "field": "instanceName",
+          "label": "证书实例名称",
+          "required": false,
+          "type": "string",
+          "description": "证书在控制台中的实例名称",
+          "maxLength": 200
+        },
+        {
+          "field": "errorMessage",
+          "label": "错误信息",
+          "required": true,
+          "type": "string",
+          "description": "控制台显示的完整错误信息，请移除敏感内容",
+          "maxLength": 1000
+        },
+        {
+          "field": "occurrenceTime",
+          "label": "发生时间",
+          "required": false,
+          "type": "string",
+          "description": "问题出现的时间，包含日期、时间和时区",
+          "maxLength": 64
+        },
+        {
+          "field": "screenshotUrl",
+          "label": "截图链接",
+          "required": false,
+          "type": "string",
+          "description": "控制台报错的截图URL，便于快速定位问题",
+          "maxLength": 500
+        }
+      ]
+    },
+    {
+      "name": "证书托管服务",
+      "keywords": [
+        "证书托管",
+        "HTTPS加速",
+        "托管服务",
+        "网站加速",
+        "SSL托管"
+      ],
+      "categoryKeywords": [
+        "托管",
+        "加速",
+        "服务"
+      ],
+      "categoryHints": [
+        "证书托管服务"
+      ],
+      "collect": [
+        {
+          "field": "domainName",
+          "label": "域名",
+          "required": true,
+          "type": "string",
+          "description": "需要托管证书的域名",
+          "maxLength": 253
+        },
+        {
+          "field": "sourceStationType",
+          "label": "源站类型",
+          "required": true,
+          "type": "string",
+          "enum": [
+            "ECS",
+            "OSS",
+            "SLB",
+            "其他",
+            "不确定"
+          ],
+          "description": "回源服务器的类型，影响HTTPS加速配置"
+        },
+        {
+          "field": "forceRedirectHttps",
+          "label": "是否开启强制HTTPS跳转",
+          "required": false,
+          "type": "boolean",
+          "description": "强制HTTP跳转HTTPS可能导致源站不可访问"
+        },
+        {
+          "field": "httpsAccelerationStatus",
+          "label": "HTTPS加速状态",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "已开启",
+            "未开启",
+            "配置失败",
+            "不确定"
+          ],
+          "description": "HTTPS加速功能的当前状态"
+        },
+        {
+          "field": "symptom",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "描述购买后网站不可访问、加速不生效等具体问题",
+          "maxLength": 1000
+        }
+      ]
+    },
+    {
+      "name": "实例到期关停问题",
+      "keywords": [
+        "到期",
+        "关停",
+        "过期",
+        "续费提醒",
+        "到期通知"
+      ],
+      "categoryKeywords": [
+        "到期",
+        "关停",
+        "过期"
+      ],
+      "categoryHints": [
+        "实例到期关停问题"
+      ],
+      "collect": [
+        {
+          "field": "domainName",
+          "label": "域名",
+          "required": false,
+          "type": "string",
+          "description": "涉及到期关停的域名",
+          "maxLength": 253
+        },
+        {
+          "field": "certId",
+          "label": "证书标识",
+          "required": false,
+          "type": "string",
+          "description": "到期的证书ID，如cert-15026476",
+          "maxLength": 120
+        },
+        {
+          "field": "expiryDate",
+          "label": "到期日期",
+          "required": false,
+          "type": "string",
+          "description": "证书到期日期",
+          "maxLength": 64
+        },
+        {
+          "field": "notificationChannel",
+          "label": "通知渠道",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "站内信",
+            "邮件",
+            "短信",
+            "未收到通知",
+            "不确定"
+          ],
+          "description": "客户是否收到到期通知及通知渠道"
+        },
+        {
+          "field": "renewalIntent",
+          "label": "续费意向",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "需要续费",
+            "不需要续费",
+            "已过期需重新申请",
+            "不确定"
+          ],
+          "description": "客户是否希望续费证书"
+        },
+        {
+          "field": "contactPhone",
+          "label": "联系电话",
+          "required": false,
+          "type": "string",
+          "description": "到期关停问题多通过电话沟通解决",
+          "maxLength": 30
+        }
+      ]
+    },
+    {
+      "name": "API/SDK问题",
+      "keywords": [
+        "API",
+        "SDK",
+        "接口调用",
+        "IncorrectFormat",
+        "RequestId",
+        "API报错"
+      ],
+      "categoryKeywords": [
+        "API",
+        "SDK",
+        "接口"
+      ],
+      "categoryHints": [
+        "API/SDK问题"
+      ],
+      "collect": [
+        {
+          "field": "domainName",
+          "label": "域名",
+          "required": false,
+          "type": "string",
+          "description": "涉及的域名",
+          "maxLength": 253
+        },
+        {
+          "field": "apiEndpoint",
+          "label": "API地址",
+          "required": false,
+          "type": "string",
+          "description": "调用的API端点地址",
+          "maxLength": 253
+        },
+        {
+          "field": "errorCode",
+          "label": "错误码",
+          "required": false,
+          "type": "string",
+          "description": "API返回的错误码，如IncorrectFormat",
+          "maxLength": 120
+        },
+        {
+          "field": "errorMessage",
+          "label": "错误信息",
+          "required": false,
+          "type": "string",
+          "description": "API返回的完整错误信息",
+          "maxLength": 1000
+        },
+        {
+          "field": "requestId",
+          "label": "请求ID",
+          "required": false,
+          "type": "string",
+          "description": "API返回的RequestId，用于定位具体请求",
+          "maxLength": 120
+        },
+        {
+          "field": "apiUsageContext",
+          "label": "API使用场景",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "部署证书到云产品",
+            "查询证书列表",
+            "申请证书",
+            "上传证书",
+            "其他"
+          ],
+          "description": "客户调用API的具体场景"
+        },
+        {
+          "field": "targetProduct",
+          "label": "目标云产品",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "CDN",
+            "SLB",
+            "ECS",
+            "WAF",
+            "不确定",
+            "其他"
+          ],
+          "description": "部署证书的目标云产品"
+        }
+      ]
+    }
+  ]
+}

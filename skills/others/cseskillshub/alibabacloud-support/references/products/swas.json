@@ -1,0 +1,875 @@
+{
+  "product": "swas",
+  "aliases": [
+    "轻量应用服务器",
+    "Simple Application Server",
+    "SWAS",
+    "轻量服务器",
+    "sas"
+  ],
+  "issueTypes": [
+    {
+      "name": "轻量应用功能咨询",
+      "keywords": [
+        "功能咨询",
+        "带宽限速",
+        "跨账号转移",
+        "跨地域迁移",
+        "安全锁定"
+      ],
+      "categoryKeywords": [
+        "功能",
+        "咨询",
+        "迁移",
+        "限速"
+      ],
+      "categoryHints": [
+        "轻量应用功能咨询"
+      ],
+      "collect": [
+        {
+          "field": "regionId",
+          "label": "地域",
+          "required": true,
+          "type": "string",
+          "description": "实例所在地域标识，如cn-hangzhou、cn-hongkong",
+          "maxLength": 64
+        },
+        {
+          "field": "instanceId",
+          "label": "实例标识",
+          "required": false,
+          "type": "string",
+          "description": "涉及具体实例时填写，如i-2zeabc123def",
+          "maxLength": 64
+        },
+        {
+          "field": "featureType",
+          "label": "咨询功能类型",
+          "required": true,
+          "type": "string",
+          "enum": ["带宽限速", "跨账号迁移", "跨地域迁移", "安全锁定", "其他"],
+          "description": "轻量服务器高频咨询：跨账号转移不支持（用自定义/共享镜像迁移）；跨地域需镜像复制后IP会变"
+        },
+        {
+          "field": "bandwidthIssue",
+          "label": "带宽问题表现",
+          "required": false,
+          "type": "string",
+          "enum": ["峰值限制", "持续限速", "无法解除", "不涉及"],
+          "description": "SWAS带宽为峰值上限非SLA承诺，高峰期可能低于峰值"
+        },
+        {
+          "field": "migrationType",
+          "label": "迁移类型",
+          "required": false,
+          "type": "string",
+          "enum": ["跨账号", "跨地域", "不涉及"],
+          "description": "跨账号用共享镜像迁移，跨地域需镜像复制到目标地域且IP会变更"
+        },
+        {
+          "field": "hasSnapshot",
+          "label": "是否有快照",
+          "required": false,
+          "type": "boolean",
+          "description": "迁移或恢复前是否已创建快照"
+        },
+        {
+          "field": "questionDescription",
+          "label": "咨询内容",
+          "required": true,
+          "type": "string",
+          "description": "说明目标、当前情况和具体疑问",
+          "maxLength": 1000
+        }
+      ]
+    },
+    {
+      "name": "远程登录与连接相关问题",
+      "keywords": [
+        "无法登录",
+        "SSH失败",
+        "远程连接",
+        "跨境链路",
+        "登录超时"
+      ],
+      "categoryKeywords": [
+        "登录",
+        "连接",
+        "SSH",
+        "RDP"
+      ],
+      "categoryHints": [
+        "远程登录与连接相关问题"
+      ],
+      "collect": [
+        {
+          "field": "instanceId",
+          "label": "实例标识",
+          "required": true,
+          "type": "string",
+          "description": "轻量服务器实例标识，如i-2zeabc123def，登录排查必需",
+          "maxLength": 64
+        },
+        {
+          "field": "loginIssueType",
+          "label": "登录问题类型",
+          "required": true,
+          "type": "string",
+          "enum": ["跨境链路", "SSH失败", "登录凭据无法使用", "RDP失败", "Workbench失败"],
+          "description": "跨境链路（内地→香港/海外）是该类最高频原因；凭据类问题只记录无法使用的现象，不采集凭据内容"
+        },
+        {
+          "field": "regionType",
+          "label": "实例地域类型",
+          "required": true,
+          "type": "string",
+          "enum": ["国内", "香港", "新加坡", "韩国", "其他"],
+          "description": "跨境登录（内地访问香港/海外节点）链路质量差异大"
+        },
+        {
+          "field": "loginMethod",
+          "label": "登录方式",
+          "required": true,
+          "type": "string",
+          "enum": ["SSH", "RDP远程桌面", "Workbench", "VNC", "其他"],
+          "description": "客户使用的登录方式及具体报错信息"
+        },
+        {
+          "field": "loginAuthorization",
+          "label": "是否已授权排查",
+          "required": false,
+          "type": "boolean",
+          "description": "SSH失败需授权工程师登录实例排查，是否已提交授权（授权ID如BS15HKW）"
+        },
+        {
+          "field": "occurrenceTime",
+          "label": "发生时间",
+          "required": true,
+          "type": "string",
+          "description": "包含日期、时间和时区",
+          "maxLength": 64
+        },
+        {
+          "field": "symptom",
+          "label": "异常现象",
+          "required": true,
+          "type": "string",
+          "description": "登录时的具体报错或超时表现，如Connection timed out、Permission denied",
+          "maxLength": 1000
+        },
+        {
+          "field": "sourceNetwork",
+          "label": "客户端网络环境",
+          "required": false,
+          "type": "string",
+          "description": "客户端所在地区、运营商（如上海电信、家庭宽带）",
+          "maxLength": 300
+        }
+      ]
+    },
+    {
+      "name": "购买/续费/计费/账单/退订问题",
+      "keywords": [
+        "下单失败",
+        "购买失败",
+        "续费",
+        "账单",
+        "退订",
+        "新客优惠"
+      ],
+      "categoryKeywords": [
+        "购买",
+        "续费",
+        "计费",
+        "账单",
+        "退订"
+      ],
+      "categoryHints": [
+        "购买/续费/计费/账单/退订问题"
+      ],
+      "collect": [
+        {
+          "field": "purchaseIssueType",
+          "label": "购买计费问题类型",
+          "required": true,
+          "type": "string",
+          "enum": ["风控拦截", "退订计算", "新客优惠", "备案规则", "续费账单", "其他"],
+          "description": "账号风控导致下单失败不支持解封；退订金额=实付-已消费（按原价算）"
+        },
+        {
+          "field": "instanceId",
+          "label": "实例标识",
+          "required": false,
+          "type": "string",
+          "description": "涉及已有实例的续费/退订问题时填写",
+          "maxLength": 64
+        },
+        {
+          "field": "regionId",
+          "label": "地域",
+          "required": false,
+          "type": "string",
+          "description": "实例所在地域标识，如cn-hangzhou",
+          "maxLength": 64
+        },
+        {
+          "field": "riskControlStatus",
+          "label": "风控状态",
+          "required": false,
+          "type": "string",
+          "enum": ["已命中风控", "未命中", "不确定"],
+          "description": "下单失败提示风控时填写；账号风控不支持人工解封"
+        },
+        {
+          "field": "orderNumber",
+          "label": "订单号",
+          "required": false,
+          "type": "string",
+          "description": "涉及的订单编号",
+          "maxLength": 120
+        },
+        {
+          "field": "refundCalculation",
+          "label": "退订金额争议",
+          "required": false,
+          "type": "string",
+          "description": "客户预期退订金额与实际退订金额的差异说明",
+          "maxLength": 300
+        },
+        {
+          "field": "newCustomerStatus",
+          "label": "新客优惠资格",
+          "required": false,
+          "type": "string",
+          "enum": ["已购过按标准价", "首次购买", "不确定"],
+          "description": "云大使关联账号已购过则按标准价，不再享受新客优惠"
+        },
+        {
+          "field": "icpRequirement",
+          "label": "备案要求",
+          "required": false,
+          "type": "string",
+          "enum": ["需备案", "免备案", "不确定"],
+          "description": "中国内地节点建站需ICP备案，香港/海外节点免备案"
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题说明",
+          "required": true,
+          "type": "string",
+          "description": "说明费用疑问、下单报错内容或期望处理方式",
+          "maxLength": 1000
+        }
+      ]
+    },
+    {
+      "name": "公网访问与内网互通问题",
+      "keywords": [
+        "公网不通",
+        "带宽限制",
+        "访问慢",
+        "内网互通",
+        "502错误"
+      ],
+      "categoryKeywords": [
+        "公网",
+        "内网",
+        "带宽",
+        "互通"
+      ],
+      "categoryHints": [
+        "公网访问与内网互通问题"
+      ],
+      "collect": [
+        {
+          "field": "regionId",
+          "label": "地域",
+          "required": true,
+          "type": "string",
+          "description": "实例所在地域标识，如cn-hongkong",
+          "maxLength": 64
+        },
+        {
+          "field": "instanceId",
+          "label": "实例标识",
+          "required": true,
+          "type": "string",
+          "description": "轻量服务器实例标识，如i-2zeabc123def",
+          "maxLength": 64
+        },
+        {
+          "field": "networkIssueType",
+          "label": "网络问题类型",
+          "required": true,
+          "type": "string",
+          "enum": ["带宽限制", "跨境访问", "端口不通", "502错误", "内网互通"],
+          "description": "带宽峰值限制为高峰期资源争抢；香港节点限速小二可直接解除恢复"
+        },
+        {
+          "field": "bandwidthLimitStatus",
+          "label": "带宽限速状态",
+          "required": false,
+          "type": "string",
+          "enum": ["已限速", "已解除", "持续限速", "不涉及"],
+          "description": "当前限速状态；香港节点限速可通过工单解除"
+        },
+        {
+          "field": "crossBorderIssue",
+          "label": "是否跨境访问",
+          "required": false,
+          "type": "boolean",
+          "description": "内地访问香港/海外节点的跨境链路问题"
+        },
+        {
+          "field": "occurrenceTime",
+          "label": "发生时间",
+          "required": true,
+          "type": "string",
+          "description": "包含日期、时间和时区",
+          "maxLength": 64
+        },
+        {
+          "field": "symptom",
+          "label": "异常现象",
+          "required": true,
+          "type": "string",
+          "description": "访问慢/不通的具体表现，如ping延迟、下载速率、502报错",
+          "maxLength": 1000
+        },
+        {
+          "field": "protocolPort",
+          "label": "协议与端口",
+          "required": false,
+          "type": "string",
+          "description": "涉及端口不通时填写，如TCP 443",
+          "maxLength": 120
+        },
+        {
+          "field": "sourceAddress",
+          "label": "访问源地址",
+          "required": false,
+          "type": "string",
+          "description": "客户端公网IP或地区，用于复测连通性",
+          "maxLength": 120
+        }
+      ]
+    },
+    {
+      "name": "网站访问问题",
+      "keywords": [
+        "网站打不开",
+        "域名访问",
+        "DNS解析",
+        "防火墙端口",
+        "页面异常"
+      ],
+      "categoryKeywords": [
+        "网站",
+        "访问",
+        "域名",
+        "防火墙"
+      ],
+      "categoryHints": [
+        "网站访问问题"
+      ],
+      "collect": [
+        {
+          "field": "regionId",
+          "label": "地域",
+          "required": true,
+          "type": "string",
+          "description": "实例所在地域标识，如cn-hangzhou",
+          "maxLength": 64
+        },
+        {
+          "field": "instanceId",
+          "label": "实例标识",
+          "required": true,
+          "type": "string",
+          "description": "轻量服务器实例标识，如i-2zeabc123def",
+          "maxLength": 64
+        },
+        {
+          "field": "websiteIssueType",
+          "label": "网站问题类型",
+          "required": true,
+          "type": "string",
+          "enum": ["防火墙端口", "DNS解析", "跨境延迟", "资源夯住"],
+          "description": "防火墙端口未放行是最高频根因（21443/8888/443）"
+        },
+        {
+          "field": "domainName",
+          "label": "访问域名",
+          "required": false,
+          "type": "string",
+          "description": "仅填写域名，不附带协议和路径",
+          "maxLength": 253
+        },
+        {
+          "field": "firewallPort",
+          "label": "防火墙端口",
+          "required": false,
+          "type": "string",
+          "description": "网站服务监听端口及轻量服务器防火墙是否已放行，如8888、21443、443",
+          "maxLength": 120
+        },
+        {
+          "field": "dnsStatus",
+          "label": "DNS解析状态",
+          "required": false,
+          "type": "string",
+          "enum": ["已生效", "未生效", "未配置", "不确定"],
+          "description": "域名解析是否已生效，可用ping/nslookup验证"
+        },
+        {
+          "field": "resourceStatus",
+          "label": "系统资源状态",
+          "required": false,
+          "type": "string",
+          "enum": ["内存", "IO", "CPU", "正常", "不确定"],
+          "description": "系统资源是否夯住，资源耗尽会导致服务无响应"
+        },
+        {
+          "field": "occurrenceTime",
+          "label": "发生时间",
+          "required": true,
+          "type": "string",
+          "description": "包含日期、时间和时区",
+          "maxLength": 64
+        },
+        {
+          "field": "errorMessage",
+          "label": "页面错误或异常现象",
+          "required": true,
+          "type": "string",
+          "description": "填写页面显示的完整错误信息或访问表现",
+          "maxLength": 1000
+        },
+        {
+          "field": "webServerType",
+          "label": "Web服务器类型",
+          "required": false,
+          "type": "string",
+          "enum": ["Nginx", "Apache", "宝塔面板", "IIS", "其他", "不确定"],
+          "description": "不同Web服务器的排查路径不同"
+        }
+      ]
+    },
+    {
+      "name": "控制台操作问题",
+      "keywords": [
+        "控制台报错",
+        "端口修改",
+        "登录凭据恢复",
+        "镜像选择",
+        "操作失败"
+      ],
+      "categoryKeywords": [
+        "控制台",
+        "操作",
+        "恢复"
+      ],
+      "categoryHints": [
+        "控制台操作问题"
+      ],
+      "collect": [
+        {
+          "field": "regionId",
+          "label": "地域",
+          "required": true,
+          "type": "string",
+          "description": "实例所在地域标识，如cn-hangzhou",
+          "maxLength": 64
+        },
+        {
+          "field": "instanceId",
+          "label": "实例标识",
+          "required": true,
+          "type": "string",
+          "description": "轻量服务器实例标识，如i-2zeabc123def",
+          "maxLength": 64
+        },
+        {
+          "field": "consoleOperation",
+          "label": "控制台操作",
+          "required": true,
+          "type": "string",
+          "enum": ["端口修改", "登录凭据恢复", "镜像选择", "重启", "其他"],
+          "description": "登录凭据恢复仅记录操作状态与结果，不采集任何凭据内容"
+        },
+        {
+          "field": "portNumber",
+          "label": "端口号",
+          "required": false,
+          "type": "string",
+          "description": "端口修改时填写目标端口，如8888、21443",
+          "maxLength": 64
+        },
+        {
+          "field": "accessRecoveryChannel",
+          "label": "访问恢复渠道",
+          "required": false,
+          "type": "string",
+          "enum": ["控制台入口", "已授权远程会话", "VNC会话", "不涉及"],
+          "description": "仅记录采用的恢复渠道和处理结果，不采集或回显登录凭据"
+        },
+        {
+          "field": "imageType",
+          "label": "镜像类型",
+          "required": false,
+          "type": "string",
+          "enum": ["系统镜像", "应用镜像", "自定义镜像", "不确定"],
+          "description": "系统镜像与应用镜像二选一，应用镜像预装环境但会覆盖数据"
+        },
+        {
+          "field": "errorMessage",
+          "label": "错误信息",
+          "required": false,
+          "type": "string",
+          "description": "控制台页面显示的完整错误信息",
+          "maxLength": 1000
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "说明操作目标、当前情况和遇到的问题",
+          "maxLength": 1000
+        },
+        {
+          "field": "hasSnapshot",
+          "label": "是否已创建快照",
+          "required": false,
+          "type": "boolean",
+          "description": "重置系统/更换镜像前是否已创建快照备份数据"
+        }
+      ]
+    },
+    {
+      "name": "环境配置与软件安装",
+      "keywords": [
+        "软件安装",
+        "环境配置",
+        "端口冲突",
+        "服务启动失败",
+        "软件运维"
+      ],
+      "categoryKeywords": [
+        "环境",
+        "软件",
+        "配置"
+      ],
+      "categoryHints": [
+        "环境配置与软件安装"
+      ],
+      "collect": [
+        {
+          "field": "regionId",
+          "label": "地域",
+          "required": true,
+          "type": "string",
+          "description": "实例所在地域标识，如cn-hangzhou",
+          "maxLength": 64
+        },
+        {
+          "field": "instanceId",
+          "label": "实例标识",
+          "required": true,
+          "type": "string",
+          "description": "轻量服务器实例标识，如i-2zeabc123def",
+          "maxLength": 64
+        },
+        {
+          "field": "softwareType",
+          "label": "软件类型",
+          "required": true,
+          "type": "string",
+          "enum": ["OpenClaw", "Apache", "Nginx", "NVM", "MySQL", "其他"],
+          "description": "涉及的软件名称，OpenClaw为高频应用运维对象"
+        },
+        {
+          "field": "configIssue",
+          "label": "配置问题类型",
+          "required": true,
+          "type": "string",
+          "enum": ["端口冲突", "Token Plan", "路径配置", "版本升级", "依赖缺失", "其他"],
+          "description": "Apache/nginx常因80端口冲突；OpenClaw Token Plan配置需镜像重置≥5.19"
+        },
+        {
+          "field": "versionInfo",
+          "label": "软件版本",
+          "required": false,
+          "type": "string",
+          "description": "当前软件版本号，如OpenClaw 5.19、Apache 2.4.57",
+          "maxLength": 120
+        },
+        {
+          "field": "osType",
+          "label": "操作系统类型",
+          "required": false,
+          "type": "string",
+          "enum": ["Linux", "Windows", "其他"],
+          "description": "不同操作系统的安装路径和命令不同"
+        },
+        {
+          "field": "symptom",
+          "label": "异常现象",
+          "required": true,
+          "type": "string",
+          "description": "安装或运行时的具体报错信息",
+          "maxLength": 1000
+        },
+        {
+          "field": "operationSteps",
+          "label": "已执行操作",
+          "required": false,
+          "type": "string",
+          "description": "客户已尝试的命令或操作步骤",
+          "maxLength": 500
+        }
+      ]
+    },
+    {
+      "name": "数据丢失/恢复/释放相关问题",
+      "keywords": [
+        "数据丢失",
+        "数据恢复",
+        "实例释放",
+        "数据找回",
+        "误删"
+      ],
+      "categoryKeywords": [
+        "数据",
+        "恢复",
+        "释放"
+      ],
+      "categoryHints": [
+        "数据丢失/恢复/释放相关问题"
+      ],
+      "collect": [
+        {
+          "field": "regionId",
+          "label": "地域",
+          "required": true,
+          "type": "string",
+          "description": "实例所在地域标识，如cn-hangzhou",
+          "maxLength": 64
+        },
+        {
+          "field": "instanceId",
+          "label": "实例标识",
+          "required": false,
+          "type": "string",
+          "description": "实例已释放时填写释放前的实例ID",
+          "maxLength": 64
+        },
+        {
+          "field": "dataLossType",
+          "label": "数据丢失类型",
+          "required": true,
+          "type": "string",
+          "enum": ["实例释放", "勒索加密", "误删", "覆盖", "其他"],
+          "description": "释放后无快照或备份时可能无法恢复；勒索加密常与账号安全配置薄弱或主机暴露有关"
+        },
+        {
+          "field": "hasSnapshot",
+          "label": "是否有快照",
+          "required": true,
+          "type": "boolean",
+          "description": "有快照是数据恢复的必要条件"
+        },
+        {
+          "field": "retentionWindow",
+          "label": "保留期",
+          "required": false,
+          "type": "string",
+          "description": "实例释放后数据保留期15天，是唯一恢复路径",
+          "maxLength": 64
+        },
+        {
+          "field": "ransomwareAttack",
+          "label": "是否勒索软件攻击",
+          "required": false,
+          "type": "boolean",
+          "description": "仅记录文件加密、异常后缀和赎金提示等现象，不采集任何登录凭据"
+        },
+        {
+          "field": "releaseTime",
+          "label": "释放/丢失时间",
+          "required": true,
+          "type": "string",
+          "description": "实例释放或数据丢失的日期时间",
+          "maxLength": 64
+        },
+        {
+          "field": "dataContent",
+          "label": "丢失数据内容",
+          "required": true,
+          "type": "string",
+          "description": "说明丢失数据的重要性和恢复需求",
+          "maxLength": 500
+        }
+      ]
+    },
+    {
+      "name": "数据备份/上传/下载问题",
+      "keywords": [
+        "数据备份",
+        "镜像导出",
+        "数据导出",
+        "数据上传",
+        "数据下载"
+      ],
+      "categoryKeywords": [
+        "备份",
+        "导出",
+        "迁移"
+      ],
+      "categoryHints": [
+        "数据备份/上传/下载问题"
+      ],
+      "collect": [
+        {
+          "field": "regionId",
+          "label": "地域",
+          "required": true,
+          "type": "string",
+          "description": "实例所在地域标识，如cn-hangzhou",
+          "maxLength": 64
+        },
+        {
+          "field": "instanceId",
+          "label": "实例标识",
+          "required": true,
+          "type": "string",
+          "description": "轻量服务器实例标识，如i-2zeabc123def",
+          "maxLength": 64
+        },
+        {
+          "field": "backupType",
+          "label": "备份类型",
+          "required": true,
+          "type": "string",
+          "enum": ["镜像导出", "过期实例导出", "配置迁移", "其他"],
+          "description": "镜像导出路径：自定义镜像→共享到ECS→复制→导出本地"
+        },
+        {
+          "field": "dataExportMethod",
+          "label": "数据导出方式",
+          "required": false,
+          "type": "string",
+          "enum": ["镜像导出", "SSH下载", "FTP上传下载", "快照回滚", "不确定"],
+          "description": "过期实例数据导出路径：续费→SSH下载→退款"
+        },
+        {
+          "field": "instanceStatus",
+          "label": "实例当前状态",
+          "required": false,
+          "type": "string",
+          "enum": ["运行中", "已停止", "已过期", "已释放", "不确定"],
+          "description": "过期实例需先续费才能SSH导出数据"
+        },
+        {
+          "field": "dataSize",
+          "label": "数据量",
+          "required": false,
+          "type": "string",
+          "description": "待导出/上传的数据规模，如20GB",
+          "maxLength": 64
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题说明",
+          "required": true,
+          "type": "string",
+          "description": "说明备份目标、当前进度和遇到的问题",
+          "maxLength": 1000
+        }
+      ]
+    },
+    {
+      "name": "服务器安全攻防相关问题",
+      "keywords": [
+        "挖矿",
+        "安全锁定",
+        "违规关停",
+        "入侵",
+        "安全事件"
+      ],
+      "categoryKeywords": [
+        "安全",
+        "攻防",
+        "锁定"
+      ],
+      "categoryHints": [
+        "服务器安全攻防相关问题"
+      ],
+      "collect": [
+        {
+          "field": "regionId",
+          "label": "地域",
+          "required": true,
+          "type": "string",
+          "description": "实例所在地域标识，如cn-hangzhou",
+          "maxLength": 64
+        },
+        {
+          "field": "instanceId",
+          "label": "实例标识",
+          "required": true,
+          "type": "string",
+          "description": "轻量服务器实例标识，如i-2zeabc123def",
+          "maxLength": 64
+        },
+        {
+          "field": "securityIssueType",
+          "label": "安全问题类型",
+          "required": true,
+          "type": "string",
+          "enum": ["挖矿锁定", "违规关停", "组网流量受阻", "账号安全风险", "其他"],
+          "description": "记录安全告警、锁定状态或组网流量受阻现象，不要求提供登录凭据或执行指令"
+        },
+        {
+          "field": "lockoutReason",
+          "label": "锁定原因",
+          "required": false,
+          "type": "string",
+          "description": "控制台提示的锁定或关停原因",
+          "maxLength": 300
+        },
+        {
+          "field": "appealFormRequired",
+          "label": "是否需提交申诉表单",
+          "required": false,
+          "type": "boolean",
+          "description": "挖矿锁定需提交申诉表单，是唯一解锁路径"
+        },
+        {
+          "field": "detectionTime",
+          "label": "发现时间",
+          "required": true,
+          "type": "string",
+          "description": "安全事件发现或告警的日期时间",
+          "maxLength": 64
+        },
+        {
+          "field": "symptom",
+          "label": "异常现象",
+          "required": true,
+          "type": "string",
+          "description": "描述异常行为、影响和当前状态",
+          "maxLength": 1000
+        },
+        {
+          "field": "authorizationStatus",
+          "label": "是否已授权排查",
+          "required": false,
+          "type": "boolean",
+          "description": "是否已授权阿里云工程师登录实例进行安全排查"
+        }
+      ]
+    }
+  ]
+}

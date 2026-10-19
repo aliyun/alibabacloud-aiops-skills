@@ -1,0 +1,819 @@
+{
+  "product": "qodercn",
+  "aliases": [
+    "QoderCn",
+    "Qoder CN",
+    "qoder.com.cn",
+    "千问编程"
+  ],
+  "issueTypes": [
+    {
+      "name": "产品问题咨询",
+      "keywords": [
+        "产品咨询",
+        "功能使用",
+        "风控拦截",
+        "Credits消耗",
+        "产品区别",
+        "Qoder vs Qoder CN",
+        "自动保存",
+        "私有部署",
+        "Seats减少"
+      ],
+      "categoryKeywords": [
+        "产品",
+        "咨询",
+        "功能",
+        "风控",
+        "Credits"
+      ],
+      "categoryHints": [
+        "QoderCn产品问题咨询（风控拦截/Credits优先级/功能使用/产品区别）"
+      ],
+      "collect": [
+        {
+          "field": "issueType",
+          "label": "问题子类",
+          "required": true,
+          "type": "string",
+          "enum": ["风控拦截", "Credits优先级", "功能使用", "产品区别"],
+          "description": "风控拦截=活动入口/Credits被风控拦截；Credits优先级=消耗顺序疑问；功能使用=产品功能操作问题；产品区别=Qoder vs Qoder CN区别"
+        },
+        {
+          "field": "riskControlStatus",
+          "label": "风控拦截状态",
+          "required": false,
+          "type": "string",
+          "enum": ["已拦截", "已解除", "待处理", "无拦截"],
+          "description": "问题子类为风控拦截时填写，描述当前风控状态"
+        },
+        {
+          "field": "creditsPriority",
+          "label": "Credits消耗优先级疑问",
+          "required": false,
+          "type": "string",
+          "enum": ["赠送Credits优先", "资源包优先", "混合抵扣", "不清楚"],
+          "description": "千问模型消耗顺序：赠送Credits优先于资源包抵扣，与用户预期可能不同"
+        },
+        {
+          "field": "productComparison",
+          "label": "产品对比说明",
+          "required": false,
+          "type": "string",
+          "enum": ["Qoder vs Qoder CN", "Qoder CN vs 千问编程", "Credits不可互换", "无对比"],
+          "description": "Qoder与Qoder CN为独立产品线，Credits不可互换"
+        },
+        {
+          "field": "featureName",
+          "label": "咨询功能名称",
+          "required": false,
+          "type": "string",
+          "description": "涉及的具体功能名称，如Auto-save、私有部署、Seats管理",
+          "maxLength": 120
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "说明遇到的问题、当前情况和期望结果",
+          "maxLength": 1000
+        },
+        {
+          "field": "subscriptionType",
+          "label": "当前套餐",
+          "required": false,
+          "type": "string",
+          "enum": ["免费版", "Pro", "Pro+", "Ultra", "团队版", "企业版"],
+          "description": "用户当前订阅的套餐类型"
+        }
+      ]
+    },
+    {
+      "name": "开通/购买/套餐变配/费用问题",
+      "keywords": [
+        "开通",
+        "购买",
+        "套餐",
+        "变配",
+        "费用",
+        "资源包到期",
+        "新用户试用",
+        "续费奖励",
+        "学生优惠",
+        "VSCode插件Deprecated"
+      ],
+      "categoryKeywords": [
+        "开通",
+        "购买",
+        "套餐",
+        "费用",
+        "续费"
+      ],
+      "categoryHints": [
+        "QoderCn开通/购买/套餐变配/费用问题（含试用/续费奖励/学生优惠/VSCode迁移）"
+      ],
+      "collect": [
+        {
+          "field": "subscriptionType",
+          "label": "目标套餐",
+          "required": false,
+          "type": "string",
+          "enum": ["Pro", "Pro+", "Ultra", "团队版", "企业版"],
+          "description": "用户希望开通或变更的目标套餐"
+        },
+        {
+          "field": "creditsPackExpiry",
+          "label": "Credits资源包到期时间",
+          "required": false,
+          "type": "string",
+          "description": "资源包到期日期，千问模型优先消耗赠送Credits而非资源包",
+          "maxLength": 64
+        },
+        {
+          "field": "trialCredits",
+          "label": "试用Credits状态",
+          "required": false,
+          "type": "string",
+          "enum": ["未到账", "部分到账", "已到账", "已过期"],
+          "description": "新用户Pro Trial赠送300 Credits的到账状态"
+        },
+        {
+          "field": "renewalBonus",
+          "label": "续费奖励状态",
+          "required": false,
+          "type": "string",
+          "enum": ["未发放", "已发放", "不符合条件", "需到期前续费"],
+          "description": "续费奖励需在到期前完成续费才能获得"
+        },
+        {
+          "field": "studentCoupon",
+          "label": "学生优惠券",
+          "required": false,
+          "type": "string",
+          "enum": ["未领取", "已领取", "控制台购买", "官网不可用"],
+          "description": "学生300元优惠券仅限控制台购买，官网不支持"
+        },
+        {
+          "field": "vscodeMigration",
+          "label": "VSCode插件迁移",
+          "required": false,
+          "type": "string",
+          "enum": ["已迁移", "待迁移", "不适用"],
+          "description": "VSCode插件已Deprecated，需迁移至Qoder CN IDE或JetBrains插件"
+        },
+        {
+          "field": "orderNumber",
+          "label": "订单号",
+          "required": false,
+          "type": "string",
+          "description": "涉及的订单编号",
+          "maxLength": 120
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "说明开通/购买/变配/费用方面的具体问题",
+          "maxLength": 1000
+        }
+      ]
+    },
+    {
+      "name": "退订问题",
+      "keywords": [
+        "退订",
+        "退款",
+        "取消订阅",
+        "Seats取消",
+        "Token清零",
+        "自动续费",
+        "到期不可退"
+      ],
+      "categoryKeywords": [
+        "退订",
+        "退款",
+        "取消",
+        "续费"
+      ],
+      "categoryHints": [
+        "QoderCn退订问题（退款链接/到期不可退/企业Seats取消/Token清零/自动续费争议）"
+      ],
+      "collect": [
+        {
+          "field": "refundStatus",
+          "label": "退款状态",
+          "required": true,
+          "type": "string",
+          "enum": ["未到期可退", "已到期不可退", "已退款", "审核中"],
+          "description": "到期后不可退款；未到期可通过退款链接申请"
+        },
+        {
+          "field": "refundLink",
+          "label": "退款链接",
+          "required": false,
+          "type": "string",
+          "description": "特殊退款链接位于 usercenter2.aliyun.com",
+          "maxLength": 253
+        },
+        {
+          "field": "seatCancellation",
+          "label": "Seats取消类型",
+          "required": false,
+          "type": "string",
+          "enum": ["个人版取消", "团队版Seats减少", "企业版Seats取消", "国际版Teams取消", "不适用"],
+          "description": "企业Seats取消需联系商务团队；国际版Teams需云市场审批"
+        },
+        {
+          "field": "tokenCleared",
+          "label": "Token是否清零",
+          "required": false,
+          "type": "boolean",
+          "description": "退订后Token余额是否被清零"
+        },
+        {
+          "field": "complaintRisk",
+          "label": "投诉风险等级",
+          "required": false,
+          "type": "string",
+          "enum": ["无投诉", "一般抱怨", "威胁法律行动", "已投诉监管"],
+          "description": "客户对退款结果的态度，威胁法律行动需升级处理"
+        },
+        {
+          "field": "autoRenewalDispute",
+          "label": "自动续费争议",
+          "required": false,
+          "type": "string",
+          "enum": ["不知情自动续费", "续费金额争议", "取消续费未生效", "无争议"],
+          "description": "自动续费相关的争议类型"
+        },
+        {
+          "field": "orderNumber",
+          "label": "订单号",
+          "required": false,
+          "type": "string",
+          "description": "涉及退订的订单编号",
+          "maxLength": 120
+        },
+        {
+          "field": "subscriptionExpiry",
+          "label": "套餐到期时间",
+          "required": false,
+          "type": "string",
+          "description": "当前订阅的到期日期",
+          "maxLength": 64
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "说明退订原因和期望处理结果",
+          "maxLength": 1000
+        }
+      ]
+    },
+    {
+      "name": "插件端功能问题",
+      "keywords": [
+        "插件",
+        "灵码迁移",
+        "模型选择",
+        "Auto智能路由",
+        "性能慢",
+        "IDE审批",
+        "Repo Wiki",
+        "专家团队",
+        "Custom Models"
+      ],
+      "categoryKeywords": [
+        "插件",
+        "IDE",
+        "模型",
+        "灵码"
+      ],
+      "categoryHints": [
+        "QoderCn插件端功能问题（灵码迁移/模型选择/性能/IDE审批）"
+      ],
+      "collect": [
+        {
+          "field": "pluginType",
+          "label": "插件类型",
+          "required": true,
+          "type": "string",
+          "enum": ["VSCode", "JetBrains", "Qoder CN IDE", "灵码"],
+          "description": "涉及的插件类型，灵码已停用需迁移至Qoder CN"
+        },
+        {
+          "field": "modelSelection",
+          "label": "模型选择方式",
+          "required": false,
+          "type": "string",
+          "enum": ["Auto", "Claude", "GPT", "DeepSeek", "千问模型", "自定义模型"],
+          "description": "Auto为智能路由（模型池非固定模型）；Claude/GPT需通过Custom Models配置鉴权参数"
+        },
+        {
+          "field": "lingmaMigration",
+          "label": "灵码迁移状态",
+          "required": false,
+          "type": "string",
+          "enum": ["已完成迁移", "待迁移", "迁移中遇到问题", "不适用"],
+          "description": "灵码已停止迭代，需迁移至Qoder CN"
+        },
+        {
+          "field": "approvalSetting",
+          "label": "审批设置类型",
+          "required": false,
+          "type": "string",
+          "enum": ["终端审批", "代码变更审批", "无审批", "不适用"],
+          "description": "IDE内审批功能设置问题"
+        },
+        {
+          "field": "performanceIssue",
+          "label": "性能问题",
+          "required": false,
+          "type": "string",
+          "enum": ["响应慢", "内存占用高", "卡顿", "崩溃", "无性能问题"],
+          "description": "插件运行性能问题表现"
+        },
+        {
+          "field": "ideVersion",
+          "label": "IDE版本",
+          "required": false,
+          "type": "string",
+          "description": "用户使用的IDE及版本号，如 IntelliJ IDEA 2024.3",
+          "maxLength": 120
+        },
+        {
+          "field": "pluginVersion",
+          "label": "插件版本",
+          "required": false,
+          "type": "string",
+          "description": "Qoder CN插件版本号",
+          "maxLength": 64
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "说明插件功能问题的具体表现和期望结果",
+          "maxLength": 1000
+        }
+      ]
+    },
+    {
+      "name": "登录问题",
+      "keywords": [
+        "登录失败",
+        "登录异常",
+        "灵码停用",
+        "版本更新",
+        "SSH断连",
+        "RAM子账号",
+        "阿里云账号"
+      ],
+      "categoryKeywords": [
+        "登录",
+        "账号",
+        "认证"
+      ],
+      "categoryHints": [
+        "QoderCn登录问题（灵码停用/版本更新破坏/SSH断连/风控）"
+      ],
+      "collect": [
+        {
+          "field": "loginIssueType",
+          "label": "登录问题子类",
+          "required": true,
+          "type": "string",
+          "enum": ["灵码停用", "版本更新", "SSH断连", "风控拦截", "其他"],
+          "description": "灵码客户端停用后登录失败；版本更新（如v3.35）破坏登录状态"
+        },
+        {
+          "field": "loginMethod",
+          "label": "登录方式",
+          "required": true,
+          "type": "string",
+          "enum": ["阿里云账号", "RAM子账号", "灵码账号", "其他"],
+          "description": "Qoder CN登录=阿里云登录（邮箱+RAM），Desktop不支持灵码账号登录"
+        },
+        {
+          "field": "versionInfo",
+          "label": "版本信息",
+          "required": false,
+          "type": "string",
+          "description": "出现问题的版本号，如 v3.35",
+          "maxLength": 64
+        },
+        {
+          "field": "sshBroken",
+          "label": "SSH断连详情",
+          "required": false,
+          "type": "string",
+          "description": "SSH连接断开的具体场景和错误信息",
+          "maxLength": 500
+        },
+        {
+          "field": "clientType",
+          "label": "客户端类型",
+          "required": false,
+          "type": "string",
+          "enum": ["VSCode插件", "JetBrains插件", "Qoder CN IDE", "Qoder CN Desktop", "Qoder CN CLI"],
+          "description": "出现登录问题的客户端类型"
+        },
+        {
+          "field": "errorMessage",
+          "label": "错误信息",
+          "required": false,
+          "type": "string",
+          "description": "登录时显示的完整错误信息",
+          "maxLength": 1000
+        },
+        {
+          "field": "occurrenceTime",
+          "label": "发生时间",
+          "required": false,
+          "type": "string",
+          "description": "登录问题首次发生的时间",
+          "maxLength": 64
+        }
+      ]
+    },
+    {
+      "name": "Qoder CN Desktop",
+      "keywords": [
+        "Desktop",
+        "IDEA插件",
+        "PyCharm插件",
+        "Token Plan",
+        "Quest迁移",
+        "VSCode不可用"
+      ],
+      "categoryKeywords": [
+        "Desktop",
+        "IDE",
+        "客户端"
+      ],
+      "categoryHints": [
+        "Qoder CN Desktop问题（IDEA/PyCharm插件登录/Token Plan配置/Quest迁移/VSCode不可用）"
+      ],
+      "collect": [
+        {
+          "field": "desktopPlugin",
+          "label": "Desktop插件类型",
+          "required": true,
+          "type": "string",
+          "enum": ["IDEA", "PyCharm", "VSCode", "Qoder CN IDE", "WebStorm", "其他"],
+          "description": "IDEA插件登录问题常因配置文件损坏；PyCharm需代理白名单"
+        },
+        {
+          "field": "tokenPlanConfig",
+          "label": "Token Plan配置状态",
+          "required": false,
+          "type": "string",
+          "enum": ["未配置", "已配置", "配置失败", "不适用"],
+          "description": "Token Plan在Qoder中需配置Custom Models"
+        },
+        {
+          "field": "questMigration",
+          "label": "Quest迁移状态",
+          "required": false,
+          "type": "string",
+          "enum": ["待迁移", "已迁移", "迁移中", "不适用"],
+          "description": "Quest窗口将于2026-10-15停用，需迁移至Qoder CN"
+        },
+        {
+          "field": "proxyWhitelist",
+          "label": "代理白名单",
+          "required": false,
+          "type": "string",
+          "description": "需添加代理白名单的域名：qoder.cn 和 qoder.console.aliyun.com",
+          "maxLength": 300
+        },
+        {
+          "field": "configCorrupted",
+          "label": "配置文件是否损坏",
+          "required": false,
+          "type": "boolean",
+          "description": "IDEA插件用户数据迁移过程中可能配置文件损坏"
+        },
+        {
+          "field": "desktopVersion",
+          "label": "Desktop版本",
+          "required": false,
+          "type": "string",
+          "description": "Qoder CN Desktop客户端版本号",
+          "maxLength": 64
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "说明Desktop问题的具体表现",
+          "maxLength": 1000
+        }
+      ]
+    },
+    {
+      "name": "Qoder CN CLI",
+      "keywords": [
+        "CLI",
+        "命令行",
+        "remote-control",
+        "模型配置",
+        "Token Plan不支持",
+        "安装指引"
+      ],
+      "categoryKeywords": [
+        "CLI",
+        "命令行",
+        "终端"
+      ],
+      "categoryHints": [
+        "Qoder CN CLI问题（remote-control bug/模型配置/Token Plan不支持/安装指引）"
+      ],
+      "collect": [
+        {
+          "field": "cliVersion",
+          "label": "CLI版本",
+          "required": true,
+          "type": "string",
+          "description": "Qoder CN CLI的版本号",
+          "maxLength": 64
+        },
+        {
+          "field": "remoteControlBehavior",
+          "label": "remote-control 异常现象",
+          "required": false,
+          "type": "string",
+          "enum": ["恢复到非预期历史会话", "历史操作状态异常", "无此问题", "不适用"],
+          "description": "说明恢复旧会话后出现的非预期会话或操作状态，不要求重现危险操作"
+        },
+        {
+          "field": "modelConfig",
+          "label": "模型配置",
+          "required": false,
+          "type": "string",
+          "enum": ["仅Token Hub可见", "可配置多模型", "配置失败", "不适用"],
+          "description": "CLI中模型配置选项，部分用户仅看到Token Hub选项"
+        },
+        {
+          "field": "tokenPlanScope",
+          "label": "Token Plan支持范围",
+          "required": false,
+          "type": "string",
+          "enum": ["QoderWork CN不支持", "Qoder CN支持", "不确定"],
+          "description": "QoderWork CN不支持Token Plan，仅Qoder CN支持"
+        },
+        {
+          "field": "installGuide",
+          "label": "安装指引需求",
+          "required": false,
+          "type": "string",
+          "enum": ["需要安装指引", "安装失败", "已安装", "不适用"],
+          "description": "CLI安装相关的问题"
+        },
+        {
+          "field": "osType",
+          "label": "操作系统",
+          "required": false,
+          "type": "string",
+          "enum": ["macOS", "Linux", "Windows", "其他"],
+          "description": "CLI运行的操作系统类型"
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "说明CLI问题的具体表现和期望结果",
+          "maxLength": 1000
+        }
+      ]
+    },
+    {
+      "name": "QoderCn通用问题",
+      "keywords": [
+        "模型断连",
+        "系统不可用",
+        "Token Plan插件",
+        "多模型不可用",
+        "企业升级",
+        "输出长度限制"
+      ],
+      "categoryKeywords": [
+        "通用",
+        "系统",
+        "模型"
+      ],
+      "categoryHints": [
+        "QoderCn通用问题（模型断连/系统不可用/Token Plan插件/多模型不可用需企业升级）"
+      ],
+      "collect": [
+        {
+          "field": "issueType",
+          "label": "问题子类",
+          "required": true,
+          "type": "string",
+          "enum": ["模型断连", "系统不可用", "Token Plan插件", "模型不可用"],
+          "description": "模型断连=模型连接中断；系统不可用=整体不可用需后端修复；Token Plan插件=WebStorm等插件中使用Token Plan；模型不可用=需企业版升级"
+        },
+        {
+          "field": "modelName",
+          "label": "模型名称",
+          "required": false,
+          "type": "string",
+          "enum": ["qwen3.8-max", "qwen3.8-flash-next", "DeepSeek-V4.1-Flash", "Claude", "GPT", "Auto", "其他"],
+          "description": "涉及的模型名称，如 DeepSeek-V4.1-Flash 深度思考模式可能触发输出长度限制"
+        },
+        {
+          "field": "systemStatus",
+          "label": "系统状态",
+          "required": false,
+          "type": "string",
+          "enum": ["完全不可用", "部分不可用", "间歇性故障", "正常"],
+          "description": "系统整体可用性状态，不可用时需后端修复"
+        },
+        {
+          "field": "enterpriseUpgrade",
+          "label": "企业升级需求",
+          "required": false,
+          "type": "string",
+          "enum": ["需升级企业版", "已为企业版", "不需要升级", "不确定"],
+          "description": "多模型不可用可能需要升级至企业版"
+        },
+        {
+          "field": "outputLimit",
+          "label": "输出长度限制",
+          "required": false,
+          "type": "boolean",
+          "description": "深度思考模式（如DeepSeek-V4.1-Flash）可能触发输出长度限制"
+        },
+        {
+          "field": "pluginType",
+          "label": "插件类型",
+          "required": false,
+          "type": "string",
+          "enum": ["VSCode", "JetBrains", "Qoder CN IDE", "WebStorm", "其他"],
+          "description": "使用Token Plan的插件类型"
+        },
+        {
+          "field": "occurrenceTime",
+          "label": "发生时间",
+          "required": false,
+          "type": "string",
+          "description": "问题首次发生的时间",
+          "maxLength": 64
+        },
+        {
+          "field": "errorMessage",
+          "label": "错误信息",
+          "required": false,
+          "type": "string",
+          "description": "系统或模型返回的错误信息",
+          "maxLength": 1000
+        }
+      ]
+    },
+    {
+      "name": "QoderWork CN",
+      "keywords": [
+        "QoderWork",
+        "账号同步",
+        "下载地址",
+        "免费额度耗尽",
+        "企业安全"
+      ],
+      "categoryKeywords": [
+        "QoderWork",
+        "同步",
+        "额度"
+      ],
+      "categoryHints": [
+        "QoderWork CN问题（账号同步/下载地址/免费额度耗尽/企业安全）"
+      ],
+      "collect": [
+        {
+          "field": "syncIssue",
+          "label": "账号同步问题",
+          "required": false,
+          "type": "string",
+          "enum": ["需重新登录", "同步失败", "数据不一致", "无同步问题"],
+          "description": "账号同步问题通常可通过插件中退出后重新登录解决"
+        },
+        {
+          "field": "downloadChannel",
+          "label": "下载渠道",
+          "required": false,
+          "type": "string",
+          "description": "说明使用的官方安装渠道和客户端平台，不采集下载链接",
+          "maxLength": 120
+        },
+        {
+          "field": "freeQuotaExhaustion",
+          "label": "免费额度状态",
+          "required": false,
+          "type": "string",
+          "enum": ["已耗尽", "即将耗尽", "未耗尽", "不适用"],
+          "description": "高频自动化任务可能快速耗尽免费额度"
+        },
+        {
+          "field": "enterpriseSecurity",
+          "label": "企业安全需求",
+          "required": false,
+          "type": "string",
+          "enum": ["安全概览咨询", "数据隔离要求", "合规需求", "不适用"],
+          "description": "企业版用户的安全相关需求"
+        },
+        {
+          "field": "subscriptionType",
+          "label": "当前套餐",
+          "required": false,
+          "type": "string",
+          "enum": ["免费版", "Pro", "Pro+", "Ultra", "团队版", "企业版"],
+          "description": "用户当前QoderWork CN套餐"
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "说明QoderWork CN问题的具体表现",
+          "maxLength": 1000
+        }
+      ]
+    },
+    {
+      "name": "其他",
+      "keywords": [
+        "其他",
+        "Mobile",
+        "文档建议",
+        "PPU性能",
+        "思考深度",
+        "系统未识别"
+      ],
+      "categoryKeywords": [
+        "其他",
+        "杂项",
+        "建议"
+      ],
+      "categoryHints": [
+        "QoderCn其他问题（Mobile同步/PPU性能/思考深度/文档建议/系统未识别）"
+      ],
+      "collect": [
+        {
+          "field": "miscType",
+          "label": "问题子类",
+          "required": true,
+          "type": "string",
+          "enum": ["Mobile同步", "PPU性能", "思考深度", "文档建议", "系统未识别", "其他"],
+          "description": "Mobile本地会话不同步至Desktop（仅Desktop到Mobile单向同步）；PPU按量付费模型性能问题"
+        },
+        {
+          "field": "miscDescription",
+          "label": "详细描述",
+          "required": true,
+          "type": "string",
+          "description": "说明问题的具体内容和期望结果",
+          "maxLength": 1000
+        },
+        {
+          "field": "ppuModel",
+          "label": "PPU模型名称",
+          "required": false,
+          "type": "string",
+          "enum": ["qwen3.8-flash-next", "qwen3.8-max", "DeepSeek-V4.1-Flash", "其他"],
+          "description": "PPU按量付费使用的模型名称"
+        },
+        {
+          "field": "thinkingDepth",
+          "label": "思考深度配置",
+          "required": false,
+          "type": "string",
+          "enum": ["浅度", "中度", "深度", "自定义", "不适用"],
+          "description": "可配置的思考深度和上下文长度"
+        },
+        {
+          "field": "mobileDevice",
+          "label": "Mobile设备",
+          "required": false,
+          "type": "string",
+          "enum": ["iOS", "Android", "不适用"],
+          "description": "Qoder CN Mobile使用的设备类型"
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "说明问题的具体表现和期望结果",
+          "maxLength": 1000
+        }
+      ]
+    }
+  ]
+}

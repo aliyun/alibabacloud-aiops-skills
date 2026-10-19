@@ -1,0 +1,654 @@
+{
+  "product": "domain",
+  "aliases": [
+    "域名",
+    "域名服务",
+    "Domain",
+    "万网"
+  ],
+  "issueTypes": [
+    {
+      "name": "域名信息查询",
+      "keywords": [
+        "域名查询",
+        "归属查询",
+        "到期时间",
+        "备案状态",
+        "域名状态查询"
+      ],
+      "categoryKeywords": [
+        "查询",
+        "信息",
+        "归属"
+      ],
+      "categoryHints": [
+        "域名信息查询"
+      ],
+      "collect": [
+        {
+          "field": "domainName",
+          "label": "域名",
+          "required": true,
+          "type": "string",
+          "description": "需查询的域名，如 www.example.com",
+          "maxLength": 253
+        },
+        {
+          "field": "queryType",
+          "label": "查询类型",
+          "required": true,
+          "type": "string",
+          "enum": ["归属", "到期时间", "备案状态", "域名状态", "其他"],
+          "description": "客户期望查询的具体信息类型"
+        },
+        {
+          "field": "accountUid",
+          "label": "账号UID",
+          "required": false,
+          "type": "string",
+          "description": "查询域名归属时需提供的账号标识（UID/登录账号/手机号）",
+          "maxLength": 120
+        },
+        {
+          "field": "domainStatus",
+          "label": "域名当前状态",
+          "required": false,
+          "type": "string",
+          "enum": ["正常", "已过期", "赎回期", "已删除", "不确定"],
+          "description": "域名当前运行状态，影响查询结果"
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "说明查询目的和期望获取的具体信息",
+          "maxLength": 1000
+        }
+      ]
+    },
+    {
+      "name": "域名注册/续费/赎回",
+      "keywords": [
+        "域名注册",
+        "域名续费",
+        "域名赎回",
+        "新注册",
+        "续费失败",
+        "赎回过期域名"
+      ],
+      "categoryKeywords": [
+        "注册",
+        "续费",
+        "赎回"
+      ],
+      "categoryHints": [
+        "域名注册/续费/赎回"
+      ],
+      "collect": [
+        {
+          "field": "domainName",
+          "label": "域名",
+          "required": true,
+          "type": "string",
+          "description": "涉及的域名，如 test.cn",
+          "maxLength": 253
+        },
+        {
+          "field": "registrationStatus",
+          "label": "域名注册状态",
+          "required": true,
+          "type": "string",
+          "enum": ["未注册", "已注册", "已过期", "赎回期", "已删除"],
+          "description": "域名当前的注册状态，决定可用操作"
+        },
+        {
+          "field": "orderNumber",
+          "label": "订单号",
+          "required": false,
+          "type": "string",
+          "description": "注册/续费/赎回的订单编号",
+          "maxLength": 120
+        },
+        {
+          "field": "registrationPeriod",
+          "label": "注册/续费年限",
+          "required": false,
+          "type": "string",
+          "description": "注册或续费的年限，赎回期为过期后30天内",
+          "maxLength": 64
+        },
+        {
+          "field": "redemptionDeadline",
+          "label": "赎回截止时间",
+          "required": false,
+          "type": "string",
+          "description": "赎回期域名的最后赎回时间，精确到日期",
+          "maxLength": 64
+        },
+        {
+          "field": "errorMessage",
+          "label": "错误信息",
+          "required": false,
+          "type": "string",
+          "description": "注册/续费/赎回失败时的错误提示",
+          "maxLength": 1000
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "说明具体需求和遇到的问题",
+          "maxLength": 1000
+        }
+      ]
+    },
+    {
+      "name": "域名实名认证",
+      "keywords": [
+        "实名认证",
+        "认证材料",
+        "认证状态",
+        "认证失败",
+        "实名审核"
+      ],
+      "categoryKeywords": [
+        "实名",
+        "认证",
+        "审核"
+      ],
+      "categoryHints": [
+        "域名实名认证"
+      ],
+      "collect": [
+        {
+          "field": "domainName",
+          "label": "域名",
+          "required": true,
+          "type": "string",
+          "description": "需实名认证的域名，如 mydomain.xyz",
+          "maxLength": 253
+        },
+        {
+          "field": "authStatus",
+          "label": "认证状态",
+          "required": true,
+          "type": "string",
+          "enum": ["未认证", "审核中", "已认证", "认证失败"],
+          "description": "域名当前的实名认证状态"
+        },
+        {
+          "field": "authEntityType",
+          "label": "认证主体类型",
+          "required": true,
+          "type": "string",
+          "enum": ["个人", "企业"],
+          "description": "域名持有者类型，影响所需材料"
+        },
+        {
+          "field": "idNumber",
+          "label": "证件号码",
+          "required": false,
+          "type": "string",
+          "description": "个人为身份证号，企业为统一社会信用代码",
+          "maxLength": 120
+        },
+        {
+          "field": "errorMessage",
+          "label": "认证失败原因",
+          "required": false,
+          "type": "string",
+          "description": "认证被拒时的审核反馈原因",
+          "maxLength": 1000
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "说明认证需求和遇到的问题",
+          "maxLength": 1000
+        }
+      ]
+    },
+    {
+      "name": "域名转移（转入/转出/账号间转移）流程咨询",
+      "keywords": [
+        "域名转移",
+        "域名转入",
+        "域名转出",
+        "PUSH转移",
+        "账号间转移",
+        "转移码"
+      ],
+      "categoryKeywords": [
+        "转移",
+        "转入",
+        "转出"
+      ],
+      "categoryHints": [
+        "域名转移流程咨询"
+      ],
+      "collect": [
+        {
+          "field": "domainName",
+          "label": "域名",
+          "required": true,
+          "type": "string",
+          "description": "涉及转移的域名，如 www.example.com",
+          "maxLength": 253
+        },
+        {
+          "field": "transferType",
+          "label": "转移类型",
+          "required": true,
+          "type": "string",
+          "enum": ["转入", "转出", "PUSH", "账号间转移"],
+          "description": "域名转移的方向和方式"
+        },
+        {
+          "field": "targetAccount",
+          "label": "目标账号",
+          "required": false,
+          "type": "string",
+          "description": "PUSH转移或账号间转移的目标账号标识",
+          "maxLength": 120
+        },
+        {
+          "field": "transferStatus",
+          "label": "转移状态",
+          "required": false,
+          "type": "string",
+          "enum": ["待转移", "转移中", "已完成", "失败"],
+          "description": "当前转移进度"
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "说明转移需求和遇到的问题",
+          "maxLength": 1000
+        }
+      ]
+    },
+    {
+      "name": "域名注销/退款",
+      "keywords": [
+        "域名注销",
+        "域名退款",
+        "取消域名",
+        "退费"
+      ],
+      "categoryKeywords": [
+        "注销",
+        "退款"
+      ],
+      "categoryHints": [
+        "域名注销/退款"
+      ],
+      "collect": [
+        {
+          "field": "domainName",
+          "label": "域名",
+          "required": true,
+          "type": "string",
+          "description": "需注销或退款的域名，如 test.cn",
+          "maxLength": 253
+        },
+        {
+          "field": "orderNumber",
+          "label": "订单号",
+          "required": false,
+          "type": "string",
+          "description": "关联的订单编号",
+          "maxLength": 120
+        },
+        {
+          "field": "refundReason",
+          "label": "退款原因",
+          "required": true,
+          "type": "string",
+          "description": "客户申请退款的具体原因",
+          "maxLength": 500
+        },
+        {
+          "field": "refundAmount",
+          "label": "退款金额",
+          "required": false,
+          "type": "string",
+          "description": "期望退还的费用金额",
+          "maxLength": 64
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "说明注销/退款需求和背景",
+          "maxLength": 1000
+        }
+      ]
+    },
+    {
+      "name": "域名过户或信息修改",
+      "keywords": [
+        "域名过户",
+        "信息修改",
+        "修改持有者",
+        "修改邮箱",
+        "企业过户"
+      ],
+      "categoryKeywords": [
+        "过户",
+        "修改",
+        "信息"
+      ],
+      "categoryHints": [
+        "域名过户或信息修改"
+      ],
+      "collect": [
+        {
+          "field": "domainName",
+          "label": "域名",
+          "required": true,
+          "type": "string",
+          "description": "需过户或修改信息的域名，如 mydomain.xyz",
+          "maxLength": 253
+        },
+        {
+          "field": "modificationType",
+          "label": "修改类型",
+          "required": true,
+          "type": "string",
+          "enum": ["持有者", "邮箱", "电话", "地址"],
+          "description": "需要修改的信息类型"
+        },
+        {
+          "field": "newTemplateId",
+          "label": "新信息模板ID",
+          "required": false,
+          "type": "string",
+          "description": "过户时使用的新持有者信息模板ID",
+          "maxLength": 120
+        },
+        {
+          "field": "businessLicense",
+          "label": "营业执照",
+          "required": false,
+          "type": "string",
+          "description": "企业过户时需提供营业执照信息",
+          "maxLength": 120
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "说明过户/修改需求和当前持有者信息",
+          "maxLength": 1000
+        }
+      ]
+    },
+    {
+      "name": "域名交易问题",
+      "keywords": [
+        "域名交易",
+        "一口价",
+        "竞价",
+        "优选域名",
+        "域名购买"
+      ],
+      "categoryKeywords": [
+        "交易",
+        "购买",
+        "竞价"
+      ],
+      "categoryHints": [
+        "域名交易问题"
+      ],
+      "collect": [
+        {
+          "field": "domainName",
+          "label": "域名",
+          "required": true,
+          "type": "string",
+          "description": "交易的域名，如 www.example.com",
+          "maxLength": 253
+        },
+        {
+          "field": "tradeType",
+          "label": "交易类型",
+          "required": true,
+          "type": "string",
+          "enum": ["一口价", "竞价", "优选域名"],
+          "description": "域名交易的方式"
+        },
+        {
+          "field": "tradeStatus",
+          "label": "交易状态",
+          "required": false,
+          "type": "string",
+          "enum": ["处理中", "待转移", "已完成", "失败"],
+          "description": "当前交易的进度状态"
+        },
+        {
+          "field": "tradeOrderNumber",
+          "label": "交易订单号",
+          "required": false,
+          "type": "string",
+          "description": "域名交易订单编号",
+          "maxLength": 120
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "说明交易需求和遇到的问题",
+          "maxLength": 1000
+        }
+      ]
+    },
+    {
+      "name": "域名管理（控制台操作类问题）",
+      "keywords": [
+        "DNS修改",
+        "域名锁定",
+        "域名解锁",
+        "证书下载",
+        "备案授权",
+        "控制台操作"
+      ],
+      "categoryKeywords": [
+        "管理",
+        "控制台",
+        "操作"
+      ],
+      "categoryHints": [
+        "域名管理（控制台操作类问题）"
+      ],
+      "collect": [
+        {
+          "field": "domainName",
+          "label": "域名",
+          "required": true,
+          "type": "string",
+          "description": "需管理的域名，如 test.cn",
+          "maxLength": 253
+        },
+        {
+          "field": "managementOperation",
+          "label": "管理操作类型",
+          "required": true,
+          "type": "string",
+          "enum": ["DNS修改", "锁定", "解锁", "证书下载", "备案授权"],
+          "description": "客户期望在控制台执行的操作"
+        },
+        {
+          "field": "consoleUrl",
+          "label": "控制台URL",
+          "required": false,
+          "type": "string",
+          "description": "操作页面的控制台链接",
+          "maxLength": 500
+        },
+        {
+          "field": "errorMessage",
+          "label": "错误信息",
+          "required": false,
+          "type": "string",
+          "description": "控制台操作失败时的错误提示",
+          "maxLength": 1000
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "说明管理需求和遇到的问题",
+          "maxLength": 1000
+        }
+      ]
+    },
+    {
+      "name": "域名处罚/安全问题",
+      "keywords": [
+        "域名处罚",
+        "违规封停",
+        "HTTP拦截",
+        "安全锁",
+        "403拦截",
+        "alreject"
+      ],
+      "categoryKeywords": [
+        "处罚",
+        "安全",
+        "封停"
+      ],
+      "categoryHints": [
+        "域名处罚/安全问题"
+      ],
+      "collect": [
+        {
+          "field": "domainName",
+          "label": "域名",
+          "required": true,
+          "type": "string",
+          "description": "被处罚或存在安全问题的域名，如 mydomain.xyz",
+          "maxLength": 253
+        },
+        {
+          "field": "violationType",
+          "label": "违规类型",
+          "required": true,
+          "type": "string",
+          "enum": ["违规信息", "安全攻击", "未备案"],
+          "description": "域名被处罚的原因类型"
+        },
+        {
+          "field": "blockType",
+          "label": "封禁类型",
+          "required": false,
+          "type": "string",
+          "enum": ["HTTP拦截", "解析暂停", "ClientHold"],
+          "description": "域名被限制访问的方式"
+        },
+        {
+          "field": "remediationStatus",
+          "label": "整改状态",
+          "required": false,
+          "type": "string",
+          "description": "客户是否已完成整改及当前处理进度",
+          "maxLength": 500
+        },
+        {
+          "field": "securityLockStatus",
+          "label": "安全锁状态",
+          "required": false,
+          "type": "string",
+          "enum": ["未锁定", "已锁定", "解锁中"],
+          "description": "域名安全锁的当前状态"
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "说明处罚情况、影响范围和期望的处理方式",
+          "maxLength": 1000
+        }
+      ]
+    },
+    {
+      "name": "DNS管理",
+      "keywords": [
+        "DNS管理",
+        "NS修改",
+        "DNS服务器修改",
+        "TXT记录",
+        "SPF记录",
+        "解析传播"
+      ],
+      "categoryKeywords": [
+        "DNS",
+        "解析",
+        "NS"
+      ],
+      "categoryHints": [
+        "DNS管理"
+      ],
+      "collect": [
+        {
+          "field": "domainName",
+          "label": "域名",
+          "required": true,
+          "type": "string",
+          "description": "需管理DNS的域名，如 www.example.com",
+          "maxLength": 253
+        },
+        {
+          "field": "dnsOperation",
+          "label": "DNS操作类型",
+          "required": true,
+          "type": "string",
+          "enum": ["NS修改", "TXT合并", "解析传播"],
+          "description": "客户期望执行的DNS操作"
+        },
+        {
+          "field": "oldNs",
+          "label": "原DNS服务器",
+          "required": false,
+          "type": "string",
+          "description": "修改前的NS服务器地址",
+          "maxLength": 253
+        },
+        {
+          "field": "newNs",
+          "label": "新DNS服务器",
+          "required": false,
+          "type": "string",
+          "description": "修改后的NS服务器地址",
+          "maxLength": 253
+        },
+        {
+          "field": "txtRecordValue",
+          "label": "TXT记录值",
+          "required": false,
+          "type": "string",
+          "description": "TXT/SPF记录的具体值，合并时需提供",
+          "maxLength": 500
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "说明DNS管理需求和遇到的问题",
+          "maxLength": 1000
+        }
+      ]
+    }
+  ]
+}

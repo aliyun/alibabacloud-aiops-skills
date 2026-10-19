@@ -1,0 +1,1503 @@
+{
+  "product": "finance",
+  "aliases": [
+    "财务",
+    "费用",
+    "账单",
+    "阿里云财务",
+    "Billing & Finance"
+  ],
+  "issueTypes": [
+    {
+      "name": "订单咨询（含新购、续费/过户、升降配、订单支付）",
+      "keywords": [
+        "订单",
+        "新购",
+        "续费",
+        "过户",
+        "升降配",
+        "订单支付",
+        "订单状态"
+      ],
+      "categoryKeywords": [
+        "订单",
+        "购买",
+        "续费",
+        "支付"
+      ],
+      "categoryHints": [
+        "订单咨询（新购/续费/过户/升降配/订单支付）"
+      ],
+      "collect": [
+        {
+          "field": "accountId",
+          "label": "账号UID",
+          "required": true,
+          "type": "string",
+          "description": "阿里云主账号UID，用于定位订单归属",
+          "maxLength": 64
+        },
+        {
+          "field": "orderNumber",
+          "label": "订单号",
+          "required": false,
+          "type": "string",
+          "description": "涉及具体订单时填写，格式如 20xxxxxxxxxxxxxxx",
+          "maxLength": 64
+        },
+        {
+          "field": "orderType",
+          "label": "订单类型",
+          "required": true,
+          "type": "string",
+          "enum": [
+            "新购",
+            "续费",
+            "过户",
+            "升降配",
+            "订单支付",
+            "其他"
+          ],
+          "description": "订单操作类型，决定处理路径"
+        },
+        {
+          "field": "productCode",
+          "label": "产品代码",
+          "required": false,
+          "type": "string",
+          "description": "订单关联的产品代码（如 ecs、rds 等）",
+          "maxLength": 120
+        },
+        {
+          "field": "billingMode",
+          "label": "计费模式",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "按量付费",
+            "包年包月",
+            "节省计划",
+            "不确定"
+          ],
+          "description": "订单涉及的计费模式"
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "说明订单遇到的具体问题和期望处理结果",
+          "maxLength": 1000
+        },
+        {
+          "field": "occurrenceTime",
+          "label": "发生时间",
+          "required": false,
+          "type": "string",
+          "description": "问题发生或订单创建的时间，包含日期和时区",
+          "maxLength": 64
+        },
+        {
+          "field": "demandType",
+          "label": "诉求类型",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "订单状态查询",
+            "支付失败排查",
+            "订单修改",
+            "取消订单",
+            "其他"
+          ],
+          "description": "客户期望的处理方式"
+        },
+        {
+          "field": "paymentMethod",
+          "label": "支付方式",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "支付宝",
+            "银行对公汇款",
+            "代金券抵扣",
+            "阿里云APP",
+            "其他"
+          ],
+          "description": "客户使用的支付方式，部分支付方式有跳转失败等问题"
+        },
+        {
+          "field": "browserInfo",
+          "label": "浏览器信息",
+          "required": false,
+          "type": "string",
+          "description": "支付跳转失败时需排查浏览器兼容性",
+          "maxLength": 200
+        },
+        {
+          "field": "transferScope",
+          "label": "过户范围",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "无过户",
+            "ECS过户",
+            "EIP过户",
+            "多产品过户",
+            "其他"
+          ],
+          "description": "仅支持部分产品过户（ECS包年包月/按量、EIP按量）"
+        }
+      ]
+    },
+    {
+      "name": "退订咨询",
+      "keywords": [
+        "退订",
+        "退款",
+        "退货",
+        "取消订阅",
+        "退费"
+      ],
+      "categoryKeywords": [
+        "退订",
+        "退款",
+        "退费"
+      ],
+      "categoryHints": [
+        "退订咨询（退款/退费/取消订阅）"
+      ],
+      "collect": [
+        {
+          "field": "accountId",
+          "label": "账号UID",
+          "required": true,
+          "type": "string",
+          "description": "阿里云主账号UID，用于定位退订订单归属",
+          "maxLength": 64
+        },
+        {
+          "field": "orderNumber",
+          "label": "订单号",
+          "required": true,
+          "type": "string",
+          "description": "需退订的原始订单号",
+          "maxLength": 64
+        },
+        {
+          "field": "productId",
+          "label": "产品/实例标识",
+          "required": false,
+          "type": "string",
+          "description": "退订涉及的产品实例ID",
+          "maxLength": 120
+        },
+        {
+          "field": "billingMode",
+          "label": "计费模式",
+          "required": true,
+          "type": "string",
+          "enum": [
+            "按量付费",
+            "包年包月",
+            "节省计划",
+            "不确定"
+          ],
+          "description": "不同计费模式的退费规则不同"
+        },
+        {
+          "field": "refundReason",
+          "label": "退订原因",
+          "required": true,
+          "type": "string",
+          "enum": [
+            "不需要了",
+            "买错了",
+            "产品不满足需求",
+            "费用太高",
+            "重复购买",
+            "其他"
+          ],
+          "description": "退订原因影响退款比例和审批路径"
+        },
+        {
+          "field": "disputedAmount",
+          "label": "争议/退款金额",
+          "required": false,
+          "type": "string",
+          "description": "客户期望退还的金额",
+          "maxLength": 64
+        },
+        {
+          "field": "purchaseDate",
+          "label": "购买日期",
+          "required": false,
+          "type": "string",
+          "description": "原始购买日期，用于判断是否在退款窗口期内",
+          "maxLength": 64
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "详细说明退订诉求和背景",
+          "maxLength": 1000
+        },
+        {
+          "field": "demandType",
+          "label": "诉求类型",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "退款",
+            "调账减免",
+            "费用解释",
+            "优惠补偿"
+          ],
+          "description": "客户期望的处理方式"
+        },
+        {
+          "field": "usageStatus",
+          "label": "使用状态",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "未使用",
+            "已部分使用",
+            "已全部使用",
+            "不确定"
+          ],
+          "description": "退费时资源是否已使用，影响退费比例"
+        },
+        {
+          "field": "refundPolicy",
+          "label": "退费规则",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "支持全额退款",
+            "不支持退款",
+            "按比例退款",
+            "不确定"
+          ],
+          "description": "部分优惠订单（如学生专属算力包）不支持退款"
+        },
+        {
+          "field": "complaintRisk",
+          "label": "投诉风险",
+          "required": false,
+          "type": "boolean",
+          "description": "客户是否有投诉倾向（如12315投诉），需触发客情流程"
+        }
+      ]
+    },
+    {
+      "name": "合同咨询",
+      "keywords": [
+        "合同",
+        "协议",
+        "采购合同",
+        "电子合同",
+        "合同盖章",
+        "合同模板"
+      ],
+      "categoryKeywords": [
+        "合同",
+        "协议",
+        "盖章"
+      ],
+      "categoryHints": [
+        "合同咨询（采购合同/电子合同/合同盖章）"
+      ],
+      "collect": [
+        {
+          "field": "accountId",
+          "label": "账号UID",
+          "required": true,
+          "type": "string",
+          "description": "阿里云主账号UID",
+          "maxLength": 64
+        },
+        {
+          "field": "contractNumber",
+          "label": "合同编号",
+          "required": false,
+          "type": "string",
+          "description": "已有合同编号，用于查询或修改",
+          "maxLength": 64
+        },
+        {
+          "field": "contractType",
+          "label": "合同类型",
+          "required": true,
+          "type": "string",
+          "enum": [
+            "新签合同",
+            "合同续签",
+            "合同变更",
+            "合同查询",
+            "合同盖章",
+            "其他"
+          ],
+          "description": "合同操作类型"
+        },
+        {
+          "field": "contractSubject",
+          "label": "合同主体",
+          "required": false,
+          "type": "string",
+          "description": "合同签约方主体名称（如阿里云计算有限公司）",
+          "maxLength": 200
+        },
+        {
+          "field": "orderNumber",
+          "label": "关联订单号",
+          "required": false,
+          "type": "string",
+          "description": "合同关联的订单号",
+          "maxLength": 64
+        },
+        {
+          "field": "annualAmount",
+          "label": "年度合同金额",
+          "required": false,
+          "type": "string",
+          "description": "合同涉及的年度采购金额，影响合同审批层级",
+          "maxLength": 64
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "说明合同咨询的具体问题和期望结果",
+          "maxLength": 1000
+        },
+        {
+          "field": "contactInfo",
+          "label": "联系人信息",
+          "required": false,
+          "type": "string",
+          "description": "合同对接人姓名和联系电话",
+          "maxLength": 200
+        },
+        {
+          "field": "contractStatus",
+          "label": "合同状态",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "未申请",
+            "申请中",
+            "已签订",
+            "需修改甲方",
+            "不支持在线申请"
+          ],
+          "description": "部分企业（如中国联通）不支持在线申请电子合同"
+        },
+        {
+          "field": "companyName",
+          "label": "企业名称",
+          "required": false,
+          "type": "string",
+          "description": "合同甲方企业名称，修改甲方时需提供营业执照",
+          "maxLength": 200
+        }
+      ]
+    },
+    {
+      "name": "卡券咨询（代金券、优惠券、储值卡等）",
+      "keywords": [
+        "代金券",
+        "优惠券",
+        "储值卡",
+        "卡券",
+        "券码",
+        "折扣券",
+        "红包"
+      ],
+      "categoryKeywords": [
+        "卡券",
+        "代金券",
+        "优惠券",
+        "储值卡"
+      ],
+      "categoryHints": [
+        "卡券咨询（代金券/优惠券/储值卡）"
+      ],
+      "collect": [
+        {
+          "field": "accountId",
+          "label": "账号UID",
+          "required": true,
+          "type": "string",
+          "description": "阿里云主账号UID，卡券归属账号",
+          "maxLength": 64
+        },
+        {
+          "field": "voucherType",
+          "label": "卡券类型",
+          "required": true,
+          "type": "string",
+          "enum": [
+            "代金券",
+            "优惠券",
+            "储值卡",
+            "折扣券",
+            "其他"
+          ],
+          "description": "卡券类型决定使用规则和有效期"
+        },
+        {
+          "field": "voucherCode",
+          "label": "卡券码",
+          "required": false,
+          "type": "string",
+          "description": "具体卡券码或券ID",
+          "maxLength": 120
+        },
+        {
+          "field": "voucherStatus",
+          "label": "卡券状态",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "未使用",
+            "已使用",
+            "已过期",
+            "已锁定",
+            "不确定"
+          ],
+          "description": "卡券当前状态"
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "说明卡券遇到的具体问题（无法使用/未到账/过期等）",
+          "maxLength": 1000
+        },
+        {
+          "field": "expectedAction",
+          "label": "期望处理",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "激活/发放",
+            "延期",
+            "退款",
+            "使用咨询",
+            "其他"
+          ],
+          "description": "客户期望的处理方式"
+        },
+        {
+          "field": "orderNumber",
+          "label": "关联订单号",
+          "required": false,
+          "type": "string",
+          "description": "卡券使用时关联的订单号",
+          "maxLength": 64
+        },
+        {
+          "field": "voucherSource",
+          "label": "卡券来源",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "活动赠送",
+            "学生优惠",
+            "合作伙伴",
+            "客服申请",
+            "其他"
+          ],
+          "description": "卡券获取渠道，影响使用范围"
+        },
+        {
+          "field": "partnerIntent",
+          "label": "合作意向",
+          "required": false,
+          "type": "boolean",
+          "description": "客户是否有合作伙伴/代理商转售意向，需转商务经理"
+        }
+      ]
+    },
+    {
+      "name": "资源包&节省计划相关",
+      "keywords": [
+        "资源包",
+        "节省计划",
+        "预留实例",
+        "预付费资源包",
+        "容量包",
+        "Savings Plan"
+      ],
+      "categoryKeywords": [
+        "资源包",
+        "节省计划",
+        "预留"
+      ],
+      "categoryHints": [
+        "资源包&节省计划相关（购买/抵扣/退款/查询）"
+      ],
+      "collect": [
+        {
+          "field": "accountId",
+          "label": "账号UID",
+          "required": true,
+          "type": "string",
+          "description": "阿里云主账号UID",
+          "maxLength": 64
+        },
+        {
+          "field": "packageType",
+          "label": "资源包类型",
+          "required": true,
+          "type": "string",
+          "enum": [
+            "资源包",
+            "节省计划",
+            "预留实例",
+            "不确定"
+          ],
+          "description": "资源包或节省计划类型"
+        },
+        {
+          "field": "packageId",
+          "label": "资源包实例ID",
+          "required": false,
+          "type": "string",
+          "description": "资源包实例标识",
+          "maxLength": 120
+        },
+        {
+          "field": "orderNumber",
+          "label": "订单号",
+          "required": false,
+          "type": "string",
+          "description": "资源包购买订单号",
+          "maxLength": 64
+        },
+        {
+          "field": "billingPeriod",
+          "label": "账期",
+          "required": false,
+          "type": "string",
+          "description": "涉及抵扣问题的账期，如 2024-01",
+          "maxLength": 64
+        },
+        {
+          "field": "chargeItem",
+          "label": "费用项目",
+          "required": false,
+          "type": "string",
+          "description": "涉及抵扣的具体费用项目",
+          "maxLength": 120
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "说明资源包/节省计划的具体问题（未抵扣/抵扣异常/退款等）",
+          "maxLength": 1000
+        },
+        {
+          "field": "demandType",
+          "label": "诉求类型",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "抵扣排查",
+            "退款",
+            "购买咨询",
+            "变更",
+            "费用解释"
+          ],
+          "description": "客户期望的处理方式"
+        },
+        {
+          "field": "disputedAmount",
+          "label": "争议金额",
+          "required": false,
+          "type": "string",
+          "description": "涉及费用争议时的具体金额",
+          "maxLength": 64
+        },
+        {
+          "field": "usageQueryUrl",
+          "label": "用量查询链接",
+          "required": false,
+          "type": "string",
+          "description": "节省计划用量查询地址：billing-cost.console.aliyun.com/resource/spn/overview",
+          "maxLength": 500
+        },
+        {
+          "field": "studentOrder",
+          "label": "是否学生优惠订单",
+          "required": false,
+          "type": "boolean",
+          "description": "学生专属算力包等优惠订单不支持退款"
+        }
+      ]
+    },
+    {
+      "name": "资金信控咨询（含充值、提现、收支明细、信控额度）",
+      "keywords": [
+        "充值",
+        "提现",
+        "信控",
+        "额度",
+        "收支明细",
+        "资金",
+        "信用额度",
+        "可用余额"
+      ],
+      "categoryKeywords": [
+        "资金",
+        "信控",
+        "充值",
+        "提现"
+      ],
+      "categoryHints": [
+        "资金信控咨询（充值/提现/收支明细/信控额度）"
+      ],
+      "collect": [
+        {
+          "field": "accountId",
+          "label": "账号UID",
+          "required": true,
+          "type": "string",
+          "description": "阿里云主账号UID",
+          "maxLength": 64
+        },
+        {
+          "field": "fundType",
+          "label": "资金类型",
+          "required": true,
+          "type": "string",
+          "enum": [
+            "充值",
+            "提现",
+            "信控额度",
+            "收支明细",
+            "可用余额",
+            "其他"
+          ],
+          "description": "资金操作或咨询类型"
+        },
+        {
+          "field": "amount",
+          "label": "涉及金额",
+          "required": false,
+          "type": "string",
+          "description": "充值/提现/争议的具体金额",
+          "maxLength": 64
+        },
+        {
+          "field": "transactionTime",
+          "label": "交易时间",
+          "required": false,
+          "type": "string",
+          "description": "充值/提现等操作的发生时间",
+          "maxLength": 64
+        },
+        {
+          "field": "paymentChannel",
+          "label": "支付渠道",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "支付宝",
+            "银行卡",
+            "对公汇款",
+            "网银",
+            "其他"
+          ],
+          "description": "充值使用的支付渠道"
+        },
+        {
+          "field": "creditLimit",
+          "label": "信控额度",
+          "required": false,
+          "type": "string",
+          "description": "当前信控额度或期望调整的额度",
+          "maxLength": 64
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "详细说明资金/信控问题和期望结果",
+          "maxLength": 1000
+        },
+        {
+          "field": "demandType",
+          "label": "诉求类型",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "充值未到账",
+            "提现失败",
+            "额度调整",
+            "明细查询",
+            "费用解释",
+            "其他"
+          ],
+          "description": "客户期望的处理方式"
+        },
+        {
+          "field": "rechargeMethod",
+          "label": "充值方式",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "对公银行汇款",
+            "支付宝",
+            "在线充值",
+            "其他"
+          ],
+          "description": "对公汇款存在认领延迟问题"
+        },
+        {
+          "field": "rechargeStatus",
+          "label": "充值认领状态",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "已认领到账",
+            "已认领未到账",
+            "未认领",
+            "不确定"
+          ],
+          "description": "对公汇款已自动认领但余额为0时需排查"
+        },
+        {
+          "field": "withdrawalStatus",
+          "label": "提现状态",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "未申请",
+            "处理中",
+            "已到账",
+            "提现失败",
+            "不确定"
+          ],
+          "description": "提现到银行卡的处理状态"
+        }
+      ]
+    },
+    {
+      "name": "发票咨询",
+      "keywords": [
+        "发票",
+        "增值税",
+        "专票",
+        "普票",
+        "电子发票",
+        "纸质发票",
+        "开票",
+        "发票抬头"
+      ],
+      "categoryKeywords": [
+        "发票",
+        "开票",
+        "增值税"
+      ],
+      "categoryHints": [
+        "发票咨询（开票/抬头/邮寄/电子发票）"
+      ],
+      "collect": [
+        {
+          "field": "accountId",
+          "label": "账号UID",
+          "required": true,
+          "type": "string",
+          "description": "阿里云主账号UID",
+          "maxLength": 64
+        },
+        {
+          "field": "invoiceType",
+          "label": "发票类型",
+          "required": true,
+          "type": "string",
+          "enum": [
+            "增值税普通发票",
+            "增值税专用发票",
+            "电子普通发票",
+            "电子专用发票",
+            "不确定"
+          ],
+          "description": "发票类型决定开票流程和所需资质"
+        },
+        {
+          "field": "invoiceTitle",
+          "label": "发票抬头",
+          "required": false,
+          "type": "string",
+          "description": "发票抬头名称（企业名称或个人姓名）",
+          "maxLength": 200
+        },
+        {
+          "field": "billingPeriod",
+          "label": "开票账期",
+          "required": false,
+          "type": "string",
+          "description": "需要开票的账期，如 2024-01",
+          "maxLength": 64
+        },
+        {
+          "field": "invoiceAmount",
+          "label": "开票金额",
+          "required": false,
+          "type": "string",
+          "description": "需要开具发票的金额",
+          "maxLength": 64
+        },
+        {
+          "field": "invoiceStatus",
+          "label": "发票状态",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "未开票",
+            "开票中",
+            "已开票",
+            "已邮寄",
+            "开票失败",
+            "不确定"
+          ],
+          "description": "当前发票处理状态"
+        },
+        {
+          "field": "taxNumber",
+          "label": "税号",
+          "required": false,
+          "type": "string",
+          "description": "企业税号（统一社会信用代码），专票必填",
+          "maxLength": 64
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "说明发票具体问题（开票失败/抬头错误/未收到等）",
+          "maxLength": 1000
+        },
+        {
+          "field": "mailingAddress",
+          "label": "邮寄地址",
+          "required": false,
+          "type": "string",
+          "description": "纸质发票邮寄地址，含收件人、电话和地址",
+          "maxLength": 500
+        },
+        {
+          "field": "duplicateInvoiceRisk",
+          "label": "重复开票风险",
+          "required": false,
+          "type": "boolean",
+          "description": "客户担心跨月开票是否重复包含已开票费用"
+        },
+        {
+          "field": "invoiceManageUrl",
+          "label": "发票管理入口",
+          "required": false,
+          "type": "string",
+          "description": "发票管理页面：help.aliyun.com/zh/user-center/request-an-invoice",
+          "maxLength": 500
+        }
+      ]
+    },
+    {
+      "name": "费用账单咨询（含对账、分账、财务单元）",
+      "keywords": [
+        "账单",
+        "费用",
+        "对账",
+        "分账",
+        "财务单元",
+        "账单明细",
+        "消费明细",
+        "费用分摊"
+      ],
+      "categoryKeywords": [
+        "账单",
+        "费用",
+        "对账",
+        "分账"
+      ],
+      "categoryHints": [
+        "费用账单咨询（对账/分账/财务单元）"
+      ],
+      "collect": [
+        {
+          "field": "accountId",
+          "label": "账号UID",
+          "required": true,
+          "type": "string",
+          "description": "阿里云主账号UID",
+          "maxLength": 64
+        },
+        {
+          "field": "billingPeriod",
+          "label": "账期",
+          "required": true,
+          "type": "string",
+          "description": "咨询的账期月份，如 2024-01",
+          "maxLength": 64
+        },
+        {
+          "field": "chargeItem",
+          "label": "费用项目",
+          "required": false,
+          "type": "string",
+          "description": "具体有疑问的费用项目（如 ECS-计算、OSS-存储等）",
+          "maxLength": 120
+        },
+        {
+          "field": "billingMode",
+          "label": "计费模式",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "按量付费",
+            "包年包月",
+            "节省计划",
+            "不确定"
+          ],
+          "description": "费用涉及的计费模式"
+        },
+        {
+          "field": "disputedAmount",
+          "label": "争议金额",
+          "required": false,
+          "type": "string",
+          "description": "有争议的具体费用金额",
+          "maxLength": 64
+        },
+        {
+          "field": "financialUnit",
+          "label": "财务单元",
+          "required": false,
+          "type": "string",
+          "description": "分账涉及的财务单元名称",
+          "maxLength": 200
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "详细说明账单疑问、对账差异或分账需求",
+          "maxLength": 1000
+        },
+        {
+          "field": "demandType",
+          "label": "诉求类型",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "费用解释",
+            "对账差异",
+            "分账配置",
+            "调账减免",
+            "账单导出",
+            "其他"
+          ],
+          "description": "客户期望的处理方式"
+        },
+        {
+          "field": "resourceId",
+          "label": "资源标识",
+          "required": false,
+          "type": "string",
+          "description": "涉及具体资源的费用时填写资源ID",
+          "maxLength": 120
+        },
+        {
+          "field": "billingDetailUrl",
+          "label": "账单详情入口",
+          "required": false,
+          "type": "string",
+          "description": "费用中心账单详情页面链接，用于查看用量明细",
+          "maxLength": 500
+        },
+        {
+          "field": "unexpectedCharge",
+          "label": "异常扣费产品",
+          "required": false,
+          "type": "string",
+          "description": "客户未预期的扣费产品名称（如云安全中心、OSS外网流量等）",
+          "maxLength": 200
+        },
+        {
+          "field": "stopChargeAction",
+          "label": "停止计费方式",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "关闭服务",
+            "释放资源",
+            "转包年包月",
+            "不确定"
+          ],
+          "description": "关闭按量付费功能可停止计费但数据会清理"
+        }
+      ]
+    },
+    {
+      "name": "企业财务咨询（财务托管、财务管理、统一结算等）",
+      "keywords": [
+        "财务托管",
+        "财务管理",
+        "统一结算",
+        "企业财务",
+        "财务关系",
+        "主子账号",
+        "跨账号结算"
+      ],
+      "categoryKeywords": [
+        "企业财务",
+        "托管",
+        "统一结算"
+      ],
+      "categoryHints": [
+        "企业财务咨询（财务托管/财务管理/统一结算）"
+      ],
+      "collect": [
+        {
+          "field": "accountId",
+          "label": "主账号UID",
+          "required": true,
+          "type": "string",
+          "description": "企业主账号UID",
+          "maxLength": 64
+        },
+        {
+          "field": "financeFunction",
+          "label": "财务功能",
+          "required": true,
+          "type": "string",
+          "enum": [
+            "财务托管",
+            "财务管理",
+            "统一结算",
+            "财务关系建立/解除",
+            "其他"
+          ],
+          "description": "企业财务功能类型"
+        },
+        {
+          "field": "subAccountId",
+          "label": "子账号UID",
+          "required": false,
+          "type": "string",
+          "description": "关联的子账号UID，多账号场景下填写",
+          "maxLength": 64
+        },
+        {
+          "field": "relationStatus",
+          "label": "财务关系状态",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "未建立",
+            "已建立",
+            "解除中",
+            "已解除",
+            "不确定"
+          ],
+          "description": "主子账号财务关系当前状态"
+        },
+        {
+          "field": "billingPeriod",
+          "label": "账期",
+          "required": false,
+          "type": "string",
+          "description": "涉及统一结算的账期",
+          "maxLength": 64
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "说明企业财务功能的具体问题和期望",
+          "maxLength": 1000
+        },
+        {
+          "field": "enterpriseName",
+          "label": "企业名称",
+          "required": false,
+          "type": "string",
+          "description": "企业认证名称",
+          "maxLength": 200
+        },
+        {
+          "field": "demandType",
+          "label": "诉求类型",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "功能开通",
+            "关系配置",
+            "结算异常",
+            "功能咨询",
+            "关系解除",
+            "其他"
+          ],
+          "description": "客户期望的处理方式"
+        },
+        {
+          "field": "relatedAccounts",
+          "label": "关联账号信息",
+          "required": false,
+          "type": "string",
+          "description": "需关联的两个企业名称和阿里云账号UID",
+          "maxLength": 500
+        },
+        {
+          "field": "financialLinkType",
+          "label": "财务关联类型",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "统一充值",
+            "统一发票",
+            "余额划拨",
+            "资源过户",
+            "全量关联"
+          ],
+          "description": "客户期望的财务关联方式"
+        }
+      ]
+    },
+    {
+      "name": "成本优化相关（预算管理、成本分析、成本优化）",
+      "keywords": [
+        "成本优化",
+        "预算管理",
+        "成本分析",
+        "成本中心",
+        "费用优化",
+        "降本",
+        "成本管家"
+      ],
+      "categoryKeywords": [
+        "成本",
+        "预算",
+        "优化"
+      ],
+      "categoryHints": [
+        "成本优化相关（预算管理/成本分析/成本优化）"
+      ],
+      "collect": [
+        {
+          "field": "accountId",
+          "label": "账号UID",
+          "required": true,
+          "type": "string",
+          "description": "阿里云主账号UID",
+          "maxLength": 64
+        },
+        {
+          "field": "optimizationType",
+          "label": "优化类型",
+          "required": true,
+          "type": "string",
+          "enum": [
+            "预算管理",
+            "成本分析",
+            "成本优化建议",
+            "成本异常检测",
+            "其他"
+          ],
+          "description": "成本管理功能类型"
+        },
+        {
+          "field": "billingPeriod",
+          "label": "分析账期",
+          "required": false,
+          "type": "string",
+          "description": "成本分析涉及的账期范围",
+          "maxLength": 64
+        },
+        {
+          "field": "budgetAmount",
+          "label": "预算金额",
+          "required": false,
+          "type": "string",
+          "description": "预算管理中设定的预算金额",
+          "maxLength": 64
+        },
+        {
+          "field": "actualAmount",
+          "label": "实际消费金额",
+          "required": false,
+          "type": "string",
+          "description": "实际消费金额，用于与预算对比",
+          "maxLength": 64
+        },
+        {
+          "field": "productCode",
+          "label": "产品代码",
+          "required": false,
+          "type": "string",
+          "description": "需优化成本的产品代码",
+          "maxLength": 120
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "说明成本优化的具体需求和期望结果",
+          "maxLength": 1000
+        },
+        {
+          "field": "billingMode",
+          "label": "计费模式",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "按量付费",
+            "包年包月",
+            "节省计划",
+            "不确定"
+          ],
+          "description": "当前计费模式，影响优化建议方向"
+        },
+        {
+          "field": "costAnalysisUrl",
+          "label": "成本分析入口",
+          "required": false,
+          "type": "string",
+          "description": "成本分析页面链接",
+          "maxLength": 500
+        }
+      ]
+    },
+    {
+      "name": "个人认证开企业发票咨询",
+      "keywords": [
+        "个人认证",
+        "企业发票",
+        "个人账号开企业发票",
+        "认证升级",
+        "个人转企业"
+      ],
+      "categoryKeywords": [
+        "个人认证",
+        "企业发票",
+        "认证"
+      ],
+      "categoryHints": [
+        "个人认证开企业发票咨询"
+      ],
+      "collect": [
+        {
+          "field": "accountId",
+          "label": "账号UID",
+          "required": true,
+          "type": "string",
+          "description": "阿里云主账号UID（当前为个人认证）",
+          "maxLength": 64
+        },
+        {
+          "field": "currentAuthType",
+          "label": "当前认证类型",
+          "required": true,
+          "type": "string",
+          "enum": [
+            "个人认证",
+            "企业认证",
+            "不确定"
+          ],
+          "description": "账号当前实名认证类型"
+        },
+        {
+          "field": "invoiceType",
+          "label": "期望发票类型",
+          "required": true,
+          "type": "string",
+          "enum": [
+            "增值税普通发票",
+            "增值税专用发票",
+            "电子普通发票",
+            "电子专用发票"
+          ],
+          "description": "希望开具的企业发票类型"
+        },
+        {
+          "field": "enterpriseName",
+          "label": "企业名称",
+          "required": true,
+          "type": "string",
+          "description": "发票对应的企业全称",
+          "maxLength": 200
+        },
+        {
+          "field": "taxNumber",
+          "label": "企业税号",
+          "required": false,
+          "type": "string",
+          "description": "企业统一社会信用代码/税号",
+          "maxLength": 64
+        },
+        {
+          "field": "billingPeriod",
+          "label": "开票账期",
+          "required": false,
+          "type": "string",
+          "description": "需要开票的账期",
+          "maxLength": 64
+        },
+        {
+          "field": "invoiceAmount",
+          "label": "开票金额",
+          "required": false,
+          "type": "string",
+          "description": "需要开具发票的金额",
+          "maxLength": 64
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "说明个人认证账号开企业发票的具体诉求和困难",
+          "maxLength": 1000
+        }
+      ]
+    },
+    {
+      "name": "账单月结问题",
+      "keywords": [
+        "月结",
+        "账单月结",
+        "月度账单",
+        "月结账单",
+        "结算周期",
+        "月度结算"
+      ],
+      "categoryKeywords": [
+        "月结",
+        "账单",
+        "结算"
+      ],
+      "categoryHints": [
+        "账单月结问题（月度账单/结算周期）"
+      ],
+      "collect": [
+        {
+          "field": "accountId",
+          "label": "账号UID",
+          "required": true,
+          "type": "string",
+          "description": "阿里云主账号UID",
+          "maxLength": 64
+        },
+        {
+          "field": "billingPeriod",
+          "label": "账期",
+          "required": true,
+          "type": "string",
+          "description": "月结账单的账期月份，如 2024-01",
+          "maxLength": 64
+        },
+        {
+          "field": "chargeItem",
+          "label": "费用项目",
+          "required": false,
+          "type": "string",
+          "description": "月结账单中有问题的具体费用项目",
+          "maxLength": 120
+        },
+        {
+          "field": "billingMode",
+          "label": "计费模式",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "按量付费",
+            "包年包月",
+            "节省计划",
+            "不确定"
+          ],
+          "description": "月结涉及的计费模式"
+        },
+        {
+          "field": "totalAmount",
+          "label": "账单总额",
+          "required": false,
+          "type": "string",
+          "description": "月结账单总金额",
+          "maxLength": 64
+        },
+        {
+          "field": "disputedAmount",
+          "label": "争议金额",
+          "required": false,
+          "type": "string",
+          "description": "有争议的具体金额",
+          "maxLength": 64
+        },
+        {
+          "field": "settlementStatus",
+          "label": "结算状态",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "未结算",
+            "结算中",
+            "已结算",
+            "结算失败",
+            "不确定"
+          ],
+          "description": "月结账单当前结算状态"
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "详细说明月结账单问题和期望处理结果",
+          "maxLength": 1000
+        },
+        {
+          "field": "demandType",
+          "label": "诉求类型",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "费用解释",
+            "对账差异",
+            "调账减免",
+            "结算异常",
+            "账单导出",
+            "其他"
+          ],
+          "description": "客户期望的处理方式"
+        },
+        {
+          "field": "settlementPeriod",
+          "label": "结算周期",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "月结",
+            "季结",
+            "年结",
+            "不确定"
+          ],
+          "description": "账单结算周期"
+        }
+      ]
+    }
+  ]
+}

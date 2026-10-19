@@ -1,0 +1,1412 @@
+{
+  "product": "bailian",
+  "aliases": [
+    "百炼",
+    "DashScope",
+    "阿里云百炼",
+    "模型服务灵积"
+  ],
+  "issueTypes": [
+    {
+      "name": "购买与费用咨询",
+      "keywords": [
+        "账单",
+        "计费",
+        "费用",
+        "扣费",
+        "欠费",
+        "额度",
+        "计费规则"
+      ],
+      "categoryKeywords": [
+        "购买",
+        "费用",
+        "账单"
+      ],
+      "categoryHints": [
+        "百炼购买与费用咨询"
+      ],
+      "collect": [
+        {
+          "field": "accountId",
+          "label": "账号标识",
+          "required": true,
+          "type": "string",
+          "description": "阿里云主账号UID，用于定位计费信息",
+          "maxLength": 64
+        },
+        {
+          "field": "orderNumber",
+          "label": "订单号",
+          "required": false,
+          "type": "string",
+          "description": "涉及具体订单时填写",
+          "maxLength": 120
+        },
+        {
+          "field": "billingPeriod",
+          "label": "账期",
+          "required": false,
+          "type": "string",
+          "description": "费用所属的计费周期，如2026-09",
+          "maxLength": 64
+        },
+        {
+          "field": "chargeItem",
+          "label": "费用项目",
+          "required": false,
+          "type": "string",
+          "description": "具体产生费用的项目，如Token调用费、资源包、模型推理费等",
+          "maxLength": 120
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题说明",
+          "required": true,
+          "type": "string",
+          "description": "说明费用疑问、期望核实内容和相关时间",
+          "maxLength": 1000
+        },
+        {
+          "field": "billingMode",
+          "label": "计费模式",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "按量付费",
+            "资源包",
+            "Token Plan",
+            "Coding Plan",
+            "节省计划",
+            "不确定"
+          ],
+          "description": "不同计费模式的费用规则不同"
+        },
+        {
+          "field": "disputedAmount",
+          "label": "争议金额",
+          "required": false,
+          "type": "string",
+          "description": "具体争议的费用金额",
+          "maxLength": 64
+        },
+        {
+          "field": "demandType",
+          "label": "诉求类型",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "退款",
+            "调账减免",
+            "费用解释",
+            "优惠补偿",
+            "更改付费类型"
+          ],
+          "description": "客户期望的处理方式"
+        },
+        {
+          "field": "subscriptionType",
+          "label": "订阅类型",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "Token Plan",
+            "Coding Plan",
+            "节省计划",
+            "资源包",
+            "按量付费",
+            "不确定"
+          ],
+          "description": "客户订阅的套餐类型，不同套餐的费用规则和退款政策不同"
+        },
+        {
+          "field": "creditsUsage",
+          "label": "Credits消耗情况",
+          "required": false,
+          "type": "string",
+          "description": "Token Plan/Coding Plan的Credits已用量和剩余量",
+          "maxLength": 200
+        },
+        {
+          "field": "voucherInfo",
+          "label": "优惠券/代金券信息",
+          "required": false,
+          "type": "string",
+          "description": "涉及的优惠券类型（学生代金券/通用优惠券）及金额，部分券不支持Token Plan",
+          "maxLength": 200
+        },
+        {
+          "field": "quotaStatus",
+          "label": "额度状态",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "额度已用尽",
+            "额度未用尽",
+            "额度未激活",
+            "不确定"
+          ],
+          "description": "月度Credits额度是否已用尽，影响是否需购买额外用量包"
+        }
+      ]
+    },
+    {
+      "name": "退订/退费问题",
+      "keywords": [
+        "退订",
+        "退费",
+        "退款",
+        "取消订阅",
+        "资源包退"
+      ],
+      "categoryKeywords": [
+        "退订",
+        "退费"
+      ],
+      "categoryHints": [
+        "百炼退订/退费问题"
+      ],
+      "collect": [
+        {
+          "field": "accountId",
+          "label": "账号标识",
+          "required": true,
+          "type": "string",
+          "description": "阿里云主账号UID",
+          "maxLength": 64
+        },
+        {
+          "field": "orderNumber",
+          "label": "订单号",
+          "required": false,
+          "type": "string",
+          "description": "需退费的订单号",
+          "maxLength": 120
+        },
+        {
+          "field": "resourcePackage",
+          "label": "资源包/套餐名称",
+          "required": false,
+          "type": "string",
+          "description": "如Token资源包、Coding Plan等",
+          "maxLength": 120
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题说明",
+          "required": true,
+          "type": "string",
+          "description": "说明退费原因和期望结果",
+          "maxLength": 1000
+        },
+        {
+          "field": "billingMode",
+          "label": "计费模式",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "按量付费",
+            "资源包",
+            "Token Plan",
+            "Coding Plan",
+            "节省计划",
+            "不确定"
+          ],
+          "description": "不同计费模式的退费规则不同"
+        },
+        {
+          "field": "refundReason",
+          "label": "退订原因",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "不再使用",
+            "价格过高",
+            "功能不满足",
+            "误购",
+            "其他"
+          ],
+          "description": "退订原因分类，影响退费比例"
+        },
+        {
+          "field": "disputedAmount",
+          "label": "争议金额",
+          "required": false,
+          "type": "string",
+          "description": "具体争议的费用金额",
+          "maxLength": 64
+        },
+        {
+          "field": "purchaseDate",
+          "label": "购买日期",
+          "required": false,
+          "type": "string",
+          "description": "资源包或套餐的购买日期",
+          "maxLength": 64
+        },
+        {
+          "field": "usageStatus",
+          "label": "使用状态",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "未使用",
+            "已部分使用",
+            "已全部使用",
+            "不确定"
+          ],
+          "description": "退费时套餐是否已使用，影响退费比例"
+        },
+        {
+          "field": "refundChannel",
+          "label": "退款渠道",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "工单退款",
+            "抖音直播间",
+            "其他"
+          ],
+          "description": "购买渠道不同退款路径不同，直播间购买的需联系直播间客服"
+        },
+        {
+          "field": "firstPurchase",
+          "label": "是否首次购买",
+          "required": false,
+          "type": "boolean",
+          "description": "部分优惠仅限首次购买，再次购买按原价"
+        }
+      ]
+    },
+    {
+      "name": "功能咨询",
+      "keywords": [
+        "功能咨询",
+        "使用咨询",
+        "如何使用",
+        "特性",
+        "方案",
+        "功能说明"
+      ],
+      "categoryKeywords": [
+        "功能",
+        "使用",
+        "咨询"
+      ],
+      "categoryHints": [
+        "百炼功能咨询"
+      ],
+      "collect": [
+        {
+          "field": "accountId",
+          "label": "账号标识",
+          "required": false,
+          "type": "string",
+          "description": "阿里云主账号UID，涉及账号级别问题时填写",
+          "maxLength": 64
+        },
+        {
+          "field": "modelName",
+          "label": "模型名称",
+          "required": false,
+          "type": "string",
+          "description": "如qwen-plus、qwen-max、qwen-turbo、wan-v2等",
+          "maxLength": 120
+        },
+        {
+          "field": "featureName",
+          "label": "咨询功能",
+          "required": true,
+          "type": "string",
+          "description": "希望了解或使用的功能名称",
+          "maxLength": 120
+        },
+        {
+          "field": "questionDescription",
+          "label": "咨询内容",
+          "required": true,
+          "type": "string",
+          "description": "说明目标、当前情况和具体疑问",
+          "maxLength": 1000
+        },
+        {
+          "field": "apiEndpoint",
+          "label": "API调用地址",
+          "required": false,
+          "type": "string",
+          "description": "涉及的DashScope API端点，如/v1/services/aigc/text-generation/generation",
+          "maxLength": 253
+        },
+        {
+          "field": "useCase",
+          "label": "使用场景",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "文本生成",
+            "多模态对话",
+            "视频/图片生成",
+            "语音合成",
+            "Embedding向量",
+            "其他"
+          ],
+          "description": "使用场景分类，用于快速定位功能模块"
+        },
+        {
+          "field": "callingMethod",
+          "label": "调用方式",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "API/SDK",
+            "控制台",
+            "OpenClaw/OpenCode",
+            "MCP协议",
+            "其他"
+          ],
+          "description": "客户的调用方式，决定排查路径"
+        },
+        {
+          "field": "requestId",
+          "label": "请求ID",
+          "required": false,
+          "type": "string",
+          "description": "排查模型调用问题时用于定位具体请求",
+          "maxLength": 120
+        },
+        {
+          "field": "modelInputType",
+          "label": "模型输入类型",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "文本",
+            "图片",
+            "视频",
+            "Word文档",
+            "多模态混合",
+            "其他"
+          ],
+          "description": "客户输入的数据类型，不同模型支持的输入类型不同"
+        },
+        {
+          "field": "screenshotUrl",
+          "label": "截图链接",
+          "required": false,
+          "type": "string",
+          "description": "页面截图或报错截图，工程师常要求提供截图排查",
+          "maxLength": 500
+        }
+      ]
+    },
+    {
+      "name": "控制台问题",
+      "keywords": [
+        "控制台报错",
+        "操作失败",
+        "权限问题",
+        "API Key",
+        "业务空间",
+        "控制台"
+      ],
+      "categoryKeywords": [
+        "控制台",
+        "权限",
+        "API Key"
+      ],
+      "categoryHints": [
+        "百炼控制台问题"
+      ],
+      "collect": [
+        {
+          "field": "accountId",
+          "label": "账号标识",
+          "required": true,
+          "type": "string",
+          "description": "阿里云主账号UID",
+          "maxLength": 64
+        },
+        {
+          "field": "operationName",
+          "label": "操作名称",
+          "required": true,
+          "type": "string",
+          "description": "如创建API Key、添加业务空间成员等",
+          "maxLength": 120
+        },
+        {
+          "field": "occurrenceTime",
+          "label": "发生时间",
+          "required": true,
+          "type": "string",
+          "description": "包含日期、时间和时区",
+          "maxLength": 64
+        },
+        {
+          "field": "errorCode",
+          "label": "错误码",
+          "required": false,
+          "type": "string",
+          "maxLength": 120
+        },
+        {
+          "field": "errorMessage",
+          "label": "错误信息",
+          "required": true,
+          "type": "string",
+          "description": "填写页面显示的完整错误信息并移除敏感内容",
+          "maxLength": 1000
+        },
+        {
+          "field": "apiKeyPrefix",
+          "label": "API Key前缀",
+          "required": false,
+          "type": "string",
+          "description": "涉及API Key问题时填写Key前缀（脱敏，仅前几位）",
+          "maxLength": 30
+        },
+        {
+          "field": "workspaceId",
+          "label": "业务空间标识",
+          "required": false,
+          "type": "string",
+          "description": "涉及业务空间操作时填写",
+          "maxLength": 120
+        },
+        {
+          "field": "permissionType",
+          "label": "权限类型",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "API Key管理",
+            "业务空间成员",
+            "RAM子账号授权",
+            "资源组权限",
+            "其他"
+          ],
+          "description": "权限问题分类，影响处理路径"
+        },
+        {
+          "field": "accountType",
+          "label": "账号类型",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "企业账号",
+            "个人账号"
+          ],
+          "description": "影响权限管理路径"
+        },
+        {
+          "field": "apiKeyType",
+          "label": "API Key类型",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "sk-（按量付费）",
+            "sk-sp-（Token Plan）",
+            "不确定"
+          ],
+          "description": "不同前缀的Key对应不同计费和地域限制"
+        },
+        {
+          "field": "baseUrl",
+          "label": "调用Base URL",
+          "required": false,
+          "type": "string",
+          "description": "API调用的Base URL，Token Plan仅支持华北2北京地域端点",
+          "maxLength": 253
+        },
+        {
+          "field": "regionLimit",
+          "label": "地域限制",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "华北2（北京）",
+            "不限地域",
+            "其他"
+          ],
+          "description": "Token Plan个人版仅支持华北2北京地域API端点"
+        }
+      ]
+    },
+    {
+      "name": "文档问题",
+      "keywords": [
+        "文档缺失",
+        "文档错误",
+        "文档不准确",
+        "示例过时",
+        "文档问题"
+      ],
+      "categoryKeywords": [
+        "文档",
+        "文档问题"
+      ],
+      "categoryHints": [
+        "百炼文档问题"
+      ],
+      "collect": [
+        {
+          "field": "docUrl",
+          "label": "文档链接",
+          "required": true,
+          "type": "string",
+          "description": "问题文档的完整URL地址",
+          "maxLength": 500
+        },
+        {
+          "field": "docIssueType",
+          "label": "文档问题类型",
+          "required": true,
+          "type": "string",
+          "enum": [
+            "文档缺失",
+            "内容错误",
+            "信息不准确",
+            "示例过时",
+            "其他"
+          ],
+          "description": "文档问题的具体类型"
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题描述",
+          "required": true,
+          "type": "string",
+          "description": "说明文档的具体问题及期望的正确内容",
+          "maxLength": 1000
+        },
+        {
+          "field": "modelName",
+          "label": "关联模型",
+          "required": false,
+          "type": "string",
+          "description": "文档涉及的模型名称",
+          "maxLength": 120
+        },
+        {
+          "field": "apiEndpoint",
+          "label": "关联API",
+          "required": false,
+          "type": "string",
+          "description": "文档涉及的API端点",
+          "maxLength": 253
+        },
+        {
+          "field": "suggestionContent",
+          "label": "改进建议",
+          "required": false,
+          "type": "string",
+          "description": "对文档改进的具体建议",
+          "maxLength": 500
+        }
+      ]
+    },
+    {
+      "name": "应用问题",
+      "keywords": [
+        "MCP",
+        "组件",
+        "数据集",
+        "应用调用",
+        "插件",
+        "应用模板"
+      ],
+      "categoryKeywords": [
+        "应用",
+        "MCP",
+        "组件"
+      ],
+      "categoryHints": [
+        "百炼应用问题"
+      ],
+      "collect": [
+        {
+          "field": "accountId",
+          "label": "账号标识",
+          "required": false,
+          "type": "string",
+          "description": "阿里云主账号UID，涉及账号级别问题时填写",
+          "maxLength": 64
+        },
+        {
+          "field": "appName",
+          "label": "应用名称",
+          "required": true,
+          "type": "string",
+          "description": "百炼平台上的应用或组件名称",
+          "maxLength": 120
+        },
+        {
+          "field": "appType",
+          "label": "应用类型",
+          "required": true,
+          "type": "string",
+          "enum": [
+            "MCP",
+            "组件",
+            "数据集",
+            "API调用",
+            "插件",
+            "应用模板",
+            "其他"
+          ],
+          "description": "应用类型分类，决定排查路径"
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题说明",
+          "required": true,
+          "type": "string",
+          "description": "说明目标、当前情况和具体问题",
+          "maxLength": 1000
+        },
+        {
+          "field": "modelName",
+          "label": "关联模型",
+          "required": false,
+          "type": "string",
+          "description": "应用调用的模型名称，如qwen-plus、qwen-max等",
+          "maxLength": 120
+        },
+        {
+          "field": "apiEndpoint",
+          "label": "API地址",
+          "required": false,
+          "type": "string",
+          "description": "应用调用的API端点",
+          "maxLength": 253
+        },
+        {
+          "field": "errorCode",
+          "label": "错误码",
+          "required": false,
+          "type": "string",
+          "maxLength": 120
+        },
+        {
+          "field": "errorMessage",
+          "label": "错误信息",
+          "required": false,
+          "type": "string",
+          "description": "填写完整错误信息并移除敏感内容",
+          "maxLength": 1000
+        },
+        {
+          "field": "workspaceId",
+          "label": "业务空间标识",
+          "required": false,
+          "type": "string",
+          "description": "应用所属的业务空间",
+          "maxLength": 120
+        },
+        {
+          "field": "appId",
+          "label": "应用ID",
+          "required": false,
+          "type": "string",
+          "description": "百炼平台上的应用标识",
+          "maxLength": 120
+        },
+        {
+          "field": "workflowDslVersion",
+          "label": "工作流DSL版本",
+          "required": false,
+          "type": "string",
+          "description": "工作流导入导出时涉及，不同版本可能不兼容",
+          "maxLength": 64
+        },
+        {
+          "field": "agentPublishStatus",
+          "label": "智能体发布状态",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "已创建未发布",
+            "已发布",
+            "发布失败",
+            "不确定"
+          ],
+          "description": "智能体在千问APP或百炼广场的发布状态"
+        }
+      ]
+    },
+    {
+      "name": "安全合规问题",
+      "keywords": [
+        "绿网",
+        "inappropriate content",
+        "内容审核",
+        "内容拦截",
+        "安全合规",
+        "违规内容"
+      ],
+      "categoryKeywords": [
+        "安全",
+        "合规",
+        "审核"
+      ],
+      "categoryHints": [
+        "百炼安全合规问题"
+      ],
+      "collect": [
+        {
+          "field": "accountId",
+          "label": "账号标识",
+          "required": true,
+          "type": "string",
+          "description": "阿里云主账号UID",
+          "maxLength": 64
+        },
+        {
+          "field": "modelName",
+          "label": "模型名称",
+          "required": false,
+          "type": "string",
+          "description": "触发审核的模型名称",
+          "maxLength": 120
+        },
+        {
+          "field": "contentDescription",
+          "label": "内容描述",
+          "required": true,
+          "type": "string",
+          "description": "描述被拦截或触发审核的内容场景",
+          "maxLength": 1000
+        },
+        {
+          "field": "occurrenceTime",
+          "label": "发生时间",
+          "required": true,
+          "type": "string",
+          "description": "包含日期、时间和时区",
+          "maxLength": 64
+        },
+        {
+          "field": "moderationAction",
+          "label": "审核动作",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "内容拦截",
+            "内容审核告警",
+            "绿网拦截",
+            "账号限制",
+            "其他"
+          ],
+          "description": "触发的审核动作类型"
+        },
+        {
+          "field": "requestContent",
+          "label": "请求内容摘要",
+          "required": false,
+          "type": "string",
+          "description": "触发审核的请求内容摘要（脱敏后填写）",
+          "maxLength": 500
+        },
+        {
+          "field": "impactScope",
+          "label": "影响范围",
+          "required": false,
+          "type": "string",
+          "description": "说明受影响的业务、调用频率和严重程度",
+          "maxLength": 500
+        },
+        {
+          "field": "blockedContentType",
+          "label": "被拦截内容类型",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "文本输入",
+            "图片内容",
+            "模型输出",
+            "不确定"
+          ],
+          "description": "内容安全拦截发生在输入还是输出阶段"
+        },
+        {
+          "field": "violationDetail",
+          "label": "违规详情",
+          "required": false,
+          "type": "string",
+          "description": "具体被拦截的文本片段或内容描述，用于核实拦截是否合理",
+          "maxLength": 500
+        }
+      ]
+    },
+    {
+      "name": "合作协议/备案",
+      "keywords": [
+        "合作协议",
+        "ICP备案",
+        "安全备案",
+        "数据合规",
+        "备案"
+      ],
+      "categoryKeywords": [
+        "合作",
+        "协议",
+        "备案"
+      ],
+      "categoryHints": [
+        "百炼合作协议/备案"
+      ],
+      "collect": [
+        {
+          "field": "accountId",
+          "label": "账号标识",
+          "required": true,
+          "type": "string",
+          "description": "阿里云主账号UID",
+          "maxLength": 64
+        },
+        {
+          "field": "cooperationType",
+          "label": "合作类型",
+          "required": true,
+          "type": "string",
+          "enum": [
+            "合作协议",
+            "ICP备案",
+            "安全备案",
+            "数据合规",
+            "其他"
+          ],
+          "description": "合作或备案的具体类型"
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题说明",
+          "required": true,
+          "type": "string",
+          "description": "说明合作需求、备案事项和期望结果",
+          "maxLength": 1000
+        },
+        {
+          "field": "companyName",
+          "label": "公司全称",
+          "required": false,
+          "type": "string",
+          "description": "涉及合作协议时填写公司全称",
+          "maxLength": 200
+        },
+        {
+          "field": "contactInfo",
+          "label": "联系方式",
+          "required": false,
+          "type": "string",
+          "description": "需商务跟进时填写联系电话",
+          "maxLength": 120
+        },
+        {
+          "field": "businessLicense",
+          "label": "营业执照号",
+          "required": false,
+          "type": "string",
+          "description": "涉及备案时填写统一社会信用代码",
+          "maxLength": 64
+        },
+        {
+          "field": "platformType",
+          "label": "上架平台类型",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "微信小程序",
+            "Android APP",
+            "iOS APP",
+            "其他"
+          ],
+          "description": "不同平台的备案要求不同"
+        },
+        {
+          "field": "filingType",
+          "label": "备案材料类型",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "算法备案",
+            "合作协议",
+            "深度合成服务证明",
+            "其他"
+          ],
+          "description": "需要的材料类型，可通过smartservice自助获取"
+        },
+        {
+          "field": "platformAppId",
+          "label": "平台AppID",
+          "required": false,
+          "type": "string",
+          "description": "客户在目标平台（如微信）的AppID",
+          "maxLength": 120
+        }
+      ]
+    },
+    {
+      "name": "三方模型问题",
+      "keywords": [
+        "云市场",
+        "minimax",
+        "Kimi",
+        "DeepSeek",
+        "三方模型",
+        "第三方模型"
+      ],
+      "categoryKeywords": [
+        "三方模型",
+        "云市场"
+      ],
+      "categoryHints": [
+        "百炼三方模型问题"
+      ],
+      "collect": [
+        {
+          "field": "accountId",
+          "label": "账号标识",
+          "required": false,
+          "type": "string",
+          "description": "阿里云主账号UID，涉及计费问题时填写",
+          "maxLength": 64
+        },
+        {
+          "field": "thirdPartyProvider",
+          "label": "三方提供商",
+          "required": true,
+          "type": "string",
+          "description": "如minimax、Kimi、DeepSeek等",
+          "maxLength": 120
+        },
+        {
+          "field": "modelName",
+          "label": "模型名称",
+          "required": false,
+          "type": "string",
+          "description": "三方模型的具体名称",
+          "maxLength": 120
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题说明",
+          "required": true,
+          "type": "string",
+          "description": "说明目标、当前情况和具体问题",
+          "maxLength": 1000
+        },
+        {
+          "field": "orderNumber",
+          "label": "订单号",
+          "required": false,
+          "type": "string",
+          "description": "云市场购买三方模型的订单号",
+          "maxLength": 120
+        },
+        {
+          "field": "apiEndpoint",
+          "label": "API地址",
+          "required": false,
+          "type": "string",
+          "description": "三方模型的API调用地址",
+          "maxLength": 253
+        },
+        {
+          "field": "errorCode",
+          "label": "错误码",
+          "required": false,
+          "type": "string",
+          "maxLength": 120
+        },
+        {
+          "field": "errorMessage",
+          "label": "错误信息",
+          "required": false,
+          "type": "string",
+          "description": "填写完整错误信息并移除敏感内容",
+          "maxLength": 1000
+        },
+        {
+          "field": "thirdPartyModelName",
+          "label": "三方模型名称",
+          "required": false,
+          "type": "string",
+          "description": "如minimax、Kimi、DeepSeek等三方模型名称",
+          "maxLength": 120
+        },
+        {
+          "field": "deploymentType",
+          "label": "部署类型",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "百炼自供",
+            "云市场第三方",
+            "不确定"
+          ],
+          "description": "同一模型可能有百炼自供和云市场第三方两种部署，性能和计费不同"
+        }
+      ]
+    },
+    {
+      "name": "活动咨询",
+      "keywords": [
+        "折扣",
+        "优惠",
+        "续费",
+        "节省计划",
+        "活动",
+        "赠送额度"
+      ],
+      "categoryKeywords": [
+        "活动",
+        "优惠",
+        "折扣"
+      ],
+      "categoryHints": [
+        "百炼活动咨询"
+      ],
+      "collect": [
+        {
+          "field": "accountId",
+          "label": "账号标识",
+          "required": false,
+          "type": "string",
+          "description": "阿里云主账号UID，涉及账号级别优惠时填写",
+          "maxLength": 64
+        },
+        {
+          "field": "activityType",
+          "label": "活动类型",
+          "required": true,
+          "type": "string",
+          "enum": [
+            "折扣优惠",
+            "续费优惠",
+            "节省计划",
+            "赠送额度",
+            "新购优惠",
+            "其他"
+          ],
+          "description": "客户咨询的活动或优惠类型"
+        },
+        {
+          "field": "questionDescription",
+          "label": "咨询内容",
+          "required": true,
+          "type": "string",
+          "description": "说明咨询的活动内容和期望结果",
+          "maxLength": 1000
+        },
+        {
+          "field": "orderNumber",
+          "label": "订单号",
+          "required": false,
+          "type": "string",
+          "description": "涉及具体订单优惠时填写",
+          "maxLength": 120
+        },
+        {
+          "field": "billingMode",
+          "label": "当前计费模式",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "按量付费",
+            "资源包",
+            "Token Plan",
+            "Coding Plan",
+            "节省计划",
+            "不确定"
+          ],
+          "description": "当前计费模式影响可享受的优惠"
+        },
+        {
+          "field": "expectedDiscount",
+          "label": "期望优惠",
+          "required": false,
+          "type": "string",
+          "description": "客户期望获得的优惠力度或方案",
+          "maxLength": 120
+        },
+        {
+          "field": "activityName",
+          "label": "活动名称",
+          "required": false,
+          "type": "string",
+          "description": "客户咨询的具体活动名称，如直播间9.9元Token Plan",
+          "maxLength": 200
+        },
+        {
+          "field": "discountType",
+          "label": "优惠类型",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "折扣优惠",
+            "代金券",
+            "续费优惠",
+            "节省计划",
+            "其他"
+          ],
+          "description": "客户咨询的优惠类型"
+        }
+      ]
+    },
+    {
+      "name": "一方模型问题",
+      "keywords": [
+        "qwen",
+        "wan",
+        "一方模型",
+        "百炼模型",
+        "qwen-plus",
+        "qwen-max",
+        "qwen-turbo"
+      ],
+      "categoryKeywords": [
+        "一方模型",
+        "qwen",
+        "wan"
+      ],
+      "categoryHints": [
+        "百炼一方模型问题"
+      ],
+      "collect": [
+        {
+          "field": "accountId",
+          "label": "账号标识",
+          "required": false,
+          "type": "string",
+          "description": "阿里云主账号UID，涉及计费或权限问题时填写",
+          "maxLength": 64
+        },
+        {
+          "field": "modelName",
+          "label": "模型名称",
+          "required": true,
+          "type": "string",
+          "description": "如qwen-plus、qwen-max、qwen-turbo、qwen-long、wan-v2等",
+          "maxLength": 120
+        },
+        {
+          "field": "modelType",
+          "label": "模型类型",
+          "required": true,
+          "type": "string",
+          "enum": [
+            "文本生成",
+            "多模态",
+            "视频",
+            "图片",
+            "语音",
+            "Embedding",
+            "其他"
+          ],
+          "description": "模型能力分类，决定排查路径"
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题说明",
+          "required": true,
+          "type": "string",
+          "description": "说明目标、当前情况和具体问题",
+          "maxLength": 1000
+        },
+        {
+          "field": "apiEndpoint",
+          "label": "API地址",
+          "required": false,
+          "type": "string",
+          "description": "模型调用的API端点，如/v1/services/aigc/text-generation/generation",
+          "maxLength": 253
+        },
+        {
+          "field": "errorCode",
+          "label": "错误码",
+          "required": false,
+          "type": "string",
+          "maxLength": 120
+        },
+        {
+          "field": "errorMessage",
+          "label": "错误信息",
+          "required": false,
+          "type": "string",
+          "description": "填写完整错误信息并移除敏感内容",
+          "maxLength": 1000
+        },
+        {
+          "field": "tokenUsage",
+          "label": "Token用量",
+          "required": false,
+          "type": "string",
+          "description": "当前Token使用量或配额情况",
+          "maxLength": 200
+        },
+        {
+          "field": "rateLimitInfo",
+          "label": "限流情况",
+          "required": false,
+          "type": "string",
+          "description": "429限流的RPM/TPM配额和当前值，如默认RPM 60/TPM 35000",
+          "maxLength": 200
+        },
+        {
+          "field": "modelStatus",
+          "label": "模型状态",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "正常可用",
+            "计划下线",
+            "已下线",
+            "不确定"
+          ],
+          "description": "部分模型计划下线（如178个模型2026-10-10下线），需确认替代方案"
+        },
+        {
+          "field": "performanceIssue",
+          "label": "性能问题类型",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "TPS慢",
+            "响应延迟",
+            "429限流",
+            "其他"
+          ],
+          "description": "性能问题的具体表现类型"
+        },
+        {
+          "field": "requestId",
+          "label": "请求ID",
+          "required": false,
+          "type": "string",
+          "description": "排查模型调用问题时用于定位具体请求",
+          "maxLength": 120
+        }
+      ]
+    },
+    {
+      "name": "AI工具集成",
+      "keywords": [
+        "OpenClaw",
+        "OpenCode",
+        "工具集成",
+        "AI工具",
+        "集成对接"
+      ],
+      "categoryKeywords": [
+        "工具集成",
+        "OpenClaw",
+        "OpenCode"
+      ],
+      "categoryHints": [
+        "百炼AI工具集成"
+      ],
+      "collect": [
+        {
+          "field": "accountId",
+          "label": "账号标识",
+          "required": false,
+          "type": "string",
+          "description": "阿里云主账号UID，涉及计费或权限问题时填写",
+          "maxLength": 64
+        },
+        {
+          "field": "toolName",
+          "label": "工具名称",
+          "required": true,
+          "type": "string",
+          "description": "如OpenClaw、OpenCode等",
+          "maxLength": 120
+        },
+        {
+          "field": "integrationType",
+          "label": "集成方式",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "API对接",
+            "SDK集成",
+            "MCP协议",
+            "插件安装",
+            "其他"
+          ],
+          "description": "工具与百炼的集成方式"
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题说明",
+          "required": true,
+          "type": "string",
+          "description": "说明目标、当前情况和具体问题",
+          "maxLength": 1000
+        },
+        {
+          "field": "modelName",
+          "label": "关联模型",
+          "required": false,
+          "type": "string",
+          "description": "工具调用的模型名称",
+          "maxLength": 120
+        },
+        {
+          "field": "apiEndpoint",
+          "label": "API地址",
+          "required": false,
+          "type": "string",
+          "description": "工具调用的API端点",
+          "maxLength": 253
+        },
+        {
+          "field": "apiKeyPrefix",
+          "label": "API Key前缀",
+          "required": false,
+          "type": "string",
+          "description": "涉及API Key问题时填写Key前缀（脱敏）",
+          "maxLength": 30
+        },
+        {
+          "field": "errorCode",
+          "label": "错误码",
+          "required": false,
+          "type": "string",
+          "maxLength": 120
+        },
+        {
+          "field": "errorMessage",
+          "label": "错误信息",
+          "required": false,
+          "type": "string",
+          "description": "填写完整错误信息并移除敏感内容",
+          "maxLength": 1000
+        },
+        {
+          "field": "planType",
+          "label": "Plan类型",
+          "required": false,
+          "type": "string",
+          "enum": [
+            "Token Plan个人版",
+            "Token Plan团队版",
+            "Coding Plan",
+            "按量付费",
+            "不确定"
+          ],
+          "description": "套餐类型，团队版仅限官方指定工具使用"
+        },
+        {
+          "field": "requestId",
+          "label": "请求ID",
+          "required": false,
+          "type": "string",
+          "description": "排查报错时用于定位具体请求",
+          "maxLength": 120
+        }
+      ]
+    }
+  ]
+}

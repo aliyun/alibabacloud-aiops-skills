@@ -1,0 +1,956 @@
+{
+  "product": "ecs",
+  "aliases": [
+    "云服务器 ECS",
+    "云服务器"
+  ],
+  "issueTypes": [
+    {
+      "name": "ECS功能与使用咨询",
+      "keywords": [
+        "功能咨询",
+        "使用咨询",
+        "如何使用",
+        "功能说明"
+      ],
+      "categoryKeywords": [
+        "功能",
+        "使用",
+        "咨询"
+      ],
+      "categoryHints": [
+        "ECS功能与使用咨询"
+      ],
+      "collect": [
+        {
+          "field": "regionId",
+          "label": "地域",
+          "required": true,
+          "type": "string",
+          "description": "实例所在地域标识",
+          "maxLength": 64
+        },
+        {
+          "field": "instanceId",
+          "label": "实例标识",
+          "required": false,
+          "type": "string",
+          "description": "涉及具体实例时填写",
+          "maxLength": 64
+        },
+        {
+          "field": "featureName",
+          "label": "咨询功能",
+          "required": true,
+          "type": "string",
+          "description": "希望了解或使用的功能名称",
+          "maxLength": 120
+        },
+        {
+          "field": "questionDescription",
+          "label": "咨询内容",
+          "required": true,
+          "type": "string",
+          "description": "说明目标、当前情况和具体疑问",
+          "maxLength": 1000
+        },
+        {
+          "field": "osType",
+          "label": "操作系统类型",
+          "required": false,
+          "type": "string",
+          "enum": ["Linux", "Windows", "其他"],
+          "description": "不同操作系统的功能路径和命令不同"
+        },
+        {
+          "field": "hasSnapshot",
+          "label": "是否有快照备份",
+          "required": false,
+          "type": "boolean",
+          "description": "涉及数据恢复类功能咨询时为关键前置条件"
+        },
+        {
+          "field": "componentName",
+          "label": "具体组件名称",
+          "required": false,
+          "type": "string",
+          "description": "客户常描述模糊（如\"助手异常\"），需精确组件名（云助手/云监控/性能扩展等）",
+          "maxLength": 120
+        }
+      ]
+    },
+    {
+      "name": "ECS性能与底层运维问题",
+      "keywords": [
+        "性能异常",
+        "负载高",
+        "卡顿",
+        "宕机",
+        "底层运维"
+      ],
+      "categoryKeywords": [
+        "性能",
+        "运维",
+        "底层"
+      ],
+      "categoryHints": [
+        "ECS性能与底层运维问题"
+      ],
+      "collect": [
+        {
+          "field": "regionId",
+          "label": "地域",
+          "required": true,
+          "type": "string",
+          "maxLength": 64
+        },
+        {
+          "field": "instanceId",
+          "label": "实例标识",
+          "required": true,
+          "type": "string",
+          "maxLength": 64
+        },
+        {
+          "field": "symptom",
+          "label": "异常现象",
+          "required": true,
+          "type": "string",
+          "description": "描述性能或运行异常表现",
+          "maxLength": 1000
+        },
+        {
+          "field": "startTime",
+          "label": "开始时间",
+          "required": true,
+          "type": "string",
+          "description": "包含日期、时间和时区",
+          "maxLength": 64
+        },
+        {
+          "field": "endTime",
+          "label": "结束时间",
+          "required": false,
+          "type": "string",
+          "description": "尚未恢复时填写当前仍在持续",
+          "maxLength": 64
+        },
+        {
+          "field": "impact",
+          "label": "影响范围",
+          "required": true,
+          "type": "string",
+          "description": "说明受影响业务、实例数量和严重程度",
+          "maxLength": 500
+        },
+        {
+          "field": "authorizationStatus",
+          "label": "授权状态",
+          "required": false,
+          "type": "boolean",
+          "description": "性能排查通常需要上机登录，客户是否已授权阿里云登录实例"
+        },
+        {
+          "field": "resourceMetrics",
+          "label": "资源使用情况",
+          "required": false,
+          "type": "string",
+          "description": "CPU/内存/磁盘IO/网络带宽的具体数值或截图",
+          "maxLength": 500
+        },
+        {
+          "field": "recentChanges",
+          "label": "近期变更操作",
+          "required": false,
+          "type": "string",
+          "description": "近期是否有升降配、重启、系统更新等操作",
+          "maxLength": 300
+        },
+        {
+          "field": "loginStatus",
+          "label": "远程连接状态",
+          "required": false,
+          "type": "string",
+          "enum": ["可远程登录", "SSH失败", "VNC失败", "完全无法登录"],
+          "description": "是否能远程登录及登录方式"
+        }
+      ]
+    },
+    {
+      "name": "ECS控制台管理操作问题",
+      "keywords": [
+        "控制台报错",
+        "操作失败",
+        "无法启动",
+        "无法停止",
+        "管理操作"
+      ],
+      "categoryKeywords": [
+        "控制台",
+        "管理",
+        "操作"
+      ],
+      "categoryHints": [
+        "ECS控制台管理操作问题"
+      ],
+      "collect": [
+        {
+          "field": "regionId",
+          "label": "地域",
+          "required": true,
+          "type": "string",
+          "maxLength": 64
+        },
+        {
+          "field": "instanceId",
+          "label": "实例标识",
+          "required": false,
+          "type": "string",
+          "maxLength": 64
+        },
+        {
+          "field": "operationName",
+          "label": "操作名称",
+          "required": true,
+          "type": "string",
+          "maxLength": 120
+        },
+        {
+          "field": "occurrenceTime",
+          "label": "发生时间",
+          "required": true,
+          "type": "string",
+          "description": "包含日期、时间和时区",
+          "maxLength": 64
+        },
+        {
+          "field": "errorCode",
+          "label": "错误码",
+          "required": false,
+          "type": "string",
+          "maxLength": 120
+        },
+        {
+          "field": "errorMessage",
+          "label": "错误信息",
+          "required": true,
+          "type": "string",
+          "description": "填写页面显示的完整错误信息并移除敏感内容",
+          "maxLength": 1000
+        },
+        {
+          "field": "loginMethod",
+          "label": "登录方式",
+          "required": false,
+          "type": "string",
+          "enum": ["Workbench", "SSH", "VNC", "远程桌面", "其他"],
+          "description": "客户使用的登录方式，决定排查路径"
+        },
+        {
+          "field": "authorizationScope",
+          "label": "授权范围",
+          "required": false,
+          "type": "string",
+          "description": "需要授权的项目：登录实例/配置修改/重启/挂载修复盘",
+          "maxLength": 300
+        },
+        {
+          "field": "hasSnapshot",
+          "label": "是否已创建快照",
+          "required": false,
+          "type": "boolean",
+          "description": "操作前是否已创建快照备份数据"
+        },
+        {
+          "field": "accountType",
+          "label": "账号类型",
+          "required": false,
+          "type": "string",
+          "enum": ["企业账号", "个人账号"],
+          "description": "影响过户等操作的处理路径"
+        }
+      ]
+    },
+    {
+      "name": "ECS相关信息查询与申请",
+      "keywords": [
+        "信息查询",
+        "配额申请",
+        "证明申请",
+        "资源申请"
+      ],
+      "categoryKeywords": [
+        "查询",
+        "申请",
+        "信息"
+      ],
+      "categoryHints": [
+        "ECS相关信息查询与申请"
+      ],
+      "collect": [
+        {
+          "field": "regionId",
+          "label": "地域",
+          "required": true,
+          "type": "string",
+          "maxLength": 64
+        },
+        {
+          "field": "requestType",
+          "label": "查询或申请事项",
+          "required": true,
+          "type": "string",
+          "maxLength": 120
+        },
+        {
+          "field": "resourceId",
+          "label": "相关资源标识",
+          "required": false,
+          "type": "string",
+          "maxLength": 120
+        },
+        {
+          "field": "businessReason",
+          "label": "业务背景",
+          "required": true,
+          "type": "string",
+          "description": "说明查询或申请原因及期望结果",
+          "maxLength": 1000
+        },
+        {
+          "field": "accountInfo",
+          "label": "账号标识",
+          "required": false,
+          "type": "string",
+          "description": "查询服务器归属时需提供账号标识（UID/登录账号/手机号）",
+          "maxLength": 120
+        },
+        {
+          "field": "instanceStatus",
+          "label": "实例当前状态",
+          "required": false,
+          "type": "string",
+          "enum": ["运行中", "已停止", "已过期", "已释放", "不确定"],
+          "description": "服务器是否已到期释放，影响查询结果"
+        },
+        {
+          "field": "ipAddress",
+          "label": "IP地址",
+          "required": false,
+          "type": "string",
+          "description": "按IP查找服务器归属时填写",
+          "maxLength": 120
+        }
+      ]
+    },
+    {
+      "name": "ECS续费账单退款及费用咨询",
+      "keywords": [
+        "续费",
+        "账单",
+        "退款",
+        "费用",
+        "计费"
+      ],
+      "categoryKeywords": [
+        "续费",
+        "账单",
+        "退款",
+        "费用"
+      ],
+      "categoryHints": [
+        "ECS续费/账单/退款/相关费用咨询"
+      ],
+      "collect": [
+        {
+          "field": "instanceId",
+          "label": "实例标识",
+          "required": false,
+          "type": "string",
+          "maxLength": 64
+        },
+        {
+          "field": "orderNumber",
+          "label": "订单号",
+          "required": false,
+          "type": "string",
+          "maxLength": 120
+        },
+        {
+          "field": "billingPeriod",
+          "label": "账期",
+          "required": false,
+          "type": "string",
+          "maxLength": 64
+        },
+        {
+          "field": "chargeItem",
+          "label": "费用项目",
+          "required": false,
+          "type": "string",
+          "maxLength": 120
+        },
+        {
+          "field": "questionDescription",
+          "label": "问题说明",
+          "required": true,
+          "type": "string",
+          "description": "说明费用疑问、期望核实内容和相关时间",
+          "maxLength": 1000
+        },
+        {
+          "field": "billingMode",
+          "label": "计费模式",
+          "required": false,
+          "type": "string",
+          "enum": ["按量付费", "包年包月", "节省计划", "不确定"],
+          "description": "不同计费模式的退费规则不同"
+        },
+        {
+          "field": "releaseTime",
+          "label": "实例释放时间",
+          "required": false,
+          "type": "string",
+          "description": "实例释放后仍计费投诉时填写，精确到日期时间",
+          "maxLength": 64
+        },
+        {
+          "field": "disputedAmount",
+          "label": "争议金额",
+          "required": false,
+          "type": "string",
+          "description": "具体争议的费用金额",
+          "maxLength": 64
+        },
+        {
+          "field": "demandType",
+          "label": "诉求类型",
+          "required": false,
+          "type": "string",
+          "enum": ["退款", "调账减免", "费用解释", "优惠补偿", "更改付费类型"],
+          "description": "客户期望的处理方式"
+        }
+      ]
+    },
+    {
+      "name": "ECS网络与安全组问题",
+      "keywords": [
+        "网络不通",
+        "无法连接",
+        "安全组",
+        "端口不通",
+        "丢包"
+      ],
+      "categoryKeywords": [
+        "网络",
+        "安全组",
+        "端口"
+      ],
+      "categoryHints": [
+        "ECS网络与安全组问题"
+      ],
+      "collect": [
+        {
+          "field": "regionId",
+          "label": "地域",
+          "required": true,
+          "type": "string",
+          "maxLength": 64
+        },
+        {
+          "field": "instanceId",
+          "label": "实例标识",
+          "required": true,
+          "type": "string",
+          "maxLength": 64
+        },
+        {
+          "field": "networkDirection",
+          "label": "访问方向",
+          "required": true,
+          "type": "string",
+          "enum": [
+            "入方向",
+            "出方向",
+            "双向"
+          ]
+        },
+        {
+          "field": "sourceAddress",
+          "label": "源地址",
+          "required": true,
+          "type": "string",
+          "maxLength": 120
+        },
+        {
+          "field": "destinationAddress",
+          "label": "目标地址",
+          "required": true,
+          "type": "string",
+          "maxLength": 120
+        },
+        {
+          "field": "protocolPort",
+          "label": "协议与端口",
+          "required": true,
+          "type": "string",
+          "maxLength": 120
+        },
+        {
+          "field": "occurrenceTime",
+          "label": "发生时间",
+          "required": true,
+          "type": "string",
+          "description": "包含日期、时间和时区",
+          "maxLength": 64
+        },
+        {
+          "field": "symptom",
+          "label": "异常现象",
+          "required": true,
+          "type": "string",
+          "maxLength": 1000
+        },
+        {
+          "field": "portPurpose",
+          "label": "端口用途",
+          "required": false,
+          "type": "string",
+          "description": "端口对应的服务（如25=邮件, 443=HTTPS, 6088=ERP）",
+          "maxLength": 120
+        },
+        {
+          "field": "networkType",
+          "label": "网络类型",
+          "required": false,
+          "type": "string",
+          "enum": ["公网", "内网", "不确定"],
+          "description": "25端口默认封禁，内网无公网时解封申请路径不同"
+        }
+      ]
+    },
+    {
+      "name": "ECS通用咨询",
+      "keywords": [
+        "ECS咨询",
+        "云服务器咨询",
+        "其他问题"
+      ],
+      "categoryKeywords": [
+        "通用",
+        "咨询"
+      ],
+      "categoryHints": [
+        "ECS通用咨询"
+      ],
+      "collect": [
+        {
+          "field": "regionId",
+          "label": "地域",
+          "required": false,
+          "type": "string",
+          "maxLength": 64
+        },
+        {
+          "field": "instanceId",
+          "label": "实例标识",
+          "required": false,
+          "type": "string",
+          "maxLength": 64
+        },
+        {
+          "field": "issueDescription",
+          "label": "问题说明",
+          "required": true,
+          "type": "string",
+          "description": "说明业务目标、当前情况和期望结果",
+          "maxLength": 1000
+        },
+        {
+          "field": "intentType",
+          "label": "咨询意图",
+          "required": false,
+          "type": "string",
+          "enum": ["售前咨询", "售后技术", "商务合作", "文档/协议申请", "其他"],
+          "description": "咨询意图分类，用于快速路由到对应处理团队"
+        },
+        {
+          "field": "contactPreference",
+          "label": "联系方式偏好",
+          "required": false,
+          "type": "string",
+          "description": "需商务跟进时填写联系电话，客户偏好的联系方式",
+          "maxLength": 120
+        }
+      ]
+    },
+    {
+      "name": "云盘和快照问题",
+      "keywords": [
+        "云盘",
+        "磁盘",
+        "快照",
+        "扩容",
+        "挂载"
+      ],
+      "categoryKeywords": [
+        "云盘",
+        "快照",
+        "磁盘"
+      ],
+      "categoryHints": [
+        "云盘和快照问题"
+      ],
+      "collect": [
+        {
+          "field": "regionId",
+          "label": "地域",
+          "required": true,
+          "type": "string",
+          "maxLength": 64
+        },
+        {
+          "field": "instanceId",
+          "label": "实例标识",
+          "required": false,
+          "type": "string",
+          "maxLength": 64
+        },
+        {
+          "field": "diskId",
+          "label": "云盘标识",
+          "required": false,
+          "type": "string",
+          "maxLength": 64
+        },
+        {
+          "field": "snapshotId",
+          "label": "快照标识",
+          "required": false,
+          "type": "string",
+          "maxLength": 64
+        },
+        {
+          "field": "operationName",
+          "label": "相关操作",
+          "required": true,
+          "type": "string",
+          "maxLength": 120
+        },
+        {
+          "field": "occurrenceTime",
+          "label": "发生时间",
+          "required": true,
+          "type": "string",
+          "description": "包含日期、时间和时区",
+          "maxLength": 64
+        },
+        {
+          "field": "errorMessage",
+          "label": "错误或异常现象",
+          "required": true,
+          "type": "string",
+          "maxLength": 1000
+        },
+        {
+          "field": "diskType",
+          "label": "磁盘类型",
+          "required": false,
+          "type": "string",
+          "enum": ["系统盘", "数据盘", "不确定"],
+          "description": "系统盘和数据盘的操作路径不同"
+        },
+        {
+          "field": "hasSnapshot",
+          "label": "是否已创建快照",
+          "required": false,
+          "type": "boolean",
+          "description": "磁盘操作前是否已创建快照备份数据"
+        },
+        {
+          "field": "operationDirection",
+          "label": "操作方向",
+          "required": false,
+          "type": "string",
+          "enum": ["扩容", "缩容", "挂载", "卸载", "恢复", "其他"],
+          "description": "扩容可行，缩容需SMC迁移，路径完全不同"
+        },
+        {
+          "field": "authorizationStatus",
+          "label": "授权状态",
+          "required": false,
+          "type": "boolean",
+          "description": "磁盘扩容需上机操作，客户是否已授权阿里云登录实例"
+        }
+      ]
+    },
+    {
+      "name": "挖矿或被安全攻击问题",
+      "keywords": [
+        "挖矿",
+        "安全攻击",
+        "入侵",
+        "异常进程",
+        "恶意行为"
+      ],
+      "categoryKeywords": [
+        "挖矿",
+        "攻击",
+        "安全"
+      ],
+      "categoryHints": [
+        "挖矿或被安全攻击问题"
+      ],
+      "collect": [
+        {
+          "field": "regionId",
+          "label": "地域",
+          "required": true,
+          "type": "string",
+          "maxLength": 64
+        },
+        {
+          "field": "instanceId",
+          "label": "实例标识",
+          "required": true,
+          "type": "string",
+          "maxLength": 64
+        },
+        {
+          "field": "detectionTime",
+          "label": "发现时间",
+          "required": true,
+          "type": "string",
+          "description": "包含日期、时间和时区",
+          "maxLength": 64
+        },
+        {
+          "field": "alertName",
+          "label": "告警或异常名称",
+          "required": false,
+          "type": "string",
+          "maxLength": 200
+        },
+        {
+          "field": "symptom",
+          "label": "异常现象",
+          "required": true,
+          "type": "string",
+          "description": "描述异常行为、影响和当前状态",
+          "maxLength": 1000
+        },
+        {
+          "field": "containmentStatus",
+          "label": "当前处置状态",
+          "required": true,
+          "type": "string",
+          "description": "说明是否已隔离实例或限制访问",
+          "maxLength": 500
+        },
+        {
+          "field": "hasPublicNetwork",
+          "label": "是否有公网",
+          "required": false,
+          "type": "boolean",
+          "description": "影响25端口解封等申请路径"
+        },
+        {
+          "field": "affectedDomain",
+          "label": "受影响网站或域名",
+          "required": false,
+          "type": "string",
+          "description": "木马攻击关联的域名或网站",
+          "maxLength": 253
+        },
+        {
+          "field": "feeDispute",
+          "label": "是否有费用争议",
+          "required": false,
+          "type": "boolean",
+          "description": "安全攻击产生的费用由谁承担，需触发客情处理流程"
+        }
+      ]
+    },
+    {
+      "name": "网站访问问题",
+      "keywords": [
+        "网站打不开",
+        "访问超时",
+        "页面异常",
+        "网站访问",
+        "服务不可用"
+      ],
+      "categoryKeywords": [
+        "网站",
+        "访问",
+        "页面"
+      ],
+      "categoryHints": [
+        "网站访问问题"
+      ],
+      "collect": [
+        {
+          "field": "regionId",
+          "label": "地域",
+          "required": true,
+          "type": "string",
+          "maxLength": 64
+        },
+        {
+          "field": "instanceId",
+          "label": "实例标识",
+          "required": true,
+          "type": "string",
+          "maxLength": 64
+        },
+        {
+          "field": "domainName",
+          "label": "访问域名",
+          "required": true,
+          "type": "string",
+          "description": "仅填写域名，不附带协议和路径",
+          "maxLength": 253
+        },
+        {
+          "field": "accessTime",
+          "label": "访问时间",
+          "required": true,
+          "type": "string",
+          "description": "包含日期、时间和时区",
+          "maxLength": 64
+        },
+        {
+          "field": "clientNetwork",
+          "label": "访问端网络环境",
+          "required": true,
+          "type": "string",
+          "description": "说明访问地区、网络运营商和网络类型",
+          "maxLength": 300
+        },
+        {
+          "field": "errorMessage",
+          "label": "页面错误或异常现象",
+          "required": true,
+          "type": "string",
+          "maxLength": 1000
+        },
+        {
+          "field": "dnsRecord",
+          "label": "DNS解析记录",
+          "required": false,
+          "type": "string",
+          "enum": ["A记录", "CNAME", "不确定", "未配置"],
+          "description": "域名解析类型和解析值，排查DNS配置问题"
+        },
+        {
+          "field": "webServerType",
+          "label": "Web服务器类型",
+          "required": false,
+          "type": "string",
+          "enum": ["Nginx", "Apache", "宝塔面板", "IIS", "Tomcat", "其他", "不确定"],
+          "description": "不同Web服务器的排查路径不同"
+        },
+        {
+          "field": "cdnUsage",
+          "label": "是否使用CDN",
+          "required": false,
+          "type": "boolean",
+          "description": "CDN与直连ECS的排查路径不同"
+        },
+        {
+          "field": "httpsRequired",
+          "label": "是否需要HTTPS",
+          "required": false,
+          "type": "boolean",
+          "description": "需HTTPS时需配置SSL证书，IP访问无法申请证书"
+        }
+      ]
+    },
+    {
+      "name": "镜像与操作系统问题",
+      "keywords": [
+        "镜像",
+        "操作系统",
+        "系统启动失败",
+        "初始化失败",
+        "系统异常"
+      ],
+      "categoryKeywords": [
+        "镜像",
+        "操作系统",
+        "系统"
+      ],
+      "categoryHints": [
+        "镜像与操作系统问题"
+      ],
+      "collect": [
+        {
+          "field": "regionId",
+          "label": "地域",
+          "required": true,
+          "type": "string",
+          "maxLength": 64
+        },
+        {
+          "field": "instanceId",
+          "label": "实例标识",
+          "required": true,
+          "type": "string",
+          "maxLength": 64
+        },
+        {
+          "field": "imageId",
+          "label": "镜像标识",
+          "required": false,
+          "type": "string",
+          "maxLength": 120
+        },
+        {
+          "field": "osName",
+          "label": "操作系统及版本",
+          "required": true,
+          "type": "string",
+          "maxLength": 200
+        },
+        {
+          "field": "operationName",
+          "label": "相关操作",
+          "required": true,
+          "type": "string",
+          "maxLength": 120
+        },
+        {
+          "field": "occurrenceTime",
+          "label": "发生时间",
+          "required": true,
+          "type": "string",
+          "description": "包含日期、时间和时区",
+          "maxLength": 64
+        },
+        {
+          "field": "errorMessage",
+          "label": "错误或异常现象",
+          "required": true,
+          "type": "string",
+          "maxLength": 1000
+        },
+        {
+          "field": "imageType",
+          "label": "镜像类型",
+          "required": false,
+          "type": "string",
+          "enum": ["公共镜像", "自定义镜像", "共享镜像", "市场镜像", "不确定"],
+          "description": "自定义镜像需检测Virtio驱动，公共镜像无需检测"
+        },
+        {
+          "field": "migrationScenario",
+          "label": "迁移场景",
+          "required": false,
+          "type": "string",
+          "enum": ["无迁移", "信创/国产化迁移", "跨账号迁移", "跨地域迁移", "其他"],
+          "description": "信创迁移（统信/麒麟/海光CPU）是高频场景，需特殊处理"
+        }
+      ]
+    }
+  ]
+}
