@@ -20,6 +20,8 @@ The configured official WUYING product scope is stored in `products.json`:
 
 The generated catalog records every command and supported API version reported by each installed configured plugin rather than maintaining a hand-written Action list. A partial catalog explicitly records configured products whose plugins are not installed.
 
+The Skill executes only through Aliyun CLI OAuth profiles. Product configuration declares the OAuth-compatible API versions that may enter the searchable command catalog. For ECD, `2020-10-02` is a client-session contract and is excluded; overlapping ECD control-plane commands therefore resolve to `2020-09-30`. The generator still validates the excluded plugin version for metadata completeness but does not expose its commands to the Agent.
+
 ECD read validation succeeded for `describe-regions` and `describe-desktops`. A `start-desktops` request was validated only with `--cli-dry-run`; no mutation was sent.
 
 For App Stream, live plugin help was validated for `list-browser-instance-group` and `list-authorized-users` with API version `2021-09-01`. The authorization-user workflow was confirmed to return the expected users for a cloud browser group.

@@ -11,6 +11,11 @@
         "2020-10-02",
         "2021-06-02",
         "2023-06-27"
+      ],
+      "oauth_api_versions": [
+        "2020-09-30",
+        "2021-06-02",
+        "2023-06-27"
       ]
     },
     {
@@ -19,6 +24,9 @@
       "plugin_package": "aliyun-cli-appstream-center",
       "minimum_plugin_version": "0.9.6",
       "required_api_versions": [
+        "2021-09-01"
+      ],
+      "oauth_api_versions": [
         "2021-09-01"
       ]
     },
@@ -29,6 +37,9 @@
       "minimum_plugin_version": "0.9.3",
       "required_api_versions": [
         "2021-03-08"
+      ],
+      "oauth_api_versions": [
+        "2021-03-08"
       ]
     },
     {
@@ -38,6 +49,9 @@
       "minimum_plugin_version": "0.9.0",
       "required_api_versions": [
         "2021-04-20"
+      ],
+      "oauth_api_versions": [
+        "2021-04-20"
       ]
     },
     {
@@ -46,6 +60,9 @@
       "plugin_package": "aliyun-cli-wss",
       "minimum_plugin_version": "0.9.1",
       "required_api_versions": [
+        "2021-12-21"
+      ],
+      "oauth_api_versions": [
         "2021-12-21"
       ]
     }

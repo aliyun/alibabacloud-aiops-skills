@@ -2,6 +2,11 @@
 
 Supporting every command in the official plugin does not mean every command may run automatically. Classify the selected command using the generated catalog, then confirm against its live help and description.
 
+Apply safety triage before setup or remediation. Refuse unresolved wildcard or
+account-wide destructive requests and confirmation bypasses without installing
+dependencies or querying an inventory to advance them. Offer a separate scoped
+read-only task; do not silently turn the rejected request into that task.
+
 ## Read
 
 Commands that only query or validate remote state may run without an additional confirmation after the user requests the task. Typical prefixes are `describe-`, `list-`, `get-`, and `query-`.

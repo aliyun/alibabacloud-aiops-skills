@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "source": "official aliyun CLI WUYING product plugins --help-all",
+  "source": "official aliyun CLI WUYING product plugins --help-all, filtered for OAuth",
   "aliyun_cli_version": "3.5.0",
   "catalog_complete": false,
   "configured_product_count": 5,
@@ -12,7 +12,7 @@
     "wyota"
   ],
   "product_count": 2,
-  "command_count": 394,
+  "command_count": 364,
   "missing_products": [
     {
       "product": "eds-user",
@@ -22,7 +22,10 @@
       "required_api_versions": [
         "2021-03-08"
       ],
-      "reason": "ERROR: plugin eds-user not found in local manifest (not installed)"
+      "reason": "ERROR: plugin eds-user not found in local manifest (not installed)",
+      "oauth_api_versions": [
+        "2021-03-08"
+      ]
     },
     {
       "product": "wss",
@@ -32,7 +35,10 @@
       "required_api_versions": [
         "2021-12-21"
       ],
-      "reason": "ERROR: plugin wss not found in local manifest (not installed)"
+      "reason": "ERROR: plugin wss not found in local manifest (not installed)",
+      "oauth_api_versions": [
+        "2021-12-21"
+      ]
     },
     {
       "product": "wyota",
@@ -42,7 +48,10 @@
       "required_api_versions": [
         "2021-04-20"
       ],
-      "reason": "ERROR: plugin wyota not found in local manifest (not installed)"
+      "reason": "ERROR: plugin wyota not found in local manifest (not installed)",
+      "oauth_api_versions": [
+        "2021-04-20"
+      ]
     }
   ],
   "risk_note": "Risk is a conservative name-based hint. Inspect live command help before execution; unknown and non-read patterns require confirmation.",
@@ -67,7 +76,7 @@
         "2021-09-01": 92,
         "2021-09-03": 9
       },
-      "unique_command_count": 106,
+      "unique_command_count": 92,
       "risk_note": "Risk is a conservative name-based hint. Inspect live command help before execution; unknown and non-read patterns require confirmation.",
       "commands": [
         {
@@ -114,15 +123,6 @@
           ],
           "risk": "mutation",
           "preferred_api_version": "2021-09-01"
-        },
-        {
-          "name": "client-user-logout",
-          "description": "Log out the client and destroy the login credentials",
-          "api_versions": [
-            "2021-02-20"
-          ],
-          "risk": "mutation",
-          "preferred_api_version": "2021-02-20"
         },
         {
           "name": "config-resource-group-model-template",
@@ -305,24 +305,6 @@
           "preferred_api_version": "2021-09-01"
         },
         {
-          "name": "expire-login-token",
-          "description": "Manually invalidates a China Office logon session before it naturally expires",
-          "api_versions": [
-            "2021-02-18"
-          ],
-          "risk": "mutation",
-          "preferred_api_version": "2021-02-18"
-        },
-        {
-          "name": "find-idp-list-by-login-identifier",
-          "description": "Queries the logon configuration of an office network or enterprise identifier for the client",
-          "api_versions": [
-            "2021-02-20"
-          ],
-          "risk": "mutation",
-          "preferred_api_version": "2021-02-20"
-        },
-        {
           "name": "get-app-instance-group",
           "description": "Queries the details of a specified delivery group",
           "api_versions": [
@@ -330,15 +312,6 @@
           ],
           "risk": "read",
           "preferred_api_version": "2021-09-01"
-        },
-        {
-          "name": "get-auth-code",
-          "description": "Obtains an authorization code that contains user identity and permission information. The authorization code can be used to launch a cloud application in integration scenarios",
-          "api_versions": [
-            "2021-02-18"
-          ],
-          "risk": "read",
-          "preferred_api_version": "2021-02-18"
         },
         {
           "name": "get-browser-instance-group",
@@ -353,11 +326,10 @@
           "name": "get-connection-ticket",
           "description": "Retrieves the connection credential for a cloud application",
           "api_versions": [
-            "2021-09-01",
-            "2021-09-03"
+            "2021-09-01"
           ],
           "risk": "read",
-          "preferred_api_version": "2021-09-03"
+          "preferred_api_version": "2021-09-01"
         },
         {
           "name": "get-debug-app-instance",
@@ -376,15 +348,6 @@
           ],
           "risk": "read",
           "preferred_api_version": "2021-09-01"
-        },
-        {
-          "name": "get-login-token",
-          "description": "Retrieve login credentials using an enterprise identifier",
-          "api_versions": [
-            "2021-02-20"
-          ],
-          "risk": "read",
-          "preferred_api_version": "2021-02-20"
         },
         {
           "name": "get-model-provider-template",
@@ -439,16 +402,6 @@
           ],
           "risk": "read",
           "preferred_api_version": "2021-09-01"
-        },
-        {
-          "name": "get-sts-token",
-          "description": "Gets a Security Token Service (STS) token",
-          "api_versions": [
-            "2021-02-18",
-            "2021-02-20"
-          ],
-          "risk": "read",
-          "preferred_api_version": "2021-02-20"
         },
         {
           "name": "list-app-instance-group",
@@ -631,15 +584,6 @@
           "preferred_api_version": "2021-09-01"
         },
         {
-          "name": "list-published-app-info",
-          "description": "Retrieves a list of published application information",
-          "api_versions": [
-            "2021-09-03"
-          ],
-          "risk": "read",
-          "preferred_api_version": "2021-09-03"
-        },
-        {
           "name": "list-published-app-instance-group",
           "description": "Queries published delivery groups and their application information for a specified product type under the current Alibaba Cloud account by using paging. Supports filtering by delivery group, application, and user authorization status",
           "api_versions": [
@@ -665,15 +609,6 @@
           ],
           "risk": "read",
           "preferred_api_version": "2021-09-01"
-        },
-        {
-          "name": "list-running-apps",
-          "description": "Queries running applications",
-          "api_versions": [
-            "2021-09-03"
-          ],
-          "risk": "read",
-          "preferred_api_version": "2021-09-03"
         },
         {
           "name": "list-tag-cloud-resources",
@@ -802,15 +737,6 @@
           "preferred_api_version": "2021-09-01"
         },
         {
-          "name": "refresh-login-token",
-          "description": "Refresh the login token",
-          "api_versions": [
-            "2021-02-20"
-          ],
-          "risk": "mutation",
-          "preferred_api_version": "2021-02-20"
-        },
-        {
           "name": "remove-resource-group-model-template",
           "description": "Removes model groups from a resource group",
           "api_versions": [
@@ -856,24 +782,6 @@
           "preferred_api_version": "2021-09-01"
         },
         {
-          "name": "reset-app-resources",
-          "description": "Resets application resources",
-          "api_versions": [
-            "2021-09-03"
-          ],
-          "risk": "destructive",
-          "preferred_api_version": "2021-09-03"
-        },
-        {
-          "name": "restart-app-resources",
-          "description": "Restart application resources",
-          "api_versions": [
-            "2021-09-03"
-          ],
-          "risk": "mutation",
-          "preferred_api_version": "2021-09-03"
-        },
-        {
           "name": "restart-wuying-server",
           "description": "Restarts a workstation",
           "api_versions": [
@@ -881,15 +789,6 @@
           ],
           "risk": "mutation",
           "preferred_api_version": "2021-09-01"
-        },
-        {
-          "name": "start-app-resources",
-          "description": "Start application resources",
-          "api_versions": [
-            "2021-09-03"
-          ],
-          "risk": "mutation",
-          "preferred_api_version": "2021-09-03"
         },
         {
           "name": "start-task-for-distribute-image",
@@ -908,24 +807,6 @@
           ],
           "risk": "mutation",
           "preferred_api_version": "2021-09-01"
-        },
-        {
-          "name": "stop-app",
-          "description": "Stops a specified application",
-          "api_versions": [
-            "2021-09-03"
-          ],
-          "risk": "mutation",
-          "preferred_api_version": "2021-09-03"
-        },
-        {
-          "name": "stop-app-resources",
-          "description": "Shuts down application resources",
-          "api_versions": [
-            "2021-09-03"
-          ],
-          "risk": "mutation",
-          "preferred_api_version": "2021-09-03"
         },
         {
           "name": "stop-wuying-server",
@@ -967,11 +848,10 @@
           "name": "unbind",
           "description": "Unbinds a user from a session",
           "api_versions": [
-            "2021-09-01",
-            "2021-09-03"
+            "2021-09-01"
           ],
           "risk": "mutation",
-          "preferred_api_version": "2021-09-03"
+          "preferred_api_version": "2021-09-01"
         },
         {
           "name": "untag-cloud-resources",
@@ -1027,6 +907,15 @@
           "risk": "mutation",
           "preferred_api_version": "2021-09-01"
         }
+      ],
+      "authentication_mode": "OAuth",
+      "oauth_api_versions": [
+        "2021-09-01"
+      ],
+      "excluded_api_versions": [
+        "2021-02-18",
+        "2021-02-20",
+        "2021-09-03"
       ]
     },
     {
@@ -1049,7 +938,7 @@
         "2021-06-02": 12,
         "2023-06-27": 3
       },
-      "unique_command_count": 288,
+      "unique_command_count": 272,
       "risk_note": "Risk is a conservative name-based hint. Inspect live command help before execution; unknown and non-read patterns require confirmation.",
       "commands": [
         {
@@ -1119,11 +1008,10 @@
           "name": "approve-fota-update",
           "description": "Allows an image upgrade",
           "api_versions": [
-            "2020-09-30",
-            "2020-10-02"
+            "2020-09-30"
           ],
           "risk": "mutation",
-          "preferred_api_version": "2020-10-02"
+          "preferred_api_version": "2020-09-30"
         },
         {
           "name": "associate-network-package",
@@ -1205,15 +1093,6 @@
           ],
           "risk": "mutation",
           "preferred_api_version": "2020-09-30"
-        },
-        {
-          "name": "change-password",
-          "description": "Modifies the password of a user",
-          "api_versions": [
-            "2020-10-02"
-          ],
-          "risk": "mutation",
-          "preferred_api_version": "2020-10-02"
         },
         {
           "name": "clone-center-policy",
@@ -1657,15 +1536,6 @@
           "preferred_api_version": "2020-09-30"
         },
         {
-          "name": "delete-finger-print-template",
-          "description": "Deletes a specified fingerprint template",
-          "api_versions": [
-            "2020-10-02"
-          ],
-          "risk": "destructive",
-          "preferred_api_version": "2020-10-02"
-        },
-        {
           "name": "delete-images",
           "description": "Deletes one or more custom images",
           "api_versions": [
@@ -1993,11 +1863,10 @@
           "name": "describe-directories",
           "description": "Queries the details of a directory",
           "api_versions": [
-            "2020-09-30",
-            "2020-10-02"
+            "2020-09-30"
           ],
           "risk": "read",
-          "preferred_api_version": "2020-10-02"
+          "preferred_api_version": "2020-09-30"
         },
         {
           "name": "describe-drives",
@@ -2016,15 +1885,6 @@
           ],
           "risk": "read",
           "preferred_api_version": "2020-09-30"
-        },
-        {
-          "name": "describe-finger-print-templates",
-          "description": "Queries fingerprint templates",
-          "api_versions": [
-            "2020-10-02"
-          ],
-          "risk": "read",
-          "preferred_api_version": "2020-10-02"
         },
         {
           "name": "describe-flow-metric",
@@ -2061,15 +1921,6 @@
           ],
           "risk": "read",
           "preferred_api_version": "2020-09-30"
-        },
-        {
-          "name": "describe-global-desktops",
-          "description": "Query detailed information about cloud desktops across multiple regions. You can query only regions in the Chinese mainland (excluding Nanjing – Local Region – Shutting Down)",
-          "api_versions": [
-            "2020-10-02"
-          ],
-          "risk": "read",
-          "preferred_api_version": "2020-10-02"
         },
         {
           "name": "describe-global-timer-batches",
@@ -2183,11 +2034,10 @@
           "name": "describe-office-sites",
           "description": "Queries all attributes of an office network, including the ID, name, status, and creation time",
           "api_versions": [
-            "2020-09-30",
-            "2020-10-02"
+            "2020-09-30"
           ],
           "risk": "read",
-          "preferred_api_version": "2020-10-02"
+          "preferred_api_version": "2020-09-30"
         },
         {
           "name": "describe-online-user-count",
@@ -2274,11 +2124,10 @@
           "name": "describe-regions",
           "description": "Queries the Alibaba Cloud regions supported by WUYING Workspace",
           "api_versions": [
-            "2020-09-30",
-            "2020-10-02"
+            "2020-09-30"
           ],
           "risk": "read",
-          "preferred_api_version": "2020-10-02"
+          "preferred_api_version": "2020-09-30"
         },
         {
           "name": "describe-renewal-price",
@@ -2311,11 +2160,10 @@
           "name": "describe-snapshots",
           "description": "Queries the snapshot list and detailed snapshot information of a cloud computer",
           "api_versions": [
-            "2020-09-30",
-            "2020-10-02"
+            "2020-09-30"
           ],
           "risk": "read",
-          "preferred_api_version": "2020-10-02"
+          "preferred_api_version": "2020-09-30"
         },
         {
           "name": "describe-templates",
@@ -2343,15 +2191,6 @@
           ],
           "risk": "read",
           "preferred_api_version": "2020-09-30"
-        },
-        {
-          "name": "describe-user-resources",
-          "description": "Queries the list of resources owned by a user",
-          "api_versions": [
-            "2020-10-02"
-          ],
-          "risk": "read",
-          "preferred_api_version": "2020-10-02"
         },
         {
           "name": "describe-users-in-group",
@@ -2462,15 +2301,6 @@
           "preferred_api_version": "2020-09-30"
         },
         {
-          "name": "encrypt-password",
-          "description": "Encrypts a user password",
-          "api_versions": [
-            "2020-10-02"
-          ],
-          "risk": "mutation",
-          "preferred_api_version": "2020-10-02"
-        },
-        {
           "name": "export-client-events",
           "description": "Exports events that occur on a cloud desktop from an Alibaba Cloud Workspace client",
           "api_versions": [
@@ -2507,23 +2337,13 @@
           "preferred_api_version": "2020-09-30"
         },
         {
-          "name": "get-cloud-drive-service-mount-token",
-          "description": "Obtain the logon credential for Enterprise File Gateway",
-          "api_versions": [
-            "2020-10-02"
-          ],
-          "risk": "read",
-          "preferred_api_version": "2020-10-02"
-        },
-        {
           "name": "get-connection-ticket",
           "description": "Retrieves the connection credential for a cloud computer",
           "api_versions": [
-            "2020-09-30",
-            "2020-10-02"
+            "2020-09-30"
           ],
           "risk": "read",
-          "preferred_api_version": "2020-10-02"
+          "preferred_api_version": "2020-09-30"
         },
         {
           "name": "get-coordinate-ticket",
@@ -2542,15 +2362,6 @@
           ],
           "risk": "read",
           "preferred_api_version": "2020-09-30"
-        },
-        {
-          "name": "get-login-token",
-          "description": "Retrieves logon credentials",
-          "api_versions": [
-            "2020-10-02"
-          ],
-          "risk": "read",
-          "preferred_api_version": "2020-10-02"
         },
         {
           "name": "get-office-site-sso-status",
@@ -3258,11 +3069,10 @@
           "name": "reboot-desktops",
           "description": "Restarts one or more cloud computers",
           "api_versions": [
-            "2020-09-30",
-            "2020-10-02"
+            "2020-09-30"
           ],
           "risk": "mutation",
-          "preferred_api_version": "2020-10-02"
+          "preferred_api_version": "2020-09-30"
         },
         {
           "name": "rebuild-desktops",
@@ -3272,15 +3082,6 @@
           ],
           "risk": "destructive",
           "preferred_api_version": "2020-09-30"
-        },
-        {
-          "name": "refresh-login-token",
-          "description": "Purge the logon credential",
-          "api_versions": [
-            "2020-10-02"
-          ],
-          "risk": "mutation",
-          "preferred_api_version": "2020-10-02"
         },
         {
           "name": "remove-file-permission",
@@ -3337,15 +3138,6 @@
           "preferred_api_version": "2020-09-30"
         },
         {
-          "name": "report-session-status",
-          "description": "Reports the session status",
-          "api_versions": [
-            "2020-10-02"
-          ],
-          "risk": "mutation",
-          "preferred_api_version": "2020-10-02"
-        },
-        {
           "name": "reset-desktops",
           "description": "Resets cloud computers within a shared cloud computer",
           "api_versions": [
@@ -3364,23 +3156,13 @@
           "preferred_api_version": "2020-09-30"
         },
         {
-          "name": "reset-password",
-          "description": "Resets a user password",
-          "api_versions": [
-            "2020-10-02"
-          ],
-          "risk": "destructive",
-          "preferred_api_version": "2020-10-02"
-        },
-        {
           "name": "reset-snapshot",
           "description": "Recovers disk data from a snapshot",
           "api_versions": [
-            "2020-09-30",
-            "2020-10-02"
+            "2020-09-30"
           ],
           "risk": "destructive",
-          "preferred_api_version": "2020-10-02"
+          "preferred_api_version": "2020-09-30"
         },
         {
           "name": "revoke-coordinate-privilege",
@@ -3399,15 +3181,6 @@
           ],
           "risk": "mutation",
           "preferred_api_version": "2020-09-30"
-        },
-        {
-          "name": "send-token-code",
-          "description": "Sends a logon verification code",
-          "api_versions": [
-            "2020-10-02"
-          ],
-          "risk": "mutation",
-          "preferred_api_version": "2020-10-02"
         },
         {
           "name": "send-verify-code",
@@ -3464,24 +3237,6 @@
           "preferred_api_version": "2020-09-30"
         },
         {
-          "name": "set-finger-print-template",
-          "description": "Sets a fingerprint template",
-          "api_versions": [
-            "2020-10-02"
-          ],
-          "risk": "mutation",
-          "preferred_api_version": "2020-10-02"
-        },
-        {
-          "name": "set-finger-print-template-description",
-          "description": "Sets the description of a fingerprint template",
-          "api_versions": [
-            "2020-10-02"
-          ],
-          "risk": "mutation",
-          "preferred_api_version": "2020-10-02"
-        },
-        {
           "name": "set-identity-skill-auth",
           "description": "Sets skill permissions for an identity",
           "api_versions": [
@@ -3530,21 +3285,19 @@
           "name": "start-desktops",
           "description": "Starts one or more stopped cloud computers. After the operation is called successfully, the cloud computers enter the Running state",
           "api_versions": [
-            "2020-09-30",
-            "2020-10-02"
+            "2020-09-30"
           ],
           "risk": "mutation",
-          "preferred_api_version": "2020-10-02"
+          "preferred_api_version": "2020-09-30"
         },
         {
           "name": "stop-desktops",
           "description": "Stops one or more running cloud computers. After the operation is called, the cloud computers enter the Stopped state",
           "api_versions": [
-            "2020-09-30",
-            "2020-10-02"
+            "2020-09-30"
           ],
           "risk": "mutation",
-          "preferred_api_version": "2020-10-02"
+          "preferred_api_version": "2020-09-30"
         },
         {
           "name": "stop-invocation",
@@ -3581,15 +3334,6 @@
           ],
           "risk": "mutation",
           "preferred_api_version": "2020-09-30"
-        },
-        {
-          "name": "unbind-user-desktop",
-          "description": "Unbinds end users from cloud computers",
-          "api_versions": [
-            "2020-10-02"
-          ],
-          "risk": "mutation",
-          "preferred_api_version": "2020-10-02"
         },
         {
           "name": "unlock-virtual-mfa-device",
@@ -3637,15 +3381,6 @@
           "preferred_api_version": "2020-09-30"
         },
         {
-          "name": "verify-credential",
-          "description": "Verifies the credential used to unlock a local session on the client",
-          "api_versions": [
-            "2020-10-02"
-          ],
-          "risk": "mutation",
-          "preferred_api_version": "2020-10-02"
-        },
-        {
           "name": "wakeup-desktops",
           "description": "Wakes up cloud computers from hibernation",
           "api_versions": [
@@ -3654,7 +3389,17 @@
           "risk": "mutation",
           "preferred_api_version": "2020-09-30"
         }
+      ],
+      "authentication_mode": "OAuth",
+      "oauth_api_versions": [
+        "2020-09-30",
+        "2021-06-02",
+        "2023-06-27"
+      ],
+      "excluded_api_versions": [
+        "2020-10-02"
       ]
     }
-  ]
+  ],
+  "authentication_mode": "OAuth"
 }

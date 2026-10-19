@@ -75,6 +75,20 @@ def parse_remote_plugins(output: str) -> dict[str, dict[str, str]]:
     return plugins
 
 
+def has_valid_oauth_profile(output: str) -> bool:
+    for line in output.splitlines():
+        columns = [column.strip() for column in line.split("|")]
+        if len(columns) < 3:
+            continue
+        # An unused OAuth profile must not validate the active AK/STS profile.
+        if "*" not in columns[0].split():
+            continue
+        credential, validity = columns[1:3]
+        if credential.startswith("OAuth:") and validity.lower() == "valid":
+            return True
+    return False
+
+
 def load_product_specs(path: Path) -> list[dict[str, Any]]:
     payload = json.loads(path.read_text(encoding="utf-8"))
     if payload.get("schema_version") != 1:
@@ -110,9 +124,20 @@ def resolve_binary(explicit: str | None) -> str | None:
 
 
 def result(status: str, checks: dict[str, Any], remediation: list[str]) -> dict[str, Any]:
+    allowed = bool(status in {"ready", "partial"}
+                   and checks.get("aliyun_cli_compatible") is True
+                   and checks.get("valid_oauth_profile") is True
+                   and checks.get("ready_products"))
     return {
         "status": status,
         "checks": checks,
+        "execution_gate": {
+            "business_requests_allowed": allowed,
+            "required_authentication": "active_valid_OAuth",
+            "required_entrypoint": "scripts/run_wuying.py",
+            "on_denial": "stop_business_execution_do_not_fallback_to_STS_AK_or_direct_calls",
+            "grants_installation_authorization": False,
+        },
         "remediation": remediation,
         "credential_values_exposed": False,
     }
@@ -204,6 +229,7 @@ def main() -> int:
         package = str(product["plugin_package"])
         minimum_version = str(product["minimum_plugin_version"])
         required_api_versions = set(product["required_api_versions"])
+        oauth_api_versions = set(product["oauth_api_versions"])
         plugin_process = run([aliyun, "plugin", "show", "--name", code])
         plugin_info = parse_key_value_output(plugin_process.stdout)
         plugin_version = plugin_info.get("Version", "unknown")
@@ -250,6 +276,7 @@ def main() -> int:
             "compatible": compatible,
             "supported_api_versions": sorted(supported_versions),
             "required_api_versions": sorted(required_api_versions),
+            "oauth_api_versions": sorted(oauth_api_versions),
             "required_api_versions_available": required_versions_available,
             "ready": ready,
         }
@@ -279,27 +306,32 @@ def main() -> int:
     checks["unavailable_products"] = unavailable_products
     checks["updates_available"] = updates_available
 
+    # Authentication evidence must not disappear merely because a plugin or CLI
+    # upgrade is also needed. Do not encourage remediation before revealing the
+    # independent OAuth blocker.
+    checks["authentication_mode"] = "OAuth"
+    if args.skip_profile:
+        checks["valid_profile"] = "not_checked"
+        checks["valid_oauth_profile"] = "not_checked"
+    else:
+        profiles = run([aliyun, "configure", "list"])
+        valid_oauth_profile = (
+            profiles.returncode == 0 and has_valid_oauth_profile(profiles.stdout)
+        )
+        checks["valid_profile"] = valid_oauth_profile
+        checks["valid_oauth_profile"] = valid_oauth_profile
+        if not valid_oauth_profile:
+            remediation.append(
+                "Stop all business requests. After specific user authorization, "
+                "configure an active OAuth profile without overwriting existing credentials; "
+                "never use STS/AK or direct calls as a fallback."
+            )
+
     technical_ready = bool(checks["aliyun_cli_compatible"] and ready_products)
     if not technical_ready:
         print(json.dumps(result("blocked", checks, remediation), ensure_ascii=False, indent=2))
         return 2
-
-    if args.skip_profile:
-        checks["valid_profile"] = "not_checked"
-        status = "partial" if unavailable_products else "ready"
-        print(json.dumps(result(status, checks, remediation), ensure_ascii=False, indent=2))
-        return 4 if unavailable_products else 0
-
-    profiles = run([aliyun, "configure", "list"])
-    valid_profile = profiles.returncode == 0 and any(
-        re.search(r"\bValid\b", line, re.IGNORECASE) for line in profiles.stdout.splitlines()
-    )
-    checks["valid_profile"] = valid_profile
-    if not valid_profile:
-        remediation.append(
-            "After user authorization, configure a standard profile, preferably: "
-            "aliyun configure --mode OAuth --profile default"
-        )
+    if not args.skip_profile and not valid_oauth_profile:
         print(json.dumps(result("needs_auth", checks, remediation), ensure_ascii=False, indent=2))
         return 3
 
