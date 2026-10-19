@@ -64,6 +64,10 @@ A CLI older than 3.3.3 is a hard blocker: report the version gap and the upgrade
 - No script in this skill accepts `--access-key-id` / `--access-key-secret` / `--sts-token` parameters. Never export or echo plaintext credentials on the command line.
 - `scripts/sts_token.py` only performs identity verification and UID derivation (via `aliyun sts get-caller-identity`); it never carries credentials.
 
+## Identity Pre-check First
+
+- **Every diagnosis MUST begin with the identity pre-check: run `python3 scripts/sts_token.py --json` (workflow Step 2) before any other query. This applies to ALL paths, including failure-recovery follow-ups. Never skip or reorder it.**
+
 ## User Confirmation
 
 - Before running any query, confirm the target **product type**, **region**, and **instance id** with the user.
@@ -190,7 +194,7 @@ Build the final report per [references/report-template.md](references/report-tem
 Every OpenAPI call MUST carry the skill User-Agent built from this template:
 
 ```
---user-agent AlibabaCloud-Agent-Skills/{SKILL_NAME}/{session-id}
+--user-agent AlibabaCloud-Agent-Skills/{SKILL_NAME}/{session-id}/skill-version/{skill-version}
 ```
 
 Template fields:

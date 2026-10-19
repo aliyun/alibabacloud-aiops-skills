@@ -58,9 +58,35 @@ from typing import Any, Dict, List, Optional, Tuple
 
 # Per-run session id for platform-level tracing (Observability SA-2.11b/c)
 _SESSION_ID = uuid.uuid4().hex
+def _resolve_skill_version():
+    """Skill version for the User-Agent (rule UA-SKILL-VERSION).
+
+    Resolution: the SKILL_VERSION env var (non-empty), else the top-level
+    'version' string of references/manifest.json. An unresolvable version
+    raises before any cloud call -- unversioned calls must never be made.
+    """
+    import json as _json, os as _os
+    v = (_os.environ.get("SKILL_VERSION") or "").strip()
+    if not v:
+        p = _os.path.join(_os.path.dirname(_os.path.dirname(
+            _os.path.abspath(__file__))), "references", "manifest.json")
+        try:
+            with open(p, encoding="utf-8") as f:
+                v = str((_json.load(f) or {}).get("version") or "").strip()
+        except (OSError, ValueError):
+            v = ""
+    if not v:
+        raise RuntimeError(
+            "skill version unresolved: set SKILL_VERSION or restore "
+            "references/manifest.json (unversioned cloud calls are forbidden)")
+    return v
+
+
+_SKILL_VERSION = _resolve_skill_version()
 _USER_AGENT = (
     "AlibabaCloud-Agent-Skills/"
     "alibabacloud-cloud-native-internet-diagnostics/" + _SESSION_ID
+    + "/skill-version/" + _SKILL_VERSION
 )
 
 CLI_TIMEOUT_SECONDS = 60
@@ -77,6 +103,7 @@ _AUTH_ERROR_CODES = (
     "InvalidAccessKeyId.NotFound",
     "SignatureDoesNotMatch",
     "AccessDenied",
+    "AuthenticationFailed",
     "Unauthorized",
     "SecurityTokenExpired",
 )
@@ -99,7 +126,7 @@ _ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
 _ERROR_CODE_RE = re.compile(r"ErrorCode:[ \t]*([A-Za-z0-9_.\-]+)")
 # ROA errors may embed a JSON body in the plain-text Message field
 # ({"code": "NotFound.GatewayNotFound", "message": "..."}).
-_EMBEDDED_CODE_RE = re.compile(r'"code"\s*:\s*"([^"]+)"')
+_EMBEDDED_CODE_RE = re.compile(r'"(?:error_)?code"\s*:\s*"([^"]+)"')
 _EMBEDDED_MSG_RE = re.compile(r'"message"\s*:\s*"([^"]+)"')
 
 
@@ -127,9 +154,12 @@ def _parse_cli_error(stdout: str, stderr: str) -> Tuple[str, str]:
             data = json.loads(text)
         except (json.JSONDecodeError, ValueError):
             continue
-        if isinstance(data, dict) and data.get("Code"):
-            return (str(data["Code"]),
-                    _sanitize_message(str(data.get("Message", "")), 500))
+        if isinstance(data, dict):
+            code = data.get("Code") or data.get("error_code")
+            if code:
+                return (str(code),
+                        _sanitize_message(str(data.get("Message")
+                                              or data.get("message") or ""), 500))
     detail = _ANSI_RE.sub("", (stderr or stdout or "")).strip()
     code: Optional[str] = None
     message: Optional[str] = None
