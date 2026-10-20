@@ -1,0 +1,27 @@
+{
+  "name": "alibabacloud-openagent-chat",
+  "version": "1.0.0",
+  "api_version": "2026-08-01",
+  "compatibility": 5,
+  "files": {
+    "SKILL.md": "519b8e5455167030a3da6fa90c00015d4b51489fcd1bc1ac8d2e6a1967668d7b",
+    "assets/requirements.txt": "7b3cb3ccdf077135274bd9800c5499db16ce47b5fdb70cf59a44fb8dd612148e",
+    "references/ram-policies.md": "480961db56493caaee843d8041e13f8ade59f106f3311c71d9d7ad8cbedb0632",
+    "references/setup.md": "81e987bd0f627cc51b36fac56b997f30a01f97ebc6ac7ea0d61f2243f0be99f9",
+    "references/tasks.md": "9ec7e69802911a7be9ce17992becff47d096841e4d4f066bfdb1f3152ad4ea41",
+    "scripts/bootstrap.py": "8514a8807b3d66884fecfd6ca13564625cf46cdaea9c0156ca7763bb4643ac04",
+    "scripts/openagent.py": "14bd02ab436cf670bbb66c58a4108f4cfbe6233663e4f9dee0424430a8d629c6",
+    "scripts/openagent_client/__init__.py": "436edcc71521f29b1e87a739694437bda9314666eeefcd10f9a7f79c0164a6f3",
+    "scripts/openagent_client/cli.py": "4b7c3515b85813e5cd56cb154e3606ce4d16cf2c72a0f18d10a6293fc69f6081",
+    "scripts/openagent_client/common.py": "c10a3d71d16dd6676d4d2e292d391d7f45bd9c3ad8352ace16ba696bd05f98f6",
+    "scripts/openagent_client/concurrency.py": "2150db1c75b6dc0eef35a07b464588f38c3f2c520e8e3ae32e88518d9ea9514f",
+    "scripts/openagent_client/contract.py": "6b2af6a4a1dc9ccd504f539e8d05b269a80960d984b9ac1bb0c73d3040bb0271",
+    "scripts/openagent_client/credentials.py": "c88629f0315b5f86d3ca5a5bbc32539730d4b38d6d582ca46db48380f6437fa5",
+    "scripts/openagent_client/presentation.py": "7bacbf98618c462415eb962e8c2e4885c877a1a9acdfd86d2d00f78157b9822a",
+    "scripts/openagent_client/settings.py": "78769bf0f1c248c06628ff9d72a13a54162399a2e2895d5cf5793fc3c1ed637a",
+    "scripts/openagent_client/stream.py": "bd358c7f4a2bdc37e6b2eee284e1b4a0c2c08523b2ebe23070017bb7dde3b7e2",
+    "scripts/openagent_client/transport.py": "890094469aef2327f18b14dc089e5875d8ee3bd207a0ad5499225ba0fedbb598",
+    "scripts/openagent_client/validation.py": "a1d48761137d38c5b740697cc0d909908a07a03139f6b020a160d46824265b8b",
+    "scripts/openagent_client/workflows.py": "bb1d8be5ed62a6e41fa58467608935e64cb38a57b03fbd2151b33d49a49d34e7"
+  }
+}
