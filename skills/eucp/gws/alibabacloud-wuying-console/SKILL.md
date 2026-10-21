@@ -9,6 +9,11 @@ Operate WUYING through the official `aliyun` CLI and configured official WUYING 
 
 This Skill supports only Aliyun CLI OAuth profiles and OAuth-compatible control-plane APIs. Client-session APIs and credentials are out of scope.
 
+For OAuth configuration plans, setup, or login troubleshooting, read
+[authentication.md](references/authentication.md), even if software preflight is
+blocked or the request is preparation-only. Generic configure help alone does
+not establish the browser login flow, OAuth scopes, or administrator prerequisites.
+
 "Execute real calls" or "never simulate/mock" does not authorize an authentication
 bypass. If OAuth preflight denies a request, executing that real check and
 reporting `request_sent: false` is the correct grounded outcome, not a simulated
@@ -17,15 +22,29 @@ SDK or HTTP calls after denial.
 
 ## First decision: scope and safety
 
+Before remediation, retain the current user's task policy in workflow context:
+allowed dependency changes, login/profile changes, cloud operations, and target
+scope. Explicit prohibitions in the current request take priority over this
+Skill's automatic preparation default, earlier broad authorization, and every
+checker remediation plan. Recheck this policy immediately before any local
+installation, upgrade or configuration command as well as before cloud calls.
+Do not hold a blocked task waiting for authorization of an explicitly prohibited
+action; a later user-requested scope change is a separate decision.
+If installation is forbidden and a dependency is missing, report the blocker;
+do not install it even to inspect help.
+
 Classify the user's intent before environment remediation, installation, or
 resource discovery. For any state-changing request, read
 [safety.md](references/safety.md) first. An unresolved wildcard or account-wide
 destructive request must stop with an explicit refusal to bypass confirmation;
 do not upgrade/install software, log in, or enumerate resources to advance it.
 Offer a separately scoped read-only inventory instead, without executing it.
-For other tasks, authorization to operate on cloud resources is not authorization
-to install software or change authentication. Obtain specific authorization for
-each required environment change before performing it.
+For eligible tasks, scoped automatic dependency preparation is part of this
+Skill's setup/use workflow: announce required official CLI/plugin changes and
+continue without asking the user to type another installation authorization.
+Follow [setup.md](references/setup.md) for scope, official download fallbacks and
+verification. An explicit check-only/no-install restriction takes precedence.
+This does not authorize OAuth login, profile/account changes or cloud mutations.
 
 ## Execution prerequisites
 
@@ -41,11 +60,12 @@ boolean `true` and the requested product is in `checks.ready_products`. Missing,
 false, or `"not_checked"` authentication evidence blocks every business request,
 including reads. After any authorized install or upgrade, rerun the environment
 check and apply both gates again; plugin readiness alone is not authentication.
-If remediation is not explicitly authorized, report the blocker and ask only for
-that authorization. A request to query or change a resource is not permission to
-install software. The local-only exception applies to a task whose goal is local
-metadata/maintenance, not to continuing a blocked cloud query by relabeling its
-preparation as local-only work.
+Repair missing or incompatible dependencies through the automatic setup workflow
+unless the user prohibited it; do not stop merely to request installation consent.
+The read-only checker returns a dependency plan, not additional permissions.
+OAuth denial still blocks business calls after installation. The local-only
+exception applies to local metadata/maintenance, not to bypassing cloud-query
+authentication by relabeling its preparation as local-only work.
 
 Every business request must use `scripts/run_wuying.py` as the execution entry
 point. It rechecks the active OAuth profile, official plugin readiness, and the
@@ -66,6 +86,10 @@ The configured product scope is `ecd`, `appstream-center`, `eds-user`, `wyota`, 
 
 The bundled scripts use only the Python standard library. They have no third-party
 package dependency; see [scripts/requirements.txt](scripts/requirements.txt).
+Resolve an existing Python >=3.10 and the current shell before running examples;
+see [setup.md](references/setup.md#runtime-and-shell-preflight). `python3` and Bash
+below are examples, not requirements to install a second interpreter or shell.
+Reuse the selected interpreter for every helper and keep workflow outputs writable.
 
 ## Observability
 
@@ -78,6 +102,13 @@ workflow:
 export SKILL_SESSION_ID="$(python3 -c 'import secrets; print(secrets.token_hex(16))')"
 export SKILL_VERSION="$(python3 -c 'import json; print(json.load(open("references/manifest.json"))["version"])')"
 ```
+
+In PowerShell, use `$env:SKILL_SESSION_ID = python -c 'import secrets; print(secrets.token_hex(16))'`
+and `$env:SKILL_VERSION = python -c 'import json; from pathlib import Path; print(json.loads(Path("references/manifest.json").read_text())["version"])'`,
+substituting the verified interpreter (for example `py -3`). Reference them as
+`$env:SKILL_SESSION_ID` / `$env:SKILL_VERSION`, not `${SKILL_SESSION_ID}`.
+These commands run from the Skill directory; quote paths and use the native
+shell's argument syntax. Do not ask the user to translate commands or set PATH.
 
 Do not regenerate the session ID between discovery, execution, verification,
 retries, or follow-up questions in the same workflow. Every `aliyun` command
@@ -93,13 +124,13 @@ business API and do not require this flag.
 
 ## Start Every Task
 
-1. Apply the scope/safety decision above, then create and retain `SKILL_SESSION_ID` as described in Observability for an eligible workflow.
-2. Run `python3 scripts/check_environment.py` from this skill directory.
-3. If Aliyun CLI is missing or older than 3.5.0, stop and request authorization before installing or upgrading it. Use an official CLI installation path such as `brew install aliyun-cli` on macOS. For an existing installation, use `aliyun upgrade`, then rerun the environment check.
-4. If the result is `blocked`, stop cloud execution and follow the returned remediation. Do not install software, start OAuth login, or change profiles without user authorization. For a task limited to local inspection, command discovery, or catalog maintenance, continue only those local steps whose dependencies are actually available; the local-only rules below apply.
-5. If the result is `partial`, continue only when the requested operation belongs to a product in `ready_products`. If it requires an `unavailable_products` entry, explain which official plugin is missing and request authorization before installing it.
-6. If `updates_available` is non-empty, tell the user which installed plugins have newer stable versions. Do not update automatically. A compatible installed version may continue to run unless the requested command is absent or the user authorizes the update.
-7. If the result is `needs_auth`, explain that OAuth authentication is missing and follow [authentication.md](references/authentication.md). Do not call any business API. Authentication is not required for local metadata inspection; this does not authorize a login or an authentication-mode change.
+1. Apply the scope/safety decision above, resolve the existing Python runtime/shell using `setup.md`, then create and retain `SKILL_SESSION_ID` as described in Observability for an eligible workflow.
+2. Run `python3 scripts/check_environment.py` from this skill directory. For an identified task product set, pass `--required-products <products...>` as described in `setup.md`; the checker listing all five products is not a requirement to install all five for a single-product task. Keep an environment-wide inspection read-only when that is what the user requested.
+3. If Aliyun CLI is missing or older than 3.5.0, automatically prepare it using [setup.md](references/setup.md), unless explicitly prohibited. On macOS, `brew install aliyun-cli` is the preferred fresh-install path when Homebrew is already present. Upgrade Homebrew-managed CLI with Homebrew; use `aliyun upgrade --yes` for an eligible independent installation. Use the documented official CDN/archive fallbacks when a source is unreachable; do not depend on GitHub or install Homebrew just for this task. Recheck the effective binary after each change.
+4. If the result is `blocked`, stop cloud execution but finish allowed dependency preparation first. Do not start OAuth login or change profiles automatically. Explicit check-only/no-install restrictions override automatic preparation. For local inspection or command discovery, continue with available metadata without requiring OAuth.
+5. If the requested product is unavailable, automatically install its official plugin or upgrade its incompatible version, then recheck. Install only task-required configured products (all five only for explicit full setup); use `--required-products` on the checker to obtain a scoped `dependency_setup_plan`. Do not ask for separate consent for each plugin or each official-source fallback. Preserve the original task and resume it after preparation.
+6. If `updates_available` is non-empty, report it without pausing or upgrading merely for freshness. Reuse compatible versions. A required compatibility/API-version gap, or an officially verified command absent from the installed version, may use the bounded setup repair; optional upgrades require an explicit update request.
+7. If the result is `needs_auth`, finish allowed local setup/discovery. When login/profile changes are explicitly prohibited, report the authentication blocker and finish without asking to override that restriction. Otherwise follow [authentication.md](references/authentication.md): reuse authorization already given for the exact login/profile change, or combine the unresolved profile/account decision and login authorization into one question. Do not call business APIs before successful OAuth recheck. A `local_check_errors.oauth_profile` failure is not evidence of expired credentials: retry inspection once, not login. Local-only tasks never need OAuth login.
 8. Convert the business intent into a short English search phrase and search the generated catalog:
 
    ```bash
@@ -136,8 +167,8 @@ the bounded exploration rules below when eligible instead of stopping immediatel
 
 CLI help, bundled catalog search, and catalog generation do not require OAuth
 credentials. An authentication gate blocks cloud execution, not these local
-operations. A missing binary or plugin still prevents its live help: obtain
-specific installation authorization or report that gap. Never describe a bundled
+operations. A missing binary or plugin still prevents its live help: apply the
+scoped automatic setup workflow unless prohibited, or report its failure. Never describe a bundled
 catalog snapshot as live-help verification or invent unavailable parameter schemas.
 
 When the user asks for command syntax, API versions, or parameter templates,
@@ -150,11 +181,18 @@ gaps and never replace missing required parameters with guessed values.
 Treat `missing_products` as a coverage boundary, not evidence that another
 product implements the missing capability. Similar keywords do not establish
 equivalent resource types or contracts. When the requested capability depends
-on unavailable metadata, either obtain specific authorization to install the
-official plugin and verify live help, or state the product's exact missing
+on unavailable metadata, install the required official plugin through the allowed
+setup workflow and verify live help, or state the product's exact missing
 dependency and the unverified commands/parameters in the final answer itself.
 Do not present another product's keyword matches as the answer without verifying
 that its documented resource type and operation match the request.
+
+Resolve a missing local command through the official catalog, live product
+listing/help and, when needed, the official API index. Inspect evidence-backed
+candidates only: do not synthesize possible Action names from verbs and probe
+their Cartesian product across services. Once these sources establish that no
+matching command for the requested resource is exposed, report the exact coverage
+gap and finish discovery; an unrelated product is not a fallback answer.
 
 Use the bundled generator, not a replacement script that synthesizes commands.
 When all configured plugins are missing, `--allow-missing` may produce an empty,
@@ -277,7 +315,7 @@ Read [safety.md](references/safety.md) before any non-read operation.
 - `destructive`: explain irreversible or disruptive effects and obtain explicit confirmation immediately before execution. Do not broaden the target set.
 - Treat unknown or newly added command patterns as `mutation` until their live help proves they are read-only.
 - Use `--cli-dry-run` to validate a prepared request when useful. A successful dry run is not evidence that the server-side operation succeeded.
-- Never add `--yes` before the user has confirmed. Never use it to bypass an approval boundary.
+- For cloud operations, never add `--yes` before the user has confirmed. Never use it to bypass an approval boundary. Noninteractive official software setup such as `aliyun upgrade --yes` is covered only by the bounded dependency workflow, not by cloud-operation approval.
 - For an unresolved wildcard or account-wide destructive request, explicitly reject bypassing confirmation before planning execution. Do not install software or submit cloud mutations to advance it. A general "do everything" or "do not ask" instruction is not confirmation of an exact target set.
 
 ## Execute and Report
@@ -296,7 +334,12 @@ Read [safety.md](references/safety.md) before any non-read operation.
    fails. Treat that as terminal for this request, not as permission to invoke
    bare `aliyun` or reconfigure credentials. Command templates may show the
    underlying official CLI syntax, but actual business execution uses the wrapper.
-2. Inspect the process exit status and the API response. A zero exit from request preparation alone is not an API success.
+   If setup selected a CLI outside PATH, use
+   `python3 scripts/run_wuying.py --aliyun-bin "<effective-path>" -- aliyun ...`.
+   The prefix `aliyun` is the command marker; preflight and execution both use
+   the explicit binary. Do not change global PATH or restart the Agent merely
+   to discover this CLI.
+2. Inspect the process exit status and the API response. A zero exit from request preparation alone is not an API success. Mark planned steps that did not run as blocked or skipped, not completed; a finished overall task does not mean its catalog lookup, help inspection or API request actually executed.
 3. For mutations, query the affected resource afterward when a read API exists and report the observed state separately from the accepted request.
 4. Base summaries only on returned fields. Do not infer region, status, resource type, or ownership from an ID.
 5. Make the final answer self-contained even after a follow-up closes the task.
@@ -341,6 +384,7 @@ as `cli_verified_text_help`; it never derives command names from PascalCase APIs
 ## References
 
 - Authentication and credential handling: [authentication.md](references/authentication.md)
+- Automatic dependency preparation and official download fallbacks: [setup.md](references/setup.md)
 - Least-privilege authorization guidance: [ram-policies.md](references/ram-policies.md)
 - Execution and confirmation rules: [safety.md](references/safety.md)
 - Errors and common compatibility issues: [troubleshooting.md](references/troubleshooting.md)

@@ -8,7 +8,7 @@ Execution baseline validated on 2026-09-23 with:
 - both plugins use type `meta` and metadata format `protobuf`
 - minimum CLI version declared by both plugins: `3.5.0`
 
-The environment check also compares installed plugins with the official stable remote index. On 2026-09-24, it reported `ecd` `0.9.4` installed with `0.9.6` available, and `appstream-center` `0.9.6` installed with `0.9.7` available. Update detection is advisory and never changes local plugins without user authorization.
+The environment check also compares installed plugins with the official stable remote index. On 2026-09-24, it reported `ecd` `0.9.4` installed with `0.9.6` available, and `appstream-center` `0.9.6` installed with `0.9.7` available. Optional update detection remains advisory: compatible plugins are not upgraded automatically. Missing/incompatible task-required dependencies follow [setup.md](setup.md); explicit check-only/no-install instructions take precedence.
 
 The configured official WUYING product scope is stored in `products.json`:
 

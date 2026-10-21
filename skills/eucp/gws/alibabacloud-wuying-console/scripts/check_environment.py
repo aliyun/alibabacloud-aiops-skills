@@ -21,6 +21,7 @@ from typing import Any
 
 MINIMUM_CLI_VERSION = (3, 5, 0)
 REMOTE_UPDATE_TIMEOUT_SECONDS = 15
+LOCAL_CHECK_TIMEOUT_SECONDS = 5
 
 
 def version_tuple(raw: str) -> tuple[int, ...]:
@@ -101,16 +102,28 @@ def load_product_specs(path: Path) -> list[dict[str, Any]]:
 
 def run(
     command: list[str],
-    timeout: int | None = None,
+    timeout: int | None = LOCAL_CHECK_TIMEOUT_SECONDS,
 ) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         command,
         check=False,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
+        stdin=subprocess.DEVNULL,
         text=True,
         timeout=timeout,
     )
+
+
+def local_probe(command: list[str]) -> tuple[subprocess.CompletedProcess[str] | None, str | None]:
+    """Bound local inspection and return value-free failure evidence."""
+    try:
+        process = run(command)
+    except subprocess.TimeoutExpired:
+        return None, "timeout"
+    except OSError:
+        return None, "execution_error"
+    return process, None if process.returncode == 0 else "command_failed"
 
 
 def resolve_binary(explicit: str | None) -> str | None:
@@ -123,12 +136,65 @@ def resolve_binary(explicit: str | None) -> str | None:
     return str(path)
 
 
-def result(status: str, checks: dict[str, Any], remediation: list[str]) -> dict[str, Any]:
+def dependency_setup_plan(
+    checks: dict[str, Any],
+    product_specs: list[dict[str, Any]],
+    required_products: list[str] | None = None,
+) -> dict[str, Any]:
+    """Plan only dependency repairs; never install, authenticate or call APIs."""
+    configured = [str(product["code"]) for product in product_specs]
+    required = configured if required_products is None else required_products
+    if set(required) - set(configured):
+        raise ValueError("required products must be in the configured WUYING scope")
+    required = [code for code in configured if code in required]
+    cli_ready = checks.get("aliyun_cli_compatible") is True
+    if checks.get("cli_inspection_failed"):
+        cli_action = "inspect"
+    elif cli_ready:
+        cli_action = "none"
+    else:
+        cli_action = "upgrade" if checks.get("aliyun_binary") else "install"
+    commands: list[list[str]] = []
+    optional_updates: list[str] = []
+    missing: list[str] = []
+    updates: list[str] = []
+    if cli_ready:
+        for code in required:
+            info = checks.get("plugins", {}).get(code)
+            if info is None:
+                continue  # No observed plugin state is not an installation fact.
+            if info.get("installed") is False:
+                missing.append(code)
+            elif info.get("installed") is True and info.get("ready") is False:
+                updates.append(code)
+            elif info.get("ready") is True and info.get("update_available") is True:
+                optional_updates.append(code)
+        binary = str(checks["aliyun_binary"])
+        if missing:
+            commands.append([binary, "plugin", "install", "--names", *missing])
+        commands.extend([binary, "plugin", "update", "--name", code] for code in updates)
+    return {
+        "read_only_plan": True,
+        "guide": "references/setup.md",
+        "required_products": required,
+        "cli_action": cli_action,
+        "recheck_after_cli_action": not cli_ready,
+        "plugin_commands": commands,
+        "optional_plugin_updates": optional_updates,
+        "authentication_changes_allowed": False,
+        "cloud_mutation_approval_granted": False,
+        "honor_explicit_no_install": True,
+    }
+
+
+def result(status: str, checks: dict[str, Any], remediation: list[str],
+           product_specs: list[dict[str, Any]] | None = None,
+           required_products: list[str] | None = None) -> dict[str, Any]:
     allowed = bool(status in {"ready", "partial"}
                    and checks.get("aliyun_cli_compatible") is True
                    and checks.get("valid_oauth_profile") is True
                    and checks.get("ready_products"))
-    return {
+    payload = {
         "status": status,
         "checks": checks,
         "execution_gate": {
@@ -141,12 +207,21 @@ def result(status: str, checks: dict[str, Any], remediation: list[str]) -> dict[
         "remediation": remediation,
         "credential_values_exposed": False,
     }
+    if product_specs is not None:
+        payload["dependency_setup_plan"] = dependency_setup_plan(
+            checks, product_specs, required_products
+        )
+    return payload
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--aliyun-bin", help="Path to the aliyun CLI binary")
     parser.add_argument("--skip-profile", action="store_true", help="Skip profile validity detection")
+    parser.add_argument(
+        "--required-products", nargs="+",
+        help="Scope the read-only dependency repair plan to these configured products",
+    )
     parser.add_argument(
         "--skip-update-check",
         action="store_true",
@@ -159,28 +234,48 @@ def main() -> int:
         help="WUYING product configuration path",
     )
     args = parser.parse_args()
+    product_specs = load_product_specs(args.products.resolve())
+    if args.required_products and set(args.required_products) - {p["code"] for p in product_specs}:
+        parser.error("--required-products must contain only configured WUYING products")
+    required_codes = set(args.required_products or [p["code"] for p in product_specs])
 
-    checks: dict[str, Any] = {}
+    checks: dict[str, Any] = {"local_check_errors": {}}
     remediation: list[str] = []
     aliyun = resolve_binary(args.aliyun_bin)
     if not aliyun:
-        remediation.append("Install the official Aliyun CLI, then rerun this check.")
-        print(json.dumps(result("blocked", checks, remediation), ensure_ascii=False, indent=2))
+        remediation.append(
+            "Prepare the official Aliyun CLI using references/setup.md and its official "
+            "source fallbacks, unless installation was explicitly prohibited; then recheck."
+        )
+        print(json.dumps(result("blocked", checks, remediation, product_specs, args.required_products), ensure_ascii=False, indent=2))
         return 2
     checks["aliyun_binary"] = aliyun
 
-    version_process = run([aliyun, "version"])
-    cli_version = version_process.stdout.strip()
+    version_process, version_error = local_probe([aliyun, "version"])
+    cli_version = version_process.stdout.strip() if version_process else ""
     checks["aliyun_cli_version"] = cli_version or "unknown"
     try:
-        cli_compatible = version_process.returncode == 0 and version_at_least(cli_version, MINIMUM_CLI_VERSION)
+        cli_compatible = bool(
+            version_process is not None and version_process.returncode == 0
+            and version_at_least(cli_version, MINIMUM_CLI_VERSION)
+        )
     except ValueError:
         cli_compatible = False
+        version_error = "unrecognized_version"
     checks["aliyun_cli_compatible"] = cli_compatible
-    if not cli_compatible:
-        remediation.append("Upgrade the official Aliyun CLI to version 3.5.0 or later.")
+    checks["cli_inspection_failed"] = version_error is not None
+    if version_error:
+        checks["local_check_errors"]["cli_version"] = version_error
+        remediation.append(
+            "CLI inspection failed; retry this local check once. "
+            "Do not infer an old CLI or reinstall from a failed probe."
+        )
+    elif not cli_compatible:
+        remediation.append(
+            "Prepare Aliyun CLI >=3.5.0 using references/setup.md; preserve the package "
+            "manager and respect explicit no-upgrade restrictions, then recheck."
+        )
 
-    product_specs = load_product_specs(args.products.resolve())
     remote_plugins: dict[str, dict[str, str]] = {}
     if args.skip_update_check:
         checks["plugin_update_check"] = {
@@ -193,13 +288,14 @@ def main() -> int:
                 [aliyun, "plugin", "list-remote"],
                 timeout=REMOTE_UPDATE_TIMEOUT_SECONDS,
             )
-        except subprocess.TimeoutExpired:
+        except (subprocess.TimeoutExpired, OSError) as error:
             checks["plugin_update_check"] = {
                 "status": "unavailable",
                 "source": "aliyun plugin list-remote",
                 "error": (
-                    "official remote plugin index check timed out after "
-                    f"{REMOTE_UPDATE_TIMEOUT_SECONDS} seconds"
+                    f"official remote plugin index check timed out after {REMOTE_UPDATE_TIMEOUT_SECONDS} seconds"
+                    if isinstance(error, subprocess.TimeoutExpired)
+                    else "official remote plugin index could not be executed"
                 ),
             }
         else:
@@ -230,12 +326,25 @@ def main() -> int:
         minimum_version = str(product["minimum_plugin_version"])
         required_api_versions = set(product["required_api_versions"])
         oauth_api_versions = set(product["oauth_api_versions"])
-        plugin_process = run([aliyun, "plugin", "show", "--name", code])
-        plugin_info = parse_key_value_output(plugin_process.stdout)
+        plugin_process, plugin_error = local_probe([aliyun, "plugin", "show", "--name", code])
+        plugin_info = parse_key_value_output(plugin_process.stdout) if plugin_process else {}
         plugin_version = plugin_info.get("Version", "unknown")
-        installed = plugin_process.returncode == 0 and plugin_info.get("Product code") == code
+        installed = None
+        if plugin_process is not None:
+            if plugin_process.returncode == 0 and plugin_info.get("Product code") == code:
+                installed = True
+            elif plugin_process.returncode != 0 and any(
+                marker in (plugin_process.stdout + plugin_process.stderr).lower()
+                for marker in ("not installed", "not found in local manifest")
+            ):
+                installed = False
+                plugin_error = None
+            elif plugin_error is None:
+                plugin_error = "unrecognized_plugin_identity"
+        if plugin_error:
+            checks["local_check_errors"][f"plugin:{code}"] = plugin_error
         try:
-            compatible = installed and version_at_least(
+            compatible = installed is True and version_at_least(
                 plugin_version, version_tuple(minimum_version)
             )
         except ValueError:
@@ -280,9 +389,16 @@ def main() -> int:
             "required_api_versions_available": required_versions_available,
             "ready": ready,
         }
-        if not installed:
+        if code not in required_codes:
+            continue  # Observe all products, but never recommend unrelated repairs.
+        if installed is None:
             remediation.append(
-                "After user authorization, install it with: "
+                f"The {code} plugin state is unknown; retry its local inspection once, "
+                "without assuming it is missing or reinstalling it."
+            )
+        elif not installed:
+            remediation.append(
+                "If required for this task and installation is not prohibited, prepare with: "
                 f"aliyun plugin install --name {package}"
             )
         elif not compatible:
@@ -298,7 +414,7 @@ def main() -> int:
         elif update_available:
             remediation.append(
                 f"A newer stable {code} plugin is available "
-                f"({plugin_version} -> {latest_version}). After user authorization, "
+                f"({plugin_version} -> {latest_version}). Optional only; after an explicit update request, "
                 f"update it with: aliyun plugin update --name {package}"
             )
     checks["plugins"] = plugin_checks
@@ -314,29 +430,38 @@ def main() -> int:
         checks["valid_profile"] = "not_checked"
         checks["valid_oauth_profile"] = "not_checked"
     else:
-        profiles = run([aliyun, "configure", "list"])
+        profiles, profile_error = local_probe([aliyun, "configure", "list"])
         valid_oauth_profile = (
-            profiles.returncode == 0 and has_valid_oauth_profile(profiles.stdout)
+            profiles is not None and profiles.returncode == 0
+            and has_valid_oauth_profile(profiles.stdout)
         )
         checks["valid_profile"] = valid_oauth_profile
         checks["valid_oauth_profile"] = valid_oauth_profile
-        if not valid_oauth_profile:
+        if profile_error:
+            checks["local_check_errors"]["oauth_profile"] = profile_error
             remediation.append(
-                "Stop all business requests. After specific user authorization, "
+                "OAuth profile inspection failed; retry the local check once. "
+                "Do not infer expiration or start login/change profiles from a failed probe."
+            )
+        elif not valid_oauth_profile:
+            remediation.append(
+                "Stop all business requests. Follow references/authentication.md; reuse existing "
+                "authorization for the exact login/profile change without asking again, "
+                "otherwise obtain it once. Then "
                 "configure an active OAuth profile without overwriting existing credentials; "
                 "never use STS/AK or direct calls as a fallback."
             )
 
     technical_ready = bool(checks["aliyun_cli_compatible"] and ready_products)
-    if not technical_ready:
-        print(json.dumps(result("blocked", checks, remediation), ensure_ascii=False, indent=2))
+    if not technical_ready or "oauth_profile" in checks["local_check_errors"]:
+        print(json.dumps(result("blocked", checks, remediation, product_specs, args.required_products), ensure_ascii=False, indent=2))
         return 2
     if not args.skip_profile and not valid_oauth_profile:
-        print(json.dumps(result("needs_auth", checks, remediation), ensure_ascii=False, indent=2))
+        print(json.dumps(result("needs_auth", checks, remediation, product_specs, args.required_products), ensure_ascii=False, indent=2))
         return 3
 
     status = "partial" if unavailable_products else "ready"
-    print(json.dumps(result(status, checks, remediation), ensure_ascii=False, indent=2))
+    print(json.dumps(result(status, checks, remediation, product_specs, args.required_products), ensure_ascii=False, indent=2))
     return 4 if unavailable_products else 0
 
 

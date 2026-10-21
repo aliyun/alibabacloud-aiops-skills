@@ -45,14 +45,21 @@ def parse_key_value_output(output: str) -> dict[str, str]:
 
 
 def run_command(command: list[str], *, env: dict[str, str] | None = None) -> str:
-    completed = subprocess.run(
-        command,
-        check=False,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        env=env,
-    )
+    try:
+        completed = subprocess.run(
+            command,
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            stdin=subprocess.DEVNULL,
+            text=True,
+            env=env,
+            timeout=10,
+        )
+    except subprocess.TimeoutExpired as error:
+        raise RuntimeError("local CLI metadata inspection timed out after 10 seconds") from error
+    except OSError as error:
+        raise RuntimeError("local CLI metadata inspection could not be executed") from error
     if completed.returncode != 0:
         detail = completed.stderr.strip() or completed.stdout.strip()
         raise RuntimeError(f"command failed ({completed.returncode}): {' '.join(command)}\n{detail}")
@@ -124,7 +131,9 @@ def read_verified_text_payload(aliyun: str, product_code: str, version: str,
             if apis:
                 break
             continue
-        match = re.fullmatch(r"  ([a-z][a-z0-9]*(?:-[a-z0-9]+)*)(?: {2,}(.*))?", line)
+        # Cobra guarantees a separator, not a two-space minimum: the longest
+        # command can have just one space before its description.
+        match = re.fullmatch(r"  ([a-z][a-z0-9]*(?:-[a-z0-9]+)*)(?: +(.*))?", line)
         if match:
             name, description = match.groups()
             if name in {"version", "list-api-versions", "help", "completion"}:

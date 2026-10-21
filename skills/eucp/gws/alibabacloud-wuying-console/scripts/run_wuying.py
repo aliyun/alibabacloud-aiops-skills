@@ -8,7 +8,9 @@
 
 from __future__ import annotations
 
+import argparse
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -57,12 +59,22 @@ def validate_request(
 
 def main() -> int:
     command = sys.argv[1:]
-    if command[:1] == ["--"]:
-        command = command[1:]
+    options: list[str] = []
+    if "--" in command:
+        separator = command.index("--")
+        options, command = command[:separator], command[separator + 1:]
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--aliyun-bin", help="Use the same effective CLI as setup/preflight, without changing PATH")
+    args = parser.parse_args(options)
     try:
-        aliyun = shutil.which("aliyun")
+        aliyun = args.aliyun_bin or shutil.which("aliyun")
         if not aliyun:
             raise ValueError("official Aliyun CLI is not installed")
+        if args.aliyun_bin:
+            binary = Path(aliyun).expanduser().resolve()
+            if not binary.is_file() or not os.access(binary, os.X_OK):
+                raise ValueError("the selected CLI binary is not executable")
+            aliyun = str(binary)
         specs = json.loads((ROOT / "references" / "products.json").read_text(encoding="utf-8"))
         # The workflow already checks remote updates. This fresh execution gate
         # intentionally performs only local CLI/plugin/profile checks.
