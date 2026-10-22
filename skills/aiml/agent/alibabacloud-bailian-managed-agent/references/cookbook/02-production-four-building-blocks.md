@@ -1,6 +1,6 @@
 
 
-> **Current routing (2026-09-18):** use built-in `web_search` / `web_fetch` for new web research workflows. This archived recipe retains its MCP configuration and measured MCP event traces to explain that integration; it is not the default web-search recommendation. For the current tested flow see [09](09-working-memory-and-web-research.md).
+> **Current routing (2026-09-18):** use built-in `web_search` / `web_fetch` for new web research workflows. This archived recipe retains its MCP configuration and measured MCP event traces to explain that integration; it is not the default web-search recommendation. For built-in configuration and its standalone live check, see [05](05-coordinator-pattern-and-cost-tiering.md).
 
 > Execution safety: legacy shell examples below illustrate wire fields. When using real credentials, construct and send JSON in-process from a secret store/environment; do not interpolate secrets into command arguments, print request bodies, enable shell tracing, or use a receiver that echoes Authorization. Verify only that an allowlisted service authenticates successfully. A sandbox check should return a boolean placeholder check, never raw `printenv` output. See [CLI/API routing](../workflows/cli-api-routing.md).
 
@@ -281,7 +281,7 @@ curl --user-agent "$BAILIAN_MANAGED_AGENT_SKILL_UA" --max-time 30 -X POST "$BASE
         "type": "message",
         "role": "user",
         "content": [
-          { "type": "text", "text": "Here is today's briefing task: 1) use bailian_web_search to search \"tea industry latest news\" and pick the 3 most notable items into a brief, one sentence each; 2) check whether GITHUB_TOKEN starts with BMA_SECRET_PLACEHOLDER_ and report only true or false, never its value; 3) deliver the final morning brief." }
+          { "type": "text", "text": "Here is the briefing task for today: 1) use bailian_web_search to search \"tea industry latest news\" and pick the 3 most notable items into a brief, one sentence each; 2) check whether GITHUB_TOKEN starts with BMA_SECRET_PLACEHOLDER_ and report only true or false, never its value; 3) deliver the final morning brief." }
         ]
       }
     ],

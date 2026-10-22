@@ -280,6 +280,8 @@ endpoint is the cheapest:
  "stats": {"active_seconds": 5.3, "duration_seconds": 22.5}, "usage": {"input_tokens": 15584}}
 ```
 
+For the cumulative `stats` / `usage` fields, timing cutoff rules and cache Token accounting, see [Session stats and usage](../integration/session-stats-and-usage.md).
+
 Note `stop_reason` **is an object, not a string** — what you read is `stop_reason.type`. All three
 values **must have branches**:
 

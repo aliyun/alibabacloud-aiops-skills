@@ -45,7 +45,7 @@ All paths below are relative to `/api/v1/agentstudio`.
 | | `DELETE /environments/{environment_id}` | Hard delete |
 | | `POST /environments/{environment_id}/archive` | Archive |
 | **Session** | `POST /sessions` | Create (binds Agent + Environment, locking a snapshot of the agent's latest version at that moment; supports `environment_variables` plaintext injection of session env vars) |
-| | `GET /sessions/{session_id}` / `GET /sessions` | Get / list |
+| | `GET /sessions/{session_id}` / `GET /sessions` | Get / list; for GET detail response `stats` / `usage`, see [Session timing and cumulative Token usage](session-stats-and-usage.md) |
 | | `POST /sessions/{session_id}` | Update metadata (e.g. rename) |
 | | `DELETE /sessions/{session_id}` | Hard delete (metadata + event history + resource copies all wiped, unrecoverable) |
 | | `POST /sessions/{session_id}/archive` | Archive (turns `terminated`; event history retained) |

@@ -2,6 +2,8 @@
 
 > In the first six recipes, agents used "platform-provided" capabilities: the builtin toolkit (01), MCP marketplace services (02/04/05). This recipe covers the reverse direction — **mounting capabilities you already own onto the agent**: register your already-running MCP Server into Bailian (custom MCP), and package and upload your team's operating procedures (Skills). The Skills API chain was field-tested end to end (2026-09, cn-beijing region); custom MCP registration is a console operation, walked through via the official entry points, with screenshot placeholders left in place.
 
+> Updated 2026-10-15: added "Pass MCP authentication headers dynamically in MA" based on product guidance and the CreateSession API parameter documentation. This addition is pending publication to the live cookbook; no cloud examples were rerun for this documentation update.
+
 ## Scenario: Luming Publishing's manuscript-review assistant
 
 "Luming Publishing" is a fictional book-publishing company whose content-operations department processes a large volume of submissions every month. They hold two ready-made assets:
@@ -64,7 +66,7 @@ How to read the three fields:
 
 - `type` takes `streamableHttp` (the MCP protocol's standard HTTP transport); the endpoint is a single URL, stateless calls;
 - `${workspaceId}` in `url` is your Bailian workspace ID (visible at the console's top right, shaped like `llm-xxxx`);
-- `headers` carries auth — the RAG endpoint uses a plain API Key (Bearer). **Note: the key you fill in at registration is stored in Bailian's MCP config, and the platform attaches it on the agent's behalf at call time** — no need to keep another copy in the agent's system prompt or a vault.
+- `headers` carries auth — the RAG endpoint uses a plain API Key (Bearer). In this fixed-authentication example, replace `${workspaceId}` and `${DASHSCOPE_API_KEY}` with actual values before registration. **The key you fill in at registration is stored in Bailian's MCP config, and the platform attaches it on the agent's behalf at call time** — no need to keep another copy in the agent's system prompt or a vault. For different credentials in each session, follow [dynamic MCP authentication headers](#dynamic-mcp-auth-headers): retain the dynamic placeholders at registration and supply their values when creating the session.
 
 > This example also corrects a common misconception in passing: **"custom MCP" does not require writing an MCP Server from scratch**. Any service you already run that exposes an MCP protocol endpoint — a homegrown business-system API gateway, a third-party SaaS's MCP interface, or even another cloud product (like Bailian knowledge indexing) — can be registered this way. What Bailian does is "registration + proxied calls", not "hosted running".
 
@@ -76,7 +78,7 @@ How to read the three fields:
 
 ### 1.3 API mounting: `type: customer`
 
-After registering (note down the **service name** you gave it), mount it on an agent — the same `mcp_servers` field as mounting a marketplace service in 02, only with `type` changed to `customer`:
+After registering, note down the **service ID** shown on the service card in the console's MCP management list (for example, `mcp-xxxxxxxx`). For custom MCP mounting, fill `name` with this ID, rather than the display name. Mount it on an agent using the same `mcp_servers` field as in recipe 02, with `type` set to `customer`:
 
 ```bash
 curl --user-agent "$BAILIAN_MANAGED_AGENT_SKILL_UA" --max-time 30 -s -X POST "$BASE/agents" \
@@ -85,12 +87,12 @@ curl --user-agent "$BAILIAN_MANAGED_AGENT_SKILL_UA" --max-time 30 -s -X POST "$B
     "name": "luming-editor",
     "model": {"id": "qwen3.8-max"},
     "mcp_servers": [
-      {"type": "customer", "name": "rag_mcp"}
+      {"type": "customer", "name": "mcp-xxxxxxxx"}
     ]
   }'
 ```
 
-After mounting, tool enablement is exactly as with marketplace services: add an `mcp_toolkit` in `tools`, fill `mcp_server_name` with the registered name, and set `enabled: true` per tool in `configs[]` (forget the per-tool enablement and the tools go silently missing at runtime — the trap was expanded on in 02).
+After mounting, tool enablement is exactly as with marketplace services: add an `mcp_toolkit` in `tools`, fill `mcp_server_name` with the same service ID used in `mcp_servers[].name`, and set `enabled: true` per tool in `configs[]` (forget the per-tool enablement and the tools go silently missing at runtime — the trap was expanded on in 02).
 
 **One important field-tested difference — the two types validate at completely different times**:
 
@@ -101,6 +103,79 @@ After mounting, tool enablement is exactly as with marketplace services: add an 
 | Troubleshooting difficulty | High (no error, just absent) | Low (surfaced immediately) |
 
 So the correct order for custom MCP is iron law: **register in the console first, then write it into the agents config**. In passing: custom MCP currently has **no management API** (no matching endpoint in the API overview) — registration, renaming, and deletion all go through the console.
+
+<a id="dynamic-mcp-auth-headers"></a>
+
+### 1.4 Pass MCP authentication headers dynamically in MA
+
+The same custom MCP service may need different authentication values for different sessions. For example, Luming's review assistant might pass the current user's access credential through `dynamic-header` and a tenant identifier through `X-Tenant-Id` when calling a business MCP service. Declare dynamic headers when registering the MCP service, then supply the actual values through **CreateSession (`POST /sessions`)**. The internal Agent service substitutes these values when it calls the MCP service.
+
+#### Step 1: configure dynamic headers during custom MCP registration
+
+In the custom MCP service's **MCP service configuration**, express each dynamic header as `"Header-Name": "${Header-Name}"`. For a header named `dynamic-header`, use the configuration below. A service can have multiple dynamic headers:
+
+```json
+{
+  "mcpServers": {
+    "business_mcp": {
+      "type": "streamableHttp",
+      "url": "https://mcp.example.com/mcp",
+      "headers": {
+        "dynamic-header": "${dynamic-header}",
+        "X-Tenant-Id": "${X-Tenant-Id}"
+      }
+    }
+  }
+}
+```
+
+Replace `url` with your actual MCP endpoint. **Keep `${dynamic-header}` and `${X-Tenant-Id}` as literal dynamic placeholders when registering the service**; do not replace them with a particular session's values at this stage. Keep the header name, the name inside its placeholder, and the key supplied at session creation consistent. The configuration field is named `headers`.
+
+After registration, mount the service on the Agent and enable its tools as described in the previous section. The following example assumes that the custom MCP service ID is `mcp-xxxxxxxx`, it is already mounted on `agent_xxx`, and environment `env_xxx` is ready.
+
+#### Step 2: pass actual values through `mcp_configs` in CreateSession
+
+Add `mcp_configs` at the top level of the request body, alongside `agent` and `environment_id`:
+
+```bash
+curl --user-agent "$BAILIAN_MANAGED_AGENT_SKILL_UA" --max-time 30 -s -X POST "$BASE/sessions" \
+  -H "Authorization: Bearer $API_KEY" -H "Content-Type: application/json" \
+  -d '{
+    "agent": {"id": "agent_xxx"},
+    "environment_id": "env_xxx",
+    "title": "Luming review: tenant A",
+    "mcp_configs": [
+      {
+        "mcp_server_name": "mcp-xxxxxxxx",
+        "headers": {
+          "dynamic-header": "session-a-token-example",
+          "X-Tenant-Id": "tenant-a"
+        }
+      }
+    ]
+  }'
+```
+
+`session-a-token-example` and `tenant-a` are example values. In your integration, the business backend supplies the current session's authentication value and tenant identifier. The outer `Authorization` header authenticates the request to the MA API; `mcp_configs[].headers` in the body supplies the headers MA uses when calling the target MCP service.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `mcp_configs` | `object[]` | Session-level MCP header configuration, separate from `agent`. Defaults to an empty array when omitted. Add separate entries to configure multiple MCP services. |
+| `mcp_configs[].mcp_server_name` | `string`, required | Target MCP Server identifier. Use the same value as `mcp_servers[].name` in the Agent configuration and `mcp_server_name` in its toolkit; this example uses `mcp-xxxxxxxx`. |
+| `mcp_configs[].headers` | `object`, required | Actual header values for this session. Both keys and values must be strings; one object can contain multiple headers. |
+
+For the full schema, see the [Create Session API](https://docs.agent.bailian.aliyun.com/en/api/managed-agents/session/create). A nonexistent MCP Server name does not cause session creation to fail, but its configuration has no effect at runtime, so verify the service identifier.
+
+#### Step 3: the Agent substitutes the placeholders when calling MCP
+
+When this session calls the MCP service, the internal Agent service replaces the registered dynamic placeholders with the actual values supplied in `mcp_configs`. The target MCP receives headers such as:
+
+```http
+dynamic-header: session-a-token-example
+X-Tenant-Id: tenant-a
+```
+
+To create a session for another user or tenant, reuse the same Agent and MCP registration, supplying that session's own `headers`, such as `dynamic-header: session-b-token-example` and `X-Tenant-Id: tenant-b`. Each session can therefore use its own MCP authentication values without registering the service again.
 
 ## 2. Skills: package and upload your team's procedures
 
@@ -322,6 +397,7 @@ curl --user-agent "$BAILIAN_MANAGED_AGENT_SKILL_UA" --max-time 30 -s -X DELETE "
 | Platform built-in execution (bash / file I/O) | `builtin_toolkit` | recipe 01 |
 | Generic public-internet services (search, document processing...) | marketplace MCP (`type: official`) | recipe 02 |
 | **Your own MCP Server (knowledge base, business systems)** | **custom MCP (`type: customer`)** | **console registration (Script deployment -> HTTP deployment, registration-only, free) -> API mounting** |
+| Different authentication values for each session using the same MCP | [Dynamic MCP headers](#dynamic-mcp-auth-headers) | Register `${Header-Name}` placeholders -> supply actual values through CreateSession's `mcp_configs` |
 | **Your team's operating procedures (checklists, scripts, templates)** | **custom Skill** | **package zip -> API upload -> pass review (minutes-scale) -> mount with pinned version** |
 
 Remember the MCP/Skills division in one line: **MCP gives the agent "hands" (which services it can call); a Skill gives the agent an "SOP" (by which procedure it works)**. Luming's review assistant mounts both: the RAG MCP lets it query the editorial standards, and the manuscript-check skill lets it run the health check by the senior editors' three looks — hands and method together.

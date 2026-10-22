@@ -111,6 +111,60 @@ def history(sid):
     return events
 
 
+def list_items(path, **params):
+    """Read every page without dropping a resource scope/filter."""
+    items, page, seen = [], None, set()
+    while True:
+        query = httpx.QueryParams(
+            {"limit": 100, **params, **({"page": page} if page else {})}
+        )
+        data = req("GET", path + "?" + str(query))
+        items.extend(data.get("data", []))
+        page = data.get("next_page")
+        if not page:
+            return items
+        if page in seen:
+            raise RuntimeError("repeated resource cursor")
+        seen.add(page)
+
+
+def terminal_state(events):
+    """Only a new terminal status can settle the submitted turn."""
+    for event in reversed(events):
+        if event.get("type") != "session_status":
+            continue
+        for block in event.get("content", []):
+            state = block.get("data", {})
+            status = state.get("session_status")
+            reason = (state.get("stop_reason") or {}).get("type")
+            if status == "terminated" or (status == "idle" and reason):
+                return state
+            if status:
+                return None
+    return None
+
+
+def assert_end_turn(events):
+    state = terminal_state(events)
+    assert state and state.get("session_status") == "idle", state
+    assert (state.get("stop_reason") or {}).get("type") == "end_turn", state
+
+
+def tool_outputs(events):
+    return [
+        event for event in events
+        if event.get("type") in ("tool_call_output", "mcp_call_output")
+    ]
+
+
+def assert_tool_success(events, output_contains=None):
+    outputs = tool_outputs(events)
+    assert outputs, "No tool output; an assistant claim alone is insufficient"
+    assert not any(event.get("is_error") for event in outputs), "Tool failed"
+    if output_contains:
+        assert output_contains in json.dumps(outputs, ensure_ascii=False), outputs
+
+
 def inspect_run(label, sid, events=None):
     evs = history(sid) if events is None else events
     (OUT / (label + "-events.json")).write_text(
@@ -146,14 +200,15 @@ def run(sid, text=None, inputs=None, timeout=210):
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         info = req("GET", f"/sessions/{sid}")
-        reason = info.get("stop_reason") or {}
-        if info.get("status") in ("idle", "terminated") and reason.get("type"):
+        if info.get("status") in ("idle", "terminated"):
             evs = history(sid)
             fresh = [e for e in evs if e.get("id") not in old_ids]
-            # Avoid accepting a previous turn's cached stop_reason after asynchronous POST.
-            if any(e.get("type") == "session_status" for e in fresh):
-                if reason.get("type") not in ("end_turn", "requires_action"):
-                    raise RuntimeError("abnormal turn: " + str(reason))
+            state = terminal_state(fresh)
+            # A fresh running event does not make an old cached end_turn current.
+            if state:
+                reason = state.get("stop_reason") or {}
+                if state.get("session_status") == "terminated" or reason.get("type") not in ("end_turn", "requires_action"):
+                    raise RuntimeError("abnormal turn: " + str(state))
                 return info, fresh
         time.sleep(2)
     raise TimeoutError(sid)
@@ -276,20 +331,27 @@ def resource_test():
         "Use bash to import humanize, read /mnt/session/uploads/audit.txt and sum the amount column. Write exactly the total to /mnt/session/outputs/total.txt. Report total and humanize version. Do not use web tools.",
     )
     inspect_run("file-analysis", sid, evs)
-    arts = req("GET", f"/files?scope_id={sid}&limit=100")
+    assert_end_turn(evs)
+    assert_tool_success(evs)
+    artifact_deadline = time.monotonic() + 60
+    while True:
+        arts = list_items("/files", scope_type="session", scope_id=sid)
+        matches = [x for x in arts if x.get("filename") == "total.txt" and x.get("downloadable")]
+        if matches or time.monotonic() >= artifact_deadline:
+            break
+        time.sleep(2)
     log(
         "artifacts",
         files=[
             {k: x.get(k) for k in ("id", "filename", "downloadable", "status")}
-            for x in arts.get("data", [])
+            for x in arts
         ],
     )
-    for x in arts.get("data", []):
-        if x.get("downloadable"):
-            r = http.get(BASE + "/files/" + x["id"] + "/content")
-            log("artifact_download", status=r.status_code, body=r.text[:200])
-            r.raise_for_status()
-            assert r.text.strip() == "350"
+    assert len(matches) == 1, "Expected exactly one downloadable total.txt"
+    r = http.get(BASE + "/files/" + matches[0]["id"] + "/content")
+    log("artifact_download", status=r.status_code, body=r.text[:200])
+    r.raise_for_status()
+    assert r.text.strip() == "350"
     # Dynamic add/read/remove. Metadata visibility alone isn't runtime readiness.
     mount = req(
         "POST",
@@ -302,18 +364,25 @@ def resource_test():
         "Use bash to wait up to 60 seconds for /mnt/session/uploads/late.txt (test -f, sleep 2). Read it and report the sum. Do not use web tools.",
     )
     inspect_run("dynamic-read", sid, evs)
+    assert_end_turn(evs)
+    assert_tool_success(evs)
+    # read may return the source rows for the model to sum; bash may return 350.
+    evidence = json.dumps(tool_outputs(evs), ensure_ascii=False)
+    assert "350" in evidence or all(row in evidence for row in ("East,100", "East,50", "West,200"))
+    assert "350" in assistant_text(evs)
     req("DELETE", f"/sessions/{sid}/resources/{mount['id']}")
-    log(
-        "dynamic_unmount",
-        remaining_ids=[
-            x["id"] for x in req("GET", f"/sessions/{sid}/resources").get("data", [])
-        ],
-    )
+    remaining_ids = [x["id"] for x in list_items(f"/sessions/{sid}/resources")]
+    log("dynamic_unmount", remaining_ids=remaining_ids)
+    assert mount["id"] not in remaining_ids
     info, evs = run(
         sid,
-        "Use bash to wait up to 60 seconds for /mnt/session/uploads/late.txt to disappear, then report whether it is absent. Do not delete the file yourself.",
+        "Use bash to wait up to 60 seconds for /mnt/session/uploads/late.txt to disappear. Print MOUNT_REMOVED only if test ! -e succeeds, otherwise print STILL_PRESENT. Do not delete the file yourself. Report the tool result.",
     )
     inspect_run("dynamic-removed", sid, evs)
+    assert_end_turn(evs)
+    assert_tool_success(evs, "MOUNT_REMOVED")
+    assert "MOUNT_REMOVED" in assistant_text(evs)
+    assert req("GET", "/files/" + fid)["status"] == "available"
 
 
 def memory_test():
@@ -330,11 +399,13 @@ def memory_test():
         "Read the mounted memory note /notes/handoff.md using read. Report project code, then use edit or write to append a new line: Verified total is 350. Use the actual memory mount path from your instructions. Do not use bash or web.",
     )
     inspect_run("memory-write", sid, evs)
+    assert_end_turn(evs)
+    assert_tool_success(evs)
+    memory = req("GET", f"/memory_stores/{ledger['memory']}/memories/{ledger['memory_item']}")
+    assert "ORCHID-73" in memory.get("content", "") and "350" in memory.get("content", "")
     log(
         "memory_readback",
-        memory=req(
-            "GET", f"/memory_stores/{ledger['memory']}/memories/{ledger['memory_item']}"
-        ),
+        memory=memory,
     )
     resource["access"] = "read_only"
     sid2 = session("memory-reader", resources=[resource])
@@ -343,16 +414,13 @@ def memory_test():
         "Use read to read /notes/handoff.md in the mounted memory store. State the project code and verified total recorded by the previous session. Do not guess, do not write, do not use bash or web.",
     )
     inspect_run("memory-cross-session", sid2, evs)
+    assert_end_turn(evs)
+    assert_tool_success(evs)
     text = assistant_text(evs)
     assert "ORCHID-73" in text and "350" in text
-    log(
-        "memory_versions",
-        count=len(
-            req("GET", f"/memory_stores/{ledger['memory']}/memory_versions").get(
-                "data", []
-            )
-        ),
-    )
+    versions = list_items(f"/memory_stores/{ledger['memory']}/memory_versions")
+    log("memory_versions", count=len(versions))
+    assert len(versions) >= 2, "Memory creation and edit should produce versions"
 
 
 def web_test():
@@ -362,6 +430,8 @@ def web_test():
         "Call built-in web_search once for Alibaba Cloud Managed Agents Memory Store documentation. Then call built-in web_fetch once for https://docs.agent.bailian.aliyun.com/zh/managed-agents/context/memory-store . State one documented mounting constraint and its source URL. No bash or MCP. Maximum two web tool calls.",
     )
     inspect_run("builtin-web", sid, evs)
+    assert_end_turn(evs)
+    assert_tool_success(evs)
     names = {
         b.get("data", {}).get("name")
         for e in evs
@@ -372,6 +442,62 @@ def web_test():
     assert not any(
         e.get("is_error") for e in evs if e.get("type") == "tool_call_output"
     )
+
+
+def web_team_test():
+    """Exercise recipe 05's actual built-in worker/coordinator configuration."""
+    worker = create(
+        "agents",
+        {
+            "name": "skill-audit-web-worker-" + uuid.uuid4().hex[:6],
+            "model": {"id": "qwen3.7-plus"},
+            "tools": [{
+                "type": "builtin_toolkit",
+                "default_config": {"enabled": False},
+                "configs": [{"name": name, "enabled": True} for name in ("web_search", "web_fetch")],
+            }],
+            "system": "You research one focused question. Use web_search once and web_fetch once, then return concise findings with source URLs, not full page text. No other web calls or tasks. Never inspect credentials.",
+        },
+    )
+    coordinator = create(
+        "agents",
+        {
+            "name": "skill-audit-web-coordinator-" + uuid.uuid4().hex[:6],
+            "model": {"id": "qwen3.8-max"},
+            "multiagent": {
+                "type": "coordinator",
+                "agents": [{"type": "agent", "id": worker["id"], "version": worker["version"]}],
+            },
+            "system": "Delegate the user's research to exactly one instance of your search worker using create_agent, then wait_for_agents. The worker has built-in web_search and web_fetch; you have no web tools. Do not research or answer from your own knowledge. After the worker finishes, summarize its finding and source URL. Do not spawn further workers.",
+        },
+    )
+    sid = session("web-team", agent=coordinator["id"])
+    _, events = run(
+        sid,
+        "Have your worker call web_search once for Alibaba Cloud Managed Agents Memory Store documentation, then web_fetch once for https://help.aliyun.com/zh/model-studio/managed-agents-memory-store . Determine when a Memory Store must be attached to a Session. Cite the source URL. One worker, at most two web tool calls in total.",
+        timeout=300,
+    )
+    inspect_run("builtin-web-team", sid, events)
+    assert_end_turn(events)
+    assert_tool_success(events)
+    assert any(e.get("type") == "thread_created" for e in events), "No delegation evidence"
+    calls = [
+        {"thread_id": e.get("thread_id"), "name": b.get("data", {}).get("name")}
+        for e in events if e.get("type") == "tool_call"
+        for b in e.get("content", []) if b.get("type") == "data"
+    ]
+    web_calls = [x for x in calls if x["name"] in ("web_search", "web_fetch")]
+    assert {x["name"] for x in web_calls} == {"web_search", "web_fetch"}
+    assert all((x["thread_id"] or "").startswith("sthr_") for x in web_calls), web_calls
+    assert not any(e.get("type") == "mcp_call" for e in events)
+    model_calls = [
+        {"thread_id": e.get("thread_id"), **b.get("data", {})}
+        for e in events if e.get("type") == "model_request_end"
+        for b in e.get("content", []) if b.get("type") == "data"
+    ]
+    log("web_team_evidence", web_calls=web_calls, model_calls=model_calls,
+        threads=list_items(f"/sessions/{sid}/threads"))
+    assert "http" in assistant_text(events), "Missing cited source"
 
 
 def delta_test():
@@ -385,6 +511,7 @@ def delta_test():
         "GET",
         BASE + f"/sessions/{sid}/events/stream",
         params=[("event_deltas[]", "message"), ("event_deltas[]", "reasoning")],
+        headers={"Accept": "text/event-stream"},
         timeout=httpx.Timeout(210, read=45),
     ) as r:
         r.raise_for_status()
@@ -432,9 +559,10 @@ def delta_test():
                     for b in ev.get("content", []):
                         state = b.get("data", {})
                         seen_status.append(state)
-                        if state.get("session_status") in ("idle", "terminated") and (
-                            state.get("stop_reason") or {}
-                        ).get("type"):
+                        if state.get("session_status") == "terminated" or (
+                            state.get("session_status") == "idle" and
+                            (state.get("stop_reason") or {}).get("type")
+                        ):
                             break
                     else:
                         continue
@@ -455,6 +583,79 @@ def delta_test():
         statuses=seen_status,
     )
     assert complete and all(comparisons.values())
+    assert_end_turn(frames)
+    assert any(e.get("type") == "event_delta" for e in frames)
+    assert "reasoning" in started.values()
+    assert any(e.get("type") == "reasoning" for e in frames)
+    assert "323" in assistant_text(frames)
+
+
+def iter_sse_events(response, deadline):
+    data = []
+    for line in response.iter_lines():
+        if time.monotonic() > deadline:
+            raise TimeoutError("SSE total deadline")
+        if line.startswith("data:"):
+            data.append(line[5:].removeprefix(" "))
+        elif line == "" and data:
+            raw = "\n".join(data)
+            data = []
+            if raw == "[DONE]":
+                return
+            yield json.loads(raw)
+
+
+def session_stream(sid):
+    return http.stream(
+        "GET", BASE + f"/sessions/{sid}/events/stream",
+        params=[("event_deltas[]", "message"), ("event_deltas[]", "reasoning")],
+        headers={"Accept": "text/event-stream"},
+        timeout=httpx.Timeout(180, read=30),
+    )
+
+
+def recovery_test():
+    """Drop SSE after a delta; reconnect and restore without resubmission."""
+    sid = session("client-recovery")
+    deadline = time.monotonic() + 180
+    first = []
+    with session_stream(sid) as response:
+        response.raise_for_status()
+        req("POST", f"/sessions/{sid}/events", {"input": [message(
+            "First say CLIENT_STARTED. Then call bash exactly once to run: sleep 3; printf CLIENT_TOOL_OK. Finally explain 17 times 19 in three sentences and finish with CLIENT_DONE_323. No web calls."
+        )]})
+        for event in iter_sse_events(response, deadline):
+            first.append(event)
+            if event.get("type") == "event_delta":
+                break
+    assert any(e.get("type") == "event_delta" for e in first), "No partial answer before disconnect"
+    live = []
+    with session_stream(sid) as response:
+        response.raise_for_status()
+        snapshot = history(sid)
+        if not terminal_state(snapshot):
+            for event in iter_sse_events(response, deadline):
+                live.append(event)
+                if terminal_state([event]):
+                    break
+    final = history(sid)
+    inspect_run("client-recovered", sid, final)
+    assert_end_turn(final)
+    assert_tool_success(final, "CLIENT_TOOL_OK")
+    assert "CLIENT_DONE_323" in assistant_text(final)
+    user_messages = [e for e in final if e.get("type") == "message" and e.get("role") == "user"]
+    assert len(user_messages) == 1, "Business input was duplicated"
+    recovered = {}
+    for event in first + snapshot + live + final:
+        if event.get("id") and event.get("type") == "message" and event.get("role") == "assistant":
+            recovered[event["id"]] = event
+    expected = {e["id"]: e for e in final if e.get("type") == "message" and e.get("role") == "assistant"}
+    assert recovered == expected
+    for name, payload in [("client-before-disconnect", first), ("client-reconnect-snapshot", snapshot), ("client-reconnected-stream", live)]:
+        (OUT / (name + ".json")).write_text(json.dumps(payload, ensure_ascii=False, indent=2))
+    log("client_recovery_evidence", submissions=1, user_messages=len(user_messages), answer_messages=len(expected),
+        before_disconnect=dict(collections.Counter(e.get("type") for e in first)),
+        after_reconnect=dict(collections.Counter(e.get("type") for e in live)), restored_equal_to_history=True)
 
 
 def image_test():
@@ -503,6 +704,7 @@ def image_test():
         ],
     )
     inspect_run("image-file", sid, evs)
+    assert_end_turn(evs)
     assert assistant_text(evs).strip().lower().rstrip(".") == "red"
 
 
@@ -717,7 +919,9 @@ SCENARIOS = {
     "files": resource_test,
     "memory": memory_test,
     "web": web_test,
+    "web_team": web_team_test,
     "delta": delta_test,
+    "recovery": recovery_test,
     "image": image_test,
     "approval": approval_test,
     "multiagent": multiagent_test,

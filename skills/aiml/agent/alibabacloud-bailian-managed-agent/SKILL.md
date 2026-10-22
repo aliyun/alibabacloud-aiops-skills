@@ -1,6 +1,7 @@
 ---
 name: alibabacloud-bailian-managed-agent
 description: |-
+  Version v20261015 (date-based release, YYYYMMDD).
   Explain, evaluate, demonstrate, provision, and integrate Alibaba Cloud Bailian
   Managed Agent (CMA / ManagedAgents). Use for Bailian Managed Agent product selection,
   sales pitches, customer solutions, hands-on PoCs, scheduled report agents, managed
@@ -16,9 +17,23 @@ This skill is the Bailian Managed Agent knowledge and operations entry point for
 The typical deployment target is a **salesperson's local Agent**: when a salesperson runs into a customer question or scenario, they ask their own Agent, which wakes this skill to recommend the product and assemble a ManagedAgent-based solution (entry point: the "sales recommendation mode" under path C).
 Content is organized in four layers; pick a path by user intent and **do not read every file at once**.
 
+## Before use: check for a newer skill release
+
+At the start of each invocation, before following a product workflow, resolve `SKILL_ROOT` to this skill's installed directory and run:
+
+```bash
+python3 "$SKILL_ROOT/scripts/check_for_updates.py"
+```
+
+The helper GETs `https://skills.aliyun.com/api/public/skills/alibabacloud-bailian-managed-agent`, reads the `vYYYYMMDD` version from `data.content`'s frontmatter description, and compares it with the local description and [manifest](references/manifest.json). This default check only reports versions; it does not download or replace the installed skill.
+
+On `update_available`, report the local and remote versions, explain that keeping the current version may leave the skill's knowledge outdated, and ask whether the user wants to update. Only run `--apply` after explicit user approval (reuse approval already given for this update); invoking the skill is not approval to update it. If the user declines or has not answered, retain the current version and continue their task. Do not make updating a prerequisite or repeatedly ask about the same release in the conversation. If the local version is newer, report the difference and keep it; do not downgrade.
+
+Run the initial check once per invocation, not per tool call. Reuse the returned `user_agent` for the invocation's cloud requests and any approved update. On `updated`, reread the installed `SKILL.md` and needed references without recursively checking again; tell the user the old/new versions and backup path, and recommend a new conversation to refresh the host's cached skill description. Do not restart or end the conversation automatically. On a check/update failure or missing remote date version, report that briefly and continue the user's task with the existing copy. A Git checkout is check-only and must not be overwritten by the installer. Commands, result handling, and release rules: [skill updates](references/workflows/skill-updates.md).
+
 ## Required versioned User-Agent
 
-Before any Alibaba Cloud API call, initialize the per-invocation UA as described in [references/workflows/user-agent.md](references/workflows/user-agent.md). Read the non-empty `version` from [references/manifest.json](references/manifest.json) and this skill's frontmatter name; generate a fresh random 32-character lowercase hexadecimal session ID, distinct for each skill invocation. Reuse it within that invocation only.
+Before any Alibaba Cloud API call, initialize the per-invocation UA as described in [references/workflows/user-agent.md](references/workflows/user-agent.md), reusing the update helper's `user_agent` if it already ran in this invocation. Read the non-empty `version` from [references/manifest.json](references/manifest.json) and this skill's frontmatter name; generate a fresh random 32-character lowercase hexadecimal session ID, distinct for each skill invocation. Reuse it within that invocation only.
 
 Required curl declaration (substitute all placeholders at runtime):
 
@@ -83,13 +98,14 @@ For Webhook endpoint-creation examples and evaluation tasks, use `https://www.ba
 | "We want to build an X bot" / "how does this business scenario land" / "give me a complete end-to-end example" / "what's still missing for production" | **B scenario cookbooks** | [references/cookbook/index.md](references/cookbook/index.md) (by scenario) |
 | "We are in industry X" / "want to solve business problem Y" / "need a solution or PoC" / "how do peers do it" | **C solution design** | [references/workflows/solution-design.md](references/workflows/solution-design.md) |
 | Sales arriving with a customer question: "the customer manually does X every day" / "the customer wants AI that works or produces reports" / "is this a fit for Managed Agent" / "help me prep a pitch or a customer demo" | **C solution design** (read its "sales recommendation mode" first) | Path C on this page + [references/product/overview.md](references/product/overview.md) |
+| "Session 时长 / Token 用量 / 缓存命中怎么算" / "explain stats or usage / estimate session token cost" | **D2 integration reference** | [references/integration/session-stats-and-usage.md](references/integration/session-stats-and-usage.md) (cumulative fields, timing cutoff, cache accounting and billing examples) |
 | "Help me create an Agent / environment" / "provision resources" | **D1 provision resources** | [references/workflows/provision.md](references/workflows/provision.md) |
 | "Integrate it into our system" / "write calling code" / "give a Python or Java example" / "how to do streaming or scheduling" | **D2 integration** | **Pick the macro scenario from the request** (online waiting → strong-interaction; background results → weak-interaction, see [references/integration/patterns.md](references/integration/patterns.md)), then follow [references/tutorials/02-integrate-to-your-system.md](references/tutorials/02-integrate-to-your-system.md) |
 | Symptoms rather than capabilities: "the agent cannot find the file" / "missing pandas or ffmpeg" / "the run finished but there is no result" / "the scheduled run did not fire" / "it fired at the wrong time" | **B hands-on tutorials** (lookup by symptom) | mapping table in [references/tutorials/index.md](references/tutorials/index.md) + the "common issues" table of the matched tutorial |
 
 When intents mix (very common: what is it → then a solution → then provisioning), advance in A → C → D order and end each step with an explicit next-step option for the user.
 
-For the newly launched capability practices: [working-memory handoff and built-in web research](references/cookbook/09-working-memory-and-web-research.md), [multimodal images, Delta and Thinking](references/cookbook/10-multimodal-delta-and-thinking.md), and [dynamic resources and reviewed deliverables](references/cookbook/11-live-resources-and-reviewed-deliverables.md). Their live-test evidence is scoped by date and workspace; do not equate feature launch with every transport variant having passed. The opt-in [live smoke script](scripts/cookbook_smoke.py) previews by default, uses synthetic data, and cleans up its own resources; execute only within the user’s authorized test scope.
+For capability practices: [built-in web research and model cost tiering](references/cookbook/05-coordinator-pattern-and-cost-tiering.md), [working-memory handoff](references/cookbook/09-working-memory-handoff.md), [multimodal image input](references/cookbook/10-multimodal-input.md), and [client integration: Delta, Thinking, recovery, and file interactions](references/cookbook/11-client-integration-practice.md). Their live-test evidence is scoped by date and workspace; do not equate tested components with a verified combined application. The opt-in [live smoke script](scripts/cookbook_smoke.py) previews by default, uses synthetic data, and cleans up its own resources; execute only within the user’s authorized test scope.
 
 ## Input/Output Examples
 

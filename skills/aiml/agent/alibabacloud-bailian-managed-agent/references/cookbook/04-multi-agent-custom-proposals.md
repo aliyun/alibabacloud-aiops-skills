@@ -1,6 +1,6 @@
 # Multi-Agent: Coordinating a Team of Specialists
 
-> **Current routing (2026-09-18):** use built-in `web_search` / `web_fetch` for new web research workflows. This archived recipe retains its MCP configuration and measured MCP event traces to explain that integration; it is not the default web-search recommendation. For the current tested flow see [09](09-working-memory-and-web-research.md).
+> **Current routing (2026-09-18):** use built-in `web_search` / `web_fetch` for new web research workflows. This archived recipe retains its MCP configuration and measured MCP event traces to explain that integration; it is not the default web-search recommendation. For built-in configuration and its standalone live check, see [05](05-coordinator-pattern-and-cost-tiering.md).
 
 > This recipe shows how to use the `multiagent` coordinator pattern of Bailian Managed Agents to organize a team of specialist sub-agents that collaborate on a sales proposal, and how to observe and live-render each sub-agent's run precisely via the Session Threads API and the Session-level event stream. Examples uniformly use curl (REST).
 

@@ -1,6 +1,6 @@
 # Product status corrections
 
-Source: explicit user-provided product correction on **2026-09-18**. This records launch status and positioning, not a live API test or a verified configuration schema. Consult current official MA documentation for execution details and applicable scope.
+Sources: explicit user-provided product corrections on **2026-09-18** and **2026-10-09**, with separately dated live checks below. Launch status and positioning do not by themselves verify a configuration schema. Consult current official MA documentation for execution details and applicable scope.
 
 The following capabilities are launched, superseding the archived whitepaper's `coming soon` labels:
 
@@ -37,7 +37,7 @@ User correction and current [official tool documentation](https://docs.agent.bai
 
 ## Live practice and known discrepancies
 
-Live tests on 2026-09-18 covered built-in web tools, cross-session working memory, image file_id input, Delta/Thinking, dynamic files, main-Agent approval, MultiAgent, manual Deployment, and Vault placeholders. Reusable procedures are in cases 09–11 of the [cookbook index](../cookbook/index.md). Base64 image input is currently unsupported; the user confirmed the earlier documentation error and reproduction evidence was retained. This does not change the launch status of multimodal events. browser_use and current-run Webhook delivery still require an activated MCP service and a controlled receiver respectively; neither was verified in this run.
+Live tests on 2026-09-18 covered built-in web tools, cross-session working memory, image file_id input, Delta/Thinking, dynamic files, main-Agent approval, MultiAgent, manual Deployment, and Vault placeholders. The [cookbook index](../cookbook/index.md) routes these to their scenario recipes: web research in 05, memory in 09, images in 10, and streaming/file interactions in 11; approval, Deployment, MultiAgent, and Vault remain in 02 / 04 / 08. The 2026-10-09 online retest verified 05's built-in worker/coordinator path, 09's explicit memory handoff and conditional API updates, 10's supported image routes, and 11's Delta assembly, protocol-level reconnection, and file add/remove between turns. A complete browser application and file updates during active tool execution were not tested; no matched cost benchmark was run. Base64 image input is currently unsupported; the user confirmed the earlier documentation error and reproduction evidence was retained. browser_use and current-run Webhook delivery still require an activated MCP service and a controlled receiver respectively; neither was verified in this run.
 
 ## Base64 image input: currently unsupported (user confirmation, 2026-09-18)
 
@@ -48,4 +48,14 @@ Source: after the live tests, the user explicitly confirmed that Base64 is curre
 - The earlier official send-event documentation incorrectly described Base64 support. This is a dated product correction, not an unresolved diagnosis.
 - Check current official documentation for future implementations. Removing the Base64 claim is a documentation correction; an explicit future launch of support requires a successful retest before changing this record. Do not describe the present limitation as permanent.
 
-See the [multimodal cookbook](../cookbook/10-multimodal-delta-and-thinking.md) for observations and the working alternative. Troubleshooting identifiers remain in local audit notes only.
+See the [multimodal cookbook](../cookbook/10-multimodal-input.md) for observations and the working alternative. Troubleshooting identifiers remain in local audit notes only.
+
+## Auto-model image follow-up (2026-09-19)
+
+A live cn-beijing test with `model.id=auto` successfully identified a synthetic red PNG sent through an uploaded, available `file_id`, answering `Red` without tool calls. The Agent configuration was read back as `auto`; no claim is made about the underlying routed model. See the [multimodal cookbook](../cookbook/10-multimodal-input.md). This test did not repeat Base64 input.
+
+The 2026-10-09 retest also passed with `auto`, `qwen3.8-max`, and `qwen3.7-plus` using available image file IDs; it did not repeat Base64 input.
+
+## Performance does not support multimodal input (user confirmation, 2026-10-09)
+
+The user explicitly confirmed that **`performance` does not support multimodal input**. Its inability to view the uploaded image in the 2026-09-19 and 2026-10-09 tests is consistent with that limitation, not an unresolved route failure. For image input, use `auto` or an explicitly supported model and a new Session. See the [multimodal cookbook](../cookbook/10-multimodal-input.md) for the verified flow.

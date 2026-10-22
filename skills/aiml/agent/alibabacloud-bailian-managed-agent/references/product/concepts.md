@@ -70,6 +70,7 @@ On the CLI side (`bl managed-agent`) these resources are declared in `agents.yam
   | Metadata `metadata` | No | Yes | Custom key-value pairs; no effect on runtime behavior |
 
 - **Reusable**: environments are managed independently of agents and **can be bound and reused by multiple sessions**.
+- **Session timing and cumulative model usage**: for `stats` / `usage` field definitions, timing cutoffs, DashScope cache accounting, and billing examples, read [Session stats and usage](../integration/session-stats-and-usage.md).
 - **Archive vs delete (official docs)**: archive → the environment is retained but hidden from the default list (`include_archived` brings it back);
   delete → a hard delete; the configuration is wiped and unrecoverable.
   ⚠ **The official docs say "bound sessions keep working", which contradicts field testing**: after archiving, the environment deactivates immediately — new sessions bound to it get 404,

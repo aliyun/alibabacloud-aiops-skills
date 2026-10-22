@@ -153,19 +153,26 @@ curl --user-agent "$BAILIAN_MANAGED_AGENT_SKILL_UA" --max-time 30 -s -X POST "${
   -d "{\"type\":\"file\",\"file_id\":\"${FILE_ID}\",\"mount_path\":\"/uploads/extra.txt\"}"
 ```
 
-No session restart needed; field-tested, appending to a **running** session works too, but landing
-in the sandbox takes about **35 seconds** from the call — not instantaneous. Don't have the Agent
-read right after appending; it won't find the file yet.
+No session restart is needed; an earlier field test also appended to a **running** session.
+The roughly **35 seconds** seen in that run is not a fixed propagation delay: a 2026-09-18
+follow-up found the path on its first tool check. Have the Agent check the sandbox path with
+a deadline before reading it, rather than relying on a fixed sleep.
 
 **How to verify**: `GET /sessions/{id}/resources` lists the resource; the ID prefix is `sesrsc_`.
+Also verify runtime access through the Agent's file tools or bash; resource metadata alone
+does not prove sandbox readiness. After unmounting, check both that the ID is absent from the
+paginated resource list and that the path disappears, without asking the Agent to delete it.
+For the corresponding attachment UI, see [cookbook 11](../cookbook/11-client-integration-practice.md).
 Two field-tested details:
 
 ```json
 {"data":[{"id":"sesrsc_01M...","type":"file",
-          "file_id":"file_58q... (note: this is a new file_id copied by the server, not the one you uploaded)",
-          "mount_path":"/mnt/session/uploads/workspace/sales_q3.txt",  // the returned value is already the full real path
+          "file_id":"file_58q...",
+          "mount_path":"/mnt/session/uploads/workspace/sales_q3.txt",
           "created_at":"..."}]}
 ```
+
+The returned `mount_path` is already the full sandbox path, and `file_id` identifies the server-side copy rather than the uploaded source.
 
 Mounting is **copy** semantics: the server duplicates a copy into the sandbox; in-session
 modifications never touch the original file, and unmounting
@@ -281,7 +288,7 @@ reuse and save one upload and scan.
 | Upload fails with `HTTP 413` `RequestEntityTooLarge` | Single file over 10 MB | Split the file |
 | Mount fails with `Invalid resource` (session creation) / `Field 'mount_path' must be an absolute path under /uploads/` (append) | `mount_path` does not start with `/uploads/`, or the file is still `checking` | Fix the prefix in the former; poll for `available` in the latter |
 | The Agent says the file does not exist | The prompt states the fill-in value, not the real path | Write the full real path `/mnt/session` + mount_path in the prompt |
-| The Agent cannot read right after a runtime append | Landing in the sandbox takes ~35 seconds (field-tested) | Wait 30-60 seconds before reading, or poll until `GET /sessions/{id}/resources` returns and then wait a bit |
+| The Agent cannot read right after a runtime append | Resource metadata can precede sandbox readiness; propagation time varies | Check the sandbox path with a deadline before reading; do not rely on a resource-list entry or a fixed sleep |
 | Two files on the same path fail with `Resource mount path conflicts` | `mount_path` deduplication is by exact string | Give each file a distinct mount path. Note **no normalization happens**: `/uploads//a.txt` and `/uploads/a.txt` are two different mount points |
 | Original deleted after mounting; the Agent cannot read it, no error | The source was deleted before the file materialized into the sandbox (the timing trap) | Keep the source at least until the session has run one turn |
 | File changed in-session; the original is untouched | Mounting is copy semantics, by design | To persist changes, have the Agent produce a new file and retrieve that |

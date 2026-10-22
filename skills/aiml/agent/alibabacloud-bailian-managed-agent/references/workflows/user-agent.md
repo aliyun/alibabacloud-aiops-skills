@@ -6,7 +6,9 @@ At the start of each invocation of this skill, generate a fresh random 32-charac
 
 ## Initialize once
 
-Resolve `SKILL_ROOT` to this installed skill's absolute directory (not the customer's current directory), then run:
+Resolve `SKILL_ROOT` to this installed skill's absolute directory (not the customer's current directory).
+
+If the [update helper](skill-updates.md) has already run in this invocation, use its JSON `user_agent` value as `BAILIAN_MANAGED_AGENT_SKILL_UA` instead of generating another session ID. The helper uses the installed version after a successful update. Otherwise, initialize once with:
 
 ```bash
 export BAILIAN_MANAGED_AGENT_SKILL_UA="$(python3 "$SKILL_ROOT/scripts/user_agent.py")"

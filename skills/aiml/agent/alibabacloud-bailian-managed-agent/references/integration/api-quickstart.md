@@ -183,8 +183,8 @@ the SDK already wraps them as the `ev.session_status` / `ev.stop_reason` propert
 
 ## Launched extensions: images, Delta and Thinking
 
-- Images: use `content: [{"type":"image","file_id":"<available image>"}]` alongside a text block. Inline Base64 `image_data` is currently unsupported (user-confirmed 2026-09-18); the earlier official documentation claiming support was incorrect. Use the tested file-ID path. Consult updated docs and re-test before adopting any future Base64 support; see [cookbook 10](../cookbook/10-multimodal-delta-and-thinking.md).
-- Delta: repeated `event_deltas[]=message` and `event_deltas[]=reasoning` on the SSE GET enable `event_start` / `event_delta` plus final full messages. Group by event ID and content-block index; do not append the final full message twice. SDK 1.27.3 has no corresponding stream argument; use REST.
+- Images: use `content: [{"type":"image","file_id":"<available image>"}]` alongside a text block. **`performance` does not support multimodal input** (user-confirmed 2026-10-09); use a supported model. The online retest passed with `auto`, `qwen3.8-max`, and `qwen3.7-plus`. Inline Base64 `image_data` is currently unsupported (user-confirmed 2026-09-18); the earlier official documentation claiming support was incorrect. Use the tested file-ID path. Consult updated docs and re-test before adopting any future Base64 support; see [cookbook 10](../cookbook/10-multimodal-input.md).
+- Delta: repeated `event_deltas[]=message` and `event_deltas[]=reasoning` on the SSE GET enable `event_start` / `event_delta` plus final full messages. Group by event ID and content-block index; do not append the final full message twice. SDK 1.27.3 has no corresponding stream argument; use REST. For backend-to-UI handling, recovery, and attachment interactions, see [cookbook 11](../cookbook/11-client-integration-practice.md).
 - Thinking: `reasoning` start/final events may occur without text deltas. Do not require visible reasoning text to recognize progress.
 - Error details are in the top-level `error` object; tool failure is the top-level `is_error` flag.
 

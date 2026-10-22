@@ -425,7 +425,7 @@ Steps 4 and 8 are exactly what "getting started" wants to show you: nobody told 
 
 Which exact pit gets stepped into varies — the `inspect.py` collision appeared in 2 of 4 field runs; the other two were one where a numeric column was written as `1200.0` floats and the agent itself `edit`ed the script to add integer conversion, and one entirely error-free run (the script happened to be named `inspect_clean.py`, dodging the collision; 10 tool calls, zero rework). But the "run → read result → fix and rerun" loop is stable, and the final numbers were identical across all four runs.
 
-> Dedup and reassembly: the SSE stream currently offers no cursor / resume token; when reconnecting after a drop, deduplicate by event `id`. Streaming assistant text should in theory accumulate by `sequence_number`, but field tests show that field is usually `null` and text arrives as whole `completed` messages — parse as "accumulate when `sequence_number` exists, otherwise treat as a whole message" for maximum robustness.
+> Dedup and reassembly: without `event_deltas[]`, this example receives whole `completed` messages; upsert those by event `id`. For incremental answers, explicitly enable Delta and append fragments by event ID and content-block index; do not rely on the observed-null `sequence_number`. Reconnection, full-message replacement, and UI rendering are covered in [11](11-client-integration-practice.md).
 
 ## Step 6: Retrieve the artifacts and verify
 
@@ -501,6 +501,8 @@ curl --user-agent "$BAILIAN_MANAGED_AGENT_SKILL_UA" --max-time 30 -X GET "$BASE/
 ```
 
 The Excel run, field-tested: `stats` is `{ "active_seconds": 113.7, "duration_seconds": 139.6 }`, and `usage` is `{ "input_tokens": 118011, "output_tokens": 4431, "cache_read_input_tokens": 104152, "cache_creation_input_tokens": 13793 }`. Four field runs landed in the 110-185 seconds / 115k-171k input-tokens range, depending on how often the agent reworked midway. Note 82%-88% of input is cache hits — multi-turn tool calls repeatedly carry the same context, so the cache hit rate dominates cost.
+
+For field definitions, timing cutoffs, cache-inclusive input totals and per-model Token billing, see [Session stats and usage](../integration/session-stats-and-usage.md).
 
 ## Step 7: Cleanup (archive)
 
