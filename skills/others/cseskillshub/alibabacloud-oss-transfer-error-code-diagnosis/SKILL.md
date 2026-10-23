@@ -11,6 +11,7 @@ description: |
   (alibabacloud-oss-security-incident-forensics), client tools
   (alibabacloud-oss-client-tools-diagnosis), throttling
   (alibabacloud-oss-quota-throttling-diagnosis). Triggers: "403 AccessDenied during OSS upload", "SignatureDoesNotMatch", "OSS RequestTimeout", "OSS upload timeout", "EntityTooLarge", "SlowDown", "InvalidAccessKeyId", "SecurityTokenExpired", "OSS download fails with 403", "OSS upload failed", "409 BucketAlreadyExists". Skip non-OSS errors (SSH/MySQL/CDN).
+  中文触发：上传报错、下载失败、403、签名错误、超时、中断。
 ---
 
 # OSS Transfer Error Code Diagnosis
@@ -70,6 +71,14 @@ Context limits (guard rails against cross-product absorption):
   degraded list and asks for the error response body.
 
 A customer rarely states the technical cause; match on the symptom sentence, the error code or the EC number, not on product vocabulary. When the customer gives no way to locate the resource, still run the entry script: it exits `STATUS: FAIL` with a `NEXT_ACTION` naming the missing input and lists the buckets visible to the current credential, which is what should be put back to the customer.
+
+Chinese triggers: "上传报错", "下载失败", "403", "签名错误", "超时", "上传中断".
+
+## Chinese Symptom Examples
+
+- "上传一半断了，报 RequestTimeTooSkewed" → explain the clock-skew signature failure and give correction and retry steps.
+- "下载报 403 AccessDenied，AK 是对的" → map to the permission/policy track through the error catalog and name the missing permission.
+- "STS 临时凭证过期了" → explain refresh and retry.
 
 ## Execution Principle
 
