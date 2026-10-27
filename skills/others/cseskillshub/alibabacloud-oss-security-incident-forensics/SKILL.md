@@ -10,6 +10,7 @@ description: |
   for billing use alibabacloud-oss-billing-diagnosis; for endpoint choice use alibabacloud-oss-endpoint-internal-diagnosis;
   for signed-URL use alibabacloud-oss-presigned-url-v4-diagnosis; for access-log tracing use alibabacloud-oss-access-log-trace-diagnosis;
   for direct-link issues use alibabacloud-oss-direct-access-link-diagnosis.
+  中文触发：流量暴涨、被刷、盗链、陌生文件、疑似 AK 泄露、桶公网可读。
 ---
 
 # OSS Traffic Abuse & Security Incident Forensics
@@ -61,6 +62,14 @@ Do NOT use it for the following -- those belong to a sibling skill:
 | direct-access issues | `alibabacloud-oss-direct-access-link-diagnosis` |
 
 A customer rarely states the technical cause; match on the symptom sentence, the error code or the EC number, not on product vocabulary. When the customer gives no way to locate the resource, still run the entry script: it exits `STATUS: FAIL` with a `NEXT_ACTION` naming the missing input and lists the buckets visible to the current credential, which is what should be put back to the customer.
+
+Chinese triggers: "流量暴涨", "被刷流量", "盗链", "陌生文件", "疑似 AK 泄露", "桶公网可读".
+
+## Chinese Symptom Examples
+
+- "OSS 半夜跑了几百 G 流量，是不是被刷了" → audit the exposure surface, run the 6-step SLS log sequence, then give the containment checklist.
+- "桶里突然多了很多陌生文件" → investigate the write source and public permissions.
+- "怀疑 AK 泄露被拿去刷 OSS" → verify the caller identity and anomalous source IPs.
 
 ## Execution Principle
 
@@ -278,4 +287,4 @@ The final answer to the user MUST:
 4. Relay the `log_evidence` conclusion when the SLS real-time-log queries executed (auth-mode mix, daily-trend shape, top sources by count AND by bytes); when the log leg degraded (not enabled / no permission / over-cap window), hand over the query statement sequence with the derived project/logstore names for the user to run in the SLS console and state the degradation reason.
 5. On `DEGRADED`, list the recorded errors and limitations explicitly instead of inventing conclusions.
 6. Give containment/hardening suggestions as manual guidance only (this skill never applies changes).
-7. When `doc_verification` is present, cite the doc URLs from `doc_verification.docs` verbatim, and state the offline-degradation sentence when `doc_verification.note` starts with DEGRADED.
+7. Always emit a `doc_verification:` line. When the leg ran, cite the URLs from `doc_verification.docs` verbatim after that label; when the section is absent or `doc_verification.note` starts with DEGRADED, write `doc_verification: DEGRADED (offline)` plus the reason. Omitting this line is a contract violation even when the diagnosis itself succeeded.
