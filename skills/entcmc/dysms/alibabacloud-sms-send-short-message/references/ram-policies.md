@@ -9,6 +9,7 @@ requires the following RAM permissions.
 | ---------------------------- | --------------------------------- | -------- |
 | `dysms:SendSms`              | Send an SMS                       | Yes      |
 | `dysms:SendBatchSms`         | Batch send SMS (per-recipient sign/template params, up to 100) | Yes      |
+| `dysms:SendTestVerification` | Send a test verification SMS (no signature/template required) | No       |
 | `dysms:GetSmsSign`           | Query signature approval status   | No       |
 | `dysms:GetSmsTemplate`       | Query template approval status    | No       |
 | `dysms:QuerySmsSignList`     | Query the signature list          | No       |
@@ -49,6 +50,7 @@ Send SMS plus query signatures, templates, and send status:
       "Action": [
         "dysms:SendSms",
         "dysms:SendBatchSms",
+        "dysms:SendTestVerification",
         "dysms:GetSmsSign",
         "dysms:GetSmsTemplate",
         "dysms:QuerySmsSignList",

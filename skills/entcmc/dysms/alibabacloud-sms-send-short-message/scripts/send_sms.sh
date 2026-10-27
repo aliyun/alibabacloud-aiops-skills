@@ -7,13 +7,19 @@
 # Install:      brew install aliyun-cli  (macOS)
 # Plugin:       aliyun plugin install --names dysmsapi
 #
+# Observability: SKILL_SESSION_ID and SKILL_VERSION MUST be provided in the environment.
+#   SKILL_SESSION_ID  32-char lowercase hex session ID, generated once per conversation
+#   SKILL_VERSION     the `version` field read from references/manifest.json
+# Example:
+#   SKILL_SESSION_ID=<32-hex> SKILL_VERSION=0.0.1 ./send_sms.sh send -p ... -s ... -t ...
+#
 
 set -e
 
 # Default configuration
 DEFAULT_REGION="cn-hangzhou"
 API_VERSION="2017-05-25"
-USER_AGENT="AlibabaCloud-Agent-Skills/alibabacloud-sms-send-short-message"
+SKILL_NAME="alibabacloud-sms-send-short-message"
 READ_TIMEOUT="3"
 
 # Color output
@@ -21,6 +27,25 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
+
+# ========== Observability ==========
+
+# Build the versioned user-agent from SKILL_SESSION_ID + SKILL_VERSION.
+# Both are mandatory: a hardcoded or session-less UA is not compliant.
+build_user_agent() {
+    if [[ ! "$SKILL_SESSION_ID" =~ ^[0-9a-f]{32}$ ]]; then
+        echo -e "${RED}Error: SKILL_SESSION_ID must be a 32-character lowercase hexadecimal string.${NC}" >&2
+        echo "Generate one per conversation, e.g.: export SKILL_SESSION_ID=\$(openssl rand -hex 16)" >&2
+        exit 1
+    fi
+    if [ -z "$SKILL_VERSION" ]; then
+        echo -e "${RED}Error: SKILL_VERSION is not set.${NC}" >&2
+        echo "Read the 'version' field from references/manifest.json and export it, e.g.:" >&2
+        echo "  export SKILL_VERSION=\$(python3 -c 'import json;print(json.load(open(\"references/manifest.json\"))[\"version\"])')" >&2
+        exit 1
+    fi
+    USER_AGENT="AlibabaCloud-Agent-Skills/${SKILL_NAME}/${SKILL_SESSION_ID} skill-version/${SKILL_VERSION}"
+}
 
 # ========== Input validators ==========
 
@@ -91,6 +116,7 @@ Usage:
 
 Commands:
   send              Send an SMS message
+  send-test         Send a test verification SMS (no signature/template needed)
   list-signs        List SMS signatures
   list-templates    List SMS templates
   query-sign        Query a specific signature status
@@ -105,6 +131,9 @@ Send options:
   -tp, --template-param   Template variables (JSON)
   -o, --out-id            External tracking ID
   --verify                Verify signature & template status before sending
+
+Send-test options (send-test):
+  -p, --phone             A single recipient phone number (required)
 
 Query options:
   --sign-name             Signature name (required for query-sign)
@@ -126,12 +155,23 @@ Common options:
   --profile               Use the given aliyun CLI profile
   -h, --help              Show this help
 
+Required environment variables (observability):
+  SKILL_SESSION_ID        32-char lowercase hex session ID (one per conversation)
+  SKILL_VERSION           version field from references/manifest.json
+
 Examples:
+  # Session/version must be exported before any API command
+  export SKILL_SESSION_ID=\$(openssl rand -hex 16)
+  export SKILL_VERSION=0.0.1
+
   # Send an SMS
   $0 send -p "13800138000" -s "AliyunDemo" -t "SMS_123456" -tp '{"code":"123456"}'
 
   # Verify signature/template first
   $0 send -p "13800138000" -s "AliyunDemo" -t "SMS_123456" -tp '{"code":"123456"}' --verify
+
+  # Send a test verification SMS (no signature/template needed)
+  $0 send-test -p "13800138000"
 
   # List signatures
   $0 list-signs
@@ -320,6 +360,55 @@ send_sms() {
     [ -n "$PROFILE" ] && cmd_args+=("--profile" "$PROFILE")
 
     echo -e "${YELLOW}Sending SMS...${NC}"
+    "${cmd_args[@]}"
+}
+
+# Send a test verification SMS (no signature/template required)
+send_test() {
+    local phone=""
+
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -p|--phone|--phone-numbers)
+                phone="$2"
+                shift 2
+                ;;
+            -r|--region)
+                REGION="$2"
+                shift 2
+                ;;
+            --profile)
+                PROFILE="$2"
+                shift 2
+                ;;
+            *)
+                shift
+                ;;
+        esac
+    done
+
+    # Validate required parameters
+    if [ -z "$phone" ]; then
+        echo -e "${RED}Error: missing phone number (-p/--phone).${NC}"
+        exit 1
+    fi
+
+    # Input validation (defends against command injection)
+    validate_phone_numbers "$phone"
+
+    # Build the command via an array (avoid eval)
+    local cmd_args=(
+        "aliyun" "dysmsapi" "send-test-verification"
+        "--api-version" "$API_VERSION"
+        "--user-agent" "$USER_AGENT"
+        "--read-timeout" "$READ_TIMEOUT"
+        "--phone" "$phone"
+    )
+
+    [ -n "$REGION" ] && cmd_args+=("--region" "$REGION")
+    [ -n "$PROFILE" ] && cmd_args+=("--profile" "$PROFILE")
+
+    echo -e "${YELLOW}Sending test verification SMS (no signature/template)...${NC}"
     "${cmd_args[@]}"
 }
 
@@ -638,20 +727,30 @@ query_statistics() {
 
 # Main entry
 main() {
-    # Dependency checks
-    check_cli
-    check_plugin
-    check_config
-
-    # Initialize variables
-    REGION="${DEFAULT_REGION}"
-    PROFILE=""
-
     # Parse the command
     if [ $# -eq 0 ]; then
         show_help
         exit 0
     fi
+
+    case $1 in
+        -h|--help|help)
+            show_help
+            exit 0
+            ;;
+    esac
+
+    # Dependency checks
+    check_cli
+    check_plugin
+    check_config
+
+    # Build the versioned user-agent (requires SKILL_SESSION_ID + SKILL_VERSION)
+    build_user_agent
+
+    # Initialize variables
+    REGION="${DEFAULT_REGION}"
+    PROFILE=""
 
     local command=$1
     shift
@@ -659,6 +758,9 @@ main() {
     case $command in
         send)
             send_sms "$@"
+            ;;
+        send-test)
+            send_test "$@"
             ;;
         list-signs)
             list_signs "$@"
