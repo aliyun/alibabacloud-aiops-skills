@@ -1,0 +1,642 @@
+{
+  "version": "1.0",
+  "description": "Alibaba Cloud IPSec VPN negotiation failure log pattern matching knowledge base (customer edition)",
+  "usage_instruction": "After retrieving VPN negotiation logs, match each error line against categories[].patterns[].regex. On match, output the corresponding cause and solution. If multiple patterns match, sort by priority (lower number = higher priority).",
+  "categories": [
+    {
+      "category": "encryption_algorithm_mismatch",
+      "description": "Phase1 or Phase2 encryption algorithm mismatch",
+      "phase": "phase1_or_phase2",
+      "patterns": [
+        {
+          "id": "ENC001",
+          "regex": "rejected enctype.*local:\\[(.+?)\\]:peer:\\[(.+?)\\]",
+          "description": "Encryption algorithm rejected",
+          "cause": "Encryption algorithms on both sides do not match. Local is $1, peer proposes $2.",
+          "solution": "Log in to the Alibaba Cloud console, update the IPSec connection encryption algorithm to match the peer device. Common mappings: AES-CBC-128 ↔ AES-128, AES-CBC-256 ↔ AES-256.",
+          "priority": 1
+        },
+        {
+          "id": "ENC002",
+          "regex": "no suitable proposal found",
+          "description": "No matching proposal found",
+          "cause": "Overall proposal parameters do not match (any of encryption/auth/DH group mismatch triggers this).",
+          "solution": "Check surrounding rejected log lines to identify the specific mismatched parameter, then align both sides.",
+          "priority": 5
+        },
+        {
+          "id": "ENC003",
+          "regex": "failed to get valid proposal",
+          "description": "Proposal negotiation ultimately failed",
+          "cause": "All proposal combinations were compared and none matched.",
+          "solution": "Check IKE config (encryption, auth, DH group) and IPSec config (encryption, auth) on both sides are fully aligned.",
+          "priority": 6
+        },
+        {
+          "id": "ENC004",
+          "regex": "proposal mismatch, transform type:1, mine:(.+?) peers:(.+?)(,|$)",
+          "description": "Encryption algorithm (transform type 1) mismatch",
+          "cause": "Encryption algorithm mismatch. Local is $1, peer is $2.",
+          "solution": "Ensure the encryption algorithm is identical on both sides.",
+          "priority": 1
+        },
+        {
+          "id": "ENC005",
+          "regex": "my_keylen:(\\d+) peer_keylen:(\\d+)",
+          "description": "Encryption key length mismatch",
+          "cause": "Same encryption algorithm type but different key lengths. Local is $1-bit, peer is $2-bit.",
+          "solution": "Align AES key length on both sides to the same value (e.g., both 128-bit or both 256-bit).",
+          "priority": 1
+        },
+        {
+          "id": "ENC006",
+          "regex": "length mismatch, mine:(\\d+) peer:(\\d+)",
+          "description": "Key length mismatch",
+          "cause": "Encryption key length mismatch. Local $1-bit, peer $2-bit.",
+          "solution": "Align encryption key length on both sides.",
+          "priority": 1
+        },
+        {
+          "id": "ENC007",
+          "regex": "trns_id mismatched: my:(.+?) peer:(.+)",
+          "description": "Transform ID mismatch",
+          "cause": "Encryption algorithm type mismatch. Local is $1, peer is $2.",
+          "solution": "Ensure both sides use the same encryption algorithm (e.g., both AES or both 3DES).",
+          "priority": 1
+        }
+      ]
+    },
+    {
+      "category": "authentication_algorithm_mismatch",
+      "description": "Authentication (integrity) algorithm mismatch",
+      "phase": "phase1_or_phase2",
+      "patterns": [
+        {
+          "id": "AUTH001",
+          "regex": "rejected hashtype.*local:\\[(.+?)\\]:peer\\[(.+?)\\]",
+          "description": "Hash algorithm rejected",
+          "cause": "Auth algorithm mismatch. Local is $1, peer proposes $2.",
+          "solution": "Ensure auth algorithms match on both sides. Common mappings: SHA ↔ SHA1, SHA256 ↔ SHA2-256, MD5 ↔ MD5.",
+          "priority": 1
+        },
+        {
+          "id": "AUTH002",
+          "regex": "authtype mismatched: my:(.+?) peer:(.+)",
+          "description": "Auth type mismatch",
+          "cause": "Auth algorithm mismatch. Local is $1, peer is $2.",
+          "solution": "Ensure auth algorithms match on both sides.",
+          "priority": 1
+        },
+        {
+          "id": "AUTH003",
+          "regex": "proposal mismatch, transform type:3, mine:(.+?) peers:(.+)",
+          "description": "Integrity algorithm (transform type 3) mismatch",
+          "cause": "Auth (integrity) algorithm mismatch. Local is $1, peer is $2.",
+          "solution": "Ensure auth algorithms match on both sides.",
+          "priority": 1
+        },
+        {
+          "id": "AUTH004",
+          "regex": "proposal mismatch, transform type:2, mine:(.+?) peers:(.+)",
+          "description": "PRF algorithm (transform type 2) mismatch",
+          "cause": "PRF (Pseudo-Random Function) algorithm mismatch. Local is $1, peer is $2.",
+          "solution": "Ensure PRF algorithms match on both sides. PRF is typically the same as the auth algorithm.",
+          "priority": 2
+        }
+      ]
+    },
+    {
+      "category": "dh_group_mismatch",
+      "description": "DH group (PFS group) mismatch",
+      "phase": "phase1_or_phase2",
+      "patterns": [
+        {
+          "id": "DH001",
+          "regex": "pfs group mismatched: my:(\\d+)\\[(.+?)\\] peer:(\\d+)\\[(.+?)\\]",
+          "description": "PFS DH group mismatch",
+          "cause": "DH group mismatch. Local is Group $1 ($2), peer is Group $3 ($4).",
+          "solution": "Ensure DH groups match on both sides. Common groups: Group 2 (modp1024), Group 14 (modp2048), Group 19 (ecp256).",
+          "priority": 1
+        },
+        {
+          "id": "DH002",
+          "regex": "proposal mismatch, transform type:4, mine:(.+?) peers:(.+)",
+          "description": "DH group (transform type 4) mismatch",
+          "cause": "DH group mismatch. Local is $1, peer is $2.",
+          "solution": "Ensure DH groups match on both sides.",
+          "priority": 1
+        },
+        {
+          "id": "DH003",
+          "regex": "rejected dhgrp",
+          "description": "DH group rejected",
+          "cause": "DH group (Diffie-Hellman group) mismatch.",
+          "solution": "Ensure the DH group in IKE config matches on both sides.",
+          "priority": 1
+        }
+      ]
+    },
+    {
+      "category": "traffic_selector_mismatch",
+      "description": "Traffic Selector (interesting traffic) mismatch",
+      "phase": "phase2",
+      "patterns": [
+        {
+          "id": "TS001",
+          "regex": "can't find matching selector",
+          "description": "No matching traffic selector found",
+          "cause": "Local and remote subnet configs do not mirror correctly. The traffic selector proposed by the peer cannot be matched locally.",
+          "solution": "Verify that the subnet configs are mirrored correctly: Alibaba Cloud 'local subnet' = peer 'remote subnet', and vice versa.",
+          "priority": 1
+        },
+        {
+          "id": "TS002",
+          "regex": "TS can't match any selector",
+          "description": "Traffic Selector cannot match",
+          "cause": "Traffic selector mismatch; peer's proposed traffic selector has no match locally.",
+          "solution": "Verify local/remote subnet configs are correctly mirrored on both sides.",
+          "priority": 1
+        },
+        {
+          "id": "TS003",
+          "regex": "traffic selector unacceptable",
+          "description": "Traffic selector unacceptable",
+          "cause": "Traffic selector negotiation failed; both sides cannot agree on a Traffic Selector.",
+          "solution": "Ensure subnet configs are correctly mirrored. For multi-subnet configs, ensure every subnet has a corresponding entry.",
+          "priority": 1
+        }
+      ]
+    },
+    {
+      "category": "preshared_key_mismatch",
+      "description": "Pre-Shared Key (PSK) mismatch",
+      "phase": "phase1",
+      "patterns": [
+        {
+          "id": "PSK001",
+          "regex": "psk mismatch",
+          "description": "PSK mismatch",
+          "cause": "Pre-Shared Keys on both sides are not identical.",
+          "solution": "Verify PSKs are exactly the same on both sides (case-sensitive, no hidden characters).",
+          "priority": 1
+        },
+        {
+          "id": "PSK002",
+          "regex": "AUTHENTICATION_FAILED",
+          "description": "IKE authentication failed",
+          "cause": "IKE authentication failed, usually due to PSK mismatch or peer ID mismatch.",
+          "solution": "1. Verify PSK is identical on both sides. 2. Check IKE LocalId/RemoteId configuration.",
+          "priority": 1
+        },
+        {
+          "id": "PSK003",
+          "regex": "invalid HASH_V1 payload length",
+          "description": "HASH verification failed (IKEv1)",
+          "cause": "IKEv1 Phase1 HASH computation mismatch, usually caused by PSK inconsistency.",
+          "solution": "Ensure PSKs are exactly identical on both sides.",
+          "priority": 1
+        },
+        {
+          "id": "PSK004",
+          "regex": "MAC verification failed",
+          "description": "MAC verification failed",
+          "cause": "Message authentication code verification failed; PSK mismatch.",
+          "solution": "Ensure PSKs are exactly identical on both sides. Avoid hidden characters introduced by copy-paste.",
+          "priority": 1
+        },
+        {
+          "id": "PSK005",
+          "regex": "integrity check failed",
+          "description": "Integrity check failed",
+          "cause": "Message integrity check failed; may be PSK mismatch or middlebox tampering.",
+          "solution": "First check PSK consistency. If PSK is correct, investigate middlebox interference.",
+          "priority": 2
+        }
+      ]
+    },
+    {
+      "category": "dpd_timeout",
+      "description": "DPD (Dead Peer Detection) timeout",
+      "phase": "established",
+      "patterns": [
+        {
+          "id": "DPD001",
+          "regex": "remote.*seems? to be dead",
+          "description": "DPD probe declared peer dead",
+          "cause": "DPD probes received no response; peer declared unreachable. VPN gateway deletes IKE SA and IPSec SA and triggers re-negotiation.",
+          "solution": "1. Check if the peer device is online. 2. Check network connectivity (UDP 500/4500). 3. Check if NAT/firewall allows IKE traffic. 4. Check peer DPD response configuration.",
+          "priority": 1
+        },
+        {
+          "id": "DPD002",
+          "regex": "retransmission limit.*reached",
+          "description": "Retransmission limit reached",
+          "cause": "IKE message retransmission timed out; peer did not reply within the timeout period.",
+          "solution": "1. Confirm peer device is running. 2. Check network path (traceroute/ping peer public IP). 3. Check firewall UDP 500/4500 rules.",
+          "priority": 1
+        },
+        {
+          "id": "DPD003",
+          "regex": "giving up on peer.*after.*retransmits",
+          "description": "Giving up on peer connection",
+          "cause": "Peer has not responded after multiple retransmits; connection declared failed.",
+          "solution": "Check peer status, network connectivity, and firewall policy.",
+          "priority": 2
+        }
+      ]
+    },
+    {
+      "category": "sa_lifetime_expired",
+      "description": "SA lifetime expiry",
+      "phase": "established",
+      "patterns": [
+        {
+          "id": "LT001",
+          "regex": "deleting.*SA.*lifetime",
+          "description": "SA deleted due to lifetime expiry",
+          "cause": "IKE SA or IPSec SA lifetime expired; this is normal SA rotation. If re-negotiation fails, the tunnel will go down.",
+          "solution": "This is normal behavior. If tunnel goes down, check whether subsequent re-negotiation succeeds. Recommend aligning SA lifetimes or setting Alibaba Cloud side slightly shorter to ensure it initiates rekey first.",
+          "priority": 3
+        },
+        {
+          "id": "LT002",
+          "regex": "SA expired|lifetime.*expired",
+          "description": "SA expired",
+          "cause": "SA lifetime expired; triggers deletion and re-negotiation.",
+          "solution": "Normal SA rotation. If re-negotiation fails, refer to other error categories.",
+          "priority": 3
+        },
+        {
+          "id": "LT003",
+          "regex": "max_bytes.*reached|max_packets.*reached",
+          "description": "Traffic-based lifetime reached",
+          "cause": "SA traffic-based lifetime limit reached (max bytes or max packets).",
+          "solution": "Normal SA rotation. Consider increasing the traffic-based lifetime to reduce frequent re-negotiation.",
+          "priority": 3
+        }
+      ]
+    },
+    {
+      "category": "peer_delete",
+      "description": "Peer-initiated SA deletion",
+      "phase": "established",
+      "patterns": [
+        {
+          "id": "DEL001",
+          "regex": "received DELETE.*for.*SA",
+          "description": "Received DELETE notification from peer",
+          "cause": "Peer actively sent DELETE notification. Possible reasons: peer restart, peer SA expiry, peer manually cleared SA.",
+          "solution": "1. Check if peer had maintenance operations. 2. Check peer SA lifetime config. 3. Check if peer had unexpected restart. 4. Monitor whether subsequent re-negotiation succeeds.",
+          "priority": 2
+        },
+        {
+          "id": "DEL002",
+          "regex": "INFORMATION_EXCHANGE.*delete",
+          "description": "DELETE in informational exchange",
+          "cause": "SA delete request received or sent via IKE informational exchange.",
+          "solution": "Check context to determine whether local or peer initiated the deletion and why (DPD timeout/lifetime/manual clear).",
+          "priority": 3
+        }
+      ]
+    },
+    {
+      "category": "nat_traversal_issue",
+      "description": "NAT traversal (NAT-T) related issues",
+      "phase": "phase1",
+      "patterns": [
+        {
+          "id": "NAT001",
+          "regex": "NAT-T.*port.*4500",
+          "description": "NAT-T port switch",
+          "cause": "NAT detected; IKE port switching from 500 to 4500. Note: IKEv1 standard behavior is to upgrade to port 4500 at packet 3; first 2 packets are still on port 500.",
+          "solution": "1. Ensure NAT device allows UDP 500 and 4500. 2. If peer only accepts port 4500 after DPD failure, IKEv1 initiator packets 1-2 will be dropped. 3. Recommend configuring peer as the initiator, or disable unnecessary NAT-T.",
+          "priority": 2
+        },
+        {
+          "id": "NAT002",
+          "regex": "NAT-D.*mismatch|nat detected",
+          "description": "NAT detection",
+          "cause": "NAT device detected in the path.",
+          "solution": "Normal NAT detection behavior. Ensure: 1. Both sides have NAT-T enabled. 2. Firewall allows UDP 500 and 4500. 3. NAT device does not modify IKE payloads.",
+          "priority": 4
+        },
+        {
+          "id": "NAT003",
+          "regex": "port float.*500.*4500|switching to port 4500",
+          "description": "Port floated to 4500",
+          "cause": "IKE negotiation port floated from 500 to 4500; NAT-T is active.",
+          "solution": "Normal NAT-T behavior. Note: if re-negotiation fails after interruption and peer only listens on port 4500, configure peer as the initiator.",
+          "priority": 3
+        }
+      ]
+    },
+    {
+      "category": "no_response",
+      "description": "Peer not responding / connection timeout",
+      "phase": "phase1",
+      "patterns": [
+        {
+          "id": "NR001",
+          "regex": "no response from.*retransmit",
+          "description": "Peer not responding; retransmitting",
+          "cause": "No reply from peer after IKE request. Possible reasons: peer VPN not configured/started; wrong peer public IP; network unreachable; firewall blocking UDP 500/4500.",
+          "solution": "1. Verify peer public IP is correct. 2. ping/traceroute peer public IP. 3. Verify peer firewall allows inbound UDP 500 and 4500. 4. Verify peer VPN config is active.",
+          "priority": 1
+        },
+        {
+          "id": "NR002",
+          "regex": "exchange.*timeout|negotiation.*timeout",
+          "description": "Negotiation timeout",
+          "cause": "IKE negotiation did not complete within the timeout period.",
+          "solution": "Follow no-response troubleshooting: check network connectivity and firewall policy.",
+          "priority": 1
+        },
+        {
+          "id": "NR003",
+          "regex": "phase1 negotiation failed.*time up",
+          "description": "Phase1 negotiation timed out",
+          "cause": "Phase1 negotiation timed out; usually means peer is not responding.",
+          "solution": "1. Check if peer VPN device is online. 2. Check peer public IP. 3. Check network path. 4. Check firewall UDP 500 policy.",
+          "priority": 1
+        },
+        {
+          "id": "NR004",
+          "regex": "peer not responding",
+          "description": "Peer not responding",
+          "cause": "Peer continuously not responding during IKE negotiation.",
+          "solution": "1. Check peer public IP. 2. Check PSK consistency. 3. Check Remote ID matches. 4. Check IKE version matches. 5. Check DH groups have intersection. 6. Check firewall UDP 500/4500. 7. Confirm peer VPN config is active.",
+          "priority": 1
+        }
+      ]
+    },
+    {
+      "category": "id_mismatch",
+      "description": "IKE ID (identity) mismatch",
+      "phase": "phase1",
+      "patterns": [
+        {
+          "id": "ID001",
+          "regex": "IDr.*didn't match|id mismatch",
+          "description": "Peer ID mismatch",
+          "cause": "The IKE ID sent by the peer does not match the RemoteId configured locally.",
+          "solution": "Check the 'Remote ID' (RemoteId) configuration on Alibaba Cloud side to ensure it matches the ID actually used by the peer. Common ID types: IP address, FQDN, email address.",
+          "priority": 1
+        },
+        {
+          "id": "ID002",
+          "regex": "no matching peer.*found|no matching connection",
+          "description": "No matching peer configuration found",
+          "cause": "Received negotiation request but no matching tunnel config found; peer IP or ID not in config.",
+          "solution": "1. Check that the peer gateway IP on Alibaba Cloud side is correct. 2. If peer is behind NAT, check LocalId/RemoteId config.",
+          "priority": 1
+        }
+      ]
+    },
+    {
+      "category": "ike_version_mismatch",
+      "description": "IKE version mismatch",
+      "phase": "phase1",
+      "patterns": [
+        {
+          "id": "VER001",
+          "regex": "unsupported.*version|invalid.*major.*version",
+          "description": "IKE version not supported",
+          "cause": "IKE versions on both sides do not match (one side IKEv1, other side IKEv2).",
+          "solution": "Ensure both sides use the same IKE version. Alibaba Cloud VPN Gateway supports both IKEv1 and IKEv2; must match peer device.",
+          "priority": 1
+        }
+      ]
+    },
+    {
+      "category": "certificate_issue",
+      "description": "Certificate issues (digital certificate authentication scenarios)",
+      "phase": "phase1",
+      "patterns": [
+        {
+          "id": "CERT001",
+          "regex": "certificate.*verify.*fail|cert.*validation.*error",
+          "description": "Certificate verification failed",
+          "cause": "Peer certificate verification failed; may be expired, CA not trusted, or incomplete certificate chain.",
+          "solution": "1. Check certificate validity period. 2. Verify CA certificate is correctly imported. 3. Check certificate chain is complete.",
+          "priority": 1
+        }
+      ]
+    },
+    {
+      "category": "aggressive_mode_failure",
+      "description": "Aggressive Mode negotiation failure",
+      "phase": "phase1",
+      "patterns": [
+        {
+          "id": "AGG001",
+          "regex": "agg_r1recv.*failed to get valid proposal",
+          "description": "Aggressive Mode responder proposal negotiation failed",
+          "cause": "Acting as Aggressive Mode responder; received peer negotiation request but proposal parameters mismatch (encryption/auth/DH group).",
+          "solution": "Check IKE config parameters on both sides. Note: Alibaba Cloud VPN Gateway defaults to Main Mode; if peer uses Aggressive Mode, confirm compatibility.",
+          "priority": 1
+        },
+        {
+          "id": "AGG002",
+          "regex": "agg_i2send|agg_r1recv",
+          "description": "Aggressive Mode packet exchange",
+          "cause": "IKEv1 is using Aggressive Mode for negotiation.",
+          "solution": "If negotiation fails, recommend switching to Main Mode. Aggressive Mode has lower security and may have compatibility issues in NAT scenarios.",
+          "priority": 3
+        }
+      ]
+    },
+    {
+      "category": "nat_t_renegotiation_failure",
+      "description": "NAT-T port drift causing re-negotiation failure",
+      "phase": "phase1",
+      "patterns": [
+        {
+          "id": "NATR001",
+          "regex": "initiator.*500.*retransmit",
+          "description": "Initiator retransmitting on port 500 with no response",
+          "cause": "In NAT-T scenario after tunnel interruption, Alibaba Cloud as IKEv1 initiator sends packets from port 500; but peer after DPD failure only accepts port 4500. IKEv1 only upgrades to port 4500 at packet 3, so packets 1-2 are dropped by peer.",
+          "solution": "1. Configure the on-premises device as the negotiation initiator. 2. Disable NAT-T if not required. 3. Ensure peer listens on both ports 500 and 4500.",
+          "priority": 1
+        },
+        {
+          "id": "NATR002",
+          "regex": "responder.*4500.*phase1 completed",
+          "description": "Responder completed negotiation on port 4500",
+          "cause": "Peer initiated negotiation via port 4500; Alibaba Cloud responded successfully. Confirms peer only communicates on port 4500.",
+          "solution": "If Alibaba Cloud needs to be the initiator, configure peer to also accept IKE negotiation on port 500.",
+          "priority": 3
+        }
+      ]
+    },
+    {
+      "category": "sa_dying_state",
+      "description": "SA entering dying state (about to be deleted)",
+      "phase": "established",
+      "patterns": [
+        {
+          "id": "DYING001",
+          "regex": "dying|DYING",
+          "description": "SA entered dying/DYING state",
+          "cause": "SA marked as about to be deleted; typically a precursor to DPD timeout or lifetime expiry. SA entering dying state triggers deletion.",
+          "solution": "Check context to determine trigger: 1. DPD timeout logs preceding → peer unreachable. 2. Lifetime logs preceding → normal rotation. 3. Peer DELETE preceding → peer-initiated disconnect.",
+          "priority": 2
+        }
+      ]
+    },
+    {
+      "category": "mid_out_of_order",
+      "description": "MID (Message ID) out-of-order causing tunnel interruption",
+      "phase": "established",
+      "patterns": [
+        {
+          "id": "MID001",
+          "regex": "Drop unordered Message",
+          "description": "Out-of-order MID packet dropped",
+          "cause": "VPN gateway detected IKEv2 Message ID out of order and dropped the packet. Third-party device rekey may produce out-of-order MIDs due to network jitter; if the device does not retransmit per RFC, rekey fails and the tunnel goes down when the old SA expires.",
+          "solution": "1. Set Alibaba Cloud VPN SA lifetime shorter than the peer's to ensure Alibaba Cloud initiates rekey. 2. Contact the peer device vendor to verify RFC-compliant retransmission behavior.",
+          "priority": 1
+        },
+        {
+          "id": "MID002",
+          "regex": "unexpected.*message.*id|invalid.*message.*id",
+          "description": "Unexpected Message ID",
+          "cause": "Received IKEv2 message with unexpected Message ID; may be out-of-order or duplicate packet.",
+          "solution": "Same as MID out-of-order: adjust SA lifetime so Alibaba Cloud initiates rekey.",
+          "priority": 2
+        }
+      ]
+    },
+    {
+      "category": "no_proposal_chosen_phase2",
+      "description": "Phase2 proposal rejected (Phase1 already passed)",
+      "phase": "phase2",
+      "patterns": [
+        {
+          "id": "NPC001",
+          "regex": "NO_PROPOSAL_CHOSEN",
+          "description": "Proposal rejected",
+          "cause": "Peer rejected all proposals. Use IKE Cookie to determine whether Phase1 or Phase2 was rejected: if both Initiator and Responder Cookies are present (Phase1 passed), this is a Phase2 config mismatch.",
+          "solution": "1. Check if both Cookies are present in logs (determines if Phase1 passed). 2. If Phase1 passed, align Phase2 (IPSec SA) encryption, auth, and PFS on both sides. 3. If Phase1 not passed, align Phase1 (IKE) config.",
+          "priority": 1
+        }
+      ]
+    },
+    {
+      "category": "negotiation_state_stuck",
+      "description": "Negotiation state machine stuck (diagnosed via state transitions)",
+      "phase": "phase1_or_phase2",
+      "patterns": [
+        {
+          "id": "STATE001",
+          "regex": "INI_IKE_SA_INIT_SENT(?!.*INI_IKE_AUTH_SENT)",
+          "description": "IKEv2 stuck in IKE_SA_INIT stage",
+          "cause": "IKEv2 Phase1 (IKE_SA_INIT) sent but did not progress to IKE_AUTH; Phase1 negotiation failed.",
+          "solution": "Check Phase1 params: encryption algorithm, DH group, whether peer received and replied to IKE_SA_INIT.",
+          "priority": 2
+        },
+        {
+          "id": "STATE002",
+          "regex": "INI_IKE_AUTH_SENT(?!.*ESTABLISHED)",
+          "description": "IKEv2 stuck in IKE_AUTH stage",
+          "cause": "IKEv2 Phase2 (IKE_AUTH) sent but did not reach ESTABLISHED; auth or Phase2 negotiation failed.",
+          "solution": "Check: 1. PSK consistency. 2. IKE ID matches. 3. Traffic selectors match.",
+          "priority": 2
+        },
+        {
+          "id": "STATE003",
+          "regex": "ikev1 phase1.*initiator.*1st",
+          "description": "IKEv1 stuck at Phase1 packet 1",
+          "cause": "IKEv1 Main Mode sent only packet 1 without receiving packet 2 reply from peer.",
+          "solution": "Peer not responding. Check: 1. Peer public IP. 2. Network connectivity. 3. Firewall UDP 500.",
+          "priority": 2
+        }
+      ]
+    },
+    {
+      "category": "phase2_proposal_rejected_with_cookie",
+      "description": "Phase1 passed (dual Cookies present) but Phase2 proposal rejected",
+      "phase": "phase2",
+      "patterns": [
+        {
+          "id": "PH2_REJ001",
+          "regex": "Responder Cookie\\s*:\\s*0x[0-9a-f]{16}",
+          "description": "Non-zero Responder Cookie present in logs; confirms Phase1 IKE SA established",
+          "cause": "Phase1 (IKE SA) established successfully (Responder Cookie present). If NO_PROPOSAL_CHOSEN also appears, Phase2 (IPSec SA) proposal was rejected.",
+          "solution": "Align Phase2 (IPSec SA) config on both sides: encryption algorithm, auth algorithm, PFS (DH group). Phase1 already passed; do not change Phase1 config.",
+          "priority": 1
+        },
+        {
+          "id": "PH2_REJ002",
+          "regex": "packet lacks expected payload",
+          "description": "Response missing expected payload",
+          "cause": "Usually accompanies NO_PROPOSAL_CHOSEN; peer returned an incomplete response after rejecting the proposal.",
+          "solution": "Use Cookie check to determine whether Phase1 or Phase2 was rejected, then align the corresponding config.",
+          "priority": 2
+        }
+      ]
+    },
+    {
+      "category": "cross_border_blocking",
+      "description": "Cross-border VPN connection potentially blocked by ISP",
+      "phase": "phase1",
+      "patterns": [
+        {
+          "id": "CB001",
+          "regex": "establishing IKE_SA failed, peer not responding",
+          "description": "Continuous peer non-response after tunnel interruption; possibly cross-border blocking",
+          "cause": "IKE SA establishment failed with persistent peer non-response. If tunnel was previously working and then suddenly went down, and the peer IP is overseas while the tunnel is in Chinese mainland (or vice versa), the cross-border VPN may have been blocked by the ISP.",
+          "solution": "1. Alibaba Cloud VPN Gateway only supports non-cross-border connections. 2. Recommend using CEN Transit Router for cross-border network connectivity. 3. As a workaround attempt: disable NAT-T and use UDP 500 for negotiation.",
+          "priority": 1
+        }
+      ]
+    },
+    {
+      "category": "none_of_proposal_matched",
+      "description": "All proposals unmatched (final verdict)",
+      "phase": "phase1_or_phase2",
+      "patterns": [
+        {
+          "id": "NPM001",
+          "regex": "none of my proposal matched",
+          "description": "All proposals unmatched",
+          "cause": "After comparing all proposals from the peer, none matched local config. This is the final mismatch verdict.",
+          "solution": "Compare config on both sides item by item: encryption algorithm, auth algorithm, DH group. Check preceding proposal mismatch logs to identify the specific mismatched parameter.",
+          "priority": 1
+        }
+      ]
+    },
+    {
+      "category": "multi_subnet_sa_flapping",
+      "description": "Multi-subnet traffic selector mode mismatch causing frequent IPSec SA re-establishment",
+      "phase": "phase2",
+      "patterns": [
+        {
+          "id": "MS001",
+          "regex": "delete proto ESP spi",
+          "description": "Frequent ESP SA deletion (assess together with child_sa established frequency)",
+          "cause": "Alibaba Cloud VPN Gateway uses address-group mode for multi-subnet traffic selectors (multiple subnets share 1 IPSec SA), while the peer VPN uses ACL mode (each subnet has its own IPSec SA). When multiple subnets communicate simultaneously, the peer's multiple IPSec SA SPIs do not match Alibaba Cloud's single SA, triggering DELETE notifications, which the peer responds to by re-establishing, creating a rapid delete→established loop causing intermittent service disruption.",
+          "solution": "1. [Recommended] Merge multiple ACLs on the peer device into one policy (using address group/object group), so the peer also uses a single SA for multi-subnet traffic. 2. [Alternative] Split multi-subnet on Alibaba Cloud into multiple IPSec connections, one subnet pair per connection, matching peer ACL mode. 3. [Alternative] Enable 'single SA mode' or 'merged SA' on peer if supported (feature name varies by vendor).",
+          "priority": 1,
+          "detection_rule": "Within 60 seconds, if the same peer IP has >=3 occurrences of 'delete proto ESP spi' AND >=3 occurrences of 'child_sa established', classify as multi-subnet SA flapping. Note: a single delete+established is normal rekey; only high-frequency rapid repetition indicates this issue."
+        },
+        {
+          "id": "MS002",
+          "regex": "child_sa established",
+          "description": "Frequent child_sa establishment (assess together with delete frequency)",
+          "cause": "IPSec SA (child_sa) being established frequently. If accompanied by equal-frequency deletions, SA is continuously flapping. Typical cause: multi-subnet address-group vs ACL mode mismatch.",
+          "solution": "Same as MS001: align traffic selector negotiation modes on both sides; recommend merging ACLs into address group on peer.",
+          "priority": 2,
+          "detection_rule": "child_sa established alone is normal (rekey/initial negotiation). Only flag as abnormal when rapid delete+established cycles occur repeatedly in a short time."
+        },
+        {
+          "id": "MS003",
+          "regex": "can't find sa for proto ESP spi",
+          "description": "Received DELETE request from peer but no matching SA found locally",
+          "cause": "Peer sent DELETE notification for an ESP SA, but Alibaba Cloud side has no SA with that SPI. In multi-subnet scenarios, this is typically because the peer (ACL mode) maintains separate SAs per subnet that have no corresponding independent SA on Alibaba Cloud side (address-group mode).",
+          "solution": "Same as MS001: root cause is traffic selector negotiation mode mismatch; unify both sides to the same mode.",
+          "priority": 2
+        }
+      ]
+    }
+  ]
+}
