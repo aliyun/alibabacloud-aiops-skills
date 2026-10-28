@@ -15,6 +15,7 @@ description: |
   "HTTP 4xx/5xx regional isolation",
   "DNS resolution differs by region / DNS hijack pollution",
   "mobile 4G/5G access issue", "CDN 5xx regional isolation".
+  中文触发：部分地区打不开、多地访问慢、域名解析异常、手机流量打不开、CDN 5xx。
 ---
 
 # Network Probe (Multi-Region Public Probing)
@@ -34,6 +35,12 @@ no cloud credentials of any kind.
 Supported probe types: HTTP(S) web probing, DNS resolution checks, Ping,
 MTR, traceroute. All probes can optionally run from mobile 4G/5G
 perspective nodes (`--mobile`) instead of IDC backbone nodes.
+
+## Chinese Symptom Examples
+
+- "上海能打开，广州打不开" → multi-region HTTP/Ping/DNS/MTR probes to locate the failure by region and carrier.
+- "手机流量打不开，Wi-Fi 可以" → add mobile 4G/5G probe nodes.
+- "域名解析出来的 IP 不对，怀疑被劫持" → compare DNS answers across regions.
 
 ## Execution Principle
 
@@ -213,10 +220,12 @@ Requirements:
 
 - **User-Agent template (mandatory)**: every request issued by the scripts
   carries a User-Agent built from the template
-  `AlibabaCloud-Agent-Skills/{SKILL_NAME}/{session-id}`, where `{SKILL_NAME}`
-  is this skill's frontmatter name — `alibabacloud-website-probe` — and
-  `{session-id}` is the session identifier described below. Resolved example:
-  `AlibabaCloud-Agent-Skills/alibabacloud-website-probe/4eefc3a1be2102b3eb41463c84e98e9b`.
+  `AlibabaCloud-Agent-Skills/{SKILL_NAME}/{session-id} skill-version/{skill-version}`,
+  where `{SKILL_NAME}` is this skill's frontmatter name —
+  `alibabacloud-website-probe`, `{session-id}` is the session identifier
+  described below, and `{skill-version}` is read at runtime from
+  `references/manifest.json` (never hardcoded). Resolved example:
+  `AlibabaCloud-Agent-Skills/alibabacloud-website-probe/4eefc3a1be2102b3eb41463c84e98e9b skill-version/0.1.0`.
 - **session-id rule**: generated **once per session**, as a **32-char
   lowercase hex** string, and kept **consistent across CLI / SDK / Terraform**
   and any other backend touched in that session. The value is cached for the

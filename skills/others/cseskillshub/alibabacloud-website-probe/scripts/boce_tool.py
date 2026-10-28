@@ -30,14 +30,20 @@ MAX_WORKERS = 6       # concurrent threads
 POLL_INTERVAL = 3     # seconds between result polls
 POLL_TIMEOUT = 120    # max seconds to wait for results
 MAX_NODES_DEFAULT = 50
-SKILL_VERSION = "0.1.0"
-# Observability (platform rule SA-2.11): the User-Agent MUST follow the template
-# AlibabaCloud-Agent-Skills/{SKILL_NAME}/{session-id}, where SKILL_NAME equals
-# the SKILL.md frontmatter name and session-id is a 32-char lowercase hex string
-# generated once per session and shared by every backend used in that session.
+# Observability (platform rule SA-2.11 + UA-SKILL-VERSION): the User-Agent MUST
+# follow AlibabaCloud-Agent-Skills/{SKILL_NAME}/{session-id} skill-version/{skill-version},
+# where SKILL_NAME equals the SKILL.md frontmatter name, session-id is a 32-char
+# lowercase hex string generated once per session, and skill-version is read from
+# references/manifest.json at runtime (never hardcoded here).
 SKILL_NAME = "alibabacloud-website-probe"
-UA_TEMPLATE = "AlibabaCloud-Agent-Skills/{skill_name}/{session_id}"
+UA_TEMPLATE = ("AlibabaCloud-Agent-Skills/{skill_name}/{session_id} "
+               "skill-version/{skill_version}")
 _RUN_SESSION_ID = None
+_MANIFEST_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "references", "manifest.json")
+_VERSION_RE = re.compile(r"^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$")
+_SKILL_VERSION = None
 
 
 def get_run_session_id() -> str:
@@ -59,9 +65,41 @@ def get_run_session_id() -> str:
     return _RUN_SESSION_ID
 
 
+class SkillVersionError(RuntimeError):
+    """references/manifest.json is missing, unreadable or has no valid version."""
+
+
+def skill_version() -> str:
+    """Read the UA skill-version from references/manifest.json (lazy, cached).
+
+    Resolved on the first User-Agent build -- i.e. before the first HTTP call of
+    the run. A missing/unreadable manifest or a malformed version raises
+    SkillVersionError instead of substituting a guessed value.
+    """
+    global _SKILL_VERSION
+    if _SKILL_VERSION is None:
+        try:
+            with open(_MANIFEST_PATH, "r", encoding="utf-8") as fh:
+                raw = json.load(fh).get("version")
+        except (OSError, ValueError, AttributeError) as exc:
+            raise SkillVersionError(
+                f"cannot read the skill version from {_MANIFEST_PATH}: {exc}"
+            ) from exc
+        version = str(raw or "").strip()
+        if not _VERSION_RE.match(version):
+            raise SkillVersionError(
+                f"references/manifest.json carries no valid version "
+                f"(got {raw!r}); refusing to guess the UA skill-version")
+        _SKILL_VERSION = version
+    return _SKILL_VERSION
+
+
 def build_user_agent() -> str:
     """Render the mandatory Agent-Skills User-Agent for this session."""
-    return UA_TEMPLATE.format(skill_name=SKILL_NAME, session_id=get_run_session_id())
+    return UA_TEMPLATE.format(
+        skill_name=SKILL_NAME,
+        session_id=get_run_session_id(),
+        skill_version=skill_version())
 
 # ─── Constants ────────────────────────────────────────────────────────────────
 BASE_URL = "https://boce.aliyun.com"
@@ -239,8 +277,8 @@ def build_session(refresh: bool = False) -> requests.Session:
     
     TLS verification is always enforced for the boce platform session; the
     User-Agent follows the mandatory template
-    AlibabaCloud-Agent-Skills/{SKILL_NAME}/{session-id} so every request issued
-    during this session is traceable on the platform side.
+    AlibabaCloud-Agent-Skills/{SKILL_NAME}/{session-id} skill-version/{skill-version}
+    so every request issued during this session is traceable on the platform side.
     """
     session = requests.Session()
     session.verify = True
