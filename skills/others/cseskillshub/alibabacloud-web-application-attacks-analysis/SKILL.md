@@ -11,6 +11,7 @@ description: |
   "abnormal crawler", "QPS surge", "bandwidth surge", "4xx/5xx surge",
   "site being attacked", "scanning probe", "API abuse",
   "slow request analysis".
+  中文触发：网站被 CC 攻击、HTTP 洪水、代理池爬虫、登录爆破、扫描探测、带宽突增、QPS 突增、4xx/5xx 突增、异常爬虫。
 ---
 
 # Web Application Attacks Analysis
@@ -22,6 +23,12 @@ Requires Python 3 (standard library only, no third-party packages):
 ```bash
 python3 --version
 ```
+
+## Chinese Symptom Examples
+
+- "网站被 CC 攻击，带宽跑满" → identify attack signatures and source distribution, then give mitigation advice.
+- "日志里全是扫描器请求" → classify scanning probes and count their sources.
+- "登录接口被爆破" → count failed logins and their source IPs.
 
 ## Module Index
 
