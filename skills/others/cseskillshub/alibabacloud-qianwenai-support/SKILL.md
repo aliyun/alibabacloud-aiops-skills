@@ -7,14 +7,12 @@ description: |
   "create ticket", "list tickets", "view ticket", "reply ticket", "close
   ticket", "rate ticket", "transfer to human", "work order", "customer
   service", "human support", "open ticket", "check ticket", "cancel ticket",
-  "evaluate ticket", "ticket list", "ticket status", "support request",
-  "escalate to agent", "follow up on a ticket", "expedite ticket",
-  "after-sales", "report a problem", "file a complaint", "overdue payment",
-  "billing issue", "invoice discrepancy", "quota exhausted", "usage limit
-  reached", "API error, contact official", "account suspended", "account
-  blocked", "contact support". Do NOT trigger for general product knowledge,
-  model usage how-tos, API Key management, or vague feedback without explicit
-  ticket intent — confirm intent first.
+  "evaluate ticket", "ticket list", "ticket status", "expedite ticket",
+  "overdue payment", "billing issue", "invoice discrepancy", "quota exhausted",
+  "account suspended", "contact support". Do NOT trigger for general product
+  knowledge, model usage how-tos, API Key management, or vague feedback
+  without explicit ticket intent — confirm intent first.
+  中文触发：查工单、工单进度、提工单、回复工单、关闭工单、评价工单、转人工、账单问题、发票问题、额度不足、账号被停用。
 compatibility: Requires QianWen CLI v1.2.0+ (v1.4.0+ for usage logs), authenticated via `qianwen auth login` (CLI device flow) or the `QIANWEN_ACCESS_TOKEN` environment variable. Problem summarization is handled by the calling agent's own model.
 metadata:
   version: "3.7.0"
@@ -61,6 +59,12 @@ The destinations below are the complete set of network endpoints present in this
 **What data leaves this machine:** only non-credential diagnostic context — hostnames, IP addresses, ports, domain names, timestamps, and resource IDs the user supplies — together with the ticket text the user has reviewed and explicitly confirmed; all of it goes only to the first-party QianWen endpoint above. No credentials, tokens, local file contents or customer data are uploaded to third parties. No attachment, log file, screenshot or archive is ever uploaded by this skill.
 
 **Read-only guarantee:** this skill is read-only with respect to cloud resources — it never creates, modifies, deletes or bills any cloud resource, and it performs no third-party data sharing beyond the destinations listed above. Its only write operations are support-ticket records on the QianWen platform (create, reply, close, rate), and each one requires the user's explicit confirmation of the displayed draft beforehand.
+
+## Chinese Symptom Examples
+
+- "帮我提个工单，模型调用一直报错" → run auto-diagnosis first; draft a ticket only when needed and submit after user confirmation.
+- "我之前那个工单有进展吗" → list tickets and show status plus the latest reply.
+- "这个工单能加急吗" → confirm the ticket ID, expedite it, and explain follow-up.
 
 ## Execution Principle
 
