@@ -25,12 +25,12 @@ Core approach: confirm identity and target domain, pull bps/flow/QPS usage data 
 1. **ABSOLUTE PROHIBITION (read-only enforcement):** Under **NO** circumstances may you generate, write, or execute any command/script calling a mutating API — e.g. `StopCdnDomain`, `DeleteCdnDomain`, `SetDomainServerCertificate`, `Modify*`, `RefreshObjectCaches`, `PushObjectCache`, or any configuration change. This includes scripts "for the user to run manually". If the user asks to stop a domain, block hotlinkers, or change configuration, only output the manual remediation workflow and declare this skill is read-only.
 2. **ABSOLUTE PROHIBITION (credential handling):** Never read, print, or pass AK/SK/STS tokens explicitly. Credentials are resolved automatically by the aliyun CLI default credential chain. Never accept AK/SK from the user or from another script.
 3. **NO FABRICATION:** Every conclusion must be grounded in data actually returned by the usage-data APIs. If a query fails or returns empty, record it and state the limitation — never invent traffic numbers.
-4. **EXECUTION RULE FOR ERRORS:** On any API error, log `[WARN] <Code>: <Message>` to stderr and continue with the remaining queries — never silently skip or abort the whole diagnosis. The final report is still produced with the data at hand.
+4. **EXECUTION RULE FOR ERRORS:** On any API error, log `[WARN] <Code>: <Message>` to stderr and continue with the remaining queries — never silently skip or abort the whole diagnosis. The final report is still produced with the data at hand. **Exception — critical domain/account-level errors** (`InvalidDomain.NotFound`, `InvalidAccessKeyId.NotFound`, `CdnServiceNotFound`): every remaining query for the same target would fail identically, so the script short-circuits them (fail fast — one failed call instead of a full failed sweep) and reports the first critical error with its actionable guidance.
 
 ## Observability
 
 All OpenAPI calls (invoked through the aliyun CLI) include:
-- **User-Agent**: `--user-agent AlibabaCloud-Agent-Skills/{SKILL_NAME}/{session-id}`
+- **User-Agent**: `--user-agent AlibabaCloud-Agent-Skills/{SKILL_NAME}/{session-id}/skill-version/{skill-version}` (`skill-version` resolves from the `SKILL_VERSION` env var, else `references/manifest.json`)
 - **SKILL_NAME**: `alibabacloud-cdn-traffic-anomaly`
 - **session-id**: 32-character hex string generated per diagnostic session (one `uuid.uuid4().hex` per script run) and attached to every CLI command in the same run.
 
@@ -166,20 +166,23 @@ CLI options for `cdn_traffic_analysis.py`: `--domain <DOMAIN>` (required), `--st
 | `Throttling.User` | Request rate limited | Log `[WARN]`, continue with remaining queries |
 | `InternalError` / `ServiceUnavailable` | Transient service-side failure | Log `[WARN]`, continue; do not conclude "service down" from a single call |
 | Empty data series | No traffic in the window (offline domain, wrong name) | Report "no data" honestly (exit 2, `error_code=NoUsageData` / `NoLogsInWindow`), verify the domain and window |
+| `InvalidDomain.NotFound` / `CdnServiceNotFound` / `InvalidAccessKeyId.NotFound` | Critical domain/account-level error; all remaining queries would fail identically | Report the first critical error with guidance (exit 1), skip the remaining queries (fail fast) — do not retry |
 
 All errors follow the `Code: Message` format raised as `RuntimeError` inside the script and degraded with `[WARN]` on stderr; the report is always emitted with whatever data succeeded. Non-JSON multi-line SDKError text from the real aliyun CLI is handled too: the scripts regex-extract `Code:` / `Message:` before falling back to the raw text.
+
+**Fail-fast on critical errors:** `InvalidDomain.NotFound`, `InvalidAccessKeyId.NotFound` and `CdnServiceNotFound` are treated as critical — after the first hit the script skips the remaining CDN queries for the same target (they would all fail the same way) and surfaces the first critical error as `error_code` (exit 1). Recovery-eligible errors (`NoPermission` / `InvalidParameter` / `Throttling` / `InternalError`) keep the record-and-continue behavior.
 
 ### Exit-code contract (both scripts)
 
 | Exit code | Meaning |
 |-----------|---------|
 | 0 | Analysis completed with usable data (may be partially degraded) |
-| 1 | Real error: critical API error (e.g. `InvalidDomain.NotFound`, `InvalidAccessKeyId.NotFound`) or all log downloads failed |
+| 1 | Real error: critical API error (`InvalidDomain.NotFound`, `InvalidAccessKeyId.NotFound`, `CdnServiceNotFound`) or all log downloads failed |
 | 2 | Benign no-data: no usage data / no offline logs in the window. Not an error — tell the user and verify the domain/window |
 
 ### Stable `error_code` field (both scripts)
 
-Every JSON (and text) result carries a stable `error_code` field for programmatic branching: `InvalidDomain.NotFound` | `InvalidAccessKeyId.NotFound` | `NoLogsInWindow` (analysis) | `AllDownloadsFailed` (analysis) | `NoUsageData` (anomaly) | `""` (normal). Other raw API codes pass through verbatim on error paths.
+Every JSON (and text) result carries a stable `error_code` field for programmatic branching: `InvalidDomain.NotFound` | `InvalidAccessKeyId.NotFound` | `CdnServiceNotFound` | `NoLogsInWindow` (analysis) | `AllDownloadsFailed` (analysis) | `NoUsageData` (anomaly) | `""` (normal). Other raw API codes pass through verbatim on error paths. When the fail-fast path triggers, the JSON also carries `fatal_api_error` (first critical error, full raw text).
 
 ### Output contract for Agents
 

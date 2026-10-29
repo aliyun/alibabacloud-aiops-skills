@@ -39,7 +39,32 @@ from typing import Optional, Dict, Any, List, Tuple
 
 # Per-run session id for platform-level tracing (Observability)
 _SESSION_ID = uuid.uuid4().hex
-_USER_AGENT = f"AlibabaCloud-Agent-Skills/alibabacloud-cdn-traffic-anomaly/{_SESSION_ID}"
+def _resolve_skill_version():
+    """Skill version for the User-Agent (rule UA-SKILL-VERSION).
+
+    Resolution: the SKILL_VERSION env var (non-empty), else the top-level
+    'version' string of references/manifest.json. An unresolvable version
+    raises before any cloud call -- unversioned calls must never be made.
+    """
+    import json as _json, os as _os
+    v = (_os.environ.get("SKILL_VERSION") or "").strip()
+    if not v:
+        p = _os.path.join(_os.path.dirname(_os.path.dirname(
+            _os.path.abspath(__file__))), "references", "manifest.json")
+        try:
+            with open(p, encoding="utf-8") as f:
+                v = str((_json.load(f) or {}).get("version") or "").strip()
+        except (OSError, ValueError):
+            v = ""
+    if not v:
+        raise RuntimeError(
+            "skill version unresolved: set SKILL_VERSION or restore "
+            "references/manifest.json (unversioned cloud calls are forbidden)")
+    return v
+
+
+_SKILL_VERSION = _resolve_skill_version()
+_USER_AGENT = f"AlibabaCloud-Agent-Skills/alibabacloud-cdn-traffic-anomaly/{_SESSION_ID}/skill-version/{_SKILL_VERSION}"
 
 # ==================== Embedded analysis constants ====================
 # Threshold model: an interval is anomalous when its value exceeds
@@ -67,7 +92,8 @@ VALUE_KEYS = ('Value', 'Bps', 'Flow', 'Qps', 'Traffic', 'Acc',
 # Critical API error codes that must surface as hard failures (exit 1)
 # rather than benign no-data (exit 2).
 CRITICAL_API_ERROR_CODES = ('InvalidDomain.NotFound',
-                            'InvalidAccessKeyId.NotFound')
+                            'InvalidAccessKeyId.NotFound',
+                            'CdnServiceNotFound')
 
 # Plain-language explanations of verdict values for non-technical readers
 # (text report only; JSON keeps the raw enum).
@@ -417,6 +443,17 @@ def diagnose(domain: str, days: int, interval: int,
 
     api_raw_responses: List[Dict[str, Any]] = []
 
+    # Fail-fast state: once a CRITICAL_API_ERROR_CODES error is hit (a
+    # domain/account-level error that makes every subsequent CDN query
+    # for the same target fail identically), the remaining queries are
+    # skipped so one bad run costs one failed call instead of a full
+    # failed sweep. Non-critical errors keep the degrade-and-continue
+    # behavior.
+    fatal_api_error: Optional[str] = None
+
+    def _is_fatal_error(err: str) -> bool:
+        return _extract_api_code(err) in CRITICAL_API_ERROR_CODES
+
     def record(query: str, request: Dict[str, Any],
                response: Optional[Dict[str, Any]] = None,
                error: Optional[str] = None):
@@ -440,6 +477,8 @@ def diagnose(domain: str, days: int, interval: int,
         record('GetCallerIdentity', {}, error=str(e))
         warn(str(e), 'GetCallerIdentity')
         log('  Caller UID: (identity check failed, continuing)')
+        if _is_fatal_error(str(e)):
+            fatal_api_error = str(e)
 
     # ---------- Step 2: Usage data series ----------
     log()
@@ -451,94 +490,124 @@ def diagnose(domain: str, days: int, interval: int,
     # The API only accepts field=bps|traf|acc ('flow' is rejected with
     # InvalidParameterField); traf returns bytes per interval.
     log('  > describe-domain-usage-data (field=traf)')
-    try:
-        resp = _describe_domain_usage_data(domain, start_time, end_time,
-                                           'traf', interval_str)
-        record('DescribeDomainUsageData/traf',
-               {'domain': domain, 'start': start_time, 'end': end_time,
-                'field': 'traf', 'interval': interval_str}, resp)
-        series_sets['traf'] = {'response': resp,
-                               'points': _extract_series(resp)}
-        log(f"    parsed {len(series_sets['traf']['points'])} points")
-    except RuntimeError as e:
-        record('DescribeDomainUsageData/traf',
-               {'domain': domain, 'field': 'traf'}, error=str(e))
-        warn(str(e), 'describe-domain-usage-data (traf)')
+    if fatal_api_error is None:
+        try:
+            resp = _describe_domain_usage_data(domain, start_time, end_time,
+                                               'traf', interval_str)
+            record('DescribeDomainUsageData/traf',
+                   {'domain': domain, 'start': start_time, 'end': end_time,
+                    'field': 'traf', 'interval': interval_str}, resp)
+            series_sets['traf'] = {'response': resp,
+                                   'points': _extract_series(resp)}
+            log(f"    parsed {len(series_sets['traf']['points'])} points")
+        except RuntimeError as e:
+            record('DescribeDomainUsageData/traf',
+                   {'domain': domain, 'field': 'traf'}, error=str(e))
+            warn(str(e), 'describe-domain-usage-data (traf)')
+            if _is_fatal_error(str(e)):
+                fatal_api_error = str(e)
+                print('[WARN] critical error; skipping the remaining '
+                      'CDN queries (fail fast)', file=sys.stderr)
 
     # 2.2 DescribeDomainUsageData (field=bps)
     log('  > describe-domain-usage-data (field=bps)')
-    try:
-        resp = _describe_domain_usage_data(domain, start_time, end_time,
-                                           'bps', interval_str)
-        record('DescribeDomainUsageData/bps',
-               {'domain': domain, 'start': start_time, 'end': end_time,
-                'field': 'bps', 'interval': interval_str}, resp)
-        series_sets['usage_bps'] = {'response': resp,
-                                    'points': _extract_series(resp)}
-        log(f"    parsed {len(series_sets['usage_bps']['points'])} points")
-    except RuntimeError as e:
-        record('DescribeDomainUsageData/bps',
-               {'domain': domain, 'field': 'bps'}, error=str(e))
-        warn(str(e), 'describe-domain-usage-data (bps)')
+    if fatal_api_error is None:
+        try:
+            resp = _describe_domain_usage_data(domain, start_time, end_time,
+                                               'bps', interval_str)
+            record('DescribeDomainUsageData/bps',
+                   {'domain': domain, 'start': start_time, 'end': end_time,
+                    'field': 'bps', 'interval': interval_str}, resp)
+            series_sets['usage_bps'] = {'response': resp,
+                                        'points': _extract_series(resp)}
+            log(f"    parsed {len(series_sets['usage_bps']['points'])} points")
+        except RuntimeError as e:
+            record('DescribeDomainUsageData/bps',
+                   {'domain': domain, 'field': 'bps'}, error=str(e))
+            warn(str(e), 'describe-domain-usage-data (bps)')
+            if _is_fatal_error(str(e)):
+                fatal_api_error = str(e)
+                print('[WARN] critical error; skipping the remaining '
+                      'CDN queries (fail fast)', file=sys.stderr)
 
     # 2.3 DescribeDomainBpsData (bandwidth trend backup)
     log('  > describe-domain-bps-data')
-    try:
-        resp = _describe_domain_bps_data(domain, start_time, end_time,
-                                         interval_str)
-        record('DescribeDomainBpsData',
-               {'domain': domain, 'start': start_time, 'end': end_time,
-                'interval': interval_str}, resp)
-        series_sets['bps'] = {'response': resp,
-                              'points': _extract_series(resp)}
-        log(f"    parsed {len(series_sets['bps']['points'])} points")
-    except RuntimeError as e:
-        record('DescribeDomainBpsData', {'domain': domain}, error=str(e))
-        warn(str(e), 'describe-domain-bps-data')
+    if fatal_api_error is None:
+        try:
+            resp = _describe_domain_bps_data(domain, start_time, end_time,
+                                             interval_str)
+            record('DescribeDomainBpsData',
+                   {'domain': domain, 'start': start_time, 'end': end_time,
+                    'interval': interval_str}, resp)
+            series_sets['bps'] = {'response': resp,
+                                  'points': _extract_series(resp)}
+            log(f"    parsed {len(series_sets['bps']['points'])} points")
+        except RuntimeError as e:
+            record('DescribeDomainBpsData', {'domain': domain}, error=str(e))
+            warn(str(e), 'describe-domain-bps-data')
+            if _is_fatal_error(str(e)):
+                fatal_api_error = str(e)
+                print('[WARN] critical error; skipping the remaining '
+                      'CDN queries (fail fast)', file=sys.stderr)
 
     # 2.4 DescribeDomainQpsData (request-rate correlation)
     log('  > describe-domain-qps-data')
-    try:
-        resp = _describe_domain_qps_data(domain, start_time, end_time,
-                                         interval_str)
-        record('DescribeDomainQpsData',
-               {'domain': domain, 'start': start_time, 'end': end_time,
-                'interval': interval_str}, resp)
-        series_sets['qps'] = {'response': resp,
-                              'points': _extract_series(resp)}
-        log(f"    parsed {len(series_sets['qps']['points'])} points")
-    except RuntimeError as e:
-        record('DescribeDomainQpsData', {'domain': domain}, error=str(e))
-        warn(str(e), 'describe-domain-qps-data')
+    if fatal_api_error is None:
+        try:
+            resp = _describe_domain_qps_data(domain, start_time, end_time,
+                                             interval_str)
+            record('DescribeDomainQpsData',
+                   {'domain': domain, 'start': start_time, 'end': end_time,
+                    'interval': interval_str}, resp)
+            series_sets['qps'] = {'response': resp,
+                                  'points': _extract_series(resp)}
+            log(f"    parsed {len(series_sets['qps']['points'])} points")
+        except RuntimeError as e:
+            record('DescribeDomainQpsData', {'domain': domain}, error=str(e))
+            warn(str(e), 'describe-domain-qps-data')
+            if _is_fatal_error(str(e)):
+                fatal_api_error = str(e)
+                print('[WARN] critical error; skipping the remaining '
+                      'CDN queries (fail fast)', file=sys.stderr)
 
     # 2.5 DescribeDomainRealTimeBpsData (last hour, fine-grained)
     log('  > describe-domain-real-time-bps-data')
-    try:
-        resp = _describe_domain_real_time_bps_data(domain)
-        record('DescribeDomainRealTimeBpsData', {'domain': domain}, resp)
-        series_sets['realtime_bps'] = {'response': resp,
-                                       'points': _extract_series(resp)}
-        log(f"    parsed {len(series_sets['realtime_bps']['points'])} points")
-    except RuntimeError as e:
-        record('DescribeDomainRealTimeBpsData', {'domain': domain},
-               error=str(e))
-        warn(str(e), 'describe-domain-real-time-bps-data')
+    if fatal_api_error is None:
+        try:
+            resp = _describe_domain_real_time_bps_data(domain)
+            record('DescribeDomainRealTimeBpsData', {'domain': domain}, resp)
+            series_sets['realtime_bps'] = {'response': resp,
+                                           'points': _extract_series(resp)}
+            log(f"    parsed {len(series_sets['realtime_bps']['points'])} points")
+        except RuntimeError as e:
+            record('DescribeDomainRealTimeBpsData', {'domain': domain},
+                   error=str(e))
+            warn(str(e), 'describe-domain-real-time-bps-data')
+            if _is_fatal_error(str(e)):
+                fatal_api_error = str(e)
+                print('[WARN] critical error; skipping the remaining '
+                      'CDN queries (fail fast)', file=sys.stderr)
 
     # 2.6 DescribeDomainSrcBpsData (origin/return-to-source bandwidth series;
     # backs the T6 "origin amplification" scenario; degrade-and-continue)
     log('  > describe-domain-src-bps-data')
-    try:
-        resp = _describe_domain_src_bps_data(domain, start_time, end_time,
-                                             interval_str)
-        record('DescribeDomainSrcBpsData',
-               {'domain': domain, 'start': start_time, 'end': end_time,
-                'interval': interval_str}, resp)
-        series_sets['src_bps'] = {'response': resp,
-                                  'points': _extract_series(resp)}
-        log(f"    parsed {len(series_sets['src_bps']['points'])} points")
-    except RuntimeError as e:
-        record('DescribeDomainSrcBpsData', {'domain': domain}, error=str(e))
-        warn(str(e), 'describe-domain-src-bps-data')
+    if fatal_api_error is None:
+        try:
+            resp = _describe_domain_src_bps_data(domain, start_time, end_time,
+                                                 interval_str)
+            record('DescribeDomainSrcBpsData',
+                   {'domain': domain, 'start': start_time, 'end': end_time,
+                    'interval': interval_str}, resp)
+            series_sets['src_bps'] = {'response': resp,
+                                      'points': _extract_series(resp)}
+            log(f"    parsed {len(series_sets['src_bps']['points'])} points")
+        except RuntimeError as e:
+            record('DescribeDomainSrcBpsData', {'domain': domain}, error=str(e))
+            warn(str(e), 'describe-domain-src-bps-data')
+            if _is_fatal_error(str(e)):
+                fatal_api_error = str(e)
+                print('[WARN] critical error; skipping the remaining '
+                      'CDN queries (fail fast)', file=sys.stderr)
 
     # ---------- Step 3 & 4: Baseline comparison + anomaly windows ----------
     log()
@@ -667,6 +736,7 @@ def diagnose(domain: str, days: int, interval: int,
     return {
         'ok': ok,
         'error_code': error_code,
+        'fatal_api_error': fatal_api_error,
         'domain': domain,
         'uid': caller_uid,
         'session_id': _SESSION_ID,
@@ -713,10 +783,31 @@ def _fmt_value(series_name: str, v: float) -> str:
     return f'{v:,.1f} req/s'
 
 
+_API_CODE_RE = re.compile(r'"error_code"\s*:\s*"([^"]+)"')
+
+
+def _extract_api_code(err: str) -> str:
+    """Best-effort API error code from a CLI error string.
+
+    Handles both shapes seen in production:
+      - legacy "Code: message" prefix (e.g. "InvalidDomain.NotFound: ...")
+      - the aliyun CLI JSON error envelope printed as
+        'CliError: {"message":..., "error_code":"InvalidDomain.NotFound",...}'
+    """
+    s = str(err)
+    head = s.split(':', 1)[0].strip()
+    if head in CRITICAL_API_ERROR_CODES:
+        return head
+    m = _API_CODE_RE.search(s)
+    if m:
+        return m.group(1)
+    return head
+
+
 def _critical_error_code(errors) -> Optional[str]:
     """Return the first critical API error code found among raw errors."""
     for err in errors:
-        code = str(err).split(':', 1)[0].strip()
+        code = _extract_api_code(err)
         if code in CRITICAL_API_ERROR_CODES:
             return code
     return None
@@ -724,7 +815,7 @@ def _critical_error_code(errors) -> Optional[str]:
 
 def _translate_error(err: str) -> str:
     """Translate a raw CLI/API error into an actionable hint."""
-    code = str(err).split(':', 1)[0].strip()
+    code = _extract_api_code(err)
     guidance = ERROR_GUIDANCE.get(code)
     if guidance:
         return f'{code} -> {guidance}'
