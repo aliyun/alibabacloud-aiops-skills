@@ -90,30 +90,21 @@ To further restrict permissions, create the following **custom RAM Policy** and 
 
 ## 3. Authorization Steps
 
+These steps are performed **manually by an administrator in the RAM console** (or
+via the administrator's own separate tooling). This skill is strictly read-only
+and never issues any RAM write command (`create-policy`, `attach-policy-*`, etc.).
+
 ### Method 1: Attach System Policies to RAM User
 
-```bash
-# Login to RAM Console -> Users -> Add Permissions, select the system policies listed above; or use aliyun CLI:
-aliyun ram attach-policy-to-user \
-  --policy-type System \
-  --policy-name AliyunECSReadOnlyAccess \
-  --user-name <ram-user-name>
-```
+In the RAM console: Users -> <ram-user-name> -> Add Permissions, then select the
+system policies listed above (for example `AliyunECSReadOnlyAccess`).
 
 ### Method 2: Attach Custom Policy to RAM Role (Recommended for STS Scenarios)
 
-```bash
-# 1. Create custom policy (save the above JSON as policy.json)
-aliyun ram create-policy \
-  --policy-name QoderSkillNetworkTroubleshootReadOnly \
-  --policy-document "$(cat policy.json)"
-
-# 2. Attach to RAM role
-aliyun ram attach-policy-to-role \
-  --policy-type Custom \
-  --policy-name QoderSkillNetworkTroubleshootReadOnly \
-  --role-name <role-name>
-```
+In the RAM console: Policies -> Create Policy (paste the JSON document above and
+name it `QoderSkillNetworkTroubleshootReadOnly`), then attach the policy to the
+target RAM role. The skill consumes the resulting role's credentials via STS
+AssumeRole and performs only the read-only actions listed in section 1.
 
 ## 4. Permission Verification
 

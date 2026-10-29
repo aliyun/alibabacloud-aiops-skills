@@ -10,9 +10,10 @@ description: |
   plus NAT gateway / SNAT / route / EIP checks for DataWorks, SAE, ACK and others.
   Triggers: "ECS public network access diagnosis", "ECS public IP reachability",
   "ECS security group blocking public access", "ECS cannot access the public network",
-  "ECS NAT gateway SNAT egress troubleshooting", "VPC cloud service public network access",
+  "VPC cloud service public network access",
   "DataWorks cannot access the public network", "SAE public network egress failure",
-  "ACK public network unreachable", "VPC NAT gateway SNAT route EIP check"
+  "ACK public network unreachable"
+  中文触发：ECS 公网不通、安全组拦截、NAT/SNAT 不通、跨 VPC 不通、云产品出网失败
 ---
 
 # ECS/VPC Public Network Connectivity Troubleshooting
@@ -141,7 +142,8 @@ python3 scripts/vpc_service_public_troubleshoot.py \
 
 ## Observability
 
-- **User-Agent template (mandatory)**: every OpenAPI call issued by the scripts carries a User-Agent built from the template `AlibabaCloud-Agent-Skills/{SKILL_NAME}/{session-id}`, where `{SKILL_NAME}` is this skill's frontmatter name — `alibabacloud-ecs-vpc-publicnetwork-troubleshoot` — and `{session-id}` is the session identifier described below. Resolved example: `AlibabaCloud-Agent-Skills/alibabacloud-ecs-vpc-publicnetwork-troubleshoot/4eefc3a1be2102b3eb41463c84e98e9b`.
+- **User-Agent template (mandatory)**: every OpenAPI call issued by the scripts carries a User-Agent built from the template `AlibabaCloud-Agent-Skills/{SKILL_NAME}/{session-id} skill-version/{version}`, where `{SKILL_NAME}` is this skill's frontmatter name — `alibabacloud-ecs-vpc-publicnetwork-troubleshoot` — `{session-id}` is the session identifier described below, and `{version}` is read at runtime from `references/manifest.json` (`version`). Resolved example: `AlibabaCloud-Agent-Skills/alibabacloud-ecs-vpc-publicnetwork-troubleshoot/4eefc3a1be2102b3eb41463c84e98e9b skill-version/1.0.0`.
+- **skill-version gate**: the scripts read `references/manifest.json` before the first cloud call and stop with a clear error if the file is missing or has no non-empty `version`.
 - **session-id rule**: generated **once per session** as a **32-char lowercase hex** string (`uuid.uuid4().hex`), and kept **consistent across the SDK and aliyun CLI backends** touched in that session. It is cached via the `SKILL_SESSION_ID` environment variable so every script in one session reports the same id.
 - The SDK backend injects it via `append_user_agent`; the CLI backend propagates the same value through the `ALIBABACLOUD_USER_AGENT` environment variable. This User-Agent is the only tracing marker this skill injects; all calls remain read-only.
 

@@ -49,7 +49,21 @@ if _orig_acs_del is not None:
 # Observability: Skill UA + session-id
 # ============================================================
 SKILL_NAME = "alibabacloud-ecs-vpc-publicnetwork-troubleshoot"
-SKILL_VERSION = "0.1.0"
+def _load_skill_version() -> str:
+    """Read the skill version from references/manifest.json (single source of truth)."""
+    import pathlib as _pl
+    _p = _pl.Path(__file__).resolve().parent.parent / "references" / "manifest.json"
+    try:
+        _d = json.loads(_p.read_text(encoding="utf-8"))
+        _v = _d.get("version")
+    except Exception as _e:
+        raise RuntimeError("references/manifest.json missing or unreadable: %s" % _e)
+    if not (isinstance(_v, str) and _v.strip()):
+        raise RuntimeError("references/manifest.json has no non-empty 'version'")
+    return _v.strip()
+
+
+SKILL_VERSION = _load_skill_version()
 # API timeout defaults (seconds)
 DEFAULT_CONNECT_TIMEOUT = 10
 DEFAULT_READ_TIMEOUT = 30
@@ -73,14 +87,14 @@ def _setup_ua(client):
     try:
         client.append_user_agent(
             "AlibabaCloud-Agent-Skills",
-            f"{SKILL_NAME}/{SESSION_ID}",
+            f"{SKILL_NAME}/{SESSION_ID} skill-version/{SKILL_VERSION}",
         )
     except Exception:
         # Ignore if older SDK does not support append_user_agent; UA will still be passed to subprocesses via env var
         pass
     # Also pass unified UA to subprocesses (aliyun CLI) via environment variable
     os.environ["ALIBABACLOUD_USER_AGENT"] = (
-        f"AlibabaCloud-Agent-Skills/{SKILL_NAME}/{SESSION_ID}"
+        f"AlibabaCloud-Agent-Skills/{SKILL_NAME}/{SESSION_ID} skill-version/{SKILL_VERSION}"
     )
     return client
 
