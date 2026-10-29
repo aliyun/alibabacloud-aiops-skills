@@ -1,0 +1,113 @@
+{
+  "accelerator_id": "ga-xxxxxxxxxxxxxxxx",
+  "accelerator_name": "ga-example-001",
+  "instance_charge_type": "POSTPAY",
+  "bandwidth_billing_type": "CDT",
+  "dns_name": "ga-xxxxxxxxxxxxxxxx.aliyunga0019.com",
+  "ip_set_config": {
+    "access_mode": "UserDefine"
+  },
+  "bandwidth_packages": [],
+  "ip_sets": [
+    {
+      "ip_set_id": "ips-xxxxxxxxxxxxxxxx",
+      "accelerate_region_id": "cn-beijing",
+      "ip_version": "IPv4",
+      "isp_type": "BGP",
+      "bandwidth": 2,
+      "accelerate_ips": [
+        "47.xxx.xxx.xxx",
+        "47.xxx.xxx.xxx"
+      ]
+    },
+    {
+      "ip_set_id": "ips-xxxxxxxxxxxxxxxx",
+      "accelerate_region_id": "cn-shanghai",
+      "ip_version": "IPv4",
+      "isp_type": "BGP",
+      "bandwidth": 2,
+      "accelerate_ips": [
+        "47.xxx.xxx.xxx",
+        "47.xxx.xxx.xxx"
+      ]
+    }
+  ],
+  "listeners": [
+    {
+      "listener_id": "lsr-xxxxxxxxxxxxxxxx",
+      "protocol": "TCP",
+      "port": 80,
+      "client_affinity": "SOURCE_IP",
+      "endpoint_groups": [
+        {
+          "endpoint_group_id": "epg-xxxxxxxxxxxxxxxx",
+          "endpoint_group_region": "cn-hangzhou",
+          "endpoint_group_type": "default",
+          "traffic_percentage": 100,
+          "health_check": {
+            "enabled": true,
+            "protocol": "TCP",
+            "port": 80,
+            "interval_seconds": 10,
+            "threshold_count": 3
+          },
+          "endpoint_group_ip_list": [
+            "47.xxx.xxx.xxx",
+            "47.xxx.xxx.xxx",
+            "47.xxx.xxx.xxx",
+            "47.xxx.xxx.xxx"
+          ],
+          "endpoints": [
+            {
+              "endpoint": "i-xxxxxxxxxxxxxxxx",
+              "type": "ECS",
+              "sub_address": "172.16.xxx.xxx",
+              "weight": 100
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "listener_id": "lsr-xxxxxxxxxxxxxxxx",
+      "protocol": "TCP",
+      "port": 8888,
+      "client_affinity": "SOURCE_IP",
+      "name": "listener-8888-openai",
+      "endpoint_groups": [
+        {
+          "endpoint_group_id": "epg-xxxxxxxxxxxxxxxx",
+          "endpoint_group_region": "ap-southeast-1",
+          "endpoint_group_type": "default",
+          "name": "epg-openai-8888",
+          "traffic_percentage": 100,
+          "port_overrides": {
+            "listener_port": 8888,
+            "endpoint_port": 80
+          },
+          "health_check": {
+            "enabled": true,
+            "protocol": "TCP",
+            "port": 80,
+            "interval_seconds": 10,
+            "threshold_count": 3
+          },
+          "endpoint_group_ip_list": [
+            "47.xxx.xxx.xxx",
+            "47.xxx.xxx.xxx",
+            "47.xxx.xxx.xxx",
+            "47.xxx.xxx.xxx"
+          ],
+          "endpoints": [
+            {
+              "endpoint": "backend.example.com",
+              "type": "Domain",
+              "weight": 100
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "cross_border_status": true
+}

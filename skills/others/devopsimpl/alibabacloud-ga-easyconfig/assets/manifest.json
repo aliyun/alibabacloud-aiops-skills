@@ -1,0 +1,29 @@
+{
+  "name": "alibabacloud-ga-easyconfig",
+  "version": "1.3.6",
+  "description": "Alibaba Cloud Global Accelerator (GA / 阿里云全球加速 / 全球加速实例 / GA实例) configuration and lifecycle management skill. Use when users ask to create, configure, set up, manage, monitor, diagnose, or optimize GA accelerators, listeners, endpoint groups, bandwidth packages, IP sets, ACLs, forwarding rules, certificates, cross-border acceleration, health checks, or configuration drift.",
+  "author": "Alibaba Cloud",
+  "license": "MIT",
+  "user_agent": "AlibabaCloud-Agent-Skills/alibabacloud-ga-easyconfig/{session-id} skill-version/1.3.6",
+  "session_id_generator": "uuid4",
+  "metadata": {
+    "product": "ga",
+    "domain": "AIOps",
+    "language": "en",
+    "min_cli_version": "3.3.3"
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${SKILL_ROOT}/scripts/check-write-operation.sh",
+            "statusMessage": "Checking if this is a write operation..."
+          }
+        ]
+      }
+    ]
+  }
+}
