@@ -135,6 +135,20 @@ def session_id() -> str:
     return _SESSION_ID
 
 
+def _load_skill_version() -> str:
+    """Read the skill version from references/manifest.json (single source of truth)."""
+    import pathlib as _pl
+    _p = _pl.Path(__file__).resolve().parent.parent / "references" / "manifest.json"
+    try:
+        _data = json.loads(_p.read_text(encoding="utf-8"))
+        _v = _data.get("version")
+    except Exception as _e:
+        raise RuntimeError("references/manifest.json missing or unreadable: %s" % _e)
+    if not (isinstance(_v, str) and _v.strip()):
+        raise RuntimeError("references/manifest.json has no non-empty 'version'")
+    return _v.strip()
+
+
 def user_agent() -> str:
     """User-Agent identifying this skill + invocation.
 
@@ -142,7 +156,7 @@ def user_agent() -> str:
     string is attached to every CLI subprocess (`--user-agent`) and every HTTP
     fallback request (`User-Agent` header).
     """
-    return f"AlibabaCloud-Agent-Skills/{_SKILL_NAME}/{session_id()}"
+    return f"AlibabaCloud-Agent-Skills/{_SKILL_NAME}/{session_id()} skill-version/{_load_skill_version()}"
 
 
 # ---------------------------------------------------------------------------

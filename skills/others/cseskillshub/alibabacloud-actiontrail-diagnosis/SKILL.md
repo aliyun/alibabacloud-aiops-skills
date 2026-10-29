@@ -2,6 +2,7 @@
 name: alibabacloud-actiontrail-diagnosis
 description: |
   Read-only query and diagnosis of Alibaba Cloud ActionTrail operation audit events: find out who performed which operation, when, from which source IP, and on which resource, across one or many regions, rendered as a 12-column event table or machine-readable JSON. Use when the user asks about the audit log or operation history of an Alibaba Cloud account; wants to know who changed, created, deleted, or operated on a resource; asks when a resource was operated on; needs to trace read/write operation records, console sign-ins, or API calls of a cloud service; or wants to investigate suspicious or failed operations recorded by ActionTrail. Triggers: audit log, operation history, operation records, who changed, who operated, who deleted, when was it operated, action history, read/write operations, ActionTrail, audit event, operation trace.
+  中文触发：谁改了配置、谁删了资源、操作记录、审计日志、什么时候操作的、控制台登录、API 调用记录、可疑操作。
 ---
 
 # ActionTrail Diagnosis
@@ -16,6 +17,12 @@ description: |
 ## Overview
 
 This skill queries the Alibaba Cloud ActionTrail `LookupEvents` API in read-only mode to retrieve operation audit events for an account, with multi-region batch querying, automatic pagination, flexible time input (ISO8601 UTC or Beijing time), server-side filtering via `LookupAttribute`, and client-side refinement filters. The single entry script `scripts/lookup_events.py` handles credential routing, retries, error degradation, and result rendering.
+
+## Chinese Symptom Examples
+
+- "昨天谁把安全组规则改了" → query operation records by time window and resource; list operator, source IP and time.
+- "这个 ECS 是什么时候被删的" → locate the deletion event and its operator.
+- "控制台最近有没有异常登录" → query sign-in events and source IPs.
 
 ## Orchestration
 
@@ -123,6 +130,7 @@ Aliyun CLI 3.x installed and configured (recommended), or credentials provided v
 
 Every Alibaba Cloud API call this skill makes carries a User-Agent for server-side audit correlation:
 
-- **UA template:** `AlibabaCloud-Agent-Skills/{skill-name}/{session-id}` — here `{skill-name}` is `alibabacloud-actiontrail-diagnosis`.
+- **UA template:** `AlibabaCloud-Agent-Skills/{skill-name}/{session-id} skill-version/{version}` — here `{skill-name}` is `alibabacloud-actiontrail-diagnosis`.
+- **skill-version:** read at runtime from `references/manifest.json` (`version`) and appended to the UA; a missing or invalid manifest stops the run before the first cloud call.
 - **session-id:** a 32-character lowercase-hex string, generated once per process run and shared unchanged by every call in that run (both the CLI backend and the HTTP fallback), so all calls of one diagnosis correlate.
 - **Inheritance:** set the environment variable `ACTIONTRAIL_SESSION_ID` to a valid 32-hex value to make a parent process and the script share one session-id; otherwise a fresh id is generated automatically. No manual configuration is required.
