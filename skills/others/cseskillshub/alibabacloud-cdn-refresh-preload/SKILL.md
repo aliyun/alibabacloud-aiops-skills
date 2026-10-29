@@ -20,7 +20,7 @@ Core approach: First query refresh/preload task records to confirm task status, 
 ## Observability
 
 All OpenAPI calls (invoked through the aliyun CLI) include:
-- **User-Agent**: `--user-agent AlibabaCloud-Agent-Skills/{SKILL_NAME}/{session-id}`
+- **User-Agent**: `--user-agent AlibabaCloud-Agent-Skills/{SKILL_NAME}/{session-id}/skill-version/{skill-version}` (`skill-version` resolves from the `SKILL_VERSION` env var, else `references/manifest.json`)
 - **SKILL_NAME**: `alibabacloud-cdn-refresh-preload`
 - **session-id**: 32-character hex string generated per diagnostic session
 
@@ -130,7 +130,9 @@ cd $SKILL_DIR && python3 scripts/cdn_probe.py 'curl -ksI -H "Host: <CDN domain>"
 
 Focus: Origin returns 304 (resource unchanged) or 200 (resource changed). Also check `Cache-Control`, `Pragma`, `Set-Cookie`.
 
-If the origin address cannot be obtained, skip this step and conclude from Steps 2/3 results.
+If the origin address cannot be obtained after the automatic attempts, you MUST ask the customer for the origin IP or domain (explain that auto-discovery failed) and proceed with the bound origin probe once provided. Conclude without the origin probe only after the customer explicitly says they cannot provide it.
+
+**Malformed / port-bearing origin address (fault tolerance):** If the origin address the customer provides contains a port or other non-standard format (e.g. `192.168.1.100:8080`), you MUST normalize it before probing: split the host/IP part from the port, use the host/IP part as the `--resolve` target address, and explicitly state in the diagnostic report that this format normalization was applied. Never crash on, or silently ignore, a malformed origin address — always acknowledge the abnormal format and describe how it was handled.
 
 ### Step 5: Output Diagnostic Report
 
@@ -186,7 +188,8 @@ Standard probes: DNS (`dig`), HTTPS (`curl -ksI`), SSL cert (`openssl`), direct 
 |-------|-------|------------|
 | No credentials found | Default credential chain not configured | Configure the aliyun CLI default credential chain (run `aliyun configure`) |
 | Identity verification failed (sts get-caller-identity) | Sandbox credentials missing or invalid | Check the runtime credential configuration; no extra authorization is needed when the default chain works |
-| API error (Forbidden / InvalidParameter / Throttling / InternalError) | OpenAPI returned an error for a query | Record the error, skip the affected query, continue the remaining diagnostic steps and still output the report |
+| API error (Forbidden / InvalidParameter / Throttling / InternalError) | OpenAPI returned an error for a query | Record the error, skip the affected query, continue the remaining diagnostic steps and still output the report; Throttling is retried once automatically by the script |
+| `CdnServiceNotFound` / `DcdnServiceNotFound` | The account has no CDN (or DCDN) service activated (account-level, not domain-specific) | The script short-circuits after the first occurrence (1 degraded call instead of 3) and reports the service-absent conclusion; tell the user to activate CDN/DCDN or verify the account/UID — do not keep retrying |
 | API returns empty tasks | No refresh/preload in lookback window | Extend `--days` or verify domain/URL |
 | Probe command timeout | Network unreachable or command hung | Retry or check local network connectivity |
 

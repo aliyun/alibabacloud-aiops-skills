@@ -33,7 +33,32 @@ from typing import Dict, Any
 
 # Per-run session id for platform-level tracing (Observability)
 _SESSION_ID = uuid.uuid4().hex
-_USER_AGENT = f"AlibabaCloud-Agent-Skills/alibabacloud-cdn-refresh-preload/{_SESSION_ID}"
+def _resolve_skill_version():
+    """Skill version for the User-Agent (rule UA-SKILL-VERSION).
+
+    Resolution: the SKILL_VERSION env var (non-empty), else the top-level
+    'version' string of references/manifest.json. An unresolvable version
+    raises before any cloud call -- unversioned calls must never be made.
+    """
+    import json as _json, os as _os
+    v = (_os.environ.get("SKILL_VERSION") or "").strip()
+    if not v:
+        p = _os.path.join(_os.path.dirname(_os.path.dirname(
+            _os.path.abspath(__file__))), "references", "manifest.json")
+        try:
+            with open(p, encoding="utf-8") as f:
+                v = str((_json.load(f) or {}).get("version") or "").strip()
+        except (OSError, ValueError):
+            v = ""
+    if not v:
+        raise RuntimeError(
+            "skill version unresolved: set SKILL_VERSION or restore "
+            "references/manifest.json (unversioned cloud calls are forbidden)")
+    return v
+
+
+_SKILL_VERSION = _resolve_skill_version()
+_USER_AGENT = f"AlibabaCloud-Agent-Skills/alibabacloud-cdn-refresh-preload/{_SESSION_ID}/skill-version/{_SKILL_VERSION}"
 
 DEFAULT_ROLE_NAME = "cseesadiagnosticrole"
 

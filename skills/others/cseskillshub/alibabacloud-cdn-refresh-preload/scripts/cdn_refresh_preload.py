@@ -30,6 +30,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 import urllib.parse
 import uuid
 from datetime import datetime, timezone, timedelta
@@ -37,7 +38,32 @@ from typing import Optional, Dict, Any, List, Tuple
 
 # Per-run session id for platform-level tracing (Observability)
 _SESSION_ID = uuid.uuid4().hex
-_USER_AGENT = f"AlibabaCloud-Agent-Skills/alibabacloud-cdn-refresh-preload/{_SESSION_ID}"
+def _resolve_skill_version():
+    """Skill version for the User-Agent (rule UA-SKILL-VERSION).
+
+    Resolution: the SKILL_VERSION env var (non-empty), else the top-level
+    'version' string of references/manifest.json. An unresolvable version
+    raises before any cloud call -- unversioned calls must never be made.
+    """
+    import json as _json, os as _os
+    v = (_os.environ.get("SKILL_VERSION") or "").strip()
+    if not v:
+        p = _os.path.join(_os.path.dirname(_os.path.dirname(
+            _os.path.abspath(__file__))), "references", "manifest.json")
+        try:
+            with open(p, encoding="utf-8") as f:
+                v = str((_json.load(f) or {}).get("version") or "").strip()
+        except (OSError, ValueError):
+            v = ""
+    if not v:
+        raise RuntimeError(
+            "skill version unresolved: set SKILL_VERSION or restore "
+            "references/manifest.json (unversioned cloud calls are forbidden)")
+    return v
+
+
+_SKILL_VERSION = _resolve_skill_version()
+_USER_AGENT = f"AlibabaCloud-Agent-Skills/alibabacloud-cdn-refresh-preload/{_SESSION_ID}/skill-version/{_SKILL_VERSION}"
 
 
 # Status label mapping
@@ -107,23 +133,37 @@ def _describe_refresh_tasks_via_cli(
     if status:
         cmd += ['--status', status]
 
-    try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-    except subprocess.TimeoutExpired:
-        raise RuntimeError('CliError: aliyun CLI request timed out after 30s')
-    except FileNotFoundError:
-        raise RuntimeError('CliError: aliyun CLI not found on PATH')
+    result: Optional[Dict[str, Any]] = None
+    for attempt in (1, 2):
+        try:
+            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        except subprocess.TimeoutExpired:
+            raise RuntimeError('CliError: aliyun CLI request timed out after 30s')
+        except FileNotFoundError:
+            raise RuntimeError('CliError: aliyun CLI not found on PATH')
 
-    if proc.returncode != 0:
-        code, message = _parse_cli_error(proc.stdout, proc.stderr)
-        raise RuntimeError(f"{code}: {message}")
+        if proc.returncode != 0:
+            code, message = _parse_cli_error(proc.stdout, proc.stderr)
+            # Throttling is transient: retry once after a short backoff.
+            if 'Throttling' in code and attempt == 1:
+                time.sleep(2)
+                continue
+            raise RuntimeError(f"{code}: {message}")
 
-    try:
-        result = json.loads(proc.stdout)
-    except (json.JSONDecodeError, ValueError):
-        raise RuntimeError('CliError: unparseable response from aliyun CLI')
-    if isinstance(result, dict) and result.get('Code'):
-        raise RuntimeError(f"{result['Code']}: {result.get('Message', '')}")
+        try:
+            parsed = json.loads(proc.stdout)
+        except (json.JSONDecodeError, ValueError):
+            raise RuntimeError('CliError: unparseable response from aliyun CLI')
+        if isinstance(parsed, dict) and parsed.get('Code'):
+            code = str(parsed.get('Code'))
+            if 'Throttling' in code and attempt == 1:
+                time.sleep(2)
+                continue
+            raise RuntimeError(f"{code}: {parsed.get('Message', '')}")
+        result = parsed
+        break
+    if result is None:
+        raise RuntimeError('CliError: no result from aliyun CLI')
 
     tasks = []
     for task in (result.get('Tasks') or {}).get('CDNTask') or []:
@@ -154,6 +194,11 @@ class RefreshPreloadVerifier:
             raise ValueError("aliyun CLI not found. Install it and run 'aliyun configure'.")
         # Whether to print in real-time (disable in JSON output mode to avoid stdout pollution)
         self.verbose = verbose
+        # Set when the CDN API reports CdnServiceNotFound (the account has no
+        # CDN service activated): every refresh-task query fails identically,
+        # so fetch_recent_tasks short-circuits and the conclusion reports the
+        # dedicated service-absent branch instead of a misleading "no tasks".
+        self.cdn_service_absent = False
 
     def _log(self, msg: str = ''):
         """Print analysis progress in real-time (only when verbose=True)"""
@@ -227,6 +272,17 @@ class RefreshPreloadVerifier:
                     print(f"[WARN] DescribeRefreshTasks [{obj_type}] page {page_number} failed -> "
                           f"{api_error} (recorded in api_raw_responses, continuing)", file=sys.stderr)
                     self._log(f'    Page {page_number}: API error -> {api_error} (stop pagination)')
+                    if 'CdnServiceNotFound' in api_error or 'DcdnServiceNotFound' in api_error:
+                        # Account-level failure: the account has no CDN service
+                        # activated, so every refresh-task query (file /
+                        # directory / preload) fails the same way. Stop at the
+                        # first occurrence (1 degraded call instead of 3) and
+                        # let the conclusion surface the service-absent branch.
+                        self.cdn_service_absent = True
+                        print('[WARN] CdnServiceNotFound/DcdnServiceNotFound: this account does not have CDN '
+                              'service (or DCDN service) activated; refresh/preload task history cannot be '
+                              'queried. Skipping the remaining refresh-task queries.',
+                              file=sys.stderr)
                     break
 
                 tasks = api_response.get('tasks', []) or []
@@ -262,6 +318,8 @@ class RefreshPreloadVerifier:
                 if len(tasks) < page_size:
                     break
                 page_number += 1
+            if self.cdn_service_absent:
+                break
             self._log(f'    Subtotal: [{obj_type}] fetched {total_received}, kept {kept_for_type} for this domain in window')
 
         self._log(f'\n  [OK] Fetch complete: kept {len(all_tasks)} tasks for domain + time window')
@@ -608,6 +666,17 @@ def verify(
         tasks, raw_responses = verifier.fetch_recent_tasks(domain, lookback_days=lookback_days)
         
         if not tasks:
+            if verifier.cdn_service_absent:
+                return {
+                    'ok': False,
+                    'url': None,
+                    'domain': domain,
+                    'error': 'CdnServiceNotFound/DcdnServiceNotFound: the account does not '
+                             'have CDN (or DCDN) service activated; refresh/preload '
+                             'task history cannot be queried (activate CDN/DCDN or '
+                             'verify the account/UID)',
+                    'api_raw_responses': raw_responses,
+                }
             return {
                 'ok': False,
                 'url': None,
@@ -687,7 +756,14 @@ def verify(
         curl = verifier.curl_check(url, resolve)
 
     # 5. Determine curl verification conclusions
-    if not has_match:
+    if verifier.cdn_service_absent:
+        verify_conclusion = (
+            "CdnServiceNotFound/DcdnServiceNotFound: the account does not have "
+            "CDN (or DCDN) service activated, so refresh/preload task "
+            "history cannot be queried; verify the account/UID or "
+            "activate CDN/DCDN first"
+        )
+    elif not has_match:
         verify_conclusion = (
             f"No refresh/preload task covering this URL in last {lookback_days} days, "
             f"curl not triggered (no task to verify)"
