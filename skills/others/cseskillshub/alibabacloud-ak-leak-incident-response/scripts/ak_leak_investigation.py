@@ -186,13 +186,22 @@ def query_ak_info(ak: str, start_time: str = "", end_time: str = "") -> dict[str
     """
     result = {"accessKeyId": ak, "status": "N/A", "createTime": "N/A",
               "owner": "N/A", "type": "N/A"}
+    # Resolve the caller's own RAM user name once so the first call already
+    # carries UserName (the API requires it for RAM-user / assumed-role / root
+    # callers). An empty string means "not resolvable" -- keep the probe path.
+    caller_name = _cli.resolve_caller_username(region=_REGION, profile=_PROFILE)
+    first_params: dict[str, Any] = {"UserAccessKeyId": ak}
+    if caller_name:
+        first_params["UserName"] = caller_name
     try:
         body = _cli.call("ram", "GetAccessKeyLastUsed",
-                         {"UserAccessKeyId": ak}, region=_REGION, profile=_PROFILE)
+                         first_params, region=_REGION, profile=_PROFILE)
         last_used = body.get("AccessKeyLastUsed") or {}
         if last_used:
             result["lastUsedTime"] = last_used.get("LastUsedDate", "N/A")
             result["lastUsedService"] = last_used.get("ServiceName", "N/A")
+        if caller_name and result.get("owner") in (None, "N/A"):
+            result["owner"] = caller_name
     except _cli.CliError as e:
         # RAM-user / assumed-role / root callers must pass UserName for
         # GetAccessKeyLastUsed (the API returns "MissingParameter: Parameter
@@ -227,7 +236,9 @@ def query_ak_info(ak: str, start_time: str = "", end_time: str = "") -> dict[str
     # resolve its real Status/CreateDate. Foreign AKs (other users/accounts) are
     # not resolvable via read-only public API, so they honestly stay "N/A".
     try:
-        body = _cli.call("ram", "ListAccessKeys", {}, region=_REGION, profile=_PROFILE)
+        list_params: dict[str, Any] = {"UserName": caller_name} if caller_name else {}
+        body = _cli.call("ram", "ListAccessKeys", list_params,
+                         region=_REGION, profile=_PROFILE)
         aks = (body.get("AccessKeys") or {}).get("AccessKey") or []
         if isinstance(aks, dict):
             aks = [aks]
