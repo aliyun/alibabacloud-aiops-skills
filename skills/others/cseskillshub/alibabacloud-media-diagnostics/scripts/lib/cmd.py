@@ -41,6 +41,8 @@ def _exit_missing_tool(tool, hint):
                f"official channel ffmpeg.org or your system package "
                f"manager, and then re-run the same diagnosis to get the "
                f"full analysis.")
+    summary += (" 中文提示：当前环境缺少 ffprobe，只能完成基础结构检查，结论可能不完整；"
+                "建议由用户或环境管理员安装 FFmpeg（其中包含 ffprobe）后重新运行同一诊断。")
     actions = ["Strongly recommended: you or your environment administrator "
                "install FFmpeg on this machine (it also provides ffprobe), "
                "for example from the official channel ffmpeg.org or your "
@@ -49,6 +51,9 @@ def _exit_missing_tool(tool, hint):
                "diagnosis to get the full deep analysis",
                "Until then, refer to the degraded conclusion above as a "
                "limited structural check"]
+    actions.append("中文：安装命令供用户或环境管理员参考（Agent 不代为安装）——"
+                   "macOS: brew install ffmpeg; Ubuntu/Debian: sudo apt install ffmpeg; "
+                   "Windows: winget install ffmpeg")
     attach_report(results, summary, "needs_attention", actions)
     emit_json(results)
     render_report(summary, [f"availability of the '{tool}' tool"],
