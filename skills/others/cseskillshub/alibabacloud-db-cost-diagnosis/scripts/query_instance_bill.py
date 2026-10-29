@@ -277,6 +277,26 @@ def _build_summary_fields(
         else f"{billing_date} (daily drill-down of {billing_cycle})"
 
     if error:
+        code = error.split(":", 1)[0].strip()
+        if code == "NotApplicable":
+            # Product/billing capability boundary (not a permission or
+            # credential problem): the API answered that the per-instance
+            # bill does not apply to this combination.
+            return (
+                f"The billing API reported NotApplicable for instance "
+                f"{instance_id} in {scope}: this product/billing "
+                f"combination does not support the per-instance bill "
+                f"query, so no bill data can be read for it.",
+                [f"Query error: {error}"],
+                [
+                    "Confirm the instance belongs to a product that "
+                    "supports DescribeInstanceBill/DescribeSplitItemBill",
+                    "Try MONTHLY granularity or the --split-item mode, and "
+                    "verify the billing cycle",
+                    "If the product is not supported, check its cost in the "
+                    "console or via its own billing item",
+                ],
+            )
         return (
             f"The bill query for instance {instance_id} in {scope} failed "
             f"before any data could be read.",
@@ -484,6 +504,12 @@ def main() -> None:
                                  args.billing_date, args.profile)
     except _cli.CliError as e:
         query_error = str(e)
+        if getattr(e, "code", "") == "NotApplicable":
+            # Benign capability boundary: the API answered that the
+            # per-instance bill does not apply to this product/billing
+            # combination. Surface it as a typed state, not a generic
+            # credential/permission failure.
+            query_error = f"NotApplicable: {e}"
         print(f"[ERROR] Bill query failed: {e}", file=sys.stderr)
 
     print(f"[2/2] Fetched {len(items)} bill item(s); rendering output ...",

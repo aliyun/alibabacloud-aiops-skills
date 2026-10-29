@@ -160,9 +160,34 @@ def session_id() -> str:
     return _SESSION_ID
 
 
+def _resolve_skill_version() -> str:
+    """Skill version for the User-Agent (rule UA-SKILL-VERSION).
+
+    Resolution: the SKILL_VERSION env var (non-empty), else the
+    top-level 'version' string of references/manifest.json. An
+    unresolvable version raises before any cloud call.
+    """
+    import json as _json, os as _os
+    v = (_os.environ.get("SKILL_VERSION") or "").strip()
+    if not v:
+        p = _os.path.join(_os.path.dirname(_os.path.dirname(
+            _os.path.abspath(__file__))), "references", "manifest.json")
+        try:
+            with open(p, encoding="utf-8") as f:
+                v = str((_json.load(f) or {}).get("version") or "").strip()
+        except (OSError, ValueError):
+            v = ""
+    if not v:
+        raise RuntimeError(
+            "skill version unresolved: set SKILL_VERSION or restore "
+            "references/manifest.json (unversioned cloud calls are forbidden)")
+    return v
+
+
 def user_agent() -> str:
     """User-Agent attached to every API call of this run."""
-    return f"AlibabaCloud-Agent-Skills/{_SKILL_NAME}/{session_id()}"
+    return (f"AlibabaCloud-Agent-Skills/{_SKILL_NAME}/{session_id()}"
+            f"/skill-version/{_resolve_skill_version()}")
 
 
 def check_cli_available() -> None:
@@ -417,12 +442,15 @@ def _extract_error_code(stderr: str) -> str:
             except json.JSONDecodeError:
                 pass
             continue
-        # JSON error envelope: {"Code": "Throttling", ...}
+        # JSON error envelope: {"Code": "Throttling", ...} (legacy) or
+        # {"error_code": "NotApplicable", ...} (newer CLI JSON envelope).
         if line.startswith("{"):
             try:
                 body = json.loads(line)
-                if isinstance(body, dict) and body.get("Code"):
-                    return str(body["Code"])
+                if isinstance(body, dict):
+                    code = body.get("Code") or body.get("error_code")
+                    if code:
+                        return str(code)
             except json.JSONDecodeError:
                 pass
         # Legacy CLI fallback: "ERROR: <Code>: <Message>". Take only the

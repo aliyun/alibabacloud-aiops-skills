@@ -97,8 +97,14 @@ def query_monthly_bill(
     permission gap or exhausted retry never discards the data already
     collected. Returns (items, warnings).
     """
+    # `dbs` is a legacy ROW-level alias for DBS (rows carrying it are
+    # normalized to `cbs` below) and must NEVER be sent as a server-side
+    # ProductCode filter: BSS rejects it with ProductNotFind ("Can not
+    # find inquired product, it may not exist.") -- verified live on
+    # 2026-09-21. Only `cbs` is queryable; excluding `dbs` here keeps the
+    # default all-product scan free of guaranteed-to-fail API calls.
     product_codes = ([product_filter] if product_filter
-                     else list(DB_PRODUCT_CODES.keys()))
+                     else [c for c in DB_PRODUCT_CODES if c != "dbs"])
 
     all_items: list[dict] = []
     warnings: list[str] = []

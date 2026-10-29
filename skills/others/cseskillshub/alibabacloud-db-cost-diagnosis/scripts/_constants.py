@@ -115,6 +115,11 @@ DB_PRODUCTS = {
 }
 
 # Simple pip-code -> display-name map (used by trend aggregation).
+# NOTE: "dbs" is a legacy ROW-level alias observed in bill rows only --
+# never pass it as a DescribeInstanceBill ProductCode filter: BSS rejects
+# it with ProductNotFind ("Can not find inquired product"), verified
+# live 2026-09-21. Query with "cbs"; rows carrying "dbs" are normalized
+# to "cbs" client-side in query_cost_trend.py.
 DB_PRODUCT_CODES = {
     "rds": "RDS",
     "dds": "MongoDB",

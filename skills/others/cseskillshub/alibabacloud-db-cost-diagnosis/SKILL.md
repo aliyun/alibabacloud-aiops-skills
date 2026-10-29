@@ -40,7 +40,7 @@ All diagnostics MUST be performed by running the scripts under `scripts/`. The A
 ## Observability
 
 All OpenAPI calls (invoked through the aliyun CLI by the scripts) include:
-- **User-Agent template**: `AlibabaCloud-Agent-Skills/{skill-name}/{session-id}`, where `{skill-name}` is `alibabacloud-db-cost-diagnosis`
+- **User-Agent template**: `AlibabaCloud-Agent-Skills/{skill-name}/{session-id}/skill-version/{version}`, where `{skill-name}` is `alibabacloud-db-cost-diagnosis` and `{version}` resolves from the `SKILL_VERSION` env var, else `references/manifest.json`
 - **session-id**: 32-character hex string (`uuid.uuid4().hex`) generated once per script run and attached to every CLI command of that run, so all calls of one diagnosis can be correlated.
 
 The shared CLI layer implements this automatically: the session-id is generated lazily on the first call of each run, cached for the rest of the run, and concatenated into the `--user-agent` argument of every `aliyun` invocation.
@@ -94,6 +94,8 @@ Then determine which capability the user needs: A single-instance bill detail, B
 
 ### Step 2 (Capability A): Single-Instance Bill Detail & Billing-Item Split
 
+**MANDATORY (capability A):** Any single-instance bill detail / billing-item split / "why is one instance's bill so high" / released-instance-still-on-bill question MUST be answered by ACTUALLY RUNNING `python3 scripts/query_instance_bill.py ...` shown below. Never substitute it with direct OpenAPI calls, manual estimation, or a different script — the diagnosis is invalid unless this exact script is executed.
+
 ```bash
 cd $SKILL_DIR && python3 scripts/query_instance_bill.py \
     --instance-id <ID> --billing-cycle <YYYY-MM> [--split-item] \
@@ -112,6 +114,8 @@ The script calls the bssopenapi `DescribeInstanceBill` action (or `DescribeSplit
 Internally: endpoint `business.aliyuncs.com`, API version `2017-12-14`.
 
 ### Step 3 (Capability B): Account-Level DB Cost Trend & Anomaly Attribution
+
+**MANDATORY (capability B):** Any account-level cost-trend / month-over-month spike / anomaly-attribution question MUST be answered by ACTUALLY RUNNING `python3 scripts/query_cost_trend.py ...` shown below. Never substitute it with direct OpenAPI calls or manual reasoning.
 
 ```bash
 cd $SKILL_DIR && python3 scripts/query_cost_trend.py [--months 6] [--product rds|dds|kvstore|polardb|dts|cbs|cdt] [--granularity MONTHLY|DAILY] [--billing-date <YYYY-MM-DD>] [--json]
