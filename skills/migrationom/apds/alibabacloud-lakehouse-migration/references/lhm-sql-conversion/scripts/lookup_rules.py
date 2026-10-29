@@ -37,9 +37,15 @@ Usage:
         --source clickhouse --target maxcompute \
         --category "functions/date-functions,functions/string-functions,ddl/alter-table"
 
+    # 预取所有分类的规则详情（批量模式 Step 1.5 一次性拉取）
+    python3 scripts/lookup_rules.py \
+        --source clickhouse --target maxcompute --all-details
+
 Output:
-    --list-categories: 输出所有唯一 source_category 值（每行一个）
+    --list-categories: 每行输出 "分类名 (N rules)"
     --category: 输出该分类下所有规则（id / source_syntax / target_syntax / examples）
+    --all-details: 依次输出所有分类的规则详情
+    --search: 输出关键词命中的规则详情
 """
 import argparse
 import json
@@ -211,8 +217,11 @@ def _install_hint() -> str:
         f"    {cli_cmd} plugin install --names lhm",
     ])
 
-# 会话级 session-id（32 位小写 hex，进程内生成一次），用于 API 调用归因
-_SESSION_ID = uuid.uuid4().hex
+# 会话级 session-id（32 位小写 hex），用于 API 调用归因。
+# 优先取环境变量 LHM_SESSION_ID（dispatcher 会话开始时生成一次，全会话复用），保证全链路可观测性；
+# 未设置时（子技能脱离 dispatcher 独立运行）每进程兜底生成一次，模块加载仅执行一次，
+# 保证 UA 始终存在且同进程内多次调用一致。
+_SESSION_ID = os.environ.get("LHM_SESSION_ID", "").strip() or uuid.uuid4().hex
 # skill-version 优先取环境变量 LHM_SKILL_VERSION（dispatcher 从 manifest.json 读取并导出），未设置时兜底 1.0.0
 _SKILL_VERSION = os.environ.get("LHM_SKILL_VERSION", "").strip() or "1.0.0"
 _USER_AGENT = f"AlibabaCloud-Agent-Skills/sql-conversion-skill/{_SESSION_ID} skill-version/{_SKILL_VERSION}"
@@ -422,54 +431,94 @@ def _call_category_detail(source: str, target: str, category: str) -> dict:
     )
 
 
-# ── 命令实现 ─────────────────────────────────────────────────────────────────
+# ── 响应结构提取（对齐服务实际返回结构）─────────────────────────────────────
+#
+# 服务实际返回：
+#   get-all-rules-summary -> data["categories"] 为 dict：{分类名: {"count":N, "ruleIds":[...]}}
+#   get-category-detail   -> data["categories"] 为 dict：{分类名: [规则对象, ...]}
+# 规则对象字段：id / status / source_syntax / target_syntax / examples / source_category
+# 下列提取函数同时对旧的 data["rules"] 列表结构做兼容回退，避免结构变动时静默返回空。
 
-def cmd_list_categories(source: str, target: str) -> None:
-    data = _call_rules_summary(source, target)
-    rules = data.get("rules", [])
-    categories = sorted({r.get("source_category", "") for r in rules if r.get("source_category")})
-    for cat in categories:
-        print(cat)
+def _summary_categories(data) -> dict:
+    """从 get-all-rules-summary 响应提取 {分类名: {"count":N, "ruleIds":[...]}}。"""
+    if not isinstance(data, dict):
+        return {}
+    cats = data.get("categories")
+    if isinstance(cats, dict):
+        return cats
+    # 兼容旧结构：data["rules"] 列表按 source_category 归组
+    rules = data.get("rules")
+    if isinstance(rules, list):
+        grouped = {}
+        for r in rules:
+            if not isinstance(r, dict):
+                continue
+            name = r.get("source_category") or ""
+            if not name:
+                continue
+            bucket = grouped.setdefault(name, {"count": 0, "ruleIds": []})
+            bucket["count"] += 1
+            bucket["ruleIds"].append(r.get("id", ""))
+        return grouped
+    return {}
 
 
-def cmd_category(source: str, target: str, category: str) -> None:
-    cat_list = [c.strip() for c in category.split(",") if c.strip()]
-    results = {}
-    for cat in cat_list:
-        data = _call_category_detail(source, target, cat)
-        results[cat] = data
+def _category_rules(data, category: str) -> list:
+    """从 get-category-detail 响应提取指定分类的规则对象列表。"""
+    if isinstance(data, list):
+        return data
+    if not isinstance(data, dict):
+        return []
+    cats = data.get("categories")
+    if isinstance(cats, dict):
+        rules = cats.get(category)
+        if isinstance(rules, list):
+            return rules
+        # 请求分类名与返回键不完全一致时，合并所有返回的规则列表
+        merged = []
+        for v in cats.values():
+            if isinstance(v, list):
+                merged.extend(v)
+        return merged
+    if isinstance(cats, list):
+        return cats
+    rules = data.get("rules")
+    if isinstance(rules, list):
+        return rules
+    return []
 
-    all_rules = []
-    for cat_data in results.values():
-        if isinstance(cat_data, dict):
-            all_rules.extend(cat_data.get("rules", []))
-        elif isinstance(cat_data, list):
-            all_rules.extend(cat_data)
 
-    if not all_rules:
-        print(f"[WARN] 未找到分类 '{category}' 下的规则", file=sys.stderr)
-        return
+def _print_rule_detail(rule: dict) -> None:
+    """按既定格式打印单条规则（id / source_syntax / target_syntax / examples）。"""
+    print(f"--- {rule.get('id', '?')} ---")
+    print(f"source_syntax : {rule.get('source_syntax', '')}")
+    print(f"target_syntax : {rule.get('target_syntax', '')}")
+    audit_note = rule.get("audit_note", "")
+    if audit_note:
+        print(f"audit_note    : {audit_note}")
+    examples = rule.get("examples", [])
+    if examples:
+        print("examples:")
+        for ex in examples:
+            print(f"  source: {ex.get('source_sql', '')}")
+            print(f"  target: {ex.get('target_sql', '')}")
+            ex_note = ex.get("audit_note", "")
+            if ex_note:
+                print(f"  audit_note: {ex_note}")
+    print()
 
-    confirmed = [r for r in all_rules if r.get("status") in ("confirmed", "unconfirmed")]
-    unsupported = [r for r in all_rules if r.get("status") in ("unsupported", "doc_confirmed_unsupported")]
+
+def _print_rules(rules: list, split_unsupported: bool = True) -> None:
+    """打印规则列表。split_unsupported=True 时把不支持的规则单独汇总列出。"""
+    if split_unsupported:
+        confirmed = [r for r in rules if r.get("status") in ("confirmed", "unconfirmed")]
+        unsupported = [r for r in rules if r.get("status") in ("unsupported", "doc_confirmed_unsupported")]
+    else:
+        confirmed = rules
+        unsupported = []
 
     for rule in confirmed:
-        print(f"--- {rule.get('id', '?')} ---")
-        print(f"source_syntax : {rule.get('source_syntax', '')}")
-        print(f"target_syntax : {rule.get('target_syntax', '')}")
-        audit_note = rule.get("audit_note", "")
-        if audit_note:
-            print(f"audit_note    : {audit_note}")
-        examples = rule.get("examples", [])
-        if examples:
-            print("examples:")
-            for ex in examples:
-                print(f"  source: {ex.get('source_sql', '')}")
-                print(f"  target: {ex.get('target_sql', '')}")
-                ex_note = ex.get("audit_note", "")
-                if ex_note:
-                    print(f"  audit_note: {ex_note}")
-        print()
+        _print_rule_detail(rule)
 
     if unsupported:
         print(f"--- 以下 {len(unsupported)} 条规则标记为不支持（源 SQL 应原样保留）---")
@@ -478,13 +527,71 @@ def cmd_category(source: str, target: str, category: str) -> None:
         print()
 
 
-def cmd_search(source: str, target: str, keyword: str) -> None:
-    """按关键词模糊搜索规则（匹配 id / source_syntax / target_syntax / examples）。"""
+# ── 命令实现 ─────────────────────────────────────────────────────────────────
+
+def cmd_list_categories(source: str, target: str) -> None:
     data = _call_rules_summary(source, target)
-    rules = data.get("rules", [])
+    cats = _summary_categories(data)
+    if not cats:
+        print(f"[WARN] 未获取到 {source} → {target} 的规则分类", file=sys.stderr)
+        return
+    for name in sorted(cats):
+        info = cats[name]
+        if isinstance(info, dict):
+            count = info.get("count")
+            if count is None:
+                count = len(info.get("ruleIds") or [])
+        else:
+            count = 0
+        print(f"{name} ({count} rules)")
+
+
+def cmd_all_details(source: str, target: str) -> None:
+    """预取所有分类的规则详情（批量模式 Step 1.5 一次性拉取）。"""
+    summary = _call_rules_summary(source, target)
+    cats = _summary_categories(summary)
+    if not cats:
+        print(f"[WARN] 未获取到 {source} → {target} 的规则分类，无法预取详情", file=sys.stderr)
+        return
+    for name in sorted(cats):
+        data = _call_category_detail(source, target, name)
+        rules = _category_rules(data, name)
+        if not rules:
+            continue
+        print(f"===== category: {name} =====")
+        _print_rules(rules)
+
+
+def cmd_category(source: str, target: str, category: str) -> None:
+    cat_list = [c.strip() for c in category.split(",") if c.strip()]
+    all_rules = []
+    for cat in cat_list:
+        data = _call_category_detail(source, target, cat)
+        all_rules.extend(_category_rules(data, cat))
+
+    if not all_rules:
+        print(f"[WARN] 未找到分类 '{category}' 下的规则", file=sys.stderr)
+        return
+
+    _print_rules(all_rules)
+
+
+def cmd_search(source: str, target: str, keyword: str) -> None:
+    """按关键词模糊搜索规则（匹配 id / source_syntax / target_syntax / examples）。
+
+    get-all-rules-summary 仅返回分类与 ruleIds，不含 source_syntax 等字段，
+    因此需逐分类拉取 get-category-detail 后再做全文匹配。
+    """
+    summary = _call_rules_summary(source, target)
+    cats = _summary_categories(summary)
+    all_rules = []
+    for name in cats:
+        data = _call_category_detail(source, target, name)
+        all_rules.extend(_category_rules(data, name))
+
     kw = keyword.lower()
     matched = []
-    for r in rules:
+    for r in all_rules:
         searchable = " ".join([
             str(r.get("id", "")),
             str(r.get("source_syntax", "")),
@@ -498,23 +605,7 @@ def cmd_search(source: str, target: str, keyword: str) -> None:
         print(f"[WARN] 未找到包含 '{keyword}' 的规则", file=sys.stderr)
         return
     print(f"=== 搜索 '{keyword}' 命中 {len(matched)} 条规则 ===\n")
-    for rule in matched:
-        print(f"--- {rule.get('id', '?')} ---")
-        print(f"source_syntax : {rule.get('source_syntax', '')}")
-        print(f"target_syntax : {rule.get('target_syntax', '')}")
-        audit_note = rule.get("audit_note", "")
-        if audit_note:
-            print(f"audit_note    : {audit_note}")
-        examples = rule.get("examples", [])
-        if examples:
-            print("examples:")
-            for ex in examples:
-                print(f"  source: {ex.get('source_sql', '')}")
-                print(f"  target: {ex.get('target_sql', '')}")
-                ex_note = ex.get("audit_note", "")
-                if ex_note:
-                    print(f"  audit_note: {ex_note}")
-        print()
+    _print_rules(matched, split_unsupported=False)
 
 
 def main() -> None:
@@ -523,6 +614,7 @@ def main() -> None:
     p.add_argument("--target", required=True, help="目标方言，如 maxcompute")
     p.add_argument("--list-categories", action="store_true", help="列出所有规则分类")
     p.add_argument("--category", help="查看指定分类的规则详情（支持逗号分隔批量查询多个分类）")
+    p.add_argument("--all-details", action="store_true", help="预取所有分类的规则详情（批量模式 Step 1.5）")
     p.add_argument("--search", help="按关键词模糊搜索规则（匹配 id/source_syntax/target_syntax/examples）")
     args = p.parse_args()
 
@@ -530,6 +622,8 @@ def main() -> None:
         cmd_search(args.source, args.target, args.search)
     elif args.list_categories:
         cmd_list_categories(args.source, args.target)
+    elif args.all_details:
+        cmd_all_details(args.source, args.target)
     elif args.category:
         cmd_category(args.source, args.target, args.category)
     else:

@@ -1,6 +1,6 @@
 ---
 name: alibabacloud-lakehouse-migration
-version: 1.0.0
+version: 1.0.1
 description: Unified dispatch entry point for the LHM (Lakehouse Migration Center) skill, coordinating the three core capabilities of SQL conversion, data validation, and big-data workflow migration. Use when the user raises a lakehouse migration requirement, such as SQL dialect conversion (e.g., "presto to spark", "hive to maxcompute", "转换 SQL", "SQL 转换", "方言转换"), pre/post-migration data validation / data consistency comparison ("数据校验", "数据比对", "一致性检查", "跑校验", "数据量校验", "指标校验"), migration of scheduled workflows such as DataWorks/DolphinScheduler/Airflow ("工作流迁移", "调度任务迁移", "建数据源", "创建数据源", "把 X 迁移到 Y"), or when the user is unsure which sub-skill to use or needs cross-skill collaboration.
 ---
 

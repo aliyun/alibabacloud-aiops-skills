@@ -56,7 +56,7 @@ export ALIBABA_CLOUD_ACCESS_KEY_ID="your-access-key-id"
 export ALIBABA_CLOUD_ACCESS_KEY_SECRET="your-access-key-secret"
 ```
 
-You can also manage credentials centrally through `lhm-common`'s `data_validation_config.yaml` to avoid setting environment variables manually each time. `lhm-common` also provides a pre-flight check to verify environment connectivity before first use:
+Credentials are resolved by the aliyun CLI default credential chain (environment variables / RAM Role / `~/.alibabacloud/credentials`). `lhm-common`'s `data_validation_config.yaml` only stores non-secret settings such as Region, resource group, service agent, and data sources — it never collects or persists AK/SK. `lhm-common` also provides a pre-flight check to verify environment connectivity before first use:
 
 ```bash
 python atomic-skills/lhm-common/scripts/run.py check --profile data-validation --region hangzhou

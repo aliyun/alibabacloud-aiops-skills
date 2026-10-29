@@ -2,16 +2,15 @@
 
 请按以下顺序完成配置，我会逐步引导你。每一步完成后我会自动保存，中途退出也不会丢失已填内容。
 
-### Step 1: API 凭证
+### Step 1: Region 配置
 
-你需要阿里云 AccessKey 来调用 LHM 服务。
+调用 LHM 服务所需的凭证由 aliyun CLI 默认凭证链自动解析（环境变量 / RAM Role / `~/.alibabacloud/credentials`），本步骤**不再收集或保存 AccessKey**。你只需选择 LHM 中心节点的 Region。
 
-**获取方式：**
-1. 登录 [阿里云 AccessKey 管理页面](https://ram.console.aliyun.com/manage/ak)
-2. 创建 AccessKey（强烈建议使用 RAM 子账号，避免使用主账号 AK）
-3. 确保该 AK 有 LHM（湖仓迁移中心）的操作权限
+**前置要求：**
+1. 已安装并配置好 aliyun CLI（`aliyun configure`，或通过 RAM Role / 环境变量提供凭证）
+2. 该凭证具备 LHM（湖仓迁移中心）的操作权限
 
-准备好后，告诉我你的 AK ID 和 Region 选择（杭州/新加坡）。
+告诉我你的 Region 选择（杭州/新加坡）即可。
 
 > 杭州和新加坡的区别：LHM 的中心节点区域，一般选择与数据集群相同的地域。
 
@@ -81,7 +80,7 @@ Hive、MaxCompute、ClickHouse、Hologres、Synapse、Databricks、StarRocks、D
 ### Step 6: 验证
 
 所有配置完成后，我会自动运行前置检查，确认：
-- API 凭证有效且 LHM 服务可达
+- aliyun CLI 环境就绪且 LHM 服务可达（凭证由默认凭证链解析）
 - 资源组已绑定且状态正常
 - 服务代理在线
 - 数据源已在配置文件中定义（连通性验证待接入 API）

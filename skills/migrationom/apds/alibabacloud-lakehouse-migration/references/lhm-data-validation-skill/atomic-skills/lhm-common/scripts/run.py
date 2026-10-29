@@ -56,7 +56,6 @@ PROFILES = {
     'data-validation': {
         'required_checks': [
             'cli_environment',
-            'api_credentials',
             'api_connectivity',
             'resource_group',
             'agent',
@@ -66,11 +65,11 @@ PROFILES = {
         'optional_checks': [],
     },
     'sql-convert': {
-        'required_checks': ['cli_environment', 'api_credentials', 'api_connectivity'],
+        'required_checks': ['cli_environment', 'api_connectivity'],
         'optional_checks': ['resource_group'],
     },
     'schedule': {
-        'required_checks': ['cli_environment', 'api_credentials', 'api_connectivity'],
+        'required_checks': ['cli_environment', 'api_connectivity'],
         'optional_checks': ['resource_group', 'data_sources'],
     },
 }
@@ -269,48 +268,10 @@ def _check_cli_environment(cfg) -> dict:
     }
 
 
-def _check_api_credentials(cfg) -> dict:
-    """检查 API 凭证是否配置。"""
-    api = cfg.get('api', {})
-    ak = api.get('access_key_id', '')
-    sk = api.get('access_key_secret', '')
-
-    # fallback 到环境变量
-    ak = ak or os.environ.get('ALIBABA_CLOUD_ACCESS_KEY_ID', '')
-    sk = sk or os.environ.get('ALIBABA_CLOUD_ACCESS_KEY_SECRET', '')
-
-    if ak and sk:
-        return {
-            'name': 'api_credentials',
-            'status': 'pass',
-            'message': 'AK/SK 已配置',
-        }
-    return {
-        'name': 'api_credentials',
-        'status': 'fail',
-        'message': '未配置 API 凭证',
-        'fix_guide': (
-            '请在 data_validation_config.yaml 的 api 段配置 access_key_id 和 access_key_secret，'
-            '或设置环境变量 ALIBABA_CLOUD_ACCESS_KEY_ID / ALIBABA_CLOUD_ACCESS_KEY_SECRET。'
-            '运行 "python run.py setup" 可引导完成配置。'
-        ),
-        'blocking': True,
-    }
-
-
 def _check_api_connectivity(cfg) -> dict:
-    """验证 LHM API 可达。"""
+    """验证 LHM API 可达（凭证由 aliyun CLI 默认凭证链解析）。"""
     api = cfg.get('api', {})
-    ak = api.get('access_key_id') or os.environ.get('ALIBABA_CLOUD_ACCESS_KEY_ID')
-    sk = api.get('access_key_secret') or os.environ.get('ALIBABA_CLOUD_ACCESS_KEY_SECRET')
     region = api.get('region')
-
-    if not ak or not sk:
-        return {
-            'name': 'api_connectivity',
-            'status': 'skip',
-            'message': 'API 凭证未配置，跳过连通性检查',
-        }
 
     try:
         client = build_client(region=region)
@@ -337,18 +298,9 @@ def _check_api_connectivity(cfg) -> dict:
 
 
 def _check_resource_group(cfg) -> dict:
-    """检查资源组绑定状态。"""
+    """检查资源组绑定状态（凭证由 aliyun CLI 默认凭证链解析）。"""
     api = cfg.get('api', {})
-    ak = api.get('access_key_id') or os.environ.get('ALIBABA_CLOUD_ACCESS_KEY_ID')
-    sk = api.get('access_key_secret') or os.environ.get('ALIBABA_CLOUD_ACCESS_KEY_SECRET')
     region = api.get('region')
-
-    if not ak or not sk:
-        return {
-            'name': 'resource_group',
-            'status': 'skip',
-            'message': 'API 凭证未配置，跳过资源组检查',
-        }
 
     try:
         client = build_client(region=region)
@@ -415,18 +367,9 @@ def _check_resource_group(cfg) -> dict:
 
 
 def _check_agent(cfg) -> dict:
-    """检查服务代理在线状态。"""
+    """检查服务代理在线状态（凭证由 aliyun CLI 默认凭证链解析）。"""
     api = cfg.get('api', {})
-    ak = api.get('access_key_id') or os.environ.get('ALIBABA_CLOUD_ACCESS_KEY_ID')
-    sk = api.get('access_key_secret') or os.environ.get('ALIBABA_CLOUD_ACCESS_KEY_SECRET')
     region = api.get('region')
-
-    if not ak or not sk:
-        return {
-            'name': 'agent',
-            'status': 'skip',
-            'message': 'API 凭证未配置，跳过服务代理检查',
-        }
 
     try:
         client = build_client(region=region)
@@ -535,16 +478,7 @@ def _check_engine_binding(cfg) -> dict:
             'message': '配置文件中未定义数据源，跳过引擎检查',
         }
 
-    api = cfg.get('api', {})
-    ak = api.get('access_key_id') or os.environ.get('ALIBABA_CLOUD_ACCESS_KEY_ID')
-    sk = api.get('access_key_secret') or os.environ.get('ALIBABA_CLOUD_ACCESS_KEY_SECRET')
-    region = api.get('region')
-    if not ak or not sk:
-        return {
-            'name': 'engine_binding',
-            'status': 'skip',
-            'message': 'API 凭证未配置，跳过引擎检查',
-        }
+    region = cfg.get('api', {}).get('region')
 
     try:
         client = build_client(region=region)
@@ -623,7 +557,6 @@ def _check_engine_binding(cfg) -> dict:
 
 CHECK_HANDLERS = {
     'cli_environment': _check_cli_environment,
-    'api_credentials': _check_api_credentials,
     'api_connectivity': _check_api_connectivity,
     'resource_group': _check_resource_group,
     'agent': _check_agent,
@@ -696,7 +629,7 @@ def cmd_check(args):
 # ============================================================================
 
 SETUP_STEPS = [
-    {'id': 'api', 'name': 'API 凭证', 'order': 1},
+    {'id': 'api', 'name': 'Region 配置', 'order': 1},
     {'id': 'resource_group', 'name': 'DataWorks 资源组', 'order': 2},
     {'id': 'bind_rg', 'name': '绑定资源组到 LHM', 'order': 3},
     {'id': 'agent', 'name': '服务代理', 'order': 4},
@@ -706,12 +639,10 @@ SETUP_STEPS = [
 
 STEP_GUIDES = {
     'api': {
-        'description': '配置阿里云 AccessKey 和 Region',
-        'guide': 'guides/setup-overview.md#step-1-api-凭证',
-        'config_keys': ['api.access_key_id', 'api.access_key_secret', 'api.region'],
+        'description': '配置中心节点 Region（AK/SK 由 aliyun CLI 默认凭证链提供，无需在此填写）',
+        'guide': 'guides/setup-overview.md#step-1-region-配置',
+        'config_keys': ['api.region'],
         'prompt_fields': [
-            {'key': 'api.access_key_id', 'prompt': 'AccessKey ID', 'required': True},
-            {'key': 'api.access_key_secret', 'prompt': 'AccessKey Secret', 'required': True},
             {'key': 'api.region', 'prompt': 'Region (hangzhou/singapore)', 'required': False, 'default': 'hangzhou'},
         ],
     },

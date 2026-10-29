@@ -11,7 +11,7 @@ version: 1.0.0
 Shared infrastructure for all LHM skills, replacing the former `lhm-preflight-check` and `lhm-client-builder`.
 
 Core capabilities:
-1. **Centralized configuration**: AK/SK/Region/resource group/service agent/data sources are stored uniformly in `~/.lhm/data_validation_config.yaml`
+1. **Centralized configuration**: Region/resource group/service agent/data sources are stored uniformly in `~/.lhm/data_validation_config.yaml` (AK/SK are NOT stored here — they are resolved by the aliyun CLI default credential chain: environment variables / RAM Role / `~/.alibabacloud/credentials`)
 2. **Standardized pre-checks**: each business Skill declares a profile, and preconditions are validated automatically before execution
 3. **Human-friendly guidance**: the `setup` command walks the user through the full configuration step by step
 
@@ -34,8 +34,8 @@ python run.py setup
 The output contains a guided structure of 6 steps. Steps 1/2/4 have `prompt_fields` (ask the user and write the values in); steps 3/5 are console operations (`manual_step`); step 6 is automatic verification. For each step with `prompt_fields`, ask the user one by one and write the values with `setup-write`.
 
 ```bash
-# Write the values provided by the user
-python run.py setup-write '{"api.access_key_id":"LTAI...","api.access_key_secret":"xxx","api.region":"hangzhou"}'
+# Write the values provided by the user (AK/SK are not collected; only Region is configured here)
+python run.py setup-write '{"api.region":"hangzhou"}'
 ```
 
 Each step is written to data_validation_config.yaml immediately after completion, so exiting midway does not lose any filled-in content.
@@ -82,16 +82,17 @@ Each business Skill declares the profile it needs:
 
 | Profile | Mandatory checks | Optional checks |
 |---------|------------------|-----------------|
-| `data-validation` | api_credentials, api_connectivity, resource_group, agent, data_sources | — |
-| `sql-convert` | api_credentials, api_connectivity | resource_group |
-| `schedule` | api_credentials, api_connectivity | resource_group, data_sources |
+| `data-validation` | cli_environment, api_connectivity, resource_group, agent, data_sources, engine_binding | — |
+| `sql-convert` | cli_environment, api_connectivity | resource_group |
+| `schedule` | cli_environment, api_connectivity | resource_group, data_sources |
 
 Check item implementations:
-- `api_credentials` — verify that AK/SK exist in data_validation_config.yaml or environment variables
-- `api_connectivity` — call `GetDataCheckTaskList(page_size=1)` to verify reachability
+- `cli_environment` — verify the aliyun CLI binary and the aliyun-cli-lhm plugin manifest are present
+- `api_connectivity` — call `GetDataCheckTaskList(page_size=1)` to verify reachability (credentials resolved by the aliyun CLI default credential chain)
 - `resource_group` — call `GetLhmDWResourceGroupStatus(region_id)` to query the status
 - `agent` — call `GetLhmAgentStatus(agent_type=1)` to query the online status
 - `data_sources` — currently pending_api; only verifies that data source definitions exist in the config file
+- `engine_binding` — verify that a validation engine can be determined for data sources that require one
 
 ## Pitfalls
 
