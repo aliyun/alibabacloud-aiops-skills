@@ -8,14 +8,13 @@ description: |
   scoping, attack-surface analysis, entry-vector analysis, risk assessment,
   prioritized remediation reporting, cryptomining incident response, or
   mining risk detection. Triggers: "mining", "cryptomining",
-  "cryptojacking", "coin mining", "coin-mining", "miner", "mining alert",
-  "mining alerts", "mining pool", "pool IPs", "malicious domains",
-  "sample hashes", "malicious processes", "mining IOC", "IOC extraction",
-  "mining alert detection", "affected-asset scoping",
-  "attack-surface analysis", "entry-vector analysis", "risk assessment",
-  "prioritized remediation reporting", "cryptomining incident response",
-  "mining risk detection", "xmrig", "kdevtmpfsi", "kinsing", "sysrv",
-  "minerd", "Security Center", "ECS high CPU mining"
+  "cryptojacking", "coin mining", "miner", "mining alert", "mining pool",
+  "pool IPs", "malicious domains", "sample hashes", "malicious processes",
+  "mining IOC", "IOC extraction", "affected-asset scoping",
+  "entry-vector analysis", "risk assessment", "remediation",
+  "xmrig", "kdevtmpfsi", "kinsing", "sysrv", "minerd", "Security Center",
+  "ECS high CPU mining"
+  中文触发：挖矿、矿池、CPU 跑满、被挖矿、木马进程、异常外联、安全告警、IOC。
 ---
 
 # Mining Attack Diagnosis (Read-Only)
@@ -107,6 +106,12 @@ Mining Attack Detection & Diagnosis — SAS Public API
 | Mining keyword / IOC reference | Read [references/mining_indicators.md](references/mining_indicators.md) |
 | End-to-end runtime flow | Read [references/detection_flow.md](references/detection_flow.md) |
 
+## Typical Customer Questions
+
+- "server CPU is pegged, suspected cryptomining" -> check mining alerts first, then extract IOCs and scope affected assets.
+- "Security Center reports cryptomining, please confirm" -> verify the alert, suspicious processes and outbound addresses.
+- "check this host for trojan processes" -> investigate by IOC and process signatures.
+
 ## Prerequisites
 
 1. **aliyun CLI 3.x** — required for API access:
@@ -153,8 +158,10 @@ All API calls made by this skill include a `User-Agent` header for
 platform-level tracing:
 
 ```
---user-agent AlibabaCloud-Agent-Skills/alibabacloud-mining-attack-diagnosis/{session-id}
+--user-agent AlibabaCloud-Agent-Skills/alibabacloud-mining-attack-diagnosis/{session-id} skill-version/{version}
 ```
+
+- **skill-version**: read at runtime from `references/manifest.json` (`version`) and appended to the UA; a missing or invalid manifest stops the run before the first cloud call.
 
 A `session-id` is a 32-character hex string auto-generated per invocation and
 attached to every request in the same investigation run; it is logged to
