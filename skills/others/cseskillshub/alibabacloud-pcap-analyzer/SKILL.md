@@ -26,6 +26,16 @@ Requires Python 3 and the scapy library:
 pip3 install scapy
 ```
 
+## Getting a capture file
+
+The analyzer needs a pcap/pcapng file the user already has. When the user has not captured one yet, hand them these commands; never run them on the user's behalf:
+
+- Linux: `sudo tcpdump -i any -w capture.pcap` (narrow it with `host <IP> and port <PORT>` when the scope is known)
+- macOS: `sudo tcpdump -i en0 -w capture.pcap`
+- Windows: Wireshark -> select the interface -> Start -> Stop -> Save as `.pcapng`
+
+Ask for the capture point and the time window when the problem is intermittent; a capture that does not include the failure window cannot support a conclusion.
+
 ## Module Index
 
 | Module | Purpose | File |

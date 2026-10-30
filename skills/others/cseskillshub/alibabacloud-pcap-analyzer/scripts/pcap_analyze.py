@@ -35,7 +35,9 @@ try:
 except ImportError:
     print("[ERROR] Required dependency 'scapy' is missing.\n"
           "        Install it with: pip3 install scapy\n"
-          "        Then re-run this script.", file=sys.stderr)
+          "        Then re-run this script.\n"
+          "        [中文] 当前环境缺少 scapy，无法解析抓包；请由用户或环境管理员执行 "
+          "pip3 install scapy 后重试（Agent 不代为安装）。", file=sys.stderr)
     sys.exit(2)
 
 # -- Utility functions -----------------------------------------------------------
