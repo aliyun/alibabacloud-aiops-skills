@@ -89,9 +89,23 @@ def get_session_id() -> str:
     return _SESSION_ID
 
 
+def _load_skill_version() -> str:
+    """Read the skill version from references/manifest.json (single source of truth)."""
+    import pathlib as _pl
+    _p = _pl.Path(__file__).resolve().parent.parent / "references" / "manifest.json"
+    try:
+        _data = json.loads(_p.read_text(encoding="utf-8"))
+        _v = _data.get("version")
+    except Exception as _e:
+        raise RuntimeError("references/manifest.json missing or unreadable: %s" % _e)
+    if not (isinstance(_v, str) and _v.strip()):
+        raise RuntimeError("references/manifest.json has no non-empty 'version'")
+    return _v.strip()
+
+
 def get_user_agent() -> str:
     """Return the User-Agent header value for all API calls."""
-    return f"AlibabaCloud-Agent-Skills/{_SKILL_ID}/{get_session_id()}"
+    return f"AlibabaCloud-Agent-Skills/{_SKILL_ID}/{get_session_id()} skill-version/{_load_skill_version()}"
 
 
 def _subprocess_env() -> dict:
@@ -242,6 +256,100 @@ def is_unauthorized(err: CliError) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# Instance-ID routing guards
+# ---------------------------------------------------------------------------
+
+_LB_PREFIX_TO_PRODUCT = {"lb": "CLB", "alb": "ALB", "nlb": "NLB"}
+_LB_ID_RE = re.compile(r"^(lb|alb|nlb)-[A-Za-z0-9]+$")
+_NOT_FOUND_MARKERS = (
+    "invalidloadbalancerid", "resourcenotfound", "notfound",
+    "not found", "does not exist",
+)
+
+
+def classify_lb_id(value: str) -> Optional[str]:
+    """Return 'CLB' / 'ALB' / 'NLB' from the instance-ID prefix, else None."""
+    m = _LB_ID_RE.match((value or "").strip())
+    return _LB_PREFIX_TO_PRODUCT[m.group(1)] if m else None
+
+
+def validate_lb_id(value: str, expected: str) -> Optional[str]:
+    """Return None when the ID matches `expected`, else an actionable message."""
+    actual = classify_lb_id(value)
+    if actual == expected:
+        return None
+    if actual is None:
+        return (
+            f"Cannot recognize a load balancer type from '{value}'. Instance IDs "
+            "start with lb- (CLB), alb- (ALB) or nlb- (NLB); if this is an "
+            "instance name, look up the instance ID in the console first."
+        )
+    return (
+        f"'{value}' is a {actual} instance ID, but the {expected} diagnosis "
+        f"script was invoked. Use scripts/diagnose_{actual.lower()}.py instead."
+    )
+
+
+def looks_not_found(text: str) -> bool:
+    """Whether an error text says the target instance does not exist."""
+    t = (text or "").lower()
+    return any(m in t for m in _NOT_FOUND_MARKERS)
+
+
+def is_not_found(err: CliError) -> bool:
+    """Whether the failure means the target instance does not exist."""
+    code = (getattr(err, "code", "") or "").lower()
+    blob = f"{code} {err} {getattr(err, 'stderr', '')}".lower()
+    return looks_not_found(blob)
+
+
+def not_found_guidance(lb_id: str) -> str:
+    return (
+        f"Instance '{lb_id}' was not found. Confirm that (1) the ID is complete, "
+        "(2) the product type is right (CLB ids start with lb-, ALB with alb-, "
+        "NLB with nlb-), and (3) the instance is in the selected region and has "
+        "not been released."
+    )
+
+
+def _lb_items(body: dict) -> list[dict]:
+    """Normalize the three products' list responses to a flat list."""
+    items = body.get("LoadBalancers") or []
+    if isinstance(items, dict):
+        items = items.get("LoadBalancer") or []
+    return [x for x in items if isinstance(x, dict)]
+
+
+def locate_lb_elsewhere(region: str, lb_id: str, exclude: str) -> list[str]:
+    """Best-effort read-only check of the other two products for this ID.
+
+    Returns human-readable hits such as "ALB (region cn-hangzhou)". Every probe
+    is individually guarded: missing permissions or throttling never fail the
+    diagnosis.
+    """
+    probes = (
+        ("CLB", "slb", "describe-load-balancers",
+         {"BizRegionId": region, "LoadBalancerId": lb_id}),
+        ("ALB", "alb", "list-load-balancers", {"LoadBalancerIds": [lb_id]}),
+        ("NLB", "nlb", "list-load-balancers", {"LoadBalancerIds": [lb_id]}),
+    )
+    hits: list[str] = []
+    for product_name, product, action, params in probes:
+        if product_name == exclude:
+            continue
+        try:
+            body = call(product, action, params, region=region, timeout=30, quiet=True)
+        except CliError:
+            continue
+        for item in _lb_items(body):
+            rid = item.get("LoadBalancerId") or item.get("LoadBalancerID") or ""
+            if rid and rid.lower() == lb_id.lower():
+                hits.append(f"{product_name} (region {region})")
+                break
+    return hits
+
+
+# ---------------------------------------------------------------------------
 # Parameter key -> plugin-mode flag conversion
 # ---------------------------------------------------------------------------
 # Plugin mode only accepts lowercase-hyphenated flags (PascalCase is rejected).
@@ -292,6 +400,7 @@ def call(
     params: Optional[dict[str, Any]] = None,
     region: str = _DEFAULT_REGION,
     timeout: int = 60,
+    quiet: bool = False,
 ) -> dict[str, Any]:
     """Invoke an Alibaba Cloud OpenAPI action via the aliyun CLI (plugin mode).
 
@@ -299,8 +408,15 @@ def call(
     'describe-load-balancer-attribute'. Returns the parsed JSON response.
     Raises CliError on failure. Transient errors (ServiceUnavailable /
     Throttling / InternalError / timeout) are retried up to 3 attempts with
-    linear backoff before raising.
+    linear backoff before raising. `quiet=True` keeps best-effort probes out
+    of ERROR_LOG and stderr.
     """
+    def _log(line: str) -> None:
+        if quiet:
+            return
+        ERROR_LOG.append(line)
+        _warn(f"[WARN] {line}")
+
     last_err: Optional[CliError] = None
     for attempt in range(1, _MAX_ATTEMPTS + 1):
         try:
@@ -308,21 +424,15 @@ def call(
         except CliError as e:
             last_err = e
             if not _is_retryable(e):
-                line = f"{product} {action} failed: {e.code or 'Error'} -- {e}"
-                ERROR_LOG.append(line)
-                _warn(f"[WARN] {line}")
+                _log(f"{product} {action} failed: {e.code or 'Error'} -- {e}")
                 raise
             if attempt >= _MAX_ATTEMPTS:
-                line = (f"{product} {action} failed after {attempt} attempts: "
-                        f"{e.code or 'Error'} -- {e}")
-                ERROR_LOG.append(line)
-                _warn(f"[WARN] {line}")
+                _log(f"{product} {action} failed after {attempt} attempts: "
+                     f"{e.code or 'Error'} -- {e}")
                 raise
             wait_s = attempt * 2
-            line = (f"{product} {action} transient error ({e.code or 'unknown'}); "
-                    f"retry {attempt}/{_MAX_ATTEMPTS - 1} in {wait_s}s")
-            ERROR_LOG.append(line)
-            _warn(f"[WARN] {line}")
+            _log(f"{product} {action} transient error ({e.code or 'unknown'}); "
+                 f"retry {attempt}/{_MAX_ATTEMPTS - 1} in {wait_s}s")
             time.sleep(wait_s)
     raise last_err  # unreachable; keeps type-checkers happy
 

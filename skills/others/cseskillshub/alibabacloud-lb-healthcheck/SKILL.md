@@ -24,9 +24,10 @@ Core approach: route to the matching diagnosis script by instance ID prefix, col
 ## Observability
 
 All OpenAPI calls (invoked through the aliyun CLI) include:
-- **User-Agent**: `--user-agent AlibabaCloud-Agent-Skills/{SKILL_NAME}/{session-id}`
+- **User-Agent**: `--user-agent AlibabaCloud-Agent-Skills/{SKILL_NAME}/{session-id} skill-version/{version}`
 - **SKILL_NAME**: `alibabacloud-lb-healthcheck`
 - **session-id**: 32-character hex string generated per diagnostic session
+- **skill-version**: read at runtime from `references/manifest.json` (`version`); the run stops before the first cloud call if the manifest is missing or has no valid version.
 
 ## Prerequisites
 
@@ -43,6 +44,16 @@ Route by the instance ID prefix and load only the guide of the matched product:
 | `lb-` | CLB (Classic Load Balancer) | `scripts/diagnose_clb.py` | [references/clb-guide.md](references/clb-guide.md) |
 | `alb-` | ALB (Application Load Balancer) | `scripts/diagnose_alb.py` | [references/alb-guide.md](references/alb-guide.md) |
 | `nlb-` | NLB (Network Load Balancer) | `scripts/diagnose_nlb.py` | [references/nlb-guide.md](references/nlb-guide.md) |
+
+## Failure Guidance
+
+Validate the instance type before calling any product API:
+
+- **Unrecognized ID** (no `lb-` / `alb-` / `nlb-` prefix): stop and tell the customer that instance IDs start with those prefixes, and that an instance *name* must first be resolved to an ID in the console.
+- **Prefix/product mismatch**: if the ID belongs to a different product, say so explicitly and point to the matching script instead of retrying.
+- **`InvalidLoadBalancerId.NotFound` / `ResourceNotFound`**: report that the ID, product type and region must all match, and that a released instance cannot be diagnosed. The scripts also run a best-effort read-only lookup in the other two products; when the same ID is found elsewhere (for example `ALB (region cn-hangzhou)`), relay that finding so the customer can retry with the correct type.
+
+All three scripts exit non-zero when the input cannot be routed, and the JSON report carries `error_hint` when the instance is missing.
 
 ## Orchestration
 
@@ -120,7 +131,7 @@ This skill is strictly read-only: only `Describe*` / `List*` / `Get*` queries ar
 
 ## Missing Information Handling (HITL)
 
-**MANDATORY AUTO-FILL DECLARATION.** Whenever any target input is not given by the user and you fill it in yourself instead of asking, the final reply (or the report metadata) **MUST** carry an explicit auto-fill declaration naming the item and its source — e.g. "Instance ID auto-located via a read-only load balancer list query: lb-xxx" or "Region auto-resolved from ~/.aliyun/config.json: cn-hangzhou". A scope line such as "diagnosis scope: all instances named *-test" is **not** a declaration: it states what was covered, not that the value was auto-filled. Stating a bare conclusion over auto-filled inputs without this declaration is a violation.
+**MANDATORY AUTO-FILL DECLARATION.** Whenever any target input is not given by the user and you fill it in yourself instead of asking, the final reply (or the report metadata) **MUST** carry an explicit auto-fill declaration naming the item and its source — e.g. "Instance ID auto-located via a read-only load balancer list query: lb-xxx" or "Region auto-resolved from ~/.aliyun/config.json: cn-hangzhou". A scope line such as "diagnosis scope: all instances named *-test" is **not** a declaration: it states what was covered, not that the value was auto-filled. Stating a bare conclusion over auto-filled inputs without this declaration is a violation. The declaration must name only the item and its source: never include credential mode, AccessKey ID (even partially masked), STS token prefixes, account IDs, or any other credential metadata in the declaration or anywhere else in the reply.
 
 1. **Load balancer ID missing** — auto-fill first, ask second. Try to resolve the target yourself with at most three read-only list queries, then **declare it** per the rule above: state plainly that the instance was not specified, that you auto-located it, which query produced it, and on what basis you picked it. Never fabricate an instance ID or present a name-based guess as a confirmed target. If the queries yield no single target, report the candidates you found (or that you found none), say what you could not determine, and stop there — one question at most, and never a second round of questions.
 2. **Region missing**: the scripts auto-resolve the region from environment variables, then from the current profile of `~/.aliyun/config.json`. When the region is auto-filled, declare the source explicitly in the response, e.g. "Region auto-resolved from ~/.aliyun/config.json: cn-hangzhou". If no source yields a region, ask the user for the RegionId.

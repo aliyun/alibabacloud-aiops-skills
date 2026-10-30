@@ -57,8 +57,12 @@ from _cli import (  # noqa: E402
     call,
     check_cli_available,
     is_unauthorized,
+    locate_lb_elsewhere,
+    looks_not_found,
+    not_found_guidance,
     resolve_region,
     set_warn_stdout,
+    validate_lb_id,
 )
 
 PRODUCT = "slb"
@@ -668,6 +672,11 @@ def main():
                              "(e.g. 80,443). Empty = no filter.")
     args = parser.parse_args()
 
+    problem = validate_lb_id(args.load_balancer_id, "CLB")
+    if problem:
+        print(f"[ERROR] {problem}", file=sys.stderr)
+        sys.exit(1)
+
     check_cli_available()
     region = resolve_region(args.region)
     set_warn_stdout(args.format != "json")  # keep JSON stdout parseable
@@ -699,12 +708,24 @@ def main():
             "DefaultBackendServers": [], "Errors": list(ERROR_LOG),
             "Fatal": True,
         }
+    err_text = " ".join(
+        str(report.get(k) or "") for k in ("error", "LoadBalancerInfoError")
+    )
+    if err_text.strip() and looks_not_found(err_text):
+        hint = not_found_guidance(args.load_balancer_id)
+        hits = locate_lb_elsewhere(region, args.load_balancer_id, "CLB")
+        if hits:
+            hint += " The same ID exists as: " + ", ".join(hits) + "."
+        report["error_hint"] = hint
+        print(f"[HINT] {hint}", file=sys.stderr)
 
     if args.format == "markdown":
         output = format_markdown_report(report)
         if report.get("error"):
             output = (f"[ERROR] Diagnosis could not collect instance data: "
                       f"{report['error']}\n\n" + output)
+        if report.get("error_hint"):
+            output = f"[HINT] {report['error_hint']}\n\n" + output
     else:
         output = json.dumps(report, indent=2, ensure_ascii=False)
 
