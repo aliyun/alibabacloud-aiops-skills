@@ -1,167 +1,124 @@
 ---
 name: alibabacloud-sls-data-agent-qa
-description: "Query and analyze real data through SLS Context Models to answer business questions. Use when the user asks business data questions using an SLS Context Model. Not for inspecting or managing the models themselves."
+description: "Use the semantic definitions in SLS Source Models or Context Models to identify fields, metrics and business definitions, query and analyze log data, and answer business questions. Not for inspecting or managing models themselves."
 metadata:
-  name_cn: SLS 业务模型问数
-  name_en: SLS Context Model Data QA
-  description_cn: 基于 SLS 业务模型查询和分析真实数据，回答业务问题。
-  description_en: Query and analyze real data through SLS Context Models to answer business questions.
+  name_cn: SLS Data Agent 问数
+  name_en: SLS Data Agent QA
+  description_cn: 基于 SLS 事实模型或业务模型查询和分析日志数据，回答业务问题。
+  description_en: Query and analyze log data through SLS Source Models or Context Models to answer business questions.
 ---
-# SLS Context Model Data QA
+# SLS Data Agent QA
 
-A Context Model is a semantic layer maintained on top of SLS logs. It contains:
+Use the semantic definitions in SLS Source Models or Context Models to explore models, establish data selection criteria, execute queries and validate their results, and answer the user's business questions.
+
+## Prerequisites
+
+Requires Python 3.10+ and Alibaba Cloud credentials.
+
+See [Python runtime](references/python-runtime.md) for dependency installation and endpoint configuration.
+
+## Model concepts
+
+- **Source Model**: A factual model organized by SLS Project, containing semantic definitions and query data sources for modeled logs.
+- **Context Model**: A business model that organizes relevant definitions from modeled Logstores in one or more Projects for business analysis, managed under its own model name.
 
 | Model content | Description |
 | --- | --- |
-| Schema | Logstore descriptions and field definitions: names, types, and business meanings |
-| Overview details | Logstore content, business uses, and analysis guidance |
-| Metrics | Metric definitions: names, business meanings, and explicit calculation logic |
-| Terms | Business term definitions, optionally including identification or calculation logic |
-| Example queries | Predefined question-query pairs that can be executed directly |
-| Data sources | Physical storage definitions and storage mappings that together determine where queries run |
+| Schema | Logstore description and field definitions: field names, types and business meanings |
+| Overview details | Business descriptions and analysis guidance for a Logstore, which may include data selection rules, differences in business definitions, applicable conditions and limitations |
+| Metrics | Metric definitions: names, business meanings and calculation logic |
+| Terms | Business term definitions, which may include matching or calculation logic |
+| Example queries (Context Model only) | Predefined questions and queries |
+| Query data sources | Physical storage locations and mappings from Schemas to those locations, used to determine where queries run |
 
-Semantic content is organized into Elements and Members: a parent Element holds a group of definitions of the same kind, and each definition (such as a field or metric) is a Member.
+Model content is organized into Elements. Semantic Elements, such as Schemas and metrics, contain definitions of the same type. Each definition is a Member, such as a field or a metric.
 
-Before running commands, follow [Python runtime](references/python-runtime.md) to prepare dependencies and credentials.
+## 1. Establish the analysis goal and explore the model
 
-To answer a business question, follow the workflow below to explore the model, execute queries, validate results, and compose the answer.
+Identify the analysis goal, the subjects to analyze and existing constraints from the user's business question. Preserve model names/UUIDs, Projects/Logstores, time ranges and other constraints supplied by the user or context. Explore the model to confirm business definitions and data sources, progressively developing and refining answer branches as evidence becomes available.
 
-## 1. Identify the Context Model and Analysis Objective
-
-Context Model is currently available only in selected regions, such as cn-beijing. If the current endpoint reports that the service is unavailable, explain the reason and ask the user for the model's endpoint or region.
-
-Use the Context Model and model endpoint specified by the user or supplied in context. If the model is missing, list candidates with the following command and ask the user to confirm; paginate according to the returned total rather than treating the first page as the complete list. If the endpoint is missing and cannot be determined from a user-provided region, ask the user to supply it.
-
-```bash
-python3 scripts/context_model_qa.py context-model list \
-  --endpoint "<context-model-endpoint>" --page 1 --size 20
-```
-
-Once the model is selected, clarify the user's analysis objective, target, and known constraints. Explore the model to confirm business definitions and data sources, then develop and refine answer branches as exploration and evidence gathering proceed.
-
-An answer branch is a unit of evidence that can be validated independently and supports one sub-conclusion. Create separate branches for distinct sub-conclusions; multiple queries or data sources needed for the same sub-conclusion remain in one branch. Construct queries, validate evidence, and record sources for each branch, then combine them into the answer.
+An answer branch is a unit of evidence that can be validated independently and supports one finding. Use separate branches for distinct findings; multiple queries or data sources needed for the same finding remain in one branch. Construct queries, validate evidence and record data sources for each branch, then combine the findings into the answer.
 
 Typical scenarios:
 
-- Metrics or statistics: each branch addresses a distinct question, such as a metric calculation, trend analysis, or data comparison.
-- Investigating an observation or its cause: develop branches from discovered clues, with each branch verifying a specific question.
+- Metrics or statistics: each branch addresses an independent question, such as a metric calculation, trend analysis or data comparison.
+- Investigating an observation or its cause: develop branches from discovered clues, with each branch investigating a specific issue.
 
-## 2. Explore the Model, Read Definitions, and Resolve Query Locations
+**Model selection**
 
-### 2.1 Exploration and Clarification
+Explicit user choices take precedence over context defaults. If the model choice is unclear or information conflicts, ask the user to clarify; do not select another model or resource on your own.
 
-Explore relevant Elements and Members as needed for the current analysis objective, and confirm the locations required to execute queries. Avoid unrelated content. During exploration:
+| Model | Selection criteria and guidance |
+| --- | --- |
+| Source Model | When the user explicitly selects a Source Model, or no model has been selected but a current Project/Logstore is available, read [Exploring a Source Model and reading definitions](references/source-model.md). |
+| Context Model | When a Context Model name/UUID is provided, or the user explicitly requests a business model, read [Exploring a Context Model and reading definitions](references/context-model.md). |
 
-- Continue exploring to verify information available in the model.
-- Read relevant overview details as needed to understand business data and develop the analysis approach.
-- When business definitions or analysis scope require a user decision, explain the available options and their differences using verified information, then ask the user to choose.
+**Exploration and clarification**
 
-### 2.2 Model Overview
+Follow the preparation steps for the selected model, read relevant definitions as needed and determine the actual query location based on the analysis goal and information gaps. During exploration:
 
-When candidate Schemas or Elements are unclear, use `catalog overview` to obtain a map of the model.
+- Before deriving data selection criteria or deciding what to investigate, read the original overview details for the relevant Logstore, if present, to understand its business context, data selection rules and limitations.
+- When business definitions or analysis scope require a user decision, explain the options and their differences using verified information and ask the user to choose.
 
-```bash
-python3 scripts/context_model_qa.py context-model catalog overview \
-  --endpoint "<context-model-endpoint>" \
-  --name "<model-name>"
-```
+## 2. Construct queries and gather supporting evidence as needed
 
-Use the result to locate Element and Member names; it does not return the full Member definitions. The default output budget is 28672 bytes. When `truncated: true`, use `omittedSources` / `omittedMembers` to narrow `--sources` / `--members` or increase `--max-bytes`; omission does not mean absence. `modelScope` contains model-level terms not bound to a specific Schema/source. `sources` contains usable semantics assigned to a specific Schema/source. `unresolved` contains content that cannot be reliably assigned to either scope and must not be used as a basis for the current data analysis.
+### 2.1 Construct queries
 
-### 2.3 Member Definitions
+For each answer branch, construct queries from the user's question and the relevant model definitions already obtained. Check what is being measured, the business definitions and the applicable scope.
 
-After locating a candidate Element, use `catalog get` to retrieve the Member definitions needed for the current question. To read only selected Members, pass their exact names with `--members`; omit it to read all Members of that Element.
-
-```bash
-# Example: read Schema fields. For other types, use --overview-element,
-# --metric-element, --term-element, or --example-query-element. Select exactly one type.
-python3 scripts/context_model_qa.py context-model catalog get \
-  --endpoint "<context-model-endpoint>" \
-  --name "<model-name>" --schema-element "<element>" \
-  --members "member1,member2"
-```
-
-- `members` contains the available definitions actually returned. `missingMembers` lists Members requested through `--members` that do not exist.
-- For a Member with `confidence`, `confidence.status` indicates whether its semantics (such as field descriptions or metric definitions) have been accepted. Both `auto_applied` and `manually_applied` mean accepted and can be trusted directly. `not_applied` means not yet accepted: treat it as a candidate clue and verify it against actual data before using it to define a query. Factual attributes such as field types are not subject to this restriction.
-
-### 2.4 Query Locations
-
-After identifying the Schema for an answer branch, use `catalog resolve` to obtain the locations required for log queries.
-
-```bash
-python3 scripts/context_model_qa.py context-model catalog resolve \
-  --endpoint "<context-model-endpoint>" \
-  --name "<model-name>" --schema "<schema-element>"
-```
-
-- `datasources` contains candidate query locations for the current answer branch, not automatically separate branches. Each entry is a set of location parameters; `store` maps to the subsequent query command's `--logstore` parameter.
-- Log queries and index reads use the resolved `region/project/store`. Pass a custom log endpoint separately when needed; do not reuse the model endpoint.
-- If a data source has a nonempty `search_filter`, parenthesize it and the business query's search prefix separately, then combine them with `AND`. If the original prefix is `*`, use the filter directly.
-- If the user specifies a single resource, query only that resource. If the user specifies a resource set, query every location within that scope.
-- If the investigation target's location is unknown, query all relevant candidates.
-- Ask the user when scope is unclear, candidates are too numerous, or the aggregation method is uncertain. Do not select a "primary" data source on your own.
-
-## 3. Construct Queries and Gather Additional Evidence
-
-### 3.1 Semantic Basis
-
-For each answer branch, choose its semantic basis in the following order; do not proceed to a later option when an earlier one applies. When using model Schemas, metrics, terms, or example queries, rely on definitions already retrieved.
-
-1. **Example query**: when its meaning matches the question, use the original query. Literal values may be replaced based on the question or verified evidence, without changing the business definition.
-2. **Metric**: assemble a complete query using the generator mapping in Section 3.2.
-3. **Term**: when the question contains a defined term, express its identification or calculation logic as filters or expressions.
-4. **Query from Schema fields**: when none of the above applies, construct a query from field names, types, and descriptions.
-
-Gather additional evidence as needed when the information required to construct a query is missing.
-
-### 3.2 Query Assembly
+- **Reuse existing logic**: When an applicable example query or metric exists, use its data selection and calculation logic to assemble the query.
+- **Construct a query**: Otherwise, write the query from confirmed definitions.
 
 **Query structure**
 
-A complete query takes the form `<search-prefix> | <SQL-statement>`. The default search prefix is `*`. SQL reads the current Logstore through `FROM log`. When SQL analysis is unnecessary, the query contains only the search expression.
+A complete query has the form `<search-prefix> | <SQL-statement>`. The default search prefix is `*`, and SQL reads the current Logstore through `FROM log`. When SQL analysis is unnecessary, the query contains only the search prefix.
 
-Specify the log time range through command parameters; do not repeat the same `__time__` filter in the search prefix or SQL.
+Specify the log time range through command parameters; do not repeat the same range as a `__time__` filter in the search prefix or SQL.
 
-**Metric generator mapping**
+**Mapping metrics and terms**
 
-A metric generator consists of an aggregate expression and an optional `FILTER (WHERE ...)`. To construct a query from a generator:
+| Definition format | Query mapping |
+| --- | --- |
+| Metric `generator`: text divided into labeled sections | Use `Metric Expression` in the `SELECT` calculation. Optional `Log Search Filter` and `SQL WHERE Condition` sections map to the search prefix and SQL `WHERE`, respectively. |
+| Metric `generator`: SQL calculation expression, possibly containing `FILTER (WHERE ...)` | Use the expression in `SELECT`. When `FILTER` selects the input for the entire metric and can be split without changing its meaning, use the complete string argument of `search(...)` as the search prefix and place the remaining SQL predicates in `WHERE`. If there are no SQL predicates, do not add a corresponding `WHERE` condition. Keep `FILTER` clauses that apply only to individual aggregates inside their calculation expressions. |
+| Term `description` | The description may be followed by `Log Search Filter` and `SQL WHERE Condition`; apply the same mapping. |
 
-1. Put the aggregate expression in `SELECT` and add an alias that reflects its business meaning.
-2. If `FILTER` contains `search(...)`, use its entire string argument as the search prefix.
-3. If `FILTER` contains other SQL predicates, put them in `WHERE`; otherwise omit `WHERE`.
+- Do not change the original definition's calculation logic, filters, literals or units when constructing queries.
+- Combine multiple metrics in one `SELECT` only when their effective search prefixes and `WHERE` conditions are identical; otherwise execute them separately.
 
-Preserve the generator's filters, literals, aggregate functions, and units. After moving the string argument of `search(...)` to the search prefix, do not split it, duplicate it, or derive additional `WHERE` conditions from it.
+**Assembling filters**
 
-Combine multiple metrics in one `SELECT` only when their mapped search prefixes and `WHERE` conditions are identical; otherwise execute them separately.
+When constructing filters, use the search prefix, SQL `WHERE`, or both:
 
-**Custom filters**
+- **Search prefix**: Common forms include keyword searches (`term`) and field searches (`field:value`). Fields indexed as `long` or `double` also support numeric comparisons (`field > value`) and range searches (`field in [min max]`). **For fields indexed as `text`, `field:value` matches tokenized terms and does not guarantee equality with the full field value.**
+- **SQL `WHERE`**: Further filter logs matched by the search prefix using field values, such as full-string equality, `LIKE` / `NOT LIKE` pattern matching or regular expressions.
 
-When constructing filters, prefer narrowing the analysis with the search prefix while preserving matching semantics. Text matching in the search prefix depends on index tokenization. To require an exact match of the entire field value, use `=` in SQL `WHERE`.
+Wildcard searches in the search prefix, such as `field:abc*`, have a limit on the number of matching terms. Do not use them to replace SQL `LIKE` / `NOT LIKE` conditions or append corresponding wildcard searches while retaining those conditions.
 
-**Row limits**
+**Result row limits**
 
-SLS SQL returns at most 100 rows by default when `LIMIT` is omitted. If more results are needed, set an explicit `LIMIT` in the final SQL.
+SLS SQL returns at most 100 rows by default when `LIMIT` is omitted. If more results are needed, specify an appropriate `LIMIT` in the final SQL.
 
-### 3.3 Additional Evidence
+### 2.2 Gather supporting evidence as needed
 
 **Index configuration**
 
-Read the index configuration when you need to verify search and analytics capabilities, index types, tokenization, or other matching rules.
+Inspect index configuration when you need to confirm search and statistical analysis capabilities, index types, tokenization or other matching rules.
 
 ```bash
-python3 scripts/context_model_qa.py index get \
+python3 scripts/model_qa.py index get \
   --region "<region>" --project "<project>" --logstore "<logstore>"
 ```
 
 **Log samples**
 
-Read a small number of relevant logs when you need to verify actual data structure, field paths, values, or formats.
+Read a small number of relevant logs when you need to confirm actual data structures, field paths, values or formats.
 
-- Set `--query` to verified keywords or field filters, such as `error` or `k1:v1 AND k2:v2`; use `*` if no reliable filter is available.
-- Prefer the current question's time range for `--time-range`; use `--lines` to bound the number of sample rows.
+- For `--query`, use verified keywords or field filters, such as `error` or `k1:v1 AND k2:v2`; use `*` when no reliable filter is available.
+- Use the established time range for `--time-range` and limit the number of sample rows with `--lines`.
 
 ```bash
-python3 scripts/context_model_qa.py query \
+python3 scripts/model_qa.py query \
   --region "<region>" --project "<project>" --logstore "<logstore>" \
   --query "<search-prefix>" --time-range "<time-range>" \
   --lines <bounded-sample-rows>
@@ -169,75 +126,88 @@ python3 scripts/context_model_qa.py query \
 
 Samples are for internal verification. Do not copy them wholesale into the final answer; cite only necessary, redacted evidence.
 
-### 3.4 References as Needed
+### 2.3 References to consult as needed
 
 | Document | Purpose |
 | --- | --- |
-| [SLS function reference](references/sql/functions.md) | SLS-specific behavior for time comparisons, bucketing, JSON, regex, approximate aggregations, and IP geolocation. |
-| [Cross-Logstore JOIN](references/sql/join.md) | Execution requirements, join relationships, and SQL templates for cross-Logstore queries. |
-| [Scan analysis (SCAN)](references/sql/scan.md) | Syntax and limitations for fields without indexes or analytics enabled. |
+| [SLS function reference](references/sql/functions.md) | SLS-specific usage of time comparisons, bucketing, JSON, regular expressions, approximate aggregations and IP geolocation functions. |
+| [Cross-Logstore JOIN](references/sql/join.md) | Execution requirements, join criteria and SQL templates for queries across Logstores. |
+| [Scan analysis (SCAN)](references/sql/scan.md) | Syntax and limitations for fields without indexes or statistical analysis enabled. |
 
-## 4. Execute Queries, Validate Results, and Handle Errors
+## 3. Execute, validate and handle errors
 
-### 4.1 Execute Queries
+### 3.1 Execute queries
 
-Choose a bounded time range for each answer branch based on the question and available evidence.
+Determine each answer branch's time range from the question and available evidence. Ask the user to clarify when it cannot be determined.
 
-- Use `--time-range` for a relative range (such as `last_15m`, `last_1h`, `now-1h~now`, `today`, or `yesterday`) or an explicit interval. Explicit intervals use `<start-time>~<end-time>`, with both endpoints in RFC3339 format including a time zone.
-- For comparisons within one window or aggregation across sources, reuse a fixed time window. For comparisons across periods, define and align each window separately.
-
-Ask the user if the time range cannot be determined.
+- Time boundaries: `query` includes the start and excludes the end. For a complete calendar period, use the start of the next period as the end.
+- `--time-range`: Specify a relative range, such as `last_15m`, `last_1h`, `now-1h~now`, `today` or `yesterday`, or an explicit interval. Use `<start>~<end>` for an explicit interval, with both endpoints in RFC3339 format including time zones.
+- Window reuse: Reuse the same fixed start and end for comparisons within one window or aggregation across sources, avoiding shifts caused by resolving relative ranges separately.
 
 ```bash
-python3 scripts/context_model_qa.py query \
+query_suffix="$(python3 -c 'import uuid; print(uuid.uuid4().hex[:12])')" && \
+python3 scripts/model_qa.py query \
   --region "<region>" --project "<project>" --logstore "<logstore>" \
   --query "<complete-query>" \
-  --time-range "<time-range>"
+  --time-range "<time-range>" \
+  --save-file "<absolute-path-to-temp-directory>/<query-purpose>-${query_suffix}.json"
 ```
 
-If start and end timestamps are already available, replace the time parameter above with:
+**Additional parameters**
+
+- `--from "<FROM_TS>" --to "<TO_TS>"`: Use these instead of `--time-range` when start and end timestamps are already available.
+- `--lines`: Optional, defaults to 100 rows, and applies only when the query contains a search prefix without SQL.
+
+### 3.2 Validate results
+
+After receiving a successful query response, verify:
+
+1. **Execution status**: `meta.progress == "Complete"` means the query executed completely. Do not interpret failed or incomplete execution as no data.
+2. **Result shape**: Fields and result structure meet the question's requirements. When all groups or a complete time series are needed, confirm that results were not truncated by the return limit.
+
+`logs: []` means the current query returned no rows, not a numeric zero. A zero returned by a scalar aggregate is an actual calculation result.
+
+The top-level `timeRange.from/to` in a successful query response records the actual execution window in Unix seconds. Use it for the execution range in the answer and for chart time windows; do not derive the window again.
+
+### 3.3 Handle errors
+
+Handle failures using CLI error messages, the top-level `error` in failed responses, or `meta.progress` in query responses. Do not evade errors by changing data sources, removing filters, shortening the user's requested time range or changing business definitions. If recovery is not possible, stop and explain the known cause, unfinished queries and required additional information.
+
+| Error | Handling |
+| --- | --- |
+| Parameter, SQL, function or JOIN error | Correct it according to the error; consult the [SLS function reference](references/sql/functions.md) or [Cross-Logstore JOIN](references/sql/join.md) as needed. |
+| Field parsing or index configuration error | Correct it using known field information. Gather supporting evidence if needed; consult [Scan analysis (SCAN)](references/sql/scan.md) when scanning is required. |
+| Throttling, service busy or request processing timeout | Wait and retry with the same query and time range. Stop and report persistent failures. |
+| `meta.progress == "Incomplete"` | Follow [Incomplete and inexact query results](references/sql/incomplete.md) to identify the cause and recover. |
+| Authentication failure, permission denied or resource not found | Correct clear parameter errors; otherwise stop and report. |
+
+## 4. Deliver results
+
+### 4.1 Organize the answer
+
+Organize the answer into conclusions and query evidence where appropriate.
+
+- Base conclusions only on validated query results. Claim complete coverage only when all required queries pass validation; otherwise identify gaps and limit the scope of the conclusions. Explain approximations and data processing limitations that affect conclusions.
+- Aggregate results across sources only when their definitions, filters and time windows are consistent and the results can be combined. Separate source results do not establish record-level relationships.
+- In the query evidence, use Markdown code blocks to show the complete executed queries supporting the main conclusions, with their data sources and actual time windows. Use a short title that describes each query's business purpose; keep it consistent with the corresponding chart title, if any.
+- Do not display endpoints, credentials, internal Element identifiers or unredacted diagnostic information.
+
+**Query presentation**
+
+- State the confirmed Region, Project and Logstore. Express the time window in Unix seconds; for executed queries, reuse `timeRange.from/to` from the response.
+- Present complete queries in ordinary Markdown, without depending on internal `run_query` / `vibeops_object` rendering protocols.
+- Label queries that were not executed or failed with their status.
+
+### 4.2 Deliver charts
+
+When results suit visualization, such as trends, TopN/category comparisons, shares across a few categories, multi-column details or flows by time and category, follow [Chart delivery](references/chart-delivery.md) and use the current host's chart capabilities near the corresponding conclusions. Use Markdown tables when chart capabilities are unavailable. Do not chart scalar results or results unsuitable for visualization.
+
+### 4.3 Extract query execution details
+
+Use the following command with the absolute paths to saved query record files supporting the main conclusions to extract complete queries, data sources, actual time windows and execution parameters for the query evidence.
 
 ```bash
---from "<FROM_TS>" --to "<TO_TS>"
+python3 "<absolute-path-to-skill-directory>/scripts/export_query_evidence.py" \
+  "<absolute-path-to-query-record-1.json>" \
+  "<absolute-path-to-query-record-2.json>"
 ```
-
-For log searches, add `--lines <bounded-result-rows>` as needed; the default is 100 rows. SQL row limits are controlled by `LIMIT`.
-
-### 4.2 Validate Results
-
-After successfully obtaining a query response, confirm:
-
-1. `meta.progress == "Complete"`, indicating that the query completed fully.
-2. The returned fields and result shape match the current question. When all groups or time-series points are required, verify that row limits have not truncated the results.
-
-`logs: []` means no rows were returned, not the numeric value 0. A scalar aggregate returning 0 is an actual calculated result. Never interpret a failed or incomplete query as no data.
-
-The top-level `timeRange.from/to` in a successful query response records the actual query window in Unix seconds. Use this window for the answer's execution scope and chart time range; do not derive it again.
-
-### 4.3 Handle Errors
-
-Handle errors based on script messages, the top-level `error` in a failed response, or `meta.progress` in a query response. Do not bypass errors by switching data sources, removing filters, shortening the user's requested time range, or changing business definitions. If recovery is impossible, stop and explain the known cause, unfinished queries, and any additional information required.
-
-| Error | Action |
-| --- | --- |
-| Parameter, SQL, function, or JOIN error | Correct the issue reported by the error; consult the [SLS function reference](references/sql/functions.md) or [Cross-Logstore JOIN](references/sql/join.md) as needed. |
-| Field parsing or index configuration error | Correct the issue using known field information. Gather more evidence if needed; consult [Scan analysis (SCAN)](references/sql/scan.md) when scanning is necessary. |
-| Throttling, service busy, or request timeout | Wait and retry with the same query and time range. Stop and report persistent failures. |
-| `meta.progress == "Incomplete"` | Diagnose and recover using [Incomplete and inexact query results](references/sql/incomplete.md). |
-| Authentication failure, access denied, or resource not found | Correct clear parameter errors; otherwise stop and report. |
-
-## 5. Deliver the Answer and Charts
-
-### 5.1 Answer Rules
-
-Base data conclusions only on query results that passed validation.
-
-- State the business definitions used (citing metric, term, or example-query names) and actual execution scope (project/logstore and time window). Include the executed queries for numerical and statistical conclusions, and key evidence for investigative conclusions.
-- For multiple branches or data sources, identify each result's source and status: available, no rows, failed, or not executed. Claim complete coverage only when all required queries pass validation; qualify the scope of conclusions when coverage is partial.
-- Aggregate across sources only when definitions, filters, and time windows match and the results can be combined. Separate per-source results do not establish unverified relationships between records.
-- Disclose approximations, coverage limits, and data-processing constraints that affect the conclusions.
-- Do not expose endpoints, credentials, internal element identifiers, exploration queries, or unredacted diagnostic information.
-
-### 5.2 Chart Delivery
-
-When validated results are suitable for visualization (trends, TopN/category comparisons, shares across a few categories, details with multiple columns, or flows across time and categories), read [chart-delivery.md](references/chart-delivery.md) and follow it to deliver charts or tables. Do not chart scalar results or results unsuitable for visualization.

@@ -1,20 +1,19 @@
-"""Model-bound catalog orchestration and presentation, reusable without CLI."""
+"""Context Model catalog, including semantic-to-physical storage resolution."""
 
-from slsmodel import Catalog
-from .adaptive_output import DEFAULT_MAX_BYTES, get_output, overview_output
+from slsmodel import ModelCatalog, CatalogError
 from .client import ContextModelClient
+from .storage import resolve_by_schema, resolve_by_source_tag
 
 
-class ContextModelCatalog:
-    def __init__(self, client: ContextModelClient, name: str):
-        self.name = name
-        self.catalog = Catalog(lambda spl, mode: client.query(name, spl, mode))
+class ContextModelCatalog(ModelCatalog):
+    def __init__(self, client: ContextModelClient, model_name: str):
+        super().__init__(lambda spl, mode: client.query_model(model_name, spl, mode), {"model": model_name})
 
-    def overview(self, sources=None, max_bytes=DEFAULT_MAX_BYTES):
-        return overview_output(self.name, self.catalog.overview(), sources, max_bytes)
-
-    def get(self, element_type, element, members=None, max_bytes=DEFAULT_MAX_BYTES):
-        return get_output(self.name, self.catalog.get(element_type, element, members), max_bytes)
-
-    def resolve(self, schema):
-        return {"model": self.name, **self.catalog.resolve(schema)}
+    def resolve_storage(self, schema_name=None, *, source_tag=None):
+        """Resolve Context Model locations by Schema name or metadata.tags.source."""
+        if bool(schema_name) == bool(source_tag):
+            raise CatalogError("InvalidParameter", "Provide exactly one of schema or source")
+        query_model = self.definitions.query_model
+        result = (resolve_by_source_tag(query_model, source_tag) if source_tag else
+                  resolve_by_schema(query_model, schema_name))
+        return {**self.identity_fields, **result}

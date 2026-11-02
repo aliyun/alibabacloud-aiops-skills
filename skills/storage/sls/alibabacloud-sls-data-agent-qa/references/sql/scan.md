@@ -1,6 +1,6 @@
 # Scan Analysis (SCAN)
 
-Scan raw logs when a required field has no index or a field needed for SQL analysis does not have analytics enabled.
+You can scan raw logs when a required field has no index or a field needed for SQL analysis does not have SQL analysis enabled.
 
 ```sql
 <search-prefix> | set session mode=scan; <SQL-statement>

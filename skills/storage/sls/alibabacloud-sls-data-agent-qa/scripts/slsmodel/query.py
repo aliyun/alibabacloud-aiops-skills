@@ -14,8 +14,14 @@ class ReadMode(IntEnum):
     COMPLETE = 1
 
 
-class QueryFunc(Protocol):
+class ModelQuery(Protocol):
+    """An SPL query already bound to one Context Model or Project Source Model."""
     def __call__(self, spl: str, mode: ReadMode) -> list[Row]: ...
+
+
+class ModelTransport(Protocol):
+    """Injected request transport shared by both model API clients."""
+    def request(self, action, method, path, query=None, body=None, project=None): ...
 
 
 def literal(value):
@@ -40,3 +46,13 @@ def decode_rows(header, data, mode=ReadMode.COMPLETE):
             raise CatalogError("IncompleteCatalogRead", "Invalid model row")
         rows.append({h: (row[i] or "") if i < len(row) else "" for i, h in enumerate(header) if h})
     return rows
+
+
+def decode_model_rows(body, mode=ReadMode.COMPLETE):
+    if not isinstance(body, dict):
+        raise CatalogError("IncompleteCatalogRead", "Model response must be an object")
+    status = body.get("responseStatus") or {}
+    if mode == ReadMode.COMPLETE and (not isinstance(status, dict) or
+            status.get("result") != "Success" or status.get("level") != "Info"):
+        raise CatalogError("IncompleteCatalogRead", "Model response does not certify a complete successful read")
+    return decode_rows(body.get("header"), body.get("data"), mode)

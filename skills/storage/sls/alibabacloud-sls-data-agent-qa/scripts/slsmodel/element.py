@@ -29,6 +29,7 @@ def object_cell(cell, code):
 
 
 def metadata(cell):
+    """Decode wire keys; source is metadata.tags.source, never a model type."""
     raw = object_cell(cell, "InvalidCatalogMetadata")
     result = {}
     for group in ("description", "tags"):
