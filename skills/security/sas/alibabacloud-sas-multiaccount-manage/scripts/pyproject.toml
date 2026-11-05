@@ -18,6 +18,7 @@ only-include = [
     "baseline.py",
     "export_baseline.py",
     "vuln.py",
+    "skill_meta.py",
 ]
 
 [project.scripts]

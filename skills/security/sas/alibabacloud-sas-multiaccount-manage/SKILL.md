@@ -1,6 +1,6 @@
 ---
 name: alibabacloud-sas-multiaccount-manage
-description: Manage multiple Alibaba Cloud accounts and batch-export Security Center (SAS) baseline and vulnerability reports via the aliyun CLI and Python scripts. Supports account list refresh, enable/disable, concurrent batch export of cloud platform configuration check (baselineCspm), system baseline risk (exportHcWarning), Linux/Windows/application/emergency vulnerability results across all managed accounts. Use this skill when users need to manage SAS multi-account settings, export baseline or vulnerability compliance data, or merge multi-account security reports into a single file.
+description: Manage multiple Alibaba Cloud accounts and batch-export Security Center (SAS) baseline and vulnerability reports via the aliyun CLI and Python scripts. Supports account list refresh, enable/disable, concurrent batch export of cloud platform configuration check (baselineCspm), system baseline risk (exportHcWarning), attack path event (exportAttackPathEvent), Linux/Windows/application/emergency vulnerability results across all managed accounts. Use this skill when users need to manage SAS multi-account settings, export baseline or vulnerability compliance data, or merge multi-account security reports into a single file.
 ---
 
 # Alibaba Cloud Security Center Multi-Account Management and Baseline Report Export
@@ -28,7 +28,7 @@ If the call fails, instruct the user to run `aliyun configure` and set up creden
 
 ### 1.1 Configure AI mode and plugin mode (required)
 
-This skill requires aliyun CLI plugin mode commands (kebab-case) and a fixed User-Agent declaration.
+This skill requires aliyun CLI plugin mode commands (kebab-case) and AI mode enabled.
 
 ```bash
 # Keep plugins up to date
@@ -44,6 +44,23 @@ aliyun configure ai-mode set-user-agent --user-agent AlibabaCloud-Agent-Skills
 # Optional checks / rollback
 aliyun configure ai-mode show
 aliyun configure ai-mode disable
+```
+
+### 1.2 User-Agent and session ID
+
+Every aliyun CLI call made by the scripts sends this User-Agent:
+
+```
+AlibabaCloud-Agent-Skills/{name}/{session-id} skill-version/{version}
+```
+
+- `{name}` and `{version}` are read from `manifest.json` at the skill root.
+- `{session-id}` is read from the `SKILL_SESSION_ID` environment variable. When the variable is not set, the scripts generate a random UUID4 for the current process.
+
+To keep one identifier across multiple script invocations in the same agent session, export it before running commands:
+
+```bash
+export SKILL_SESSION_ID=$(uuidgen | tr -d '-' | tr '[:upper:]' '[:lower:]')
 ```
 
 ### 2. Install Python ≥ 3.6
@@ -143,11 +160,24 @@ Control whether an account participates in subsequent batch exports.
     "DisplayName": "cwx",
     "FolderId": "r-1Q4pqB",
     "IsMaAccount": "NO",
-    "SasVersion": "0",
+    "SasVersion": "3",
+    "SasVersionName": "Enterprise",
     "enable": true
   }
 ]
 ```
+
+`SasVersion` indicates the Security Center edition purchased for this account. `SasVersionName` is the corresponding human-readable name (populated automatically by `accounts.py refresh`).
+
+| Value | Edition |
+|-------|--------|
+| `1` | Basic (free) |
+| `6` | Anti-virus |
+| `5` | Advanced |
+| `3` | Enterprise |
+| `7` | Ultimate |
+| `8` | Multi-version |
+| `10` | Value-added Plan |
 
 ---
 
@@ -193,12 +223,25 @@ Export `exportHcWarning` risk list (high/medium/low, all statuses) for all enabl
 .venv/bin/python baseline.py export-system-warning --account-id 1225574417218097
 ```
 
+### Export attack path events
+
+Export `exportAttackPathEvent` attack path events (serious/suspicious/remind risk levels) for all enabled accounts and merge into `attack-path-merged-{date}.xlsx`.
+
+```bash
+# Export for all enabled accounts
+.venv/bin/python baseline.py export-attack-path
+
+# Export for one specific account
+.venv/bin/python baseline.py export-attack-path --account-id 1225574417218097
+```
+
 ### Output Files
 
 | File | Description |
 |------|------|
 | `baseline-cspm-merged-{date}.xlsx` | Merged cloud platform configuration check results, including “Resource Directory Account” column |
 | `system-warning-merged-{date}.xlsx` | Merged system baseline risk list, including “Resource Directory Account” column |
+| `attack-path-merged-{date}.xlsx` | Merged attack path event list, including “Resource Directory Account” column |
 
 ### Error Handling
 

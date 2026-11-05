@@ -30,11 +30,11 @@ warnings.filterwarnings(
 
 
 def merge_excel(export_name, inputs):
-    """将多个 Excel 文件合并为一个，并在末尾追加「资源管理账号」列。
+    """将多个 Excel 文件合并为一个，并在末尾追加「资源管理账号」和「账号名称」列。
 
     Args:
         export_name: 输出文件名（.xlsx）
-        inputs: 列表，每项包含 filename(str) 和 account_id(str)
+        inputs: 列表，每项包含 filename(str)、account_id(str)，可选 display_name(str)
 
     Returns:
         输出文件的路径字符串
@@ -49,6 +49,7 @@ def merge_excel(export_name, inputs):
     for item in inputs:
         filename = item["filename"]
         account_id = str(item["account_id"])
+        display_name = str(item.get("display_name", ""))
         if not Path(filename).exists():
             print("警告: 文件 {} 不存在，跳过".format(filename), file=sys.stderr)
             continue
@@ -62,11 +63,11 @@ def merge_excel(export_name, inputs):
             continue
 
         if header is None:
-            header = list(rows[0]) + ["资源管理账号"]
+            header = list(rows[0]) + ["资源管理账号", "账号名称"]
             all_rows.append(header)
 
         for row in rows[1:]:
-            all_rows.append(list(row) + [account_id])
+            all_rows.append(list(row) + [account_id, display_name])
 
         valid_count += 1
 

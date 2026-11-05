@@ -1,35 +1,35 @@
-# RAM 权限策略说明
+# RAM Policy Reference
 
-本 Skill 通过 aliyun CLI 调用阿里云云安全中心 (SAS) 和安全令牌服务 (STS)，运行账号（RAM 用户或 RAM 角色）须被授予以下最小权限。
+This skill calls Alibaba Cloud Security Center (SAS) and Security Token Service (STS) through the aliyun CLI. The running account (RAM user or RAM role) must be granted the following minimum permissions.
 
-> **注意**：云安全中心 (SAS) 的 RAM 授权粒度为 **SERVICE 级别**，不支持资源级授权，`Resource` 必须设置为 `"*"`。
-
----
-
-## 所需 RAM Action
-
-### 安全令牌服务 (STS)
-
-| Action | 调用脚本 | 用途 |
-|--------|----------|------|
-| `sts:GetCallerIdentity` | `accounts.py`、`baseline.py`、`vuln.py` | 获取当前凭证的主账号 ID，用于判断是否省略 `--ResourceDirectoryAccountId` 参数 |
-
-### 云安全中心 (SAS)
-
-RAM Code：`yundun-sas`（同义别名：`threatdetection`、`yundun-aegis`）
-
-| Action | 调用脚本 | 访问级别 | 用途 |
-|--------|----------|----------|------|
-| `yundun-sas:ListAccountsInResourceDirectory` | `accounts.py` | 读取 | 从资源目录拉取所有成员账号列表 |
-| `yundun-sas:DescribeMonitorAccounts` | `accounts.py` | 读取 | 查询已纳入 SAS 监控的成员账号列表，用于过滤 |
-| `yundun-sas:ExportRecord` | `baseline.py` | 写入 | 发起基线检测结果导出任务（baselineCspm / exportHcWarning） |
-| `yundun-sas:DescribeExportInfo` | `baseline.py` | 读取 | 轮询基线导出任务状态，获取下载链接 |
-| `yundun-sas:ExportVul` | `vuln.py` | 写入 | 发起漏洞导出任务（cve / sys / app / emg） |
-| `yundun-sas:DescribeVulExportInfo` | `vuln.py` | 读取 | 轮询漏洞导出任务状态，获取下载链接 |
+> **Note**: SAS RAM authorization is enforced at the **service level** and does not support resource-level authorization. `Resource` must be set to `"*"`.
 
 ---
 
-## 最小权限策略示例
+## Required RAM Actions
+
+### Security Token Service (STS)
+
+| Action | Script | Purpose |
+|--------|--------|---------|
+| `sts:GetCallerIdentity` | `accounts.py`, `baseline.py`, `vuln.py` | Get the master account ID of the current credentials, used to decide whether to omit the `--ResourceDirectoryAccountId` parameter |
+
+### Security Center (SAS)
+
+RAM code: `yundun-sas` (aliases: `threatdetection`, `yundun-aegis`)
+
+| Action | Script | Access level | Purpose |
+|--------|--------|--------------|---------|
+| `yundun-sas:ListAccountsInResourceDirectory` | `accounts.py` | Read | List all member accounts from the resource directory |
+| `yundun-sas:DescribeMonitorAccounts` | `accounts.py` | Read | List member accounts already monitored by SAS, used for filtering |
+| `yundun-sas:ExportRecord` | `baseline.py` | Write | Start a baseline result export task (baselineCspm / exportHcWarning) |
+| `yundun-sas:DescribeExportInfo` | `baseline.py` | Read | Poll baseline export task status and get the download link |
+| `yundun-sas:ExportVul` | `vuln.py` | Write | Start a vulnerability export task (cve / sys / app / emg) |
+| `yundun-sas:DescribeVulExportInfo` | `vuln.py` | Read | Poll vulnerability export task status and get the download link |
+
+---
+
+## Minimum Policy Example
 
 ```json
 {
@@ -60,26 +60,26 @@ RAM Code：`yundun-sas`（同义别名：`threatdetection`、`yundun-aegis`）
 
 ---
 
-## 多账号访问说明
+## Multi-Account Access
 
-本工具设计用于**资源目录主账号**（Master Account）下运行，通过 `--ResourceDirectoryAccountId` 参数代入成员账号进行操作。
+This tool is designed to run under the **resource directory master account** and operates on member accounts through the `--ResourceDirectoryAccountId` parameter.
 
-- 运行凭证须属于资源目录的**管理账号**或已被授权的 RAM 角色
-- 成员账号侧无需额外配置，SAS 多账号管理的权限由主账号统一管控
-- 若凭证属于成员账号（非主账号），`--ResourceDirectoryAccountId` 参数会被自动省略，仅导出该账号自身的数据
-
----
-
-## 授权说明
-
-- **读取操作**（`Describe*`、`GetCallerIdentity`）：不修改任何资源，风险低
-- **写入操作**（`ExportRecord`、`ExportVul`）：在服务端触发导出任务，不修改用户资产或配置，风险低
-- 由于 SAS 不支持资源级授权，所有 `yundun-sas` Action 的 Resource 均须设为 `"*"`
+- The running credentials must belong to the resource directory **management account** or to an authorized RAM role.
+- No extra configuration is required on member accounts; SAS multi-account permissions are managed centrally by the master account.
+- If the credentials belong to a member account (not the master account), the `--ResourceDirectoryAccountId` parameter is omitted automatically and only that account's own data is exported.
 
 ---
 
-## 参考文档
+## Authorization Notes
 
-- [云安全中心 RAM 鉴权](https://www.alibabacloud.com/help/en/security-center/developer-reference/api-sas-2018-12-03-ram)
+- **Read operations** (`Describe*`, `GetCallerIdentity`): do not modify any resources; low risk.
+- **Write operations** (`ExportRecord`, `ExportVul`): trigger export tasks on the server side without changing user assets or configurations; low risk.
+- Because SAS does not support resource-level authorization, the `Resource` of every `yundun-sas` action must be set to `"*"`.
+
+---
+
+## References
+
+- [Security Center RAM authorization](https://www.alibabacloud.com/help/en/security-center/developer-reference/api-sas-2018-12-03-ram)
 - [STS GetCallerIdentity](https://www.alibabacloud.com/help/en/resource-access-management/latest/getcalleridentity)
-- [RAM 自定义策略](https://help.aliyun.com/zh/ram/user-guide/create-a-custom-policy)
+- [Create a custom RAM policy](https://help.aliyun.com/zh/ram/user-guide/create-a-custom-policy)

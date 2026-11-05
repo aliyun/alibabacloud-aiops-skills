@@ -15,10 +15,23 @@ import subprocess
 import sys
 from pathlib import Path
 
+from skill_meta import build_user_agent_header
+
 ACCOUNTS_FILE = Path("accounts.json")
-ALIYUN_USER_AGENT_HEADER = "User-Agent=AlibabaCloud-Agent-Skills/alibabacloud-sas-multiaccount-manage"
+ALIYUN_USER_AGENT_HEADER = build_user_agent_header()
 CLI_CONNECT_TIMEOUT_SECONDS = 10
 CLI_READ_TIMEOUT_SECONDS = 60
+
+# Security Center edition mapping: SasVersion value -> English name (Chinese name)
+SAS_VERSION_MAP = {
+    "1": "Basic",
+    "6": "Anti-virus",
+    "5": "Advanced",
+    "3": "Enterprise",
+    "7": "Ultimate",
+    "8": "Multi-version",
+    "10": "Value-added Plan",
+}
 
 
 def _aliyun_cmd(*args):
@@ -102,6 +115,8 @@ def cmd_refresh(args):
 
     for account in accounts:
         account["enable"] = existing.get(account["AccountId"], True)
+        sas_ver = str(account.get("SasVersion", ""))
+        account["SasVersionName"] = SAS_VERSION_MAP.get(sas_ver, "")
 
     save_accounts(accounts)
     print(f"已刷新 {len(accounts)} 个账号，写入 {ACCOUNTS_FILE}")

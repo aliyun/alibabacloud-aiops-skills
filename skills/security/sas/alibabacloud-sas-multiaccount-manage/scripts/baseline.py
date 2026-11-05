@@ -11,6 +11,10 @@
   # 导出系统基线风险列表
   uv run baseline.py export-system-warning
   uv run baseline.py export-system-warning --account-id 1234567890
+
+  # 导出攻击路径事件
+  uv run baseline.py export-attack-path
+  uv run baseline.py export-attack-path --account-id 1234567890
 """
 
 import argparse
@@ -25,12 +29,13 @@ from pathlib import Path
 
 # 将 scripts 目录加入路径以便导入同级模块
 sys.path.insert(0, str(Path(__file__).parent))
-from accounts import get_caller_account_id, get_enabled_accounts  # noqa: E402
+from accounts import get_caller_account_id, get_enabled_accounts, load_accounts  # noqa: E402
 from merge import merge_excel  # noqa: E402
+from skill_meta import build_user_agent_header  # noqa: E402
 
 TODAY = date.today().strftime("%Y%m%d")
 QPS_LIMIT = 5  # API 并发上限
-ALIYUN_USER_AGENT_HEADER = "User-Agent=AlibabaCloud-Agent-Skills/alibabacloud-sas-multiaccount-manage"
+ALIYUN_USER_AGENT_HEADER = build_user_agent_header()
 CLI_CONNECT_TIMEOUT_SECONDS = 10
 CLI_READ_TIMEOUT_SECONDS = 60
 DOWNLOAD_TIMEOUT_SECONDS = 60
@@ -53,6 +58,7 @@ class AccountSkippedError(Exception):
         self.account_id = account_id
         self.reason = reason
         super().__init__(f"账号 {account_id} 跳过: {reason}")
+
 
 # ────────────────────────────── 异步 API 封装 ──────────────────────────────
 
@@ -87,7 +93,7 @@ async def _run_aliyun_async(args, account_id=""):
             if code in err_text:
                 raise AccountSkippedError(account_id, code)
         print(f"aliyun CLI 调用失败:\n{err_text}", file=sys.stderr)
-        raise RuntimeError("aliyun CLI error")
+        raise RuntimeError(f"aliyun CLI error: {err_text.strip()}")
     # returncode==0 但 stderr 中仍含可跳过错误码时也忽略
     for code in _SKIP_ERROR_CODES:
         if code in err_text:
@@ -102,14 +108,14 @@ async def _run_aliyun_async(args, account_id=""):
 async def start_export_async(export_type, account_id, params=None):
     """发起导出任务，返回 export_id。"""
     cli_args = [
-        "export-record",
-        "--lang", "zh",
-        "--export-type", export_type,
+        "ExportRecord",
+        "--Lang", "zh",
+        "--ExportType", export_type,
     ]
     if account_id != _caller_account_id:
-        cli_args += ["--resource-directory-account-id", str(account_id)]
+        cli_args += ["--ResourceDirectoryAccountId", str(account_id)]
     if params:
-        cli_args += ["--params", params]
+        cli_args += ["--Params", params]
 
     data = await _run_aliyun_async(cli_args, account_id)
     export_id = str(data["Id"])
@@ -121,11 +127,11 @@ async def wait_for_export_async(export_id, account_id, poll_interval=5):
     """轮询导出状态，成功后返回下载链接。"""
     while True:
         cli_args = [
-            "describe-export-info",
-            "--export-id", export_id,
+            "DescribeExportInfo",
+            "--ExportId", export_id,
         ]
         if account_id != _caller_account_id:
-            cli_args += ["--resource-directory-account-id", str(account_id)]
+            cli_args += ["--ResourceDirectoryAccountId", str(account_id)]
         data = await _run_aliyun_async(cli_args, account_id)
         status = data.get("ExportStatus", "")
 
@@ -165,17 +171,17 @@ def _download_with_timeout(link, output_path):
             shutil.copyfileobj(response, fp)
 
 
-async def _wait_and_download(export_id, account_id, prefix):
+async def _wait_and_download(export_id, account_id, prefix, display_name=""):
     """等待导出完成后下载，返回 merge 所需的 input dict。"""
     link = await wait_for_export_async(export_id, account_id)
     xlsx_path = await download_and_extract_async(link, account_id, prefix)
-    return {"filename": xlsx_path, "account_id": account_id}
+    return {"filename": xlsx_path, "account_id": account_id, "display_name": display_name}
 
 
 # ────────────────────────────── 异步导出流程 ──────────────────────────────
 
 
-async def do_export_async(export_type, prefix, merged_name, account_ids, params=None):
+async def do_export_async(export_type, prefix, merged_name, account_ids, params=None, account_display_names=None):
     """并发导出流程：
 
     阶段 1 — 并发提交所有账号的导出任务（QPS ≤ 5）
@@ -189,6 +195,7 @@ async def do_export_async(export_type, prefix, merged_name, account_ids, params=
         print("错误: 没有可用账号", file=sys.stderr)
         sys.exit(1)
 
+    _display_names = account_display_names or {}
     print(f"共 {len(account_ids)} 个账号待导出（耗时操作，请耐心等待）")
 
     # 阶段 1：并发提交所有导出任务
@@ -198,41 +205,33 @@ async def do_export_async(export_type, prefix, merged_name, account_ids, params=
     )
 
     pending = []  # (export_id, account_id)
-    skipped = []
     for aid, res in zip(account_ids, submit_results):
         if isinstance(res, AccountSkippedError):
-            skipped.append(aid)
+            print(f"  [跳过][提交阶段] 账号 {aid}: {res.reason}", file=sys.stderr)
         elif isinstance(res, BaseException):
             print(f"  [失败] 账号 {aid}: {res}", file=sys.stderr)
         else:
             pending.append((res, aid))
 
     if not pending:
-        print(f"所有账号均被跳过（{len(skipped)} 个），无可合并数据")
+        print("所有账号导出任务均未成功提交，无可合并数据")
         return
 
     # 阶段 2：并发等待 + 下载解压
     download_results = await asyncio.gather(
-        *[_wait_and_download(eid, aid, prefix) for eid, aid in pending],
+        *[_wait_and_download(eid, aid, prefix, _display_names.get(str(aid), "")) for eid, aid in pending],
         return_exceptions=True,
     )
 
     inputs = []
-    failed = []
     for (_, aid), res in zip(pending, download_results):
         if isinstance(res, AccountSkippedError):
-            skipped.append(aid)
+            print(f"  [跳过][下载阶段] 账号 {aid}: {res.reason}", file=sys.stderr)
         elif isinstance(res, BaseException):
             print(f"  [失败] 账号 {aid}: {res}", file=sys.stderr)
-            failed.append(aid)
         else:
             print(f"  [成功] 账号 {aid}")
             inputs.append(res)
-
-    if skipped:
-        print(f"跳过 {len(skipped)} 个账号: {', '.join(skipped)}")
-    if failed:
-        print(f"失败 {len(failed)} 个账号: {', '.join(failed)}", file=sys.stderr)
 
     if not inputs:
         print("没有成功下载的文件，跳过合并")
@@ -249,14 +248,13 @@ async def do_export_async(export_type, prefix, merged_name, account_ids, params=
     print(f"已生成: {merged_name}（共 {len(inputs)} 个账号，已清理临时文件）")
 
 
-def do_export(export_type, prefix, merged_name, account_ids, params=None, region_id="cn-shanghai"):
+def do_export(export_type, prefix, merged_name, account_ids, params=None, region_id="cn-shanghai", account_display_names=None):
     """同步入口，内部通过 asyncio.run 驱动异步流程。"""
     global _caller_account_id, _region_id
     _caller_account_id = get_caller_account_id()
     _region_id = region_id
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(
-        do_export_async(export_type, prefix, merged_name, account_ids, params)
+    asyncio.run(
+        do_export_async(export_type, prefix, merged_name, account_ids, params, account_display_names)
     )
 
 
@@ -265,6 +263,8 @@ def do_export(export_type, prefix, merged_name, account_ids, params=None, region
 
 def cmd_export_cspm(args):
     """导出云平台配置检查结果（baselineCspm）。"""
+    all_accounts = load_accounts()
+    account_display_names = {str(a["AccountId"]): a.get("DisplayName", "") for a in all_accounts}
     if args.account_id:
         account_ids = [args.account_id]
     else:
@@ -277,11 +277,14 @@ def cmd_export_cspm(args):
         merged_name=f"baseline-cspm-merged-{TODAY}.xlsx",
         account_ids=account_ids,
         region_id=args.region_id,
+        account_display_names=account_display_names,
     )
 
 
 def cmd_export_system_warning(args):
     """导出系统基线风险列表（exportHcWarning）。"""
+    all_accounts = load_accounts()
+    account_display_names = {str(a["AccountId"]): a.get("DisplayName", "") for a in all_accounts}
     if args.account_id:
         account_ids = [args.account_id]
     else:
@@ -304,6 +307,37 @@ def cmd_export_system_warning(args):
         account_ids=account_ids,
         params=params,
         region_id=args.region_id,
+        account_display_names=account_display_names,
+    )
+
+
+def cmd_export_attack_path(args):
+    """导出攻击路径事件（exportAttackPathEvent）。"""
+    all_accounts = load_accounts()
+    account_display_names = {str(a["AccountId"]): a.get("DisplayName", "") for a in all_accounts}
+    if args.account_id:
+        account_ids = [args.account_id]
+    else:
+        accounts = get_enabled_accounts()
+        account_ids = [a["AccountId"] for a in accounts]
+
+    params = json.dumps(
+        {
+            "PageSize": 10,
+            "CurrentPage": 1,
+            "RiskLevelList": ["serious", "suspicious", "remind"],
+        },
+        ensure_ascii=False,
+    )
+
+    do_export(
+        export_type="exportAttackPathEvent",
+        prefix="attack-path",
+        merged_name=f"attack-path-merged-{TODAY}.xlsx",
+        account_ids=account_ids,
+        params=params,
+        region_id=args.region_id,
+        account_display_names=account_display_names,
     )
 
 
@@ -351,10 +385,29 @@ def main():
         help="SAS API 地域：cn-shanghai（中国大陆，默认）/ ap-southeast-1（非中国大陆）",
     )
 
+    # export-attack-path
+    p_atk = sub.add_parser(
+        "export-attack-path",
+        help="导出攻击路径事件（exportAttackPathEvent）",
+    )
+    p_atk.add_argument(
+        "--account-id",
+        metavar="ACCOUNT_ID",
+        help="指定单个账号 ID（默认导出所有启用账号）",
+    )
+    p_atk.add_argument(
+        "--region-id",
+        dest="region_id",
+        choices=["cn-shanghai", "ap-southeast-1"],
+        default="cn-shanghai",
+        help="SAS API 地域：cn-shanghai（中国大陆，默认）/ ap-southeast-1（非中国大陆）",
+    )
+
     args = parser.parse_args()
     dispatch = {
         "export-cspm": cmd_export_cspm,
         "export-system-warning": cmd_export_system_warning,
+        "export-attack-path": cmd_export_attack_path,
     }
     dispatch[args.command](args)
 
