@@ -1,0 +1,102 @@
+openapi: 3.0.3
+info:
+  title: IDaaS instance ECS PKCS7 M2M token exchange
+  version: "2"
+  description: >-
+    Instance-scoped HTTP authentication API. This is not a POP RPC Action.
+    Obtain the real endpoint from the selected IDaaS instance before calling.
+    All resource identifiers and assertions must come from the current workflow.
+servers:
+  - url: https://{instance_endpoint}
+    variables:
+      instance_endpoint:
+        default: example.invalid
+        description: Replace with the actual selected IDaaS instance endpoint.
+paths:
+  /api/v2/iauths_system/oauth2/token:
+    post:
+      summary: Exchange an ECS PKCS7 assertion for an M2M access token
+      description: >-
+        Authentication is carried by the required client assertion and credential
+        name in the form body. A real positive test requires an actual ECS identity
+        signature. An HTML or WAF response does not establish OAuth success or an
+        expected authentication rejection. Never log the assertion or full token.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - grant_type
+                - client_id
+                - client_assertion_type
+                - client_assertion
+                - application_federated_credential_name
+                - scope
+              properties:
+                grant_type:
+                  type: string
+                  enum: [client_credentials]
+                client_id:
+                  type: string
+                  minLength: 1
+                  description: ClientId of the actual selected M2M application.
+                client_assertion_type:
+                  type: string
+                  enum:
+                    - urn:cloud:idaas:params:oauth:client-assertion-type:pkcs7-bearer
+                client_assertion:
+                  type: string
+                  minLength: 1
+                  writeOnly: true
+                  description: Single-line base64 ECS PKCS7 signature without PEM delimiters.
+                application_federated_credential_name:
+                  type: string
+                  minLength: 1
+                  description: Actual credential name bound to the selected application.
+                scope:
+                  type: string
+                  minLength: 1
+                  description: Resource-server scope authorized for the selected client.
+      responses:
+        "200":
+          description: JSON response containing an access token.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [access_token]
+                properties:
+                  access_token:
+                    type: string
+                    minLength: 1
+                  token_type:
+                    type: string
+                  expires_in:
+                    type: integer
+        "400":
+          description: OAuth request or assertion validation rejected.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OAuthError"
+        "401":
+          description: Client or assertion authentication rejected.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OAuthError"
+        default:
+          description: >-
+            Preserve the actual error. Other status codes and infrastructure
+            failures are not proof of the expected invalid-signature rejection.
+components:
+  schemas:
+    OAuthError:
+      type: object
+      properties:
+        error:
+          type: string
+        error_description:
+          type: string
