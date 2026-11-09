@@ -46,6 +46,15 @@ npx skills add <path>/alibabacloud-aiops-skills/skills/<skill-name>
 
 ```
 
+### 使用 Neotask 安装
+
+已上架 [Neotask Construct](https://construct.neotask.ai/u/alibaba-cloud) 的 Skills 可通过 Neotask CLI 按名称安装：
+
+```bash
+# 安装单个 Skill，例如 alibabacloud-cli-guidance
+neotask construct install alibabacloud-cli-guidance
+```
+
 ## 认证与配置
 使用阿里云产品相关的 Skills 需要配置认证信息。支持以下认证方式：
 
