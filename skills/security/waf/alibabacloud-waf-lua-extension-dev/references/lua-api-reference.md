@@ -241,7 +241,7 @@ All interfaces return an empty string `""` on failure (except integer return val
 
 | API | Input | Output | Description |
 | --- | --- | --- | --- |
-| `aliwaf.func.punish()` | none | none | Applies the preselected action to the current request; the action mode currently supports "block" only. |
+| `aliwaf.func.punish(desc?)` | optional `desc: string` | none | Applies the preselected action to the current request; the action mode currently supports "block" only. The optional `desc` is passed through to the log's `"desc"` field (max 64 bytes; excess is truncated by UTF-8 encoding). |
 | `aliwaf.func.is_last_fragment_arrived()` | none | `boolean` | Whether the request body has been fully received |
 | `aliwaf.func.is_request_body_discarded()` | none | `boolean` | Whether the request body was truncated due to the size limit (128KB) |
 | `aliwaf.func.wait_request_body()` | none | none | Tells the framework to wait until the body is fully received, then re-executes the script |

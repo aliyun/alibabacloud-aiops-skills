@@ -50,7 +50,8 @@ end
 
 local token = aliwaf.req.get_arg("token")
 if token ~= expected then
-  aliwaf.func.punish()
+  -- Optional desc: passed through to the log's "desc" field (max 64 bytes, truncated by UTF-8)
+  aliwaf.func.punish("token mismatch")
 end
 ```
 

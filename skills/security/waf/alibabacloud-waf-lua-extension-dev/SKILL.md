@@ -106,7 +106,7 @@ The platform exposes APIs only under the `aliwaf` namespace; full signatures and
 
 - `aliwaf.req.*` — request reading (method, URI, domain, query, args, cookies, headers, body). Returns an empty string `""` when a field does not exist.
 - `aliwaf.util.*` — encoding/hashing/crypto helpers (base64, hex, URI escape, md5, sha256, crc32, evp encrypt/decrypt, ES256 sign/verify, millisecond timestamp). Returns `""` on failure (except `crc32` / `get_current_ms` / `es256_verify`).
-- `aliwaf.func.*` — business helpers: `punish()` applies the preconfigured action (currently block only), plus the body-reception functions used in the flow below.
+- `aliwaf.func.*` — business helpers: `punish()` applies the preconfigured action (currently block only); it optionally takes a `desc` string passed through to the log's `"desc"` field (max 64 bytes, truncated by UTF-8 encoding), plus the body-reception functions used in the flow below.
 
 **Body handling must follow the three-step flow** — (1) if `is_last_fragment_arrived()` is false, call `wait_request_body()` and return so the framework re-executes the script after the body fully arrives; (2) if `is_request_body_discarded()` is true, the body was truncated over the size limit — give up the action; (3) only then call `get_body()`. Missing any step may read an incomplete or empty body. The complete code pattern is in [references/examples.md](references/examples.md) ("Standard Pattern for Request Body Handling").
 
