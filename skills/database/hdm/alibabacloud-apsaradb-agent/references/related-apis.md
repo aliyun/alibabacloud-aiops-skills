@@ -23,17 +23,22 @@ Official documentation: [GetYaoChiAgent](https://help.aliyun.com/zh/das/develope
 | `Query` | `--query` | string | Yes | Natural-language request; include product, region, resource ID, and time range when relevant |
 | `SessionId` | `--session-id` | UUID string | No | Omit on the first turn; reuse the returned value for related follow-ups |
 | `Source` | `--source` | string | No | Select the matching known-product route; RDS and generic consultation use `yaochi-console` |
-| `ExtraInfo` | `--extra-info` | JSON string | No | The script requires a JSON object and always merges `{"mode":"readonly"}` into it |
+| `ExtraInfo` | `--extra-info` | JSON string | No | The script requires a JSON object and passes explicit `{"mode":"readonly"}` through unchanged |
 
-The deployed request contract uses console source names. Prefer the exact matching product route; use `yaochi-console` only for RDS, an unknown product, or genuinely generic consultation. Do not shorten or invent a route.
+Pass the canonical console routes below to the helper. It validates the route locally with `--cli-dry-run` before any agent request. Plugins that accept console names retain them; when the plugin explicitly rejects a source enum, the helper probes an explicit equivalent short name (`yaochi`, `polardb`, `tair`, `mongodb`, `lindorm`, `polarx`, or `dbs`). Only a successful local probe selects that alias. The canonical route still controls operation approval. Follow-ups use the same canonical route and returned SessionID; do not update plugins during a conversation. Unmapped routes, including `polardb-pg-console`, must be accepted as-is or fail with a compatibility error; they never fall back to a different product. Do not shorten or invent routes manually.
 
 The current DAS plugin does not expose image input, so the bundled script does not accept image keys.
 
 ## Readonly Contract
 
-`ExtraInfo.mode == "readonly"` asks the service to filter write tools and block write APIs, and to omit the `humanConfirm` tool. The script always sends this mode and rejects any other `mode` value. Classification on the service side is based on API names, and some auxiliary tools are passed through, so describe readonly as the request contract rather than a universal guarantee. If a `humanConfirm` UI call still arrives, the script reports `[ReadonlyViolation]`, makes no confirmation call, and exits nonzero.
+The helper uses the standard session when no mode is supplied. Explicit
+`ExtraInfo.mode == "readonly"` asks the service to filter write tools for
+read-only requests. It is not a universal guarantee about every auxiliary
+tool. In either mode, a confirmation card without a matching approved plan
+does not receive a callback. The approved operation path omits the mode
+and is limited to the exact local and server-side allowlists.
 
-Resource changes and confirmation execution are outside this public release. No local write-command fallback is provided.
+Only the operations listed in [the operation contract](related-commands.md#confirming-an-operation) may receive approval. No local write fallback is provided.
 
 ## Supported Source Routes
 
@@ -80,7 +85,7 @@ Field casing varies between the public OpenAPI schema, plugin wrapper, and backe
 | Reasoning delta | `ReasoningContent`, `reasoning_content` | Only write to stderr with `--debug` |
 | Conversation ID | `SessionId`, `session_id`, `sessionId` | Write as `[SessionID] ...` on stderr |
 | Tool calls | `FunctionCall`, `function_call` | Debug progress only |
-| UI calls | `UiFunctionCall`, `ui_function_call` | `humanConfirm` is treated as a readonly violation and never approved |
+| UI calls | `UiFunctionCall`, `ui_function_call` | Readonly: violation, no callback. Operation: check against the exact approved plan before sending a decision |
 | Sub-agent calls | `SubAgentCall`, `sub_agent_call` | Debug progress only |
 | Request ID | `RequestId`, `requestId` | Include in structured errors when available |
 | Heartbeat | `heartbeat` | Ignore when no content is present |
@@ -105,3 +110,15 @@ Use `scripts/call_apsaradb_agent.sh` instead of assembling this command manually
 ## Secrets
 
 Passwords, tokens, AccessKeys, credentials, private keys, and other secrets must not enter `Query`, `ExtraInfo`, local command arguments, logs, or artifacts. The script rejects queries and metadata that appear to contain such values. Perform secret-bearing changes and connection tests only through the Alibaba Cloud console or another secure secret-entry channel.
+
+## CreateYaoChiAgentConfirm
+
+Use the official DAS `create-yao-chi-agent-confirm` plugin command in the helper.
+The callback uses the pending card's `ConfirmationId` and originating stream
+`SessionId`, with the same profile, endpoint, and versioned User-Agent as the
+query. The boolean `Approved` records the decision. Do not send `ToolArgs`.
+The response must echo the ID and decision; it does not prove the operation
+succeeded. Read the original stream to its terminal event and verify the
+resource state with a separate readonly request.
+
+[Official DAS OpenAPI catalog](https://api.aliyun.com/document/DAS)

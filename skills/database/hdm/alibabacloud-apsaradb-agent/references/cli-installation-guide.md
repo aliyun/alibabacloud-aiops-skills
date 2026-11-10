@@ -2,7 +2,7 @@
 
 Complete guide for installing and configuring Aliyun CLI.
 
-> **Aliyun CLI 3.3.3+**: Supports installing and using all published Alibaba Cloud product plugins. Make sure to upgrade to 3.3.3 or later for full plugin ecosystem coverage.
+> **Aliyun CLI 3.5.0+**: Required by the current DAS plugin. Verify both agent and confirmation help commands before use.
 
 ## Installation
 
@@ -16,7 +16,7 @@ One command to install or update — works on both macOS and Linux, auto-detects
 
 After installation, verify:
 ```bash
-aliyun version   # should be >= 3.3.3
+aliyun version   # should be >= 3.5.0
 ```
 
 ### macOS — Homebrew (Alternative)
@@ -73,9 +73,11 @@ aliyun version
 Once the CLI is at version 3.3.5 or newer, routine updates can use the built-in self-update subcommand instead of re-running the install script:
 
 ```bash
-aliyun upgrade
+aliyun upgrade --yes
 aliyun version
 ```
+
+The authorized Skill setup helper automatically attempts this update once when the active CLI is below 3.5.0, then rechecks the version before preparing DAS. If the update fails or the active CLI remains too old, it reports an environment error. `--check-only` never upgrades software. The helper uses the existing CLI through PATH and does not replace or bypass platform wrappers.
 
 ## Configuration
 
