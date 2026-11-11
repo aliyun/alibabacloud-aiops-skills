@@ -89,9 +89,8 @@ def build_user_agent() -> str:
         raise SkillIdentityError("Cannot read references/manifest.json; restore the skill manifest before retrying.") from exc
     version = manifest.get("version") if isinstance(manifest, dict) else None
     if (not isinstance(version, str)
-            or not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?", version)
-            or manifest.get("name") != "alibabacloud-flink-sql-skill"):
-        raise SkillIdentityError("Invalid skill name or version in references/manifest.json; repair it before retrying.")
+            or not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?", version)):
+        raise SkillIdentityError("Invalid skill version in references/manifest.json; repair it before retrying.")
     session_id = os.environ.get("SKILL_SESSION_ID", "")
     if not re.fullmatch(r"[0-9a-f]{32}", session_id):
         raise SkillIdentityError("Set SKILL_SESSION_ID to one 32-character lowercase hexadecimal ID per Agent session.")

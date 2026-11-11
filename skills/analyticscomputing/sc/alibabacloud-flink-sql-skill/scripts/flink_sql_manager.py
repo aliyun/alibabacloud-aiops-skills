@@ -22,11 +22,12 @@ Lifecycle:
   Operate              start_job, get_job, stop_job, create_savepoint ...
   Diagnose             diagnose_job, get_start_log, get_events, flink_api_proxy ...
   Historical Metrics   get_metric_dashboard, get_metric_data
+  Operator observing   get_observable_operators, get_operator_observing, start_operator_observing
   Git                  git_init, git_sync (automatically synchronizes Deployment mutations when configured)
 
 Authentication:
   Uses the Alibaba Cloud default credential chain (RAM Role, CLI profile, and so on)
-  Historical Metrics use a user-provided VVP Cookie (standard input or VVP_COOKIE)
+  Historical Metrics and operator observing use a user-provided VVP Cookie (standard input or VVP_COOKIE)
 
 Examples:
   # Save one default scope for the first time (without credentials)
@@ -57,6 +58,7 @@ Examples:
     import sql_development
     import job_operations
     import metric_history
+    import operator_observing
     import session_clusters
     import sql_extensions
     import sql_runtime_resources
@@ -66,6 +68,7 @@ Examples:
     sql_development.register(subparsers)
     job_operations.register(subparsers)
     metric_history.register(subparsers)
+    operator_observing.register(subparsers)
     session_clusters.register(subparsers)
     sql_extensions.register(subparsers)
     sql_runtime_resources.register(subparsers)

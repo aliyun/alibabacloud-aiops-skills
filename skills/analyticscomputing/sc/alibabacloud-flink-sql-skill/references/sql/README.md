@@ -5,7 +5,10 @@ Read one or a few topics appropriate to the current lifecycle stage; do not load
 - First job or end-to-end example: [quickstart.md](quickstart.md)
 - Event time, state, Checkpoints, Savepoints, and job resources: [concepts.md](concepts.md)
 - DDL/DML, windows, Joins, aggregations, deduplication, Watermarks, and tuning: [sql-development.md](sql-development.md)
+- Delta Query, Fluss indexes, Delta Join/Aggregate SQL, and runtime tuning: [delta-query-knowledge.md](delta-query-knowledge.md)
+- SinkUpsertMaterializer (SUM), Changelog ordering, and safe disabling conditions: [sink-upsert-materializer.md](sink-upsert-materializer.md)
 - Source/Sink options for Kafka, MySQL CDC, Hologres, Paimon, and others: [connectors.md](connectors.md)
+- AI model DDL, inference, text and vector functions, caching, and multimodal processing: [ai-functions.md](ai-functions.md)
 - Mapping between VVR and Apache Flink versions: [engine-versions.md](engine-versions.md)
 
 ## Required Checks When Generating SQL

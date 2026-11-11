@@ -108,6 +108,12 @@ Notes:
 
 Note: `generate_resource_plan` is asynchronous.
 
+## Operator Observing
+
+- `get_observable_operators`
+- `get_operator_observing`
+- `start_operator_observing`
+
 ## Session Clusters (SQL Development/Test Execution Environments)
 
 - `create_session_cluster`

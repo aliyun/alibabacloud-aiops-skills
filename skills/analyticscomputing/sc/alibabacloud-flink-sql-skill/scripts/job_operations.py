@@ -4,11 +4,13 @@
 from client import (
     add_common_args,
     call_api,
+    error_response,
     get_client,
     output,
     require_args,
     require_confirmation,
     runtime_options,
+    success_response,
 )
 from git_sync import (
     api_result_data,
@@ -864,6 +866,23 @@ def cmd_flink_api_proxy(args):
         headers,
         runtime_options(),
     )
+    if getattr(args, "save_to", None) and api_result_succeeded(result):
+        import hashlib
+        from pathlib import Path
+
+        content = api_result_data(result)
+        if not isinstance(content, str):
+            return output(error_response("flink_api_proxy", "DownloadError", "The proxy response is not a text file.", result.get("request_id", "")), args.output)
+        path = Path(args.save_to).expanduser().resolve()
+        raw = content.encode("utf-8")
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with path.open("xb") as stream:
+                stream.write(raw)
+        except OSError:
+            return output(error_response("flink_api_proxy", "DownloadError", "Cannot create the output file; check the path and permissions, and use a filename that does not exist.", result.get("request_id", "")), args.output)
+        result = success_response("flink_api_proxy", {"file": str(path), "bytes": len(raw),
+                                  "sha256": hashlib.sha256(raw).hexdigest()}, result.get("request_id", ""))
     output(result, args.output)
 
 
@@ -1123,6 +1142,7 @@ def register(subparsers):
 
     def _flink_proxy_args(p):
         p.add_argument("--flink_api_path", required=True, help="Flink REST API path")
+        p.add_argument("--save_to", help="Save the raw text response to a new local file; return its path, byte count, and SHA-256")
         p.add_argument(
             "--resource_type",
             required=True,

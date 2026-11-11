@@ -1,7 +1,7 @@
 ---
 name: alibabacloud-flink-sql-skill
 description: >
-  Manage the full lifecycle of Alibaba Cloud Realtime Compute for Apache Flink SQL: analyze schemas, author and validate SQL, manage Drafts, Deployments, Jobs, Savepoints, Session Clusters, Catalogs, Connectors, UDFs, variables, and deployment targets, synchronize configuration to Git, and troubleshoot logs, Metrics, Checkpoints, exceptions, plans, and backpressure. Use when the user asks about Alibaba Cloud Flink, VVR, VVP, Flink SQL, its job lifecycle, or troubleshooting. Operate the platform through the Python CLI; historical Metrics use a user-supplied VVP Cookie. Verify scope and authentication before platform operations. High-risk actions usually require confirmation; explicit confirmation for the resolved target in the same request satisfies the gate.
+  Manage the full lifecycle of Alibaba Cloud Realtime Compute for Apache Flink SQL: analyze schemas, author and validate SQL, manage Drafts, Deployments, Jobs, Savepoints, Session Clusters, Catalogs, Connectors, UDFs, variables, and deployment targets, synchronize configuration to Git, and troubleshoot logs, Metrics, Checkpoints, exceptions, plans, and backpressure. Use when the user asks about Alibaba Cloud Flink, VVR, VVP, Flink SQL, its job lifecycle, or troubleshooting. Operate the platform through the Python CLI; historical Metrics and operator observing use a user-supplied VVP Cookie. Verify scope and authentication before platform operations. High-risk actions usually require confirmation; explicit confirmation for the resolved target in the same request satisfies the gate.
 metadata:
   allowed-tools: Bash Read WebFetch WebSearch
 ---
@@ -46,9 +46,9 @@ If the workspace, namespace, or region is missing, follow [references/configurat
 
 For local-only SQL design, authoring, or explanation, complete the current stage without blocking on platform configuration. Apply the gate when entering cloud validation or any later stage.
 
-Historical Metrics use separate Cookie authentication and are not gated by the SDK credential check.
+Historical Metrics and operator observing use separate Cookie authentication and are not gated by the SDK credential check.
 
-Always use real resource identifiers. When workspace, namespace, or region is missing, use the first-time initialization flow above. When a Draft ID, Deployment ID, or Job ID is missing, obtain it from user-provided information or a read-only query. Never call an API with placeholder IDs. Other than a user-provided Cookie for historical Metrics, do not accept AccessKey IDs, AccessKey secrets, tokens, or passwords. Never echo or commit credentials.
+Always use real resource identifiers. When workspace, namespace, or region is missing, use the first-time initialization flow above. When a Draft ID, Deployment ID, or Job ID is missing, obtain it from user-provided information or a read-only query. Never call an API with placeholder IDs. Other than a user-provided Cookie for historical Metrics or operator observing, do not accept AccessKey IDs, AccessKey secrets, tokens, or passwords. Never echo or commit credentials.
 
 ## Safety Gate
 

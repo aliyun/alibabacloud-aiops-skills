@@ -53,7 +53,7 @@ The current skill does not maintain multiple named configurations. Command argum
 
 ## Skill Identity and Session
 
-Before cloud operations (including `config_doctor` and Cookie-based Metrics), read this skill's [manifest.json](manifest.json). It is the source of the skill name and version. If it is missing, unreadable, or invalid, stop and restore the manifest; never guess a version or fall back to an unversioned User-Agent.
+Before cloud operations (including `config_doctor` and Cookie-based Metrics), read this skill's [manifest.json](manifest.json). It is the source of the skill version. The skill name is fixed in `DEFAULT_USER_AGENT`; the manifest's `name` field is optional metadata. If the manifest is missing, unreadable, or has an invalid version, stop and restore it; never guess a version or fall back to an unversioned User-Agent.
 
 Generate `SKILL_SESSION_ID` once per Agent session, unless that session already has a valid ID:
 

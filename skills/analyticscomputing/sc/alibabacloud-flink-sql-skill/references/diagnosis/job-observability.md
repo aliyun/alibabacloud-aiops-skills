@@ -10,6 +10,7 @@ Read after the [diagnosis entry point](README.md) identifies the required eviden
 - [Job Logs](#job-logs): runtime logs, startup logs, and exceptions.
 - [Platform Events and Diagnosis](#platform-events-and-diagnosis), [Checkpoints and Savepoints](#checkpoints-and-savepoints).
 - [Backpressure and Watermarks](#backpressure-and-watermarks), [Flame Graphs and Thread Dumps](#flame-graphs-and-thread-dumps).
+- [Operator Observing](#operator-observing): sample operator records and download inspection logs.
 - [Lineage](#lineage), [ResourcePlan](#resourceplan).
 
 ## Query Preparation and Entry Points
@@ -508,6 +509,20 @@ python3 scripts/flink_sql_manager.py flink_api_proxy \
 Distinguish input and output Watermarks and their owning Subtasks, and interpret actual fields. Convert ordinary Watermark timestamps using their units; mark sentinel values such as `Long.MIN_VALUE` as uninitialized rather than formatting them as normal business dates.
 
 These APIs provide a sample or snapshot. Query reported historical Metrics when a trend is required; one value cannot prove persistent backpressure or a stalled Watermark.
+
+## Operator Observing
+
+Use `get_observable_operators` to obtain supported operator IDs. These commands reuse the [historical Metric Cookie flow](#specified-historical-time-and-time-range). Pass `--console_url <https-origin>` instead of `-r` for an internal or pre-release VVP console.
+
+```bash
+python3 scripts/flink_sql_manager.py start_operator_observing \
+  -w <workspace> -n <namespace> --console_url <https-console-origin> \
+  --deployment_id <deployment-id> --job_id <job-uuid> \
+  --operator_ids <observable-operator-id> --timeout_seconds 60 --max_file_size 2mb \
+  --cookie_stdin --confirm
+```
+
+Read back with `get_operator_observing`, then download the target TMs' `inspect-*.out` logs using `flink_api_proxy --save_to <new-local-file>`. Check the operator, Subtasks, and actual time range in the logs; the size limit may end recording before the timeout.
 
 ## Flame Graphs and Thread Dumps
 

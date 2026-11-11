@@ -9,7 +9,7 @@ import re
 import sys
 import warnings
 from urllib.error import HTTPError, URLError
-from urllib.parse import quote
+from urllib.parse import quote, urlencode, urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 from client import SkillIdentityError, add_common_args, build_user_agent, error_response, output, require_args, success_response
@@ -94,10 +94,19 @@ def unwrap(value, request_id=""):
 
 class ConsoleClient:
     def __init__(self, args, cookie):
-        for name in ("region_id", "workspace", "namespace"):
+        for name in ("workspace", "namespace"):
             if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_-]*", getattr(args, name) or ""):
                 raise MetricError(f"Invalid {name} format.", "ValidationError")
-        self.origin = f"https://flink-{args.region_id}.data.aliyun.com"
+        origin = getattr(args, "console_url", None)
+        if not origin:
+            if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_-]*", args.region_id or ""):
+                raise MetricError("Invalid region_id format.", "ValidationError")
+            origin = f"https://flink-{args.region_id}.data.aliyun.com"
+        parsed = urlsplit(origin)
+        if (parsed.scheme != "https" or not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9.-]*(?::443)?", parsed.netloc)
+                or parsed.path not in ("", "/") or parsed.query or parsed.fragment):
+            raise MetricError("console_url must be an HTTPS console origin without a path, credentials, or query.", "ValidationError")
+        self.origin = origin.rstrip("/")
         self.base = self.origin + f"/api/v2/namespaces/{args.namespace}"
         self.headers = {
             "Cookie": cookie, "workspace": args.workspace,
@@ -107,9 +116,9 @@ class ConsoleClient:
         }
         self.opener = build_opener(NoRedirect())
 
-    def request(self, path, body=None):
+    def request(self, path, body=None, root=False):
         self.headers["User-Agent"] = build_user_agent()
-        request = Request(self.base + path, headers=self.headers,
+        request = Request((self.origin if root else self.base) + path, headers=self.headers,
                           data=json.dumps(body).encode() if body is not None else None)
         try:
             with self.opener.open(request, timeout=30) as response:
@@ -172,6 +181,29 @@ def dashboard_panels(value):
     return panels
 
 
+def query_legacy_data(client, args):
+    query = args.query
+    if not query:
+        dashboard, _ = client.request("/metric/dashboard?language=zh-CN")
+        query = next((target.get("expr") for panel in dashboard_panels(dashboard)
+                      if panel["dashboard_id"] == args.dashboard_id and panel["panel_id"] == args.panel_id
+                      for target in panel["targets"] if target["refId"] == args.ref_id), None)
+    if not isinstance(query, str) or not query.strip():
+        raise MetricError("The selected Target has no PromQL expression; provide --query for the legacy fallback.")
+    variables = {"workspace": args.workspace, "namespace": args.namespace,
+                 "deploymentId": args.deployment_id, "jobId": args.job_id}
+
+    def replace_variable(match):
+        name = match.group(1) or match.group(2)
+        if name not in variables:
+            raise MetricError(f"Unresolved Metric variable {match.group(0)}; provide --query with rendered PromQL.")
+        return variables[name]
+
+    query = re.sub(r"\$(?:\{([^}]+)\}|([a-zA-Z_]\w*))", replace_variable, query)
+    params = urlencode({"query": query, "start": args.start_time, "end": args.end_time, "step": args.step})
+    return client.request(f"/metric/v1/namespaces/{args.namespace}/query?{params}", root=True)
+
+
 def query_data(client, args):
     if args.start_time < 0 or args.end_time <= args.start_time or args.step <= 0:
         raise MetricError("Provide a valid Unix-second time range and a step greater than zero.", "ValidationError")
@@ -183,7 +215,12 @@ def query_data(client, args):
         "dashboardId": args.dashboard_id, "queryParams": {"panelId": args.panel_id, "refId": args.ref_id},
         "variables": {"deploymentId": args.deployment_id, "jobId": args.job_id},
     }
-    data, request_id = client.request("/metric/data", body)
+    try:
+        data, request_id = client.request("/metric/data", body)
+        if not isinstance(data, dict) or data.get("resultType") != "matrix" or not isinstance(data.get("result"), list):
+            raise MetricError("The Metric response is not the expected time-series matrix.", request_id=request_id)
+    except MetricError:
+        data, request_id = query_legacy_data(client, args)
     if not isinstance(data, dict) or data.get("resultType") != "matrix" or not isinstance(data.get("result"), list):
         raise MetricError("The Metric response is not the expected time-series matrix.", request_id=request_id)
     series = []
@@ -242,15 +279,21 @@ def cmd_metric(args):
     output(redact(result, cookie) if cookie else result, args.output)
 
 
+def add_console_args(parser):
+    add_common_args(parser)
+    parser.add_argument("--cookie_stdin", action="store_true", help="Read the Cookie from standard input; defaults to VVP_COOKIE")
+    parser.add_argument("--console_url", help="HTTPS console origin; defaults to https://flink-<region>.data.aliyun.com")
+
+
 def register(subparsers):
     for name, help_text in (("get_metric_dashboard", "Get Job and historical Metric dashboard definitions"),
                             ("get_metric_data", "Query historical VVP Metrics with a Cookie")):
         parser = subparsers.add_parser(name, help=help_text)
-        add_common_args(parser)
+        add_console_args(parser)
         parser.add_argument("--deployment_id", required=True, help="Deployment ID")
         parser.add_argument("--job_id", required=name == "get_metric_data", help="Job UUID; dashboard queries use the latest streaming Job when omitted")
-        parser.add_argument("--cookie_stdin", action="store_true", help="Read the Cookie from standard input; defaults to VVP_COOKIE")
         if name == "get_metric_data":
+            parser.add_argument("--query", help="Rendered PromQL for the legacy GET fallback; defaults to the selected Target expression")
             parser.add_argument("--dashboard_id", required=True, help="Dashboard UID returned by the dashboard query")
             parser.add_argument("--panel_id", required=True, type=int, help="Panel ID returned by the dashboard query")
             parser.add_argument("--ref_id", required=True, help="Target refId returned by the dashboard query")
