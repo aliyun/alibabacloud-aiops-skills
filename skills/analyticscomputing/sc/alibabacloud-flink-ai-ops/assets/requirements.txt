@@ -1,0 +1,4 @@
+alibabacloud-ververica20220718==1.14.0
+alibabacloud-tea-openapi==0.4.5
+darabonba-core==1.0.8
+alibabacloud-credentials==1.0.8
