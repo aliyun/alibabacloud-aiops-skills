@@ -1,5 +1,7 @@
 #!/bin/bash
 # Shared helpers for live-debug CMS scripts.
+# Dependencies: Bash >=3.2, Python >=3.8 (stdlib only), Aliyun CLI >=3.3.15
+# with the cms2 plugin. Query scripts additionally require the sls command.
 # Source this file:  source "$(dirname "$0")/common.sh"
 
 # Resolve REGION_ID from LIVE_DEBUG_REGION_ID, then optional name suffixes.
@@ -40,18 +42,32 @@ resolve_cms2() {
   fi
 }
 
-# Resolve the --user-agent flag into the UA_ARGS array (skill Observability rule).
-# Priority:
-#   1. LIVE_DEBUG_USER_AGENT  - full user-agent string override
-#   2. LIVE_DEBUG_SESSION_ID  - 32-hex session id, expanded into the skill template
-# Empty when neither is set (safe expansion: ${UA_ARGS[@]+"${UA_ARGS[@]}"}).
+# Resolve the manifest version and workflow session before any cloud API call.
+# The agent generates LIVE_DEBUG_SESSION_ID once when entering this skill.
 resolve_user_agent() {
-  UA_ARGS=()
-  if [ -n "${LIVE_DEBUG_USER_AGENT:-}" ]; then
-    UA_ARGS=(--user-agent "$LIVE_DEBUG_USER_AGENT")
-  elif [ -n "${LIVE_DEBUG_SESSION_ID:-}" ]; then
-    UA_ARGS=(--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-livedebug/${LIVE_DEBUG_SESSION_ID}")
+  local manifest_path
+  manifest_path="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/references/manifest.json"
+  SKILL_VERSION=$(python3 - "$manifest_path" <<'PY'
+import json
+import sys
+
+try:
+    with open(sys.argv[1], encoding="utf-8") as handle:
+        manifest = json.load(handle)
+    version = manifest.get("version") if isinstance(manifest, dict) else None
+    if not isinstance(version, str) or not version.strip() or any(c.isspace() for c in version):
+        raise ValueError("version must be a non-empty string without whitespace")
+    print(version)
+except (OSError, ValueError) as exc:
+    print(f"Error: cannot read skill manifest version: {exc}", file=sys.stderr)
+    sys.exit(1)
+PY
+  ) || return 1
+  if [[ ! "${LIVE_DEBUG_SESSION_ID:-}" =~ ^[a-f0-9]{32}$ ]]; then
+    echo "Error: LIVE_DEBUG_SESSION_ID must be exactly 32 lowercase hexadecimal characters; generate it once per skill workflow." >&2
+    return 1
   fi
+  UA_ARGS=(--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-livedebug/skill-version/${SKILL_VERSION}/${LIVE_DEBUG_SESSION_ID}")
 }
 
 # Build common CMS2 flags (region/endpoint/user-agent) into the CMS2_ARGS array.
@@ -59,13 +75,13 @@ resolve_user_agent() {
 # machine-level default region of the Aliyun CLI config.
 resolve_cms2_args() {
   CMS2_ARGS=()
-  resolve_user_agent
+  resolve_user_agent || return 1
   if [ -n "${LIVE_DEBUG_CMS_ENDPOINT:-}" ]; then
-    CMS2_ARGS+=(--endpoint "$LIVE_DEBUG_CMS_ENDPOINT" ${UA_ARGS[@]+"${UA_ARGS[@]}"})
+    CMS2_ARGS+=(--endpoint "$LIVE_DEBUG_CMS_ENDPOINT" "${UA_ARGS[@]}")
     return 0
   fi
   resolve_region_id || return 1
-  CMS2_ARGS+=(--region "$REGION_ID" ${UA_ARGS[@]+"${UA_ARGS[@]}"})
+  CMS2_ARGS+=(--region "$REGION_ID" "${UA_ARGS[@]}")
 }
 
 # One-shot setup used by every CMS script.

@@ -16,19 +16,17 @@ metadata:
 ## Prerequisite Check
 
 1. **Check `aliyun` exists** - `which aliyun` (macOS/Linux) or `where aliyun` (Windows).
- - Not found -> ask the user to install the aliyun CLI first: <https://help.aliyun.com/document_detail/121541.html>. Stop and wait.
+ - Not found -> guide the user through [Aliyun CLI Installation](#aliyun-cli-installation) below. After installation, re-check `aliyun version` before continuing.
 
 2. **Check CLI version** - run `aliyun version`. Minimum required: **3.3.15** (see `compatibility` in frontmatter).
 
- > WARNING: Compare version segments as **integers** (semver): 3.3.4 < 3.3.15 because 4 < 15.
- > Shell verification: `printf '%s\n' "3.3.15" "$(aliyun version)" | sort -V | head -1`
- > If the output equals the current version, the requirement is NOT met.
+ > Compare version segments as **integers** (semver): 3.3.4 < 3.3.15 because 4 < 15. Version **3.3.15 itself meets** the minimum requirement.
 
  - Version OK -> go to step 3.
  - Version too old or unrecognized ->
- 1. Run `aliyun upgrade --help` to test whether the `upgrade` subcommand exists.
+ 1. For Homebrew installations, run `brew update` and then `brew upgrade aliyun-cli`, then re-check `aliyun version`. For other installations, run `aliyun upgrade --help` to test whether the `upgrade` subcommand exists.
  - Available -> run `aliyun upgrade -y`, then re-check `aliyun version`.
- - Not available (or the upgrade fails) -> ask the user to reinstall/upgrade the CLI manually from the official guides: install <https://help.aliyun.com/zh/cli/install-cli>, update <https://help.aliyun.com/zh/cli/update-cli>. **Do NOT pipe remote install scripts directly into a shell interpreter** - download the installer, inspect it, then run it deliberately, or use the OS package manager. Stop and wait.
+ - Not available (or the upgrade fails) -> guide the user to reinstall from [Aliyun CLI Installation](#aliyun-cli-installation) or follow the [official installation/update guide](https://www.alibabacloud.com/help/zh/cli/install-update-alibaba-cloud-cli). **Do NOT pipe remote install scripts directly into a shell interpreter** - download the installer, inspect it, then run it deliberately, or use the OS package manager. Stop and wait if installation remains unresolved.
  2. If the upgrade succeeded -> go to step 3.
 
 3. **Check `cms2` plugin** - run `aliyun cms2 apm service-task --help`.
@@ -43,6 +41,32 @@ metadata:
 
 4. **Check SLS** - run `aliyun sls --help` (required to query capture results).
 
+Bundled scripts require **Bash 3.2+**, **Python 3.8+** (standard library only), and **Aliyun CLI 3.3.15+** with the `cms2` and `sls` commands checked above. Check these with `bash --version`, `python3 --version`, and `aliyun version`; no pip packages are needed. Direct CLI commands can be used without the scripts.
+
+## Aliyun CLI Installation
+
+Use the [official installation/update guide](https://www.alibabacloud.com/help/zh/cli/install-update-alibaba-cloud-cli) and select the package for the target operating system and architecture:
+
+| Platform | Installation |
+| --- | --- |
+| macOS (Homebrew installed) | Run `brew install aliyun-cli`. |
+| macOS (without Homebrew) | Download the [official PKG installer](https://aliyuncli.alicdn.com/aliyun-cli-latest.pkg), open it, and follow the installer. |
+| Linux AMD64 | Download the [AMD64 TGZ](https://aliyuncli.alicdn.com/aliyun-cli-linux-latest-amd64.tgz) and follow the extraction steps below. |
+| Linux ARM64 | Download the [ARM64 TGZ](https://aliyuncli.alicdn.com/aliyun-cli-linux-latest-arm64.tgz) and follow the extraction steps below. |
+| Windows AMD64 | Download the [Windows ZIP](https://aliyuncli.alicdn.com/aliyun-cli-windows-latest-amd64.zip), extract `aliyun.exe` into `C:\AliyunCLI`, add that directory to the user `Path`, and reopen the terminal. |
+
+For Linux, run `uname -m` to choose the architecture (`x86_64` = AMD64; `aarch64` / `arm64` = ARM64). For example, on AMD64:
+
+```bash
+curl -fSL --connect-timeout 10 --max-time 120 https://aliyuncli.alicdn.com/aliyun-cli-linux-latest-amd64.tgz -o aliyun-cli-linux-latest.tgz
+tar xzvf aliyun-cli-linux-latest.tgz
+sudo mv ./aliyun /usr/local/bin/
+```
+
+For ARM64, replace `amd64` with `arm64` in the download URL. Windows ARM64 and 32-bit systems are unsupported.
+
+After installation, run `aliyun version` and require **3.3.15 or later**, then continue with the `cms2` plugin and SLS prerequisite checks above. Installing the base CLI does not replace those checks; configure credentials as described below.
+
 ## Credentials
 
 `aliyun cms2` and `aliyun sls` reuse the aliyun CLI credential system (`aliyun configure`).
@@ -52,48 +76,24 @@ Required RAM permissions - see [references/ram-policies.md](references/ram-polic
 
 ## Observability
 
-### User-Agent Template
+Before the first cloud API request, read [references/manifest.json](references/manifest.json) and require its non-empty string `version`. Use that exact version; if the manifest cannot be read or validated, stop before making cloud requests. Never guess a version or fall back to a hard-coded one.
 
-Every `aliyun` CLI command (`aliyun cms2`, `aliyun sls`) in this skill **MUST** include the `--user-agent` flag:
+On entry to this skill, generate one fresh random **32-character lowercase hexadecimal** session ID, for example with `openssl rand -hex 16`. Export it as `LIVE_DEBUG_SESSION_ID` for bundled scripts. Reuse it for every cloud request, retry, and script invocation in this workflow. Do not regenerate it between steps. When switching to another skill, use that skill's own name and a newly generated session ID; never inherit another skill's session or User-Agent. A new workflow, including re-entry after a skill switch, starts a new session even if an old environment variable is present.
+
+Every `aliyun` cloud API call in this skill, including CMS ServiceTask, service/workspace discovery, log-correlation discovery and SLS queries, must carry:
 
 ```text
---user-agent "AlibabaCloud-Agent-Skills/alibabacloud-livedebug/{session-id}"
+--user-agent "AlibabaCloud-Agent-Skills/alibabacloud-livedebug/skill-version/{version}/{session-id}"
 ```
 
-Replace `{session-id}` with the session identifier for the current workflow. The companion scripts append this automatically when `LIVE_DEBUG_SESSION_ID` is set.
-
-Example:
-
-```bash
-aliyun cms2 apm service-task list \
- --workspace agentloop-0a1b2c3d4e5f60718293a4b5c6d7e8f9 \
- --service-id 'ggxw4lnjuz@f2fd3a6265a254a052afb' \
- --type live_debug_log_probe \
- --region cn-hangzhou \
- --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-livedebug/3f2a8b1c4d5e6f709182a3b4c5d6e7f8"
-```
-
-### session-id Rule
-
-1. **Generate once** at the start of each skill-triggered workflow.
-2. **Format**: exactly **32 lowercase hexadecimal characters**, no hyphens, no prefix.
-3. **Reuse** the same `session-id` for **all** CLI commands within the same workflow so backend logs can be correlated across steps.
-4. **Do NOT** regenerate `session-id` between steps of the same request.
-5. **Generation** (pick one):
-
-```bash
-# Preferred
-openssl rand -hex 16
-
-# Alternative
-uuidgen | tr -d '-' | tr '[:upper:]' '[:lower:]'
-```
+Substitute the manifest version and current session ID literally when generating direct CLI commands. Bundled scripts read the manifest and `LIVE_DEBUG_SESSION_ID` and inject this flag automatically. Local commands (`version`, `configure`, `plugin`, `upgrade`, `--help`) are excluded. Do not persist the User-Agent in global CLI configuration or use an arbitrary override.
 
 ## Global Conventions
 
 > **Always run `aliyun cms2 apm service-task <subcommand> --help` first** to get the full flag list and examples.
 
-- **Read `.arms-info` first**: the target workspace / serviceId / regionId / slsProject / targetIp are read from the `.arms-info` file in the project root (`key=value`); ask the user only for missing values. Before calling any script, export `LIVE_DEBUG_REGION_ID` (and `LIVE_DEBUG_SLS_PROJECT`) from it - do not rely on the local `aliyun configure` default region.
+- **Read `.arms-info` first**: read workspace / serviceId / regionId / targetIp from the project-root file (`key=value`); ask only for missing target values. Export `LIVE_DEBUG_REGION_ID`, `LIVE_DEBUG_WORKSPACE`, and `LIVE_DEBUG_SERVICE_ID` for scripts. Discover the current SLS destination from the application's log correlation binding; a saved `slsProject` is only a hint. Do not rely on the CLI default region.
+- **Discover application logs**: before querying captures, use `aliyun cms2 apm log-correlation get --workspace <workspace> --service-id <serviceId> --region <cms-region> -o json` with the workflow User-Agent. Parse `data.record.recordContent` (a JSON string) for `project`, `storeName`, and `regionId`; use these as the SLS project, logstore, and region. There is no fixed default logstore. If the binding is missing, malformed, or inaccessible, report that result and ask for a confirmed target; never guess one or create/change the binding as part of diagnosis. Read the query workflow in [references/live-debug.md](references/live-debug.md) for script usage.
 - **Workspace discovery**: when no workspace is given by `.arms-info` or the user, run `aliyun cms2 workspace list` and pick an existing workspace that matches the naming the user requires (e.g. `agentloop-{32 hex chars}`). **Never invent a workspace ID**, and never pass a workspace format the user has explicitly forbidden to `--workspace`.
 - **Resolve serviceId by name when needed**: if the user only knows a service name / tag, run `aliyun cms2 apm service list` and filter by `serviceName` to resolve the `serviceId` first. If multiple candidates match, list them and ask the user to confirm - do not pick one silently.
 - **Clarify vague requests before acting**: if the request lacks the application language (Java vs Python - the supported capabilities differ), region, workspace, target service, or the diagnostic goal (e.g. dynamic logging vs snapshot vs thread/memory info), ask for the missing pieces first. Never guess or fabricate a workspace / serviceId / taskId, and never create or delete tasks based on guessed targets.
