@@ -1,0 +1,3 @@
+# No third-party dependency: the entry script uses the Python standard library only
+# and reaches the cloud through the Alibaba Cloud CLI (plugin mode), which the
+# evaluation sandbox already provides.
