@@ -1,145 +1,30 @@
 ---
 name: alibabacloud-sls-data-agent
-description: |
-  Invoke SLS DataAgent to autonomously perform data acquisition, processing, analysis, and visualization for Alibaba Cloud SLS (Simple Log Service). Acts as a fully automated data analyst — ask a question in natural language, get structured conclusions and charts.
-  Use when the user asks about: 数据分析, 取数, 数据查询, 日志分析, SLS, 可视化, 图表, 数据洞察, data analysis, DataAgent, 全自动数据分析师.
+description: Select this Skill for SLS log analysis, including clarification of missing model, resource or time parameters, Context/Source Model definition or readiness reviews, and DataAgent Chat requests, including interaction or recovery reviews of recorded DataAgent Chat results; load it before the first reply. Query and analyze SLS logs with Source Models or Context Models, or delegate multi-turn analysis and business model management to SLS DataAgent Chat. Use when users request SLS log statistics, investigations or analysis through SLS models, ask a DataAgent to handle a task, continue its Chat, or handle its interactions and recovery. Do not select this Skill for retention changes, resource migration or archival, log collection setup, or product/API documentation lookup requests unless the user explicitly delegates that task to a DataAgent.
 ---
+# SLS Model Queries and DataAgent Chat
 
-# SLS DataAgent
+## Workflow selection
 
-SLS DataAgent is an AI assistant that **autonomously understands natural language** and
-**automatically completes data acquisition, processing, analysis, and visualization**. It acts as
-your "fully automated data analyst": you ask a question in natural language, and it fetches,
-cleans, analyzes the data, and returns conclusions and visualizations.
+| Scenario | Workflow |
+| --- | --- |
+| The user asks a DataAgent to handle the task or continue an existing Chat, or no Context Model/Source Model is selected and no Project/Logstore is identified in the current request or existing context (the default route) | [DataAgent Chat](references/data-agent-chat.md) |
+| Otherwise, the current request or existing context explicitly selects a Context Model/Source Model, or identifies the Project/Logstore to analyze | [Model queries](references/model-data-qa.md) |
 
-It is invoked through the SLS DataAgent OpenAPI; the session streams the analysis process and
-conclusions back over SSE.
+Keep the workflow selected by the table. If the DataAgent, model, or logstore information required by that workflow is missing or incomplete, consult [Resource information examples](references/target-configuration.md) to confirm or complete it. Skip that reference when the information is already clear and complete.
 
-## Capabilities
+For Chat, ask for an unknown Chat Region before discovering DataAgents; an empty candidate list does not select the Model queries workflow.
 
-- **Natural language understanding**: turn colloquial data questions into well-defined analysis tasks.
-- **Data acquisition**: automatically locate and pull relevant data (logs, metrics, etc.) within the SLS project.
-- **Data processing**: cleaning, aggregation, transformation.
-- **Data analysis**: statistics, trends, comparisons, anomalies / insights.
-- **Visualization**: generate charts and structured conclusion reports.
+## Runtime prerequisites
 
-## Digital Employee (agentId)
+- For CLI and Python prerequisites, dependency installation, and credential entry points, see [Installation and configuration](references/cli-installation-guide.md).
+- When checking authorization or handling permission errors, read [RAM permissions](references/ram-policies.md) and authorize the actual operations and resources. Ordinary queries do not require model-write permissions by default.
+- During diagnosis, keep the configured authentication and the operation’s confirmed region, endpoint and resource scope. Check only whether explicitly required environment variables are set; never enumerate the environment or display credential values, even masked. After an explicit permission denial, stop the denied operation and ask the user to resolve authorization for the reported action and resource before retrying it. If an opaque pagination cursor is rejected, ask for a valid replacement; never guess, clear or omit it to substitute another page. For other persistent failures, stop retrying. Use only a documented fallback applicable to the selected workflow and confirmed scope; otherwise report failure and end the request without offering another retry cycle.
 
-A session is handled by a "digital employee" (digital employee / agentId).
+## Request attribution
 
-- Generic and customizable: `--digital-employee <name>` > `SLS_DATA_AGENT_EMPLOYEE` env var > script default **`apsara-ops`**.
-- The console `assistantId` is the digital employee in use.
+Before this Skill's first cloud call in a conversation, run `python3 "<skill-dir>/scripts/_skill_user_agent.py" init` once. Retain its JSON and pass it unchanged in the per-call environment variable `ALIBABACLOUD_SLS_DATA_AGENT_SESSION` for every `chat.py` and `model_qa.py` invocation, including follow-ups and retries. Reuse it only for this Skill, installed directory and conversation.
 
-## Built-in Skill (capability routing)
+Each script invocation reads this Skill's [manifest](references/manifest.json) and uses its `version` with that binding. Missing or invalid attribution stops before cloud calls; never guess a version. On switching or returning to a Skill, use its own binding and reread its manifest.
 
-Use `--skill` to select a DataAgent built-in skill; omit it to use the general capability.
-
-| Skill ID | Description |
-|----------|-------------|
-| `builtin.sls.sls-sql-generation` | SQL generation |
-| `builtin.sls.spl-generation` | SPL generation |
-| `builtin.sls.sls-loongcollector` | LoongCollector ingestion ops |
-| `builtin.sls.sls-visualization` | Dashboard assistant |
-
-## Logstore context
-
-Use `--logstore` to specify the target logstore, giving the analysis an explicit data source scope.
-
-## Environment Variables
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `SLS_DATA_AGENT_PROJECT` | Yes | SLS project name (the scope; can also be passed via `--project`). |
-| `SLS_DATA_AGENT_REGION` | Yes | Region where the SLS project resides (e.g. `cn-shanghai`, `cn-beijing`). |
-| `SLS_DATA_AGENT_EMPLOYEE` | No | Digital employee name (default `apsara-ops`). |
-| `SLS_DATA_AGENT_LOGSTORE` | No | Default target logstore (can also be passed via `--logstore`). |
-| `SLS_DATA_AGENT_SKILL` | No | Built-in skill ID (e.g. `builtin.sls.sls-sql-generation`). Omit to use the general capability. |
-
-**Credentials** — uses the Alibaba Cloud Credentials SDK default chain (STS / RAM role / CLI profile
-`~/.aliyun/config.json` / env vars `ALIBABA_CLOUD_ACCESS_KEY_ID`+`ALIBABA_CLOUD_ACCESS_KEY_SECRET`).
-
-**Pre-flight check:**
-
-```bash
-missing=""
-[ -z "$SLS_DATA_AGENT_PROJECT" ] && missing="$missing SLS_DATA_AGENT_PROJECT"
-[ -z "$SLS_DATA_AGENT_REGION" ]  && missing="$missing SLS_DATA_AGENT_REGION"
-if [ -n "$missing" ]; then echo "ERROR: Missing required environment variables:$missing" >&2; exit 1; fi
-echo "OK: PROJECT=$SLS_DATA_AGENT_PROJECT REGION=$SLS_DATA_AGENT_REGION"
-```
-
-If a required value is empty, **stop and ask the user**; do not substitute a placeholder such as
-`example-project`.
-
-## Invocation
-
-**`--pipe` is mandatory**: it guarantees stdout emits the `THREAD` line and the
-`=== DATA AGENT ANSWER BEGIN/END ===` delimiters, so downstream can parse reliably.
-
-```bash
-pip3 install -r scripts/requirements.txt
-
-# First question (auto-creates a session; most queries need --logstore)
-python3 scripts/call_sls_data_agent.py \
-  --logstore my_logstore \
-  --question "<full data-analysis request>" --pipe
-
-# Follow-up (reuse the THREAD ID from the previous step to keep context)
-python3 scripts/call_sls_data_agent.py \
-  --thread "<thread_id>" --question "<follow-up>" --pipe
-
-# Specify a built-in skill
-python3 scripts/call_sls_data_agent.py \
-  --skill builtin.sls.sls-sql-generation \
-  --logstore my_logstore \
-  --question "number of error logs in the last 5 minutes" --pipe
-```
-
-Example output (pipe):
-
-```text
-THREAD: thread-abc123-xyz
-DATA_AGENT_URL: https://starops.console.aliyun.com/chat?threadId=thread-abc123-xyz&assistantId=apsara-ops
-=== DATA AGENT ANSWER BEGIN ===
-(analysis conclusion / visualization description)
-=== DATA AGENT ANSWER END ===
-```
-
-## Behavioral Notes
-
-1. A DataAgent call is a long task: a single session may trigger multi-step internal analysis and take several minutes; the default timeout is 30 minutes.
-2. Provide the full context in one go: SLS project, time range, target logstore/fields, the metrics to analyze, and the expected chart/conclusion form.
-3. **Always reuse `--thread` for follow-ups**, otherwise context and intermediate results are lost.
-4. **Always pass `--pipe`**: tool status and intermediate progress go to stderr; stdout keeps only the reusable thread id and the final answer.
-5. **Conclusions must be based on the real return between the `BEGIN` / `END` delimiters**: cite concrete data points, do not fabricate. If the answer is empty, retry once with the same `--thread`; if still empty, state plainly that DataAgent returned no valid data.
-
-## Troubleshooting
-
-1. **HTTP 401/403** — credentials did not resolve to an authorized identity. Confirm the default chain resolves valid credentials and that the identity is allowed to call the SLS DataAgent OpenAPI. See [references/ram-policies.md](references/ram-policies.md).
-2. **HTTP 404** — the digital employee (`--digital-employee`, default `apsara-ops`) or the SLS project (`SLS_DATA_AGENT_PROJECT`) does not exist. Verify both.
-3. **ConfigError: Missing required SLS DataAgent configuration** — one of `SLS_DATA_AGENT_PROJECT` / `SLS_DATA_AGENT_REGION` is empty.
-4. **CredentialError** — the default chain found no valid credential source.
-5. **Idle timeout** — no SSE event within `--idle-timeout` seconds. Increase the value if needed, or retry with the same `--thread`.
-6. **ModuleNotFoundError** — run `pip3 install -r scripts/requirements.txt` first.
-
-## API Surface
-
-The script calls the SLS DataAgent OpenAPI directly (ACS3-HMAC-SHA256 signing); the endpoint
-defaults to `starops.cn-beijing.aliyuncs.com` and can be overridden via `SLS_DATA_AGENT_ENDPOINT`:
-
-- Create a session (thread)
-- Start a conversation and stream the analysis process and conclusions (SSE)
-
-See [references/api-reference.md](references/api-reference.md) and
-[references/ram-policies.md](references/ram-policies.md) for details.
-
-## Observability
-
-Every HTTP request carries a `user-agent` header for tracing:
-
-```
-AlibabaCloud-Agent-Skills/alibabacloud-sls-data-agent/{session-id}
-```
-
-- `alibabacloud-sls-data-agent` — fixed skill identifier (matches the `name` field).
-- `{session-id}` — a 32-character hex string, read from the `SKILL_SESSION_ID` environment variable. If the env var is not set, the script falls back to generating `uuid.uuid4().hex`. The same session-id is shared across all requests in a single invocation (CreateThread + CreateChat), enabling correlation of API calls in server-side logs.
+For direct `aliyun` cloud calls, pass the same JSON through `ALIBABACLOUD_SLS_DATA_AGENT_SESSION` to `python3 "<skill-dir>/scripts/_skill_user_agent.py" user-agent`. Only after it succeeds, execute `env -u ALIBABA_CLOUD_USER_AGENT aliyun ... --no-cli-ai-mode --user-agent "<resolved-user-agent>"`. Apply this to every actual cloud command, including commands generated at runtime. The format is `AlibabaCloud-Agent-Skills/<frontmatter-name>/<32-hex-session-id> skill-version/<manifest-version>`. Bundled Chat calls apply the same isolation without changing global CLI configuration. Local help, `version`, `plugin`, `configure`, and evidence export do not require attribution.

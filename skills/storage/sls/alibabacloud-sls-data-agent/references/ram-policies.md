@@ -1,23 +1,48 @@
-# STAROps RAM Policy Notes
+# RAM permissions
 
-This skill does not use STAROps-specific AccessKey environment variables. It relies on Alibaba Cloud Credentials default-chain behavior, so credentials should be configured through standard Alibaba Cloud mechanisms.
+Grant only the permissions needed by the selected workflow. `<account-id>` is the resource owner's account UID, not a RAM user ID.
 
-## Required Access
+## DataAgent Chat
 
-The STAROps OpenAPI actions are registered under the **`cms`** service code. Grant the caller the following actions:
+| Entry point | API | RAM action | Resource scope |
+| --- | --- | --- | --- |
+| `aliyun sls list-data-agents` | [ListDataAgents](https://help.aliyun.com/zh/sls/developer-reference/api-sls-2020-12-30-listdataagents) | `log:ListDataAgents` | `*` |
+| `chat.py send` when creating a thread | [CreateThread](https://help.aliyun.com/zh/sls/developer-reference/api-sls-2020-12-30-createthread) | `log:CreateThread` | `*` |
+| `aliyun sls get-thread-data` | [GetThreadData](https://help.aliyun.com/zh/sls/developer-reference/api-sls-2020-12-30-getthreaddata) | `log:GetThreadData` | Thread ARN |
+| `chat.py send/respond/reconnect`, `aliyun sls create-chat --action stop` | [CreateChat](https://help.aliyun.com/zh/sls/developer-reference/api-sls-2020-12-30-createchat) | Not published separately | See conversation policy below |
 
-| Action | Description |
-|--------|-------------|
-| `cms:CreateThread` | Create an investigation thread |
-| `cms:CreateChat` | Send a message and stream the agent response |
+Thread ARN: `acs:log:<chat-region>:<account-id>:dataagent/<agent-name>/thread/<thread-id>`. Use `*` for `<thread-id>` when access to multiple threads under the selected DataAgent is required.
 
-Resource ARN format:
+For CreateChat, follow the ordinary-user policy in [Configure SLS DataAgent permissions](https://help.aliyun.com/zh/sls/configure-sls-dataagent-permissions); do not infer `log:CreateChat` from the API name. The scenario policy and individual API references use different resource scopes, so the table is not a validated complete least-privilege Chat policy.
 
-```
-acs:cms::{uid}:digitalemployee/{employee_name}
-```
+The caller's conversation permissions and the DataAgent's bound role authorize conversation access and underlying data access separately.
 
-### Example Custom Policy
+## Model QA
+
+### Model and log reads
+
+| Entry point | API | RAM action | Resource scope |
+| --- | --- | --- | --- |
+| `model_qa.py context-model list` | [ListContextModels](https://help.aliyun.com/zh/sls/developer-reference/api-sls-2020-12-30-listcontextmodels) | `log:ListContextModels` | `*` |
+| `model_qa.py context-model catalog overview/get/resolve` | [QueryContextModel](https://help.aliyun.com/zh/sls/developer-reference/api-sls-2020-12-30-querycontextmodel) | `log:QueryContextModel` | Context Model ARN |
+| `model_qa.py source-model status` | [GetSourceModelStatus](https://help.aliyun.com/zh/sls/developer-reference/api-sls-2020-12-30-getsourcemodelstatus) | `log:GetSourceModelStatus` | Project ARN |
+| `model_qa.py source-model query`, `catalog overview/get` | [QuerySourceModel](https://help.aliyun.com/zh/sls/developer-reference/api-sls-2020-12-30-querysourcemodel) | `log:QuerySourceModel` | Project ARN |
+| `model_qa.py query` | [GetLogsV2](https://help.aliyun.com/zh/sls/developer-reference/api-sls-2020-12-30-getlogsv2) | `log:GetLogStoreLogs` | Each queried Logstore ARN |
+| `aliyun sls get-index` | [GetIndex](https://help.aliyun.com/zh/sls/developer-reference/api-sls-2020-12-30-getindex) | `log:GetIndex` | Each inspected Logstore ARN |
+
+Resource ARNs:
+
+- Context Model: `acs:log:<model-region>:<account-id>:contextmodel/<model-name>`.
+- Project: `acs:log:<source-region>:<account-id>:project/<source-project>`.
+- Logstore: `acs:log:<log-region>:<account-id>:project/<log-project>/logstore/<logstore>`.
+
+`<model-name>` is the Context Model name/UUID, not a Schema name or source tag. Use physical query locations and include every Logstore queried, including JOIN sources.
+
+Reading model definitions does not grant log access. Source Model authorization is Project-scoped; `--sources` narrows the returned catalog, not the RAM authorization boundary.
+
+### Policy example
+
+Replace the placeholders and remove unused statements. Keep only the model type being used; omit listing when unnecessary and remove `log:GetIndex` when no index inspection is needed. Use ARN arrays for multiple models, Projects or Logstores.
 
 ```json
 {
@@ -25,44 +50,43 @@ acs:cms::{uid}:digitalemployee/{employee_name}
   "Statement": [
     {
       "Effect": "Allow",
-      "Action": [
-        "cms:CreateThread",
-        "cms:CreateChat"
-      ],
-      "Resource": "acs:cms::*:digitalemployee/*"
+      "Action": ["log:ListContextModels"],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["log:QueryContextModel"],
+      "Resource": "acs:log:<model-region>:<account-id>:contextmodel/<model-name>"
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["log:GetSourceModelStatus", "log:QuerySourceModel"],
+      "Resource": "acs:log:<source-region>:<account-id>:project/<source-project>"
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["log:GetLogStoreLogs", "log:GetIndex"],
+      "Resource": "acs:log:<log-region>:<account-id>:project/<log-project>/logstore/<logstore>"
     }
   ]
 }
 ```
 
-To restrict access to a specific account and digital employee, replace `*` with concrete values, e.g. `acs:cms::<your-uid>:digitalemployee/<employee-name>`.
+### Optional Source Model writes
 
-## Recommended Credential Sources
+Grant these separately, only for explicitly requested writes through the existing management/HIL flow:
 
-Use one of the Alibaba Cloud Credentials default-chain sources:
+| CLI | RAM action | Resource |
+| --- | --- | --- |
+| `aliyun sls create-source-model` | [`log:CreateSourceModel`](https://help.aliyun.com/zh/sls/developer-reference/api-sls-2020-12-30-createsourcemodel) | Project ARN above |
+| `aliyun sls regenerate-source-model` | [`log:RegenerateSourceModel`](https://help.aliyun.com/zh/sls/configure-sls-dataagent-permissions) | Project ARN above |
 
-- Standard Alibaba Cloud AccessKey environment credentials.
-- Alibaba Cloud CLI profile or shared credentials profile.
-- STS credentials.
-- RAM role credentials.
-- ECS instance metadata credentials, when available.
+`--logstores` limits the modeling request, not the Project-level RAM authorization scope.
 
-For local development environments where metadata lookup causes delays, set:
+## Permission errors
 
-```bash
-export ALIBABA_CLOUD_ECS_METADATA_DISABLED=true
-```
+Use the failing operation and reported action, resource and requestId, when available, to check the actual caller identity and grants. The SDK and CLI may use different identities; see the [installation guide](cli-installation-guide.md).
 
-## Security Boundaries
-
-This skill creates STAROps investigation threads and streams STAROps Agent answers. It does not directly mutate ECS, OSS, RDS, SLS, or other cloud resources. Any operational action proposed by STAROps should still be reviewed according to the user's normal change-management process.
-
-## Permission Failure Handling
-
-When the script returns an HTTP 401 or 403 error indicating an authorization failure:
-
-1. Stop immediately. Do **not** retry with different credentials or fabricate diagnostic results.
-2. Report the exact error message to the user, including the `Action` and `Resource` from the error response.
-3. Direct the user to check that their identity has the required STAROps permissions listed in the **Required Access** section above.
-4. If using STS credentials, verify that the STS token has not expired and that the assumed role's policy includes `cms:CreateThread` and `cms:CreateChat`.
-5. Wait for the user to confirm that permissions have been granted before retrying.
+- Model reads succeed but log queries fail: check the physical Logstore permissions.
+- Chat data access fails: check the DataAgent's bound role.
+- Distinguish invalid or expired credentials, unavailable services and missing resources from authorization failures. Do not switch identities or broaden grants to bypass an error.
