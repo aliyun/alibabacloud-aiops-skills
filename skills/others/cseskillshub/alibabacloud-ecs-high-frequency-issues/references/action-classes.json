@@ -1,0 +1,275 @@
+{
+  "schema": "ecs-action-classes/1",
+  "decided_by": "customer instruction 2026-11-12: high-risk actions (a restart, and anything that interrupts service or cannot be undone) are never executed on the customer's behalf - guidance only; configuration-changing actions may be executed after the customer agrees, and must state their side effects (a snapshot bills).",
+  "classification_rule": {
+    "auto-read": "the action name starts with Describe / Get / List / Query / Check and changes nothing. Runs without asking, because it cannot alter a resource.",
+    "consent-write": "the action changes configuration or creates a billable object, and the effect is either reversible or additive-and-billed. Runs only after the customer agrees to that one operation in this turn, and only with the class obligations printed.",
+    "guide-only": "the action interrupts a running service, destroys or replaces data or a system disk, changes a spec/billing class that needs a restart, or cannot be undone. The skill never dispatches it: it explains the effect, the prerequisites and where the customer performs it."
+  },
+  "obligations": {
+    "per-operation-consent": "one agreement authorises exactly one operation; a prior agreement is not carried forward",
+    "state-effect": "say what changes and what the customer will observe while it happens",
+    "state-cost": "say what the operation bills for, and on what basis",
+    "state-revert": "say how it is undone, or state plainly that it is not undoable",
+    "rollback-point": "before a filesystem- or data-touching change, name the snapshot already taken",
+    "no-result-claim": "never state the effect was achieved unless this run read it back"
+  },
+  "actions": [
+    {
+      "id": "create-snapshot",
+      "api": "CreateSnapshot",
+      "cli": "create-snapshot",
+      "class": "consent-write",
+      "capability": "dispatched",
+      "areas": [
+        "host-intrusion-cleanup",
+        "image-billing-cleanup",
+        "instance-start-stop-anomaly"
+      ],
+      "why_this_class": "additive, destroys nothing, but bills by capacity for as long as it exists",
+      "obligations": [
+        "per-operation-consent",
+        "state-cost",
+        "no-result-claim"
+      ],
+      "customer_disclosure": "Creating the snapshot is billable: snapshot storage is charged by capacity used, not by the number of snapshots, and it keeps accruing until the snapshot is deleted. A running disk may be snapshotted without a restart; the first upload can be slower while the disk is busy."
+    },
+    {
+      "id": "guest-read-command",
+      "api": "RunCommand",
+      "cli": "run-command",
+      "class": "auto-read",
+      "capability": "dispatched",
+      "areas": [
+        "access-block-layered",
+        "disk-pl-change-guide",
+        "host-intrusion-cleanup",
+        "image-billing-cleanup",
+        "instance-start-stop-anomaly",
+        "intranet-egress",
+        "ram-policy-diagnosis",
+        "smtp-block-diagnosis",
+        "web-inaccessible-slow"
+      ],
+      "why_this_class": "the command is delivered inside the customer's machine and leaves a task record there, so the cloud-side name says read-only while the operation is not - it is gated by consent all the same",
+      "obligations": [
+        "per-operation-consent",
+        "state-effect"
+      ],
+      "customer_disclosure": "This reads the inside of the instance through Cloud Assistant: one command, from a frozen list of non-mutating readings, recorded as an execution task in your console. Nothing is changed inside.",
+      "payload_rule": "class follows the payload: only non-mutating readings are dispatchable; a payload carrying a mutating verb is treated as guest-config-change below"
+    },
+    {
+      "id": "guest-config-change",
+      "api": "RunCommand",
+      "cli": "run-command",
+      "class": "consent-write",
+      "capability": "not-built",
+      "areas": [],
+      "why_this_class": "example from the customer: enabling or resizing swap, a sysctl value, a service unit, an fstab row - reversible, config-shaped, no service interruption if scoped right",
+      "obligations": [
+        "per-operation-consent",
+        "state-effect",
+        "state-revert",
+        "rollback-point",
+        "no-result-claim"
+      ],
+      "customer_disclosure": "This writes inside your instance. Before it runs you get: the exact command, the file or setting it changes, how to undo it, and the snapshot taken as the rollback point. It is not executed until you agree to that one command.",
+      "built_status_evidence": "not dispatchable today: every area with a guest guard keeps mutating verbs in its own block list (resource-bottleneck/_constants.py COMMAND_BLOCK_SUBSTRINGS: swapon, swapoff, sysctl, systemctl, chmod, rm -, mkfs, dd, reboot, shutdown and others)"
+    },
+    {
+      "id": "security-group-write",
+      "api": "AuthorizeSecurityGroup",
+      "cli": "authorize-security-group",
+      "class": "consent-write",
+      "capability": "not-built",
+      "areas": [],
+      "why_this_class": "a rule change is reversible and usually service-preserving, but a wrong revoke can cut the only path in - so the pre-change rule text is quoted back before and after",
+      "obligations": [
+        "per-operation-consent",
+        "state-effect",
+        "state-revert"
+      ],
+      "customer_disclosure": "This opens or closes one access rule. You get the rule as it stands now, the rule after the change, and how to put it back. Removing the last allow rule can lock you out of the instance."
+    },
+    {
+      "id": "reboot-instance",
+      "api": "RebootInstance",
+      "cli": "reboot-instance",
+      "class": "guide-only",
+      "capability": "never-dispatched",
+      "areas": [],
+      "why_this_class": "interrupts everything running on the instance for the length of the restart; the customer chooses the window",
+      "obligations": [
+        "state-effect",
+        "no-result-claim"
+      ],
+      "customer_disclosure": "A restart stops whatever is running for its duration, so you start it yourself in the console (or the OS) when the window suits you; the steps are in the guide we print, and afterwards this check can re-read the result for you."
+    },
+    {
+      "id": "stop-instance",
+      "api": "StopInstance",
+      "cli": "stop-instance",
+      "class": "guide-only",
+      "capability": "never-dispatched",
+      "areas": [],
+      "why_this_class": "takes the service down and, in stop-no-charging mode, releases the compute resources so the instance may not come back on the same host",
+      "obligations": [
+        "state-effect",
+        "no-result-claim"
+      ],
+      "customer_disclosure": "Stopping it takes the service down now and can change what you get when it starts again; you perform the stop, and we state what to check before you do."
+    },
+    {
+      "id": "reinit-disk",
+      "api": "ReInitDisk",
+      "cli": "re-init-disk",
+      "class": "guide-only",
+      "capability": "never-dispatched",
+      "areas": [],
+      "why_this_class": "overwrites the disk contents; data on it is gone and no rollback exists unless a snapshot was taken beforehand",
+      "obligations": [
+        "state-effect",
+        "state-revert",
+        "no-result-claim"
+      ],
+      "customer_disclosure": "Re-initialising the disk discards what is on it and cannot be undone - only a snapshot taken before the operation can bring the data back, so the guide names that step first and you perform the re-initialisation yourself."
+    },
+    {
+      "id": "replace-system-disk",
+      "api": "ReplaceSystemDisk",
+      "cli": "replace-system-disk",
+      "class": "guide-only",
+      "capability": "never-dispatched",
+      "areas": [],
+      "why_this_class": "swaps the OS disk: the old system disk content, its passwords and its local data are replaced; a restart is part of it",
+      "obligations": [
+        "state-effect",
+        "state-revert",
+        "no-result-claim"
+      ],
+      "customer_disclosure": "Replacing the system disk installs a new OS and discards the current system disk content, including local data and the log-in credential; you carry it out in the console after backing up, and this check can verify the result afterwards."
+    },
+    {
+      "id": "delete-instance",
+      "api": "DeleteInstance",
+      "cli": "delete-instance",
+      "class": "guide-only",
+      "capability": "never-dispatched",
+      "areas": [],
+      "why_this_class": "destroys the resource; recovery is not a switch",
+      "obligations": [
+        "state-effect",
+        "state-revert",
+        "no-result-claim"
+      ],
+      "customer_disclosure": "Deleting the instance is not reversible: disks released with it are gone unless a snapshot exists. The guide states what to back up and what to check first; the deletion itself is yours to perform."
+    },
+    {
+      "id": "delete-snapshot",
+      "api": "DeleteSnapshot",
+      "cli": "delete-snapshot",
+      "class": "guide-only",
+      "capability": "never-dispatched",
+      "areas": [],
+      "why_this_class": "removes the only rollback point some customers have; deleting it is how data becomes unrecoverable",
+      "obligations": [
+        "state-effect",
+        "no-result-claim"
+      ],
+      "customer_disclosure": "A snapshot you delete cannot be recovered, and a custom image built from it may stop working; the guide lists what still depends on it before you delete anything."
+    },
+    {
+      "id": "spec-or-billing-change",
+      "api": "ModifyInstanceSpec",
+      "cli": "modify-instance-spec",
+      "class": "guide-only",
+      "capability": "never-dispatched",
+      "areas": [],
+      "why_this_class": "changes paid configuration and takes effect only across a restart",
+      "obligations": [
+        "state-effect",
+        "no-result-claim"
+      ],
+      "customer_disclosure": "Changing instance specification or billing class alters what you pay and needs a restart to land, so it is a console action you schedule; we report the current configuration and what the target family changes."
+    },
+    {
+      "id": "network-spec-change",
+      "api": "ModifyInstanceNetworkSpec",
+      "cli": "modify-instance-network-spec",
+      "class": "guide-only",
+      "capability": "never-dispatched",
+      "areas": [],
+      "why_this_class": "alters a paid bandwidth setting on a live instance",
+      "obligations": [
+        "state-effect",
+        "no-result-claim"
+      ],
+      "customer_disclosure": "Bandwidth and public-traffic settings are billed changes on a running instance; you make them in the console, and we state the current value and what the new one costs."
+    },
+    {
+      "id": "eip-lifecycle",
+      "api": "ReleaseEipAddress",
+      "cli": "release-eip-address",
+      "class": "guide-only",
+      "capability": "never-dispatched",
+      "areas": [],
+      "why_this_class": "releases an address that may be referenced by DNS, firewall rules and customers' own allow-lists",
+      "obligations": [
+        "state-effect",
+        "no-result-claim"
+      ],
+      "customer_disclosure": "Releasing an elastic IP loses that address for good - anything pointing at it (DNS records, peer allow-lists) has to change first, so the release is yours to perform after we list what still depends on it."
+    },
+    {
+      "id": "redeploy-instance",
+      "api": "RedeployInstance",
+      "cli": "redeploy-instance",
+      "class": "guide-only",
+      "capability": "never-dispatched",
+      "areas": [],
+      "why_this_class": "moves the instance to different host hardware: a restart plus loss of local disk content",
+      "obligations": [
+        "state-effect",
+        "no-result-claim"
+      ],
+      "customer_disclosure": "Redeploying moves the instance to other host hardware - a restart, and local-disk content does not survive it - so you trigger it yourself once data is backed up."
+    },
+    {
+      "id": "install-cloud-assistant",
+      "api": "InstallCloudAssistant",
+      "cli": "install-cloud-assistant",
+      "class": "guide-only",
+      "capability": "never-dispatched",
+      "areas": [],
+      "why_this_class": "the API itself completes only after an instance restart, which is guide-only above; installing through a channel that needs restarting cannot be a silent side effect of a diagnosis",
+      "obligations": [
+        "state-effect",
+        "no-result-claim"
+      ],
+      "customer_disclosure": "Installing the Cloud Assistant agent finishes only when the instance restarts, and a restart is yours to schedule. We report whether the agent is installed and what status it reports, then give the install step; once it is back, the in-guest checks can run."
+    },
+    {
+      "id": "refund-or-unsubscribe",
+      "api": "CancelInstanceForRefund",
+      "cli": "cancel-instance-for-refund",
+      "class": "guide-only",
+      "capability": "never-dispatched",
+      "areas": [],
+      "why_this_class": "a money and contract action on the customer's account, not a technical fix",
+      "obligations": [
+        "state-effect",
+        "no-result-claim"
+      ],
+      "customer_disclosure": "Refunds, unsubscription and cancellation are commercial actions you submit yourself; we state the eligibility read and what the console shows."
+    }
+  ],
+  "counts": {
+    "auto-read_call_sites": 33,
+    "consent-write_dispatched": 2,
+    "consent-write_not_built": 2,
+    "guide_only_named": 12,
+    "guide_only_call_sites_in_code": 0
+  },
+  "evidence": "the counts are produced by ecs-suite-v2/tools/check_action_policy.py, which walks every call site under scripts/ with the standard-library ast module and resolves the ACTION_* constants the areas pass to their CLI runner; measured 2026-11-12 on HEAD 7c8f01d"
+}
