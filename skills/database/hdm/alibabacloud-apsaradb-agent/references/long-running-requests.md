@@ -1,6 +1,6 @@
 # Waiting for an agent request
 
-Use `scripts/agent_job.py` when an execution tool would kill a long blocking call. Python 3 is required for this local wrapper. It calls the existing guarded helper, preserves the platform environment and records actual status; it has no independent cloud API or confirmation path.
+Use `scripts/agent_job.py` when an execution tool would kill a long blocking call. Python 3 is required for this local wrapper. It calls the existing guarded helper, preserves the platform environment and records actual status; the existing DAS helper remains the only cloud transport, including confirmation callbacks.
 
 ## Start exactly once
 
@@ -17,7 +17,7 @@ python3 "$SKILL_ROOT/scripts/agent_job.py" start \
 
 For a related continuation, append `--session-id "$RETURNED_SESSION_ID"` after the source options. Use only the server SessionID returned by the earlier request and the same product source. Keep each query file unchanged until its job finishes.
 
-For an explicitly approved operation, pass the exact operation options after `--` instead of readonly metadata: `--source`, `--confirm approve`, `--expect-tool`, and the complete concrete `--expect-args`. The query file contains only its short task label. All approval, allowlist and single-operation checks remain in `call_apsaradb_agent.sh`; the job tool does not create an approval or restart a failed operation.
+For operation-capable requests, omit readonly metadata and send the business query unchanged. The job creates its own private confirmation inbox. On `state=awaiting_confirmation`, follow [the live-card workflow](operation-confirmation.md): obtain a real user decision, submit it with `confirm`, then observe this same job. Do not reconstruct product API parameters or start a new request to approve a card.
 
 A successful `start` only proves that a local worker was launched, not that a query or write succeeded.
 
@@ -31,6 +31,8 @@ This is one bounded foreground observation, not another request. It waits at mos
 
 Do not finalize the parent task while the job remains running merely because it has waited a long time, stdout is empty, or admission was previously throttled. A later accepted request can still be streaming. Retry exhaustion is established by the helper's actual terminal status, not a guessed deadline or retry count. If the enclosing execution budget itself ends, record the job as incomplete; never call it successful or empty.
 
+- `state=awaiting_confirmation` exposes the real card, session ID, masked arguments, digest and deadline. Show the preceding service answer and obtain the user decision immediately; do not keep polling without asking.
+- `outcome=cancelled` distinguishes a rejected/expired card from an attempted approval. Its nonzero exit is intentional; do not retry the operation.
 - `state=finished` includes the actual helper `exit_code` and timestamps.
 - `request_succeeded=true` additionally requires exit 0, a nonempty answer and a valid returned SessionID. Inspect the business result; this flag does not verify a resource postcondition.
 - `state=interrupted` means the worker disappeared without terminal status. It is incomplete; never automatically relaunch it, especially for an operation.

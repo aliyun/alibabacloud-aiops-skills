@@ -20,6 +20,12 @@ EXPECTED_TOOL=""
 EXPECTED_ARGS=""
 APPROVED_PLAN=""
 CONFIRMED_CARD=""
+CONFIRMED_PLAN=""
+CONFIRMATION_DIR=""
+READONLY_REQUEST=false
+APPROVAL_ATTEMPTED=false
+POST_APPROVAL_CONTENT=false
+OPERATION_CANCELLED=false
 SKILL_SESSION_ID="${SKILL_SESSION_ID:-}"
 SKILL_VERSION="${SKILL_VERSION:-}"
 USER_AGENT=""
@@ -55,7 +61,8 @@ Options:
   --session-id <uuid>      Reuse a server SessionID for a related follow-up
   --source <source>        Backend source route (default: yaochi-console)
   --extra-info <json>      JSON object string (default: {}); optional readonly mode
-  --confirm approve       Execute one already approved allowlisted operation
+  --confirmation-dir <dir> Private live-card inbox (normally supplied by agent_job.py)
+  --confirm approve       Compatibility: one exact already approved operation
   --expect-tool <api>     Exact approved API; required with --confirm approve
   --expect-args <json>    Complete approved argument object; required with approval
   --profile <name>         Existing aliyun CLI profile
@@ -412,6 +419,12 @@ validate_input() {
         printf 'Error: --extra-info mode must be readonly; use the explicit confirmation path for supported operations.\n' >&2
         exit 2
     fi
+    if printf '%s' "$EXTRA_INFO" | jq -e '.mode == "readonly"' >/dev/null; then
+        READONLY_REQUEST=true
+    fi
+    if [[ -n "$CONFIRMATION_DIR" ]]; then
+        python3 "$SCRIPT_DIR/operation_confirmation.py" check-dir --directory "$CONFIRMATION_DIR" >/dev/null || exit 2
+    fi
     if [[ -z "$CONFIRM_ACTION" && -z "$EXPECTED_TOOL" && -z "$EXPECTED_ARGS" ]]; then
         return
     fi
@@ -420,16 +433,15 @@ validate_input() {
         printf 'Error: approval requires --confirm approve, --expect-tool, and --expect-args in a fresh request without extra metadata or dry run.\n' >&2
         exit 2
     fi
-    APPROVED_PLAN=$(normalize_operation "$EXPECTED_TOOL" "$EXPECTED_ARGS") || {
-        printf 'Error: unsupported operation or invalid approved arguments; no request sent.\n' >&2
+    APPROVED_PLAN=$(printf '%s' "$EXPECTED_ARGS" | python3 "$SCRIPT_DIR/operation_confirmation.py" normalize \
+        --tool "$EXPECTED_TOOL" --reject-secrets 2>/dev/null) || {
+        printf 'Error: forbidden operation, malformed or secret-bearing approval arguments; no request sent.\n' >&2
         exit 2
     }
-    # The service enables normal confirmation when the readonly mode is omitted.
-    QUERY="Execute only this explicitly approved operation, using its exact parameters. Verify the current API/CLI definition for this exact action before forming the confirmation card; do not copy a generic example or another command's parameters. The confirmation card must contain only the approved argument keys and values. The region key binds CLI signing/routing; do not invent biz-region-id, RegionId, profile or other extra arguments. Invoke the registered product-operation tool exactly once so the service can emit a structured humanConfirm event. A Markdown table, a CLI example, or a narrative question is not a confirmation event and does not complete this request. This client handles the real event; do not call the confirmation API yourself or fabricate approval. Do not substitute tools, alter parameters, start diagnostic tasks, or perform other writes. If unavailable, stop."
-    if [[ $(printf '%s' "$APPROVED_PLAN" | jq -r '.tool') == "CreateDatabase" ]]; then
-        QUERY+=" RDS CreateDatabase contract: its required API fields are DBInstanceId, DBName and CharacterSetName; the approved region is only the CLI --region routing option. BizRegionId and RegionId are not fields of this API. If a quick-reference example disagrees with the current API parameter list and GenerateCLICommand output, use the current definition and generated command, not the quick-reference example. Do not add DBDescription or any other optional field absent from the approved plan."
-    fi
-    QUERY+=" Approved plan: $APPROVED_PLAN"
+    # Compatibility path only. Normal requests preserve the business query and
+    # let the service generate its concrete operation/ordering plan.
+    QUERY="Execute this exact already approved plan through the registered product tool and its real humanConfirm event. Do not substitute tools, modify parameters or perform additional writes. If unavailable, stop. Approved plan: $(jq -cn --arg tool "$EXPECTED_TOOL" --argjson args "$EXPECTED_ARGS" '{tool:$tool,args:$args}')"
+
     if ((${#QUERY} > 4000)); then
         printf 'Error: operation query and approved plan exceed the 4000-character limit.\n' >&2
         exit 2
@@ -437,92 +449,7 @@ validate_input() {
 }
 
 normalize_operation() {
-    local tool="$1" args="$2" policy
-    if json_has_sensitive_key "$args" || text_has_sensitive_assignment "$args"; then
-        return 1
-    fi
-    # Keep the jq program in this executable script so it travels with the helper.
-    policy=$(cat <<'JQ'
-# Only these API/route pairs and their scalar parameters may be approved.
-def aliases:
-  {
-    "DBInstanceId":"db-instance-id", "DBClusterId":"db-cluster-id",
-    "DBInstanceDescription":"db-instance-description",
-    "DBClusterDescription":"db-cluster-description",
-    "DBName":"db-name", "CharacterSetName":"character-set-name",
-    "DBDescription":"db-description", "MaintainTime":"maintain-time",
-    "InstanceId":"instance-id", "MaintainStartTime":"maintain-start-time",
-    "MaintainEndTime":"maintain-end-time", "Comment":"comment", "Protection":"protection"
-  };
-def canonical:
-  if type != "object" then error("expected arguments object") else
-    to_entries | map(.key |= (aliases[.] // .)) |
-    if (map(.key) | unique | length) != length then error("duplicate argument aliases")
-    else from_entries end
-  end;
-def matches($pattern): type == "string" and test($pattern);
-def description: matches("^[\\p{L}][\\p{L}\\p{N} ,_-]{1,255}$");
-def rds: $source == "yaochi-console";
-def polar: $source == "polardb-console" or $source == "polardb-pg-console";
-def action($pascal; $kebab): $tool == $pascal or $tool == $kebab;
-def clock: matches("^([01][0-9]|2[0-3]):[0-5][0-9]Z$");
-def maintenance: split("-") | length == 2 and .[0] != .[1] and all(.[]; clock);
-def shape($required; $optional):
-  (keys - ($required + $optional) | length) == 0
-  and ($required - keys | length) == 0;
-
-canonical
-| if all(.[]; type == "string" and length > 0 and (test("[[:cntrl:]]") | not)) then . else empty end
-| select(.region | matches("^[a-z][a-z0-9-]+$"))
-| if rds and action("CreateDatabase"; "create-database") then
-    select(shape(["db-instance-id","region","db-name","character-set-name"]; ["db-description"])
-      and (."db-instance-id" | matches("^rm-[a-z0-9]+$"))
-      and (."db-name" | matches("^[a-z][a-z0-9_-]{0,62}[a-z0-9]$"))
-      and (."character-set-name" | matches("^(utf8|utf8mb4|gbk|latin1)$"))
-      and ((."db-description" // "ok") | description))
-    | {tool:"CreateDatabase", args:.}
-  elif rds and action("ModifyDBInstanceDescription"; "modify-db-instance-description") then
-    select(shape(["db-instance-id","region","db-instance-description"]; [])
-      and (."db-instance-id" | matches("^rm-[a-z0-9]+$"))
-      and (."db-instance-description" | description))
-    | {tool:"ModifyDBInstanceDescription", args:.}
-  elif polar and action("ModifyDBClusterDescription"; "modify-db-cluster-description") then
-    select(shape(["db-cluster-id","region","db-cluster-description"]; [])
-      and (."db-cluster-id" | matches("^pc-[a-z0-9]+$"))
-      and (."db-cluster-description" | description))
-    | {tool:"ModifyDBClusterDescription", args:.}
-  elif rds and action("ModifyDBInstanceMaintainTime"; "modify-db-instance-maintain-time") then
-    select(shape(["db-instance-id","region","maintain-time"]; [])
-      and (."db-instance-id" | matches("^rm-[a-z0-9]+$"))
-      and (."maintain-time" | maintenance))
-    | {tool:"ModifyDBInstanceMaintainTime", args:.}
-  elif polar and action("ModifyDBClusterMaintainTime"; "modify-db-cluster-maintain-time") then
-    select(shape(["db-cluster-id","region","maintain-time"]; [])
-      and (."db-cluster-id" | matches("^pc-[a-z0-9]+$"))
-      and (."maintain-time" | maintenance))
-    | {tool:"ModifyDBClusterMaintainTime", args:.}
-  elif $source == "tair-console" and action("ModifyInstanceMaintainTime"; "modify-instance-maintain-time") then
-    select(shape(["instance-id","region","maintain-start-time","maintain-end-time"]; [])
-      and (."instance-id" | matches("^r-[a-z0-9]+$"))
-      and (."maintain-start-time" | clock) and (."maintain-end-time" | clock)
-      and ."maintain-start-time" != ."maintain-end-time")
-    | {tool:"ModifyInstanceMaintainTime", args:.}
-  elif polar and action("CreateBackup"; "create-backup") then
-    select(shape(["db-cluster-id","region"]; ["comment"])
-      and (."db-cluster-id" | matches("^pc-[a-z0-9]+$"))
-      and ((.comment // "ok") | description))
-    | {tool:"CreateBackup", args:.}
-  elif polar and action("ModifyDBClusterDeletion"; "modify-db-cluster-deletion") then
-    select(shape(["db-cluster-id","region","protection"]; [])
-      and (."db-cluster-id" | matches("^pc-[a-z0-9]+$"))
-      and .protection == "true")
-    | {tool:"ModifyDBClusterDeletion", args:.}
-  else empty end
-JQ
-    )
-    printf '%s' "$args" | jq -ces \
-        'if length == 1 then .[0] else error("expected one object") end' 2>/dev/null |
-        jq -ceS --arg source "$SOURCE" --arg tool "$tool" "$policy" 2>/dev/null
+    printf '%s' "$2" | python3 "$SCRIPT_DIR/operation_confirmation.py" normalize --tool "$1" 2>/dev/null
 }
 
 is_uuid() {
@@ -569,22 +496,48 @@ handle_operation_card() {
     tool=$(printf '%s' "$card" | jq -r '.tool_name // .toolName // empty')
     args=$(printf '%s' "$card" | jq -c '.tool_args // .toolArgs // null')
     actual=$(normalize_operation "$tool" "$args") || actual=""
-    if [[ -n "$CONFIRMED_CARD" && "$id" == "$CONFIRMED_CARD" && "$actual" == "$APPROVED_PLAN" &&
+    if [[ -n "$CONFIRMED_CARD" && "$id" == "$CONFIRMED_CARD" && "$actual" == "$CONFIRMED_PLAN" &&
           ( "$decision" == "0" || "$decision" == "1" ) ]]; then
         return 0
     fi
-    if [[ -z "$CONFIRMED_CARD" && "$decision" == "0" && -n "$actual" ]] &&
-        jq -en --argjson expected "$APPROVED_PLAN" --argjson actual "$actual" '$expected == $actual' >/dev/null; then
+    if [[ -n "$CONFIRMATION_DIR" && -z "$APPROVED_PLAN" && "$decision" == "0" && -n "$actual" ]]; then
+        local outcome approved
+        if ! outcome=$(printf '%s' "$card" | python3 "$SCRIPT_DIR/operation_confirmation.py" wait \
+            --directory "$CONFIRMATION_DIR" --session-id "$PARSED_SESSION_ID"); then
+            send_confirmation "$id" false || return 1
+            printf '[OperationBlocked] Live confirmation could not be established. No approval sent.\n' >&2
+            return 1
+        fi
+        approved=$(printf '%s' "$outcome" | jq -r '.approved')
+        # The local decision is consumed before the callback: never retry it.
         CONFIRMED_CARD="$id"
+        CONFIRMED_PLAN="$actual"
+        [[ "$approved" == "true" ]] && APPROVAL_ATTEMPTED=true
+        send_confirmation "$id" "$approved" || return 1
+        if [[ "$approved" != "true" ]]; then
+            OPERATION_CANCELLED=true
+            printf '[OperationCancelled] User rejected or the confirmation deadline expired.\n' >&2
+            return 1
+        fi
+        POST_APPROVAL_CONTENT=false
+        printf '[ConfirmationAccepted] Approved live operation %s; verify execution separately.\n' "$tool" >&2
+        return 0
+    fi
+    if [[ -z "$CONFIRMED_CARD" && "$decision" == "0" && -n "$actual" && "$actual" == "$APPROVED_PLAN" ]]; then
+        CONFIRMED_CARD="$id"
+        CONFIRMED_PLAN="$actual"
+        APPROVAL_ATTEMPTED=true
         send_confirmation "$id" true || return 1
+        POST_APPROVAL_CONTENT=false
         printf '[ConfirmationAccepted] Approved exact operation %s. Verify the resource state separately; this is not an execution result.\n' "$EXPECTED_TOOL" >&2
         return 0
     fi
     if [[ "$decision" == "0" && "$id" != "$CONFIRMED_CARD" ]]; then
         send_confirmation "$id" false || return 1
     fi
-    printf '[OperationBlocked] Card is not pending, is outside the allowlist, differs from the approved plan, or requests an additional write.\n' >&2
+    printf '[OperationBlocked] Forbidden, changed, expired or unapproved confirmation card.\n' >&2
     return 1
+
 }
 
 is_terminal_payload() {
@@ -617,7 +570,11 @@ process_json_payload() {
 
     session=$(printf '%s' "$payload" | jq -r '.SessionId // .sessionId // .session_id // empty')
     if [[ -n "$session" ]]; then
-        if [[ -n "$APPROVED_PLAN" && -n "$PARSED_SESSION_ID" && "$session" != "$PARSED_SESSION_ID" ]]; then
+        if [[ -n "$CONFIRMATION_DIR" && -n "$SESSION_ID" && "$session" != "$SESSION_ID" ]]; then
+            printf '[OperationBlocked] Follow-up stream does not match its requested session.\n' >&2
+            return 1
+        fi
+        if [[ ( -n "$APPROVED_PLAN" || -n "$CONFIRMATION_DIR" ) && -n "$PARSED_SESSION_ID" && "$session" != "$PARSED_SESSION_ID" ]]; then
             printf '[OperationBlocked] The operation stream changed its conversation ID.\n' >&2
             return 1
         fi
@@ -635,7 +592,8 @@ process_json_payload() {
         [[ -n "$sub_agent_calls" ]] && debug_log "SubAgentCall tools: $(summarize_tool_calls "$sub_agent_calls")"
     fi
     if [[ -n "$ui_calls" ]] && has_human_confirm "$ui_calls"; then
-        if [[ -n "$APPROVED_PLAN" ]]; then
+        if [[ -n "$APPROVED_PLAN" || ( -n "$CONFIRMATION_DIR" && "$READONLY_REQUEST" != "true" ) ]]; then
+            [[ -n "$content" ]] && printf '%s\n' "$content"
             PARSED_EVENT_COUNT=$((PARSED_EVENT_COUNT + 1))
             handle_operation_card "$ui_calls" || return 1
             if is_terminal_payload "$payload"; then
@@ -651,7 +609,10 @@ process_json_payload() {
         return 1
     fi
 
-    [[ -n "$content" ]] && printf '%s' "$content"
+    if [[ -n "$content" ]]; then
+        printf '%s' "$content"
+        [[ "$APPROVAL_ATTEMPTED" == "true" ]] && POST_APPROVAL_CONTENT=true
+    fi
     PARSED_EVENT_COUNT=$((PARSED_EVENT_COUNT + 1))
     if is_terminal_payload "$payload"; then
         return 3
@@ -743,12 +704,14 @@ emit_session_id() {
 
 cleanup() {
     local exit_code=$?
-    if ((exit_code != 0)) && [[ -n "$CONFIRMED_CARD" ]]; then
+    if ((exit_code != 0)) && [[ "$APPROVAL_ATTEMPTED" == "true" ]]; then
         printf '[OperationUnverified] An approval was attempted. Verify the resulting state with a separate readonly query; never replay.\n' >&2
     fi
     if ((exit_code != 0 && PARSED_EVENT_COUNT > 0)); then
         emit_session_id
-        printf '\n[IncompleteResponse] Request failed after response events; stdout may be partial. Keep the failure status; verify any approved operation by a separate readonly request, never replay it.\n' >&2
+        if [[ "$OPERATION_CANCELLED" != "true" ]]; then
+            printf '\n[IncompleteResponse] Request failed after response events; stdout may be partial. Keep the failure status; verify any approved operation by a separate readonly request, never replay it.\n' >&2
+        fi
     fi
     if [[ -n "$ALIYUN_PID" ]] && kill -0 "$ALIYUN_PID" 2>/dev/null; then
         kill "$ALIYUN_PID" 2>/dev/null || true
@@ -764,13 +727,14 @@ trap 'exit 130' INT TERM
 
 while (($# > 0)); do
     case "$1" in
-        --session-id|--source|--extra-info|--profile|--confirm|--expect-tool|--expect-args)
+        --session-id|--source|--extra-info|--profile|--confirm|--expect-tool|--expect-args|--confirmation-dir)
             require_option_value "$1" "${2:-}"
             case "$1" in
                 --session-id) SESSION_ID="$2" ;;
                 --source) SOURCE="$2" ;;
                 --extra-info) EXTRA_INFO="$2" ;;
                 --profile) PROFILE="$2" ;;
+                --confirmation-dir) CONFIRMATION_DIR="$2" ;;
                 --confirm) CONFIRM_ACTION="$2" ;;
                 --expect-tool) EXPECTED_TOOL="$2" ;;
                 --expect-args) EXPECTED_ARGS="$2" ;;
@@ -818,9 +782,13 @@ if [[ ! "$THROTTLE_RETRIES" =~ ^([0-9]|10)$ ]]; then
     exit 2
 fi
 
+if ! command -v python3 >/dev/null 2>&1; then
+    printf 'Error: Python 3 is required for generic confirmation handling.\n' >&2
+    exit 1
+fi
 check_dependencies
 validate_input
-if [[ -n "$APPROVED_PLAN" ]] && ! aliyun das create-yao-chi-agent-confirm --help >/dev/null 2>&1; then
+if [[ -n "$APPROVED_PLAN" || -n "$CONFIRMATION_DIR" ]] && ! aliyun das create-yao-chi-agent-confirm --help >/dev/null 2>&1; then
     printf 'Error: the official DAS plugin does not expose operation confirmation. Upgrade it before executing an operation.\n' >&2
     exit 1
 fi
@@ -891,9 +859,19 @@ while true; do
         aliyun_exit_code=0
     fi
     if ((parser_exit_code == 0 && aliyun_exit_code == 0)); then
-        if [[ -n "$APPROVED_PLAN" && ( -z "$CONFIRMED_CARD" || "$PARSED_FINISHED" != "true" ) ]]; then
-            printf '[OperationUnverified] No approved confirmation with a complete terminal stream. Verify readonly; do not replay.\n' >&2
+        if [[ ( -n "$APPROVED_PLAN" && -z "$CONFIRMED_CARD" ) ||
+              ( -n "$CONFIRMED_CARD" && "$PARSED_FINISHED" != "true" &&
+                ( "$POST_APPROVAL_CONTENT" != "true" || "$PARSED_UNKNOWN_OUTPUT" == "true" ) ) ]]; then
+            printf '[OperationUnverified] No approved confirmation with a completed response. Verify readonly; do not replay.\n' >&2
             exit 1
+        fi
+        # The official CLI can finish successfully at EOF without a Done event.
+        # Wait above for its actual exit status; never infer success from prose.
+        if [[ "$PARSED_FINISHED" != "true" ]]; then
+            printf '[StreamCompleted] CLI exited 0 at EOF without an explicit end marker.\n' >&2
+        fi
+        if [[ "$APPROVAL_ATTEMPTED" == "true" ]]; then
+            printf '[OperationVerificationRequired] Request completed; independently verify the resulting resource/order/task readonly. Never replay the operation.\n' >&2
         fi
         exit 0
     fi
@@ -904,7 +882,7 @@ while true; do
     if [[ "$LAST_ERROR_CODE" == "Throttling.UserConcurrentLimit" &&
           "$ERROR_HAS_PROGRESS" == "false" && -z "$PARSED_SESSION_ID" &&
           -z "$CONFIRMED_CARD" &&
-          ( -z "$APPROVED_PLAN" || "$PARSED_UNKNOWN_OUTPUT" == "false" ) ]] &&
+          ( ( -z "$APPROVED_PLAN" && -z "$CONFIRMATION_DIR" ) || "$PARSED_UNKNOWN_OUTPUT" == "false" ) ]] &&
        ((PARSED_EVENT_COUNT == 0 && attempt < THROTTLE_RETRIES)); then
         delay=$((30 * (1 << attempt)))
         ((delay > 120)) && delay=120

@@ -97,6 +97,21 @@ def status(job):
         path = job / name
         result[name + "_bytes"] = path.stat().st_size if path.exists() else 0
     result["session_id"] = session_id(job)
+    directory = job / "confirmations"
+    if result["state"] == "running" and directory.exists():
+        from operation_confirmation import private_dir, read_json
+        private_dir(directory)
+        pending = [read_json(path) for path in directory.glob("*.json") if not path.name.endswith('.decision.json')]
+        pending = [item for item in pending if item.get("state") == "pending"
+                   and time.time() < item["expires_at"]
+                   and not (directory / (item["confirmation_id"] + '.decision.json')).exists()]
+        if len(pending) > 1:
+            raise ValueError("More than one pending card")
+        if pending:
+            result.update(state="awaiting_confirmation", confirmation=pending[0], session_id=pending[0]["session_id"])
+    if result["state"] == "finished" and (job / "stderr").exists():
+        if "[OperationCancelled]" in (job / "stderr").read_text(errors="replace"):
+            result["outcome"] = "cancelled"
     result["request_succeeded"] = (
         result["state"] == "finished" and result.get("phase") == "agent"
         and result.get("exit_code") == 0 and result["stdout_bytes"] > 0
@@ -116,6 +131,9 @@ def start(args):
     os.umask(0o077)
     job.mkdir(mode=0o700, parents=True)  # Exclusive: an existing job never starts another request.
     options = args.options[1:] if args.options[:1] == ["--"] else args.options
+    if "--confirmation-dir" in options:
+        raise ValueError("The job owns its confirmation directory")
+    options = [*options, "--confirmation-dir", str(job / "confirmations")]
     save(job, "request.json", {
         "created_at": now(), "query_sha256": hashlib.sha256(content).hexdigest(),
     })
@@ -140,6 +158,12 @@ def main():
     launch.add_argument("--query-file", required=True)
     launch.add_argument("--prepare", action="store_true", help="Run authorized standard dependency preparation")
     launch.add_argument("options", nargs=argparse.REMAINDER)
+    confirmation = commands.add_parser("confirm", help="Submit the user's decision for this exact live card")
+    confirmation.add_argument("--job-dir", required=True)
+    confirmation.add_argument("--confirmation-id", required=True)
+    confirmation.add_argument("--session-id", required=True)
+    confirmation.add_argument("--plan-sha256", required=True)
+    confirmation.add_argument("--decision", choices=("approve", "reject"), required=True)
     for action in ("wait", "result"):
         command = commands.add_parser(action)
         command.add_argument("--job-dir", required=True)
@@ -152,6 +176,15 @@ def main():
             job = Path(args.job_dir)
             if not job.is_absolute():
                 raise ValueError("Use an absolute job path")
+            if args.command == "confirm":
+                from operation_confirmation import decide
+                state = status(job)
+                if state["state"] != "awaiting_confirmation":
+                    raise ValueError("No live card on this job")
+                result = decide(job / "confirmations", args.confirmation_id, args.session_id,
+                                args.plan_sha256, args.decision)
+                sys.stdout.write(json.dumps(result, ensure_ascii=False) + "\n")
+                return 0
             seconds = getattr(args, "seconds", 0)
             if not 0 <= seconds <= 55:
                 raise ValueError("Wait duration must be between 0 and 55 seconds")

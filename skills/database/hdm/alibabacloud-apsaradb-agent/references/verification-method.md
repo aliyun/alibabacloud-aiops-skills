@@ -93,20 +93,19 @@ Verify exit 0, a complete stdout answer, a valid `[SessionID] <uuid>` on stderr,
 
 ## 7. Operation Scope Verification
 
-With the fake CLI, verify that only a supported action with an exact approved
-plan and one pending card receives `Approved=true`. Deletion, restart, secrets,
-billing and other unsupported actions must not receive approval. Check that a
-changed target, extra argument, mismatched response, or second write fails
-closed. The callback must use the same originating session, profile and UA,
-without custom arguments. A failed or interrupted operation is never replayed;
-an acknowledged decision alone does not prove execution. A separate readonly
-resource query must establish the postcondition.
+Run `tests/test_live_confirmation.py` with an isolated CLI. Verify the normal
+business request remains running while a real test card awaits human decision;
+the exact ID/session/hash can approve or reject once; wrong bindings, stale/dead
+jobs, readonly cards and destructive operations cannot approve. Check nested
+CreateOrder arguments, future service operation names, masked secret fields and
+transport failure after approval. No product write runs locally, and no accepted
+query/callback is replayed. Verify multiple cards each require a new decision.
 
-AgentHub cases 21–30 assess the plan, approval boundary and verification plan without submitting changes. Cases 31–32 additionally assess an explicitly approved single database creation or description change, requiring successful readonly prechecks, exact approved execution and an independent readonly postcondition query. They are execution cases and must not be counted as readonly; provisioning remains plan-only. Case 33 checks missing-target clarification. Local fake-stream tests cover the approved callback and rejection paths. A live smoke test requires an approved exact plan and
-a designated test resource. An explicit admission rejection before any event, session,
-card or callback may retry the identical GetYaoChiAgent request; it has not submitted
-a product write. Once the service returns progress or approval is uncertain, no replay
-is allowed, including after callback or a malformed response.
+AgentHub plan-only scenarios remain readonly by their user scope. Operation
+scenarios require actual precheck, real approval, execution and independent
+business verification; do not require a hardcoded creation API when the service
+uses CreateOrder. Deferred/manual-approval cases are not completed writes.
+Local isolated tests do not prove live cloud execution or platform admission.
 
 ## 8. Permission Error Verification
 

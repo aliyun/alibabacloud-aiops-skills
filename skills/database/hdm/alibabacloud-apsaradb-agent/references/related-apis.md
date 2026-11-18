@@ -36,7 +36,7 @@ The helper uses the standard session when no mode is supplied. Explicit
 read-only requests. It is not a universal guarantee about every auxiliary
 tool. In either mode, a confirmation card without a matching approved plan
 does not receive a callback. The approved operation path omits the mode
-and is limited to the exact local and server-side allowlists.
+and is subject to server-side operation availability plus the client prohibition on deletion, release and disabling deletion protection.
 
 Only the operations listed in [the operation contract](related-commands.md#confirming-an-operation) may receive approval. No local write fallback is provided.
 
