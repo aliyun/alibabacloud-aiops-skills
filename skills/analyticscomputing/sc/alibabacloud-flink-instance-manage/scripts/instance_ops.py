@@ -13,6 +13,11 @@ Commands:
     create_namespace    Create a namespace
     describe_namespaces Describe namespaces
     list_tags           List tags for resources
+    get_flink_ai_service            Get Flink AI service status
+    get_flink_ai_service_free_quota Get Flink AI service free quota usage
+    open_flink_ai_service           Open Flink AI service
+    close_flink_ai_service          Close Flink AI service
+    modify_ai_service_protection    Change Flink AI service closure protection
 
 Authentication:
     Uses Alibaba Cloud default credential chain (RAM role, CLI profile, etc.)
@@ -23,7 +28,10 @@ Output:
 
 import argparse
 import json
+import os
+import re
 import sys
+from pathlib import Path
 
 from alibabacloud_credentials.client import Client as CredentialClient
 from alibabacloud_foasconsole20211028 import models as foas_models
@@ -34,22 +42,56 @@ from alibabacloud_tea_util import models as util_models
 DEFAULT_CONNECT_TIMEOUT_MS = 10_000
 DEFAULT_READ_TIMEOUT_MS = 60_000
 DEFAULT_USER_AGENT = "AlibabaCloud-Agent-Skills"
+SKILL_USER_AGENT = f"{DEFAULT_USER_AGENT}/alibabacloud-flink-instance-manage"
+SESSION_ID_PATTERN = re.compile(r"[0-9a-f]{32}")
+REGION_ID_PATTERN = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
+MANIFEST_PATH = Path(__file__).resolve().parent.parent / "references" / "manifest.json"
+
+
+def build_user_agent(require_context=False):
+    """Return the skill User-Agent, with session context when available."""
+    session_id = os.environ.get("SKILL_SESSION_ID", "")
+    version = os.environ.get("SKILL_VERSION", "")
+    valid_session = SESSION_ID_PATTERN.fullmatch(session_id)
+    valid_version = (
+        bool(version) and version == version.strip() and version.isascii() and version.isprintable()
+    )
+    if require_context:
+        if not valid_session or not valid_version:
+            raise ValueError(
+                "Set SKILL_SESSION_ID to 32 lowercase hexadecimal characters and "
+                "SKILL_VERSION to the version in references/manifest.json."
+            )
+        with MANIFEST_PATH.open(encoding="utf-8") as manifest_file:
+            manifest = json.load(manifest_file)
+        if not isinstance(manifest, dict) or manifest.get("version") != version:
+            raise ValueError("SKILL_VERSION must match the version in references/manifest.json.")
+    if valid_session and valid_version:
+        return f"{SKILL_USER_AGENT}/{session_id} skill-version/{version}"
+    return f"{SKILL_USER_AGENT}/{session_id}" if valid_session else DEFAULT_USER_AGENT
 
 
 class FlinkClient:
     """Flink OpenAPI client (2021-10-28) with automatic authentication."""
 
-    def __init__(self, region_id):
+    def __init__(self, region_id, *, require_observability=False):
         if not region_id:
             raise ValueError(
                 "region_id is required. Please specify the region for this operation."
             )
+        if (
+            not isinstance(region_id, str)
+            or len(region_id) > 63
+            or not REGION_ID_PATTERN.fullmatch(region_id)
+        ):
+            raise ValueError("Provide a valid Alibaba Cloud region ID.")
 
+        user_agent = build_user_agent(require_observability)
         config = openapi_models.Config(
             credential=CredentialClient(),
             region_id=region_id,
             endpoint=f"foasconsole.{region_id}.aliyuncs.com",
-            user_agent=DEFAULT_USER_AGENT,
+            user_agent=user_agent,
         )
 
         self.client = Client(config)
@@ -91,7 +133,7 @@ def _get_resource_spec_values(spec):
 
 
 def _confirmation_audit(confirm_provided):
-    """Return an auditable confirmation gate snapshot for create operations."""
+    """Return an auditable confirmation gate snapshot for write operations."""
     provided = bool(confirm_provided)
     return {
         "required_flag": "--confirm",
@@ -640,6 +682,90 @@ def list_tags(args):
         return 1
 
 
+def run_ai_service_command(args):
+    """Execute one regional Flink AI service operation."""
+    result = {"success": False, "operation": args.command, "request_id": ""}
+    if hasattr(args, "confirm"):
+        result["confirmation_check"] = _confirmation_audit(args.confirm)
+        if not args.confirm:
+            result["error"] = {
+                "code": "SafetyCheckRequired",
+                "message": (
+                    "Obtain explicit user approval for this regional Flink AI service change, "
+                    "then use --confirm."
+                ),
+            }
+            print(json.dumps(result, indent=2))
+            return 1
+
+    try:
+        client = FlinkClient(args.region_id, require_observability=True)
+        request_params = {"region": args.region_id}
+        if hasattr(args, "deletion_protection"):
+            request_params["deletion_protection"] = args.deletion_protection == "true"
+        request = args.request_model(**request_params)
+        response = client.call_api(args.command, request)
+        data = response.body.to_map() if response.body is not None else {}
+        result["data"] = data
+        headers = response.headers or {}
+        result["request_id"] = data.get("RequestId") or headers.get("x-acs-request-id", "")
+        result["success"] = data.get("Success") is True
+        if not result["success"]:
+            result["error"] = {
+                "code": "ApiUnsuccessful",
+                "message": "The Flink AI service API did not report success.",
+            }
+    except Exception as exc:
+        # The SDK stringifies absent error fields as "None".
+        request_id = getattr(exc, "request_id", None)
+        if request_id and request_id != "None":
+            result["request_id"] = request_id
+        error_code = getattr(exc, "code", None)
+        result["error"] = {
+            "code": error_code if error_code and error_code != "None" else type(exc).__name__,
+            "message": getattr(exc, "message", None) or str(exc),
+        }
+
+    print(json.dumps(result, indent=2))
+    return 0 if result["success"] else 1
+
+
+def add_ai_service_commands(subparsers):
+    """Register the supported Flink AI service SDK operations."""
+    commands = (
+        ("get_flink_ai_service", foas_models.GetFlinkAiServiceRequest, "Get Flink AI service status", False),
+        (
+            "get_flink_ai_service_free_quota",
+            foas_models.GetFlinkAiServiceFreeQuotaRequest,
+            "Get Flink AI service free quota usage",
+            False,
+        ),
+        ("open_flink_ai_service", foas_models.OpenFlinkAiServiceRequest, "Open Flink AI service", True),
+        ("close_flink_ai_service", foas_models.CloseFlinkAiServiceRequest, "Close Flink AI service", True),
+        (
+            "modify_ai_service_protection",
+            foas_models.ModifyAiServiceProtectionRequest,
+            "Change Flink AI service closure protection",
+            True,
+        ),
+    )
+    for name, request_model, help_text, requires_confirmation in commands:
+        parser = subparsers.add_parser(name, help=help_text)
+        parser.add_argument("--region_id", required=True, help="Region ID")
+        if requires_confirmation:
+            parser.add_argument(
+                "--confirm", action="store_true", help="Acknowledge explicit user approval for the change"
+            )
+        if name == "modify_ai_service_protection":
+            parser.add_argument(
+                "--deletion_protection",
+                required=True,
+                choices=("true", "false"),
+                help="Enable (true) or disable (false) closure protection",
+            )
+        parser.set_defaults(func=run_ai_service_command, request_model=request_model)
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Flink Instance Manager (API 2021-10-28)"
@@ -722,6 +848,8 @@ def main():
     )
     list_tags_parser.add_argument("--resource_ids", help="Resource IDs")
     list_tags_parser.set_defaults(func=list_tags)
+
+    add_ai_service_commands(subparsers)
 
     args = parser.parse_args()
     if not args.command:

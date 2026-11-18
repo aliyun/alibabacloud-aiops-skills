@@ -7,6 +7,7 @@ This folder is organized by operation lifecycle, not by evaluation workflow.
 - `quick-start.md`: install, auth, first commands
 - `trigger-recognition-guide.md`: when to use this skill
 - `core-execution-flow.md`: standard flow for create/query tasks
+- Use `flink-ai-service.md` to query and manage Flink AI Service by region.
 
 ## 2) Execute Commands
 

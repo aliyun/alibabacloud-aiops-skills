@@ -65,3 +65,12 @@ For lifecycle tasks that require instance + namespace create:
 
 - if `create_namespace` fails, do not mark overall status as `completed`
 - use `failed` or `not_ready` with explicit next action
+
+## 9) Flink AI Service
+
+| Scenario | Expected behavior | Failure case |
+|---|---|---|
+| Query status or free quota | Run the read-only command in the user's specified region and report the returned DTO fields | Treat missing quota as zero or silently switch regions |
+| Activate, deactivate, or change closure protection | Pass `--confirm` after user confirmation and use an explicit boolean for closure protection | Automatically disable closure protection when it blocks deactivation |
+| Verify a change | Check the returned `Success` and verify the target state with a follow-up query | Report an accepted request or transitional state as complete |
+| Write request times out or returns an ambiguous result | Record the `request_id` if available and query the current state first | Retry the write before checking the current state |

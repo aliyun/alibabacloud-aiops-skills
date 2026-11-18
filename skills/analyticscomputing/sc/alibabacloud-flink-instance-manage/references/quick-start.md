@@ -1,6 +1,6 @@
 # Quick Start
 
-Alibaba Cloud Flink VVP instance operations with create/query command scope.
+Create or query Alibaba Cloud Flink VVP instances and namespaces, and query or manage Flink AI Service.
 
 ## Trigger Recognition
 
@@ -8,11 +8,12 @@ Use this skill when request is about:
 - Flink instance create/query
 - Flink namespace create/query
 - Flink region/zone/tag queries
+- Flink AI Service status, activation, deactivation, free quota, or closure protection
 
 Do not use this skill for:
 - Flink SQL or Flink jobs
 - Other Alibaba Cloud services (ECS, Kafka, OSS, DataWorks)
-- Update or delete operations
+- Instance or namespace updates and deletion
 
 ## 1) Install Dependencies
 
@@ -74,6 +75,8 @@ python scripts/instance_ops.py describe_namespaces \
 |----------|----------|
 | Query | `describe_regions`, `describe_zones`, `describe`, `describe_namespaces`, `list_tags` |
 | Create | `create`, `create_namespace` |
+| AI service queries | `get_flink_ai_service`, `get_flink_ai_service_free_quota` |
+| AI service changes | `open_flink_ai_service`, `close_flink_ai_service`, `modify_ai_service_protection` |
 
 ## Required Confirmation
 
@@ -81,6 +84,7 @@ python scripts/instance_ops.py describe_namespaces \
 |-----------|------|
 | `create` | `--confirm` |
 | `create_namespace` | `--confirm` |
+| AI service activation, deactivation, and closure protection changes | `--confirm` |
 
 ## Reference Map
 
@@ -95,6 +99,7 @@ python scripts/instance_ops.py describe_namespaces \
 | `common-failures.md` | Typical mistakes and fixes |
 | `python-environment-setup.md` | Python setup guide |
 | `related-apis.md` | API command mapping |
+| `flink-ai-service.md` | AI service session setup, commands, and verification |
 
 ## Output Shape
 

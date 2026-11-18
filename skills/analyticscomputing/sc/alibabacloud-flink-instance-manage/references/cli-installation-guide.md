@@ -2,7 +2,7 @@
 
 Complete guide for installing and configuring Aliyun CLI.
 
-> **Aliyun CLI 3.3.1+**: Supports installing and using all published Alibaba Cloud product plugins. Make sure to upgrade to 3.3.1 or later for full plugin ecosystem coverage.
+> Aliyun CLI is optional and is used for credential and environment diagnostics. Flink operations in this skill use the Python SDK.
 
 ## Table of Contents
 
@@ -17,95 +17,9 @@ Complete guide for installing and configuring Aliyun CLI.
 
 ## Installation
 
-### macOS
+Run `aliyun version` to check for an existing installation. If installation is needed, the user selects an approved version and downloads the asset for their operating system and architecture from the [official Aliyun CLI releases](https://github.com/aliyun/aliyun-cli/releases).
 
-**Using Homebrew (Recommended)**
-```bash
-brew install aliyun-cli
-# Upgrade to latest
-brew upgrade aliyun-cli
-
-# Verify version (>= 3.3.1)
-aliyun version
-```
-
-**Using Binary**
-```bash
-# Download
-wget https://aliyuncli.alicdn.com/aliyun-cli-macosx-latest-amd64.tgz
-
-# Extract
-tar -xzf aliyun-cli-macosx-latest-amd64.tgz
-
-# Move to PATH
-sudo mv aliyun /usr/local/bin/
-
-# Verify
-aliyun version
-```
-
-### Linux
-
-**Debian/Ubuntu**
-```bash
-# Download
-wget https://aliyuncli.alicdn.com/aliyun-cli-linux-latest-amd64.tgz
-
-# Extract and install
-tar -xzf aliyun-cli-linux-latest-amd64.tgz
-sudo mv aliyun /usr/local/bin/
-
-# Verify
-aliyun version
-```
-
-**CentOS/RHEL**
-```bash
-# Download
-wget https://aliyuncli.alicdn.com/aliyun-cli-linux-latest-amd64.tgz
-
-# Extract and install
-tar -xzf aliyun-cli-linux-latest-amd64.tgz
-sudo mv aliyun /usr/local/bin/
-
-# Verify
-aliyun version
-```
-
-**ARM64 Architecture**
-```bash
-# Download ARM64 version
-wget https://aliyuncli.alicdn.com/aliyun-cli-linux-latest-arm64.tgz
-
-# Extract and install
-tar -xzf aliyun-cli-linux-latest-arm64.tgz
-sudo mv aliyun /usr/local/bin/
-```
-
-### Windows
-
-**Using Binary**
-1. Download from: https://aliyuncli.alicdn.com/aliyun-cli-windows-latest-amd64.zip
-2. Extract the ZIP file
-3. Add the directory to your PATH environment variable
-4. Open new Command Prompt or PowerShell
-5. Verify: `aliyun version`
-
-**Using PowerShell**
-```powershell
-# Download
-Invoke-WebRequest -Uri "https://aliyuncli.alicdn.com/aliyun-cli-windows-latest-amd64.zip" -OutFile "aliyun-cli.zip"
-
-# Extract
-Expand-Archive -Path aliyun-cli.zip -DestinationPath C:\aliyun-cli
-
-# Add to PATH (requires admin privileges)
-$env:Path += ";C:\aliyun-cli"
-[Environment]::SetEnvironmentVariable("Path", $env:Path, [System.EnvironmentVariableTarget]::Machine)
-
-# Verify
-aliyun version
-```
+Compare the downloaded file's SHA-256 digest with the digest for the exact asset on its release page or in an approved artifact repository. If the digest is unavailable or differs, stop. Once verified, follow the official platform installation instructions and run `aliyun version` to confirm the installed version matches the selected release.
 
 ## Configuration
 
@@ -284,11 +198,10 @@ aliyun configure set --profile projectB \
 
 **Use Specific Profile**
 
-```bash
-aliyun ecs describe-instances --profile projectA
+Set the confirmed profile name for the Python SDK credential chain.
 
+```bash
 export ALIBABA_CLOUD_PROFILE=projectA
-aliyun ecs describe-instances   # Uses projectA
 ```
 
 **List and Switch Profiles**
@@ -312,31 +225,21 @@ Credentials are loaded in this order (first found wins):
 
 ### Test Authentication
 
+Use local diagnostics to check the installed CLI and configured profiles.
+
 ```bash
-# Basic test - list regions
-aliyun ecs describe-regions
-
-# Expected output: JSON array of regions
+aliyun version
+aliyun configure list
 ```
 
-**If successful**, you'll see:
-```json
-{
-  "Regions": {
-    "Region": [
-      {
-        "RegionId": "cn-hangzhou",
-        "RegionEndpoint": "ecs.cn-hangzhou.aliyuncs.com",
-        "LocalName": "华东 1（杭州）"
-      },
-      ...
-    ]
-  },
-  "RequestId": "..."
-}
+For a live read-only credential check requested by the user, first [initialize the skill session](../SKILL.md#initialize-the-session), then run the following from the skill root.
+
+```bash
+python scripts/instance_ops.py describe_regions
 ```
 
-**If failed**, you'll see error messages:
+Check for `success: true`, `operation: "describe_regions"`, and the supported regions in `data`. If the command fails, inspect `error.code`, `error.message`, and `request_id` when available. Common authentication errors include the following.
+
 - `InvalidAccessKeyId.NotFound` - Wrong Access Key ID
 - `SignatureDoesNotMatch` - Wrong Access Key Secret
 - `InvalidSecurityToken.Expired` - STS token expired (for StsToken mode)
@@ -345,15 +248,10 @@ aliyun ecs describe-regions
 ### Debug Configuration
 
 ```bash
-# Show current configuration
-aliyun configure get
-
-# Test with debug logging
-aliyun ecs describe-regions --log-level=debug
-
-# Check credential provider
-aliyun configure get mode
+aliyun configure list
 ```
+
+For cloud failures, use the script's structured error fields and request ID. Keep credential values out of diagnostic output.
 
 ## Security Best Practices
 
@@ -370,12 +268,7 @@ aliyun configure get mode
 
 ### 2. Principle of Least Privilege
 
-Grant only the minimum permissions needed:
-
-```bash
-# Example: Read-only ECS access
-# Attach policy: AliyunECSReadOnlyAccess
-```
+Grant only the explicitly listed Flink RAM actions needed for the requested operation. Use the [RAM policies reference](ram-policies.md) to select the required actions and resource constraints.
 
 ### 3. Rotate Access Keys Regularly
 
@@ -433,24 +326,14 @@ echo $PATH
 
 ```bash
 # Verify configuration
-aliyun configure get
-
-# Test with debug
-aliyun ecs describe-regions --log-level=debug
-
-# Check credentials in console
-# Verify access key is active
+aliyun configure list
 ```
+
+Ask the user to verify that the configured identity is active. If the user requests a live check, follow [Test Authentication](#test-authentication) and inspect the returned error fields.
 
 ### Issue: Permission Denied
 
-```bash
-# Error: Forbidden.RAM
-
-# Check RAM user permissions
-# Attach necessary policies in RAM console
-# Example: AliyunECSFullAccess for ECS operations
-```
+For `Forbidden.RAM`, follow the [permission failure procedure](../SKILL.md#ram-authorization). Provide the failed Flink operation, region, error code, and request ID to the permission diagnosis skill or the user's RAM administrator.
 
 ### Issue: STS Token Expired
 
@@ -465,24 +348,13 @@ aliyun configure set --mode StsToken \
 
 ### Issue: Wrong Region
 
-```bash
-# Some resources may not exist in the specified region
-
-# Check available regions
-aliyun ecs describe-regions
-
-# Update default region
-aliyun configure set region cn-shanghai
-```
+Confirm the target region with the user and pass it as `--region_id` to the requested Flink command. If the user requests a live supported-region query, follow [Test Authentication](#test-authentication).
 
 ## Advanced Configuration
 
-### Custom Endpoint
+### Flink Endpoint
 
-```bash
-# Use custom or private endpoint
-export ALIBABA_CLOUD_ECS_ENDPOINT=ecs-vpc.cn-hangzhou.aliyuncs.com
-```
+The script derives the Flink OpenAPI endpoint from the validated `--region_id`.
 
 ### Proxy Settings
 
@@ -509,21 +381,12 @@ export ALIBABA_CLOUD_READ_TIMEOUT=30
 
 After installation and configuration:
 
-1. **Install plugins** for services you need (v3.3.1+ supports all published product plugins):
+1. **Explore commands**:
    ```bash
-   aliyun plugin install --names ecs vpc rds
-
-   # List all available plugins
-   aliyun plugin list-remote
+   aliyun --help
    ```
 
-2. **Explore commands**:
-   ```bash
-   aliyun ecs --help
-   aliyun fc --help
-   ```
-
-3. **Read documentation**:
+2. **Read documentation**:
    - Command Syntax Guide
    - Global Flags Reference
    - Common Scenarios

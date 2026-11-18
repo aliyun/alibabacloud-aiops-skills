@@ -4,7 +4,7 @@ This guide helps identify when to use the alibabacloud-flink-instance-manage ski
 
 ## Quick Rule
 
-Use this skill when the prompt is about **Flink VVP instance/namespace create or query**.
+Use this skill to create or query Flink VVP instances and namespaces, or to manage regional Flink AI Service.
 
 ## Positive Triggers (Use Skill)
 
@@ -28,6 +28,16 @@ Use this skill when the prompt is about **Flink VVP instance/namespace create or
 | "创建Flink命名空间" | create_namespace command |
 | "查询实例下的命名空间" | describe_namespaces command |
 
+### Flink AI Service
+
+| User request | Command |
+|---|---|
+| "杭州的 Flink AI 服务开通了吗" | `get_flink_ai_service` |
+| "查一下 Flink AI 服务免费额度和用量" | `get_flink_ai_service_free_quota` |
+| "在北京开通 Flink AI 服务" | `open_flink_ai_service` |
+| "关闭深圳的 Flink AI 服务" | `close_flink_ai_service` |
+| "开启北京 Flink AI 服务的关闭保护" | `modify_ai_service_protection` with `true` |
+
 ## Negative Triggers (Do Not Use Skill)
 
 ### Different Service Domain
@@ -46,6 +56,7 @@ Use this skill when the prompt is about **Flink VVP instance/namespace create or
 | "Run Flink SQL query" | Flink SQL, not instance | Use Flink SQL skill |
 | "Submit Flink job" | Job management | Different skill |
 | "运行Flink SQL" | Flink SQL, not instance | Use Flink SQL skill |
+| "用云端 AI 助手诊断作业", "配置智能巡检" | Intelligent Assistant and intelligent inspection | Use the Flink AI operations skill |
 
 ### In-Domain but Rejected (Trigger + Reject)
 | User Request | Reason | Correct Action |
@@ -60,11 +71,15 @@ Use this skill when the prompt is about **Flink VVP instance/namespace create or
 When request intent is unclear, ask one clarifying question:
 
 - "Do you need Flink instance/namespace management, or Flink SQL/job operations?"
+- "开启 Flink AI" can mean activating regional AI Service or using an AI feature. Clarify which the user wants.
 
 ## Decision Tree
 
 ```
 User request about Flink
+    │
+    ├─ Regional AI service status, quota, activation, deactivation, or closure protection → Use this skill
+    ├─ Intelligent Assistant or intelligent inspection → Use the Flink AI operations skill
     │
     ├─ Mentions "instance" or "namespace" or "VVP"?
     │   ├─ YES → USE THIS SKILL

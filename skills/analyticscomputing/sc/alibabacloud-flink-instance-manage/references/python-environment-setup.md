@@ -17,7 +17,7 @@ Complete guide for setting up the Python environment for Flink instance operatio
 
 ## Prerequisites
 
-- Python 3.6 or higher
+- Python 3.7 or higher
 - pip (Python package manager)
 - Alibaba Cloud credentials available from the default credential chain
 
@@ -26,13 +26,13 @@ Complete guide for setting up the Python environment for Flink instance operatio
 ## Step 1: Verify Python Installation
 
 ```bash
-# Check Python version (must be 3.6+)
+# Check Python version (must be 3.7+)
 python3 --version
 ```
 
 **Expected Output:**
 ```
-Python 3.6.0 or higher
+Python 3.7.0 or higher
 ```
 
 **If Python is not installed:**
@@ -69,9 +69,9 @@ pip install -r assets/requirements.txt
 ```
 
 This installs:
-- `alibabacloud-foasconsole20211028>=2.2.1` - Flink OpenAPI SDK
-- `alibabacloud-tea-openapi>=0.4.3` - OpenAPI client
-- `alibabacloud-tea-util>=0.3.14` - Utility library
+- `alibabacloud-foasconsole20211028==2.4.0` - Flink OpenAPI SDK
+- `alibabacloud-tea-openapi==0.4.6` - OpenAPI client
+- `alibabacloud-tea-util==0.3.14` - Utility library
 
 **Verify installation:**
 ```bash
@@ -133,12 +133,12 @@ python scripts/instance_ops.py describe_regions
 
 **Symptom:**
 ```
-Python 3.5.2
+Python 3.6.15
 # or lower
 ```
 
 **Solution:**
-Upgrade Python to 3.6 or higher using your system's package manager.
+Upgrade Python to 3.7 or higher using your system's package manager.
 
 ### Issue: Module not found
 

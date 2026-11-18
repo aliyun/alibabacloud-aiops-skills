@@ -4,7 +4,7 @@ This document defines the execution flow for Alibaba Cloud Flink VVP instance op
 
 ## When to Use This Skill
 
-**Trigger when user request is about Flink instance/namespace lifecycle create/query.**
+Use this skill to create or query Flink instances and namespaces or to manage Flink AI services. For AI service session setup, changes, and status verification, see the [Flink AI service guide](flink-ai-service.md).
 
 ### English triggers
 - "create a Flink instance" / "create Flink"
@@ -13,7 +13,7 @@ This document defines the execution flow for Alibaba Cloud Flink VVP instance op
 - "what regions support Flink" / "Flink regions"
 - "Flink VVP" / "Flink on Cloud"
 
-### Chinese triggers (中文触发词)
+### Chinese triggers
 - "创建Flink实例" / "创建实时计算实例"
 - "查询Flink实例" / "查询实例信息"
 - "创建命名空间" / "Flink命名空间"
@@ -23,7 +23,7 @@ This document defines the execution flow for Alibaba Cloud Flink VVP instance op
 ### Explicitly DO NOT trigger for
 - Flink SQL queries ("运行Flink SQL", "Flink job")
 - Other Alibaba Cloud services (ECS, Kafka, OSS, DataWorks)
-- Update/delete operations (拒绝此类请求并说明scope)
+- Instance and namespace updates and deletions
 
 ## Execution Entry Point
 

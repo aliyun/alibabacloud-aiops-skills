@@ -2,6 +2,10 @@
 
 Pre-execution validation checklist. If any check fails, do not execute.
 
+## Region ID Validation
+
+Use a confirmed `--region_id` of 1 to 63 ASCII characters. Each segment must contain only lowercase letters or digits. Separate segments with a single hyphen. The shared client validates the region before initializing credentials or constructing the API endpoint.
+
 ## Create Command Validation
 
 ### 1. Confirmation flag (MANDATORY)
@@ -71,7 +75,7 @@ Idempotent exception:
 
 ## Query Command Validation
 
-Query commands have minimal validation:
+Query commands require the following arguments:
 - `describe_regions`: no parameters required
 - `describe_zones`: requires `--region_id`
 - `describe`: requires `--region_id`
@@ -84,7 +88,7 @@ Query commands have minimal validation:
 |-----------|-------|-----|
 | SafetyCheckRequired | Missing `--confirm` | Add `--confirm` flag |
 | MissingParameter | Missing required flag | Add the required flag |
-| ValueError | Invalid parameter combination | Check resource spec rules |
+| ValueError | Invalid region ID or parameter combination | Check the region format and resource spec rules |
 | InstanceNameConflict | Instance exists with different config | Use different name or verify existing instance |
 | NamespaceNotFound | Parent instance not found | Verify instance_id exists |
 | InsufficientResources | Requested namespace resources exceed available capacity | Inform user and request manual instance resource expansion/reallocation, then retry |
@@ -94,7 +98,7 @@ Query commands have minimal validation:
 Before executing `create`:
 ```
 □ --confirm flag present
-□ --region_id present
+□ --region_id confirmed and valid
 □ --name present
 □ --instance_type valid (PayAsYouGo or Subscription)
 □ --vswitch_id present
@@ -106,7 +110,7 @@ Before executing `create`:
 Before executing `create_namespace`:
 ```
 □ --confirm flag present
-□ --region_id present
+□ --region_id confirmed and valid
 □ --instance_id present
 □ --name present
 □ For new namespace: both --cpu AND --memory_gb present

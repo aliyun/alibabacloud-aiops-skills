@@ -6,7 +6,7 @@
 - `operation`: operation name
 - `data`: successful response payload
 - `error.code` and `error.message`: failure diagnostics
-- `confirmation_check` (create operations): auditable confirmation gate status
+- `confirmation_check` records confirmation for instance and namespace creation, AI service activation and deactivation, and closure protection changes.
 
 ## Retry policy (strict)
 
