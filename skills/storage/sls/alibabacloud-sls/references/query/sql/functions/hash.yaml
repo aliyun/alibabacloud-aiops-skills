@@ -1,0 +1,32 @@
+category: hash_functions
+name: Hash functions
+description: Calculate hash values.
+functions:
+- name: md5
+  syntax: md5(binary_value)
+  description: Calculate a MD5 digest of binary data.
+  returns: varbinary
+  example: >-
+    * | SELECT to_hex(md5(to_utf8('hello'))) AS result FROM log LIMIT 1
+  example_output:
+    result: 5D41402ABC4B2A76B9719D911017C592
+- name: sha1
+  syntax: sha1(binary_value)
+  description: Calculate a SHA1 digest of binary data.
+  returns: varbinary
+  example: >-
+    * | SELECT to_hex(sha1(to_utf8('hello'))) AS result FROM log LIMIT 1
+  example_output:
+    result: AAF4C61DDCC5E8A2DABEDE0F3B482CD9AEA9434D
+- name: sha256
+  syntax: sha256(binary_value)
+  description: Calculate a SHA256 digest of binary data.
+  returns: varbinary
+  example: >-
+    * | SELECT to_hex(sha256(to_utf8('hello'))) AS result FROM log LIMIT 1
+  example_output:
+    result: 2CF24DBA5FB0A30E26E83B2AC5B9E29E1B161E5C1FA7425E73043362938B9824
+source: https://help.aliyun.com/zh/sls/binary-functions
+important_notes:
+- Use to_utf8 for text input and to_hex for readable hash or binary output.
+- The examples wrap binary results with from_utf8 or to_hex so their contents are visible.

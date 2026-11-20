@@ -1,0 +1,44 @@
+category: conditional_functions
+name: Conditional functions
+description: Evaluate conditions and branches.
+functions:
+- name: if
+  syntax: if(condition, true_value [, false_value])
+  description: Return true_value when the condition is true; otherwise return false_value, or NULL if
+    it is omitted.
+  example: >-
+    * | SELECT if(503 >= 500, 'error','normal') AS result FROM log LIMIT 1
+  example_output:
+    result: error
+- name: case
+  syntax: CASE WHEN condition THEN result [...] [ELSE default] END
+  description: Return the result of the first matching branch; ELSE is optional and defaults to NULL.
+  example: >-
+    * | SELECT CASE WHEN 404 >= 500 THEN 'server_error' WHEN 404 >= 400 THEN 'client_error' ELSE 'success'
+    END AS result FROM log LIMIT 1
+  example_output:
+    result: client_error
+- name: coalesce
+  syntax: coalesce(value1, value2, ...)
+  description: Return the first non-NULL value.
+  example: >-
+    * | SELECT coalesce(CAST(NULL AS VARCHAR), 'guest') AS result FROM log LIMIT 1
+  example_output:
+    result: guest
+- name: nullif
+  syntax: nullif(value1, value2)
+  description: Return NULL when the values are equal; otherwise return the first value.
+  example: >-
+    * | SELECT nullif('', '') AS result FROM log LIMIT 1
+  example_output:
+    result: null
+- name: try
+  syntax: TRY(expression)
+  description: Handle evaluation errors such as division by zero by returning NULL.
+  returns: The expression type, with NULL for a handled error.
+  note: Use try_cast when only a type conversion needs error handling.
+  example: >-
+    * | SELECT TRY(1 / 0) AS result FROM log LIMIT 1
+  example_output:
+    result: null
+source: https://help.aliyun.com/zh/sls/conditional-expressions

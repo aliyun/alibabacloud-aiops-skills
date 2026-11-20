@@ -1,0 +1,361 @@
+# aliyun sls command contracts
+#
+# status legend:
+#   confirmed   : subcommand + params verified via `aliyun sls <cmd> --help`
+#   cli_gap     : no direct plugin subcommand; use documented fallback
+#   product_gap : no public SLS OpenAPI/CLI; use degradation path
+#
+# Rules for all write commands:
+#   - After user authorization, run `--cli-dry-run` and the actual write as separate direct commands.
+#   - Exception: when get/list proves the desired state already matches, skip both calls and record the operation and verification, except for config.modify and AgentSight (workflow.md §6).
+#   - Coupled config/index: should follow snapshot → render → validate → config diff → index diff → config dry-run → index dry-run → config write → index write → verification (index-coupling.md).
+#   - Preserve unchanged fields for replace updates; logstore update merges supplied fields.
+#   - Get/list before Create/Apply; a verified no-op counts as successful completion, subject to the config.modify and AgentSight exceptions.
+#   - Every cloud tool invocation contains exactly one direct, literal `aliyun sls ...` command.
+#   - Cloud calls use --region <r> and inherit ALIBABA_CLOUD_USER_AGENT from the shared setup.
+#   - JSON list/object params passed as single-quoted JSON, e.g. --inputs '[{"Type":"input_file",...}]'
+#   - Use --format json for machine-readable output; paginate list commands with --offset/--size.
+
+meta:
+  plugin: "aliyun-cli-sls"
+  api_version: "2020-12-30"
+  dry_run_flag: "--cli-dry-run"
+  global_flags: ["--region", "--endpoint", "--profile", "--format", "--cli-dry-run"]
+  success_rule: "Command exit code 0 means success; a nonzero value means failure."
+  error_recovery:
+    max_retries_after_initial_attempt: 3
+    parameter: "400 ParameterInvalid -> preserve request ID, fix invalid parameter only, retry same API"
+    throttling: "429/WriteQuotaExceed -> preserve request ID, bounded exponential backoff, retry identical command"
+    internal: "500/InternalServerError -> preserve request ID, retry identical atomic command"
+    permission: "[Error: permission] 401/403 Unauthorized/AccessDenied -> report missing Action and request ID; ask once and end the turn; retry only after the user explicitly confirms authorization, otherwise [BLOCKED: PERMISSION_REQUIRED]"
+  infrastructure_failure: "if the CLI fails below the API layer, retry the identical atomic command once, then report the raw output; never fabricate the expected response"
+  idempotent_skip: "Record the skipped create/apply operation and the get/list command that verified the target state; see workflow.md §6 for exceptions."
+
+project:
+  create_project:
+    command: "aliyun sls project create"
+    status: confirmed
+    required: [--project, --description]
+    optional: [--data-redundancy-type, --recycle-bin-enabled, --resource-group-id]
+  get_project:
+    command: "aliyun sls project get"
+    status: confirmed
+    required: [--project]        # verify param name via `aliyun sls project get --help`
+  list_project:
+    command: "aliyun sls project list"
+    status: confirmed
+    optional: [--project, --size, --offset]
+  update_project:
+    command: "aliyun sls project update"
+    status: confirmed
+    pre: "project get first, carry description/attributes back"
+  delete_project:
+    command: "aliyun sls project delete"
+    status: confirmed
+    risk: R4
+
+logstore:
+  create_log_store:
+    command: "aliyun sls logstore create"
+    status: confirmed
+    required: [--project, --logstore, --shard-count, --ttl]
+    optional: [--auto-split, --max-split-shard, --append-meta, --enable-tracking, --hot-ttl,
+               --infrequent-access-ttl, --telemetry-type, --enable-modify, --encrypt-conf, --resource-group-id]
+  get_log_store:
+    command: "aliyun sls logstore get"
+    status: confirmed
+    required: [--project, --logstore]
+  list_log_stores:
+    command: "aliyun sls logstore list"
+    status: confirmed
+  update_log_store:
+    command: "aliyun sls logstore update"
+    status: confirmed
+    required: [--project, --logstore]
+    pre: "Read current settings to prepare the diff; the command merges supplied top-level fields with the existing configuration."
+    note: "Retention changes use the supplied ttl/hot-ttl/infrequent-access-ttl values as a group; include the retention values to preserve."
+  delete_log_store:
+    command: "aliyun sls logstore delete"
+    status: confirmed
+    risk: R4
+
+index:
+  create_index:
+    command: "aliyun sls index create"
+    status: confirmed
+    required: [--project, --logstore]
+    optional: [--keys, --line, --max-text-len, --scan-index, --log-reduce]
+    note: "--keys is field-index JSON; --line is the full-text index object, requires token as a JSON string array, and uses chn=true (includeChinese is invalid). Call index get first; use create only on IndexConfigNotExist, otherwise index update."
+  get_index:
+    command: "aliyun sls index get"
+    status: confirmed
+    required: [--project, --logstore]
+  update_index:
+    command: "aliyun sls index update"
+    status: confirmed
+    pre: "index get first; full overwrite — merge new keys with existing"
+  delete_index:
+    command: "aliyun sls index delete"
+    status: confirmed
+    risk: R3
+
+machine_group:
+  create_machine_group:
+    command: "aliyun sls machine-group create"
+    status: confirmed
+    required: [--project, --machine-group, --machine-identify-type, --machine-list]
+    optional: [--group-attribute, --group-type]
+    note: "--machine-identify-type: ip | userdefined; --machine-list is a JSON string array, e.g. '[\"192.0.2.1\",\"192.0.2.2\"]'."
+  get_machine_group:
+    command: "aliyun sls machine-group get"
+    status: confirmed
+    required: [--project, --machine-group]      # verify exact param via --help
+  list_machine_group:
+    command: "aliyun sls machine-group list"
+    status: confirmed
+  update_machine_group:
+    command: "aliyun sls machine-group update"
+    status: confirmed
+    pre: "machine-group get first; preserve unchanged configuration for this replace update. Use add-members/remove-members for member-only changes."
+  delete_machine_group:
+    command: "aliyun sls machine-group delete"
+    status: confirmed
+    risk: R4
+  list_machines:
+    command: "aliyun sls machine-group list-machines"
+    status: confirmed          # CLI-001 CLOSED
+    required: [--project, --machine-group]
+    optional: [--offset, --size]     # size default 100, max 500
+    returns: "machines[] with identity, lastHeartbeatTime, and binary (collector version, e.g. 3.3.4)"
+  add_members:
+    command: "aliyun sls machine-group add-members"
+    status: confirmed
+    required: [--project, --machine-group, --machine-list]
+  remove_members:
+    command: "aliyun sls machine-group remove-members"
+    status: confirmed
+    required: [--project, --machine-group, --machine-list]
+  member_update:
+    status: confirmed          # CLI-003
+    method: "machine-group add-members / machine-group remove-members --project <p> --machine-group <g> --machine-list '<JSON array>'"
+    note: "These commands read the group and update its member list while preserving other fields; they are not server-side atomic membership operations."
+  list_members:
+    command: "aliyun sls machine-group list-members"
+    status: confirmed
+    required: [--project, --machine-group]
+
+pipeline_config:
+  mandatory_mapping:
+    rule: "Use only logtail-pipeline-config get/list/create/update/delete with --logtail-pipeline-config (list uses --project and optional --logstore). Never use classic get/list/update-config as Pipeline aliases or use --config. If the object has inputDetail/outputDetail instead of inputs/processors/flushers, stop as classic-config unsupported."
+  create_logtail_pipeline_config:
+    command: "aliyun sls logtail-pipeline-config create"
+    status: confirmed
+    required: [--project, --logtail-pipeline-config, --inputs, --flushers]
+    optional: [--processors, --aggregators, --global, --log-sample]
+    note: "inputs: exactly 1; flushers: exactly 1 flusher_sls; native and extended plugins cannot be mixed"
+  get_logtail_pipeline_config:
+    command: "aliyun sls logtail-pipeline-config get"
+    status: confirmed
+    required: [--project, --logtail-pipeline-config]
+  list_logtail_pipeline_config:
+    command: "aliyun sls logtail-pipeline-config list"
+    status: confirmed
+    optional: [--logtail-pipeline-config, --logstore, --config-type, --offset, --size]
+  update_logtail_pipeline_config:
+    command: "aliyun sls logtail-pipeline-config update"
+    status: confirmed
+    pre: "logtail-pipeline-config get first; carry full inputs/processors/flushers/global back"
+  delete_logtail_pipeline_config:
+    command: "aliyun sls logtail-pipeline-config delete"
+    status: confirmed
+    risk: R4
+
+binding:
+  mandatory_mapping:
+    rule: "group->configs is machine-group get-applied-configs --machine-group; config->groups is logtail-pipeline-config get-applied-machine-groups --logtail-pipeline-config. Never invent get-machine-group-applied-configs or get-config-applied-machine-groups."
+  apply_config_to_machine_group:
+    command: "aliyun sls logtail-pipeline-config apply-to-machine-group"
+    status: confirmed
+    required: [--project, --machine-group, --logtail-pipeline-config]
+    post: "read binding back via machine-group get-applied-configs / logtail-pipeline-config get-applied-machine-groups"
+  remove_config_from_machine_group:
+    command: "aliyun sls logtail-pipeline-config remove-from-machine-group"
+    status: confirmed
+    required: [--project, --machine-group, --logtail-pipeline-config]
+    risk: R3
+  get_applied_configs:
+    command: "aliyun sls machine-group get-applied-configs"
+    status: confirmed
+    note: "configs applied to a machine group (machine-group snapshot)"
+  get_applied_machine_groups:
+    command: "aliyun sls logtail-pipeline-config get-applied-machine-groups"
+    status: confirmed          # CLI-002 CLOSED
+    required: [--project, --logtail-pipeline-config]
+
+query:
+  get_logs_v2:
+    command: "aliyun sls query"
+    status: confirmed
+    required: [--project, --logstore]
+    optional: [--from, --to, --time-range, --query, --line, --offset, --reverse, --power-sql, --save-file]
+    time_rule: "Supply --from and --to together, or --time-range. Endpoints accept timestamps, RFC3339, local dates/times and relative times. Use fixed absolute endpoints for retries."
+    note: "use for business logstore AND SLS Lens run logs; check meta.progress for completeness; never use deprecated get-logs"
+  get_logging:
+    command: "aliyun sls logging get"
+    status: confirmed          # CLI-004
+    required: [--project]
+    returns: "loggingProject (Lens/service-log project) + loggingDetails[] {type, logstore}"
+    note: "type logtail_status|logtail_profile|logtail_alarm -> Lens run-log logstore (typically internal-diagnostic_log); type operation_log -> operation-record logstore (internal-operation_log)"
+
+version_discovery:
+  status: confirmed          # CLI-007
+  chain:
+    - "config or machine group known: machine-group list-machines --project <p> --machine-group <g> -> machines[].binary is the collector version (a config maps to its bound group via logtail-pipeline-config get-applied-machine-groups)"
+    - "only an IP known: SLS Lens logtail_status.version (query on the Lens logstore)"
+    - "user-provided version"
+  rule: "If version still cannot be confirmed, do NOT generate configs that depend on version gates; ask the user."
+
+lens_entry_discovery:
+  status: confirmed          # CLI-004
+  method: "logging get --project <business-project> -> loggingProject is the Lens project; the loggingDetails[] entry whose type is logtail_status/logtail_profile/logtail_alarm gives the Lens logstore (typically internal-diagnostic_log)."
+  fallback: "if logging get is unavailable/denied/LoggingNotExist and Lens evidence is required, ask for user-provided lens_project/logstore; verify it, then query via query. Never STAROps/console-private/UID-guessed entries."
+
+# --- install.deploy adapters (non-SLS) ------------------------------------
+# Cloud-API commands use --region and the shared User-Agent environment.
+# Do not use OOS / ChatOps. Addon name is loongcollector (not loongcollector-ds).
+
+host_install:
+  script: loongcollector.sh
+  official_doc: "https://help.aliyun.com/zh/sls/loongcollector-installation-linux"
+  render: "scripts/loongcollector/render_loongcollector_install_cmd.py"
+  actions:
+    install_same_account_same_region: "./loongcollector.sh install ${region}"
+    install_cross_region_internet: "./loongcollector.sh install ${region}-internet"
+    install_cross_region_acceleration: "./loongcollector.sh install ${region}-acceleration"
+    upgrade: "./loongcollector.sh upgrade"   # never reuse install to overwrite
+  identity:
+    user_defined_id: "/etc/ilogtail/user_defined_id"
+    users_file: "/etc/ilogtail/users/${aliuid}"   # cross-account
+  accept: "sudo /etc/init.d/loongcollectord status  ->  loongcollector is running"
+  windows: blocked
+
+ecs_runcommand:
+  status: confirmed_contract
+  exec:
+    command: "aliyun ecs run-command --biz-region-id <region> --type RunShellScript --timeout 600 --command-content '<remote_command>' --instance-id <ecs_instance_id>"
+    poll: "aliyun ecs describe-invocation-results --biz-region-id <region> --invoke-id <invoke_id> --content-encoding PlainText"
+    note: "Poll until InvocationStatus is Success/Failed/PartialFailed. Read Output then loongcollectord status. Never workbench/OOS. Never print AK/SK. Never StrictHostKeyChecking=no."
+  scope: "Alibaba Cloud Linux ECS only; does not create ECS. Cloud Assistant must be running (default on Alibaba Cloud Linux)."
+
+ssh_host:
+  status: confirmed_contract
+  rule: "User-configured SSH alias/agent only; confirm host fingerprint; never accept a private key in chat; never StrictHostKeyChecking=no; no unbounded root shell."
+  shape: "ssh <alias> -- <literal-command>  then check exit code and loongcollectord status."
+
+ack_enablement:
+  status: confirmed
+  note: "Open ACK and prepare its service roles when required for the user-specified installation."
+  script: "scripts/loongcollector/ensure_ack_prereq.sh --region <r> --profile <profile>"
+  when: "ErrorNotEnabled / cskpro / NotEnabled / EntityNotExist.Role on any aliyun cs write; or preflight ack_service=warn"
+  open_service:
+    cli: "aliyun cs open-ack-service --type propayasgo"
+    risk: R2
+    idempotent: true
+    detail: "enables ACK Pro + Basic pay-as-you-go; already-enabled is a no-op"
+  service_roles:
+    cli: "aliyun ram get-role / aliyun ram create-role / aliyun ram list-policies-for-role / aliyun ram attach-policy-to-role"
+    trust: "cs.aliyuncs.com"
+    names:
+      - AliyunCSDefaultRole
+      - AliyunCSManagedKubernetesRole
+      - AliyunCSManagedNetworkRole
+      - AliyunCSManagedLogRole
+      - AliyunCSManagedCmsRole
+      - AliyunCSManagedCsiRole
+      - AliyunCSManagedAutoScalerRole
+    fail: "Any listed role or its required System policy remains unavailable -> block completion; use RAM HITL for permission failures."
+  create_cluster:
+    only_when: "user explicitly asked to create a cluster"
+    never: ["--profile", "auto-create an unspecified cluster", "create ECS / invent VPC"]
+    cli: "aliyun cs create-cluster --name <n> --cluster-type ManagedKubernetes --biz-profile Default --cluster-spec ack.standard --vpcid <vpc> --vswitch-ids <vsw>"
+    spec_order: [ack.standard, ack.pro.small]
+    recover: "ErrorNotEnabled -> open-ack-service then retry this spec once; EntityNotExist.Role -> ensure_ack_prereq.sh then retry once"
+    risk: R2
+
+ack_addon:
+  status: confirmed
+  plugin: "aliyun-cli-cs"
+  addon_name: "loongcollector"  # NOT loongcollector-ds (that is the in-cluster DaemonSet)
+  mutex: "logtail / logtail-ds already installed -> do not auto-uninstall (R4); stop and report."
+  commands:
+    describe_addon:
+      cli: "aliyun cs describe-addon --addon-name loongcollector [--cluster-id <cid>]"
+      required: [--addon-name]
+    list_instances:
+      cli: "aliyun cs list-cluster-addon-instances --cluster-id <cid>"
+      required: [--cluster-id]
+    describe_instance:
+      cli: "aliyun cs describe-cluster-addon-instance --cluster-id <cid> --addon-name loongcollector"
+      required: [--cluster-id, --addon-name]
+    get_instance:
+      cli: "aliyun cs get-cluster-addon-instance --cluster-id <cid> --instance-name loongcollector"
+      required: [--cluster-id, --instance-name]
+    list_resources:
+      cli: "aliyun cs list-cluster-addon-instance-resources --cluster-id <cid> --instance-name loongcollector"
+    install:
+      cli: "aliyun cs install-cluster-addons --cluster-id <cid> --biz-body name=loongcollector"
+      required: [--cluster-id, --biz-body]
+      note: "Current aliyun-cli-cs uses --biz-body name=... (not --body). Optional version= after describe-addon."
+      risk: R2
+    upgrade:
+      cli: "aliyun cs upgrade-cluster-addons --cluster-id <cid> --biz-body component_name=loongcollector"
+      required: [--cluster-id, --biz-body]
+      risk: R2
+  wait: "scripts/loongcollector/wait_cs_task.sh --cluster-id <cid> --addon-name loongcollector --profile <profile>"
+  reuse_after_install:
+    project: "k8s-log-${cluster_id}"
+    machine_group: "k8s-group-${cluster_id}"
+  collection_default: "aliyun sls logtail-pipeline-config create + logtail-pipeline-config apply-to-machine-group k8s-group-${cluster_id}"
+  kubeconfig_optional_crd:
+    status: confirmed            # verified 2026-08-28: public endpoint empty → intranet 6443 only
+    detail: "describe-cluster-detail master_url.api_server_endpoint must be non-empty before issuing public kubeconfig"
+    issue: "aliyun cs describe-cluster-user-kubeconfig --cluster-id <cid> --private-ip-address false --temporary-duration-minutes 15"
+    secret_rule: "Write config to 0600 tempfile; never print/cat kubeconfig or client certs; do not overwrite ~/.kube/config"
+    fail_closed: "empty public endpoint or TCP 6443 unreachable → stay on SLS API; do not enable EIP unless user asks"
+    not_agent_channel: "CloudShell / console Workbench are browser terminals, not OpenAPI exec"
+
+self_k8s_install:
+  official_doc: "https://help.aliyun.com/zh/sls/loongcollector-installation-kubernetes-1"
+  method: "User kubectl + official custom package; discover package version at runtime; never hardcode a doc example (e.g. 3.2.6) as latest."
+  values_required: [projectName, region, aliUid, net, clusterID, accessKeyID, accessKeySecret]
+  secret_rule: "Do not ask for or print AK/SK in chat; read from an already-configured local/cluster secret path the user names, or stop."
+  accept: "kubectl get po -n kube-system | grep loongcollector-ds  ->  Running"
+  reuse_after_install:
+    project: "values.yaml projectName"
+    machine_group: "k8s-group-${clusterID}"
+
+crd_pipeline:
+  kind: ClusterAliyunPipelineConfig
+  api_version: telemetry.alibabacloud.com/v1alpha1
+  scope: cluster
+  name_rule: "metadata.name == SLS config name; 2-128 lowercase [a-z0-9_-]"
+  default: "do not use; K8s collection uses SLS Pipeline API"
+  prefer_when:
+    - user explicitly asked for ClusterAliyunPipelineConfig / GitOps / kubectl apply CR
+    - environment is ack or self_k8s
+    - kube-apiserver reachable (public endpoint or in-VPC)
+    - kubectl auth can-i create clusteraliyunpipelineconfigs returns yes
+    - CRD registered
+    - alibaba-log-controller or loongcollector-operator is running
+  commands:
+    get_crd: "kubectl get crd clusteraliyunpipelineconfigs.telemetry.alibabacloud.com"
+    can_i: "kubectl auth can-i create clusteraliyunpipelineconfigs"
+    list: "kubectl get clusteraliyunpipelineconfigs -o yaml"
+    get: "kubectl get clusteraliyunpipelineconfigs <name> -o yaml"
+    dry_run: "kubectl apply --dry-run=server -f <cr.yaml>"
+    apply: "kubectl apply -f <cr.yaml>"
+    delete: "kubectl delete clusteraliyunpipelineconfigs <name>"
+  status_pass: "status.success==true and lastAppliedConfig non-empty"
+  forbidden_kinds: [AliyunLogConfig, NamespaceAliyunPipelineConfig]
+  render: "scripts/loongcollector/render_crd.py"
+  validate: "scripts/loongcollector/validate_pipeline.py on spec.config, then kubectl apply --dry-run=server after approval"

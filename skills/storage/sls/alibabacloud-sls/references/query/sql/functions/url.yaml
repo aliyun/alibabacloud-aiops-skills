@@ -1,0 +1,37 @@
+category: url_functions
+name: URL functions
+description: Parse URLs.
+functions:
+- name: url_extract_host
+  syntax: url_extract_host(url)
+  description: Extract the host.
+  example: >-
+    * | SELECT url_extract_host('https://example.com:8443/api/orders?user_id=42#details') AS result FROM
+    log LIMIT 1
+  example_output:
+    result: example.com
+- name: url_extract_path
+  syntax: url_extract_path(url)
+  description: Extract the path.
+  example: >-
+    * | SELECT url_extract_path('https://example.com:8443/api/orders?user_id=42#details') AS result FROM
+    log LIMIT 1
+  example_output:
+    result: /api/orders
+- name: url_extract_parameter
+  syntax: url_extract_parameter(url, param_name)
+  description: Extract a query parameter.
+  example: >-
+    * | SELECT url_extract_parameter('https://example.com:8443/api/orders?user_id=42#details','user_id')
+    AS result FROM log LIMIT 1
+  example_output:
+    result: '42'
+- name: url_extract_protocol
+  syntax: url_extract_protocol(url)
+  description: Extract the protocol.
+  example: >-
+    * | SELECT url_extract_protocol('https://example.com:8443/api/orders?user_id=42#details') AS result
+    FROM log LIMIT 1
+  example_output:
+    result: https
+source: https://help.aliyun.com/zh/sls/url-functions

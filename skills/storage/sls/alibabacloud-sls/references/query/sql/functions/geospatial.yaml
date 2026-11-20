@@ -1,0 +1,89 @@
+category: geospatial_functions
+name: Geospatial functions
+description: Process geometries and geographic data.
+functions:
+- name: ST_Point
+  syntax: ST_Point(x, y)
+  description: Create a point from numeric x and y coordinates.
+  example: >-
+    * | SELECT ST_AsText(ST_Point(3,4)) AS result FROM log LIMIT 1
+  example_output:
+    result: POINT (3 4)
+  returns: Geometry; examples use ST_AsText or a spatial predicate to display it.
+- name: ST_GeometryFromText
+  syntax: ST_GeometryFromText(wkt_string)
+  description: Create a geometry from Well-Known Text (WKT).
+  example: >-
+    * | SELECT ST_AsText(ST_GeometryFromText('POINT(3 4)')) AS result FROM log LIMIT 1
+  example_output:
+    result: POINT (3 4)
+  returns: Geometry; examples use ST_AsText or a spatial predicate to display it.
+- name: ST_AsText
+  syntax: ST_AsText(geometry)
+  description: Convert a geometry to Well-Known Text (WKT).
+  example: >-
+    * | SELECT ST_AsText(ST_Point(3,4)) AS result FROM log LIMIT 1
+  example_output:
+    result: POINT (3 4)
+- name: ST_Contains
+  syntax: ST_Contains(geometry1, geometry2)
+  description: Test whether geometry1 fully contains geometry2.
+  returns: boolean
+  example: >-
+    * | SELECT ST_Contains(ST_GeometryFromText('POLYGON((0 0,10 0,10 10,0 10,0 0))'),ST_Point(5,5)) AS
+    result FROM log LIMIT 1
+  example_output:
+    result: true
+  note: A point lying only on the polygon boundary is not contained; use ST_Intersects to include boundary
+    contact.
+- name: ST_Distance
+  syntax: ST_Distance(geometry1, geometry2)
+  description: Return the minimum planar distance between two geometries, in their coordinate units.
+  example: >-
+    * | SELECT ST_Distance(ST_Point(0,0),ST_Point(3,4)) AS result FROM log LIMIT 1
+  example_output:
+    result: 5.0
+- name: ST_Intersects
+  syntax: ST_Intersects(geometry1, geometry2)
+  description: Test whether two geometries intersect.
+  returns: boolean
+  example: >-
+    * | SELECT ST_Intersects(ST_GeometryFromText('POLYGON((0 0,10 0,10 10,0 10,0 0))'),ST_Point(0,5))
+    AS result FROM log LIMIT 1
+  example_output:
+    result: true
+- name: ST_Boundary
+  syntax: ST_Boundary(geometry)
+  description: Return the boundary of a geometry.
+  example: >-
+    * | SELECT ST_AsText(ST_Boundary(ST_GeometryFromText('POLYGON((0 0,10 0,10 10,0 10,0 0))'))) AS result
+    FROM log LIMIT 1
+  example_output:
+    result: LINESTRING (0 0, 10 0, 10 10, 0 10, 0 0)
+  returns: Geometry; examples use ST_AsText or a spatial predicate to display it.
+- name: ST_Buffer
+  syntax: ST_Buffer(geometry, distance)
+  description: Return the region within a specified distance of a geometry.
+  example: >-
+    * | SELECT ST_Contains(ST_Buffer(ST_Point(0,0),2.0),ST_Point(1,0)) AS result FROM log LIMIT 1
+  example_output:
+    result: true
+  returns: Geometry; examples use ST_AsText or a spatial predicate to display it.
+- name: ST_Area
+  syntax: ST_Area(geometry)
+  description: Return the planar area in squared coordinate units.
+  example: >-
+    * | SELECT ST_Area(ST_GeometryFromText('POLYGON((0 0,10 0,10 10,0 10,0 0))')) AS result FROM log LIMIT
+    1
+  example_output:
+    result: 100.0
+use_cases:
+- Geofence checks
+- Distance calculations
+- Area analysis
+- Spatial queries
+important_notes:
+- Geometry calculations are planar. Passing longitude/latitude coordinates does not make ST_Distance return
+  meters.
+- Use ST_AsText to inspect geometry output as WKT.
+source: https://help.aliyun.com/zh/sls/geospatial-functions

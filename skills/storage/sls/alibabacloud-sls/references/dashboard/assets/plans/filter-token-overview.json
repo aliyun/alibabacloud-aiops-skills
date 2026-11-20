@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "dashboard": {
+    "displayName": "Request filters and time buckets"
+  },
+  "sources": [
+    {
+      "id": "logs",
+      "type": "logstore",
+      "region": "cn-hangzhou",
+      "project": "example-project",
+      "name": "example-logstore"
+    }
+  ],
+  "controls": [
+    {
+      "id": "request-method",
+      "mode": "filter",
+      "key": "request_method",
+      "label": "Request method",
+      "source": "logs",
+      "query": {
+        "name": "A",
+        "source": "logs",
+        "query": "* | select distinct request_method limit 1000",
+        "fields": [{"name": "request_method", "type": "string"}]
+      }
+    },
+    {
+      "id": "interval",
+      "mode": "token",
+      "key": "interval",
+      "label": "Time bucket",
+      "values": ["60", "300", "600"],
+      "aliases": ["1 minute", "5 minutes", "10 minutes"],
+      "defaults": ["60"]
+    }
+  ],
+  "charts": [
+    {
+      "id": "method-control",
+      "title": "Request method",
+      "type": "droplistpro",
+      "control": "request-method",
+      "layout": {"x": 0, "y": 0, "w": 6, "h": 2}
+    },
+    {
+      "id": "interval-control",
+      "title": "Time bucket",
+      "type": "droplistpro",
+      "control": "interval",
+      "layout": {"x": 6, "y": 0, "w": 6, "h": 2}
+    },
+    {
+      "id": "request-count",
+      "title": "Request count",
+      "type": "statpro",
+      "layout": {"x": 0, "y": 2, "w": 6, "h": 6},
+      "queries": [
+        {
+          "name": "A",
+          "source": "logs",
+          "query": "* | select count(*) as requests",
+          "fields": [{"name": "requests", "type": "number"}]
+        }
+      ],
+      "config": {
+        "stat": {"mode": "calculate", "valueFields": ["requests"], "reducer": "first"}
+      }
+    },
+    {
+      "id": "request-trend",
+      "title": "Request trend",
+      "type": "linepro",
+      "layout": {"x": 6, "y": 2, "w": 18, "h": 6},
+      "queries": [
+        {
+          "name": "A",
+          "source": "logs",
+          "query": "* | select __time__ - __time__ % ${{interval|60}} as time, count(*) as requests group by time order by time limit 10000",
+          "fields": [
+            {"name": "time", "type": "time"},
+            {"name": "requests", "type": "number"}
+          ]
+        }
+      ]
+    }
+  ]
+}

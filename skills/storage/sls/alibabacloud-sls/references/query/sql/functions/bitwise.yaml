@@ -1,0 +1,50 @@
+category: bitwise_functions
+name: Bitwise functions
+description: Perform operations directly on binary bits.
+functions:
+- name: bit_count
+  syntax: bit_count(x, bits)
+  description: Count the set bits in a binary representation.
+  params:
+  - x: A bigint value
+  - bits: Bit width
+  example: >-
+    * | SELECT bit_count(5,64) AS result FROM log LIMIT 1
+  example_output:
+    result: 2
+- name: bitwise_and
+  syntax: bitwise_and(x, y)
+  description: Bitwise AND.
+  example: >-
+    * | SELECT bitwise_and(5,3) AS result FROM log LIMIT 1
+  example_output:
+    result: 1
+- name: bitwise_or
+  syntax: bitwise_or(x, y)
+  description: Bitwise OR.
+  example: >-
+    * | SELECT bitwise_or(5,3) AS result FROM log LIMIT 1
+  example_output:
+    result: 7
+- name: bitwise_xor
+  syntax: bitwise_xor(x, y)
+  description: Bitwise XOR.
+  example: >-
+    * | SELECT bitwise_xor(5,3) AS result FROM log LIMIT 1
+  example_output:
+    result: 6
+- name: bitwise_not
+  syntax: bitwise_not(x)
+  description: Bitwise NOT.
+  example: >-
+    * | SELECT bitwise_not(5) AS result FROM log LIMIT 1
+  example_output:
+    result: -6
+use_cases:
+- Permission bitmask operations
+- Flag checks
+- Bitmap operations
+- Low-level data processing
+important_notes:
+- Inputs and results use bigint. Convert text fields when necessary.
+source: https://help.aliyun.com/zh/sls/bitwise-functions

@@ -1,0 +1,99 @@
+category: datetime_functions
+name: Date and time functions
+description: Process dates and times.
+functions:
+- name: date_format
+  syntax: date_format(timestamp, format)
+  description: Format a timestamp as a string.
+  format_examples:
+  - '%Y-%m-%d': '2024-01-01'
+  - '%Y-%m-%d %H:%i:%s': '2024-01-01 12:30:45'
+  - '%H:%i': '12:30'
+  note: __time__ is in Unix seconds. In these format strings, %i means minutes and %m means month.
+  example: >-
+    * | SELECT date_format(TIMESTAMP '2024-01-02 03:04:05', '%Y-%m-%d %H:%i:%s') AS result FROM log LIMIT
+    1
+  example_output:
+    result: '2024-01-02 03:04:05'
+  returns: varchar
+- name: date_parse
+  syntax: date_parse(string, format)
+  description: Parse a time string into a timestamp.
+  example: >-
+    * | SELECT date_parse('2024-01-02 03:04:05', '%Y-%m-%d %H:%i:%s') AS result FROM log LIMIT 1
+  example_output:
+    result: '2024-01-02 03:04:05.000'
+  returns: timestamp
+- name: from_unixtime
+  syntax: from_unixtime(unix_seconds [, time_zone])
+  description: Convert Unix seconds to a timestamp; an explicit time zone produces a timestamp with time
+    zone.
+  example: >-
+    * | SELECT from_unixtime(1704067200, 'UTC') AS result FROM log LIMIT 1
+  example_output:
+    result: 2024-01-01 00:00:00.000 UTC
+  returns: timestamp or timestamp with time zone
+  note: Use an explicit time zone when the displayed calendar time matters.
+- name: to_unixtime
+  syntax: to_unixtime(timestamp)
+  description: Convert a timestamp to Unix seconds.
+  example: >-
+    * | SELECT to_unixtime(from_unixtime(1704067200, 'UTC')) AS result FROM log LIMIT 1
+  example_output:
+    result: 1704067200.0
+  returns: double
+- name: date_trunc
+  syntax: date_trunc(unit, timestamp)
+  description: Truncate time to the specified granularity.
+  units:
+  - millisecond
+  - second
+  - minute
+  - hour
+  - day
+  - week
+  - month
+  - quarter
+  - year
+  note: Align timestamps to calendar units for grouping. For five-minute buckets on Unix seconds, use
+    __time__ - __time__ % 300.
+  example: >-
+    * | SELECT date_trunc('hour', TIMESTAMP '2024-01-02 03:04:05') AS result FROM log LIMIT 1
+  example_output:
+    result: '2024-01-02 03:00:00.000'
+- name: date_diff
+  syntax: date_diff(unit, start_time, end_time)
+  description: Return end_time minus start_time in the specified unit, as an integer.
+  returns: bigint
+  example: >-
+    * | SELECT date_diff('hour', TIMESTAMP '2024-01-02 03:00:00', TIMESTAMP '2024-01-02 05:30:00') AS
+    result FROM log LIMIT 1
+  example_output:
+    result: 2
+- name: current_timestamp
+  syntax: current_timestamp
+  description: Return the current date and time, including the time zone.
+  example: >-
+    * | SELECT current_timestamp AS result FROM log LIMIT 1
+  returns: timestamp with time zone
+- name: date_add
+  syntax: date_add(unit, amount, timestamp)
+  description: Add a time interval to a timestamp; a negative amount subtracts the interval.
+  returns: timestamp
+  params:
+  - unit: millisecond, second, minute, hour, day, week, month, quarter, or year.
+  - amount: Number of units to add or subtract.
+  example: >-
+    * | SELECT date_add('day', -1, TIMESTAMP '2024-02-01 03:04:05') AS result FROM log LIMIT 1
+  example_output:
+    result: '2024-01-31 03:04:05.000'
+- name: from_iso8601_timestamp
+  syntax: from_iso8601_timestamp(text)
+  description: Parse an ISO 8601 date-time string, including its time-zone offset.
+  returns: timestamp with time zone
+  note: Use an explicit Z or numeric offset when the time zone is known.
+  example: >-
+    * | SELECT from_iso8601_timestamp('2024-01-02T03:04:05+08:00') AS result FROM log LIMIT 1
+  example_output:
+    result: '2024-01-02 03:04:05.000 +08:00'
+source: https://help.aliyun.com/zh/sls/date-and-time-functions-1

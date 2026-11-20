@@ -1,0 +1,119 @@
+category: aggregate_functions
+name: Aggregate functions
+description: Summarize matching rows, optionally within GROUP BY groups.
+functions:
+- name: count
+  syntax: count(*) or count(x)
+  description: Count log records.
+  example: >-
+    * | SELECT count(*) AS rows, count(x) AS non_null_values
+  note: count(*) counts all rows; count(x) counts rows where x is not NULL.
+  example_input:
+  - x: 10
+  - x: 20
+  - x: null
+  example_output:
+    rows: 3
+    non_null_values: 2
+- name: sum
+  syntax: sum(x)
+  description: Sum the non-NULL numeric values.
+  example: >-
+    * | SELECT sum(x) AS total
+  example_input:
+  - x: 10
+  - x: 20
+  - x: null
+  example_output:
+    total: 30
+- name: avg
+  syntax: avg(x)
+  description: Calculate the arithmetic mean of non-NULL numeric values.
+  example: >-
+    * | SELECT avg(x) AS average
+  example_input:
+  - x: 10
+  - x: 20
+  - x: null
+  example_output:
+    average: 15.0
+- name: max
+  syntax: max(x [, n])
+  description: Return the largest non-NULL value, or the largest n values as an array.
+  example: >-
+    * | SELECT max(x) AS maximum, max(x, 2) AS top_values
+  example_input:
+  - x: 10
+  - x: 20
+  - x: null
+  example_output:
+    maximum: 20
+    top_values:
+    - 20
+    - 10
+  note: The optional n must be a positive integer.
+- name: min
+  syntax: min(x [, n])
+  description: Return the smallest non-NULL value, or the smallest n values as an array.
+  example: >-
+    * | SELECT min(x) AS minimum, min(x, 2) AS bottom_values
+  example_input:
+  - x: 10
+  - x: 20
+  - x: null
+  example_output:
+    minimum: 10
+    bottom_values:
+    - 10
+    - 20
+  note: The optional n must be a positive integer.
+- name: count_if
+  syntax: count_if(condition)
+  description: Count logs that satisfy a condition.
+  example: >-
+    * | SELECT count_if(x >= 20) AS matching_rows
+  example_input:
+  - x: 10
+  - x: 20
+  - x: null
+  example_output:
+    matching_rows: 1
+- name: arbitrary
+  syntax: arbitrary(x)
+  description: Return an arbitrary non-NULL value.
+  example: >-
+    * | SELECT status, arbitrary(request_time) GROUP BY status
+  note: Useful for a representative value in each group; does not select the earliest or latest row.
+- name: max_by
+  syntax: max_by(value, sort_value [, n])
+  description: Return the value associated with the largest sort_value.
+  returns: The type of value, or an array of that type when n is supplied.
+  note: The optional positive n returns the values associated with the n largest sort values.
+  example_input:
+  - path: /a
+    latency: 10
+  - path: /b
+    latency: 30
+  - path: /c
+    latency: 20
+  example: >-
+    * | SELECT max_by(path, latency) AS result
+  example_output:
+    result: /b
+- name: min_by
+  syntax: min_by(value, sort_value [, n])
+  description: Return the value associated with the smallest sort_value.
+  returns: The type of value, or an array of that type when n is supplied.
+  note: The optional positive n returns the values associated with the n smallest sort values.
+  example_input:
+  - path: /a
+    latency: 10
+  - path: /b
+    latency: 30
+  - path: /c
+    latency: 20
+  example: >-
+    * | SELECT min_by(path, latency) AS result
+  example_output:
+    result: /a
+source: https://help.aliyun.com/zh/sls/aggregate-function

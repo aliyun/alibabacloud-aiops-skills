@@ -1,0 +1,148 @@
+category: map_functions
+name: Map functions and operators
+description: Create, query, merge, and otherwise process key/value structures.
+functions:
+- name: map
+  syntax: map() or map(x, y)
+  description: Return an empty Map or map two arrays into key/value pairs.
+  params:
+  - x: Key array (optional)
+  - y: Value array (optional)
+  example: >-
+    * | SELECT map(ARRAY['a','b'],ARRAY[1,2]) AS result FROM log LIMIT 1
+  example_output:
+    result:
+      a: 1
+      b: 2
+- name: element_at
+  syntax: element_at(x, key)
+  description: Retrieve the value for a specified Map key.
+  example: >-
+    * | SELECT element_at(map(ARRAY['a','b'],ARRAY[1,2]),'missing') AS result FROM log LIMIT 1
+  example_output:
+    result: null
+  note: Returns NULL for a missing key; direct map[key] access raises an error when the key is absent.
+- name: cardinality
+  syntax: cardinality(x)
+  description: Count the key/value pairs in a Map.
+  example: >-
+    * | SELECT cardinality(map(ARRAY['a','b'],ARRAY[1,2])) AS result FROM log LIMIT 1
+  example_output:
+    result: 2
+- name: map_keys
+  syntax: map_keys(x)
+  description: Return all Map keys as an array.
+  example: >-
+    * | SELECT array_sort(map_keys(map(ARRAY['a','b'],ARRAY[1,2]))) AS result FROM log LIMIT 1
+  example_output:
+    result:
+    - a
+    - b
+- name: map_values
+  syntax: map_values(x)
+  description: Return all Map values as an array.
+  example: >-
+    * | SELECT array_sort(map_values(map(ARRAY['a','b'],ARRAY[1,2]))) AS result FROM log LIMIT 1
+  example_output:
+    result:
+    - 1
+    - 2
+- name: map_concat
+  syntax: map_concat(x, y...)
+  description: Combine multiple Maps into one.
+  example: >-
+    * | SELECT map_concat(map(ARRAY['a'],ARRAY[1]),map(ARRAY['a','b'],ARRAY[2,3])) AS result FROM log
+    LIMIT 1
+  example_output:
+    result:
+      a: 2
+      b: 3
+  note: For duplicate keys, the value from the last map wins.
+- name: map_filter
+  syntax: map_filter(x, lambda_expression)
+  description: Filter Map entries using a lambda expression.
+  example: >-
+    * | SELECT map_filter(map(ARRAY['a','b'],ARRAY[1,2]),(k,v)->v>1) AS result FROM log LIMIT 1
+  example_output:
+    result:
+      b: 2
+- name: histogram
+  syntax: histogram(x)
+  description: Count occurrences of each value and return a map from value to count.
+  note: Similar to GROUP BY, with results in Map form.
+  example_input:
+  - method: GET
+    duration: 10
+  - method: GET
+    duration: 20
+  - method: POST
+    duration: 30
+  example: >-
+    * | SELECT histogram(method) AS result
+  example_output:
+    result:
+      POST: 1
+      GET: 2
+- name: histogram_u
+  syntax: histogram_u(x)
+  description: Return grouped values and their counts as separate result rows.
+  note: The count column has a generated name; the example labels it count. Row order is not guaranteed.
+  example_input:
+  - method: GET
+    duration: 10
+  - method: GET
+    duration: 20
+  - method: POST
+    duration: 30
+  example: >-
+    * | SELECT histogram_u(method) AS result
+  example_output:
+  - key: GET
+    count: 2
+  - key: POST
+    count: 1
+- name: map_agg
+  syntax: map_agg(x, y)
+  description: Aggregate key/value pairs into a map. If a key has multiple values, one is selected without
+    a defined ordering.
+  example_input:
+  - method: GET
+    duration: 10
+  - method: POST
+    duration: 30
+  example: >-
+    * | SELECT map_agg(method,duration) AS result
+  example_output:
+    result:
+      POST: 30
+      GET: 10
+- name: multimap_agg
+  syntax: multimap_agg(x, y)
+  description: Map x to y, using x as the key and all corresponding y values as an array.
+  example_input:
+  - method: GET
+    duration: 10
+  - method: GET
+    duration: 20
+  - method: POST
+    duration: 30
+  example: >-
+    * | SELECT multimap_agg(method,duration) AS result
+  example_output:
+    result:
+      POST:
+      - 30
+      GET:
+      - 10
+      - 20
+  note: Values for each key form an array; their order is not guaranteed.
+use_cases:
+- Analyze request-method distributions.
+- Count occurrences of status codes.
+- Merge configuration Maps.
+- Extract a Map structure from a JSON field.
+- Filter a Map by condition.
+important_notes:
+- Keys in a map have one consistent type; values also have one consistent type.
+- Use json_parse and cast to convert a JSON string into a map.
+source: https://help.aliyun.com/zh/sls/map-functions-and-operators

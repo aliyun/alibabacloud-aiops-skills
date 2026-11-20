@@ -1,0 +1,201 @@
+{
+  "version": 1,
+  "dashboard": {
+    "displayName": "Service requests"
+  },
+  "sources": [
+    {
+      "id": "logs",
+      "type": "logstore",
+      "region": "cn-hangzhou",
+      "project": "example-project",
+      "name": "example-logstore"
+    }
+  ],
+  "charts": [
+    {
+      "id": "total",
+      "title": "Requests",
+      "type": "statpro",
+      "layout": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 6
+      },
+      "queries": [
+        {
+          "name": "requests",
+          "source": "logs",
+          "query": "* | select count(*) as requests",
+          "fields": [
+            {
+              "name": "requests",
+              "type": "number"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "trend",
+      "title": "Requests over time",
+      "type": "linepro",
+      "layout": {
+        "x": 12,
+        "y": 0,
+        "w": 12,
+        "h": 6
+      },
+      "queries": [
+        {
+          "name": "requests",
+          "source": "logs",
+          "query": "* | select __time__ - __time__ % 60 as time, count(*) as requests group by time order by time limit 10000",
+          "fields": [
+            {
+              "name": "time",
+              "type": "time"
+            },
+            {
+              "name": "requests",
+              "type": "number"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "share",
+      "title": "Requests by service",
+      "type": "piepro",
+      "layout": {
+        "x": 0,
+        "y": 6,
+        "w": 12,
+        "h": 6
+      },
+      "queries": [
+        {
+          "name": "requests",
+          "source": "logs",
+          "query": "* | select service, count(*) as requests group by service order by requests desc limit 20",
+          "fields": [
+            {
+              "name": "service",
+              "type": "string"
+            },
+            {
+              "name": "requests",
+              "type": "number"
+            }
+          ]
+        }
+      ],
+      "config": {
+        "pie": {
+          "mode": "categoryValue",
+          "categoryField": "service",
+          "valueField": "requests"
+        }
+      }
+    },
+    {
+      "id": "service-trends",
+      "title": "Service trends",
+      "type": "aggpro",
+      "layout": {
+        "x": 12,
+        "y": 6,
+        "w": 12,
+        "h": 6
+      },
+      "queries": [
+        {
+          "name": "requests",
+          "source": "logs",
+          "query": "* | select __time__ - __time__ % 60 as time, service, count(*) as requests group by time, service order by time limit 10000",
+          "fields": [
+            {
+              "name": "time",
+              "type": "time"
+            },
+            {
+              "name": "service",
+              "type": "string"
+            },
+            {
+              "name": "requests",
+              "type": "number"
+            }
+          ]
+        }
+      ],
+      "config": {
+        "agg": {
+          "valueField": "requests",
+          "aggField": "service"
+        }
+      }
+    },
+    {
+      "id": "error-rate",
+      "title": "Error rate (%)",
+      "type": "burgauge",
+      "layout": {
+        "x": 0,
+        "y": 12,
+        "w": 12,
+        "h": 6
+      },
+      "queries": [
+        {
+          "name": "requests",
+          "source": "logs",
+          "query": "* | select 100.0 * sum(case when cast(status as bigint) >= 500 then 1 else 0 end) / nullif(count(*), 0) as error_percent",
+          "fields": [
+            {
+              "name": "error_percent",
+              "type": "number"
+            }
+          ]
+        }
+      ],
+      "config": {
+        "gauge": {
+          "data": {
+            "mode": "calculate",
+            "valueFields": [
+              "error_percent"
+            ],
+            "reducer": "lastNotNull"
+          },
+          "range": {
+            "mode": "fixed",
+            "min": 0,
+            "max": 100
+          },
+          "labelMode": "value"
+        }
+      }
+    },
+    {
+      "id": "service-table",
+      "title": "Service request counts",
+      "type": "tablepro",
+      "layout": {
+        "x": 12,
+        "y": 12,
+        "w": 12,
+        "h": 6
+      },
+      "queries": [
+        {
+          "name": "requests",
+          "source": "logs",
+          "query": "* | select service, count(*) as requests group by service order by requests desc limit 20"
+        }
+      ]
+    }
+  ]
+}

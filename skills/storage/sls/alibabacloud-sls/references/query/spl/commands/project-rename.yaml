@@ -1,0 +1,14 @@
+name: project-rename
+category: Field-operation commands
+description: Rename specified fields and retain all other fields.
+grammar: project-rename <new_field1> = <old_field1>, <new_field2> = <old_field2>, ...
+example: |
+  * | project-rename status_code = status, uri = request_uri
+scenarios:
+- All SPL scenarios
+note:
+- Renames fields without deleting fields.
+- The reserved fields __time__ and __time_ns_part__ are retained and cannot be renamed or overwritten by this
+  command.
+references:
+- https://help.aliyun.com/zh/sls/field-operation-instructions

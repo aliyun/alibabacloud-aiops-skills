@@ -1,0 +1,63 @@
+{
+  "dashboardName": "example-piepro",
+  "displayName": "Requests by service example",
+  "attribute": {
+    "type": "grid"
+  },
+  "charts": [
+    {
+      "title": "piepro",
+      "type": "piepro",
+      "display": {
+        "version": 2,
+        "xPos": 0,
+        "yPos": 0,
+        "width": 24,
+        "height": 8,
+        "basicOptions": {
+          "displayName": "Requests by service",
+          "showTitle": true,
+          "showBorder": true,
+          "showBackground": true,
+          "showTime": true
+        },
+        "pieOption": {
+          "chartType": "PieChart",
+          "showLabel": true,
+          "labelType": "type_num_percent"
+        },
+        "legendOption": {
+          "show": true,
+          "position": "bottom"
+        },
+        "standardOption": {
+          "format": "none",
+          "decimals": 0
+        },
+        "pieDataMode": "queryOptionMap",
+        "queryOptionMap": {
+          "A": {
+            "showFieldKey": "service",
+            "numFieldKey": "requests"
+          }
+        }
+      },
+      "search": {
+        "chartQueries": [
+          {
+            "name": "A",
+            "datasource": "logstore",
+            "region": "cn-hangzhou",
+            "project": "example-project",
+            "logstore": "example-logstore",
+            "query": "* | select service, requests from unnest(array['API','Worker','Web'], array[40,25,15]) as t(service,requests) order by requests desc"
+          }
+        ],
+        "start": "-3600s",
+        "end": "now",
+        "dataSourceType": "mixed"
+      },
+      "action": {}
+    }
+  ]
+}

@@ -1,0 +1,64 @@
+category: string_functions
+name: String functions
+description: Process text data.
+support:
+  spl: true
+functions:
+- name: concat
+  syntax: concat(x, y, ...)
+  description: Concatenate strings.
+  examples:
+    spl: '* | extend full_info = concat(region, ''-'', status)'
+- name: substr
+  syntax: substr(x, start [, length])
+  description: Extract a substring.
+  params:
+  - start: Starting position, beginning at 1
+  - length: Optional length
+  examples:
+    spl: '* | extend short_msg = substr(message, 1, 100)'
+- name: lower
+  syntax: lower(x)
+  description: Convert to lowercase.
+  examples:
+    spl: '* | extend method_lower = lower(method)'
+- name: upper
+  syntax: upper(x)
+  description: Convert to uppercase.
+  examples:
+    spl: '* | extend method_upper = upper(method)'
+- name: trim
+  syntax: trim(x)
+  description: Remove leading and trailing spaces.
+  examples:
+    spl: '* | extend user_clean = trim(user_name)'
+- name: ltrim
+  syntax: ltrim(x)
+  description: Remove leading spaces.
+  examples:
+    spl: '* | extend user_clean = ltrim(user_name)'
+- name: rtrim
+  syntax: rtrim(x)
+  description: Remove trailing spaces.
+  examples:
+    spl: '* | extend user_clean = rtrim(user_name)'
+- name: length
+  syntax: length(x)
+  description: Return string length.
+  examples:
+    spl: '* | extend msg_len = length(message)'
+- name: split
+  syntax: split(x, delimiter)
+  description: Split a string by a delimiter.
+  returns: Array
+  examples:
+    spl: '* | extend tags_array = split(tags, '','')'
+- name: replace
+  syntax: replace(x, search, replacement)
+  description: Replace text.
+  examples:
+    spl: '* | extend url_https = replace(url, ''http://'', ''https://'')'
+- name: split_part
+  syntax: split_part(x, delimiter, part)
+  description: Split text by a delimiter and return the specified part.
+  reference: https://help.aliyun.com/zh/sls/string-functions-1

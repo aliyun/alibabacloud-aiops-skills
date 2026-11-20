@@ -1,0 +1,59 @@
+category: operators
+name: Comparison and logical operators
+description: Compare values and combine Boolean conditions.
+support:
+  spl: true
+comparison_operators:
+- name: '='
+  description: Equal to
+  example: status = '200'
+- name: '!= or <>'
+  description: Not equal to
+  example: status != '200'
+- name: <
+  description: Less than
+  example: cast(request_time as bigint) < 100
+- name: <=
+  description: Less than or equal to
+  example: cast(request_time as bigint) <= 100
+- name: '>'
+  description: Greater than
+  example: cast(request_time as bigint) > 100
+- name: '>='
+  description: Greater than or equal to
+  example: cast(request_time as bigint) >= 100
+- name: BETWEEN
+  syntax: x BETWEEN min AND max
+  description: Test whether x is between min and max, inclusive.
+- name: IN
+  syntax: x IN (value1, value2, ...)
+  description: Test whether x belongs to a list of values.
+- name: IS NULL
+  description: Test for NULL.
+- name: IS NOT NULL
+  description: Test for a non-null value.
+- name: LIKE
+  syntax: x LIKE pattern
+  description: 'String pattern matching: % matches any sequence and _ matches one character.'
+logical_operators:
+- name: AND
+  description: Logical AND returns true when all conditions are true.
+  example: cast(status as bigint) >= 200 AND cast(status as bigint) < 300
+- name: OR
+  description: Logical OR returns true when any condition is true.
+  example: status = '404' OR status = '500'
+- name: NOT
+  description: Logical NOT negates a Boolean value.
+  example: NOT status = '200'
+important_notes:
+- String comparisons are case-sensitive.
+- Comparisons involving NULL return NULL.
+- Use IS NULL or IS NOT NULL to test null values.
+- Ordinary input fields begin as VARCHAR; reserved time fields are numeric. Use explicit conversion
+  for numeric comparisons. Fields converted with extend retain their new types.
+- Consider operator precedence and use parentheses when necessary.
+use_cases:
+- Filter logs by status code.
+- Filter data by time range.
+- Combine query conditions.
+- Handle NULL values.

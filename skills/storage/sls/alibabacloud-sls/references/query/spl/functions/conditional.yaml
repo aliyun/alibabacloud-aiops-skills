@@ -1,0 +1,24 @@
+category: conditional_functions
+name: Conditional functions
+description: Evaluate conditions and branches.
+support:
+  spl: true
+functions:
+- name: if
+  syntax: if(condition, true_value, false_value)
+  description: Conditional expression
+  examples:
+    spl: '* | extend level = if(cast(status as BIGINT) >= 500, ''error'', ''normal'')'
+- name: case
+  syntax: CASE WHEN condition THEN result [...] ELSE default END
+  description: Multiple conditional branches
+  examples:
+    spl: "* | extend status_type = CASE \n      WHEN cast(status as BIGINT) >= 500 THEN 'error'\n      WHEN\
+      \ cast(status as BIGINT) >= 400 THEN 'client_error'\n      ELSE 'success'\n    END\n"
+- name: coalesce
+  syntax: coalesce(value1, value2, ...)
+  description: Return the first non-null value.
+  note: Arguments must have the same type. For a BIGINT expression, use cast(0 as BIGINT) rather
+    than an INTEGER literal as the fallback.
+  examples:
+    spl: '* | extend user = coalesce(user_name, user_id, ''anonymous'')'

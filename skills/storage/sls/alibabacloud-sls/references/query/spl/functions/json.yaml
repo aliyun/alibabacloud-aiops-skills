@@ -1,0 +1,96 @@
+category: json_functions
+name: JSON functions
+description: Process JSON data.
+support:
+  spl: true
+functions:
+- name: json_extract
+  syntax: json_extract(json_string, json_path)
+  description: Extract a JSON value, returning JSON.
+  path_syntax:
+  - $: Root
+  - $.key: Object property
+  - $[index]: Array index, starting at 0
+  examples:
+    spl: '* | extend user_id = json_extract(payload, ''$.user.id'')'
+  input:
+    x: STRING or JSON
+    json_path: STRING
+  returns: JSON
+- name: json_extract_scalar
+  syntax: json_extract_scalar(json_string, json_path)
+  description: Extract a JSON scalar, returning a string.
+  examples:
+    spl: '* | extend user_name = json_extract_scalar(payload, ''$.user.name'')'
+  note: The extracted value may need cast conversion to another type.
+  input:
+    x: STRING or JSON
+    json_path: STRING
+  returns: STRING
+- name: json_size
+  syntax: json_size(x, json_path)
+  description: Count elements in a JSON object or array.
+  input:
+    x: STRING
+    json_path: STRING
+  returns: BIGINT
+- name: json_parse
+  syntax: json_parse(x)
+  description: Convert a string to JSON.
+  input:
+    x: STRING
+  returns: JSON
+- name: json_format
+  syntax: json_format(x)
+  description: Serialize JSON as a string.
+  input:
+    x: JSON
+  returns: STRING
+- name: json_array_length
+  syntax: json_array_length(x)
+  description: Count elements in a JSON array.
+  input:
+    x: STRING
+  returns: BIGINT
+- name: json_array_contains
+  syntax: json_array_contains(x, value)
+  description: Test whether a JSON array contains a value.
+  input:
+    x: STRING
+    value: String or numeric value
+  returns: BOOLEAN
+notes:
+- name: JSON values versus scalar strings
+  description:
+  - json_extract returns JSON; json_extract_scalar returns VARCHAR.
+  - json_extract can extract a substructure. json_extract_scalar extracts scalar leaf values, such as strings,
+    booleans, and integers, as text.
+- name: JSON paths
+  description:
+  - Use $.key for an object property. If a key contains a dot, use bracket notation and double quotes, such
+    as $["http.path"].
+  - JSON path array indexes start at 0, unlike SPL array subscripts, which start at 1.
+  - Use $[index] for array elements; wildcard * is not supported here.
+  - Use $ for the root.
+  examples:
+  - description: Read the amount of the first order.
+    spl: '* | extend x=json_extract_scalar(request, ''$.param.orders[0].payment'')'
+  - description: Read the second item in the first order.
+    spl: '* | extend x=json_extract_scalar(request, ''$.param.orders[0].items[1].name'')'
+  - description: Read an array inside an object.
+    spl: '* | extend x=''{"input" : {"messsage": ["a","b"]}}'' | project x | extend y=json_extract(x, ''$.input.messsage'')'
+  - description: Read the second array element.
+    spl: '* | extend x=''["a","b","c"]'' | project x | extend y=json_extract(x, ''$[1]'')'
+  - description: Read a property inside an array element.
+    spl: '* | extend x=''["a","b",{"msg" : "hello"}]'' | project x | extend y=json_extract(x, ''$[2].msg'')'
+- name: Process JSON arrays
+  description:
+  - Specify the element type when casting to an array, such as ARRAY(BIGINT) for numeric elements.
+  - Use JSON and ARRAY(JSON) types together for more complex processing.
+  - Extract a JSON value, cast it to ARRAY(JSON), and apply transformations.
+  - When needed, cast the array back to JSON and serialize it with json_format.
+  - Use CASE WHEN and try_cast for type-dependent processing. json_type and typeof are not supported.
+  example: '* | extend x=json_extract(payload, ''$.items'') | extend y=cardinality(cast(x as array(bigint)))'
+  example_input:
+    payload: '{"items":[1,2]}'
+  example_result: y = 2

@@ -1,0 +1,38 @@
+apiVersion: telemetry.alibabacloud.com/v1alpha1
+kind: ClusterAliyunPipelineConfig
+metadata:
+  name: k8s-stdout-json
+spec:
+  project:
+    name: k8s-log-<cluster_id>
+  config:
+    sample: '{"level":"INFO","msg":"ok"}'
+    global:
+      TopicType: machine_group_topic
+    inputs:
+      - Type: input_container_stdio
+        IgnoringStdout: false
+        IgnoringStderr: true
+        ContainerFilters:
+          K8sNamespaceRegex: "^(prod|default)$"
+          K8sPodRegex: "^(api|worker)-.*"
+          IncludeK8sLabel:
+            app: "^(order|payment)$"
+    processors:
+      - Type: processor_parse_json_native
+        SourceKey: content
+        KeepingSourceWhenParseFail: true
+    flushers:
+      - Type: flusher_sls
+        Logstore: k8s-stdout
+  logstores:
+    - name: k8s-stdout
+      ttl: 30
+      shardCount: 2
+      autoSplit: true
+      maxSplitShard: 64
+      appendMeta: true
+      queryMode: standard
+  machineGroups:
+    - name: k8s-group-<cluster_id>
+  enableUpgradeOverride: false

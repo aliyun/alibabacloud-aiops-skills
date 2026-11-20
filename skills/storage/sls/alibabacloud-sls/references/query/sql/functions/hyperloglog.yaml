@@ -1,0 +1,58 @@
+category: hyperloglog_functions
+name: HyperLogLog functions
+description: Analyze large datasets, trading precision for lower memory use.
+functions:
+- name: approx_set
+  syntax: approx_set(x)
+  description: Convert values of x into a HyperLogLog object.
+  returns: HyperLogLog
+  example: >-
+    * | SELECT cardinality(approx_set(x)) AS result
+  example_input:
+  - x: 1.0
+  - x: 1.0
+  - x: 2.0
+  - x: 3.0
+  example_output:
+    result: 3
+- name: cardinality
+  syntax: cardinality(hll)
+  description: Estimate the number of distinct values in a HyperLogLog object.
+  returns: bigint
+  example: >-
+    * | SELECT cardinality(approx_set(x)) AS result
+  example_input:
+  - x: 1.0
+  - x: 1.0
+  - x: 2.0
+  - x: 3.0
+  example_output:
+    result: 3
+- name: empty_approx_set
+  syntax: empty_approx_set()
+  description: Create an empty HyperLogLog object.
+  example: >-
+    * | SELECT cardinality(empty_approx_set()) AS result FROM log LIMIT 1
+  example_output:
+    result: 0
+- name: merge
+  syntax: merge(hll)
+  description: Merge multiple HyperLogLog objects.
+  returns: HyperLogLog
+  example: >-
+    * | SELECT cardinality(merge(hll)) AS result FROM (SELECT approx_set(x) AS hll FROM log)
+  example_input:
+  - x: 1
+  - x: 1
+  - x: 2
+  example_output:
+    result: 2
+use_cases:
+- Estimate unique visitors or distinct values.
+- Merge distinct-count sketches across groups.
+important_notes:
+- HyperLogLog estimates distinct counts; it does not return deduplicated rows.
+- Build sketches in a subquery before merging them; use cardinality to display the estimated count.
+related:
+- approx_distinct provides a convenient wrapper around HyperLogLog.
+source: https://help.aliyun.com/zh/sls/hyperloglog-functions

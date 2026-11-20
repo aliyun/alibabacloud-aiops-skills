@@ -1,0 +1,15 @@
+name: project-away
+category: Field-operation commands
+description: Remove matching fields and retain all other fields.
+grammar: project-away [-wildcard] <field1>, <field2>, ...
+example: |
+  * | project-away "__tag__:__path__", __source__
+scenarios:
+- All SPL scenarios
+note:
+- Use double quotes around names containing special characters, such as a colon.
+- Field matching is exact by default. Add -wildcard to enable * patterns.
+- The reserved fields __time__ and __time_ns_part__ are retained and cannot be renamed or overwritten by this
+  command.
+references:
+- https://help.aliyun.com/zh/sls/field-operation-instructions

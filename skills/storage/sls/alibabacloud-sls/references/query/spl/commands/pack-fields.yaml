@@ -1,0 +1,37 @@
+name: pack-fields
+category: Semi-structured extraction commands
+description: Serialize selected fields as JSON text in a new field.
+grammar: pack-fields [-keep] [-ltrim=<prefix>] [-include=<includeRegex>] [-exclude=<excludeRegex>] as <outputField>
+example: |
+  * | pack-fields -include='\w+' as test
+  * | pack-fields -keep -include='\w+' as test
+  * | pack-fields as content -- Packs all fields by default when no filter is specified
+  * | pack-fields -include='k_.*' -ltrim='k_' as content
+scenarios:
+- Data processing
+- Rule-based consumption
+- Scan queries
+params:
+- name: output
+  type: String
+  required: true
+  description: Output field name. The value is serialized JSON text.
+- name: include
+  type: RegExp
+  required: false
+  description: Pack fields matching this regular expression. Defaults to .* (all fields).
+- name: exclude
+  type: RegExp
+  required: false
+  description: Exclude matching fields; takes precedence over include. Empty by default.
+- name: ltrim
+  type: String
+  required: false
+  description: Remove a prefix from packed field names.
+- name: keep
+  type: Bool
+  required: false
+  description: Retain packed source fields when true. Defaults to false.
+references:
+- https://help.aliyun.com/zh/sls/spl-instructions-and-functions/
+- https://help.aliyun.com/zh/sls/data-transformation-new-version-instruction

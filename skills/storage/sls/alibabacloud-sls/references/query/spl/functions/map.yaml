@@ -1,0 +1,47 @@
+category: map_functions
+name: Map functions and operators
+description: Create, access, and merge key/value maps.
+support:
+  spl: partial
+functions:
+- name: map
+  syntax: map() or map(x, y)
+  description: Return an empty map or map two arrays to key/value pairs.
+  params:
+  - x: Optional key array
+  - y: Optional value array
+  examples:
+    spl: '* | extend mapped = map(keys_arr, values_arr)'
+- name: element_at
+  syntax: element_at(x, key)
+  description: Get the value of a specified map key.
+  examples:
+    spl: '* | extend value = element_at(map_field, ''key1'')'
+- name: map_keys
+  syntax: map_keys(x)
+  description: Return all map keys as an array.
+  examples:
+    spl: '* | extend keys = map_keys(map_field)'
+- name: map_values
+  syntax: map_values(x)
+  description: Return all map values as an array.
+  examples:
+    spl: '* | extend values = map_values(map_field)'
+- name: map_concat
+  syntax: map_concat(x, y...)
+  description: Merge maps.
+  examples:
+    spl: '* | extend merged = map_concat(map1, map2)'
+- name: map_filter
+  syntax: map_filter(x, lambda_expression)
+  description: Filter map entries with a lambda expression.
+  examples:
+    spl: '* | extend filtered = map_filter(map_field, (k, v) -> v > 100)'
+use_cases:
+- Merge configuration maps.
+- Extract map structures from JSON fields.
+- Filter maps by a condition.
+important_notes:
+- Use the [key] subscript to access a value directly.
+- Use cast and json_parse to process JSON-formatted maps.
+- Map keys and values require consistent types.

@@ -1,0 +1,58 @@
+category: color_functions
+name: Color functions
+description: Represent and convert colors for visualization.
+functions:
+- name: bar
+  syntax: bar(x, width [, low_color, high_color])
+  description: Generate an ANSI bar.
+  params:
+  - x: Fraction of the bar to display, from 0 to 1
+  - width: Bar width
+  - low_color: Starting color (optional)
+  - high_color: Ending color (optional)
+  example: >-
+    * | SELECT bar(0.5,4) AS result FROM log LIMIT 1
+  example_output:
+    result: "\e[38;5;196m█\e[38;5;214m█\e[0m  "
+  returns: varchar
+- name: color
+  syntax: color(string)
+  description: Convert a color string to a color value.
+  params:
+  - string: 'black, red, green, yellow, blue, magenta, cyan, white, or a CSS RGB value such as #f00.'
+  example: >-
+    * | SELECT color('red') AS result FROM log LIMIT 1
+  example_output:
+    result: red
+  returns: color
+- name: render
+  syntax: render(value, color) or render(condition)
+  description: Render a value using the specified color.
+  example: >-
+    * | SELECT render(42,color('red')) AS result FROM log LIMIT 1
+  example_output:
+    result: "\e[38;5;1m42\e[0m"
+  returns: varchar
+  note: The Boolean form renders a green check mark for true and a red cross for false.
+- name: rgb
+  syntax: rgb(red, green, blue)
+  description: Create a color from RGB values.
+  params:
+  - red: Red component (0-255)
+  - green: Green component (0-255)
+  - blue: Blue component (0-255)
+  example: >-
+    * | SELECT rgb(255,0,0) AS result FROM log LIMIT 1
+  example_output:
+    result: '#ff0000'
+  returns: color
+use_cases:
+- Console output formatting
+- Log level coloring
+- Visual indicators
+- ANSI charts
+important_notes:
+- bar and render produce text with ANSI color escapes. Colors require a renderer that understands those
+  escapes.
+- Example output shows the escape sequences as \x1b rather than rendering them.
+source: https://help.aliyun.com/zh/sls/color-functions

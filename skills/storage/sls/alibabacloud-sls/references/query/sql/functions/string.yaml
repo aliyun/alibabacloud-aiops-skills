@@ -1,0 +1,130 @@
+category: string_functions
+name: String functions
+description: Process text data.
+functions:
+- name: concat
+  syntax: concat(x, y, ...)
+  description: Concatenate strings.
+  example: >-
+    * | SELECT concat('cn-hangzhou', '-', '200') AS result FROM log LIMIT 1
+  example_output:
+    result: cn-hangzhou-200
+  returns: varchar
+  note: Arguments must be strings; cast numeric fields to varchar before concatenating them.
+- name: substr
+  syntax: substr(x, start [, length])
+  description: Extract a substring.
+  params:
+  - start: Starting position, beginning at 1
+  - length: Length to extract (optional)
+  example: >-
+    * | SELECT substr('HTTP/2.0', 1, 4) AS result FROM log LIMIT 1
+  example_output:
+    result: HTTP
+  returns: varchar
+- name: lower
+  syntax: lower(x)
+  description: Convert to lowercase.
+  example: >-
+    * | SELECT lower('GET') AS result FROM log LIMIT 1
+  example_output:
+    result: get
+  returns: varchar
+- name: upper
+  syntax: upper(x)
+  description: Convert to uppercase.
+  example: >-
+    * | SELECT upper('get') AS result FROM log LIMIT 1
+  example_output:
+    result: GET
+  returns: varchar
+- name: trim
+  syntax: trim(x)
+  description: Remove leading and trailing spaces.
+  example: >-
+    * | SELECT trim('  alice  ') AS result FROM log LIMIT 1
+  example_output:
+    result: alice
+  returns: varchar
+- name: ltrim
+  syntax: ltrim(x)
+  description: Remove leading spaces.
+  example: >-
+    * | SELECT ltrim('  alice  ') AS result FROM log LIMIT 1
+  example_output:
+    result: 'alice  '
+  returns: varchar
+- name: rtrim
+  syntax: rtrim(x)
+  description: Remove trailing spaces.
+  example: >-
+    * | SELECT rtrim('  alice  ') AS result FROM log LIMIT 1
+  example_output:
+    result: '  alice'
+  returns: varchar
+- name: length
+  syntax: length(x)
+  description: Return the number of characters in a string.
+  example: >-
+    * | SELECT length('日志abc') AS result FROM log LIMIT 1
+  example_output:
+    result: 5
+  returns: bigint
+- name: split
+  syntax: split(x, delimiter [, limit])
+  description: Split a string by a delimiter.
+  returns: array(varchar)
+  example: >-
+    * | SELECT split('/api/orders', '/') AS result FROM log LIMIT 1
+  example_output:
+    result:
+    - ''
+    - api
+    - orders
+  note: The optional positive limit caps the number of parts; the final part contains the remaining text.
+- name: split_part
+  syntax: split_part(x, delimiter, part)
+  description: Split a string by a delimiter and return the selected part.
+  params:
+  - part: Part number, beginning at 1.
+  returns: varchar
+  example: >-
+    * | SELECT split_part('/api/orders?page=2', '?', 1) AS result FROM log LIMIT 1
+  example_output:
+    result: /api/orders
+- name: replace
+  syntax: replace(x, search [, replacement])
+  description: Replace all occurrences of a substring, or delete them when replacement is omitted.
+  example: >-
+    * | SELECT replace('http://example.com', 'http://', 'https://') AS result FROM log LIMIT 1
+  example_output:
+    result: https://example.com
+  returns: varchar
+- name: position
+  syntax: position(substring in string)
+  description: Return the first position of a substring, starting at 1; return 0 when it is not found.
+  example: >-
+    * | SELECT position('error' in 'an error occurred') AS result FROM log LIMIT 1
+  example_output:
+    result: 4
+  returns: bigint
+- name: to_utf8
+  syntax: to_utf8(text)
+  description: Encode a string as UTF-8 binary data.
+  returns: varbinary
+  note: Useful before hashing or binary encoding. The example uses to_hex to display the encoded bytes.
+  example: >-
+    * | SELECT to_hex(to_utf8('hello')) AS result FROM log LIMIT 1
+  example_output:
+    result: 68656C6C6F
+- name: from_utf8
+  syntax: from_utf8(binary_value [, replacement])
+  description: Decode UTF-8 binary data into a string.
+  returns: varchar
+  note: Invalid UTF-8 sequences are replaced with U+FFFD by default. The optional replacement selects
+    a replacement character.
+  example: >-
+    * | SELECT from_utf8(from_hex('68656C6C6F')) AS result FROM log LIMIT 1
+  example_output:
+    result: hello
+source: https://help.aliyun.com/zh/sls/string-functions-1

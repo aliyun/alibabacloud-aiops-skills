@@ -1,0 +1,49 @@
+category: regex_functions
+name: Regular expression functions
+description: Process strings with regular expressions.
+notes:
+- In a SQL regular-expression string, write \d directly. Shell or JSON quoting may add a separate escaping
+  layer.
+functions:
+- name: regexp_like
+  syntax: regexp_like(x, pattern)
+  description: Test whether any substring matches the pattern; use ^ and $ to match the whole string.
+  returns: boolean
+  example: >-
+    * | SELECT regexp_like('HTTP/2.0', '\d+') AS result FROM log LIMIT 1
+  example_output:
+    result: true
+- name: regexp_extract
+  syntax: regexp_extract(x, pattern [, group])
+  description: Return the first match, or a capture group within that match; return NULL when no match
+    exists.
+  params:
+  - group: Capture groups start at 1. Omit this argument to return the whole match.
+  example: >-
+    * | SELECT regexp_extract('code:503 retry:2', 'code:(\d+)', 1) AS result FROM log LIMIT 1
+  example_output:
+    result: '503'
+  returns: varchar
+- name: regexp_replace
+  syntax: regexp_replace(x, pattern [, replacement])
+  description: Replace all matches, or delete them when replacement is omitted.
+  example: >-
+    * | SELECT regexp_replace('13812345678', '(\d{3})\d{4}(\d{4})', '$1****$2') AS result FROM log LIMIT
+    1
+  example_output:
+    result: 138****5678
+  returns: varchar
+  note: Use $1, $2, and so on to refer to captured groups in the replacement.
+- name: regexp_extract_all
+  syntax: regexp_extract_all(text, pattern [, group])
+  description: Return all matching substrings, or the selected capture group from every match.
+  returns: array(varchar)
+  params:
+  - group: Capture groups start at 1. Omit this argument to return the whole matches.
+  example: >-
+    * | SELECT regexp_extract_all('code=200 code=503', 'code=(\d+)', 1) AS result FROM log LIMIT 1
+  example_output:
+    result:
+    - '200'
+    - '503'
+source: https://help.aliyun.com/zh/sls/regular-expression-functions-1

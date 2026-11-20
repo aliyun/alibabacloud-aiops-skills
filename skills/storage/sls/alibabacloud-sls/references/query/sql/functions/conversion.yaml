@@ -1,0 +1,36 @@
+category: conversion_functions
+name: Unit conversion functions
+description: Convert units of data size or duration.
+functions:
+- name: convert_data_size
+  syntax: convert_data_size(size [, unit])
+  description: Convert a size string to the requested unit, or choose a suitable unit when it is omitted.
+  params:
+  - size: Data size as a string, such as '1200KB'
+  - unit: 'Target unit: KB, MB, GB, PB, TB, EB, ZB, or YB'
+  returns: string
+  example: >-
+    * | SELECT convert_data_size('1200KB','MB') AS result FROM log LIMIT 1
+  example_output:
+    result: 1.17MB
+- name: format_duration
+  syntax: format_duration(duration)
+  description: Convert seconds to a readable duration.
+  params:
+  - duration: Duration in seconds (double)
+  returns: Formatted duration string, such as 3 minutes, 55 seconds
+  example: >-
+    * | SELECT format_duration(235.0) AS result FROM log LIMIT 1
+  example_output:
+    result: 3 minutes, 55 seconds
+use_cases:
+- Display readable data sizes.
+- Format durations.
+- Display performance metrics.
+- Generate reports.
+important_notes:
+- convert_data_size takes size text including its unit.
+- format_duration takes seconds as input.
+- The result is a string.
+- Intended for displaying results rather than calculations.
+source: https://help.aliyun.com/zh/sls/unit-conversion-functions

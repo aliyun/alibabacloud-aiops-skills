@@ -1,0 +1,41 @@
+category: lambda_expressions
+name: Lambda expressions
+description: Define expressions and pass them to functions.
+support:
+  spl: partial
+functions:
+- name: filter
+  syntax: filter(array, lambda_expression)
+  description: Retain array elements that meet a condition.
+  lambda_syntax: x -> condition
+  spl_example: '* | extend filtered = filter(arr, x -> x > 0)'
+- name: transform
+  syntax: transform(array, lambda_expression)
+  description: Transform each array element.
+  lambda_syntax: x -> expression
+  spl_example: '* | extend transformed = transform(arr, x -> x * 2)'
+lambda_syntax:
+  single_parameter:
+    format: x -> expression
+    example: x -> x * 2
+    description: Single-parameter lambda expression
+  multiple_parameters:
+    format: (x, y, ...) -> expression
+    example: (x, y) -> x + y
+    description: Multiple-parameter lambda expression
+  complex_expression:
+    format: x -> complex_expression
+    example: x -> if(x > 0, x, 0)
+    description: Complex conditional expression
+use_cases:
+- Filter array elements.
+- Transform array elements.
+- Accumulate values.
+- Evaluate complex conditions.
+- Process maps.
+important_notes:
+- Lambda expressions are anonymous functions.
+- Parameter names can be chosen freely, such as x, y, or element.
+- Expressions can contain conditions and operations.
+- Use lambda expressions with array and map functions.
+- SPL supports some lambda-expression uses.

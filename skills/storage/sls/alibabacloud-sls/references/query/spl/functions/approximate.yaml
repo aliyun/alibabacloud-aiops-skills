@@ -1,0 +1,23 @@
+category: approximate_functions
+name: Approximate functions
+description: Estimate distinct counts and percentiles in stats.
+support:
+  spl: true
+functions:
+- name: approx_distinct
+  syntax: approx_distinct(x)
+  description: Estimate the number of distinct values using HyperLogLog.
+  returns: bigint
+  note: The default standard error is 2.3%; this is not an error bound for every result.
+- name: approx_percentile
+  syntax: approx_percentile(x, percentage)
+  description: Calculate an approximate percentile.
+  note: Results are approximate and may vary between executions.
+  params:
+  - x: Numeric input
+  - percentage: Percentile fraction, from 0 to 1
+use_cases:
+- Estimate unique visitors.
+- Calculate P50, P95, and P99 performance metrics.
+context: stats
+source: https://help.aliyun.com/zh/sls/approximate-functions

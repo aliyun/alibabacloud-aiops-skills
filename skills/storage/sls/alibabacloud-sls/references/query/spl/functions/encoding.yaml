@@ -1,0 +1,32 @@
+category: encoding_functions
+name: Encoding and decoding functions
+description: Encode and decode data.
+support:
+  spl: true
+functions:
+- name: url_encode
+  syntax: url_encode(str)
+  description: URL encode
+  examples:
+    spl: '* | extend encoded_query = url_encode(query)'
+- name: url_decode
+  syntax: url_decode(str)
+  description: URL decode
+  examples:
+    spl: '* | extend decoded_param = url_decode(encoded_param)'
+- name: to_base64
+  syntax: to_base64(binary_data)
+  description: Encode binary data as Base64 text.
+  returns: VARCHAR
+  examples:
+    spl: '* | extend encoded_data = to_base64(to_utf8(message))'
+- name: from_base64
+  syntax: from_base64(encoded_text)
+  description: Decode Base64 text to binary data.
+  returns: VARBINARY
+  examples:
+    spl: '* | extend decoded_data = from_utf8(from_base64(encoded_data))'
+note: Use to_utf8 to encode text as bytes and from_utf8 to decode UTF-8 bytes as text.
+references:
+- https://help.aliyun.com/zh/sls/binary-functions
+- https://help.aliyun.com/zh/sls/string-functions-1

@@ -1,0 +1,17 @@
+name: project
+category: Field-operation commands
+description: Retain fields that match the given names or patterns, and optionally rename fields.
+grammar: project [-wildcard] <field1>, <field2>, ... [, <new_field> = <old_field>]
+example: |
+  * | project status, body
+  * | project status, request_uri, __time__
+scenarios:
+- All SPL scenarios
+note:
+- Execute field-retention expressions before renaming expressions.
+- Use double quotes for special characters in field names, such as project "a:b:c".
+- Field matching is exact by default. Add -wildcard to enable * patterns.
+- The reserved fields __time__ and __time_ns_part__ are retained and cannot be renamed or overwritten by this
+  command.
+references:
+- https://help.aliyun.com/zh/sls/field-operation-instructions

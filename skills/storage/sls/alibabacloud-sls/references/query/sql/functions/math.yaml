@@ -1,0 +1,54 @@
+category: math_functions
+name: Mathematical functions
+description: Perform numeric calculations.
+functions:
+- name: abs
+  syntax: abs(x)
+  description: Absolute value.
+  example: >-
+    * | SELECT abs(-12) AS result FROM log LIMIT 1
+  example_output:
+    result: 12
+- name: round
+  syntax: round(x [, decimals])
+  description: Round a value.
+  example: >-
+    * | SELECT round(12.345,2) AS result FROM log LIMIT 1
+  example_output:
+    result: 12.35
+- name: floor
+  syntax: floor(x)
+  description: Round toward negative infinity.
+  example: >-
+    * | SELECT floor(-1.2) AS result FROM log LIMIT 1
+  example_output:
+    result: -2.0
+- name: ceil
+  syntax: ceil(x)
+  description: Round toward positive infinity.
+  example: >-
+    * | SELECT ceil(-1.2) AS result FROM log LIMIT 1
+  example_output:
+    result: -1.0
+- name: power
+  syntax: power(x, y)
+  description: 'Exponentiation: x raised to y.'
+  example: >-
+    * | SELECT power(2,10) AS result FROM log LIMIT 1
+  example_output:
+    result: 1024.0
+- name: sqrt
+  syntax: sqrt(x)
+  description: Square root.
+  example: >-
+    * | SELECT sqrt(81) AS result FROM log LIMIT 1
+  example_output:
+    result: 9.0
+- name: mod
+  syntax: mod(x, y)
+  description: Remainder.
+  example: >-
+    * | SELECT mod(10,3) AS result FROM log LIMIT 1
+  example_output:
+    result: 1
+source: https://help.aliyun.com/zh/sls/mathematical-calculation-functions

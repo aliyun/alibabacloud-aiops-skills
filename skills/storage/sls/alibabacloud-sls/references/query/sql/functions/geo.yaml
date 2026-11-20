@@ -1,0 +1,28 @@
+category: geo_functions
+name: Geographic functions
+description: Analyze geographic locations and perform map calculations.
+functions:
+- name: geohash
+  syntax: geohash(latitude, longitude)
+  description: Encode latitude and longitude as a geohash string.
+  returns: varchar
+  example: >-
+    * | SELECT geohash(39.9075,116.3972) AS result FROM log LIMIT 1
+  example_output:
+    result: wx4g08vy534y
+- name: geohash (coordinate string)
+  syntax: geohash(coordinates)
+  description: Encode a latitude,longitude coordinate string as a geohash.
+  returns: varchar
+  example: >-
+    * | SELECT geohash('39.9075,116.3972') AS result FROM log LIMIT 1
+  example_output:
+    result: wx4g08vy534y
+use_cases:
+- Location encoding
+- Nearby-location queries
+- Geographic clustering
+- Heatmap display
+important_notes:
+- Arguments use latitude first and longitude second; this differs from ST_Point(x, y).
+source: https://help.aliyun.com/zh/sls/geo-functions

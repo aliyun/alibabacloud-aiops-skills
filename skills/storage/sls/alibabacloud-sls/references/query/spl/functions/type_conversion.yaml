@@ -1,0 +1,26 @@
+category: type_conversion_functions
+name: Type conversion functions
+description: Convert data types.
+support:
+  spl: true
+functions:
+- name: cast
+  syntax: cast(value as TYPE)
+  description: Convert a value to the specified type.
+  types:
+  - BIGINT
+  - INTEGER
+  - DOUBLE
+  - VARCHAR
+  - BOOLEAN
+  - TIMESTAMP
+  examples:
+    spl: '* | extend status_num = cast(status as BIGINT) | where status_num >= 500'
+  note: Ordinary input fields begin as VARCHAR; reserved time fields are numeric. A field converted
+    with extend keeps its new type in subsequent stages.
+- name: try_cast
+  syntax: try_cast(value as TYPE)
+  description: Convert the type, returning NULL on failure.
+  examples:
+    spl: '* | extend status_num = try_cast(status as BIGINT)'
+  note: Recommended to prevent conversion errors from failing the query.

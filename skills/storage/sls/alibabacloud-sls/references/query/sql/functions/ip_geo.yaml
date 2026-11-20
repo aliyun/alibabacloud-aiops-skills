@@ -1,0 +1,31 @@
+category: ip_geo_functions
+name: IP geolocation functions
+description: Convert IP addresses to geographic locations.
+functions:
+- name: ip_to_province
+  syntax: ip_to_province(ip)
+  description: Look up the province for an IPv4 address.
+  returns: Province name in Chinese
+  example: >-
+    * | SELECT ip_to_province('8.8.8.8') AS result FROM log LIMIT 1
+- name: ip_to_city
+  syntax: ip_to_city(ip)
+  description: Look up the city for an IPv4 address.
+  returns: City name in Chinese
+  example: >-
+    * | SELECT ip_to_city('8.8.8.8') AS result FROM log LIMIT 1
+- name: ip_to_country
+  syntax: ip_to_country(ip)
+  description: Look up the country for an IPv4 address.
+  returns: Country name in Chinese
+  example: >-
+    * | SELECT ip_to_country('8.8.8.8') AS result FROM log LIMIT 1
+- name: ip_to_geo
+  syntax: ip_to_geo(ip)
+  description: Look up latitude and longitude for an IPv4 address.
+  returns: Coordinate string in latitude,longitude format
+  example: >-
+    * | SELECT ip_to_geo('8.8.8.8') AS result FROM log LIMIT 1
+source: https://help.aliyun.com/zh/sls/ip-functions
+important_notes:
+- Location results depend on the IP database; no fixed output is assumed.

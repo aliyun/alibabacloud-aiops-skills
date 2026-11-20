@@ -1,0 +1,41 @@
+category: math_functions
+name: Math functions
+description: Perform mathematical calculations.
+support:
+  spl: true
+functions:
+- name: abs
+  syntax: abs(x)
+  description: Absolute value
+  examples:
+    spl: '* | extend diff_abs = abs(cast(value1 as BIGINT) - cast(value2 as BIGINT))'
+- name: round
+  syntax: round(x [, decimals])
+  description: Round to the nearest value.
+  examples:
+    spl: '* | extend price_rounded = round(cast(price as DOUBLE), 2)'
+- name: floor
+  syntax: floor(x)
+  description: Round down.
+  examples:
+    spl: '* | extend value_floor = floor(cast(value as DOUBLE))'
+- name: ceil
+  syntax: ceil(x)
+  description: Round up.
+  examples:
+    spl: '* | extend value_ceil = ceil(cast(value as DOUBLE))'
+- name: power
+  syntax: power(x, y)
+  description: Exponentiation, x^y
+  examples:
+    spl: '* | extend result = power(2, 10)'
+- name: sqrt
+  syntax: sqrt(x)
+  description: Square root
+  examples:
+    spl: '* | extend value_sqrt = sqrt(cast(value as DOUBLE))'
+- name: mod
+  syntax: mod(x, y)
+  description: Remainder
+  examples:
+    spl: '* | extend is_even = mod(cast(count as BIGINT), 2)'

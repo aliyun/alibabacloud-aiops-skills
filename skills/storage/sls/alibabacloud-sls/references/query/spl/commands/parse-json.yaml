@@ -1,0 +1,19 @@
+name: parse-json
+category: Semi-structured extraction commands
+description: Extract first-level JSON information from a field.
+grammar: parse-json <field>
+example: |
+  * | parse-json message
+  * | parse-json body | extend user_id = cast(user_id as BIGINT)
+scenarios:
+- All SPL scenarios
+note:
+- By default, extracted field names are the first-level object keys. For {"msg":"hello"}, the field
+  name is msg.
+- Extracted fields are added to the existing fields as VARCHAR values, including JSON numbers and
+  booleans. Convert them before numeric calculations.
+- JSON parsing failures do not raise an error; processing continues.
+- By default, parse-json expands all first-level fields; json_extract and json_extract_scalar extract
+  only the specified value.
+- When a known JSON field is needed, prefer json_extract or json_extract_scalar over parse-json.
+- See [JSON functions](../functions/json.yaml) for extraction examples.

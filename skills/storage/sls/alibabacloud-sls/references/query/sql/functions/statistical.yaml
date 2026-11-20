@@ -1,0 +1,168 @@
+category: statistical_functions
+name: Statistical functions
+description: Analyze distributions, correlations, and numeric statistics.
+functions:
+- name: corr
+  syntax: corr(y, x)
+  description: Measure the correlation between two numeric columns.
+  returns: double in the documented range [0, 1]
+  example: >-
+    * | SELECT corr(y,x) AS result
+  example_input:
+  - x: 1.0
+    y: 3.0
+  - x: 2.0
+    y: 5.0
+  - x: 3.0
+    y: 7.0
+  example_output:
+    result: 1.0
+  note: Do not use the sign of this score to infer the direction of a relationship.
+- name: covar_pop
+  syntax: covar_pop(y, x)
+  description: Calculate the population covariance of two columns.
+  example: >-
+    * | SELECT round(covar_pop(y,x),4) AS result
+  example_input:
+  - x: 1.0
+    y: 3.0
+  - x: 2.0
+    y: 5.0
+  - x: 3.0
+    y: 7.0
+  example_output:
+    result: 1.3333
+- name: covar_samp
+  syntax: covar_samp(y, x)
+  description: Calculate the sample covariance of two columns.
+  example: >-
+    * | SELECT covar_samp(y,x) AS result
+  example_input:
+  - x: 1.0
+    y: 3.0
+  - x: 2.0
+    y: 5.0
+  - x: 3.0
+    y: 7.0
+  example_output:
+    result: 2.0
+- name: stddev
+  syntax: stddev(x)
+  description: Calculate sample standard deviation; an alias of stddev_samp.
+  example: >-
+    * | SELECT stddev(x) AS result
+  example_input:
+  - x: 1.0
+    y: 3.0
+  - x: 2.0
+    y: 5.0
+  - x: 3.0
+    y: 7.0
+  example_output:
+    result: 1.0
+- name: stddev_pop
+  syntax: stddev_pop(x)
+  description: Calculate the population standard deviation.
+  example: >-
+    * | SELECT round(stddev_pop(x),4) AS result
+  example_input:
+  - x: 1.0
+    y: 3.0
+  - x: 2.0
+    y: 5.0
+  - x: 3.0
+    y: 7.0
+  example_output:
+    result: 0.8165
+- name: stddev_samp
+  syntax: stddev_samp(x)
+  description: Calculate the sample standard deviation.
+  example: >-
+    * | SELECT stddev_samp(x) AS result
+  example_input:
+  - x: 1.0
+    y: 3.0
+  - x: 2.0
+    y: 5.0
+  - x: 3.0
+    y: 7.0
+  example_output:
+    result: 1.0
+- name: variance
+  syntax: variance(x)
+  description: Calculate sample variance; an alias of var_samp.
+  example: >-
+    * | SELECT variance(x) AS result
+  example_input:
+  - x: 1.0
+    y: 3.0
+  - x: 2.0
+    y: 5.0
+  - x: 3.0
+    y: 7.0
+  example_output:
+    result: 1.0
+- name: var_pop
+  syntax: var_pop(x)
+  description: Calculate the population variance.
+  example: >-
+    * | SELECT round(var_pop(x),4) AS result
+  example_input:
+  - x: 1.0
+    y: 3.0
+  - x: 2.0
+    y: 5.0
+  - x: 3.0
+    y: 7.0
+  example_output:
+    result: 0.6667
+- name: var_samp
+  syntax: var_samp(x)
+  description: Calculate the sample variance.
+  example: >-
+    * | SELECT var_samp(x) AS result
+  example_input:
+  - x: 1.0
+    y: 3.0
+  - x: 2.0
+    y: 5.0
+  - x: 3.0
+    y: 7.0
+  example_output:
+    result: 1.0
+- name: regr_intercept
+  syntax: regr_intercept(y, x)
+  description: Calculate the linear-regression intercept.
+  example: >-
+    * | SELECT regr_intercept(y,x) AS result
+  example_input:
+  - x: 1.0
+    y: 3.0
+  - x: 2.0
+    y: 5.0
+  - x: 3.0
+    y: 7.0
+  example_output:
+    result: 1.0
+  note: 'Arguments are (y, x): y is the dependent value and x is the predictor.'
+- name: regr_slope
+  syntax: regr_slope(y, x)
+  description: Calculate the linear-regression slope.
+  example: >-
+    * | SELECT regr_slope(y,x) AS result
+  example_input:
+  - x: 1.0
+    y: 3.0
+  - x: 2.0
+    y: 5.0
+  - x: 3.0
+    y: 7.0
+  example_output:
+    result: 2.0
+  note: 'Arguments are (y, x): y is the dependent value and x is the predictor.'
+use_cases:
+- Analyze correlation between request duration and response size.
+- Measure variation in performance metrics.
+- Make predictions using linear regression.
+- Assess data quality.
+source: https://help.aliyun.com/zh/sls/mathematical-statistics-functions

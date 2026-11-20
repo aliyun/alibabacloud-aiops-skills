@@ -1,0 +1,60 @@
+{
+  "dashboardName": "example-gauge",
+  "displayName": "Utilization example",
+  "attribute": {
+    "type": "grid"
+  },
+  "charts": [
+    {
+      "title": "gauge",
+      "type": "gauge",
+      "display": {
+        "version": 2,
+        "xPos": 0,
+        "yPos": 0,
+        "width": 24,
+        "height": 8,
+        "basicOptions": {
+          "displayName": "Utilization",
+          "showTitle": true,
+          "showBorder": true,
+          "showBackground": true,
+          "showTime": true
+        },
+        "queryOptionMap": {
+          "A": {
+            "showField": [
+              "utilization"
+            ]
+          }
+        },
+        "valueOption": {
+          "showMode": "calculate",
+          "calculationType": "first"
+        },
+        "standardOption": {
+          "format": "percent",
+          "decimals": 1,
+          "min": 0,
+          "max": 100
+        }
+      },
+      "search": {
+        "chartQueries": [
+          {
+            "name": "A",
+            "datasource": "logstore",
+            "region": "cn-hangzhou",
+            "project": "example-project",
+            "logstore": "example-logstore",
+            "query": "* | select utilization from unnest(array[68.5]) as t(utilization)"
+          }
+        ],
+        "start": "-3600s",
+        "end": "now",
+        "dataSourceType": "mixed"
+      },
+      "action": {}
+    }
+  ]
+}

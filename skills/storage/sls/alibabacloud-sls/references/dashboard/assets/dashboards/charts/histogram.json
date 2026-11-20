@@ -1,0 +1,71 @@
+{
+  "dashboardName": "example-histogram",
+  "displayName": "Latency distribution example",
+  "attribute": {
+    "type": "grid"
+  },
+  "charts": [
+    {
+      "title": "histogram",
+      "type": "histogram",
+      "display": {
+        "version": 2,
+        "xPos": 0,
+        "yPos": 0,
+        "width": 24,
+        "height": 8,
+        "basicOptions": {
+          "displayName": "Latency distribution",
+          "showTitle": true,
+          "showBorder": true,
+          "showBackground": true,
+          "showTime": true
+        },
+        "isTimeSeries": false,
+        "queryOptionMap": {
+          "A": {
+            "xAxisKey": "latency_ms",
+            "yAxisKeys": [
+              "samples"
+            ]
+          }
+        },
+        "histogramOptions": {
+          "bucketSize": 20,
+          "startPosition": 0,
+          "endPosition": 100,
+          "orientation": "vertical",
+          "combineMode": "no"
+        },
+        "xAxisOption": {
+          "show": true,
+          "label": "Latency (ms)"
+        },
+        "yAxisOption": {
+          "show": true,
+          "position": 3,
+          "label": "Samples"
+        },
+        "legendOption": {
+          "show": false
+        }
+      },
+      "search": {
+        "chartQueries": [
+          {
+            "name": "A",
+            "datasource": "logstore",
+            "region": "cn-hangzhou",
+            "project": "example-project",
+            "logstore": "example-logstore",
+            "query": "* | select latency_ms, 1 as samples from unnest(array[12,18,23,26,31,38,42,45,57,63,78,92]) as t(latency_ms) order by latency_ms"
+          }
+        ],
+        "start": "-3600s",
+        "end": "now",
+        "dataSourceType": "mixed"
+      },
+      "action": {}
+    }
+  ]
+}

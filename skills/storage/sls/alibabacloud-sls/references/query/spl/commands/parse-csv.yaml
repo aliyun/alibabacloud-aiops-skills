@@ -1,0 +1,12 @@
+name: parse-csv
+category: Semi-structured extraction commands
+description: Extract CSV information from a field.
+grammar: parse-csv <field> as <field1>, <field2>, ...
+example: |
+  * | parse-csv content as name, age, city
+scenarios:
+- All SPL scenarios
+note:
+- By default, parse-csv uses a comma delimiter.
+references:
+- https://help.aliyun.com/zh/sls/instructions-for-extracting-semi-structured-data

@@ -1,0 +1,28 @@
+category: hash_functions
+name: Hash functions
+description: Calculate hash values.
+support:
+  spl: true
+functions:
+- name: md5
+  syntax: md5(binary_data)
+  description: Calculate an MD5 hash.
+  returns: VARBINARY
+  examples:
+    spl: '* | extend user_id_hash = to_hex(md5(to_utf8(user_id)))'
+- name: sha1
+  syntax: sha1(binary_data)
+  description: Calculate a SHA1 hash.
+  examples:
+    spl: '* | extend token_hash = to_hex(sha1(to_utf8(token)))'
+  returns: VARBINARY
+- name: sha256
+  syntax: sha256(binary_data)
+  description: Calculate a SHA256 hash.
+  examples:
+    spl: '* | extend token_hash = to_hex(sha256(to_utf8(token)))'
+  returns: VARBINARY
+note: Hash functions accept binary data and return binary digests. Use to_utf8 for text input and to_hex for
+  readable hexadecimal output.
+references:
+- https://help.aliyun.com/zh/sls/binary-functions

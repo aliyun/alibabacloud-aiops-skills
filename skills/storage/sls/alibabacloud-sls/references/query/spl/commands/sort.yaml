@@ -1,0 +1,15 @@
+name: sort
+category: Aggregation commands
+description: Sort query results.
+grammar: sort [<field1> [asc|desc]] [, <field2> [asc|desc]], ...
+example: |
+  * | stats cnt = count(*) by status | sort cnt desc
+  * | extend status_num = cast(status as BIGINT) | project host,client_ip,status_num | sort status_num asc, __time__ desc
+scenarios:
+- Scan queries
+note:
+- The default direction is ascending (asc).
+- Multiple sort fields are supported.
+- Use project or stats when an explicit result schema is needed.
+references:
+- https://help.aliyun.com/zh/sls/aggregation-instructions

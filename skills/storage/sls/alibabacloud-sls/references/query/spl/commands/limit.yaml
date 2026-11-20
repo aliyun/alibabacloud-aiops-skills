@@ -1,0 +1,16 @@
+name: limit
+category: Aggregation commands
+description: Limit the number of returned log rows.
+grammar: limit [<offset>,] <size>
+example: |
+  * | project host,client_ip,status | limit 100
+  * | stats cnt = count(*) by status | sort status asc | limit 10, 10
+  * | where cast(status as BIGINT) >= 500 | project host,client_ip,status | sort __time__ desc | limit 10
+scenarios:
+- Logstore query and analysis
+note:
+- The optional offset skips that many result rows; size is the maximum number of rows to return.
+- Commonly combined with sort for Top-N results.
+- Use project or stats when an explicit result schema is needed.
+references:
+- https://help.aliyun.com/zh/sls/aggregation-instructions

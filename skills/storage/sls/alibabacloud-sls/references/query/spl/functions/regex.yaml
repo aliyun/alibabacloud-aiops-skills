@@ -1,0 +1,28 @@
+category: regex_functions
+name: Regular expression functions
+description: Process strings with regular expressions.
+support:
+  spl: true
+notes:
+- Use RE2-compatible patterns. Backreferences (\1) and lookaround (?<=...) are not supported.
+- Lazy quantifiers such as .*? and the ungreedy flag (?U) are supported.
+- 'Backslashes do not need to be doubled in SPL patterns: write \d rather than \\d.'
+functions:
+- name: regexp_like
+  syntax: regexp_like(x, pattern)
+  description: Test a regular expression match; write a single backslash, such as \d.
+  returns: Boolean
+  examples:
+    spl: '* | where regexp_like(message, ''ERROR|FATAL'')'
+- name: regexp_extract
+  syntax: regexp_extract(x, pattern [, group])
+  description: Extract matching text.
+  params:
+  - group: Capture-group index, default 0
+  examples:
+    spl: '* | extend error_code = regexp_extract(message, ''code:(\d+)'', 1)'
+- name: regexp_replace
+  syntax: regexp_replace(x, pattern, replacement)
+  description: Replace text matched by a regular expression.
+  examples:
+    spl: '* | extend phone_masked = regexp_replace(phone, ''(\d{3})\d{4}(\d{4})'', ''$1****$2'')'

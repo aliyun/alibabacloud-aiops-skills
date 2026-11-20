@@ -1,0 +1,13 @@
+name: parse-kv
+category: Semi-structured extraction commands
+description: Extract key/value pairs from a field.
+grammar: parse-kv <field>, '<pair_separator>', '<kv_separator>'
+example: |
+  * | parse-kv message, ' ', '='
+  * | parse-kv content, '&', '='
+scenarios:
+- All SPL scenarios
+note:
+- Specify the pair separator and key/value separator as positional arguments.
+references:
+- https://help.aliyun.com/zh/sls/instructions-for-extracting-semi-structured-data

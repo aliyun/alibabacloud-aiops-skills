@@ -1,0 +1,26 @@
+category: url_functions
+name: URL functions
+description: Parse URLs.
+support:
+  spl: true
+functions:
+- name: url_extract_host
+  syntax: url_extract_host(url)
+  description: Extract the host name.
+  examples:
+    spl: '* | extend host = url_extract_host(request_url)'
+- name: url_extract_path
+  syntax: url_extract_path(url)
+  description: Extract the path.
+  examples:
+    spl: '* | extend path = url_extract_path(request_url)'
+- name: url_extract_parameter
+  syntax: url_extract_parameter(url, param_name)
+  description: Extract a query parameter.
+  examples:
+    spl: '* | extend user_id = url_extract_parameter(request_url, ''user_id'')'
+- name: url_extract_protocol
+  syntax: url_extract_protocol(url)
+  description: Extract the protocol.
+  examples:
+    spl: '* | extend protocol = url_extract_protocol(request_url)'

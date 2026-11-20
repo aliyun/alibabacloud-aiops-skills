@@ -1,0 +1,14 @@
+name: parse-regexp
+category: Semi-structured extraction commands
+description: Extract information from a field using a regular expression.
+grammar: parse-regexp <field>, '<regexp>' [as <field1>, <field2>, ...]
+example: |
+  * | parse-regexp message, '(\d+\.\d+\.\d+\.\d+).*status:(\d+)' as ip, status
+  * | parse-regexp content, 'Error: (.*)' as error_msg
+scenarios:
+- All SPL scenarios
+note:
+- Uses RE2 regular expression syntax.
+- Wrap the regular expression in single quotes.
+- 'Backslashes do not need to be doubled: write \d directly.'
+- Each parenthesized capture group corresponds to an output field.

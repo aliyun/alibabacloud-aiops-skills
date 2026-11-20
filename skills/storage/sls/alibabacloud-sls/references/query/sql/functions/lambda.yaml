@@ -1,0 +1,99 @@
+category: lambda_expressions
+name: Lambda expressions
+description: Define lambda expressions and pass them to functions.
+functions:
+- name: filter
+  syntax: filter(array, lambda_expression)
+  description: Filter array elements, retaining those that satisfy the condition.
+  lambda_syntax: x -> condition
+  example: >-
+    * | SELECT filter(ARRAY[5,-6,NULL,7],x -> x > 0) AS result FROM log LIMIT 1
+  example_output:
+    result:
+    - 5
+    - 7
+- name: transform
+  syntax: transform(array, lambda_expression)
+  description: Apply a transformation to each array element.
+  lambda_syntax: x -> expression
+  example: >-
+    * | SELECT transform(ARRAY[5,NULL,6],x -> coalesce(x,0)+1) AS result FROM log LIMIT 1
+  example_output:
+    result:
+    - 6
+    - 1
+    - 7
+- name: reduce
+  syntax: reduce(array, initial_value, combine_function, final_function)
+  description: Fold elements into an initial state, then apply the final function to that state.
+  lambda_syntax: (accumulator, element) -> expression
+  example: >-
+    * | SELECT reduce(ARRAY[5,20,50],0,(s,x)->s+x,s->s) AS result FROM log LIMIT 1
+  example_output:
+    result: 75
+- name: any_match
+  syntax: any_match(array, lambda_expression)
+  description: Test whether any array element satisfies the condition.
+  returns: boolean
+  example: >-
+    * | SELECT any_match(ARRAY[1,2,3],x->x>2) AS result FROM log LIMIT 1
+  example_output:
+    result: true
+  note: Returns NULL if no element is true and at least one predicate result is NULL.
+- name: all_match
+  syntax: all_match(array, lambda_expression)
+  description: Test whether all array elements satisfy the condition.
+  returns: boolean
+  example: >-
+    * | SELECT all_match(ARRAY[1,2,3],x->x>0) AS result FROM log LIMIT 1
+  example_output:
+    result: true
+  note: Returns NULL if no element is false and at least one predicate result is NULL.
+- name: map_filter
+  syntax: map_filter(map, lambda_expression)
+  description: Filter Map entries.
+  lambda_syntax: (key, value) -> condition
+  example: >-
+    * | SELECT map_filter(map(ARRAY['a','b'],ARRAY[1,2]),(k,v)->v>1) AS result FROM log LIMIT 1
+  example_output:
+    result:
+      b: 2
+- name: zip_with
+  syntax: zip_with(array1, array2, lambda_expression)
+  description: Combine corresponding elements of two arrays and calculate the result.
+  lambda_syntax: (x, y) -> expression
+  example: >-
+    * | SELECT zip_with(ARRAY[1,2],ARRAY[3],(x,y)->x+coalesce(y,0)) AS result FROM log LIMIT 1
+  example_output:
+    result:
+    - 4
+    - 2
+  note: The shorter array is padded with NULL before the lambda is evaluated.
+lambda_syntax:
+  single_parameter:
+    format: x -> expression
+    example: x -> x * 2
+    description: Single-parameter lambda expression
+  multiple_parameters:
+    format: (x, y, ...) -> expression
+    example: (x, y) -> x + y
+    description: Multiple-parameter lambda expression
+  complex_expression:
+    format: x -> complex_expression
+    example: x -> if(x > 0, x, 0)
+    description: Complex conditional expression
+use_cases:
+- Filter array elements.
+- Transform array elements.
+- Accumulate values.
+- Evaluate complex conditions.
+- Process Maps.
+important_notes:
+- A lambda expression is an anonymous function.
+- Parameter names are customizable, such as x, y, or element.
+- Expressions can contain conditions and calculations.
+- Use with array and Map functions.
+sources:
+- https://help.aliyun.com/zh/sls/lambda-expressions
+- https://help.aliyun.com/zh/sls/array-functions-and-operators
+- https://help.aliyun.com/zh/sls/map-functions-and-operators

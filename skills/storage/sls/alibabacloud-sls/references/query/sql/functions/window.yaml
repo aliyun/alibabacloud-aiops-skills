@@ -1,0 +1,201 @@
+category: window_functions
+name: Window functions
+description: Aggregate, rank, and analyze data over a window.
+functions:
+- name: row_number
+  syntax: row_number() OVER ([PARTITION BY col] ORDER BY col)
+  description: Assign row numbers starting at 1 within each partition; include a tie-breaker for deterministic
+    ordering.
+  example: >-
+    * | SELECT id, x, row_number() OVER (ORDER BY x,id) AS result ORDER BY id
+  example_input:
+  - id: 1
+    x: 10
+  - id: 2
+    x: 10
+  - id: 3
+    x: 20
+  example_output:
+  - id: 1
+    result: 1
+    x: 10
+  - id: 2
+    result: 2
+    x: 10
+  - id: 3
+    result: 3
+    x: 20
+- name: rank
+  syntax: rank() OVER ([PARTITION BY col] ORDER BY col)
+  description: Rank equal values equally, with gaps in subsequent ranks.
+  example: >-
+    * | SELECT id, x, rank() OVER (ORDER BY x) AS result ORDER BY id
+  example_input:
+  - id: 1
+    x: 10
+  - id: 2
+    x: 10
+  - id: 3
+    x: 20
+  example_output:
+  - id: 1
+    result: 1
+    x: 10
+  - id: 2
+    result: 1
+    x: 10
+  - id: 3
+    result: 3
+    x: 20
+- name: dense_rank
+  syntax: dense_rank() OVER ([PARTITION BY col] ORDER BY col)
+  description: Rank equal values equally, without gaps in subsequent ranks.
+  example: >-
+    * | SELECT id, x, dense_rank() OVER (ORDER BY x) AS result ORDER BY id
+  example_input:
+  - id: 1
+    x: 10
+  - id: 2
+    x: 10
+  - id: 3
+    x: 20
+  example_output:
+  - id: 1
+    result: 1
+    x: 10
+  - id: 2
+    result: 1
+    x: 10
+  - id: 3
+    result: 2
+    x: 20
+- name: lag
+  syntax: lag(col [, offset] [, default]) OVER ([PARTITION BY col] ORDER BY col)
+  description: Retrieve the value offset rows before the current row.
+  params:
+  - offset: Defaults to 1; 0 selects the current row.
+  - default: Used when the target row is absent; defaults to NULL.
+  example: >-
+    * | SELECT id, x, lag(x,1,0) OVER (ORDER BY id) AS result ORDER BY id
+  example_input:
+  - id: 1
+    x: 10
+  - id: 2
+    x: 10
+  - id: 3
+    x: 20
+  example_output:
+  - id: 1
+    result: 0
+    x: 10
+  - id: 2
+    result: 10
+    x: 10
+  - id: 3
+    result: 10
+    x: 20
+- name: lead
+  syntax: lead(col [, offset] [, default]) OVER ([PARTITION BY col] ORDER BY col)
+  description: Retrieve the value offset rows after the current row.
+  params:
+  - offset: Defaults to 1; 0 selects the current row.
+  - default: Used when the target row is absent; defaults to NULL.
+  example: >-
+    * | SELECT id, x, lead(x,1,0) OVER (ORDER BY id) AS result ORDER BY id
+  example_input:
+  - id: 1
+    x: 10
+  - id: 2
+    x: 10
+  - id: 3
+    x: 20
+  example_output:
+  - id: 1
+    result: 10
+    x: 10
+  - id: 2
+    result: 20
+    x: 10
+  - id: 3
+    result: 0
+    x: 20
+- name: first_value
+  syntax: first_value(col) OVER ([PARTITION BY col] ORDER BY col [frame])
+  description: Return the first value in the current window frame.
+  example: >-
+    * | SELECT id, x, first_value(x) OVER (ORDER BY id) AS result ORDER BY id
+  example_input:
+  - id: 1
+    x: 10
+  - id: 2
+    x: 10
+  - id: 3
+    x: 20
+  example_output:
+  - id: 1
+    result: 10
+    x: 10
+  - id: 2
+    result: 10
+    x: 10
+  - id: 3
+    result: 10
+    x: 20
+- name: last_value
+  syntax: last_value(col) OVER ([PARTITION BY col] ORDER BY col [frame])
+  description: Return the last value in the current window frame.
+  example: >-
+    * | SELECT id, x, last_value(x) OVER (ORDER BY id ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)
+    AS result ORDER BY id
+  example_input:
+  - id: 1
+    x: 10
+  - id: 2
+    x: 10
+  - id: 3
+    x: 20
+  example_output:
+  - id: 1
+    result: 20
+    x: 10
+  - id: 2
+    result: 20
+    x: 10
+  - id: 3
+    result: 20
+    x: 20
+  note: With ORDER BY and no explicit frame, the frame ends at the current row and its peers. Include
+    UNBOUNDED FOLLOWING to select the last value of the entire partition.
+- name: ntile
+  syntax: ntile(n) OVER ([PARTITION BY col] ORDER BY col)
+  description: Divide ordered data into n buckets and return the current row's bucket number.
+  example: >-
+    * | SELECT id, x, ntile(2) OVER (ORDER BY id) AS result ORDER BY id
+  example_input:
+  - id: 1
+    x: 10
+  - id: 2
+    x: 10
+  - id: 3
+    x: 20
+  example_output:
+  - id: 1
+    result: 1
+    x: 10
+  - id: 2
+    result: 1
+    x: 10
+  - id: 3
+    result: 2
+    x: 20
+use_cases:
+- Top-N queries
+- Rank calculations
+- Period comparisons using adjacent time intervals
+- Cumulative calculations
+- Moving averages
+important_notes:
+- OVER defines the partition, ordering, and applicable frame.
+- The ORDER BY inside OVER does not set the final result order; add an outer ORDER BY when needed.
+- Compute window results in a subquery before filtering them in WHERE.
+source: https://help.aliyun.com/zh/sls/window-functions

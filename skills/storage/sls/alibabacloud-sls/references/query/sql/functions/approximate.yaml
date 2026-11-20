@@ -1,0 +1,96 @@
+category: approximate_functions
+name: Approximate functions
+description: Estimate distinct counts, percentiles, and distributions.
+functions:
+- name: approx_distinct
+  syntax: approx_distinct(x [, error])
+  description: Estimate the number of distinct values using HyperLogLog.
+  returns: bigint
+  example: >-
+    * | SELECT approx_distinct(x) AS result
+  note: The default standard error is 2.3%; the optional error is in [0.0115, 0.26].
+  example_input:
+  - x: 1.0
+  - x: 1.0
+  - x: 2.0
+  - x: 3.0
+  example_output:
+    result: 3
+- name: approx_percentile
+  syntax: approx_percentile(x, percentage)
+  description: Calculate an approximate percentile.
+  params:
+  - x: Column name
+  - percentage: Percentile fraction, from 0 to 1
+  example: >-
+    * | SELECT approx_percentile(x,0.5) AS result
+  example_input:
+  - x: 1.0
+  - x: 1.0
+  - x: 2.0
+  - x: 3.0
+  example_output:
+    result: 2.0
+  returns: Same numeric type as the input; the example uses double.
+- name: approx_percentile (with array)
+  syntax: approx_percentile(x, array[p1, p2,...])
+  description: Calculate multiple percentiles at once.
+  example: >-
+    * | SELECT approx_percentile(x,ARRAY[0.5,0.99]) AS result
+  example_input:
+  - x: 1.0
+  - x: 1.0
+  - x: 2.0
+  - x: 3.0
+  example_output:
+    result:
+    - 2.0
+    - 3.0
+  returns: Array of percentile values, in the requested percentile order.
+- name: numeric_histogram
+  syntax: numeric_histogram(bucket_count, x)
+  description: Build an approximate histogram of x with the specified bucket count.
+  params:
+  - bucket_count: Number of buckets
+  - x: Numeric column
+  returns: map(double, double), mapping bucket centers to approximate counts.
+  example: >-
+    * | SELECT numeric_histogram(3,x) AS result
+  example_input:
+  - x: 1.0
+  - x: 1.0
+  - x: 2.0
+  - x: 3.0
+  example_output:
+    result:
+      '1.0': 2.0
+      '2.0': 1.0
+      '3.0': 1.0
+- name: numeric_histogram_u
+  syntax: numeric_histogram_u(bucket_count, x)
+  description: Build an approximate histogram of x with the specified bucket count, returning multiple
+    rows.
+  example: >-
+    * | SELECT numeric_histogram_u(3,x) AS result
+  example_input:
+  - x: 1.0
+  - x: 1.0
+  - x: 2.0
+  - x: 3.0
+  note: The count column has a generated name; the example labels it count. Row order is not guaranteed.
+  example_output:
+  - bucket_avg: 1.0
+    count: 2.0
+  - bucket_avg: 2.0
+    count: 1.0
+  - bucket_avg: 3.0
+    count: 1.0
+  returns: Rows with bucket centers and approximate counts.
+use_cases:
+- Quickly estimate unique visitors (UV).
+- Calculate P50, P95, and P99 performance metrics.
+- Generate numeric distribution histograms.
+- Calculate statistics quickly over large datasets.
+important_notes:
+- Results are approximate; the sample outputs illustrate their shape, not a precision guarantee.
+source: https://help.aliyun.com/zh/sls/approximate-functions

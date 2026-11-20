@@ -1,0 +1,21 @@
+category: encoding_functions
+name: Encoding and decoding functions
+description: Encode and decode data.
+functions:
+- name: url_encode
+  syntax: url_encode(str)
+  description: URL encoding.
+  example: >-
+    * | SELECT url_encode('a b+c') AS result FROM log LIMIT 1
+  example_output:
+    result: a+b%2Bc
+- name: url_decode
+  syntax: url_decode(str)
+  description: URL decoding.
+  example: >-
+    * | SELECT url_decode('a+b%2Bc') AS result FROM log LIMIT 1
+  example_output:
+    result: a b+c
+related:
+- 'Base64 functions: binary.yaml'
+source: https://help.aliyun.com/zh/sls/url-functions

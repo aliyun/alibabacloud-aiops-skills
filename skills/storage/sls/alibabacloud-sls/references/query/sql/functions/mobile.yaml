@@ -1,0 +1,37 @@
+category: mobile_functions
+name: Mobile-number functions
+description: Analyze the registered location and carrier of Mainland China mobile numbers.
+functions:
+- name: mobile_carrier
+  syntax: mobile_carrier(mobile_number)
+  description: Look up a mobile number's carrier.
+  returns: varchar
+  example: >-
+    * | SELECT mobile_carrier(13900000000) AS result FROM log LIMIT 1
+  params:
+  - mobile_number: Phone number as bigint; use try_cast for a text field.
+- name: mobile_city
+  syntax: mobile_city(mobile_number)
+  description: Look up a mobile number's registered city.
+  returns: varchar
+  example: >-
+    * | SELECT mobile_city(13900000000) AS result FROM log LIMIT 1
+  params:
+  - mobile_number: Phone number as bigint; use try_cast for a text field.
+- name: mobile_province
+  syntax: mobile_province(mobile_number)
+  description: Look up a mobile number's registered province.
+  returns: varchar
+  example: >-
+    * | SELECT mobile_province(13900000000) AS result FROM log LIMIT 1
+  params:
+  - mobile_number: Phone number as bigint; use try_cast for a text field.
+use_cases:
+- Analyze users by region.
+- Analyze carrier distributions.
+- Look up a number's registered location.
+- Build regional user profiles.
+important_notes:
+- Use numeric input, not a quoted phone-number string.
+- Location and carrier results depend on the number database.
+source: https://help.aliyun.com/zh/sls/mobile-number-functions

@@ -1,0 +1,45 @@
+category: window_funnel_function
+name: Window funnel function
+description: Analyze user behavior, application traffic, and goal conversions.
+functions:
+- name: window_funnel
+  syntax: window_funnel(window, timestamp, ARRAY[event1, event2, ...])
+  description: Return the longest ordered sequence of completed stages within the time window, starting
+    at the first stage.
+  params:
+  - window: Time-window size in seconds (bigint)
+  - timestamp: Timestamp in seconds (bigint)
+  - event1, event2, ...: Ordered Boolean conditions, up to 32 stages.
+  returns: Maximum number of event stages completed by a user
+  example: >-
+    * | SELECT user_id, window_funnel(120, ts, ARRAY[action='view',action='cart',action='buy']) AS result
+    GROUP BY user_id
+  example_input:
+  - user_id: u1
+    ts: 0
+    action: view
+  - user_id: u1
+    ts: 60
+    action: cart
+  - user_id: u1
+    ts: 180
+    action: buy
+  example_output:
+    result: 2
+    user_id: u1
+use_cases:
+- E-commerce purchase funnels
+- Application workflow analysis
+- Registration conversion analysis
+- User journey analysis
+important_notes:
+- The result ranges from 0 to the number of stages; it is a stage count, not a conversion rate.
+- Group by user ID or the entity whose event sequence is being analyzed.
+- The window and timestamp are both in seconds.
+- The chain starts at its first stage and cannot skip a required stage.
+examples:
+- desc: Analyze a three-stage purchase funnel.
+  sql: "* | SELECT step, count(*) AS users\nFROM (\n  SELECT user_id,\n    window_funnel(1800, cast(__time__\
+    \ as bigint),\n      ARRAY[page='product', action='add_cart', action='payment']) AS step\n  FROM log\n\
+    \  GROUP BY user_id\n)\nGROUP BY step\nORDER BY step\n"
+source: https://help.aliyun.com/zh/sls/window-funnel-function

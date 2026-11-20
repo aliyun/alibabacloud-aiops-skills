@@ -1,0 +1,64 @@
+{
+  "dashboardName": "example-radarchart",
+  "displayName": "Team score comparison example",
+  "attribute": {
+    "type": "grid"
+  },
+  "charts": [
+    {
+      "title": "radarchart",
+      "type": "radarchart",
+      "display": {
+        "version": 2,
+        "xPos": 0,
+        "yPos": 0,
+        "width": 24,
+        "height": 8,
+        "basicOptions": {
+          "displayName": "Team score comparison",
+          "showTitle": true,
+          "showBorder": true,
+          "showBackground": true,
+          "showTime": true
+        },
+        "queryOptionMap": {
+          "A": {
+            "showFieldKey": "dimension",
+            "numFieldKey": [
+              "team_a",
+              "team_b"
+            ]
+          }
+        },
+        "typeOption": {
+          "chartType": "PolygonsChart",
+          "showLabel": true
+        },
+        "legendOption": {
+          "show": true,
+          "position": "bottom"
+        },
+        "standardOption": {
+          "format": "none",
+          "decimals": 0
+        }
+      },
+      "search": {
+        "chartQueries": [
+          {
+            "name": "A",
+            "datasource": "logstore",
+            "region": "cn-hangzhou",
+            "project": "example-project",
+            "logstore": "example-logstore",
+            "query": "* | select dimension, team_a, team_b from unnest(array['Reliability','Speed','Coverage','Cost','Support'], array[90,75,80,65,85], array[80,88,70,82,75]) as t(dimension,team_a,team_b)"
+          }
+        ],
+        "start": "-3600s",
+        "end": "now",
+        "dataSourceType": "mixed"
+      },
+      "action": {}
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+category: array_functions
+name: Array functions and operators
+description: Read, modify, iterate, and transform arrays.
+support:
+  spl: partial
+functions:
+- name: array_distinct
+  syntax: array_distinct(x)
+  description: Remove duplicate array elements.
+  examples:
+    spl: '* | extend unique_arr = array_distinct(arr_field)'
+- name: array_intersect
+  syntax: array_intersect(x, y)
+  description: Calculate the intersection of two arrays.
+  examples:
+    spl: '* | extend intersection = array_intersect(arr1, arr2)'
+- name: array_except
+  syntax: array_except(x, y)
+  description: Calculate the difference of two arrays.
+  examples:
+    spl: '* | extend diff = array_except(arr1, arr2)'
+- name: array_join
+  syntax: array_join(x, delimiter [, null_replacement])
+  description: Join array elements using a delimiter.
+  params:
+  - x: Array
+  - delimiter: Delimiter
+  - null_replacement: Optional string used to replace null elements
+  examples:
+    spl: '* | extend joined = array_join(arr_field, '','')'
+- name: cardinality
+  syntax: cardinality(x)
+  description: Count array elements.
+- name: reverse
+  syntax: reverse(x)
+  description: Reverse array elements.
+  examples:
+    spl: '* | extend reversed = reverse(arr_field)'
+- name: filter
+  syntax: filter(x, lambda_expression)
+  description: Filter array elements with a lambda expression.
+  examples:
+    spl: '* | extend filtered = filter(arr_field, x -> x > 0)'
+- name: transform
+  syntax: transform(x, lambda_expression)
+  description: Apply a lambda expression to each array element.
+  examples:
+    spl: '* | extend transformed = transform(arr_field, x -> x * 2)'
+- name: sequence
+  syntax: sequence(x, y [, step])
+  description: Return an increasing or decreasing sequence with an inclusive end bound.
+  params:
+  - x: Start value
+  - y: End value
+  - step: For numeric inputs, defaults to 1 when start <= end and -1 otherwise.
+  examples:
+    spl: '* | extend seq = sequence(1, 100)'
+important_notes:
+- Array indexes start at 1.
+- Lambda expressions support complex array processing.
+- Use cast and json_parse to process JSON-formatted arrays.

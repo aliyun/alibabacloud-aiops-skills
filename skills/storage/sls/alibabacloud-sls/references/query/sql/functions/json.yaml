@@ -1,0 +1,54 @@
+category: json_functions
+name: JSON functions
+description: Process JSON data.
+functions:
+- name: json_extract
+  syntax: json_extract(json_string, json_path)
+  description: Extract a JSON value, preserving its JSON type.
+  path_syntax:
+  - $: Root value
+  - $.key: Object property
+  - $[index]: Array element; indexes start at 0.
+  example: >-
+    * | SELECT json_extract('{"tags":["api","error"]}', '$.tags') AS result FROM log LIMIT 1
+  example_output:
+    result:
+    - api
+    - error
+  returns: json
+- name: json_extract_scalar
+  syntax: json_extract_scalar(json_string, json_path)
+  description: Extract a scalar JSON value as a string, including numbers and booleans.
+  note: Use json_extract for objects or arrays. Cast a numeric scalar before arithmetic or numeric aggregation.
+  example: >-
+    * | SELECT json_extract_scalar('{"status":500}', '$.status') AS result FROM log LIMIT 1
+  example_output:
+    result: '500'
+  returns: varchar
+- name: json_parse
+  syntax: json_parse(json_text)
+  description: Parse a JSON string into a JSON value.
+  returns: json
+  note: Use when a JSON value is needed, for example before casting it to an array or map.
+  example: >-
+    * | SELECT json_parse('{"status":500}') AS result FROM log LIMIT 1
+  example_output:
+    result:
+      status: 500
+- name: json_format
+  syntax: json_format(json_value)
+  description: Serialize a JSON value as JSON text.
+  returns: varchar
+  example: >-
+    * | SELECT json_format(json_parse('{"status":500}')) AS result FROM log LIMIT 1
+  example_output:
+    result: '{"status":500}'
+- name: json_array_length
+  syntax: json_array_length(json_array)
+  description: Return the number of elements in a JSON array.
+  returns: bigint
+  example: >-
+    * | SELECT json_array_length('["api","error","retry"]') AS result FROM log LIMIT 1
+  example_output:
+    result: 3
+source: https://help.aliyun.com/zh/sls/json-functions

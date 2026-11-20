@@ -1,0 +1,89 @@
+category: binary_functions
+name: Binary functions
+description: Process, encode, and decode binary data.
+functions:
+- name: from_base64
+  syntax: from_base64(x)
+  description: Decode a Base64-encoded string.
+  returns: varbinary
+  example: >-
+    * | SELECT from_utf8(from_base64('aGVsbG8=')) AS result FROM log LIMIT 1
+  example_output:
+    result: hello
+- name: to_base64
+  syntax: to_base64(x)
+  description: Encode binary data as a Base64 string.
+  returns: varchar
+  example: >-
+    * | SELECT to_base64(to_utf8('hello')) AS result FROM log LIMIT 1
+  example_output:
+    result: aGVsbG8=
+- name: from_hex
+  syntax: from_hex(x)
+  description: Convert a hexadecimal string to binary data.
+  example: >-
+    * | SELECT from_utf8(from_hex('68656C6C6F')) AS result FROM log LIMIT 1
+  example_output:
+    result: hello
+- name: to_hex
+  syntax: to_hex(x)
+  description: Convert binary data to a hexadecimal string.
+  example: >-
+    * | SELECT to_hex(to_utf8('hello')) AS result FROM log LIMIT 1
+  example_output:
+    result: 68656C6C6F
+- name: from_big_endian_64
+  syntax: from_big_endian_64(x)
+  description: Convert an 8-byte big-endian value to bigint.
+  example: >-
+    * | SELECT from_big_endian_64(from_hex('0000000000000001')) AS result FROM log LIMIT 1
+  example_output:
+    result: 1
+- name: to_big_endian_64
+  syntax: to_big_endian_64(x)
+  description: Convert bigint to an 8-byte big-endian value.
+  example: >-
+    * | SELECT to_hex(to_big_endian_64(1)) AS result FROM log LIMIT 1
+  example_output:
+    result: '0000000000000001'
+- name: md5
+  syntax: md5(binary_value)
+  description: Calculate a MD5 digest of binary data.
+  example: >-
+    * | SELECT to_hex(md5(to_utf8('hello'))) AS result FROM log LIMIT 1
+  example_output:
+    result: 5D41402ABC4B2A76B9719D911017C592
+  returns: varbinary
+- name: sha1
+  syntax: sha1(binary_value)
+  description: Calculate a SHA1 digest of binary data.
+  example: >-
+    * | SELECT to_hex(sha1(to_utf8('hello'))) AS result FROM log LIMIT 1
+  example_output:
+    result: AAF4C61DDCC5E8A2DABEDE0F3B482CD9AEA9434D
+  returns: varbinary
+- name: sha256
+  syntax: sha256(binary_value)
+  description: Calculate a SHA256 digest of binary data.
+  example: >-
+    * | SELECT to_hex(sha256(to_utf8('hello'))) AS result FROM log LIMIT 1
+  example_output:
+    result: 2CF24DBA5FB0A30E26E83B2AC5B9E29E1B161E5C1FA7425E73043362938B9824
+  returns: varbinary
+- name: sha512
+  syntax: sha512(binary_value)
+  description: Calculate a SHA512 digest of binary data.
+  example: >-
+    * | SELECT to_hex(sha512(to_utf8('hello'))) AS result FROM log LIMIT 1
+  example_output:
+    result: 9B71D224BD62F3785D96D46AD3EA3D73319BFBC2890CAADAE2DFF72519673CA72323C3D99BA5C11D7C7ACC6E14B8C5DA0C4663475C2E5C3ADEF46F73BCDEC043
+  returns: varbinary
+use_cases:
+- Base64 encoding and decoding
+- Hash calculation
+- Binary data processing
+- Data verification
+important_notes:
+- Use to_utf8 for text input and to_hex for readable hash or binary output.
+- The examples wrap binary results with from_utf8 or to_hex so their contents are visible.
+source: https://help.aliyun.com/zh/sls/binary-functions

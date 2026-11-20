@@ -1,0 +1,49 @@
+category: comparison_functions
+name: Period comparison functions
+description: Calculate relative changes in time-series data for period comparisons.
+functions:
+- name: compare
+  syntax: compare(x, n)
+  description: Compare the current period's result with the result from n seconds earlier.
+  params:
+  - x: A calculated double or long value
+  - n: Time offset in seconds, such as 3600 (1 hour), 86400 (1 day), or 604800 (1 week)
+  returns: Array [current result, result n seconds earlier, ratio]
+  note: The query time range determines the current period. n shifts that entire range; it does not set
+    its duration.
+  example: >-
+    * | SELECT compare(PV, 86400) FROM (SELECT count(*) AS PV FROM log)
+- name: compare (multiple)
+  syntax: compare(x, n1, n2, n3...)
+  description: Compare the current period's result with results from multiple historical periods.
+  params:
+  - x: A calculated double or long value
+  - n1, n2, n3: Multiple time offsets in seconds
+  returns: Array [current, historical_1, historical_2, ..., ratio_1, ratio_2, ...]. Each ratio is current
+    / historical.
+  example: >-
+    * | SELECT compare(pv, 86400, 604800) AS comparisons FROM (SELECT count(*) AS pv FROM log)
+- name: ts_compare
+  syntax: ts_compare(x, n1 [, n2, ...])
+  description: Compare the current period's result with the result from n seconds earlier, grouped by
+    time.
+  params:
+  - x: A calculated double or long value
+  - n: Time offset in seconds
+  returns: 'For one offset: [current, historical, current / historical, historical Unix timestamp]. For
+    multiple offsets: current, all historical values, all ratios, then all historical timestamps.'
+  note: GROUP BY must include exactly one time column. Cannot be nested with compare or ts_compare.
+  example: >-
+    * | SELECT time, ts_compare(PV, 86400) as diff FROM (SELECT count(*) as PV, date_trunc('hour', __time__)
+    AS time FROM log GROUP BY time) GROUP BY time ORDER BY time
+important_notes:
+- Offsets are in seconds; 86400 compares with the same time range one day earlier.
+- A ratio of 1.2 means a 20% increase; growth percentage is (ratio - 1) * 100.
+- compare and ts_compare cannot be nested within one another.
+- Array subscripts start at 1.
+use_cases:
+- Compare traffic today with the same period yesterday.
+- Calculate weekly growth rates.
+- Analyze traffic trends across periods.
+- Monitor period-to-period changes in key metrics.
+source: https://help.aliyun.com/zh/sls/interval-valued-and-periodicity-valued-comparison-functions

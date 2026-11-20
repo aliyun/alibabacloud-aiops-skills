@@ -1,0 +1,105 @@
+category: operators
+name: Comparison and logical operators
+description: Compare values and combine Boolean conditions.
+comparison_operators:
+- name: '='
+  description: Equal.
+  example: >-
+    * | SELECT 2 = 2 AS result FROM log LIMIT 1
+  example_output:
+    result: true
+- name: '!= or <>'
+  description: Not equal.
+  example: >-
+    * | SELECT 2 <> 3 AS result FROM log LIMIT 1
+  example_output:
+    result: true
+- name: <
+  description: Less than.
+  example: >-
+    * | SELECT 2 < 3 AS result FROM log LIMIT 1
+  example_output:
+    result: true
+- name: <=
+  description: Less than or equal.
+  example: >-
+    * | SELECT 2 <= 2 AS result FROM log LIMIT 1
+  example_output:
+    result: true
+- name: '>'
+  description: Greater than.
+  example: >-
+    * | SELECT 3 > 2 AS result FROM log LIMIT 1
+  example_output:
+    result: true
+- name: '>='
+  description: Greater than or equal.
+  example: >-
+    * | SELECT 2 >= 2 AS result FROM log LIMIT 1
+  example_output:
+    result: true
+- name: BETWEEN
+  syntax: x BETWEEN min AND max
+  description: Test whether x is between min and max, including both bounds.
+  example: >-
+    * | SELECT 2 BETWEEN 1 AND 2 AS result FROM log LIMIT 1
+  example_output:
+    result: true
+- name: IN
+  syntax: x IN (value1, value2, ...)
+  description: Test whether x belongs to a list of values.
+  example: >-
+    * | SELECT 2 IN (1,2,3) AS result FROM log LIMIT 1
+  example_output:
+    result: true
+- name: IS NULL
+  description: Test whether a value is NULL.
+  example: >-
+    * | SELECT CAST(NULL AS BIGINT) IS NULL AS result FROM log LIMIT 1
+  example_output:
+    result: true
+- name: IS NOT NULL
+  description: Test whether a value is not NULL.
+  example: >-
+    * | SELECT 2 IS NOT NULL AS result FROM log LIMIT 1
+  example_output:
+    result: true
+- name: LIKE
+  syntax: x LIKE pattern [ESCAPE 'escape_character']
+  description: Match a string pattern; % matches any sequence of characters and _ matches one character.
+  example: >-
+    * | SELECT '/api/orders' LIKE '/api/%' AS result FROM log LIMIT 1
+  example_output:
+    result: true
+logical_operators:
+- name: AND
+  description: Logical AND; true when all conditions are true.
+  example: >-
+    * | SELECT true AND CAST(NULL AS BOOLEAN) AS result FROM log LIMIT 1
+  example_output:
+    result: null
+- name: OR
+  description: Logical OR; true when any condition is true.
+  example: >-
+    * | SELECT true OR CAST(NULL AS BOOLEAN) AS result FROM log LIMIT 1
+  example_output:
+    result: true
+- name: NOT
+  description: Logical NOT; negate a Boolean value.
+  example: >-
+    * | SELECT NOT CAST(NULL AS BOOLEAN) AS result FROM log LIMIT 1
+  example_output:
+    result: null
+important_notes:
+- SQL string comparisons and LIKE matching are case-sensitive.
+- Ordinary comparisons involving NULL yield NULL. Use IS NULL or IS NOT NULL to test for NULL.
+- NOT, AND, OR is the logical precedence order, from highest to lowest; use parentheses to group conditions.
+- A NULL result is unknown, not false. WHERE retains only rows for which the predicate is true.
+use_cases:
+- Filter logs by status code.
+- Select data within a time range.
+- Combine query conditions.
+- Handle NULL values.
+sources:
+- https://help.aliyun.com/zh/sls/comparison-operators
+- https://help.aliyun.com/zh/sls/logical-operators

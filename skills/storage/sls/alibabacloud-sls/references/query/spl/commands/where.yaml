@@ -1,0 +1,16 @@
+name: where
+category: Structured-data expression commands
+description: Keep records that satisfy a Boolean expression.
+grammar: where <boolean_expression>
+example: |
+  * | where status = '500'
+  * | where cast(status as BIGINT) >= 500
+  * | where status = '200' and method = 'GET'
+scenarios:
+- All SPL scenarios
+note:
+- Boolean expressions may use SQL functions; see [function details](../README.md#high-frequency-functions).
+- Type conversion must be explicit with cast.
+- Use single quotes for strings.
+- Apply filters early when their input fields are available; filters on extracted or computed fields
+  follow the corresponding parse or extend stage.

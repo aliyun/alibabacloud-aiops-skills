@@ -1,0 +1,37 @@
+name: stats
+category: Aggregation commands
+description: Calculate statistics, grouping, and aggregates.
+grammar: stats <output1> = <aggOperator1> [, <output2> = <aggOperator2>, ...] [by <group1>, <group2>, ...]
+example: |
+  * | stats total = count(*)
+  * | extend avg_latency = cast(latency as DOUBLE) | stats avg_latency = avg(avg_latency) by status
+  * | extend total_bytes = cast(bytes as BIGINT) | stats cnt = count(*), total_bytes = sum(total_bytes) by method, status
+  * | stats pv = count(*) by ip
+scenarios:
+- Scan queries
+supportedAggregators:
+- count
+- count_if
+- min
+- max
+- sum
+- avg
+- skewness
+- kurtosis
+- approx_percentile
+- approx_distinct
+- bool_and
+- bool_or
+- every
+- arbitrary
+- array_agg
+note:
+- Use = to name output fields, rather than as.
+- Use by for grouping.
+- Use commas to separate multiple aggregate functions in one command.
+- Aggregate arguments can include expressions such as avg(cast(latency as double)). Use extend
+  to prepare derived fields when that makes grouping or reuse clearer.
+- Returns the first 100 aggregate rows by default; combine with limit for more results.
+references:
+- https://help.aliyun.com/zh/sls/aggregation-instructions
+- https://help.aliyun.com/zh/sls/spl-statement

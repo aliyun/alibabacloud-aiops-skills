@@ -1,0 +1,39 @@
+category: type_conversion_functions
+name: Type conversion functions
+description: Convert data types.
+functions:
+- name: cast
+  syntax: cast(value as TYPE)
+  description: Convert a value; raise an error on failure.
+  types:
+  - BIGINT
+  - INTEGER
+  - DOUBLE
+  - VARCHAR
+  - BOOLEAN
+  - TIMESTAMP
+  - DECIMAL(precision, scale)
+  - ARRAY(element_type)
+  - MAP(key_type, value_type)
+  note: Indexed SQL uses the configured field types. Convert textual numbers before numeric calculations.
+  example: >-
+    * | SELECT cast('503' AS BIGINT) AS result FROM log LIMIT 1
+  example_output:
+    result: 503
+- name: try_cast
+  syntax: try_cast(value as TYPE)
+  description: Convert a value safely, returning NULL on failure.
+  note: Recommended when conversion failures should not fail the query.
+  example: >-
+    * | SELECT try_cast('unknown' AS BIGINT) AS result FROM log LIMIT 1
+  example_output:
+    result: null
+- name: typeof
+  syntax: typeof(value)
+  description: Return the SQL type name of a value.
+  returns: varchar
+  example: >-
+    * | SELECT typeof(cast('503' AS BIGINT)) AS result FROM log LIMIT 1
+  example_output:
+    result: bigint
+source: https://help.aliyun.com/zh/sls/data-type-conversion-functions

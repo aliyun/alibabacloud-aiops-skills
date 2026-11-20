@@ -1,0 +1,14 @@
+name: extend
+category: Structured-data expression commands
+description: Compute new fields from expressions.
+grammar: extend <new_field1> = <expression1> [, <new_field2> = <expression2>, ...]
+example: |
+  * | extend status_num = cast(status as BIGINT)
+  * | extend request_time = from_unixtime(cast(__time__ as DOUBLE))
+  * | extend is_error = if(cast(status as BIGINT) >= 500, 'yes', 'no')
+scenarios:
+- All SPL scenarios
+note:
+- Expressions may use SQL functions; see [function details](../README.md#high-frequency-functions).
+- If a new field has the same name as an existing field, it overwrites that field.
+- One extend command can define multiple fields.

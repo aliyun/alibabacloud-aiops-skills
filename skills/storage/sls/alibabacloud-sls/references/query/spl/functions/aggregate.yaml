@@ -1,0 +1,32 @@
+category: aggregate_functions
+name: Aggregate functions
+description: Summarize fields in stats.
+support:
+  spl: true
+functions:
+- name: count
+  syntax: count(*) or count(x)
+  description: Count log records.
+  note: count(*) counts all records; count(x) counts non-null x values.
+  example: '* | stats pv = count(*) by ip'
+- name: sum
+  syntax: sum(x)
+  description: Calculate the sum.
+- name: avg
+  syntax: avg(x)
+  description: Calculate the average.
+  example: '* | extend latency_ms = try_cast(latency as BIGINT) | stats avg_latency = avg(latency_ms) by api'
+- name: max
+  syntax: max(x)
+  description: Return the maximum value.
+- name: min
+  syntax: min(x)
+  description: Return the minimum value.
+- name: count_if
+  syntax: count_if(condition)
+  description: Count records that meet a condition.
+- name: arbitrary
+  syntax: arbitrary(x)
+  description: Return an arbitrary non-null value.
+  note: Obtain a non-grouping field value when grouping.
+context: stats
