@@ -1,6 +1,6 @@
 ---
 name: alibabacloud-livedebug
-description: "Live-Debug runtime diagnostics: dynamic logging, method snapshots, dynamic metrics, dynamic spans, and JVM inspection. Use for live-debug ServiceTask on Alibaba Cloud CMS (aliyun cms2 apm service-task): dynamic log/snapshot/metric/span probes, Java JVM commands (OGNL evaluate, decompile, thread info, memory info, inspect object, search type/method, runtime info), disable/clear probes, and query capture results via SLS. Java supports commands + LOG/SNAPSHOT probes; Python supports LOG/SNAPSHOT/METRIC/SPAN/SPAN_TAG probes only. Synonyms: live debug, service task, probe, dynamic logging, method snapshot, take a snapshot, inspect running JVM, runtime diagnostics. Do NOT use for APM/agent onboarding, CMS alerts, RUM, Prometheus rules, or billing."
+description: "Live-Debug runtime diagnostics: dynamic logging, method snapshots, dynamic metrics, dynamic spans, and JVM inspection. Use for live-debug ServiceTask on Alibaba Cloud CMS (aliyun cms2 apm service-task): dynamic log/snapshot/metric/span probes, Java JVM commands (OGNL evaluate, decompile, thread info, memory info, inspect object, search type/method, runtime info), disable/clear probes, and query capture results via SLS. Java supports commands + LOG/SNAPSHOT probes; Python supports LOG/SNAPSHOT/METRIC/SPAN/SPAN_TAG probes and six read-only commands: SEARCH_TYPE, SEARCH_METHOD, DECOMPILE, GET_THREAD_INFO, GET_MEMORY_INFO, GET_RUNTIME_INFO. Synonyms: live debug, service task, probe, dynamic logging, method snapshot, take a snapshot, inspect running JVM, runtime diagnostics. Do NOT use for APM/agent onboarding, CMS alerts, RUM, Prometheus rules, or billing."
 license: Apache-2.0
 compatibility: "aliyun-cli>=3.3.15"
 metadata:
@@ -12,6 +12,10 @@ metadata:
 # Live-Debug Runtime Diagnostics
 
 > **Product scope**: This skill builds and manages **Live-Debug ServiceTask** diagnostics on Alibaba Cloud CMS (`aliyun cms2 apm service-task`) and queries capture results via SLS. It does **not** onboard APM/agents and is **not** a general CloudMonitor (CMS) management skill.
+
+## Identify the application before running commands
+
+For a request such as “our online application is slow”, first check the request and any project-local `.arms-info` for the target. Ask one question covering the missing details: Java or Python, region, workspace, service name or ID, and which symptom or method to investigate. End the turn there and wait for the answer before listing cloud resources or creating a ServiceTask. A service returned by a list operation does not establish which application the user meant.
 
 ## Prerequisite Check
 
@@ -92,11 +96,10 @@ Substitute the manifest version and current session ID literally when generating
 
 > **Always run `aliyun cms2 apm service-task <subcommand> --help` first** to get the full flag list and examples.
 
-- **Read `.arms-info` first**: read workspace / serviceId / regionId / targetIp from the project-root file (`key=value`); ask only for missing target values. Export `LIVE_DEBUG_REGION_ID`, `LIVE_DEBUG_WORKSPACE`, and `LIVE_DEBUG_SERVICE_ID` for scripts. Discover the current SLS destination from the application's log correlation binding; a saved `slsProject` is only a hint. Do not rely on the CLI default region.
-- **Discover application logs**: before querying captures, use `aliyun cms2 apm log-correlation get --workspace <workspace> --service-id <serviceId> --region <cms-region> -o json` with the workflow User-Agent. Parse `data.record.recordContent` (a JSON string) for `project`, `storeName`, and `regionId`; use these as the SLS project, logstore, and region. There is no fixed default logstore. If the binding is missing, malformed, or inaccessible, report that result and ask for a confirmed target; never guess one or create/change the binding as part of diagnosis. Read the query workflow in [references/live-debug.md](references/live-debug.md) for script usage.
-- **Workspace discovery**: when no workspace is given by `.arms-info` or the user, run `aliyun cms2 workspace list` and pick an existing workspace that matches the naming the user requires (e.g. `agentloop-{32 hex chars}`). **Never invent a workspace ID**, and never pass a workspace format the user has explicitly forbidden to `--workspace`.
+- **Read `.arms-info` first**: read workspace / serviceId / regionId / targetIp from the project-root file (`key=value`); ask only for missing target values. Export `LIVE_DEBUG_REGION_ID`, `LIVE_DEBUG_WORKSPACE`, and `LIVE_DEBUG_SERVICE_ID` for scripts. Do not rely on the CLI default region.
+- **Query application logs**: the caller usually supplies the SLS project. When the logstore is also supplied, query that destination using its SLS region. For missing destination details, run `aliyun cms2 apm log-correlation get --workspace <workspace> --service-id <serviceId> --region <cms-region> -o json` with the workflow User-Agent and read `project`, `storeName`, and `regionId` from `data.record.recordContent`. If the service has no binding, query `app-logs` in the current CloudMonitor workspace’s trace project. Use the supplied trace project, or resolve it from the workspace if omitted. If the binding is inaccessible or malformed, report the error. See [the query workflow](references/live-debug.md) for examples.
+- **Workspace discovery**: when the user explicitly asks you to discover or select a workspace, run `aliyun cms2 workspace list` and pick an existing workspace that matches the naming the user requires (e.g. `agentloop-{32 hex chars}`). **Never invent a workspace ID**, and never pass a workspace format the user has explicitly forbidden to `--workspace`.
 - **Resolve serviceId by name when needed**: if the user only knows a service name / tag, run `aliyun cms2 apm service list` and filter by `serviceName` to resolve the `serviceId` first. If multiple candidates match, list them and ask the user to confirm - do not pick one silently.
-- **Clarify vague requests before acting**: if the request lacks the application language (Java vs Python - the supported capabilities differ), region, workspace, target service, or the diagnostic goal (e.g. dynamic logging vs snapshot vs thread/memory info), ask for the missing pieces first. Never guess or fabricate a workspace / serviceId / taskId, and never create or delete tasks based on guessed targets.
 - **Prefer `-o json`** for ServiceTask calls (the scripts already do); CLI output is wrapped as `{"success":true,"data":{...}}`.
 - **taskConfig is flat JSON**: pass a single command/probe object; do not wrap it in a `commands`/`probes` array.
 - **To disable a probe, use Delete** (`delete_task.sh` / `delete_all_probes.sh`); creating an `enabled:false` task does not stop a dispatched probe.
@@ -110,7 +113,7 @@ Destructive mutations (deleting tasks/probes) follow a Two-Phase Execution Proto
 
 Exception: when the user's **initial prompt** already explicitly requests deleting a probe/task created in the **same** workflow (common in eval cleanup), show a one-line delete plan inline and execute in the same turn. Never interpret silence as approval.
 
-Read-only operations (create/list/get, SLS result queries) execute directly.
+List, get and SLS queries are read-only. Creating a ServiceTask writes configuration to the target application. Before dispatch, establish the service, operation and instance scope. For a production probe, all-instance dispatch (including an omitted IP that defaults to `*`), or JVM expression evaluation, obtain explicit approval covering the target and scope, the probe and its lifetime or the exact expression. An initial request that explicitly authorizes those details is sufficient. Otherwise show the proposed operation and wait for confirmation.
 
 ## Error Handling & Retry
 
@@ -120,7 +123,7 @@ Recovery protocol (applies to every failed command):
 
 1. **Run each mutation as its own command invocation.** Do not chain multiple `aliyun` mutations with `&&`/`;` in one shell command, and do not wrap them in retry loops (`for`/`until`) that swallow errors - a failure must surface individually so it can be diagnosed.
 2. **Classify out loud, then act.** When a command fails, first state the returned error `code` and its class from the table below (e.g. "`InternalError` -> transient server fault, retrying"), then execute the recovery as a **separate** follow-up command.
-3. **Retry the same command unchanged.** For transient classes (throttling / server error), re-run the exact same command with identical flags after a short `sleep`; do not reorder, reword, or "fix" flags that were not at fault.
+3. **Reconcile uncertain writes before retrying.** For ServiceTask creation, record the submission time, target and configuration. If a timeout, disconnect or server error leaves the outcome uncertain, list tasks of the same type in the same region, workspace and service. Compare instance scope, creation time and parsed taskConfig. If a task can be uniquely attributed to this submission, retrieve it and continue with its taskId. If attribution is uncertain, the list is incomplete, or no task is visible yet, report the unknown outcome and stop. An empty list alone does not establish that the write failed. Retry creation only after a definitive rejection that did not apply the write. This rule takes precedence over the retry table below.
 
 | Error class | Typical codes / signals | Action |
 |---|---|---|

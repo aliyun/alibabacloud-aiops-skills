@@ -6,7 +6,7 @@
 
 ## Scope
 
-Construct and manage Live-Debug ServiceTask APIs for JVM and Python runtime diagnostics. Supports create/list/get/delete tasks, SLS result queries, Java commands (OGNL, decompile, thread, memory, search, inspect) and probes (LOG/SNAPSHOT); Python probes only (LOG/SNAPSHOT/METRIC/SPAN/SPAN_TAG). Use when the user mentions live-debug, wants to disable/clear probes, build serviceTask calls, inspect a running JVM, or add dynamic logging/snapshots/metrics/spans.
+Construct and manage Live-Debug ServiceTask APIs for JVM and Python runtime diagnostics. Supports create/list/get/delete tasks, SLS result queries, Java commands (OGNL, decompile, thread, memory, search, inspect) and probes (LOG/SNAPSHOT); Python read-only commands and probes (LOG/SNAPSHOT/METRIC/SPAN/SPAN_TAG). Use when the user mentions live-debug, wants to disable/clear probes, build serviceTask calls, inspect a running JVM, or add dynamic logging/snapshots/metrics/spans.
 
 ---
 
@@ -15,7 +15,7 @@ Construct and manage Live-Debug ServiceTask APIs for JVM and Python runtime diag
 Manage live-debug tasks on target instances via scripts (create / list / get / delete) and query the execution results.
 
 Two task categories are supported:
-- **Command (active probing)**: one-shot execution, results reported asynchronously. **Java/JVM only; not supported for Python.**
+- **Command (active probing)**: one-shot execution, results reported asynchronously. Java supports eight commands and Python supports six (see the task type table).
 - **Probe (code enhancement)**: continuously effective bytecode instrumentation that captures and reports data when triggered. Java supports `LOG`/`SNAPSHOT`; Python supports `LOG`/`SNAPSHOT`/`METRIC`/`SPAN`/`SPAN_TAG`.
 
 > **Important: taskConfig uses a flat JSON structure.** Pass a single command/probe object directly; do **not** wrap it in a `commands` or `probes` array.
@@ -32,7 +32,7 @@ Confirm the following parameters before making a call:
 | serviceId | Application / service ID | `ggxw4lnjuz@f2fd3a6265a254a052afb` |
 | targetIp | Target instance IP (optional; defaults to `*`, matching all instances) | `10.0.0.1` |
 | regionId | Onboarding region | `cn-hangzhou` |
-| SLS destination | Discover `project`, `storeName`, and `regionId` from the application's log correlation binding before querying | Application-specific; no fixed logstore |
+| SLS destination | Discover `project`, `storeName`, and `regionId` from the application's log correlation binding before querying | Unbound application: workspace trace project / `app-logs` |
 
 **Acquisition order:**
 
@@ -44,17 +44,17 @@ Confirm the following parameters before making a call:
    targetIp=10.0.0.1
    slsProject=proj-xtrace-xxxxxxxxxxxxxxxxxxxxxx-cn-hangzhou
    ```
-2. If `.arms-info` does not exist or is missing target parameters, ask the user for the missing values. If the workspace is unknown, run `aliyun cms2 workspace list` and pick an existing workspace that matches the naming the user requires (e.g. `agentloop-{32 hex chars}`); never invent a workspace ID. If `targetIp` is missing, use the default `*`. Resolve the current SLS destination from the application's binding rather than assuming the saved `slsProject` is current.
+2. If `.arms-info` does not exist or is missing target parameters, ask the user for the missing values. If the user asks you to discover the workspace, run `aliyun cms2 workspace list` and pick an existing workspace that matches the naming the user requires (e.g. `agentloop-{32 hex chars}`); never invent a workspace ID. If `targetIp` is missing, use the default `*`. Resolve the current SLS destination from the application's binding rather than assuming the saved `slsProject` is current.
 
 Defaults can be overridden via environment variables:
 - `LIVE_DEBUG_REGION_ID` - CMS workspace region (from `regionId` in `.arms-info`). Used for ServiceTask calls and log-correlation discovery.
 - `LIVE_DEBUG_CMS_ENDPOINT` - CMS API endpoint (optional; passed as the CMS CLI `--endpoint`, overriding the region-derived result).
 - `LIVE_DEBUG_CMS2` - how the CMS CLI is invoked (default `aliyun cms2`, i.e. the aliyuncms2 plugin of the Alibaba Cloud CLI; for local debugging it can be set to `aliyuncms2` or an absolute binary path).
 - `LIVE_DEBUG_WORKSPACE` / `LIVE_DEBUG_SERVICE_ID` - application identifiers used by `query_task.sh` to discover the log binding.
-- `LIVE_DEBUG_SLS_PROJECT` / `LIVE_DEBUG_SLS_LOGSTORE` / `LIVE_DEBUG_SLS_REGION_ID` - optional explicit values from a confirmed binding. `query_task.sh` discovers the binding if project or logstore is missing. It uses the binding's `regionId` for SLS, which can differ from the CMS workspace region. When both project and logstore are supplied, set the confirmed SLS region too; legacy calls without it fall back to the explicit region or project suffix.
+- `LIVE_DEBUG_SLS_PROJECT` / `LIVE_DEBUG_SLS_LOGSTORE` / `LIVE_DEBUG_SLS_REGION_ID` - optional explicit values for a confirmed SLS destination. `query_task.sh` discovers the binding if project or logstore is missing. It uses the binding's `regionId` for SLS, which can differ from the CMS workspace region. When both project and logstore are supplied, set the confirmed SLS region too; legacy calls without it fall back to the explicit region or project suffix.
 - `LIVE_DEBUG_SESSION_ID` - the workflow's 32-character lowercase hex session ID; follow the [root Observability rules](../SKILL.md#observability). Scripts derive the versioned User-Agent from this ID and the manifest.
 
-> **Agent must-do:** export the CMS region, workspace, service ID and current skill session before using scripts. For capture queries, discover the application binding or supply all confirmed SLS target values. Never assume a fixed logstore or use the CLI default region.
+> **Agent must-do:** export the CMS region, workspace, service ID and current skill session before using scripts. For capture queries, discover the application binding or supply all confirmed SLS target values. For an unbound service, use the default described in section 5 and pass its SLS region explicitly.
 
 ## Workflow
 
@@ -73,6 +73,8 @@ Maps to the OpenAPI `ServiceTaskController` (CMS `2024-03-30`):
 All scripts call CMS through the CMS CLI (`aliyun cms2`, i.e. aliyuncms2) `apm service-task` commands, reusing the Alibaba Cloud CLI credential system. CLI output is uniformly wrapped as `{"success":true,"data":{...}}`, and the scripts always use `-o json`.
 
 ### 1. Create a task (CreateServiceTask)
+
+Follow the scope approval and uncertain-write recovery rules in [Execution Safety and Error Handling](../SKILL.md#execution-safety) for both the wrapper and direct CLI. The wrapper submits one create call.
 
 ```bash
 scripts/live-debug/send_command.sh \
@@ -188,9 +190,17 @@ aliyun cms2 apm log-correlation get \
   --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-livedebug/skill-version/{version}/{session-id}" -o json
 ```
 
-Decode `data.record.recordContent` as JSON and map `project` to `--project`, `storeName` to `--logstore`, and `regionId` to the **SLS** `--region`. The CMS region locates the application; the binding's region locates the logs. Do not create or update a binding during diagnostics. If it is missing, inaccessible, invalid, or a `storeview` rather than a `logstore`, report the limitation and request a confirmed logstore target. Never fall back to a guessed destination.
+Decode `data.record.recordContent` as JSON and map `project` to `--project`, `storeName` to `--logstore`, and `regionId` to the **SLS** `--region`. The CMS region locates the application; the binding's region locates the logs. Do not create or update a binding during diagnostics. If it is inaccessible, invalid, or a `storeview` rather than a `logstore`, report the limitation and request a confirmed logstore target. Never fall back to a guessed destination.
 
-For automatic discovery, reuse the workflow session and export the confirmed application identifiers:
+When the service has **no application log binding** (`service record not exists`), the default for Live Debug logs routed as application logs (`external_logs`) is the **current CloudMonitor workspace’s trace project**, Logstore **`app-logs`**. Confirm the trace project associated with that workspace; the workspace name and its general SLS project can differ from the trace project. Use the explicit-target form:
+
+```bash
+LIVE_DEBUG_SLS_REGION_ID="$TRACE_REGION" scripts/live-debug/query_task.sh "$TASK_ID" "$TRACE_PROJECT" app-logs 30
+```
+
+If the probe sends the `livedebug` scope as `internal_logs`, also check `logstore-apm-logs` in the trace project. A missing Logstore or empty result does not confirm delivery. A permission error does not establish that the service is unbound.
+
+For automatic discovery of an existing binding, reuse the workflow session and export the confirmed application identifiers:
 
 ```bash
 LIVE_DEBUG_REGION_ID=cn-hangzhou \
@@ -209,7 +219,7 @@ The script looks back N minutes from now as the query range and outputs two sect
 - **Capture Results** - the data actually captured (`livedebug.report_type != 'status'`).
 
 **taskType format:**
-- Command types: `live_debug_` + the lowercase command type, e.g. `live_debug_get_memory_info` (Java only).
+- Command types: `live_debug_` + the lowercase command type, e.g. `live_debug_get_memory_info` (Java and Python).
 - Probe types: `live_debug_log_probe`, `live_debug_snapshot_probe`; Python also supports `live_debug_metric_probe`, `live_debug_span_probe`, `live_debug_span_tag_probe`.
 
 **Full taskType enums (taskType / List-Get-Delete `type`):**
@@ -222,13 +232,13 @@ The script looks back N minutes from now as the query range and outputs two sect
 | `live_debug_span_probe` | Probe SPAN | **Python** |
 | `live_debug_span_tag_probe` | Probe SPAN_TAG | **Python** |
 | `live_debug_evaluate_expression` | Command EVALUATE_EXPRESSION | Java |
-| `live_debug_decompile` | Command DECOMPILE | Java |
-| `live_debug_get_memory_info` | Command GET_MEMORY_INFO | Java |
-| `live_debug_get_thread_info` | Command GET_THREAD_INFO | Java |
+| `live_debug_decompile` | Command DECOMPILE | Java / Python |
+| `live_debug_get_memory_info` | Command GET_MEMORY_INFO | Java / Python |
+| `live_debug_get_thread_info` | Command GET_THREAD_INFO | Java / Python |
 | `live_debug_inspect_object` | Command INSPECT_OBJECT | Java |
-| `live_debug_search_type` | Command SEARCH_TYPE | Java |
-| `live_debug_search_method` | Command SEARCH_METHOD | Java |
-| `live_debug_get_runtime_info` | Command GET_RUNTIME_INFO | Java |
+| `live_debug_search_type` | Command SEARCH_TYPE | Java / Python |
+| `live_debug_search_method` | Command SEARCH_METHOD | Java / Python |
+| `live_debug_get_runtime_info` | Command GET_RUNTIME_INFO | Java / Python |
 
 ---
 
@@ -417,7 +427,7 @@ Captures a method snapshot (arguments, return value, this object, exception, cal
 
 ## II. Python Probe types (code enhancement)
 
-Python live-debug supports Probes only, not Commands (active probing). When creating a task via `send_command.sh`, still pass a flat single-probe taskConfig - no top-level `probes` array, and do not pass a `taskId` manually; the `{ "probes": [...] }` structure is only used by the underlying ConfigServer / local `DynamicInstrumentation.apply_config()`.
+Python supports five probe types in addition to the read-only commands below. When creating a task via `send_command.sh`, still pass a flat single-probe taskConfig - no top-level `probes` array, and do not pass a `taskId` manually; the `{ "probes": [...] }` structure is only used by the underlying ConfigServer / local `DynamicInstrumentation.apply_config()`.
 
 Python `ttl` supports `30s`/`5m`/`2h`/`1d` or a plain number of seconds; do not use the `ms` unit. Default rate limits: `LOG`/`METRIC`/`SPAN`/`SPAN_TAG` are 5000/s, `SNAPSHOT` is 1/s, and line-level probes additionally have a global 100/s guard.
 
@@ -505,7 +515,29 @@ Appends attributes to the currently active Span; if no Span is being recorded, i
 A Command is a one-shot, asynchronously-executed operation that is destroyed once complete. taskConfig uses a flat structure: pass a single command object directly.
 
 > **Note:** the top level of a Command's taskConfig must include the `"instanceIds":["*"]` field, otherwise the API returns an `instanceIds is required` error.
-> **Python does not support Commands.** If the target language is Python, you can only build the Probe tasks from the previous section - do not generate active-probing requests such as `EVALUATE_EXPRESSION`, `SEARCH_TYPE`, `DECOMPILE`, `GET_THREAD_INFO`.
+### Python read-only commands
+
+Set `language` to `python` and place `instanceIds` at the top level. Look up the returned task ID in SLS with `livedebug.report_type=command_result`; task creation alone does not confirm execution.
+
+| Command | Example `params` | Result |
+|---|---|---|
+| SEARCH_TYPE | `{"classPattern":"app.Cart*"}` | Matching classes in an already loaded module |
+| SEARCH_METHOD | `{"classPattern":"app","methodPattern":"process_*"}` | Qualified function names, parameters and source locations |
+| DECOMPILE | `{"className":"app","methodName":"process_order"}` | Function source, or bytecode instructions when source is unavailable |
+| GET_THREAD_INFO | `{"limit":10,"stackTraceDepth":8}` | Thread names, IDs and stacks |
+| GET_MEMORY_INFO | `{}` | GC and available process memory statistics |
+| GET_RUNTIME_INFO | `{}` | Python version, PID, thread count and loaded module count |
+
+For example, use task type `live_debug_decompile` with this flat task configuration:
+
+```json
+{"commandType":"DECOMPILE","language":"python","params":{"className":"app","methodName":"process_order"},"instanceIds":["*"]}
+```
+
+Python searches require a known loaded module. GET_RUNTIME_INFO returns a module count. DECOMPILE targets one function or method per request. EVALUATE_EXPRESSION and INSPECT_OBJECT are Java-only.
+
+### Java command parameters and examples
+
 
 ### EVALUATE_EXPRESSION
 
@@ -803,7 +835,7 @@ scripts/live-debug/delete_task.sh \
 - The `type` query parameter of List/Get/Delete is **required** and must match the task's actual `taskType`.
 - List filters **exactly by type**; there is no "list all live_debug_* at once" API.
 - **taskConfig uses a flat JSON structure**: pass a single command/probe object directly, without wrapping it in a `commands` or `probes` array.
-- **Command types are Java-only**, and the taskConfig top level must include `"instanceIds":["*"]`, otherwise the API returns an `instanceIds is required` error.
+- For **Java and Python commands**, the taskConfig top level must include `"instanceIds":["*"]`, otherwise the API returns an `instanceIds is required` error.
 - For **Probe types**, `instanceIds` goes inside the `target` object.
 - `classLoaderHash` takes precedence over `classLoaderClass`; when `classLoaderClass` matches multiple, it returns FAILED plus the list.
 - Commands default to a 30000ms timeout, returning `state=TIMEOUT` on timeout.

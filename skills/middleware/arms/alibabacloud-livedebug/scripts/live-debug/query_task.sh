@@ -50,6 +50,12 @@ if [ $# -lt 1 ]; then
 fi
 
 TASK_ID="$1"
+# The ID is inserted into a quoted SLS search term.
+case "$TASK_ID" in
+  ''|*[!abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-]*)
+    echo "Error: taskId must contain only ASCII letters, digits, underscores or hyphens." >&2
+    exit 1 ;;
+esac
 PROJECT="${2:-${LIVE_DEBUG_SLS_PROJECT:-}}"
 LOGSTORE="${3:-${LIVE_DEBUG_SLS_LOGSTORE:-}}"
 MINUTES="${4:-5}"
