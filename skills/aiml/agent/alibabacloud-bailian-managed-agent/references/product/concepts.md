@@ -43,20 +43,52 @@ On the CLI side (`bl managed-agent`) these resources are declared in `agents.yam
 - **CLI**: the `agents:` node in `agents.yaml`; state carries `resource-version` (matching "every save generates a version").
   The environment / vault / memory stores it uses can be declared on it and overridden per session (`--environment` / `--vault` / `--memory-stores`).
 - **Model identifier (REST field-test)**: the wire shape of `model` is `{"id": "…"}` (the SDK's `model` parameter is a string).
-  `model.id` values observed in a live workspace include `qwen3.8-max` / `qwen3.7-max` / `qwen3.7-plus` / `qwen3.6-plus` /
-  `qwen3.6-flash`, plus `auto`, `glm-5.2`, `deepseek-v4-pro`, etc. — **a flash tier exists, and non-Qwen models are supported**.
+  `model.id` accepts an intelligent routing mode or an explicit model ID; see [available models](#available-models) for the supported options and capabilities.
   **`qwen3-max` does not exist in field testing** (`400 AGENT_010 model does not exist`); legacy DashScope IDs (`qwen-max` / `qwen-plus` /
-  `qwen-flash`) were not individually field-tested — promise customers only field-tested IDs. The full usable list defers to the console dropdown / Bailian's official support list.
-- **The critical tool-config semantics (REST field-test, the most frequent pitfall)**: `default_config.enabled: true` inside `tools[]`
-  **does not actually deliver tools to the model**; you must list every tool you want **individually in `configs[]` with `enabled: true`**.
-  Writing only `default_config` without listing `configs` leaves the agent with just the platform-auto-injected `mark_artifacts`,
-  after which every call fails with `TOOL_NOT_FOUND: Tool 'bash' not found. Available tools: ['mark_artifacts']`,
-  and the turn ends with an apology like "I have no tools available". One Agent can attach at most 1 `builtin_toolkit`.
+  `qwen-flash`) were not individually field-tested. Use supported IDs from the catalog; distinguish catalog support from live verification in a particular workspace. For execution, check the console dropdown / Bailian's official support list if availability is in doubt.
+- **Tool-config priority (user clarification, 2026-10-29)**: within each `tools[]` group, explicit `configs[]` entries take precedence;
+  tools absent from that list use `default_config`. Prefer `default_config.enabled: false` with required tools explicitly enabled
+  to keep the tool inventory stable when the toolkit gains new tools. Set the default to `true` when automatic adoption is intended.
+  See [tool configuration](../integration/tool-configuration.md) for examples. One Agent can attach at most 1 `builtin_toolkit`.
 - **Unverified**: whether run-control fields such as max turns and timeouts are configurable.
+
+### Available models
+
+Source: the user-supplied supported-model list. This catalog includes supported options beyond the subset exercised by the archived live tests.
+
+`model.id` supports intelligent modes, with the platform routing by tier:
+
+| Mode ID | Description |
+| --- | --- |
+| `auto` | Routes to a suitable tier according to task complexity |
+| `performance` | Performance tier: high-quality models balancing speed and quality |
+| `balanced` | Balanced tier: advanced reasoning and high-quality output |
+| `economy` | Economy tier: standard reasoning and cost efficiency |
+
+Alternatively, select an explicit model ID:
+
+| Brand | Model ID | Capabilities |
+| --- | --- | --- |
+| Qwen | `qwen3.8-max` | Reasoning, visual understanding, text generation |
+| Qwen | `qwen3.8-flash` | Reasoning, visual understanding, text generation |
+| Qwen | `qwen3.7-max` | Reasoning, text generation |
+| Qwen | `qwen3.7-plus` | Reasoning, visual understanding, text generation |
+| Qwen | `qwen3.6-plus` | Reasoning, visual understanding, text generation |
+| Qwen | `qwen3.6-flash` | Reasoning, visual understanding, text generation |
+| DeepSeek | `deepseek-v4.1-flash` | Reasoning, visual understanding, text generation |
+| DeepSeek | `deepseek-v4.1-flash-1017` | Reasoning, visual understanding, text generation |
+| DeepSeek | `deepseek-v4-pro` | Reasoning, text generation |
+| DeepSeek | `deepseek-v4-flash-0731` | Reasoning, text generation |
+| Zhipu AI | `glm-5.3` | Reasoning, text generation |
+| Zhipu AI | `glm-5.2` | Reasoning, text generation |
+| Zhipu AI | `glm-5.1` | Reasoning, text generation |
+| Moonshot AI | `kimi-k3` | Reasoning, visual understanding, text generation |
+
+Intelligent modes do not pin a concrete model. Do not infer a mode's visual-input support from the explicit-model table; the existing [`performance` multimodal limitation](status.md#performance-does-not-support-multimodal-input-user-confirmation-2026-10-09) remains applicable.
 
 ## Environment (runtime / sandbox)
 - **Whitepaper**: the cloud container sandbox where sessions run; dependencies can be preinstalled; container-level full isolation supporting code execution, file read-write, and network access;
-  recyclable at session end; the sandbox can be persisted as a whole; **network-isolated with credentials never entering the sandbox**.
+  recyclable after use; optional filesystem persistence has the boundaries described below; **network-isolated with credentials never entering the sandbox**.
 - **Configuration fields (official docs)**:
 
   | Field | Required | Mutable | Description |
@@ -79,14 +111,13 @@ On the CLI side (`bl managed-agent`) these resources are declared in `agents.yam
   (zod strips unknown keys — writing it has no effect and raises no error; `validate` passes everything). The real places for CLI-declared file mounts are top-level `files:` and
   `deployments.<name>.resources` — and `validate` requires `mount_path` to start with `/mnt/` in both places
   (rejecting `/uploads/`), which **deadlocks** against the runtime API's required `/uploads/` prefix. CLI-declarative file mounting currently cannot run end to end; mount files via API / console.
-- **Not public in the official docs**: sandbox specs (CPU / memory / disk), per-session duration cap, egress allowlist granularity (only `unrestricted` observed so far),
-  and the exact persistence boundary. When customers ask about specs, state honestly "not public in the docs; needs confirmation from the product team" — **do not estimate**.
+- **Sandbox persistence (launched; checked 2026-11-17)**: configured on each Session, disabled by default. Working files and environment modifications can survive recycling; uploads, synchronized artifacts, Memory and Skills come from external bindings. Processes are not retained. See [sandbox persistence](../integration/sandbox-persistence.md) for configuration, retention refresh, expiry and billing.
+- **Not public in the archived spec references**: sandbox specs (CPU / memory / disk), per-session duration cap, and egress allowlist granularity (only `unrestricted` observed so far). Check current documentation before answering; do not estimate undocumented specs. Persistence boundaries are now documented in the reference above.
 - **Compliance note (official docs)**: the sandbox container is governed by Article 6 of the *Alibaba Cloud Product Terms of Service*; software the customer installs and its consequences are the customer's responsibility
   (mention this whenever a customer solution involves installing third-party software).
 
 ## Session
-- **Whitepaper**: one run instance with server-held state; supports the **interruption mechanism** and **tool-call approval**; keeps context and file-system state across turns;
-  task duration can reach minutes to hours, with disconnect auto-recovery and checkpoint resumption. **Billed only while "running"; idle is free.**
+- **Session**: server-held interaction state with the **interruption mechanism** and **tool-call approval**. Filesystem recovery after sandbox recycling depends on persistence and external-resource rules; it does not resume running processes. **Runtime fees apply only while running; retained snapshots can incur separate charges while idle.**
 - **CLI**: `session run` (create session + send message + stream; `--output json` returns `{ session_id, provider, agent, events }`),
   `session send`, `session get` / `list` / `delete`, `session events --all`; `--no-stream` replaces SSE with polling.
 - **State machine (official docs' three states + SDK enum)**: the official docs and GET session's `status` enum have only
@@ -110,11 +141,11 @@ On the CLI side (`bl managed-agent`) these resources are declared in `agents.yam
   Integrations that check only `idle` miss the `requires_action` branch and the task silently deadlocks.
 - **Archive vs delete (official docs)**: archive → `terminated` but **event history is retained and queryable**; delete → a hard delete; metadata / event history / resource copies are all wiped.
   Always use archive when an audit trail matters.
-- **Snapshot semantics (official docs)**: creating a session **snapshots the agent's latest version at that moment**; later agent edits do not affect in-flight sessions.
+- **Agent configuration snapshot (official docs)**: creating a session **snapshots the agent's latest version at that moment**; later agent edits do not affect in-flight sessions. This is distinct from the optional sandbox filesystem snapshot. Snapshot expiry does not terminate the Session; Session archive/delete triggers snapshot cleanup.
 - **Session environment variables `environment_variables` (REST field-test, 2026-09-03)**: key-value pairs can be passed at session creation and are **plaintext-injected** into the sandbox process
   environment — the agent reads real values straight from `os.environ` in bash / python; both the create response and GET echo the field verbatim.
-  Layered with Vault secrets: **non-sensitive config (API endpoints, log levels, feature flags) via environment variables; high-sensitivity secrets (API keys, tokens) into the Vault** (placeholder injection; see the Vault section).
-  Note **Deployment does not support this parameter** (silently ignored when passed; REST field-test) — credential injection on scheduled pipelines can only rely on `vault_ids`.
+  Choose by authentication mechanism: non-sensitive config uses environment variables; direct header API keys/tokens prefer Vault. Verified SDK/CLI local signing or HMAC needs real key material before egress, so Session-start `environment_variables` is a compatibility option with additional runtime/Session-reader exposure, not Vault-equivalent isolation. Construct secret-bearing requests in-process and filter responses/logs; see the [signing branch](../cookbook/08-vault-secret-injection-and-egress-gateway.md#sdkcli-local-signing-and-hmac-user-clarification-2026-11-10).
+  In the **2026-09-03 REST field test**, Deployment silently ignored this parameter; verify current support. `vault_ids` supports compatible header authentication on the tested scheduled path, but does not supply real keys for local signing. Application-controlled Session creation is an alternative when that compatibility is needed.
 - **Integration implication**: in multi-user systems use Session as the user / task isolation unit; event history doubles as the audit and frontend-replay data source.
 
 ## Event
@@ -127,7 +158,7 @@ On the CLI side (`bl managed-agent`) these resources are declared in `agents.yam
 
   | Group | type |
   | --- | --- |
-  | Body and thinking | `message` (assistant output, streamable in chunks; **`sequence_number` is observed to be always null** — chunks can only be concatenated by arrival order, not accumulated by sequence number), `reasoning` |
+  | Body and thinking | `message` (answers), `reasoning` (Thinking text); request their `event_deltas[]` types for incremental text, preserve arrival order, and keep the two channels separate |
   | Tools | `tool_call` / `tool_call_output`, `function_call` / `function_call_output`, `mcp_call` / `mcp_call_output` |
   | Session and status | `session_status` (carries `session_status` and `stop_reason`), `session_updated`, `error` |
   | Sub-threads | `thread_created`, `thread_status`, `thread_message_sent`, `thread_message_received`, `thread_context_compacted` (**pushed only in multi-agent formations**; see the MultiAgent section)|
@@ -155,7 +186,8 @@ On the CLI side (`bl managed-agent`) these resources are declared in `agents.yam
   `session_thread_id`. The `content[*].data` of `thread_created` / `thread_status` events additionally embeds a key *named*
   `session_thread_id` — the two names point in opposite directions; do not mix them up. Ignorable for a single agent; in a formation, split member output by top-level `thread_id`
   (the event-list API has no official thread filter parameter; field-tested `?thread_id=` is undocumented but works; see the MultiAgent section).
-- **Launched**: multimodal events (mixed image and text), Delta incremental returns and Agent Thinking events. Launch status: [2026-09-18 user confirmation](status.md); verify current event schemas before writing integration code.
+- **Launched**: multimodal events (mixed image and text), Delta incremental returns and Thinking text. Nonempty reasoning deltas were verified in 5/5 fresh Sessions on 2026-10-23; see [status](status.md).
+- **Events versus stream frames**: the table above lists business event types, not every wire-frame shape. With Delta enabled, parent Message lifecycle frames and `object=content,type=text` frames carry the stream. Content frames use `msg_id` + `index`; `delta=true` appends and `delta=false` replaces the block snapshot. Do not assume every frame has `content[]` or `thread_id`. [Event-stream integration reference](../integration/event-stream.md).
 - **CLI**: `initial_events` may use `user.message` / `system.message`; `user.define_outcome` is dropped by Bailian with a diagnostic.
 - **Integration details** (event parsing, SSE vs polling, `requires_action` handling) are in
   [../integration/api-quickstart.md](../integration/api-quickstart.md).
@@ -166,16 +198,17 @@ On the CLI side (`bl managed-agent`) these resources are declared in `agents.yam
 - **Two-level structure (official docs)** — Vault container + Credential (credentials are created under
   `/vaults/{vault_id}/credentials`, prefix `vcrd_`); each credential = display name + variable name + variable value + an **egress network allowlist**;
   tools reference credentials **by variable name**; after saving, plaintext is never echoed again. The rotation mechanism is still unpublished (unverified).
-- **Placeholder injection model (2026-09 breaking change, REST field-test 2026-09-03)**:
+- **Placeholder injection model (2026-09 breaking change; header scope updated from official docs on 2026-11-02)**:
   - Credential structure change: `auth.networking.allowed_hosts` is now **required** (omitting it → 409 `CREDENTIAL_AUTH_NETWORKING_ERROR`
     "egress network addresses cannot be empty"); `allowed_hosts` must be nested inside the `networking` object (the old top-level form no longer works).
   - Injection semantics change: in a session with a Vault attached, `os.environ` inside the sandbox yields **placeholders**
     `BMA_SECRET_PLACEHOLDER_<variable-name>`, **no longer real values**. Do not send requests to credential-echo services or log authentication headers: response bodies can still carry secrets into the sandbox, model context, and event history.
   - Egress gateway substitution: HTTPS requests leaving the sandbox pass through a **transparent MITM gateway** (no proxy env vars; intercepted at the network layer); when the request
-    host hits that credential's `allowed_hosts`, the gateway **replaces the placeholder in the `Authorization` header with the real value** before forwarding;
+    host hits that credential's `allowed_hosts`, the gateway **replaces matching credential placeholders in all HTTP request headers**, including `Authorization`, `X-API-Key`, and custom headers, with the real values before forwarding;
     on a host miss the placeholder passes through as-is (real secrets are never leaked to non-whitelisted destinations).
-  - Field-tested boundaries: substitution applies only to the `Authorization` header (other headers such as `X-Api-Key` are not substituted); the gateway locates the credential **by host**
-    (it does not parse the placeholder variable name — with multiple credentials on one host the substitution behavior is ambiguous; recommend one credential per host); the archived test encountered a gateway certificate missing from the sandbox CA store. This is not a universal current limitation: retain TLS verification and configure a trusted CA when required (see cookbook/08 troubleshooting).
+  - **Replacement scope**: request headers only; placeholders in request bodies and query parameters remain unchanged. Source: [official credential documentation](https://docs.agent.bailian.aliyun.com/zh/managed-agents/sessions/credentials), checked 2026-11-02 and confirmed by the user. This supersedes the archived Authorization-only limitation; see [product status](status.md#vault-header-replacement-scope-2026-11-02).
+  - **Local signing boundary (user clarification, 2026-11-10)**: an SDK/CLI computing a signature or HMAC over placeholder bytes cannot be repaired by later header substitution. Confirm the authentication mechanism before choosing Session environment injection or a trusted external signer; see the [dated clarification](status.md#local-signing-requires-real-key-material-user-clarification-2026-11-10).
+  - Historical host-only selection and same-host ambiguity observations from 2026-09-03 are archived in cookbook/08; they are not a current contract. The archived test also encountered a gateway certificate missing from the sandbox CA store. Retain TLS verification and configure a trusted CA when required (see cookbook/08 troubleshooting).
   - The full chain and the curl field-test walkthrough are in [../cookbook/08-vault-secret-injection-and-egress-gateway.md](../cookbook/08-vault-secret-injection-and-egress-gateway.md).
 - **Non-sensitive config does not belong in the Vault**: session-level `environment_variables` (plaintext passthrough into the sandbox) is the simpler choice; see the Session section.
 
@@ -220,7 +253,8 @@ On the CLI side (`bl managed-agent`) these resources are declared in `agents.yam
 ## Tool and MCP
 - **Built-in tool set (`type: "builtin_toolkit"`, at most 1 per Agent)**:
   - **Six shell/file tools**: `bash` / `read` / `write` / `edit` / `glob` / `grep`.
-    They must be listed individually in `configs[]` (see "The critical tool-config semantics" under Agent).
+    Prefer explicitly enabling the required tools in `configs[]` with a disabled default (see [tool configuration](../integration/tool-configuration.md)).
+  - `todo_write`: maintains a structured to-do list recording task steps and their status; use it to break down long tasks and track multi-step execution progress. Source: [2026-11-02 user clarification](status.md#task-planning-tool-user-clarification-2026-11-02).
   - `mark_artifacts`: **auto-injected by the platform runtime** — callable without any config. Its purpose is marking "which files this turn produced" for chat UIs
     wrapped by the business side; **fetching outputs does not need it** (outputs go through `/mnt/session/outputs/` auto-scan + the Files API).
   - `download_file`: **officially announced as deprecated**. The whitepaper and the official `build-agent/tools` page still list it (docs lag the announcement);
@@ -231,8 +265,8 @@ On the CLI side (`bl managed-agent`) these resources are declared in `agents.yam
 - **Internet access**: built-in `web_search` and `web_fetch` are launched and preferred for search and webpage reading; `browser_use` is available **through MCP**, not as a built-in tool. See [status.md](status.md). Only use the marketplace `WebSearch` MCP service (`bailian_web_search`) for an explicitly selected MCP integration or a verified built-in capability gap (example in [../cookbook/04-multi-agent-custom-proposals.md](../cookbook/04-multi-agent-custom-proposals.md) §1.1). Verify current configuration fields before execution.
 - **MCP mounting (REST field-test, two steps)**:
   1. The Agent's top-level `mcp_servers: [{"type": "official"|"customer", "name": "<service name>"}]` declares the service to connect;
-  2. Then add to `tools[]` a `{"type": "mcp_toolkit", "mcp_server_name": "<same name>", "configs": [{"name": "<tool name>", "enabled": true}]}`
-     to **enable tools one by one** — skipping step 2 leaves the tools silently missing at runtime.
+  2. Then add to `tools[]` a `{"type": "mcp_toolkit", "mcp_server_name": "<same name>", "default_config": {"enabled": false}, "configs": [{"name": "<tool name>", "enabled": true}]}`
+     to explicitly enable required tools while leaving unlisted tools disabled. The same default/override priority applies as for built-in tools.
   - **The two types validate at completely different times**: `official` (marketplace) **does not check existence at declaration time**; a mistyped name still creates successfully,
     and the failure only shows up at runtime as "no tools available" — expensive to troubleshoot; `customer` (custom) **validates hard**; an unregistered name fails immediately with
     `400 AGENT_010 MCP Server validation failed: error querying MCP details`. So the iron rule for custom MCP: **register in the console first, then write it into the config**.
@@ -320,8 +354,12 @@ On the CLI side (`bl managed-agent`) these resources are declared in `agents.yam
 ## Memory Store (working memory)
 - **Launched**: Memory Store is MA built-in memory, primarily for working memory and task context across sessions. Source: [2026-09-18 user confirmation](status.md); the whitepaper label is historical.
 - **CLI**: `memory_stores:` is already declarable; an Agent can bind several (`--memory-stores` overrides).
-- **Different product**: Bailian Memory Library primarily provides personalized memory scoped by a supplied `UserId`. It is not MA Memory Store. Do not reuse its API endpoints, identifiers or UserId semantics as the MA native Memory Store contract.
-- Verify MA-specific current docs and CLI help for binding, lifecycle and read/write configuration; the launch confirmation does not establish those schemas. File mounting remains an option for persistent files, not a required replacement for an unavailable Memory Store.
+- **Two Session providers**: `resources[].type=memory_store` accepts omitted/`default` for built-in file memory and `agentstudio_memory` for **Bailian Memory Library**. Bailian memory supports facts, skills and profiles, is scoped by library plus required `entity_id`, and has no filesystem mount path. Its service API and IDs remain distinct from MA built-in Memory Store APIs.
+- **Binding limits**: at most eight memory bindings, one provider per Session; bindings are chosen at Session creation. Bailian memory supports up to five fact/skill rule IDs and one separate profile template per binding. See [knowledge and memory integration](../integration/knowledge-and-memory.md) for examples, defaults, isolation and asynchronous writes.
+
+## Knowledge retrieval
+
+Enable the built-in `search_knowledgebases` tool and set `params.knowledge_application_id` to a published retrieval service (`aid-…`). The service manages bound knowledge bases and retrieval strategy; the model invokes it when needed. Agent configuration acceptance does not verify that the service exists or can return results. Configuration and diagnosis: [knowledge and memory integration](../integration/knowledge-and-memory.md#configure-knowledge-retrieval).
 
 ## State (CLI-local state, not a product object)
 - `state list` / `show` inspect tracked resources; `state import --address <provider.type.name> --remote-id <id>` adopts existing remote resources.

@@ -9,7 +9,9 @@ Scenario: a project session writes verified facts and progress into working note
 | Need | Product and isolation |
 | --- | --- |
 | MA project notes, progress, cross-session handoff | **MA Memory Store**: a separate file tree mounted through Session `resources` |
-| Personal preferences and personalized memory supplied with UserId | **Bailian Memory Library**: a separate product with different APIs |
+| Personal facts, reusable skills and profiles scoped by entity | **Bailian Memory Library**: mount through Session `resources` with `provider=agentstudio_memory` and `entity_id`; no file path |
+
+This recipe covers built-in file memory (`provider` omitted or `default`). For Bailian memory, rule IDs, profile templates, asynchronous writes and the one-provider-per-Session limit, use [knowledge and memory integration](../integration/knowledge-and-memory.md). Both providers support Session binding, but their service APIs and identifiers remain distinct.
 
 `metadata.user_id` does not automatically isolate Memory Store contents. Sessions sharing a Store share its contents. For isolation, the application must allocate separate Stores and verify each business user's access.
 
@@ -34,7 +36,7 @@ Implementation: `setup` and `memory_test` in [cookbook_smoke.py](../../scripts/c
 
 ```json
 {
-  "agent": "<agent_id>",
+  "agent": {"type": "agent", "id": "<agent_id>"},
   "environment_id": "<environment_id>",
   "resources": [{
     "type": "memory_store",

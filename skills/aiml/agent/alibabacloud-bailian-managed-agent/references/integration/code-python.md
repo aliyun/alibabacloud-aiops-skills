@@ -8,6 +8,8 @@ Companion tutorial: [../tutorials/02-integrate-to-your-system.md](../tutorials/0
 > To avoid the SDK dependency entirely, call REST directly — endpoints in [api-endpoints.md](api-endpoints.md),
 > event-parsing essentials at the end of this page.
 
+**Output mode:** the SDK examples below subscribe to completed events; their `chat_stream` forwards completed answer messages. For incremental answer **and Thinking text**, use the [shared event-stream reference](event-stream.md), request both Delta types, and adapt content frames before forwarding them. SDK 1.27.3 did not expose the required stream argument; verify a newer SDK before adopting it, or use REST. An SDK version limitation is not a Thinking capability limitation.
+
 ## Installation and client
 
 ```bash
@@ -57,7 +59,7 @@ Resource entry points: `client.agents` / `environments` / `sessions` (with `sess
 
 ## Event contract (shared by all three shapes — read this first)
 
-In the SDK, events and messages are the same `Message` structure; the `type` field tells them apart.
+Completed SDK events use the `Message` structure; `type` tells the business event kinds apart. This does not describe every raw SSE frame: Delta streams also contain `object=content` frames without a `content[]` array. See [frame dispatch](event-stream.md#parse-frames-then-route-by-the-parent-event).
 
 **The server pushes at least 23 event types** (22 in the SDK enum + `tool_approval_request`, which is
 outside the enum) — not just the handful shown in typical doc examples. Handle only the ones you care
@@ -126,7 +128,7 @@ class NeedsAction(RuntimeError):
     """Client intervention required (approval, missing info); must be handled separately."""
 
 
-def handle_event(ev, on_text=None, on_tool=None, on_member_text=None):
+def handle_event(ev, on_text=None, on_tool=None, on_member_text=None, on_reasoning=None):
     """Return the type string of stop_reason to signal the turn ended; return None to continue.
 
     In multi-agent formations, one stream mixes output from every member: tell threads
@@ -137,6 +139,9 @@ def handle_event(ev, on_text=None, on_tool=None, on_member_text=None):
     """
     ev_type = getattr(ev, "type", None)
     thread_key = getattr(ev, "thread_id", None) or "main"
+    # This dispatcher consumes complete SDK/history events, not raw Delta frames.
+    if ev_type in ("message", "reasoning") and getattr(ev, "status", "completed") != "completed":
+        return None
 
     if ev_type == "message" and getattr(ev, "role", None) == "assistant":
         for block in ev.content or []:
@@ -149,7 +154,8 @@ def handle_event(ev, on_text=None, on_tool=None, on_member_text=None):
                     on_text(text)
 
     elif ev_type == "reasoning":
-        pass                                     # reasoning trace; render here if you show it
+        if getattr(ev, "role", None) == "assistant" and on_reasoning:
+            on_reasoning(ev)  # Preserve id/thread_id/content; store/render separately from answers.
 
     elif ev_type in TOOL_EVENTS:
         (on_tool or (lambda e: log.info("tool event: %s", ev_type)))(ev)
@@ -192,6 +198,7 @@ These snippets show API contracts and application seams (`session_store`, `task_
 ## Shape A: synchronous / streaming conversation (**strong-interaction** scenario)
 
 `client.sessions.events.stream()` returns an iterable `EventStream` that supports the `with` context.
+This version of `chat_stream` is **answer-only, completed-message streaming**. To also expose Thinking, pass `on_reasoning` to `handle_event` and emit a separately typed application event containing its ID, thread and content; do not append it to `chunks`. For token-level updates, use a REST Delta adapter per [event-stream.md](event-stream.md) and replace block snapshots at the frontend rather than appending every payload.
 
 ```python
 AGENT_ID = os.environ["CMA_AGENT_ID"]           # agent_xxx
@@ -221,7 +228,7 @@ def chat_stream(user_id, text, session_store):
             chunks = []
             stop_reason = handle_event(ev, on_text=chunks.append)
             for chunk in chunks:
-                yield chunk                       # pass through to the frontend
+                yield chunk                       # one completed answer message/block, not a token delta
             if stop_reason:
                 break
 
@@ -463,8 +470,9 @@ vault = client.vaults.create(display_name="Production credentials")
 #         "secret_value": "<real secret value>",
 #         "networking": {"allowed_hosts": ["api.example.com"]}})
 # Injection semantics in cookbook/08: inside the sandbox os.environ yields the placeholder
-# BMA_SECRET_PLACEHOLDER_MY_API_KEY; the real value substitutes the Authorization header
-# only when the egress gateway hits allowed_hosts
+# BMA_SECRET_PLACEHOLDER_MY_API_KEY; when the destination matches allowed_hosts, the
+# gateway replaces matching placeholders in any HTTP request header (Authorization,
+# X-API-Key, or custom headers). Request-body and query placeholders remain unchanged.
 ```
 
 ## Exception handling
@@ -500,6 +508,7 @@ except AgentStudioError as e:
 
 ## Related
 
+- Answer/Thinking Delta subscription and frame parsing → [event-stream.md](event-stream.md)
 - Full endpoint table and fields → [api-endpoints.md](api-endpoints.md)
 - Shape selection and more shapes → [patterns.md](patterns.md)
 - Java implementation → [code-java.md](code-java.md)

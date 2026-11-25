@@ -42,13 +42,15 @@ One-line distinction: **Flow Agent (agent app 2.5) is the business assistant tha
 | File upload and mounting | Files are standalone resources mounted by `mount_path`; lifecycle decoupled from sessions, reusable across sessions; single file ≤10MB, workspace total ≤100GB, retained 30 days |
 | Resource runtime mounting | Append/unmount file resources while a session runs; takes effect immediately without restart (official docs already open) |
 | Code repository mounting `[coming soon]` | Github / Gitee mounted by repository URL + PAT, cloned by default to `/data/workspace/<repo-name>` |
-| Memory Store working memory | Launched MA built-in working memory; distinct from the UserId-scoped personalized Bailian Memory Library |
+| Knowledge retrieval | Built-in `search_knowledgebases`, configured with a published knowledge retrieval service ID; see [configuration](../integration/knowledge-and-memory.md) |
+| Session memory | Built-in working files (`default`) or Bailian Memory Library (`agentstudio_memory`, scoped by library/entity); see [configuration](../integration/knowledge-and-memory.md) |
 
 ### (3) Tools and extensions
 
 | Capability | Value |
 | --- | --- |
-| Built-in tool set | `[integrated]` bash / read / write / edit / glob / grep (each must be explicitly enabled); `mark_artifacts` auto-injected by the runtime;<br>`download_file` **officially announced as deprecated — do not rely on it anymore**; launched built-in `web_search` / `web_fetch`; `browser_use` via MCP; `[coming soon]` aliyun-cli (historical status, verify current docs) |
+| Built-in tool set | `[integrated]` bash / read / write / edit / glob / grep (recommended: disabled default, explicitly enable required tools; see [configuration priority](../integration/tool-configuration.md)); `mark_artifacts` auto-injected by the runtime;<br>`download_file` **officially announced as deprecated — do not rely on it anymore**; launched built-in `web_search` / `web_fetch`; `browser_use` via MCP; `[coming soon]` aliyun-cli (historical status, verify current docs) |
+| Task planning (`todo_write`) | Maintains a structured to-do list of task steps and status; breaks down long tasks and tracks multi-step execution progress ([2026-11-02 user clarification](status.md#task-planning-tool-user-clarification-2026-11-02)) |
 | MCP service integration | Connect any external tool service via the MCP protocol. Browser use is available through MCP; an alternative search integration is to mount the marketplace service `WebSearch` (tool name `bailian_web_search`); custom MCP lets you register an already-running MCP endpoint |
 | Agent Skills | End-to-end task workflows packaged as skills; the agent decides when to invoke one from its `SKILL.md` description; reusable across agents |
 | Official skill marketplace | Ready out of the box: PDF / Word / Excel / PowerPoint processing, bailian-cli, and more |
@@ -59,7 +61,7 @@ One-line distinction: **Flow Agent (agent app 2.5) is the business assistant tha
 | Capability | Value |
 | --- | --- |
 | Session environment variables | Pass `environment_variables` at session creation for **plaintext injection** into the sandbox; the agent reads them straight from `os.environ` — the preferred path for non-sensitive configuration (API endpoints, log levels) |
-| Vault secret store | Centrally manage external auth material, never echoing plaintext back; **placeholder injection**: the sandbox only sees placeholders, and real values only replace the `Authorization` header when the egress gateway hits a whitelisted host of the credential — **credentials never enter the sandbox** (2026-09 security model; field-tested in [cookbook/08](../cookbook/08-vault-secret-injection-and-egress-gateway.md)) |
+| Vault secret store | Centrally manage external auth material; the sandbox receives placeholders. For destinations matching `allowed_hosts`, the gateway replaces matching placeholders in **all HTTP request headers**, including `Authorization` and `X-API-Key`; request bodies and query parameters are outside this scope ([current scope, 2026-11-02](status.md#vault-header-replacement-scope-2026-11-02); examples in [cookbook/08](../cookbook/08-vault-secret-injection-and-egress-gateway.md)) |
 | Sandbox execution isolation | Container-level isolation against privilege escalation / escape; recyclable at session end; network isolation |
 | Egress gateway | Outbound sandbox traffic passes through a uniformly controlled gateway: secrets are substituted per the `allowed_hosts` allowlist; non-whitelisted destinations only receive the placeholder, preventing secret leakage |
 | Enterprise security policies | Can be centrally enforced and cannot be overridden |
@@ -70,7 +72,8 @@ One-line distinction: **Flow Agent (agent app 2.5) is the business assistant tha
 | --- | --- |
 | Session event stream (SSE) | Messages / tool calls / MCP calls / status changes pushed in real time; poll for the full event list when not subscribing to the stream |
 | Event history persistence | Persisted server-side, **no customer-side storage needed**; the console can filter by All / User / Agent / Tool / Tool_output / Error / Model / System |
-| Events enhancements (launched) | Multimodal events (mixed image and text), Delta incremental returns, Agent Thinking events |
+| Events enhancements (launched) | Multimodal events (mixed image and text), incremental answers and Thinking text via SSE; [subscription and parsing guidance](../integration/event-stream.md) |
+| Usage summaries and trends | Query workspace/Agent/Session consumption and model/tool details; workspace/Agent trends support hour/day/month. Results are asynchronously updated, with unknown values preserved; [contract and 2026-11-11 verification](../integration/usage-api.md) |
 | Deployment managed scheduling | An agent crystallizes into a schedulable / on-demand deployment: create, pause/resume, archive, trigger a run, query run records (list-runs / get-run) |
 | Webhook notifications | Run results / status pushed proactively to IM, ticketing, monitoring, and other customer systems. The whitepaper marks this `[coming soon]`, but **REST field-testing shows it is usable** (`webhook_endpoints` resource, 32 named events, HMAC signature verification); delivery is at-least-once and may be out of order — receivers must be idempotent |
 | CLI + open API + SDK | Full REST API + Python SDK (`dashscope` ≥ v1.26.2) / Java SDK (≥ v2.22.24); any application / IDE / CLI can orchestrate calls |
@@ -108,9 +111,10 @@ Commercialization notice: https://www.aliyun.com/notice/118456
 | Session runtime fee (base billing item) | **0.5 CNY / hour**, billed by the running time of sessions created and enabled (in the running state); sub-hour usage is pro-rated precisely by actual duration |
 | Model invocation fee | Billed separately per the invoked model's Bailian public pay-as-you-go standard; **not included** in the runtime fee |
 | Tool / MCP service invocation fee | Billed separately per the actual standard of the invoked tool or MCP service |
+| Sandbox snapshot storage | **0.003 CNY / snapshot-hour**, based on retained duration (user-provided price, 2026-11-17); see [lifecycle and billing example](../integration/sandbox-persistence.md) |
 | Free quota | After official commercialization, **10 hours of free runtime** are granted (10 hours total, **no limit on session count, freely deductible** — the whitepaper's old wording "one session running 10 hours" is outdated); only offsets the session runtime fee, not model or tool fees; valid for **30 days** from the effective date |
 
-Key points: **the runtime fee accrues only while a Session is in the "running" state; idle sessions are not billed.**
+Key points: **the runtime fee accrues only while a Session is in the "running" state; an idle Session can still incur snapshot storage charges.** The runtime free quota does not establish a snapshot-storage allowance.
 CMA token consumption is often several times larger than an ordinary Q&A agent's — always estimate the model fee separately when quoting.
 Check the actual account quota with `bl quota` / `bl usage` (see skill `bailian-cli`); do not recite numbers from memory.
 
@@ -119,7 +123,7 @@ Check the actual account quota with `bl quota` / `bl usage` (see skill `bailian-
 | Customer need signature | Why it fits |
 | --- | --- |
 | Long-running complex tasks (deep research, multi-step data analysis, code generation; minutes to hours, many consecutive tool calls) | Agent Loop + checkpoint resumption + error self-recovery |
-| Needs a safe cloud execution environment (isolated sandbox, preconfigured dependencies, no VM to operate) | Isolated sandbox out of the box, persistable as a whole |
+| Needs a safe cloud execution environment (isolated sandbox, preconfigured dependencies, no VM to operate) | Isolated sandbox with opt-in filesystem persistence; external resources are rebound and processes are not retained. See [recovery rules](../integration/sandbox-persistence.md). |
 | Only wants to write agent logic, not build infrastructure | Fully managed runtime + All For API |
 | Persistent stateful interaction (cross-session context, retained files, maintained history) | Session state machine + cross-session file mounting + MA Memory Store working memory |
 | Automated scheduled tasks (daily reports, periodic monitoring, data inspection) | Deployment scheduled triggering + run records + Webhook event notifications |

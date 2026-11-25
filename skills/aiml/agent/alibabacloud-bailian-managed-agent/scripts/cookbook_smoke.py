@@ -226,12 +226,12 @@ def session(label, agent=None, **kw):
     )["id"]
 
 
-def setup():
+def setup(delta_only=False):
     env = create(
         "environments",
         {
             "name": "skill-audit-" + uuid.uuid4().hex[:8],
-            "config": {
+            "config": {"type": "cloud"} if delta_only else {
                 "type": "cloud",
                 "packages": {"pip": ["humanize"]},
                 "networking": {"type": "unrestricted"},
@@ -245,7 +245,7 @@ def setup():
             "name": "skill-audit-" + uuid.uuid4().hex[:8],
             "model": {"id": "qwen3.8-max", "enable_thinking": True},
             "system": "You are a concise test assistant. Follow exact tool-use instructions. Never inspect or output credentials. For web tasks prefer built-in web_search and web_fetch. Do only the requested small task.",
-            "tools": [
+            "tools": [] if delta_only else [
                 {
                     "type": "builtin_toolkit",
                     "default_config": {"enabled": False},
@@ -268,6 +268,8 @@ def setup():
         "main_agent",
     )
     log("agent_readback", tools=req("GET", "/agents/" + agent["id"]).get("tools"))
+    if delta_only:
+        return
     store = create(
         "memory_stores",
         {
@@ -500,20 +502,85 @@ def web_team_test():
     assert "http" in assistant_text(events), "Missing cited source"
 
 
+def normalize_delta_frame(frame):
+    """Adapt the observed content frames to the archived delta envelope."""
+    if (frame.get("object") == "message" and frame.get("status") == "in_progress"
+            and frame.get("type") in ("message", "reasoning")):
+        return {"type": "event_start", "event": frame}
+    if frame.get("object") == "content" and frame.get("type") == "text":
+        content = {"type": "text", "text": frame.get("text", "")}
+        if frame.get("delta") is True:
+            return {"type": "event_delta", "event_id": frame["msg_id"],
+                    "delta": {"index": frame["index"], "content": content}}
+        if frame.get("delta") is False and frame.get("status") == "completed":
+            return {"type": "content_completed", "event_id": frame["msg_id"],
+                    "index": frame["index"], "content": content}
+    return frame
+
+
+def delta_evidence(frames, events):
+    """Compare actual fragments, block snapshots, full events and history."""
+    pending = {}
+    snapshots = {}
+    complete = {}
+    started = {}
+    counts = collections.Counter()
+    chars = collections.Counter()
+    for raw in frames:
+        ev = normalize_delta_frame(raw)
+        typ = ev.get("type")
+        if typ == "event_start":
+            started[ev["event"]["id"]] = ev["event"].get("type")
+        elif typ == "event_delta":
+            delta = ev["delta"]
+            content = delta.get("content", {})
+            if content.get("type") == "text":
+                key = (ev["event_id"], delta["index"])
+                text = content.get("text", "")
+                pending[key] = pending.get(key, "") + text
+                counts[ev["event_id"]] += bool(text)
+                chars[ev["event_id"]] += len(text)
+        elif typ == "content_completed":
+            snapshots[(ev["event_id"], ev["index"])] = ev["content"]["text"]
+        elif typ in ("message", "reasoning") and ev.get("role") == "assistant" and ev.get("status") == "completed":
+            complete[ev["id"]] = ev
+    historical = {e["id"]: e for e in events if e.get("id")}
+    result = {}
+    for kind in ("message", "reasoning"):
+        finals = {eid: ev for eid, ev in complete.items() if ev["type"] == kind}
+        comparisons, snapshot_matches, history_matches = {}, {}, {}
+        for eid, ev in finals.items():
+            blocks = {i: b.get("text", "") for i, b in enumerate(ev.get("content", [])) if b.get("type") == "text"}
+            comparisons[eid] = bool(blocks) and {n: t for (i, n), t in pending.items() if i == eid} == blocks
+            if any(i == eid for i, _ in snapshots):
+                snapshot_matches[eid] = {n: t for (i, n), t in snapshots.items() if i == eid} == blocks
+            history_matches[eid] = eid in historical and historical[eid].get("content") == ev.get("content")
+        result[kind] = {
+            "nonempty_delta_count": sum(counts[eid] for eid, typ in started.items() if typ == kind),
+            "text_chars": sum(chars[eid] for eid, typ in started.items() if typ == kind),
+            "final_text_chars": sum(len(b.get("text", "")) for ev in finals.values()
+                                    for b in ev.get("content", []) if b.get("type") == "text"),
+            "delta_matches_completed": comparisons,
+            "block_snapshots_match_completed": snapshot_matches,
+            "final_matches_history": history_matches,
+        }
+    return result
+
+
+def assert_delta_evidence(evidence):
+    for kind in ("message", "reasoning"):
+        result = evidence[kind]
+        assert result["final_matches_history"] and all(result["final_matches_history"].values()), (kind, result)
+        assert result["nonempty_delta_count"] > 0, (kind, "No nonempty text deltas")
+        for field in ("delta_matches_completed", "final_matches_history"):
+            assert result[field] and all(result[field].values()), (kind, field, result)
+        assert all(result["block_snapshots_match_completed"].values()), (kind, result)
+
+
 def delta_test():
     sid = session("delta")
     frames = []
-    pending = {}
-    complete = {}
-    started = {}
-    seen_status = []
-    with http.stream(
-        "GET",
-        BASE + f"/sessions/{sid}/events/stream",
-        params=[("event_deltas[]", "message"), ("event_deltas[]", "reasoning")],
-        headers={"Accept": "text/event-stream"},
-        timeout=httpx.Timeout(210, read=45),
-    ) as r:
+    with session_stream(sid) as r:
         r.raise_for_status()
         req(
             "POST",
@@ -526,68 +593,28 @@ def delta_test():
                 ]
             },
         )
-        data = []
         deadline = time.monotonic() + 180
-        for line in r.iter_lines():
-            if time.monotonic() > deadline:
-                raise TimeoutError("delta business deadline")
-            if line.startswith("data:"):
-                data.append(line[5:].lstrip())
-            elif line == "" and data:
-                raw = "\n".join(data)
-                data = []
-                if raw == "[DONE]":
-                    break
-                ev = json.loads(raw)
+        try:
+            for ev in iter_sse_events(r, deadline):
                 frames.append(ev)
-                typ = ev.get("type")
-                if typ == "event_start":
-                    started[ev["event"]["id"]] = ev["event"].get("type")
-                if typ == "event_delta":
-                    d = ev.get("delta", {})
-                    content = d.get("content", {})
-                    key = (ev["event_id"], d.get("index", 0))
-                    if content.get("type") == "text":
-                        pending[key] = pending.get(key, "") + content.get("text", "")
-                if typ == "message" and ev.get("role") == "assistant":
-                    complete[ev["id"]] = "".join(
-                        b.get("text", "")
-                        for b in ev.get("content", [])
-                        if b.get("type") == "text"
-                    )
-                if typ == "session_status":
-                    for b in ev.get("content", []):
-                        state = b.get("data", {})
-                        seen_status.append(state)
-                        if state.get("session_status") == "terminated" or (
-                            state.get("session_status") == "idle" and
-                            (state.get("stop_reason") or {}).get("type")
-                        ):
-                            break
-                    else:
-                        continue
+                if terminal_state([ev]):
                     break
-    (OUT / "delta-frames.json").write_text(
-        json.dumps(frames, ensure_ascii=False, indent=2)
-    )
-    comparisons = {
-        eid: "".join(v for (i, n), v in sorted(pending.items()) if i == eid) == text
-        for eid, text in complete.items()
-    }
+        finally:
+            (OUT / "delta-frames.json").write_text(json.dumps(frames, ensure_ascii=False, indent=2))
+    events = history(sid)
+    (OUT / "delta-history.json").write_text(json.dumps(events, ensure_ascii=False, indent=2))
+    evidence = delta_evidence(frames, events)
     log(
         "delta",
         session=sid,
         types=dict(collections.Counter(x.get("type") for x in frames)),
-        start_types=list(started.values()),
-        delta_matches_completed=comparisons,
-        statuses=seen_status,
+        evidence=evidence,
+        terminal=terminal_state(frames),
     )
-    assert complete and all(comparisons.values())
     assert_end_turn(frames)
-    assert any(e.get("type") == "event_delta" for e in frames)
-    assert "reasoning" in started.values()
-    assert any(e.get("type") == "reasoning" for e in frames)
+    assert_delta_evidence(evidence)
     assert "323" in assistant_text(frames)
+    return evidence
 
 
 def iter_sse_events(response, deadline):
@@ -619,6 +646,8 @@ def recovery_test():
     sid = session("client-recovery")
     deadline = time.monotonic() + 180
     first = []
+    started = {}
+    saw_answer_delta = False
     with session_stream(sid) as response:
         response.raise_for_status()
         req("POST", f"/sessions/{sid}/events", {"input": [message(
@@ -626,9 +655,14 @@ def recovery_test():
         )]})
         for event in iter_sse_events(response, deadline):
             first.append(event)
-            if event.get("type") == "event_delta":
+            frame = normalize_delta_frame(event)
+            if frame.get("type") == "event_start":
+                started[frame["event"]["id"]] = frame["event"].get("type")
+            if (frame.get("type") == "event_delta"
+                    and started.get(frame["event_id"]) == "message"):
+                saw_answer_delta = True
                 break
-    assert any(e.get("type") == "event_delta" for e in first), "No partial answer before disconnect"
+    assert saw_answer_delta, "No partial answer before disconnect"
     live = []
     with session_stream(sid) as response:
         response.raise_for_status()
@@ -647,7 +681,8 @@ def recovery_test():
     assert len(user_messages) == 1, "Business input was duplicated"
     recovered = {}
     for event in first + snapshot + live + final:
-        if event.get("id") and event.get("type") == "message" and event.get("role") == "assistant":
+        if (event.get("id") and event.get("type") == "message"
+                and event.get("role") == "assistant" and event.get("status") == "completed"):
             recovered[event["id"]] = event
     expected = {e["id"]: e for e in final if e.get("type") == "message" and e.get("role") == "assistant"}
     assert recovered == expected
@@ -957,11 +992,12 @@ def main():
         help="Retry cleanup from the output ledger",
     )
     args = parser.parse_args()
+    delta_only = args.scenarios == ["delta"]
     print(
         json.dumps(
             {
                 "scenarios": args.scenarios,
-                "resources": "temporary agents, environment, memory store, sessions, files; optional vault/deployment",
+                "resources": "temporary no-tool agent, plain cloud environment, session" if delta_only else "temporary agents, environment, memory store, sessions, files; optional vault/deployment",
                 "schedule": "none; manual run only",
                 "cleanup": "automatic; archive-only resources retain history",
                 "output": str(args.output),
@@ -1011,7 +1047,7 @@ def main():
             "GET", "/agents?limit=1"
         )  # Validate the exact key/endpoint pair before any mutation.
         if not args.cleanup_only:
-            setup()
+            setup(delta_only=delta_only)
             for name in args.scenarios:
                 try:
                     SCENARIOS[name]()

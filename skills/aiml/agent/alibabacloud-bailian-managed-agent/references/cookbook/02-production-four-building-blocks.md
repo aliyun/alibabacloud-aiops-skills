@@ -2,7 +2,7 @@
 
 > **Current routing (2026-09-18):** use built-in `web_search` / `web_fetch` for new web research workflows. This archived recipe retains its MCP configuration and measured MCP event traces to explain that integration; it is not the default web-search recommendation. For built-in configuration and its standalone live check, see [05](05-coordinator-pattern-and-cost-tiering.md).
 
-> Execution safety: legacy shell examples below illustrate wire fields. When using real credentials, construct and send JSON in-process from a secret store/environment; do not interpolate secrets into command arguments, print request bodies, enable shell tracing, or use a receiver that echoes Authorization. Verify only that an allowlisted service authenticates successfully. A sandbox check should return a boolean placeholder check, never raw `printenv` output. See [CLI/API routing](../workflows/cli-api-routing.md).
+> Execution safety: legacy shell examples below illustrate wire fields. When using real credentials, construct and send JSON in-process from a secret store/environment; do not interpolate secrets into command arguments, print request bodies, enable shell tracing, or use a receiver that echoes credential-bearing headers. Verify only that an allowlisted service authenticates successfully. A sandbox check should return a boolean placeholder check, never raw `printenv` output. See [CLI/API routing](../workflows/cli-api-routing.md).
 
 > This recipe covers productionizing on Bailian Managed Agents: MCP toolkit integration (marketplace registration), config injection (session environment variables + the Vault secret store), platform-managed triggering (Deployment: manual / cron / initial_events), human approval (HITL), resource lifecycle management, and the current data-residency behavior. Examples uniformly use curl; every key API shape is field-tested (2026-09, Bailian cn-beijing region).
 >
@@ -46,17 +46,17 @@ export GITHUB_TOKEN="ghp_DUMMY_TOKEN_FOR_SMOKE_TEST"
 For extending an agent, production really uses two **mutually independent** lines:
 
 - **MCP toolkits**: the agent declares one (or more) services from the Bailian MCP marketplace; at runtime the platform calls that service's tools on the agent's behalf. Fits "service on the public internet, hosted by the Bailian marketplace" — you handle no connection details and (usually) no keys.
-- **Config / credential injection (two routes, layered by sensitivity)**:
-  - **Session environment variables** (`environment_variables`, the default recommendation): pass key-value pairs at session creation; they reach the sandbox process **as plaintext**, and the agent reads real values via `os.environ` in bash / python. Fits non-sensitive config and interactive sessions — simplest, nothing to pre-create. Limitation: Deployments do not support them (see above).
-  - **Vault secret store**: secrets are stored in the vault beforehand; sessions carry only `vault_ids`. Inside the sandbox you get a **placeholder** (`BMA_SECRET_PLACEHOLDER_*`); the real value is swapped into the `Authorization` header only when the egress gateway hits that secret's `allowed_hosts` allowlist. Fits highly sensitive secrets and unattended chains. Full security model in [08-vault-secret-injection-and-egress-gateway.md](08-vault-secret-injection-and-egress-gateway.md).
+- **Config / credential injection (choose by authentication mechanism and exposure)**:
+  - **Session environment variables** (`environment_variables`): pass key-value pairs at session creation; they reach the sandbox process **as plaintext**, and the agent reads real values via `os.environ` in bash / python. Prefer this for non-sensitive config. Verified SDK/CLI local signing or HMAC may also require this real-key path, with additional exposure to runtime code and Session readers; follow the in-process request and response/log filtering guidance in [08](08-vault-secret-injection-and-egress-gateway.md#sdkcli-local-signing-and-hmac-user-clarification-2026-11-10). The archived Deployment test did not support these variables; verify current support.
+  - **Vault secret store**: secrets are stored in the vault beforehand; sessions carry only `vault_ids`. Inside the sandbox you get a **placeholder** (`BMA_SECRET_PLACEHOLDER_*`); for destinations matching the secret's `allowed_hosts`, the gateway replaces matching placeholders in **all HTTP request headers**, including `Authorization` and `X-API-Key`. This fits direct header credentials; request-body/query placeholders and locally derived signatures are not repaired by the gateway. Full selection rules in [08-vault-secret-injection-and-egress-gateway.md](08-vault-secret-injection-and-egress-gateway.md).
 
-The combination is the full picture: platform-level external capabilities via MCP; user-level private credentials via Vault (secrets) or environment variables (config).
+The combination is the full picture: platform-level external capabilities via MCP; application configuration and credentials through the injection path compatible with the target service's authentication.
 
 There is also a third mode, not expanded in 01: **custom tools** — your own services. The agent throws the call back to your app as a `function_call` event; you compute and backfill with `function_call_output`. Use this only when the service is reachable on your intranet.
 
 This recipe adds the **trigger line**: in 01's world, sessions are created by your app and messages sent by your app — the role of "who sends the task at 7:30 in the morning" could only be a cron script you write yourself. **Deployment** absorbs that role into the platform: declaratively configure "which agent, pinned to which version, which messages delivered at trigger, which credentials attached, what schedule" — after that, scheduled triggering, session creation, and initial_events delivery are all done by the platform; your app only comes to look at results.
 
-> **Security boundary (the 2026-09 model)**: once a token is stored in a vault it **never enters the sandbox** — `printenv` shows only the placeholder, secret plaintext never appears in model context or the event stream; on egress the gateway swaps it per the `allowed_hosts` allowlist. That is an order of magnitude safer than the old "plaintext environment-variable injection" (the old docs' warning that "printenv can read the real value; use the prompt to stop the agent printing credentials" is obsolete). But two boundaries still hold: the gateway replaces only the `Authorization` header; and sandbox outbound HTTPS goes through a gateway MITM, so strict TLS verification fails (`curl -k` fixes it) — details and pitfalls in 08.
+> **Security boundary (header scope updated 2026-11-02)**: Vault injection exposes only placeholders to the sandbox. On egress, the gateway substitutes matching placeholders in any HTTP request header when the destination matches `allowed_hosts`; request bodies and query parameters remain outside this scope. Do not return credential-bearing headers from the target service into model context or event history. Retain TLS verification and configure the supported gateway CA if needed; current scope, historical observations, and troubleshooting are in [08](08-vault-secret-injection-and-egress-gateway.md).
 
 ---
 
@@ -106,7 +106,7 @@ curl --user-agent "$BAILIAN_MANAGED_AGENT_SKILL_UA" --max-time 30 -X POST "$BASE
 
 Key points:
 
-- `secret_name`: the variable name. **Inside the sandbox, `os.environ["GITHUB_TOKEN"]` yields the placeholder `BMA_SECRET_PLACEHOLDER_GITHUB_TOKEN`** — the real value is swapped into the `Authorization` header by the gateway only when an outbound request hits an allowlisted host (full chain in [08](08-vault-secret-injection-and-egress-gateway.md)).
+- `secret_name`: the variable name. **Inside the sandbox, `os.environ["GITHUB_TOKEN"]` yields the placeholder `BMA_SECRET_PLACEHOLDER_GITHUB_TOKEN`** — put that value into the request header required by the service; the gateway replaces matching placeholders in any header when the request hits an allowlisted host (full chain in [08](08-vault-secret-injection-and-egress-gateway.md)).
 - `secret_value`: the real secret. **Write-only, never echoed** — on GET, `auth` contains only `secret_name` / `type` / `networking`, no value.
 - `networking.allowed_hosts`: the **allowlist of domains the secret may travel to**, wildcards supported (`*.github.com`). The token is only swapped into requests heading to these hosts — requests to other domains keep the placeholder, preventing leakage.
 - The response `id` looks like `vcrd_01M1G0W5BYXJDRD32NMB16ER1Z` (prefix `vcrd_`, not `cred_`).
@@ -136,26 +136,26 @@ curl --user-agent "$BAILIAN_MANAGED_AGENT_SKILL_UA" --max-time 30 -X POST "$BASE
     "tools": [
       {
         "type": "builtin_toolkit",
-        "default_config": { "enabled": true, "permission_policy": { "type": "always_allow" } },
+        "default_config": { "enabled": false, "permission_policy": { "type": "always_allow" } },
         "configs": [ { "name": "bash", "enabled": true } ]
       },
       {
         "type": "mcp_toolkit",
         "mcp_server_name": "WebSearch",
-        "default_config": { "enabled": true },
+        "default_config": { "enabled": false },
         "configs": [ { "name": "bailian_web_search", "enabled": true } ]
       }
     ]
   }'
 ```
 
-Two key details from field tests:
+Two key configuration details:
 
-> **`configs` must enable tools one by one.** `mcp_toolkit` mirrors 01's `builtin_toolkit`: `default_config.enabled: true` alone is not enough — every tool you want (here `bailian_web_search`) must be explicitly `enabled: true` in `configs[]`, otherwise at runtime the agent simply **does not have the tool** — no error, just absent.
+> **Explicit configuration takes precedence over the default.** `mcp_toolkit` follows the same rule as `builtin_toolkit`: unlisted tools use `default_config`. This example disables the default and explicitly enables required tools (including `bailian_web_search`) for stable behavior. An enabled default would automatically enable unlisted tools, including later additions. See [configuration priority](../integration/tool-configuration.md).
 
 > **`mcp_servers.name` is not validated at declaration.** A name absent from the marketplace (say `amap-maps`, field-tested not in the marketplace listing) still returns 200 at creation; the tool silently goes missing at runtime and the agent replies "I have no available tools". To troubleshoot: send a message that forces tool use and check the event stream for `mcp_call`. List available services via the CLI: `bl mcp list` (lists the account's activated MCP servers, with code / tools).
 
-Marketplace services are called via the platform proxy, with endpoints like `https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v1/mcps/{code}/sse`; you usually provide no credentials. For services needing your own key, store the key in a vault and connect directly from bash with an `Authorization` header (bash sees the placeholder; the real value is swapped by the egress gateway — see [08](08-vault-secret-injection-and-egress-gateway.md)).
+Marketplace services are called via the platform proxy, with endpoints like `https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v1/mcps/{code}/sse`; you usually provide no credentials. For services needing your own key, store the key in a vault and connect directly from bash using the service's required request header, such as `Authorization` or `X-API-Key` (bash sees the placeholder; the real value is swapped by the egress gateway for an allowlisted destination — see [08](08-vault-secret-injection-and-egress-gateway.md)).
 
 ```bash
 export AGENT_ID="agent_xxx"
@@ -182,13 +182,13 @@ curl --user-agent "$BAILIAN_MANAGED_AGENT_SKILL_UA" --max-time 30 -X POST "$BASE
   }'
 ```
 
-Verify: have the agent run `printenv BRIEF_MAX_ITEMS` → outputs `5` (the **real value**). Both the creation response and GET echo the field — put non-sensitive content only.
+Verify this non-sensitive example: have the agent run `printenv BRIEF_MAX_ITEMS` → outputs `5` (the **real value**). Both the creation response and GET echo the field. Do not copy this printing check for signing credentials; use the protected handling in recipe 08.
 
-> Interactive session + non-sensitive config → environment variables suffice. **When you need secret-grade security (no plaintext inside the sandbox) or the Deployment unattended chain** → use the vault wiring below.
+> Interactive session + non-sensitive config → environment variables suffice. For this recipe's direct header credentials, use the Vault wiring below to keep the secret outside the sandbox. A local signing SDK requires a different choice; Vault binding alone does not make it compatible.
 
-### 4.2 Required for the scheduled chain: vault_ids wiring
+### 4.2 Vault wiring for this scheduled chain's header credentials
 
-Deployments do not support `environment_variables`, so the scheduled chain (Step 5) can only rely on the vault. Wire the secret into the runtime with `vault_ids` at session creation (the field is just `agent`, taking the Agent ID string; the session locks a full snapshot of that agent's current version):
+In the archived **2026-09-03** test, Deployments ignored `environment_variables`; verify the current contract before relying on them. This recipe's compatible header credentials use `vault_ids`. If the target SDK instead needs local signing, use a supported real-key path such as application-controlled Session creation or a trusted external signer, per recipe 08. For the Vault path, attach `vault_ids` at Session creation (the field is just `agent`, taking the Agent ID string; the Session locks a full snapshot of that Agent's current version):
 
 ```bash
 curl --user-agent "$BAILIAN_MANAGED_AGENT_SKILL_UA" --max-time 30 -X POST "$BASE/sessions" \
@@ -579,7 +579,7 @@ Sessions spawned by deployments are equally deletable: collect every `session_id
 This recipe erected the production-operations skeleton:
 
 - **MCP toolkits** (`mcp_servers` official + per-tool `mcp_toolkit` configs) let the agent call marketplace external services via the platform proxy; watch `mcp_call` / `mcp_call_output` in the event stream.
-- **Config injection has two layers**: non-sensitive config via **session environment variables** (`environment_variables`, plaintext straight into the sandbox; first choice for interactive sessions); highly sensitive secrets via **Vault** (placeholder injection + egress-gateway swap per the `allowed_hosts` allowlist — the token never passes your app side, never enters agent config, never enters the sandbox) — the scheduled chain (Deployment) supports only the latter.
+- **Credential injection follows the authentication mechanism**: non-sensitive config uses Session `environment_variables`; direct header tokens prefer Vault placeholders and `allowed_hosts`. Confirmed local-signing clients require real key material or a trusted signer, with the exposure and logging controls in recipe 08. This recipe's Vault-based scheduled path was tested; the archived `environment_variables` Deployment limitation is not proof that every authentication scheme can use Vault.
 - **Deployment** absorbs triggering into the platform: `agent {id, version}` pins the version explicitly, `initial_events` delivers the first message at trigger, cron runs it automatically, `pause` (blocks scheduling, not manual) / `unpause` (no catch-up) / `archive` (full deactivation) manage the lifecycle, and `GET runs` collects results.
 - Two production HITL routes: **poll `requires_action` + `tool_approval_response`**, or **Deployment trigger + post-hoc run queries**.
 - Lifecycle verbs differ per resource: **agents and deployments are archive-only**; session / environment / vault can be deleted; **credential before vault** (no cascade).

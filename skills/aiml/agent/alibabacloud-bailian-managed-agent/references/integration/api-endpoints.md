@@ -10,6 +10,10 @@ and the docs index `https://docs.agent.bailian.aliyun.com/llms.txt`.
 
 Local evaluation adapters can use [api-contracts.yaml](api-contracts.yaml) for scenario-scoped REST metadata; it is not a substitute for the live OpenAPI schema.
 
+For Agent creation, updates, or other APIs accepting the same Agent `tools` structure, see [tool configuration: defaults and explicit overrides](tool-configuration.md). It explains `default_config` / `configs[]` priority and how to choose between a stable tool inventory and automatic adoption of new tools.
+
+For `search_knowledgebases` and Session memory bindings (`default` / `agentstudio_memory`), use [knowledge and memory integration](knowledge-and-memory.md), checked against the current Agent/Session operation pages on 2026-11-09. Knowledge retrieval uses a published `aid-…` service; Bailian memory requires a per-resource `entity_id`.
+
 ## Base URL and auth
 
 ```
@@ -21,7 +25,7 @@ https://{workspace_id}.{region}.maas.aliyuncs.com/api/v1/agentstudio
 - Auth header: `Authorization: Bearer <your-api-key>`; one key can access every resource under its workspace
 - Request bodies are JSON (`Content-Type: application/json`); file upload is `multipart/form-data`
 - Every response carries `x-request-id`; attaching it to support tickets speeds up diagnosis
-- List pagination: `limit` (default 20, max 100, **over-limit returns 400 rather than truncating**), `page` (omit on the first call; pass the previous response's `next_page` afterwards; no `next_page` in the response means the last page)
+- Resource-list pagination: `limit` (default 20, max 100, **over-limit returns 400 rather than truncating**), `page` (omit on the first call; pass the previous response's `next_page` afterwards; no `next_page` in the response means the last page). **Usage trend is different:** `page_size`, `page_token`, `data.next_page_token`, `data.has_more`; see [Usage API](usage-api.md).
 
 ## Webhook example URL
 
@@ -33,6 +37,8 @@ All paths below are relative to `/api/v1/agentstudio`.
 
 | Resource | Method + path | Purpose |
 | --- | --- | --- |
+| **Usage** | `POST /usage/summary` | Read-only workspace/Agent time-range totals or Session lifetime totals, with model/tool details; [contract and 2026-11-11 probes](usage-api.md) |
+| | `POST /usage/trend` | Read-only workspace/Agent hourly/daily/monthly trends; cursor pages count complete time buckets; no Session trend |
 | **Agent** | `POST /agents` | Create |
 | | `GET /agents/{agent_id}` | Get |
 | | `GET /agents` | List |
@@ -64,7 +70,7 @@ All paths below are relative to `/api/v1/agentstudio`.
 | | `GET /files/{file_id}` / `GET /files` | Metadata / list |
 | | `GET /files/{file_id}/content` | Download content (**note the `/content` suffix — `/download` 404s**; and only session artifacts with `downloadable=true` can be downloaded — accessing directly-uploaded files returns 403 code 11900007) |
 | | `DELETE /files/{file_id}` | Hard delete (File supports deletion only, not archiving) |
-| **Memory Store** | `POST /memory_stores`, `GET /memory_stores[/{id}]`, `POST /memory_stores/{id}`, `POST /memory_stores/{id}/archive` | MA working-memory container; distinct from UserId-scoped Bailian Memory Library |
+| **Memory Store** | `POST /memory_stores`, `GET /memory_stores[/{id}]`, `POST /memory_stores/{id}`, `POST /memory_stores/{id}/archive` | Built-in working-memory container (`provider=default`). Bailian Memory Library mounts via Session `resources` with `provider=agentstudio_memory`; its management/data APIs are separate |
 | **Memory** | `POST /memory_stores/{id}/memories`, `GET …/memories[/{memory_id}]`, `POST …/memories/{memory_id}`, `DELETE …/memories/{memory_id}` | UTF-8 working-note files; update can use `precondition.content_sha256` |
 | **Memory Version** | `GET /memory_stores/{id}/memory_versions[/{version_id}]` | Created/modified/deleted history; see cookbook 09 |
 | **Skill** | `POST /skills` | Upload a skill package to create |
@@ -74,7 +80,7 @@ All paths below are relative to `/api/v1/agentstudio`.
 | | `GET /skills/{skill_id}/versions[/{version}]` | List / get versions |
 | | `GET /skills/{skill_id}/versions/{version}/content` | Get the skill package download URL |
 | **Vault** | `POST /vaults`, `GET`, `POST /{id}`, `DELETE /{id}`, `POST /{id}/archive` | Vault CRUD + archive |
-| **Credential** | `GET /vaults/{vault_id}/credentials`; `GET`/`POST` `…/credentials/{id}`; `POST …/credentials/{id}/archive`; `DELETE …/credentials/{id}` | CRUD + archive for individual secrets inside a vault. **Mounted under the vault sub-path — the top-level `/credentials` 404s** (the official OpenAPI's top-level form does not match the live API); update must carry the full `auth` value; ID prefix `vcrd_`. **2026-09 breaking change**: `auth.networking.allowed_hosts` is **required** (missing → 409 `CREDENTIAL_AUTH_NETWORKING_ERROR` "egress network addresses cannot be empty"); credentials now use **placeholder injection** (inside the sandbox `os.environ` yields `BMA_SECRET_PLACEHOLDER_<variable-name>`; the real value only substitutes the `Authorization` header when the egress gateway hits `allowed_hosts`) — see [../cookbook/08-vault-secret-injection-and-egress-gateway.md](../cookbook/08-vault-secret-injection-and-egress-gateway.md) |
+| **Credential** | `GET /vaults/{vault_id}/credentials`; `GET`/`POST` `…/credentials/{id}`; `POST …/credentials/{id}/archive`; `DELETE …/credentials/{id}` | CRUD + archive for individual secrets inside a vault. **Mounted under the vault sub-path — the top-level `/credentials` 404s** (the official OpenAPI's top-level form does not match the live API); update must carry the full `auth` value; ID prefix `vcrd_`. **2026-09 breaking change**: `auth.networking.allowed_hosts` is **required** (missing → 409 `CREDENTIAL_AUTH_NETWORKING_ERROR` "egress network addresses cannot be empty"); credentials use **placeholder injection** (inside the sandbox `os.environ` yields `BMA_SECRET_PLACEHOLDER_<variable-name>`). **Current scope, 2026-11-02**: for matching `allowed_hosts`, the gateway replaces matching placeholders in all HTTP request headers; body and query placeholders remain unchanged — see [Vault cookbook](../cookbook/08-vault-secret-injection-and-egress-gateway.md) |
 | **Deployment** | `POST /deployments` | Create (binds Agent + trigger mode) |
 | | `GET /deployments/{id}` / `GET /deployments` | Get / list |
 | | `POST /deployments/{id}` | Update (passed fields replace; omitted fields unchanged) |
@@ -120,15 +126,17 @@ a coordinator is just a normal Agent carrying an extra `multiagent`):
 | Entry `version` | No | Latest if omitted; pin it for production |
 
 Note: the SDK's `system_prompt` parameter maps to the wire field `system`; the `model` parameter is a string while the wire form is `{"id": "…"}`.
+For `model.id`, choose one of the four intelligent modes or an explicit model from [available models](../product/concepts.md#available-models); that reference also lists each explicit model's capabilities.
 Update a formation with `POST /agents/{id}` and **carry the current `version` as the optimistic lock**.
 
-**Two high-frequency 400s and one silent failure of `POST /agents` (REST field tests)**:
+**Two high-frequency 400s of `POST /agents` (REST field tests)**:
 
 | Symptom | Cause | The correct way |
 | --- | --- | --- |
-| `400 AGENT_010 model does not exist` | Used a nonexistent model ID (`qwen3-max` is field-test rejected) | Field-tested to accept `qwen3.8-max` / `qwen3.7-max` / `qwen3.7-plus` / `qwen3.6-plus` / `qwen3.6-flash`, plus `auto`, `glm-5.2`, `deepseek-v4-pro`, etc. (**a flash tier exists**; the full list defers to the console dropdown) |
+| `400 AGENT_010 model does not exist` | Used a nonexistent model ID (`qwen3-max` is field-test rejected) | Use an exact mode or model ID from [available models](../product/concepts.md#available-models); verify availability in the target workspace's console if needed. The archived field-tested subset is not the complete supported list |
 | `400 AGENT_010 MCP Server validation failed` | An `mcp_servers` entry with `type: customer` whose service name was never registered in the console | Register in the console first, then write the config; `type: official` (marketplace) is, counterintuitively, not validated — a mistyped name only surfaces at runtime |
-| Creation succeeds but the agent says "I have no tools available", with `TOOL_NOT_FOUND ... Available tools: ['mark_artifacts']` | Only wrote `default_config.enabled: true` without listing tools individually in `configs[]` | In `configs[]` write one entry per tool you use: `{"name": "bash", "enabled": true}`; MCP tools likewise, additionally requiring `mcp_toolkit.mcp_server_name` |
+
+The earlier missing-tool observation (`TOOL_NOT_FOUND ... Available tools: ['mark_artifacts']`) does not establish that `default_config.enabled: true` is ineffective. The 2026-10-29 product clarification supersedes that interpretation: explicit entries take precedence and unlisted tools use the default. For missing tools, check the effective Agent configuration, exact tool names, and MCP service mounting where applicable; see [tool configuration](tool-configuration.md).
 
 **Formation agents need no orchestration-tool declarations**: the coordinator's `create_agent` / `list_agents` / `wait_for_agents` and the members'
 `submit_result` are auto-injected by the platform in multiagent mode.
@@ -171,6 +179,8 @@ Update a formation with `POST /agents/{id}` and **carry the current `version` as
 
 **Creating a Session** (requires `agent` + `environment_id`):
 
+For opt-in filesystem persistence, add top-level `sandbox.enable_snapshot` and `sandbox.snapshot_persistent_seconds` at creation. The current object-form Agent binding, field constraints, GET status/usage fields and recovery rules are in [sandbox persistence](sandbox-persistence.md); the older minimal example below does not enable snapshots.
+
 ```json
 {
   "agent": "agent_xxx",
@@ -190,18 +200,20 @@ Update a formation with `POST /agents/{id}` and **carry the current `version` as
 Note the `.csv` extension is rejected at upload time (415 code 11900014; the whitelist is `.txt` `.md` `.json` `.xlsx` `.pdf` `.png`) —
 rename CSV data to `.txt` before uploading.
 
-**The two credential-injection paths (REST field-test, 2026-09-03) — completely different security levels**:
+**The two credential-injection paths (REST field-test, 2026-09-03; header scope rechecked against current official docs on 2026-11-10; local-signing clarification from the user on 2026-11-10)**:
 
 | | `environment_variables` (session env vars) | `vault_ids` (Vault) |
 | --- | --- | --- |
 | How values are passed | Plaintext key-value pairs at session creation; **echoed verbatim in the create response** (GET echoes too) | Credentials are pre-stored in the Vault; the session passes only vault IDs |
 | `os.environ` inside the sandbox | **Real values** (readable directly via `printenv`) | **Placeholder** `BMA_SECRET_PLACEHOLDER_<variable-name>` |
-| Where the real value appears | Inside the sandbox process (and the event stream, if the agent prints it) | Only in the vault (encrypted) + the instant the egress gateway hits `allowed_hosts` and substitutes the `Authorization` header |
-| Fits | Non-sensitive config: API endpoints, log levels, feature flags | High-sensitivity secrets: API keys, tokens |
+| Where the real value appears | Inside the sandbox process (and the event stream, if the agent prints it) | Stored encrypted in the Vault; substituted for matching placeholders in any HTTP request header when the egress gateway hits `allowed_hosts` |
+| Authentication placement | Values can be used directly by code, including SDK/CLI local signing or HMAC | Matching placeholders in all HTTP request headers, including `Authorization` and `X-API-Key`; request bodies/query parameters are not substituted, and signatures derived locally from placeholder bytes are not recomputed |
+| Fits | Non-sensitive config; scoped compatibility option for verified clients needing the real secret in-process, with additional exposure | API keys/tokens passed directly in headers without local cryptographic derivation |
 | Deployment support | ❌ **not supported** (silently ignored when passed; the triggered session lacks the variable) | ✅ `vault_ids` wires at the deployment level |
 
-The full Vault chain (placeholders, `allowed_hosts`, gateway substitution behavior) is in
-[../cookbook/08-vault-secret-injection-and-egress-gateway.md](../cookbook/08-vault-secret-injection-and-egress-gateway.md).
+Current mechanism: [official credential documentation](https://docs.bailian.console.aliyun.com/zh/model-studio/managed-agents-credential). **Local-signing decision:** a client that computes an HMAC/signature needs the actual signing secret before egress; a Vault placeholder produces a different signature even if that signature is sent in a header. This user-provided clarification is not a new cloud test or a diagnosis of every SDK failure. Verify the client's authentication mechanism and failure evidence before changing injection paths.
+
+For this compatibility case, Session-start `environment_variables` can carry real values, but these remain readable by sandbox code and may be returned by Session create/GET. Construct and send the request in-process from a protected secret source; keep values out of prompts, command arguments, source/config files and experiment artifacts. Filter requests, responses, debug logs and errors before display; do not imply that the API itself stops echoing the field or that plaintext injection has Vault's isolation. See the [SDK/CLI signing branch](../cookbook/08-vault-secret-injection-and-egress-gateway.md#sdkcli-local-signing-and-hmac-user-clarification-2026-11-10) for selection, verification and Deployment limitations.
 
 **Sending a message event** (`POST /sessions/{id}/events`):
 
@@ -219,6 +231,8 @@ The full Vault chain (placeholders, `allowed_hosts`, gateway substitution behavi
 
 POST always returns JSON (echoing only the events you sent). The real-time event stream uses the **dedicated endpoint** `GET /sessions/{session_id}/events/stream`
 (adding `Accept: text/event-stream` to the POST does **not** turn it into SSE); history and polling use `GET /sessions/{session_id}/events`.
+
+For incremental answer and Thinking content, repeat `event_deltas[]=message` and `event_deltas[]=reasoning` on the SSE GET. Enable Thinking on the Agent and use a fresh Session after Agent changes. The observed stream includes `object=message` lifecycle frames and `object=content` text frames keyed by `msg_id` + `index`; not every frame has `content[]`. Append only `delta=true`; replace completed snapshots. Complete parsing and recovery rules: [event-stream.md](event-stream.md).
 
 Besides `message`, `input[].type` can send 5 more kinds: `interrupt` (cancel the current turn), `tool_approval_response` (tool approval response),
 `tool_call_output`, `function_call_output` (fill in tool results), and `define_outcome` (declare the acceptance goal).
@@ -263,7 +277,7 @@ take `batch_id`/`call_id` from `stop_reason`'s `pending_batch_id`/`pending_call_
 
 - Omitting `schedule` = manual triggering; `type` currently only `cron`; **`schedule.timezone` is required** (missing → 400 PARAMS_MISSING)
 - Omitting `agent.version` takes the latest version; **pin the version for production** to keep scheduled-task behavior from drifting when the Agent changes
-- **Deployments do not support `environment_variables`** (REST field test: POST accepts it without error but silently ignores it; the triggered session lacks the variable) — injecting credentials on scheduled pipelines can only wire `vault_ids`
+- **Archived Deployment test: `environment_variables` was ignored** (POST accepted it, but the triggered Session lacked the variable). Verify current support before relying on it. `vault_ids` works for compatible header credentials; SDK/CLI local signing instead needs a supported real-key path such as application-controlled Session creation, not a placeholder passed to the signer.
 - `initial_events` takes 1-50 items (empty array / 51 items both 400). `next_run_at` / `last_run_at` live **inside the `schedule` object**
   (not at the top level; values are UTC) — usable to verify the next trigger time
 

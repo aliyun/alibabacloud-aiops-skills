@@ -11,6 +11,8 @@
 
 Match by the **action verb** in the user's request. When one request hits multiple rows, teach the lowest difficulty first.
 
+For **sandbox file retention, recovery after recycling, snapshot expiry or automatic extension**, use the [sandbox persistence guide](../integration/sandbox-persistence.md), including the external-resource recovery matrix and separate storage charges.
+
 | Capability / request | Tutorial | Difficulty | Prerequisites |
 | --- | --- | --- | --- |
 | First touch / live demo for a customer (create Agent → attach Skill → run session → collect artifacts) | [01-ai-native-quickstart.md](01-ai-native-quickstart.md) | Beginner | A local Agent that supports the CLI (Qoder / Claude Code / Codex etc.); an Alibaba Cloud account |
@@ -20,10 +22,12 @@ Match by the **action verb** in the user's request. When one request hits multip
 | "Streaming or async?" / unsure which integration shape / presenting the selection at an architecture review | [02-integrate-to-your-system.md](02-integrate-to-your-system.md) step 3 (split into **strong- / weak-interaction** macro scenarios first, then pick the shape) | Intermediate | An API key and workspace ID |
 | "How do I reference the CLI's Agent in code?" / where does `agent_id` come from | [02-integrate-to-your-system.md](02-integrate-to-your-system.md) step 1 | Intermediate | An API key and workspace ID |
 | Build a streaming chat UI (SSE passthrough to the frontend) | [02-integrate-to-your-system.md](02-integrate-to-your-system.md) Shape A (strong interaction) | Intermediate | Same as above |
+| Subscribe to Thinking text / render answer deltas / avoid duplicate final text | [Event-stream integration reference](../integration/event-stream.md), then [02](02-integrate-to-your-system.md) Shape A | Intermediate | Thinking-enabled Agent, fresh Session, SSE established before submission |
 | Convert long-running tasks to async (submit a ticket number, poll in the background) | [02-integrate-to-your-system.md](02-integrate-to-your-system.md) Shape B (weak interaction) | Intermediate | Same as above |
 | Scheduled unattended batch runs (Deployment + cron) | [04-scheduled-deployment.md](04-scheduled-deployment.md) | Advanced | Tutorial 01, plus one manual run already working |
 | Have the Agent read my data files / upload files for the Agent to analyze | [03-mount-files.md](03-mount-files.md) | Beginner | An API key and workspace ID; a working Agent |
 | Agent says "file not found" after mounting / how to write the mount path | [03-mount-files.md](03-mount-files.md) step 5 | Beginner | Same as above |
+| Configure enterprise knowledge retrieval / attach built-in or Bailian memory / entity isolation, rules and profiles | [Knowledge and memory integration](../integration/knowledge-and-memory.md) | Intermediate | Published retrieval service or appropriate memory Store/library, in the intended workspace |
 | Uploaded file not usable immediately / file scan status | [03-mount-files.md](03-mount-files.md) step 3 | Beginner | Same as above |
 | How to collect scheduled-task results / prevent double processing | [04-scheduled-deployment.md](04-scheduled-deployment.md) step 5 | Advanced | An existing Deployment |
 | Pause a scheduled task temporarily / change config / archive | [04-scheduled-deployment.md](04-scheduled-deployment.md) step 6 | Advanced | Same as above |
@@ -36,6 +40,7 @@ Match by the **action verb** in the user's request. When one request hits multip
 | Multi-agent collaboration / formations / multiple Agents dividing work | [07-multiagent-coordinator.md](07-multiagent-coordinator.md) | Expert | Tutorial 02; at least one single-agent Agent already working |
 | "Which member is doing what" in a formation / member outputs mixed into one pot | [07-multiagent-coordinator.md](07-multiagent-coordinator.md) step 5 | Expert | Same as above |
 | How to create a coordinator-type Agent | [07-multiagent-coordinator.md](07-multiagent-coordinator.md) step 3 (**no such type exists** — a normal Agent plus `multiagent` is all it takes) | Expert | Same as above |
+| Query workspace/Agent/Session token and call consumption / build hourly, daily or monthly usage views | [Usage API guide and probes](../integration/usage-api.md) | Advanced | Workspace API key; existing resource IDs for scoped queries |
 | Formation dispatching is inaccurate / want routing rules | [07-multiagent-coordinator.md](07-multiagent-coordinator.md) step 3 (**no routing field** — edit the coordinator's prompt) | Expert | Same as above |
 | Attach specialized MCP toolkits (`browser_use`; prefer built-in web tools for search) / config & credential injection (session env vars + Vault) / Agent version rollback / Webhook notifications / custom MCP and Skill packaging | _No capability tutorial in this directory yet — see the "capability → which playbook has end-to-end practice" reverse-lookup table in [../cookbook/index.md](../cookbook/index.md)_ | | |
 

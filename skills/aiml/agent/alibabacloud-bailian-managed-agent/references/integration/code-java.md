@@ -13,6 +13,8 @@ Companion tutorial: [../tutorials/02-integrate-to-your-system.md](../tutorials/0
 > living in the event's `content[*].data` (`GET /sessions/{id}` also returns a copy at the root).
 > These facts apply equally to plain REST; the event dispatching below is implemented accordingly.
 
+**Output mode:** `sendAndStream` below requests completed events; the WebFlux example forwards completed answers. For token-level answer and Thinking updates, add both repeated `event_deltas[]` parameters **and** a content-frame adapter per [event-stream.md](event-stream.md). Adding the query parameters alone to this completed-event dispatcher will drop fragments. Keep reasoning in a separate typed channel and use replacement semantics for completed snapshots.
+
 Dependencies (Maven):
 
 ```xml
@@ -147,8 +149,9 @@ public class CmaClient {
         return createSession(agentId, environmentId, title, resources, null, metadata);
     }
 
-    /** environmentVariables: non-sensitive config injected into the sandbox in plaintext (the agent reads
-     *  real values via os.environ directly); high-sensitivity secrets go through a Vault. */
+    /** environmentVariables reaches the sandbox and Session readers as plaintext. Prefer Vault for
+     *  direct header credentials; verified local-signing clients need real key material. For that
+     *  compatibility case, construct requests in-process and filter responses/logs per cookbook/08. */
     public JsonNode createSession(String agentId, String environmentId, String title,
                                   List<Map<String, Object>> resources,
                                   Map<String, String> environmentVariables,
@@ -315,9 +318,20 @@ public final class EventDispatcher {
             "thread_created", "thread_status", "thread_message_sent",
             "thread_message_received", "thread_context_compacted");
 
-    /** Returning the type of stop_reason signals the turn ended; returning null means continue. */
+    /** Completed-event, answer-only convenience overload. */
     public static String handle(JsonNode ev, StringBuilder textBuffer) {
+        return handle(ev, textBuffer, null);
+    }
+
+    /** Reasoning is delivered separately with its id/thread_id/content.
+     *  Returning stop_reason signals the waiting operation ended; null means continue. */
+    public static String handle(JsonNode ev, StringBuilder textBuffer,
+                                java.util.function.Consumer<JsonNode> onReasoning) {
         String type = ev.path("type").asText();
+        if (("message".equals(type) || "reasoning".equals(type))
+                && !"completed".equals(ev.path("status").asText("completed"))) {
+            return null; // Raw Delta lifecycle/content frames require the separate adapter.
+        }
         // In formations one stream mixes every member's output: the server event's thread field
         // is thread_id (main thread thrd_ prefix, member sub-threads sthr_); missing means the
         // coordinator's main thread. Mind the direction: the top-level field is named
@@ -332,7 +346,9 @@ public final class EventDispatcher {
                 }
             }
         } else if ("reasoning".equals(type)) {
-            // reasoning trace; render here if you show it
+            if ("assistant".equals(ev.path("role").asText()) && onReasoning != null) {
+                onReasoning.accept(ev); // Never append Thinking to textBuffer.
+            }
         } else if (TOOL_EVENTS.contains(type)) {
             log.info("tool event: {}", type);          // render here if you show the execution trace
         } else if (THREAD_EVENTS.contains(type)) {
@@ -404,6 +420,8 @@ The Spring and task-store snippets below are application adapters, not a complet
 Spring WebFlux / SSE scenario; the business service acts as the proxy layer, and **the key never
 ships to the frontend**.
 
+This `Flux<String>` is answer-only and forwards completed messages. A UI that also displays Thinking should use typed events, call the `handle(ev, buffer, onReasoning)` overload, and keep reasoning out of the answer buffer. To display token deltas, implement the parent-ID/block adapter in [event-stream.md](event-stream.md) before enabling the Delta query parameters.
+
 ```java
 public Flux<String> chatStream(String userId, String text) {
     String sessionId = sessionStore.getOrCreate(userId, () -> {
@@ -424,7 +442,7 @@ public Flux<String> chatStream(String userId, String text) {
                 int before = buffer.length();
                 String stopReason = EventDispatcher.handle(ev, buffer);
                 if (buffer.length() > before) {
-                    sink.next(buffer.substring(before));      // incremental pass-through to the frontend
+                    sink.next(buffer.substring(before));      // completed answer text, not token-level Delta
                 }
                 if (stopReason != null) {
                     try {

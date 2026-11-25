@@ -31,6 +31,7 @@ The caller waits online and **must manage the event-stream lifecycle**. The core
 Frontend ⇄ Business service (forward/passthrough) ⇄ Agent event stream
 ```
 - **Fits**: human-facing conversational UIs that must render as content is generated and show intermediate steps.
+- **Text delivery**: an SSE connection alone returns completed events. For incremental answers and Thinking, request both `event_deltas[]=message` and `event_deltas[]=reasoning`, then apply the [shared frame adapter rules](event-stream.md). Forward typed answer/reasoning updates with event/block keys and replacement semantics, rather than merging both into one string.
 - **Constraints**: the business service must support long-lived connections; the gateway / load balancer must **disable response buffering**; disconnects must reconnect or degrade to polling.
 - **Caution**: **never ship the Bailian key to the frontend** — always proxy through the business service.
 - **CLI equivalents**: `session run` / `session send` (streaming by default).
@@ -106,7 +107,7 @@ This is not a third scenario — it is a design **layered on top of any of the s
 - One business user (or one task) maps to one Session; do **not** let multiple users share a Session.
 - The business side stores the `user/task ↔ session_id` mapping itself; write the business key into `metadata` at session creation (e.g. `{"user_id": "..."}`) for easy reverse lookup.
 - For task working context across sessions: MA Memory Store is launched built-in working memory. For UserId-scoped personalized memory: use the separate Bailian Memory Library. Do not substitute their contracts or treat memory as an authorization/isolation mechanism; preserve business-side user/tenant access controls. See [concepts](../product/concepts.md#memory-store-working-memory).
-- For per-tenant isolation of config/credentials: non-sensitive config goes straight into `environment_variables` at session creation (one copy per session, plaintext passthrough into the sandbox); high-sensitivity secrets are isolated via different Environments / Vaults, or overridden at session creation (`--environment` / `--vault`). The two-path selection layering is in [../cookbook/08-vault-secret-injection-and-egress-gateway.md](../cookbook/08-vault-secret-injection-and-egress-gateway.md).
+- For per-tenant config/credentials, enforce business-side access checks on the selected resources and injected values. Non-sensitive config uses Session `environment_variables`; direct header credentials prefer tenant-scoped Vault bindings. Verified local-signing SDKs need real key material or a trusted signer; plaintext Session injection adds runtime/Session-reader exposure and requires in-process request construction and response/log filtering. Choose the path using [recipe 08](../cookbook/08-vault-secret-injection-and-egress-gateway.md#sdkcli-local-signing-and-hmac-user-clarification-2026-11-10); do not treat an Environment selection alone as credential authorization.
 
 # Selection quick reference
 

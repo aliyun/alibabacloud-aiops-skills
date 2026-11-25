@@ -1,5 +1,7 @@
 # CLI / API routing and recovery
 
+For an explicitly offline or written-only task, describe the appropriate CLI/API path without running version/help, authentication, installation, update or SDK checks. Read relevant bundled references and use configuration variables; hypothetical authorization does not permit real calls. Follow the [execution-mode rule](../../SKILL.md#respect-the-requested-execution-mode-before-preflight) before operational preflight below.
+
 Before cloud calls, initialize and propagate the [versioned User-Agent](user-agent.md). Check the CLI header mechanism as well as feature support; unsupported UA propagation follows the same bounded update/API fallback path.
 
 ## Install or update only when the task needs CLI

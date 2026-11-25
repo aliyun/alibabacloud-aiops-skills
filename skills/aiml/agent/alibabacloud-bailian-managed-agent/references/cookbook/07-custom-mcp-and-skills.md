@@ -92,7 +92,7 @@ curl --user-agent "$BAILIAN_MANAGED_AGENT_SKILL_UA" --max-time 30 -s -X POST "$B
   }'
 ```
 
-After mounting, tool enablement is exactly as with marketplace services: add an `mcp_toolkit` in `tools`, fill `mcp_server_name` with the same service ID used in `mcp_servers[].name`, and set `enabled: true` per tool in `configs[]` (forget the per-tool enablement and the tools go silently missing at runtime — the trap was expanded on in 02).
+After mounting, tool enablement is exactly as with marketplace services: add an `mcp_toolkit` in `tools` and fill `mcp_server_name` with the same service ID used in `mcp_servers[].name`. Prefer `default_config.enabled: false` and explicitly enable required tools in `configs[]`. Explicit entries take precedence; unlisted tools use the default. Use an enabled default when automatic adoption of new tools is desired. See [configuration priority](../integration/tool-configuration.md).
 
 **One important field-tested difference — the two types validate at completely different times**:
 
@@ -317,7 +317,7 @@ curl --user-agent "$BAILIAN_MANAGED_AGENT_SKILL_UA" --max-time 30 -s -X POST "$B
     "name": "luming-editor",
     "model": {"id": "qwen3.8-max"},
     "system": "You are the content-review assistant for Luming Publishing. On receiving a manuscript you must run the health check using the manuscript-check skill and organize the findings into review comments.",
-    "tools": [{"type": "builtin_toolkit", "default_config": {"enabled": true},
+    "tools": [{"type": "builtin_toolkit", "default_config": {"enabled": false},
       "configs": [{"name": "bash", "enabled": true}, {"name": "read", "enabled": true},
                   {"name": "write", "enabled": true}, {"name": "glob", "enabled": true},
                   {"name": "grep", "enabled": true}]}],

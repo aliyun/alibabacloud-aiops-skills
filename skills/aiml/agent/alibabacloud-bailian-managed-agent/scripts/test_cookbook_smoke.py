@@ -1,5 +1,6 @@
 """Local checks for live-test assertions; no credentials or network required."""
 import unittest
+from copy import deepcopy
 from unittest.mock import patch
 
 import cookbook_smoke as smoke
@@ -13,6 +14,73 @@ def status(state, reason=None, event_id="status"):
 
 
 class SmokeAssertionsTest(unittest.TestCase):
+    def delta_fixture(self):
+        frames, history = [], []
+        for eid, kind, chunks in (("reason", "reasoning", [(0, "a"), (1, "b"), (0, "a")]),
+                                  ("answer", "message", [(0, "3"), (0, "23")])):
+            frames.append({"object": "message", "status": "in_progress", "id": eid,
+                           "type": kind, "role": "assistant"})
+            blocks = {}
+            for index, text in chunks:
+                frames.append({"object": "content", "status": "in_progress", "type": "text",
+                               "msg_id": eid, "index": index, "delta": True, "text": text})
+                blocks[index] = blocks.get(index, "") + text
+            for index, text in sorted(blocks.items()):
+                frames.append({"object": "content", "status": "completed", "type": "text",
+                               "msg_id": eid, "index": index, "delta": False, "text": text})
+            final = {"object": "message", "status": "completed", "id": eid, "type": kind,
+                     "role": "assistant", "content": [{"type": "text", "text": text}
+                                                         for _, text in sorted(blocks.items())]}
+            frames.append(final)
+            history.append(deepcopy(final))
+        return frames, history
+
+    def test_content_deltas_separate_thinking_and_answer_without_appending_snapshots(self):
+        frames, history = self.delta_fixture()
+        evidence = smoke.delta_evidence(frames, history)
+        smoke.assert_delta_evidence(evidence)
+        self.assertEqual(evidence["reasoning"]["nonempty_delta_count"], 3)
+        self.assertEqual(evidence["reasoning"]["text_chars"], 3)
+        self.assertEqual(evidence["message"]["nonempty_delta_count"], 2)
+        self.assertEqual(evidence["message"]["text_chars"], 3)
+
+    def test_archived_event_delta_envelope_still_verifies(self):
+        frames, history = self.delta_fixture()
+        legacy = [smoke.normalize_delta_frame(f) for f in frames
+                  if not (f.get("object") == "content" and f.get("delta") is False)]
+        smoke.assert_delta_evidence(smoke.delta_evidence(legacy, history))
+
+    def test_reasoning_start_and_final_alone_do_not_prove_text_delivery(self):
+        frames, history = self.delta_fixture()
+        frames = [f for f in frames if f.get("msg_id") != "reason"]
+        for event in frames + history:
+            if event.get("id") == "reason":
+                event.pop("content", None)
+        evidence = smoke.delta_evidence(frames, history)
+        with self.assertRaises(AssertionError):
+            smoke.assert_delta_evidence(evidence)
+
+    def test_empty_reasoning_still_requires_a_history_event(self):
+        frames, history = self.delta_fixture()
+        for event in frames:
+            if event.get("id") == "reason":
+                event.pop("content", None)
+        history = [e for e in history if e["id"] != "reason"]
+        with self.assertRaises(AssertionError):
+            smoke.assert_delta_evidence(smoke.delta_evidence(frames, history))
+
+    def test_full_snapshot_cannot_hide_a_lost_delta(self):
+        frames, history = self.delta_fixture()
+        frames = [f for f in frames if not (f.get("delta") is True and f.get("text") == "23")]
+        with self.assertRaises(AssertionError):
+            smoke.assert_delta_evidence(smoke.delta_evidence(frames, history))
+
+    def test_history_content_must_match_stream(self):
+        frames, history = self.delta_fixture()
+        history[0]["content"][0]["text"] = "different"
+        with self.assertRaises(AssertionError):
+            smoke.assert_delta_evidence(smoke.delta_evidence(frames, history))
+
     def test_sse_comments_optional_space_and_multiline_data(self):
         class Response:
             def iter_lines(self):

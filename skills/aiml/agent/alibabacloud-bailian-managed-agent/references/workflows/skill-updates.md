@@ -1,8 +1,10 @@
 # Check this skill's version and offer an optional update
 
-This skill uses calendar releases: **`vYYYYMMDD`**, currently **`v20261015`**. Keep the version in `SKILL.md`'s frontmatter `description` and `references/manifest.json` identical. Use the release date, not the CLI/SDK version. A new release that should trigger an update must have a strictly later date; multiple edits published under the same date do not trigger replacement.
+This skill uses calendar releases: **`vYYYYMMDD`**, currently **`v20261115`**. Keep the version in `SKILL.md`'s frontmatter `description` and `references/manifest.json` identical. Use the release date, not the CLI/SDK version. A new release that should trigger an update must have a strictly later date; multiple edits published under the same date do not trigger replacement.
 
 ## Invocation
+
+Apply the execution-mode rule in [SKILL.md](../../SKILL.md#respect-the-requested-execution-mode-before-preflight) first. For an explicitly offline, written-only or no-execution request, do not run the checker or contact the registry. Use the installed references, state snapshot limitations when relevant, and deliver the answer. A hypothetical `update_available` result is evidence to interpret, not a request to perform a new check or installation.
 
 Resolve `SKILL_ROOT` from the loaded skill's location, not the user's project directory. Python 3 and its standard library are sufficient:
 
@@ -37,12 +39,12 @@ Each helper call makes one metadata GET; the approved apply call rechecks before
   "code": 200,
   "data": {
     "skillName": "alibabacloud-bailian-managed-agent",
-    "content": "---\nname: alibabacloud-bailian-managed-agent\ndescription: |-\n  Version v20261015 (date-based release, YYYYMMDD).\n  Explain, evaluate, demonstrate, provision, and integrate Alibaba Cloud Bailian\n  Managed Agent (CMA / ManagedAgents).\n---\n"
+    "content": "---\nname: alibabacloud-bailian-managed-agent\ndescription: |-\n  Version v20261115 (date-based release, YYYYMMDD).\n  Explain, evaluate, demonstrate, provision, and integrate Alibaba Cloud Bailian\n  Managed Agent (CMA / ManagedAgents).\n---\n"
   }
 }
 ```
 
-Decode the API response as JSON first; its `\n` escapes become real line breaks in `data.content`. Then read that string's YAML frontmatter description to extract `v20261015`. A description with no version, such as the legacy text starting directly with “Explain, evaluate…”, has no comparable release version.
+Decode the API response as JSON first; its `\n` escapes become real line breaks in `data.content`. Then read that string's YAML frontmatter description to extract `v20261115`. A description with no version, such as the legacy text starting directly with “Explain, evaluate…”, has no comparable release version.
 
 ## Results and recovery
 

@@ -183,8 +183,8 @@ For history queries, the official spec declares only `types` and the time range 
 from collections import defaultdict
 
 def run_coordinator(session_id, timeout=900.0):
-    """Split the fleet session's event stream into one transcript per thread."""
-    transcripts = defaultdict(list)      # thread_key -> [text fragments]
+    """Split completed events by thread and separate answers from Thinking."""
+    transcripts = defaultdict(lambda: {"message": [], "reasoning": []})
     stop_reason = None
 
     with client.sessions.events.stream(session_id, timeout=timeout) as stream:
@@ -193,11 +193,13 @@ def run_coordinator(session_id, timeout=900.0):
             key = getattr(ev, "thread_id", None) or "main"
 
             if ev.type == "thread_created":
-                transcripts[key].append("[new thread]")
-            elif ev.type in ("message", "reasoning"):
+                transcripts[key]["message"].append("[new thread]")
+            elif (ev.type in ("message", "reasoning")
+                  and getattr(ev, "role", None) == "assistant"
+                  and getattr(ev, "status", "completed") == "completed"):
                 for block in ev.content or []:
                     if getattr(block, "text", None):
-                        transcripts[key].append(block.text)
+                        transcripts[key][ev.type].append(block.text)
             elif ev.type == "session_status":
                 stop_reason = (ev.stop_reason or {}).get("type")   # the SDK already extracts content[*].data for you
                 if stop_reason:
@@ -205,6 +207,8 @@ def run_coordinator(session_id, timeout=900.0):
 
     return transcripts, stop_reason
 ```
+
+This SDK example subscribes to completed events, keeping `transcripts[thread]["message"]` and `["reasoning"]` separate. For Delta subscriptions, raw content frames must first be associated with their parent `msg_id`; do not route a frame with missing `thread_id` to the coordinator automatically. Keep it provisional until ownership is known. See [the shared event-stream reference](../integration/event-stream.md). The five-session Thinking retest covered single-agent REST, not MultiAgent Delta routing.
 
 Two field-tested reminders: do not also collect `thread_message_received` as text — its content is a JSON-wrapped string,
 and collecting it double-displays member output in the main thread (the member's own `message` events are already in its sub-thread);

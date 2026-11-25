@@ -6,6 +6,30 @@ version_note: Workspace-scoped REST API has no verified POP product/version iden
 base_path: /api/v1/agentstudio
 source: references/integration/api-endpoints.md
 operations:
+  - name: Usage Summary API
+    method: POST
+    path: /usage/summary
+    read_only: true
+    required_params: [dimension]
+    dimensions: [workspace, agent, session]
+    conditional_required_params:
+      workspace: [time_range.start_time, time_range.end_time]
+      agent: [agent_id, time_range.start_time, time_range.end_time]
+      session: [session_id]
+    response_fields: [request_id, data.usage.total, data.usage.models, data.usage.tools, data.data_updated_at]
+    response_note: "Workspace/Agent include data.query_range; Session omits it and rejects time_range/granularity. Metrics are value/unit objects; null is unknown, not zero."
+    request_schema_source: references/integration/usage-api.md
+  - name: Usage Trend API
+    method: POST
+    path: /usage/trend
+    read_only: true
+    required_params: [dimension, time_range.start_time, time_range.end_time]
+    dimensions: [workspace, agent]
+    conditional_required_params:
+      agent: [agent_id]
+    response_fields: [request_id, data.query_range, data.data_updated_at, data.granularity, data.points, data.has_more, data.next_page_token]
+    pagination: "page_size (1-100, default 100) and opaque page_token; omit cursor initially; keep original query conditions on continuation."
+    request_schema_source: references/integration/usage-api.md
   - name: Agents API
     method: GET
     path: /agents
@@ -39,7 +63,22 @@ operations:
     path: /sessions/{session_id}/events/stream
     required_params: [session_id]
     response_format: text/event-stream
-    response_fields: [type, content]
+    response_fields: [type]
+    optional_query_params:
+      "event_deltas[]": [message, reasoning]
+    response_note: "SSE frames have different shapes; content[] is not present on every frame. Consume live deltas in arrival order, not by sequence_number."
+    frame_variants:
+      - object: message
+        status: in_progress
+        fields: [id, type, role]
+      - object: content
+        type: text
+        fields: [msg_id, index, delta, text, status]
+      - object: message
+        status: completed
+        fields: [id, type, content]
+    delta_semantics: "delta=true appends text; delta=false with status=completed replaces the block; the completed parent replaces all provisional content."
+    parsing_source: references/integration/event-stream.md
   - name: Environments API
     method: POST
     path: /environments

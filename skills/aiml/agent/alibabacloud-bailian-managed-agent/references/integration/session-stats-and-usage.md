@@ -4,16 +4,18 @@ Use this reference to interpret response fields from the [Get Session API](https
 
 Source: product clarifications provided by the user on 2026-09-20, supplementing accounting definitions not fully explained in the existing API documentation. The examples below are illustrative data, not results of new live tests performed by this skill.
 
+For workspace/Agent aggregation, model/tool breakdowns, Session lifetime summary and hourly/daily/monthly trends, use the dedicated [Usage API](usage-api.md), supplied and live-tested on **2026-11-11**. It uses nested `value/unit` metrics and different cache field names. Its `runtime_ms` counts settled running segments; do not substitute Session elapsed duration or assume equality with live `active_seconds`. The scalar Session GET definitions below remain specific to that endpoint.
+
 ## Field definitions
 
-`stats` describes session duration, and `usage` describes cumulative usage across recorded model calls within the session. Neither represents a single request.
+`stats` describes session duration, and the token fields under `usage` describe cumulative usage across recorded model calls within the session. Neither represents a single request. The separate `usage.sandbox` snapshot-retention counters, available in the current Get Session contract, are documented in [sandbox persistence](sandbox-persistence.md); do not derive storage charges from runtime or elapsed Session duration.
 
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `stats` | object | Session duration statistics. |
 | `stats.active_seconds` | number | Cumulative time in seconds that the session has spent in the `running` state, excluding time in the `idle` state; not model inference time alone. |
 | `stats.duration_seconds` | number | Total elapsed time in seconds from session creation to the statistics cutoff, including both running and idle time. |
-| `usage` | object | Cumulative token usage across recorded model calls within the session. |
+| `usage` | object | Contains cumulative model token counters and, when available, separate `sandbox` retention counters. |
 | `usage.input_tokens` | integer | Cumulative input tokens, including ordinary input, cache reads, and cache creation. |
 | `usage.output_tokens` | integer | Cumulative output tokens. |
 | `usage.cache_read_input_tokens` | integer | Cumulative input tokens served from cache. |
@@ -26,9 +28,9 @@ Source: product clarifications provided by the user on 2026-09-20, supplementing
 The following relationships use **DashScope / Qwen accounting conventions**:
 
 ```text
-总输入 tokens = 普通 tokens + 缓存读取 tokens + 缓存创建 tokens
-普通 tokens = input_tokens − cache_read_input_tokens − cache_creation_input_tokens
-总 tokens = input_tokens + output_tokens
+Total input tokens = ordinary input tokens + cache read tokens + cache creation tokens
+Ordinary input tokens = input_tokens − cache_read_input_tokens − cache_creation_input_tokens
+Total tokens = input_tokens + output_tokens
 ```
 
 Cache reads and cache creation are already included in total input tokens; do not add them again. Session usage accumulates tokens across model calls, rather than counting tokens in the deduplicated final conversation.
@@ -98,11 +100,11 @@ A cumulative creation count greater than 0 means explicit cache creation occurre
 ## Billing notes
 
 ```text
-输入费用 = 普通 tokens × 普通输入单价
-         + 缓存读取 tokens × 缓存读取单价
-         + 缓存创建 tokens × 缓存创建单价
+Input cost = ordinary input tokens × ordinary input unit price
+           + cache read tokens × cache read unit price
+           + cache creation tokens × cache creation unit price
 
-Token 总费用 = 输入费用 + 输出 tokens × 输出单价
+Total token cost = input cost + output tokens × output unit price
 ```
 
 - If unit prices are quoted per million tokens, divide the calculated amount by 1,000,000.

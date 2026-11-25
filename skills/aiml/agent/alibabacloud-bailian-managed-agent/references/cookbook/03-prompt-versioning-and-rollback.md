@@ -150,7 +150,7 @@ curl --user-agent "$BAILIAN_MANAGED_AGENT_SKILL_UA" --max-time 30 -X DELETE "$BA
   -H "Authorization: Bearer $API_KEY"
 ```
 
-> The SSE live stream (`GET /sessions/{id}/events/stream`, request header `Accept: text/event-stream`) can replace polling — accumulate streamed text by `sequence_number`; polling is simply easier in an evaluation script. Archive (`POST /sessions/{id}/archive`) or delete, one of the two: DELETE is cleaner inside an evaluation loop.
+> The SSE live stream (`GET /sessions/{id}/events/stream`, request header `Accept: text/event-stream`) can replace polling. Without Delta parameters, upsert completed events by ID; with Delta enabled, append fragments in arrival order by parent-message ID and content-block index, then replace full snapshots. Do not use `sequence_number` for assembly. Keep Thinking separate from the evaluated answer; see [event-stream.md](../integration/event-stream.md). Polling is simply easier in an evaluation script. Archive (`POST /sessions/{id}/archive`) or delete, one of the two: DELETE is cleaner inside an evaluation loop.
 
 The score logic: run triage once per ticket, tally "hits / total" per team.
 

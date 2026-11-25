@@ -34,7 +34,7 @@ The two complement each other; neither replaces the other.
 | Task duration | Seconds ~ minutes (timeout 30min-1h) | Minutes ~ hours, unattended long-horizon execution |
 | Tool capability | Plugin-style function calls | Sandbox built-in tools (bash / read / write / edit / glob / grep) + MCP + Skill; can execute code and read/write files |
 | Event model | Response-level streaming | Session-level SSE event stream with full history persisted |
-| Credential security | Managed by the app itself | Two layers: session environment variables injected in plaintext (non-sensitive config) + Vault centrally holding secrets (sandbox only sees placeholders; the egress gateway substitutes per the allowlist; credentials never enter the sandbox) |
+| Credential security | Managed by the app itself | Vault keeps direct header credentials outside the sandbox through placeholders and destination-scoped substitution. Session environment variables carry real values for config or verified local-signing compatibility, with additional runtime/Session-reader exposure; see [credential selection](../cookbook/08-vault-secret-injection-and-egress-gateway.md#sdkcli-local-signing-and-hmac-user-clarification-2026-11-10) |
 | Scheduling | Triggered by the business side | Built-in Deployment (scheduled / on-demand / Webhook notification) |
 | Billing | Mostly by Token / call count; consumption is small | Token + sandbox runtime duration; **token consumption is often several times that of a Q&A agent** |
 | Comparable competitors | Coze, Dify, Baidu Qianfan AppBuilder | Claude Managed Agents, etc. |
@@ -65,7 +65,7 @@ Closing pitch: **the cost of self-building is not "getting it to run once" — i
 
 Official wording you can state directly:
 - **Container-level fully isolated sandbox**: command execution, file read-write, and network access are all sandboxed; guards against privilege escalation / escape; recyclable at session end.
-- **Credentials never touch the sandbox (2026-09 security model, field-tested)**: Vault centrally manages them and never echoes plaintext; **the sandbox only receives placeholders** (`BMA_SECRET_PLACEHOLDER_*`); real values only substitute the `Authorization` header when the egress gateway hits that credential's `allowed_hosts` allowlist — secret plaintext never enters the sandbox, the model context, or the event stream.
+- **Vault injects placeholders into the sandbox** (`BMA_SECRET_PLACEHOLDER_*`): for destinations matching the credential's `allowed_hosts`, the gateway replaces matching placeholders in **all HTTP request headers**, including `Authorization` and `X-API-Key`. Request-body and query-parameter placeholders remain unchanged ([scope updated 2026-11-02](status.md#vault-header-replacement-scope-2026-11-02)). Avoid services that echo received credentials into responses, which could expose them to the sandbox, model context, or event history.
   Non-sensitive config goes through session-level `environment_variables` (plaintext passthrough), layered separately from secrets.
 - **Egress leak prevention**: requests to non-whitelisted hosts carry the placeholder as-is; the destination never sees the real secret.
 - **Hard network isolation**: the Harness and the sandbox network are isolated.
@@ -97,6 +97,7 @@ Billing wording (official billing page: https://docs.agent.bailian.aliyun.com/zh
 - Session runtime fee **0.5 CNY/hour** (billed only while running, not while idle; sub-hour usage pro-rated precisely by actual duration)
 - **Model invocation fee is separate** (per Bailian's public pay-as-you-go standard); CMA token consumption is often several times that of a Q&A agent
 - Tool / MCP invocation fee is separate
+- Snapshot storage is separate: **0.003 CNY per snapshot-hour** (user clarification, 2026-11-17), including retention while the Session is idle. Configuration, renewal and the five-day illustration: [sandbox persistence](../integration/sandbox-persistence.md). This price is not yet listed on the general billing page checked that day.
 - **10 hours** of free runtime granted, no session-count limit, **offsets only the runtime fee** (not model or tool fees), valid for **30 days**
 
 **Official billing example** (usable to walk customers through the math): 2 sessions each running 5 hours, together consuming 1M Input + 200K Output Tokens of qwen-plus
@@ -113,18 +114,20 @@ quoting only 0.5 CNY/hour severely underestimates the total.
 
 Quoting method: estimate the runtime fee from "daily session count × average runtime", then estimate the model fee separately;
 check the account's actual quota with `bl quota` / `bl usage` (skill `bailian-cli`).
-**Cost-saving tip**: archive sessions promptly when tasks finish, to avoid paying for idle spinning.
+**Cost-saving tip**: idle itself incurs no runtime fee. When no more runs are needed, archiving triggers snapshot release and retains event history, but makes the Session terminal; do not archive a Session the user intends to resume.
 
 ## Common misconceptions, corrected
 
 | What users say | Correction |
 | --- | --- |
 | "CMA is just a hosted version of the agent app" | Different positioning: 2.5 is light-interaction Q&A; CMA is heavy-execution infrastructure |
-| "0.5 CNY/hour is the whole cost" | Model fees and tool/MCP fees are billed separately, and token consumption is larger |
-| "A session burns money as soon as it's created" | Only the "running" state is billed; idle is free |
-| "Memory Store and Bailian Memory Library are the same" | MA Memory Store is launched built-in working memory. Bailian Memory Library is a separate service for UserId-scoped personalized memory; their APIs and identifiers are not interchangeable. See [status.md](status.md) |
+| "0.5 CNY/hour is the whole cost" | Model, tool/MCP, and optional snapshot storage fees are separate |
+| "A session burns money as soon as it's created" | Runtime is billed only while running; snapshot storage is charged while snapshots are retained, including idle time |
+| "Every return to idle extends the snapshot by another three days" | Retention restarts only on successful creation of a new snapshot; recovery alone leaves the old deadline unchanged. See [lifecycle](../integration/sandbox-persistence.md). |
+| "A snapshot restores every file and background process" | Only working files/environment changes use snapshot recovery. Uploads, synchronized artifacts, Memory and Skills use external bindings; processes are not retained. |
+| "Memory Store and Bailian Memory Library are the same" | Both can be mounted in MA Session `resources`, but use different providers: `default` for built-in files, `agentstudio_memory` for Bailian Memory Library with required `entity_id` and no mount path. One Session cannot mix providers; service APIs and IDs are not interchangeable. See [knowledge and memory](../integration/knowledge-and-memory.md) |
 | "How should an Agent access the web?" | Prefer built-in `web_search` for search and `web_fetch` for reading pages; enable these exact names in `builtin_toolkit.configs[]`. Use MCP for `browser_use` or specialized integrations. The old “no such built-in” observation is superseded. |
-| "Enabling `enabled: true` under `default_config` turns tools on" | It does not. They must be listed one by one in `configs[]`, otherwise the agent only gets `mark_artifacts` and replies "I have no tools available" |
+| "`default_config` is a master switch that overrides `configs[]`" | Explicit `configs[]` entries take precedence; unlisted tools use `default_config`. Prefer a disabled default and explicitly enable required tools for stability. Use an enabled default to automatically adopt new tools. See [tool configuration](../integration/tool-configuration.md). |
 | "Webhook isn't live yet, only polling" | The whitepaper wording lags; `webhook_endpoints` **is field-tested as usable**; but delivery is at-least-once and may be out of order — receivers must be idempotent |
 | "`download_file` still works for fetching outputs" | Officially announced as deprecated. Fetch outputs via `/mnt/session/outputs/` auto-scan + `GET /files/{id}/content` |
 | "Some capabilities can only be clicked in the console" | Mostly API First: the full lifecycle of core resources is API-driven; the known exception is registering custom MCP services (console only; the API side can only reference registered services) |

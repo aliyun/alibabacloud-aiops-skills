@@ -2,7 +2,7 @@
 
 The skill version is the top-level `version` string in [../manifest.json](../manifest.json), not the CLI/SDK version. The skill name comes from SKILL.md frontmatter. Never hardcode a session ID or copy one from another skill.
 
-At the start of each invocation of this skill, generate a fresh random 32-character lowercase hexadecimal session ID with `secrets.token_hex(16)`. Generate it once per invocation, not per HTTP request. Reuse it across requests, retries, polling, SSE reconnects, subprocesses, and transport fallback in that invocation. Every other skill invocation generates its own ID; do not reuse an inherited generic UA or another skill's ID. A new run must regenerate it.
+When an invocation will send cloud requests, generate a fresh random 32-character lowercase hexadecimal session ID with `secrets.token_hex(16)` before its first request. Generate it once per invocation, not per HTTP request. Reuse it across requests, retries, polling, SSE reconnects, subprocesses, and transport fallback in that invocation. Every other executing invocation generates its own ID; do not reuse an inherited generic UA or another skill's ID. For offline explanations or code examples, show placeholders/runtime initialization without running the helper.
 
 ## Initialize once
 

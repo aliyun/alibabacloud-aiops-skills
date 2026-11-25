@@ -73,12 +73,14 @@ client = Client(
 
 ## The minimal integration loop (three steps)
 
+The SDK sample below receives completed events and prints only answers. For incremental answer and Thinking text, follow the [shared event-stream reference](event-stream.md); do not assume opening SSE alone enables Delta output.
+
 **Prerequisite readiness gates**: an Environment with preinstalled packages may still be preparing after creation, and Session creation can fail during that window. Wait using the [environment readiness guidance](../tutorials/05-environment-packages.md). Uploaded files must pass detection/security review and reach `available` before attachment; use the bounded [file polling loop](../tutorials/03-mount-files.md). The abbreviated snippet below assumes both gates have passed.
 
 ```
 (1) Upload a file (optional), wait for available; wait for Environment preparation
 → (2) Create a Session (bind Agent + Environment, attach ready files, attach Vault)
-→ (3) Send a message + subscribe to the SSE event stream until session_status turns idle
+→ (3) Establish SSE, send the message, then inspect session_status + stop_reason for the turn outcome
 ```
 
 ```python
@@ -96,9 +98,10 @@ session = client.sessions.create(
     resources=[{"type": "file", "file_id": file.id, "mount_path": "/uploads/workspace/data.txt"}],
     environment_variables={"API_BASE_URL": "https://new.example.com", "LOG_LEVEL": "info"},
                                                  # plaintext-injected sandbox env vars (the agent reads real values from os.environ);
-                                                 # echoed verbatim in the create response — put only non-sensitive config here
-    vault_ids=["vlt_xxx"],                    # high-sensitivity secrets go into the Vault (sandbox sees only placeholders; the egress gateway substitutes),
-                                              # for the two-path selection see "The two credential-injection paths" in api-endpoints.md
+                                                 # echoed in create/GET responses — this example uses non-sensitive config only
+    vault_ids=["vlt_xxx"],                    # direct header credentials: sandbox sees placeholders; the gateway substitutes
+                                              # local signing/HMAC needs real key material and protected request/response handling;
+                                              # see "The two credential-injection paths" in api-endpoints.md before adapting this example
     metadata={"biz_ticket_id": "1234"},       # business-side correlation key; does not affect model behavior
 )
 
@@ -127,13 +130,13 @@ The pure-REST curl request bodies are in [api-endpoints.md](api-endpoints.md).
 
 ## The event contract (required reading for parsing the event stream)
 
-Events and messages share the same structure; the `type` field distinguishes kinds. **The server pushes at least 23 event types** (the SDK enum's 22 + the out-of-enum
+Completed events share the Message structure; `type` distinguishes business kinds. Raw Delta content frames have a different shape: dispatch on `object` + `status` + `type` and resolve `msg_id` against the parent, as described in [event-stream.md](event-stream.md). **The server pushes at least 23 event types** (the SDK enum's 22 + the out-of-enum
 `tool_approval_request`); the business side handles only the kinds it cares about and must safely ignore the rest (otherwise newly added types will crash the flow):
 
 | Group | type | How the business side uses it |
 | --- | --- | --- |
 | Body | `message` | Concatenate and render in event **arrival order** (`sequence_number` is observed to be always null — do not rely on it) |
-| Thinking | `reasoning` | Render if you show a "thinking" indicator; otherwise ignore |
+| Thinking | `reasoning` | Render Thinking text incrementally and separately from answers; see the dated frame formats below |
 | Tools | `tool_call` / `tool_call_output` / `function_call` / `function_call_output` / `mcp_call` / `mcp_call_output` / `tool_approval_request` | Show execution progress, audit trail; `tool_approval_request` is an approval request (out of the SDK enum; appears when `permission_policy` is configured) |
 | Session | `session_status` / `session_updated` / `error` | `session_status` is the **loop exit condition**; `error` must be logged |
 | Sub-threads | `thread_created` / `thread_status` / `thread_message_sent` / `thread_message_received` / `thread_context_compacted` | Multi-thread orchestration and context compaction; usually ignored |
@@ -184,8 +187,8 @@ the SDK already wraps them as the `ev.session_status` / `ev.stop_reason` propert
 ## Launched extensions: images, Delta and Thinking
 
 - Images: use `content: [{"type":"image","file_id":"<available image>"}]` alongside a text block. **`performance` does not support multimodal input** (user-confirmed 2026-10-09); use a supported model. The online retest passed with `auto`, `qwen3.8-max`, and `qwen3.7-plus`. Inline Base64 `image_data` is currently unsupported (user-confirmed 2026-09-18); the earlier official documentation claiming support was incorrect. Use the tested file-ID path. Consult updated docs and re-test before adopting any future Base64 support; see [cookbook 10](../cookbook/10-multimodal-input.md).
-- Delta: repeated `event_deltas[]=message` and `event_deltas[]=reasoning` on the SSE GET enable `event_start` / `event_delta` plus final full messages. Group by event ID and content-block index; do not append the final full message twice. SDK 1.27.3 has no corresponding stream argument; use REST. For backend-to-UI handling, recovery, and attachment interactions, see [cookbook 11](../cookbook/11-client-integration-practice.md).
-- Thinking: `reasoning` start/final events may occur without text deltas. Do not require visible reasoning text to recognize progress.
+- Delta: subscribe with repeated `event_deltas[]=message` and `event_deltas[]=reasoning` on the SSE GET. The **2026-10-23 cn-beijing retest** received `object=message,status=in_progress` parent frames, then `object=content,type=text` frames keyed by `msg_id` + `index`: append `text` only for `delta=true`; replace the block for `delta=false,status=completed`. Finally replace provisional content with the completed Message. Documentation and the 2026-10-09 snapshot use `event_start/event_delta` instead; support the observed envelope rather than assuming one format. SDK 1.27.3 lacked the stream argument in the archived test; verify newer SDK support. Details and examples: [cookbook 11](../cookbook/11-client-integration-practice.md).
+- Thinking: **nonempty reasoning text was verified in 5/5 fresh Sessions** with `qwen3.8-max` and `enable_thinking=true` (2026-10-23). Subscribe to `event_deltas[]=reasoning`, and route content by its parent message type so it does not enter the answer. Verify nonempty fragments and agreement with the block snapshot, completed reasoning event, and history. See [Thinking evidence](../cookbook/11-client-integration-practice.md#4-separate-thinking-activity-from-turn-completion).
 - Error details are in the top-level `error` object; tool failure is the top-level `is_error` flag.
 
 ## The 8 things production integration must handle
@@ -197,9 +200,9 @@ the SDK already wraps them as the `ev.session_status` / `ev.stop_reason` propert
 5. **Event fault tolerance**: unknown event types must not crash the flow; persist the raw payload on parse failure for troubleshooting.
 6. **Idempotency**: for scheduled / event-triggered scenarios use a business idempotency key against duplicate submissions.
 7. **Observability**: log `session_id` and the response header `x-request-id`; attaching `x-request-id` to support tickets speeds up diagnosis.
-8. **Cost control**: **a session accrues runtime fees only while running (0.5 CNY/hour, sub-hour pro-rated precisely by actual duration); idle is free**
-   — official commercialized billing has three parts: session runtime fee + model invocation fee (tokens billed separately) + tool/MCP invocation fee,
-   plus a 10-hour runtime free quota (valid 30 days). Archive sessions promptly when tasks finish, and cap per-session turns to keep runaway loops from burning quota.
+8. **Cost control**: **a Session accrues runtime fees only while running (0.5 CNY/hour, sub-hour pro-rated precisely by actual duration); retained snapshots can incur separate charges while idle.**
+   Runtime, model tokens and tool/MCP calls are billed separately; optional snapshot storage adds **0.003 CNY per snapshot-hour** (user clarification, 2026-11-17; [lifecycle and billing](sandbox-persistence.md)).
+   The 10-hour free quota (valid 30 days) covers runtime only. Archive when no more runs are needed: this triggers snapshot cleanup and makes the Session terminal. Cap per-session turns to keep runaway loops from burning quota.
 
 ## The three most frequent pitfalls
 

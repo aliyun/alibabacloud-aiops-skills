@@ -153,8 +153,8 @@ def check(root, apply=False, user_agent=None):
         return dict(result, status='up_to_date' if latest == current else 'local_newer')
     if not apply:
         return dict(result, status='update_available',
-                    message=f'当前 Skill 版本为 {current}，发现新版本 {latest}。是否更新？'
-                            '暂不更新也可以继续当前任务，但 Skill 中的知识可能落后于最新版本。')
+                    message=f'The current skill version is {current}; version {latest} is available. Would you like to update? '
+                            'You can continue the current task without updating, but the skill knowledge may be outdated.')
     if any((parent / '.git').exists() for parent in (root, *root.parents)):
         return dict(result, status='source_checkout')
     payload = fetch(DOWNLOAD_URL, user_agent, MAX_ZIP)
@@ -162,7 +162,7 @@ def check(root, apply=False, user_agent=None):
     result['user_agent'] = user_agent.rsplit(' skill-version/', 1)[0] + ' skill-version/' + latest
     return dict(result, status='updated', installed_version=latest, backup_path=str(backup),
                 restart_recommended=True,
-                message='Skill 已更新；建议新建对话以刷新宿主缓存的 Skill 列表和 description。')
+                message='The skill has been updated. Start a new conversation to refresh the host\'s cached skill list and description.')
 
 
 def main():

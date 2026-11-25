@@ -21,11 +21,11 @@ All requests carry `Authorization: Bearer $API_KEY`. The multi-agent `multiagent
 
 For the model ID use a field-tested one: `qwen3.8-max` / `qwen3.7-max` / `qwen3.7-plus` (generic IDs like `qwen3-max` are rejected with 400). Every roster member is a full Agent, **so different models can be mixed by role** — flagship models for high-value writing/coordination, cheaper tiers for mechanical file-reading and rule-application; cost separation is just a matter of different model IDs. This example uniformly uses `qwen3.7-plus`.
 
-Two traps that come up repeatedly in multi-agent scenarios, stated up front:
+Two configuration notes for multi-agent scenarios:
 
 > **Updated:** built-in `web_search` / `web_fetch` are launched and preferred. The following MCP variant and its historical traces are retained only for explicit MCP integration.
 
-> **`default_config.enabled: true` does not deliver the tools to the model.** Both `builtin_toolkit` and `mcp_toolkit` require every tool explicitly `enabled: true` in `configs[]`, otherwise the agent holds only the platform-injected `mark_artifacts` (01 covered this trap; it applies to multi-agent members too).
+> **Keep each member's tool inventory explicit.** For both `builtin_toolkit` and `mcp_toolkit`, `configs[]` entries take precedence and unlisted tools use `default_config`. These examples use a disabled default and explicitly enable required tools, so toolkit additions do not broaden a member's tools. Use an enabled default only when automatic adoption is desired. See [configuration priority](../integration/tool-configuration.md).
 
 ---
 
@@ -53,7 +53,7 @@ curl --user-agent "$BAILIAN_MANAGED_AGENT_SKILL_UA" --max-time 30 -X POST "$BASE
       { "type": "builtin_toolkit", "default_config": { "enabled": false },
         "configs": [ { "name": "read", "enabled": true } ] },
       { "type": "mcp_toolkit", "mcp_server_name": "WebSearch",
-        "default_config": { "enabled": true },
+        "default_config": { "enabled": false },
         "configs": [ { "name": "bailian_web_search", "enabled": true } ] }
     ]
   }'
@@ -382,12 +382,12 @@ The three reports differ sharply — the researcher delivers external intelligen
 
 The previous three sections covered the server-side observation surface. To consume this stream on the client, there is one core data structure — **a bucketed dictionary keyed by `thread_id`** — plus four field-tested behaviors; the rendering logic is simpler than you'd think:
 
-1. **Deduplicate by event `id`.** All 168 frames this turn were unique; SSE offers no cursor / resume token, and a reconnected stream may replay old frames — dedupe by `id` (01's conclusion, equally valid in multi-agent).
-2. **Assistant text arrives whole; no incremental assembly needed.** Some tutorial ecosystems tell you to "accumulate tokens by `sequence_number` for a live preview" — that mechanism does not appear on this platform: this turn's 17 assistant messages had `sequence_number` **all `null`**, with no multi-frame increments under the same id; every text arrives whole in one frame (`status: "completed"`) — 01's single-agent field-test conclusion holds again in multi-agent. Parse as "if `sequence_number` exists, accumulate in order; otherwise treat it as whole" for maximum robustness. The multi-agent "live feel" actually comes mostly from structural events: `thread_created` (who started), `thread_status` (who finished), `mcp_call` / `tool_call` (who is doing what).
-3. **`session_status` is the only session-level event.** This turn's only 2 events without `thread_id` were exactly those (running and idle+stop_reason); treat them as session state during splitting — they belong to no thread.
+1. **Deduplicate completed events by `id`.** All 168 complete events in this run were unique. Reconcile stream/history by event ID after reconnect; do not assume SSE replays history or deduplicate individual delta fragments by parent ID.
+2. **This subscription receives completed messages.** The example does not request `event_deltas[]`, so its assistant messages arrive whole. For incremental answer and Thinking text, enable both Delta types and use [the shared frame adapter](../integration/event-stream.md): append in arrival order, replace snapshots, and separate reasoning from answers. Null `sequence_number` does not mean Delta is unavailable.
+3. **Route complete events by `thread_id`.** The two events without that field in this recorded run were session statuses. Delta content/start frames may also omit thread metadata; resolve their parent message and buffer until ownership is established instead of assigning them to the coordinator.
 4. **The primary thread has no `thread_created`.** The `thrd_` thread exists before the stream starts — when first meeting some `thrd_` event, just register it as the coordinator.
 
-Assembled, these give a ~50-line team workbench (the script was replay-verified on field-test logs):
+Assembled, these give a completed-event team workbench (the original script was replay-verified on field-test logs). The example does not enable Delta; use the shared adapter before adding Delta query parameters:
 
 ```python
 #!/usr/bin/env python3
@@ -398,13 +398,17 @@ Assembled, these give a ~50-line team workbench (the script was replay-verified 
 import json, sys
 
 threads = {}   # thread_id -> {name, status, last}
-seen = set()   # event-id dedup (a reconnected stream may replay old frames)
+seen = set()   # completed-event IDs when reconciling stream/history
 
 def feed(line):
     d = json.loads(line)
-    if d.get("id") in seen:
+    if d.get("object") == "content" or d.get("status", "completed") != "completed":
         return
-    seen.add(d.get("id"))
+    event_id = d.get("id")
+    if event_id and event_id in seen:
+        return
+    if event_id:
+        seen.add(event_id)
     t, typ = d.get("thread_id"), d.get("type")      # session_status has no thread_id
 
     if typ == "session_status":                      # session-level event
@@ -427,9 +431,11 @@ def feed(line):
     elif typ in ("tool_call", "mcp_call"):           # the main source of the live feel
         data = (d.get("content") or [{}])[0].get("data", {})
         print(f"[{threads[t]['name']}] {data.get('name', typ)}")
-    elif typ == "message" and d.get("role") == "assistant":
-        threads[t]["last"] = "".join(c.get("text", "") for c in d.get("content") or [])
-        print(f"[{threads[t]['name']}] {threads[t]['last'][:80]!r}")
+    elif typ in ("message", "reasoning") and d.get("role") == "assistant":
+        field = "thinking" if typ == "reasoning" else "last"
+        threads[t][field] = "".join(c.get("text", "") for c in d.get("content") or [])
+        label = " Thinking" if typ == "reasoning" else ""
+        print(f"[{threads[t]['name']}{label}] {threads[t][field][:80]!r}")
 
 for ln in sys.stdin:                                 # one line per frame: data:{...}
     ln = ln.rstrip("\n")

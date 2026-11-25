@@ -126,11 +126,10 @@ agents:
 - Built-in `web_search` / `web_fetch` are launched and preferred for search/page reading. Enable these exact names and read back the Agent config. `browser_use` is available through MCP.
   A successful `validate` alone does not establish runtime tool availability.
   See [launch status](../product/status.md) and verify current configuration fields.
-- **One more trap when creating Agents via plain REST** (CLI users won't hit it; code writers will):
-  writing only `default_config.enabled: true` in `tools[]` **does not actually deliver the tools** —
-  you must list each one in `configs[]` as `{"name": "bash", "enabled": true}`. Miss it and you get
-  `TOOL_NOT_FOUND: Tool 'bash' not found. Available tools: ['mark_artifacts']`, with the Agent
-  concluding "I have no tools available". Full example in
+- **Tool configuration when creating or updating Agents via REST**: explicit `configs[]` entries take precedence;
+  unlisted tools use `default_config`. Prefer `default_config.enabled: false` and entries such as
+  `{"name": "bash", "enabled": true}` so newly added tools stay disabled until deliberately enabled.
+  Use an enabled default if automatic adoption is desired. See [configuration priority](../integration/tool-configuration.md); full Agent example in
   [../cookbook/01-get-started-data-analysis-agent.md](../cookbook/01-get-started-data-analysis-agent.md) Step 1.
 
 **How to verify**: `bl managed-agent session events --session-id <id> --all` shows the full event

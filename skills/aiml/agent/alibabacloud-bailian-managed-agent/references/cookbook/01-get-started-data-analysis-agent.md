@@ -37,9 +37,9 @@ The output quality of a data-analysis agent lives mostly in the system prompt. I
 
 Tools use the builtin toolkit, `type` being `builtin_toolkit` (an Agent carries at most 1 builtin toolkit). **Six configurable core tools**: `bash`, `read`, `write`, `edit`, `glob`, `grep` — all enabled in this example. Two others to avoid: `download_file` **is officially announced as offline — stop adding it to configs** (some workspaces can still call it during the transition; do not rely on it; retrieve artifacts via the Files API, see Step 6); `mark_artifacts` is injected automatically by the platform runtime and needs no declaration (the example below still lists it explicitly only for a self-evident tool inventory; omitting it changes nothing). For internet access, prefer built-in `web_search` / `web_fetch`, enabled in the same toolkit. Use MCP for browser interaction or specialized services.
 
-> ⚠️ **The most common trap: `default_config.enabled: true` does not actually deliver the tools to the model.** Every tool you want must be **explicitly listed one by one** in `configs[]` with `enabled: true`. With only `default_config.enabled: true` and no `configs`, the tool list the agent receives contains just the platform-injected `mark_artifacts`; any `bash` call then returns `TOOL_NOT_FOUND: Tool 'bash' not found. Available tools: ['mark_artifacts']`, and the turn ends with an apology about having no tools.
+> **Recommended tool configuration:** set `default_config.enabled: false` and explicitly enable required tools in `configs[]`. Explicit entries take precedence; unlisted tools use the default. This keeps new tools disabled until deliberately adopted. Use an enabled default when automatic adoption of toolkit additions is desired. See [configuration priority](../integration/tool-configuration.md) (user clarification, 2026-10-29, superseding the earlier missing-tool interpretation).
 
-Pick `qwen3.8-max` for the model. Managed Agents currently accepts model IDs from this generation: `qwen3.8-max` / `qwen3.7-max` / `qwen3.7-plus` / `qwen3.6-plus` / `qwen3.6-flash` (field-tested workspaces also run `auto`, `glm-5.2`, `deepseek-v4-pro`) — legacy generic DashScope IDs like `qwen3-max` are rejected outright (`400 AGENT_010 model not found`). The definitive list is Bailian's official support list.
+This recipe uses `qwen3.8-max`. For all four intelligent modes and the explicit supported models, see [available models](../product/concepts.md#available-models). Use exact IDs: the archived test rejected the generic DashScope ID `qwen3-max` with `400 AGENT_010 model not found`.
 
 The system prompt contains newlines; stuffing it into shell single quotes is error-prone — write it to a file first and use `-d @`:
 
@@ -53,7 +53,7 @@ cat > agent.json <<'EOF'
     {
       "type": "builtin_toolkit",
       "default_config": {
-        "enabled": true,
+        "enabled": false,
         "permission_policy": { "type": "always_allow" }
       },
       "configs": [
@@ -87,7 +87,7 @@ Two lines in this prompt are the crux of this example and worth calling out:
 - **"run a data-quality check first"**: without it the model tends to `read` a glance of the data and start reporting numbers, silently carrying dirty data into conclusions.
 - **"data that looks extreme but is internally consistent — do not delete"**: this is the guardrail against **over-cleaning**. Our dataset plants one wholesale order with a huge but fully legitimate amount, accounting for over half of total revenue. Without this line the model would likely drop it as an outlier and report a "prettier" but wrong total.
 
-> Note: `builtin_toolkit` has two switch levels — `default_config.{enabled, permission_policy}` and `configs[].{name, enabled, permission_policy}`. `permission_policy` is a real field (this example uses `{ "type": "always_allow" }` so tool calls execute directly, no confirmation round trip). If a tool call ever needs human approval it surfaces via SSE `stop_reason.type == requires_action`; you then send a `tool_approval_response` event to approve. This beginner example does not hit that path.
+> Note: `builtin_toolkit` has fallback configuration in `default_config.{enabled, permission_policy}` and explicit tool configuration in `configs[].{name, enabled, permission_policy}`. `permission_policy` is a real field (this example uses `{ "type": "always_allow" }` so tool calls execute directly, no confirmation round trip). If a tool call ever needs human approval it surfaces via SSE `stop_reason.type == requires_action`; you then send a `tool_approval_response` event to approve. This beginner example does not hit that path.
 >
 > Also, the platform **auto-injects a `mark_artifacts` tool** (no need — and no way — to declare it in `configs`). The agent uses it to register artifacts under `/mnt/session/outputs/` and **get `file_id` back instantly**, optionally attaching a description — the recommended route for Step 6 retrieval. Note registration is not an "exit permit": the outputs directory itself is scanned by the platform, and unregistered files can still be found in the file listing and downloaded later (field-tested); the value of `mark_artifacts` is **not having to wait for the scan or dig through the listing afterwards**.
 
@@ -382,7 +382,7 @@ Event `type` values you will actually see:
 | `type` | Meaning |
 |---|---|
 | `message` | Message text. `role: user` is the echo of what you sent; `role: assistant` is agent output; the text is in `content[].text` |
-| `reasoning` | Thinking placeholder event; field-tested it carries **no `content` field** (be defensive when parsing — do not blindly take `d["content"]`) |
+| `reasoning` | Thinking text in the completed event's `content[]`; enable `event_deltas[]=reasoning` for incremental text. Start/content frames have different shapes; see [the shared parser reference](../integration/event-stream.md) |
 | `tool_call` | The agent calls a tool; `content[0].data` = `{ name, arguments, call_id }` |
 | `tool_call_output` | Tool return; `content[0].data` = `{ name, call_id, output }`, where `output` is a JSON **string** |
 | `model_request_start` / `model_request_end` | Start/end of each model request; `_end`'s `content[0].data` carries `input_tokens` / `output_tokens` / cache hits — handy for cost accounting |
@@ -527,7 +527,7 @@ After archiving, the Session's `status` becomes `terminated`; the Environment an
 
 - **Agent / Environment / Session, three decoupled layers**: the Agent is the versionable "persona + tools", the Environment the reusable "sandbox template", the Session one self-contained run. The first two are built once and reused.
 - **Dependencies live in the Environment, not in the turn**: packages declared in `config.packages.pip` are ready at container start (field-tested `pandas 2.2.3` / `openpyxl 3.1.5`), so the agent spends no tokens or time on `pip install`. Reading `.xlsx` — remember `openpyxl`.
-- **Tools must be enabled one by one**: `default_config.enabled: true` is only the toolkit master switch; what actually decides which tools the model gets is each `enabled: true` entry in `configs[]`. Skip this and the agent has only `mark_artifacts`.
+- **Explicit tool configuration takes precedence**: unlisted tools use `default_config`. This example disables the default and enables required tools individually so toolkit additions do not change its enabled inventory.
 - **Uploads are constrained by the extension whitelist**: `.csv` is rejected with `415`, `.xlsx` passes — so prefer Excel for datasets. If you must ship CSV, upload as `.txt` / `.zip` and use `mount_path` to name it back; the sandbox filename is decided by `mount_path`. Also, binary files sit at `checking` after upload — wait for `available` before creating the Session.
 - **Files are read-only mounts + a writable workspace**: uploaded files mount under `/mnt/session/uploads/` (read-only); the agent must copy to `/mnt/user` or `/tmp` to modify, and write artifacts to `/mnt/session/outputs/`. Note `/mnt/user` and `/mnt/session/outputs` **may not exist yet** in a fresh container (field-tested: the agent's first `ls /mnt/user` got "No such file"); `mkdir -p` before copying covers it.
 - **Artifacts exit via `/mnt/session/outputs/`**: files written there get scanned by the platform; after the turn they are visible and downloadable in the session-scoped file listing (field-tested: even unregistered ones download). The value of `mark_artifacts` is getting `file_id` **instantly** plus a description — no waiting for the scan, no digging through listings afterwards, and one call registers multiple artifacts.
@@ -576,9 +576,9 @@ In production, when the agent runs for minutes and your handler cannot hold a lo
 
 ## Cheat sheet
 
-**Model IDs**: `qwen3.8-max` / `qwen3.7-max` / `qwen3.7-plus` (no flash tier; generic DashScope IDs like `qwen3-max` and `qwen-plus` are rejected).
+**Model IDs**: choose an intelligent mode (`auto`, `performance`, `balanced`, `economy`) or an explicit supported model. Flash and non-Qwen models are included; see the full [model and capability table](../product/concepts.md#available-models). Use exact IDs rather than generic DashScope aliases.
 
-**Builtin tools**: six configurable core tools — `bash`, `read`, `write`, `edit`, `glob`, `grep`, **each requiring `enabled: true` in `configs[]`**. The platform additionally auto-injects `mark_artifacts` (no declaration needed). `download_file` is officially offline — stop configuring it. Prefer the launched built-in `web_search` / `web_fetch` for internet search and page reading; use MCP for browser interaction or specialized integrations.
+**Builtin tools**: six configurable core tools — `bash`, `read`, `write`, `edit`, `glob`, `grep`; **prefer a disabled default and explicit `enabled: true` entries for required tools in `configs[]`**. The platform additionally auto-injects `mark_artifacts` (no declaration needed). `download_file` is officially offline — stop configuring it. Prefer the launched built-in `web_search` / `web_fetch` for internet search and page reading; use MCP for browser interaction or specialized integrations.
 
 **Upload whitelist** (by extension): `.txt` `.md` `.json` `.yaml` `.py` `.html` `.xml` `.xlsx` `.pdf` `.zip` accepted; `.csv` `.tsv` `.yml` `.sh` `.log` `.dat` `.parquet` `.gz` `.ipynb` and extension-less files rejected with `415`. Changing the MIME type does nothing. **Tabular data goes as `.xlsx`** (remember `openpyxl` in the Environment). After upload, wait for `status` to go from `checking` to `available` before mounting.
 

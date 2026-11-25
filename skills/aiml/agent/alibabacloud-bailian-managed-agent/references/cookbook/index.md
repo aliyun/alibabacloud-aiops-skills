@@ -6,6 +6,8 @@
 > **the cookbook is organized by business scenario** (Yunling Tea's morning-brief bot, Shibei E-commerce's reconciliation notifier) — one recipe chains several capabilities into a complete pipeline.
 > "How do I use this feature" → tutorials; "how does my business scenario land end to end / give me a complete example" → the cookbook.
 
+**2026-10-23 follow-up:** recipe 11 verifies nonempty Thinking text in **5/5 fresh Sessions**, with `object=message/content` frame handling and comparison against full events/history. This follow-up did not repeat recovery or file scenarios.
+
 ## Scenario → recipe mapping
 
 Match on the **business intent** in the user's description (not the action verb). When one intent hits multiple recipes, lead with the lower difficulty.
@@ -19,7 +21,7 @@ Match on the **business intent** in the user's description (not the action verb)
 | "Research online with built-in tools" / "multi-agent is too expensive" / "how to mix flagship and cheap models" | [05-coordinator-pattern-and-cost-tiering.md](05-coordinator-pattern-and-cost-tiering.md) | Web research, from one question to high-volume reading | built-in web_search / web_fetch / coordinator-worker model tiering / cost guardrails / controlled experiments | Advanced / Expert |
 | "Notify me when the task finishes" / "tired of polling" / "alert me when runs fail" | [06-webhook-event-notifications.md](06-webhook-event-notifications.md) | Shibei E-commerce · reconciliation notifier | Webhook resources (`wep_`) / 32 named events / receiver-side implementation / HMAC signature verification / at-least-once and reordering / retry semantics | Advanced |
 | "We already have an MCP Server / an internal SOP — can we hook it up" | [07-custom-mcp-and-skills.md](07-custom-mcp-and-skills.md) | Luming Publishing · manuscript-review assistant | custom MCP (`type: customer`) registration and mounting / custom Skill packaging, upload, and versioning / runtime event-stream verification | Advanced |
-| "How do I hand secrets to the Agent / is it safe" / "keep API keys out of code and logs" / "the compliance review needs the secret chain explained" / "passing config into sessions" | [08-vault-secret-injection-and-egress-gateway.md](08-vault-secret-injection-and-egress-gateway.md) | A weather assistant · external API calls | Vault placeholder injection / `allowed_hosts` egress allowlist / egress gateway Authorization replacement / session environment variables vs. Vault selection / TLS pitfalls | Advanced |
+| "How do I hand secrets to the Agent / is it safe" / "keep API keys out of code and logs" / "the compliance review needs the secret chain explained" / "passing config into sessions" | [08-vault-secret-injection-and-egress-gateway.md](08-vault-secret-injection-and-egress-gateway.md) | A weather assistant · external API calls | Vault placeholder injection / `allowed_hosts` egress allowlist / placeholder replacement in all HTTP request headers / session environment variables vs. Vault selection / TLS pitfalls | Advanced |
 | "Next session should pick up my project notes" | [09-working-memory-handoff.md](09-working-memory-handoff.md) | Project handoff | MA Memory Store / explicit write-back / cross-session readback | Advanced |
 | "Have the Agent answer a question about an image" / "how to send multimodal input" | [10-multimodal-input.md](10-multimodal-input.md) | Image-question service | image upload and review / file_id image blocks / model-route verification | Advanced |
 | "Build a conversation client" / "stream answers and show Thinking" / "let users add or remove attachments" | [11-client-integration-practice.md](11-client-integration-practice.md) | Web or mobile conversation client | backend event adapter / Delta assembly / Thinking and turn states / recovery / runtime file interactions | Advanced |
@@ -30,7 +32,7 @@ tutorials explain "how to configure this feature"; here you see "what it looks l
 
 | Capability | Feature tutorial | End-to-end practice |
 | --- | --- | --- |
-| Builtin toolsets and per-tool `configs[]` enablement | [../tutorials/01-ai-native-quickstart.md](../tutorials/01-ai-native-quickstart.md) | 01 Step 1, the two traps at the top of 04 |
+| Tool defaults and explicit `configs[]` overrides | [Configuration priority and recommended strategy](../integration/tool-configuration.md) | 01 Step 1, the configuration notes at the top of 04 |
 | File upload & mounting, artifact retrieval | [../tutorials/03-mount-files.md](../tutorials/03-mount-files.md) | 01 Step 3 / Step 6, 04 §3.1-3.2 (9 files) |
 | Deployment scheduling and triggering | [../tutorials/04-scheduled-deployment.md](../tutorials/04-scheduled-deployment.md) | 02 Step 5 (including the version-drift trap, pause / archive) |
 | Sandbox environment and dependencies | [../tutorials/05-environment-packages.md](../tutorials/05-environment-packages.md) | 01 Step 2, 04 §3.3 |
@@ -42,6 +44,7 @@ tutorials explain "how to configure this feature"; here you see "what it looks l
 | Agent versioning and rollback | _(no feature tutorial yet — the recipes are authoritative)_ | all of 03 |
 | Webhook event notifications | _(no feature tutorial yet — the recipes are authoritative)_ | all of 06 |
 | MA working memory / cross-session handoff | [Memory distinction](../product/status.md) | 09 |
+| Knowledge retrieval / Bailian Memory Library binding | [Knowledge and memory integration](../integration/knowledge-and-memory.md) | Retrieval service configuration; Session provider/entity/rules/profile settings and asynchronous persistence |
 | Built-in web search / page reading | [Current tool rules](../product/concepts.md#tool-and-mcp) | 05; browser interaction still uses MCP |
 | Multimodal image input | [Event contracts](../integration/api-quickstart.md) | 10; use the tested file_id image path |
 | Delta / Thinking / client recovery | [Event contracts](../integration/api-quickstart.md) | 11; backend-to-UI integration |
@@ -65,7 +68,7 @@ python3 -m venv /tmp/ma-cookbook-env
 /tmp/ma-cookbook-env/bin/pip install httpx
 ```
 
-Each recipe supplies its own `--scenarios` selection. Without `--execute`, the script only previews scope and does not load credentials. With `--execute`, it creates temporary synthetic resources, calls models/tools, and cleans up only IDs recorded from its own creation responses. Its shared fixture includes an Agent, Environment, and Memory Store even when a selected scenario does not use memory.
+Each recipe supplies its own `--scenarios` selection. Without `--execute`, the script only previews scope and does not load credentials. With `--execute`, it creates temporary synthetic resources, calls models/tools, and cleans up only IDs recorded from its own creation responses. Its shared fixture includes an Agent, Environment, and Memory Store. Selecting **only `delta`** instead uses a no-tool Agent and plain cloud Environment without memory or files; the scenario requires nonempty Thinking text and agreement with completed events/history.
 
 The recipe commands use `DASHSCOPE_API_KEY` already injected into the local environment. Set its matching workspace endpoint before running:
 

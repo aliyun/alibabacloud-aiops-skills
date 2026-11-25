@@ -169,6 +169,7 @@ Chain: `frontend ⇄ your business service (proxying) ⇄ CMA event stream`
 
 Key points:
 - **Listen before sending**: `stream` does not replay history; POST-then-connect loses the earlier events.
+- **Enable text deltas explicitly**: request `event_deltas[]=message` and `event_deltas[]=reasoning` for incremental answers and Thinking. Without these, SSE carries completed events. Use the [shared frame adapter](../integration/event-stream.md) and send separately typed answer/reasoning updates with block replacement semantics to the frontend.
 - **Session reuse**: one user's consecutive conversation reuses the same `session_id`; context carries forward automatically — no need to replay history yourself.
 - **Gateway config**: Nginx needs `proxy_buffering off;`, or SSE gets buffered into one lump response.
 - **The frontend holds no key**: the business service acts as the proxy layer, passing text through only, never credentials.
@@ -214,7 +215,7 @@ Key points (all endpoints below field-tested returning 200):
 - **The only required fields are `name` / `agent` / `initial_events`**; `environment_id` and `schedule` are both optional (no `schedule` means manual triggering only). Inside `agent`, `id` is required and `version` optional.
 - **Pin `agent.version`**: the official schema explicitly says "omitted means the latest version" — the behavior drifts the moment the Agent changes. Always pin in production.
 - **The cron is executed by the Bailian server**: if the business side already runs a cron for the same thing, confirm no double-triggering before going live.
-- **How artifacts return to the business system is your own design**: have the Agent proactively call your write-back API (credentials in a Vault — Deployments do not support session-level `environment_variables`; on the scheduled path `vault_ids` is the only injection route, while app-created sessions should prefer `environment_variables` for non-sensitive config; the two-path layering is in [../cookbook/08-vault-secret-injection-and-egress-gateway.md](../cookbook/08-vault-secret-injection-and-egress-gateway.md)), or have the business side periodically pull run records via `GET /deployments/{id}/runs` and collect artifacts from there.
+- **How artifacts return to the business system is your own design**: have the Agent proactively call your write-back API with compatible authentication, or have the business side periodically pull `GET /deployments/{id}/runs` and collect artifacts. Direct header credentials fit Vault; a verified local-signing SDK needs real key material or a trusted signer. The archived Deployment test ignored `environment_variables`; verify current support or use application-controlled Session creation for that compatibility case. See [credential selection and exposure controls](../cookbook/08-vault-secret-injection-and-egress-gateway.md#sdkcli-local-signing-and-hmac-user-clarification-2026-11-10).
 - During integration testing, trigger manually with `POST /deployments/{id}/run` instead of waiting for the schedule (it returns a `deployment_run` object carrying `status` and `trigger_source: manual`); it genuinely starts a Session and genuinely bills.
 - **Deployments cannot be deleted** (field-tested: `DELETE` returns `405 Method Not Allowed`). Stopping one takes exactly two routes: `POST /deployments/{id}/pause` to pause (`status` becomes `paused`), or archive. Don't count on delete-and-recreate.
 
@@ -229,13 +230,12 @@ field by field:
 
 ### 5. Event parsing: the three branches you must handle
 
-Whatever the shape or language, the event-loop skeleton is the same. Note **the dispatch key is
-the JSON body's `type` field**, not the SSE `event:` name (which is always `message`):
+Whatever the shape or language, dispatch from JSON, not the outer SSE `event:` name. For Delta streams, first handle `object=message,status=in_progress` parent registration and `object=content` text updates (`msg_id`, `index`, `delta`, `text`). Then dispatch completed business events by `type` below. Full rules and language-specific query encoding: [event-stream.md](../integration/event-stream.md).
 
 ```
 switch (event.type):
-  message                                    → accumulate body text in arrival order
-  reasoning                                  → reasoning trace; render if you show it
+  message                                    → upsert completed assistant answer by id; replace provisional content
+  reasoning                                  → upsert Thinking text separately; never merge it into the answer
   tool_call / tool_call_output               → render if you show the execution trace, else log only
   function_call / function_call_output       → same as above
   mcp_call / mcp_call_output                 → same as above
@@ -245,9 +245,7 @@ switch (event.type):
   default                                    → log and ignore; never throw and break the stream
 ```
 
-> **Do not sort by `sequence_number`**: the field exists but is field-tested to be `null` on every
-> event. Order by the SSE `id:` incrementing integer (valid only within the current connection) or
-> the event's `created_at`.
+> **Consume live deltas in arrival order.** `sequence_number` was null in the tests; content frames need not carry `created_at` or an SSE `id:` cursor. Do not sort or deduplicate fragments by those fields or by the block index. Reconcile completed events from history by event ID.
 
 **The server pushes at least 23 event types** (22 in the SDK enum + the approval event
 `tool_approval_request`; the full enumeration is in the Event section of
@@ -330,9 +328,10 @@ Without splitting, member texts interleave on the UI and failures can't be attri
 | POSTing a message returns only your own sentence, no model reply | Treating `POST /events` as a synchronous Q&A endpoint | It echoes only the submitted event. Model output comes via `GET /events/stream` (live) or `GET /events` (query back) |
 | Added `Accept: text/event-stream` yet still one lump of JSON | `POST /events` does not support streaming; the response header is always `application/json` | Switch to `GET /sessions/{id}/events/stream` |
 | SSE connects, shows only `:connected`, then nothing | The stream does not replay history; the session is already `idle` with nothing new to push | Attach the listener before sending; backfill history via `GET /sessions/{id}/events` |
-| No streaming over SSE; everything dumps at the end | curl lacks `-N`, or the gateway buffers responses | Add `-N`; set `proxy_buffering off` on Nginx |
-| Dispatching on the SSE `event:` name sends every event into one branch | Every event's `event:` name is `message` | Parse the `data:` JSON and dispatch on its `type` field |
-| Sorting by `sequence_number` scrambles everything | The field is field-tested to be always `null` | Use the SSE `id:` or the event's `created_at` |
+| No incremental text over SSE; answers appear at completion | Delta types were not requested, or client/proxy buffering is enabled | Request both `event_deltas[]` types and implement content-frame handling; use curl `-N` and disable proxy buffering |
+| Thinking text is missing from the UI | `reasoning` was not subscribed, the Agent snapshot lacks Thinking, or `object=content` frames are ignored | Verify Agent model settings and fresh Session, request `event_deltas[]=reasoning`, route text via its parent `msg_id`, and compare against completed reasoning/history |
+| Dispatching on the SSE `event:` name sends every event into one branch | The outer SSE name does not identify the business event | Parse JSON `object` / `status` / `type`; resolve content frames through their parent |
+| Sorting by `sequence_number` scrambles everything | The tested field was null; it is not a delta sequence | Preserve live arrival order; use event ID only to reconcile completed events |
 | The Agent says it cannot find the mounted file | The prompt wrote the `mount_path` value as-is | `mount_path` must start with `/uploads/`; the real in-container path = `/mnt/session` + the `mount_path` value — write the full real path in the prompt |
 | A freshly uploaded file fails to mount | The security scan has not finished | Wait until the status goes from `checking` to `available` before mounting |
 | Sending to a session returns `400 invalid_parameter: Session is archived` | The session was archived into the `terminated` terminal state | Terminal states are unrecoverable; create a new session to continue |
