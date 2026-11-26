@@ -60,7 +60,7 @@ def fetch_response(url: str, *, allow_redirects: bool = True, timeout: int = 0,
     'data' turns the request into a form POST for announcements or China trial cards;
     'headers' adds non-credential headers on top of the User-Agent.
     """
-    req = urllib.request.Request(url, data=data, headers={**(headers or {}), "User-Agent": help_const.UA})
+    req = urllib.request.Request(url, data=data, headers={**(headers or {}), "User-Agent": help_const.ua_for(url)})
     opener = urllib.request.urlopen if allow_redirects else _NO_REDIRECT_OPENER.open
     deadline = effective_timeout(timeout or TIMEOUT)
     meta = {"status": None, "retry_after": None, "truncated": False, "error": ""}
@@ -117,7 +117,7 @@ def fetch(url: str, max_bytes: int = 0, allow_redirects: bool = True, timeout: i
     timeout defaults to TIMEOUT (15 s for the China site); the international index leg passes
     its own larger value because its indexes are 4-6 times slower to serve.
     """
-    req = urllib.request.Request(url, headers={"User-Agent": help_const.UA})
+    req = urllib.request.Request(url, headers={"User-Agent": help_const.ua_for(url)})
     opener = urllib.request.urlopen if allow_redirects else _NO_REDIRECT_OPENER.open
     try:
         with opener(req, timeout=effective_timeout(timeout or TIMEOUT)) as resp:

@@ -14,6 +14,7 @@ import platform
 import re
 import sys
 import tempfile
+import urllib.parse
 import uuid
 
 
@@ -268,6 +269,18 @@ def _user_agent(unique_id: str) -> str:
 
 
 UA = _user_agent(UNIQUE_ID)
+
+# Hosts outside the first-party namespaces get a minimal UA: the installation ID and the
+# agent/OS/Python metadata are usage-statistics identifiers and never leave the first party.
+UA_MINIMAL = f"AlibabaCloud-Agent-Skills/{SKILL_NAME} skill-version/{SKILL_VERSION}"
+_FIRST_PARTY_DOMAINS = ("aliyun.com", "alibabacloud.com", "aliyuncs.com")
+
+
+def ua_for(url: str) -> str:
+    host = (urllib.parse.urlsplit(url).hostname or "").lower()
+    if any(host == d or host.endswith("." + d) for d in _FIRST_PARTY_DOMAINS):
+        return UA
+    return UA_MINIMAL
 
 
 def ensure_unique_id() -> str:
