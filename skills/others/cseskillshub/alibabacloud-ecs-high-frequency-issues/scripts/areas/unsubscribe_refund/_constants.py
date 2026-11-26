@@ -451,6 +451,6 @@ HANDOFF_SKILLS = {
     "why a charge occurred / bill reconciliation": "area:billing-attribution-bill-check",
     "expiry and auto-release lifecycle questions": "area:expiry-release-retention",
     "overdue suspension / free-trial expiry stop-billing": "area:arrears-trial-billing-stop",
-    "charge-type conversion (subscription <-> pay-as-you-go)": "area:billing-mode-selection",
+    "charge-type conversion (subscription <-> pay-as-you-go)": "billing mode selection in the account-and-service-process extension package",
     "spec-change / upgrade purchase feasibility": "area:instance-modify-diagnosis",
 }

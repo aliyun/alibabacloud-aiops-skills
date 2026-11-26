@@ -60,6 +60,19 @@ When the symptom belongs to another tier, stop and emit the handoff wording.
 See [references/cross-border-link-diagnosis__handoff-map.md](references/cross-border-link-diagnosis__handoff-map.md) for the full table of
 recognition features, target skill, and the one-sentence wording to use.
 
+**First-question anchoring (MANDATORY).** The root-cause chain is anchored to
+the customer's FIRST question; secondary context MUST NOT rewrite the primary
+root cause. When the first question is "the instance cannot use an overseas
+service (for example Let's Encrypt) - it shows a timeout", the causal chain is
+mainland -> overseas API reachability (the regulated outbound direction, D4),
+and that chain leads the verdict. Side context such as "the website also broke
+after I changed the public IP" or bandwidth worries is at most a parallel
+observation to rule out: changing the public address does not change the
+cross-border path, so it never replaces the anchored chain. ABSOLUTE
+PROHIBITION on attributing the first question's timeout to the IP change or to
+bandwidth while the cross-border chain is unaddressed; treat side facts only
+after the anchored chain, each with its own evidence.
+
 ## Inputs to collect
 
 | Field | Required | Notes |

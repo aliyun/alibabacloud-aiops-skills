@@ -46,6 +46,14 @@ include `err_timed_out`, `Operation timed out`, `i/o timeout`, a handshake that 
 early, and a stated packet-loss percentage. They describe where the wait ended, not
 why; never let them substitute for the geography and direction inputs.
 
+Anchor the causal chain to the FIRST question (MANDATORY): a first question about an
+overseas API timing out from a mainland instance (for example a Let's Encrypt ACME
+call) is the regulated outbound direction above, and that cross-border chain leads
+the verdict. Secondary context - an IP change, a website symptom, bandwidth worries -
+never replaces it as the primary root cause; a fault that reproduces on a new address
+is evidence against an address-side cause (section 1), so the IP-change story is ruled
+out by the customer's own observation, not promoted to the root cause.
+
 ## 3. Decision tree
 
 ### D1 Ownership and geography

@@ -15,7 +15,7 @@ Two things this module owns that prose cannot:
 
 1. it refuses an argv that names a guide-only action, before the child process starts;
 2. it prints the disclosure an executed consent-write owes (a snapshot bills), instead of
-   trusting each of the 55 areas to remember it - today only 3 areas dispatch
+   trusting each of the 24 areas to remember it - today only 3 areas dispatch
    `CreateSnapshot` and none of them states the billing basis in the customer body.
 
 Pattern strictness follows what a wrong hit costs (the same rule the evidence-source table
@@ -43,7 +43,7 @@ _ACTION_FLAG_RE = re.compile(r'(?i)^--.*(action|api|operation|verb)(=|$)')
 
 # Dispatch evidence for a guide-only action. Deliberately narrow: it matches the
 # shapes a CLI invocation or a request record takes, not advice prose. Measured
-# against the 55 areas, an answer may legitimately say "restart the instance in the
+# against the 24 areas, an answer may legitimately say "restart the instance in the
 # console" - it may not emit `ecs reboot-instance` or `Action=RebootInstance`.
 _VIOLATION_RES = (
     ("cli-invocation", re.compile(r"(?i)\baliyun\s+[a-z]+[\s-]+"

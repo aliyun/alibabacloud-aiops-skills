@@ -14,15 +14,15 @@ Each row is reachable from the decision tree in
 | Disk resized in the console, but the guest still shows the old size | `area:disk-expand-diagnosis` | A resize that has not taken effect is a partition and file-system adjustment matter; use area:disk-expand-diagnosis. |
 | Instance will not start, or is stuck between states | `area:instance-state-diagnosis` | Boot and state-transition faults are outside this tier; use area:instance-state-diagnosis. |
 | Slow disk read or write, throughput below the purchased specification | `area:resource-bottleneck` | Storage latency is a different measurement path; use area:resource-bottleneck. |
-| Bandwidth fully used with no cross-border segment involved | `area:network-quality-bandwidth` | A local capacity ceiling with no cross-border factor belongs to area:network-quality-bandwidth. |
+| Bandwidth fully used with no cross-border segment involved | the advanced-network-diagnostics extension package | A local capacity ceiling with no cross-border factor belongs to the network quality and bandwidth check in the advanced-network-diagnostics extension package. |
 | Failure happens at SSH authentication or service configuration, unrelated to the path | `area:ssh-connection` | Credential and service configuration faults belong to area:ssh-connection. |
 | Layered unreachability across DNS, the acceleration layer, or the origin application | `area:web-inaccessible-slow` | Site-layer diagnosis belongs to area:web-inaccessible-slow. |
-| Internal reachability, or the outbound direction governed by a private network, address translation, or a route table | `area:intranet-egress` | Private-network and egress configuration belongs to area:intranet-egress. |
+| Internal reachability, or the outbound direction governed by a private network, address translation, or a route table | the advanced-network-diagnostics extension package | Private-network and egress configuration belongs to the intranet egress check in the advanced-network-diagnostics extension package. |
 | The blocker is mainland filing or registration requirements rather than link quality | `area:icp-filing-guide` | Filing rules and service codes belong to area:icp-filing-guide. |
-| Only the server management panel sign-in or QR scan fails while the site port works | `area:bt-panel-diagnosis` | Panel sign-in behaviour belongs to area:bt-panel-diagnosis. |
-| Attack traffic and a resulting blackhole are already visible | `area:attack-blackhole-diagnosis` | Attack and blackhole handling belongs to area:attack-blackhole-diagnosis. |
-| After the cross-border path is excluded, one transfer tool or protocol misbehaves | `area:file-transfer-diagnosis` | Protocol and tool configuration belongs to area:file-transfer-diagnosis. |
-| The resource is restricted by a platform policy decision | `area:punishment-appeal-guide` | Policy restriction appeals belong to area:punishment-appeal-guide. |
+| Only the server management panel sign-in or QR scan fails while the site port works | the app-deploy-and-site-build extension package | Panel sign-in behaviour belongs to the panel diagnosis in the app-deploy-and-site-build extension package. |
+| Attack traffic and a resulting blackhole are already visible | the security-audit-and-intrusion-response extension package | Attack and blackhole handling belongs to the attack and blackhole diagnosis in the security-audit-and-intrusion-response extension package. |
+| After the cross-border path is excluded, one transfer tool or protocol misbehaves | the boot-and-login-repair extension package | Protocol and tool configuration belongs to the file transfer diagnosis in the boot-and-login-repair extension package. |
+| The resource is restricted by a platform policy decision | the account-and-service-process extension package | Policy restriction appeals belong to the punishment appeal guide in the account-and-service-process extension package. |
 | The request is for a change: cleanup, restart, firewall edit, address swap | human execution | This skill is read-only and will not perform or generate the change; the human runbook and the risk statement are provided instead. |
 
 ## Three shapes that need a decision, not a handoff

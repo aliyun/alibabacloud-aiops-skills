@@ -54,7 +54,7 @@ this file.
 | "Why did this charge appear / reconcile my bill" | `area:billing-attribution-bill-check` |
 | "When exactly does an expired instance auto-release" (pure lifecycle) | `area:expiry-release-retention` (this tier keeps only the refund-relevant retention segment) |
 | "Overdue / trial about to expire, how to stop billing" | `area:arrears-trial-billing-stop` |
-| "Convert subscription to pay-as-you-go" | `area:billing-mode-selection` |
+| "Convert subscription to pay-as-you-go" | billing mode selection in the account-and-service-process extension package |
 | "Can I resize / is the target spec purchasable" | `area:instance-modify-diagnosis` |
 | Disk-full / boot failure / slow IO symptoms drifting into a refund chat | the respective ECS diagnosis tiers |
 | Domain / account closure, RDS or other product-line commercial actions | that product line's human ticket (evidence: closure of a related resource required its own separate ticket) |

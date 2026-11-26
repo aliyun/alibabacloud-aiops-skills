@@ -25,17 +25,17 @@ The same table is embedded in `scripts/areas/public_ip_guide/_constants.py` as `
 | --- | --- | --- |
 | reset on 443, domain only works over the address, mainland region, unregistered domain | filing interception | `area:icp-filing-guide` |
 | ping fails, packet loss, handshake with no data, timeouts, route or return path | public path | `alibabacloud-ecs-vpc-publicnetwork-troubleshoot` |
-| throughput, latency, cross-region or international link quality | link quality | `area:network-quality-bandwidth` |
+| throughput, latency, cross-region or international link quality | link quality | the network quality and bandwidth check in the advanced-network-diagnostics extension package |
 | port closed, connection refused, service not listening, firewall or security group | service exposure | `area:access-block-layered` |
 | SSH or Workbench failure | secure shell | `area:ssh-connection` |
 | RDP, mstsc, remote desktop, one client tool only | windows remote | `area:windows-rdp` |
-| DDoS, attack traffic, blackhole, mitigation | attack handling | `area:attack-blackhole-diagnosis` |
+| DDoS, attack traffic, blackhole, mitigation | attack handling | the attack and blackhole diagnosis in the security-audit-and-intrusion-response extension package |
 | overdue, arrears, stopped for non-payment | arrears | `area:arrears-trial-billing-stop` |
 | expiry, retention window, release protection, about to be released | expiry and retention | `area:expiry-release-retention` |
 | refund, invoice, coupon, cancellation | commerce | `area:unsubscribe-refund` |
 | the transfer procedure itself, not the address question | account transfer | `the Alibaba Cloud account ownership transfer process (console ticket; no skill here performs it)` |
 | changing the spec, the image, or the CPU architecture | instance change | `area:instance-modify-diagnosis` |
-| raising or lowering bandwidth with no address question in it | bandwidth change | `area:bandwidth-modify-guide` |
+| raising or lowering bandwidth with no address question in it | bandwidth change | the bandwidth modification guide in the advanced-network-diagnostics extension package |
 
 ## Wording that closes the loop
 

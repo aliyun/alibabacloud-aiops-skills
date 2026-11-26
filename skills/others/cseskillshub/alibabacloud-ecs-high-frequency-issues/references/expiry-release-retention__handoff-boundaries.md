@@ -8,9 +8,9 @@ another area) as follows, carrying the facts already verified.
 |---|---|
 | Renew, unsubscribe, refund amount or refund destination | `area:unsubscribe-refund` for the refund mechanics; the customer performs the action in the console |
 | Price, discount, renewal quote or price-mismatch | `area:renewal-pricing-discount` |
-| Stop-mode billing (what is still charged while stopped) | `area:stop-mode-billing-guide` |
+| Stop-mode billing (what is still charged while stopped) | the stop-mode billing guide in the account-and-service-process extension package |
 | Arrears, overdue balance, account suspension | account and billing support |
-| Snapshot or backup restore and retention after release | `alibabacloud-ecs-snapshot-and-backup` (snapshot) or `area:hbr-backup-diagnosis` (Cloud Backup) |
+| Snapshot or backup restore and retention after release | `alibabacloud-ecs-snapshot-and-backup` (snapshot and Cloud Backup diagnostics) |
 | Custom image lifecycle (who can see or use an image) | `area:custom-image-lifecycle` |
 | Instance stuck in a start/stop state rather than expired | `area:instance-state-diagnosis` |
 | Disk capacity, partition or file system growth | the disk capacity / disk expand areas in this package |

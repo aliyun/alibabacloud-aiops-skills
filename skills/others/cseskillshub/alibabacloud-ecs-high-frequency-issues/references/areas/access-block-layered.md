@@ -164,6 +164,17 @@ and `aliyun waf-openapi describe-instance`. Never mix the two.
 
 ## Report contract
 
+**Answer surface (MANDATORY, ABSOLUTE PROHIBITION).** The customer-facing reply
+opens with the verdict line (SKILL.md rules 3d/3h); that first line IS the
+customer-facing conclusion, and everything after it is customer content only.
+ABSOLUTE PROHIBITION on emitting any scheduler, queue, handoff-switch or
+run-log reasoning - "let me check the scheduler options", "the scheduler has
+queued a handoff", "checking the run log for the handoff switch", "the handoff
+area needs a pinned target" - in any language, anywhere in the reply, not even
+as a preamble: scheduling and handoff machinery are internal, never customer
+content. A handoff reaches the customer only as the dispatcher's
+customer-worded continuation meaning, never as internal switch or log talk.
+
 Output is the per-layer verdict table (each layer EXCLUDED, HIT, UNKNOWN or
 NOT_APPLICABLE with the evidence quoted), the most likely root cause with its
 confidence and its counter-evidence, the exact manual steps for the hit layer,

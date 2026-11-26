@@ -369,7 +369,7 @@ HANDOFF_RULES = (
     (
         "bandwidth and link quality",
         ("bandwidth", "throughput", "speed", "mbps", "upgrade bandwidth", "downgrade bandwidth"),
-        "area:bandwidth-modify-guide",
+        "the bandwidth modification guide in the advanced-network-diagnostics extension package",
         "The bandwidth change itself belongs to the bandwidth guide; this skill keeps only the "
         "billing-method switch that is a precondition of an address change.",
     ),
@@ -390,7 +390,7 @@ HANDOFF_RULES = (
     (
         "attack and blackhole",
         ("ddos", "attack", "blackhole", "black hole", "mitigation", "scrubbing"),
-        "area:attack-blackhole-diagnosis",
+        "the attack and blackhole diagnosis in the security-audit-and-intrusion-response extension package",
         "A new address does not end an attack and will leak again. Mitigation and blackhole "
         "handling belong to the attack skill; this one only answers whether a change is "
         "possible and at what cost.",
@@ -426,7 +426,7 @@ HANDOFF_RULES = (
     (
         "network quality between regions",
         ("latency", "cross region", "international link", "packet"),
-        "area:network-quality-bandwidth",
+        "the network quality and bandwidth check in the advanced-network-diagnostics extension package",
         "Inter-region and international link quality belongs to the network quality skill.",
     ),
 )

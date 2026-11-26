@@ -4,7 +4,7 @@ area: unsubscribe-refund
 description: |
   Read-only Alibaba Cloud ECS unsubscription and refund guidance: refundable-instance inventory, refund rules (five-day no-reason, yearly one-instance limit shared with resource packages and reserved instance coupons, per-resource retention after a refund, downgrade irreversible), consumed-amount reference estimate, manual refund entry and pre-submission checklist.
   Triggers: "ECS refund", "unsubscribe my instance", "cancel the order and refund", "five day no reason refund", "downgrade refund cancel", "savings plan unsubscribe", "refund goes to balance", InvalidInstanceId.NotFound, Throttling.User.
-  Do NOT use: renewal pricing -> area:renewal-pricing-discount; bill attribution -> area:billing-attribution-bill-check; expiry lifecycle -> area:expiry-release-retention; overdue stop-billing -> area:arrears-trial-billing-stop; charge-type switch -> area:billing-mode-selection.
+  Do NOT use: renewal pricing -> area:renewal-pricing-discount; bill attribution -> area:billing-attribution-bill-check; expiry lifecycle -> area:expiry-release-retention; overdue stop-billing -> area:arrears-trial-billing-stop; charge-type switch -> billing mode selection in the account-and-service-process extension package.
 ---
 
 # ECS Unsubscribe & Refund Guide

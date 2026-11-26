@@ -1,16 +1,18 @@
 ---
 name: alibabacloud-ecs-high-frequency-issues
 description: |
-  Ticket-grade non-mutating ECS diagnosis: unreachable website/instance, slowness/crash, billing/renewal/arrears/refund/trial expiry, snapshot/image/spot charges, access blocked, login failure (password/key/RDP/SSH/VNC/Cloud Assistant), start-stop-reboot, disk mount/expand/IOPS, data recovery, SSL, bandwidth, DDoS/CC, intrusion, image lifecycle, ICP filing, cross-account transfer.
-  Use when a customer describes an ECS problem in ticket language (ids may be missing), or asks ECS rules/policy only.
-  Do NOT use for DR design, Cloud-Assistant-gated live diagnosis (alibabacloud-ecs-diagnose), invoices, non-ECS.
-  Triggers: "unexpected or snapshot-size charges", "rule added still blocked", "RDP failure", "stuck stopping", "disk invisible after expand", "snapshot before C-drive expand", "snapshot rollback error", "upload entry missing", "where to see username/password", "RAM permission denied", "burstable CPU throttled", "snapshot cleanup", "trial expired: auto-stop? still billed?".
+  ECS diagnosis, 24 families: site/instance down/slow, port/security-group blocked, SSH/RDP/VNC login failure, password/key reset, stuck start/stop/reboot, instance state, disk expand unseen, CPU/memory/IO bottleneck, bill check, renewal/discount, arrears/trial, refund, expiry/retention, spec change, public IP/EIP, cross-border slow, intrusion/mining, security alerts, ICP filing, image/OS.
+  Route first: one symptom, one area; query-only by default, safety writes (snapshot/image) need explicit per-operation consent; extension families handed off by name.
+  Use when a customer describes an ECS problem in ticket language (ids may be missing) or asks ECS rules/policy.
+  Do NOT use for DR design, Cloud-Assistant diagnosis (alibabacloud-ecs-diagnose), invoices, non-ECS.
+  Triggers: "rule added still blocked", "RDP failure", "stuck stopping", "trial expired", "website won't open", "remote connection", "reset password", "disk expand", "charged", "arrears", "refund", "mining", "ICP filing".
 ---
 
 # alibabacloud-ecs-high-frequency-issues
 
-Merged ECS support skill (55 areas, customer-symptom family). Each area keeps its
-original full spec; this file is the router and the shared contract layer.
+Merged ECS support skill (24 areas, customer-symptom family). Each area keeps its original full spec; this file is the router and the shared contract layer.
+The single source of truth for which package owns which symptom family (24 core areas plus the 31 families that moved to extension packages) is
+[references/symptom-ownership.json](references/symptom-ownership.json).
 
 ## Execution Principle (MANDATORY, applies to every area)
 - MANDATORY ENTRY SCRIPT: every area answer MUST be produced by running
@@ -30,7 +32,7 @@ original full spec; this file is the router and the shared contract layer.
   block sent earlier still fails.
 - MANDATORY CUSTOMER QUESTION: pass the customer's own words on every dispatch via
   `--customer-question "<verbatim question>"` after the `--`. The dispatcher consumes
-  it and never forwards it to the area, so it is safe on all 55 areas. The document leg
+  it and never forwards it to the area, so it is safe on all 24 areas. The document leg
   ranks the frozen official anchors in `references/doc-anchors.json` against exactly
   that text (through `scripts/_doc_refs.py`, no runtime search), so a dispatch without
   it cites nothing - not a smaller answer, no citation at all. Rule 4b then governs
@@ -53,9 +55,8 @@ original full spec; this file is the router and the shared contract layer.
 ## Guest Consent and Credential Fail-Closed (MANDATORY, applies to every area)
 
 **In-guest reads are OFF by default.** Cloud Assistant `RunCommand` executes inside the
-customer's instance. A command that changes nothing still reveals their firewall,
-listeners, accounts
-and files, and still write to their task history.
+customer's instance. A command that changes nothing still reveals their firewall, listeners,
+accounts and files, and still writes to their task history.
 
 - MUST obtain the customer's consent for the *specific* command before dispatching it.
   Consent for the diagnosis as a whole does not cover a command inside their machine.
@@ -124,12 +125,13 @@ and mutates nothing.
 **Selecting an area from a Chinese question (MANDATORY).** The `Triggers:` on each area
 card are English. When the customer's first question is Chinese, also match it against
 [references/trigger-lexicon.json](references/trigger-lexicon.json): per-area Chinese
-trigger terms measured over the same 37,750-ticket corpus, each admitted only when it
-fires in at least 20 first questions and at most half of those belong to other areas.
-It covers the 41 areas whose Chinese vocabulary is discriminative; the other 14 share
-words with sibling areas and must be chosen by meaning, using the cross-area table in
-`references/routing-table.json`. The lexicon only helps pick `--area`; it never
-authorises a dispatch or a write, and a lexical match is a hint, not a confirmed cause.
+trigger terms measured over the same 37,750-ticket corpus (admission: a term fires in
+at least 5 first questions with at least half belonging to this area; a sparse fallback
+admits 2-fire terms at a stricter share; areas under 10 development tickets are
+coverage-exempt). It carries terms for all 24 areas; where an area's terms are sparse,
+choose by meaning, using the cross-area table in `references/routing-table.json`. The
+lexicon only helps pick `--area`; it never authorises a dispatch or a write, and a
+lexical match is a hint, not a confirmed cause.
 
 **Routing a free question before the area is known.** Run
 `python3 scripts/ticket-support.py --route-question "<customer question>"` to get a
@@ -139,6 +141,12 @@ normally with `--area`. With no lexical signal it prints `no lexical signal` (ex
 and you choose by meaning plus the cross-area table. Do not paste the suggestion
 block into a customer answer.
 
+**Families owned by an extension package (MANDATORY).** When the question matches a family
+that `references/symptom-ownership.json` assigns to an extension package, do not dispatch a
+moved area and do not answer its mechanism from memory: name the owning extension package in
+words (its short name, e.g. "the account-and-service-process extension package"), deliver what
+this package can still read for the symptom, and mark the moved part as the extension's to settle.
+
 **Boundary rules when two areas both look plausible.** Measured on a stratified entry-routing
 benchmark (326 tickets, first informative customer turn): these rules put first-question area
 selection at 84.0% on questions that carry enough information, +2.0pp over the same sample
@@ -147,56 +155,50 @@ question cannot determine the area, ask one clarifying question instead of guess
 
 Each rule below resolves a measured confusion:
 1. "why am I still being charged", "I released it but the balance keeps dropping", "which resource costs this" -> billing-attribution-bill-check. Use arrears-trial-billing-stop ONLY when the question is about overdue payment stopping/releasing resources or a trial ending.
-2. Any performance, utilisation, capacity or benchmark question -> resource-bottleneck, even when it mentions a panel, a disk or a website ("is this memory usage normal", "fio cannot reach the disk throughput limit", "too many auto-start services"). UNLESS the ask is to CHANGE a disk's category/performance level or to EXTEND capacity: "can this IO be raised" -> disk-pl-change-guide; "extend the disk" -> disk-expand-diagnosis.
+2. Any performance, utilisation, capacity or benchmark question -> resource-bottleneck, even when it mentions a panel, a disk or a website ("is this memory usage normal", "fio cannot reach the disk throughput limit", "too many auto-start services"). UNLESS the ask is to EXTEND capacity: "extend the disk" -> disk-expand-diagnosis; CHANGING a disk's category/performance level ("can this IO be raised") belongs to the disk-io-and-data-protection extension package.
 3. Price, feasibility or billing-period questions about changing spec -> spec-change-purchase ONLY on money wording: price, refund, cost of the change, billing period. Whether a change is possible, how to perform it, or a change that is blocked or unavailable ("cannot upgrade in this region", "can I raise memory/CPU", "can this plan be upgraded", "why can't I change two at once") -> instance-modify-diagnosis.
-4. Burstable/credit behaviour, CPU performance limits, hyper-threading support -> burstable-instance-guide, not instance-modify-diagnosis.
-5. Port 8888, "bt.cn", Baota/BT panel wording -> bt-panel-diagnosis, even if the symptom is "cannot open the URL". UNLESS the object of the question is not the panel itself: "the panel does not show the extended disk capacity" -> disk-expand-diagnosis.
-6. A named website/URL/API that cannot be reached, including "the instance cannot reach the internet" phrased as access failure -> web-inaccessible-slow. Use network-quality-bandwidth ONLY when the complaint is speed/latency/packet loss with the service still reachable, OR when the customer reports ping/traceroute to the instance itself failing or a regional network incident.
+4. Burstable/credit behaviour, CPU performance limits and hyper-threading support belong to the performance-and-crash-diagnosis extension package, not instance-modify-diagnosis; whether a spec change is possible stays here.
+5. Port 8888, "bt.cn", Baota/BT panel wording belongs to the app-deploy-and-site-build extension package, even if the symptom is "cannot open the URL". UNLESS the object of the question is not the panel itself: "the panel does not show the extended disk capacity" -> disk-expand-diagnosis.
+6. A named website/URL/API that cannot be reached, including "the instance cannot reach the internet" phrased as access failure -> web-inaccessible-slow. Speed/latency/packet loss with the service still reachable, ping/traceroute to the instance itself failing, or a regional network incident belong to the advanced-network-diagnostics extension package.
 7. SSH specifically (port 22, key, sshd, "only my IP works") -> ssh-connection. Use access-block-layered ONLY when the customer names security-group rules, a firewall policy or an explicit block as the object of the question.
 8. Windows remote desktop (mstsc, RDP, 3389) -> windows-rdp. Use remote-connection-entry ONLY when the connection method is not yet known.
 9. OS version upgrade / replacing the operating system / image choice -> custom-image-lifecycle, not instance-modify-diagnosis. UNLESS the ask is about leftover files after an upgrade ("can I delete Windows.old") or about repartitioning/reinstalling only one volume: then the disk area owns it.
-10. A cross-border or overseas endpoint that is slow while a same-region peer is fine -> cross-border-link-diagnosis, not network-quality-bandwidth.
-11. Recovering a database's own data files, or database connectivity/availability -> db-on-ecs-diagnosis. Use data-recovery-assessment ONLY for generic file/disk loss.
+10. A cross-border or overseas endpoint that is slow while a same-region peer is fine -> cross-border-link-diagnosis, not the network-quality axis of the advanced-network-diagnostics extension package.
+11. Database connectivity/availability on ECS belongs to the app-deploy-and-site-build extension package; generic file/disk loss recovery belongs to the snapshot-and-backup extension package.
 12. A pending maintenance/operational event, or instance state questions -> instance-state-diagnosis. Use instance-start-stop-anomaly ONLY when a start/stop action itself failed.
-13. A multi-product deployment quote or a request for a human/account manager -> service-escalation-guide, not spec-change-purchase.
-14. Whether a disk keeps data when the instance fails, or how a disk attaches -> disk-attach-os-visibility, not data-recovery-assessment.
-15. "Is there a short-term server" / which billing mode suits me -> billing-mode-selection, not preemptible-instance-guide.
-16. A channel request that NAMES a topic ("human agent: ECS upgrade", "transfer me, the server expired") is routed by the TOPIC, never by the channel wording. service-escalation-guide only when the whole message carries no technical topic ("how do I reach a human", "after-sales service").
+13. A multi-product deployment quote or a request for a human/account manager belongs to the account-and-service-process extension package, not spec-change-purchase.
+14. Whether a disk keeps data when the instance fails, or how a disk attaches, belongs to the disk-space-and-mount extension package; generic file/disk loss belongs to the snapshot-and-backup extension package.
+15. "Is there a short-term server" / which billing mode suits me belongs to the account-and-service-process extension package; spot interruption/reclaim behaviour belongs to the os-config-and-lifecycle extension package.
+16. A channel request that NAMES a topic ("human agent: ECS upgrade", "transfer me, the server expired") is routed by the TOPIC, never by the channel wording. A message with no technical topic ("how do I reach a human", "after-sales service") belongs to the account-and-service-process extension package.
 
 Entry command for every area (keep the `scripts/` prefix verbatim):
 `python3 scripts/ticket-support.py --area <area> -- <args>`
 
-Full spec for every area: `references/areas/<area>.md` (one card per area, named exactly
-as the slug below). The mode shown is the area's default authority; the gated-action list
-under the table governs confirmation for state-changing actions in every area it names,
-including areas whose default mode is query-only.
+Full spec for every area: `references/areas/<area>.md` (one card per area, named exactly as the slug).
+The lists above group areas by authority; the gate paragraph below governs confirmation for state-changing actions.
 
-**query-only areas (37):**
-   `web-inaccessible-slow`, `renewal-pricing-discount`, `billing-attribution-bill-check`, `access-block-layered`,
-   `expiry-release-retention`, `attack-blackhole-diagnosis`, `login-credential-repair`, `instance-state-diagnosis`,
-   `arrears-trial-billing-stop`, `unsubscribe-refund`, `billing-mode-selection`, `console-channel-diagnosis`,
-   `remote-connection-entry`, `public-ip-guide`, `bandwidth-modify-guide`, `instance-modify-diagnosis`,
-   `spec-change-purchase`, `network-quality-bandwidth`, `ssh-connection`, `icp-filing-guide`, `data-recovery-assessment`,
-   `intranet-egress`, `console-resource-lookup`, `cross-border-link-diagnosis`, `vpc-connectivity-check`,
-   `instance-relocation-guide`, `sas-alert-vulnerability`, `disk-expand-diagnosis`, `unexpected-reboot-diagnosis`,
-   `service-escalation-guide`, `stop-mode-billing-guide`, `smtp-block-diagnosis`, `ddh-capacity-guide`,
-   `punishment-appeal-guide`, `preemptible-instance-guide`, `slb-backend-diagnosis`, `burstable-instance-guide`
+**query-only areas (13):** `arrears-trial-billing-stop`, `billing-attribution-bill-check`,
+   `cross-border-link-diagnosis`, `expiry-release-retention`, `icp-filing-guide`,
+   `instance-modify-diagnosis`, `login-credential-repair`, `public-ip-guide`,
+   `remote-connection-entry`, `renewal-pricing-discount`, `sas-alert-vulnerability`,
+   `spec-change-purchase`, `unsubscribe-refund`
 
-**gated areas (18)** - state-changing actions require explicit customer confirmation:
-   `resource-bottleneck`, `web-service-runtime-config`, `instance-start-stop-anomaly`,
-   `bt-panel-diagnosis`, `snapshot-billing-cleanup`, `file-transfer-diagnosis`,
-   `host-intrusion-cleanup`, `disk-attach-os-visibility`, `db-on-ecs-diagnosis`,
-   `custom-image-lifecycle`, `windows-rdp`, `cloud-assistant-diagnosis`, `image-billing-cleanup`,
-   `hbr-backup-diagnosis`, `ssl-cert-deployment`, `ram-policy-diagnosis`,
-   `linux-permission-repair`, `disk-pl-change-guide`
+**consent-write areas (4)** - cloud writes require explicit per-operation customer confirmation:
+   `disk-expand-diagnosis`, `host-intrusion-cleanup`, `instance-start-stop-anomaly`
+   (CreateSnapshot) and `custom-image-lifecycle` (plan-mode image chain: CreateImage,
+   CopyImage, ModifyImageSharePermission, ImportImage, ExportImage).
 
-Gated areas in this package: resource-bottleneck, web-service-runtime-config, instance-start-stop-anomaly, bt-panel-diagnosis, snapshot-billing-cleanup, file-transfer-diagnosis, host-intrusion-cleanup, disk-attach-os-visibility, db-on-ecs-diagnosis, custom-image-lifecycle, windows-rdp, cloud-assistant-diagnosis, image-billing-cleanup, hbr-backup-diagnosis, ssl-cert-deployment, ram-policy-diagnosis, linux-permission-repair, disk-pl-change-guide, access-block-layered, console-channel-diagnosis, disk-expand-diagnosis, intranet-egress, unexpected-reboot-diagnosis, web-inaccessible-slow. The gate covers state-changing actions ONLY: those MUST stop and ask for explicit customer confirmation (the area's confirmation flag: `--user-confirmed` / `--confirmation-scope`, or `--confirm` where the area defines it) before running; without confirmation, do not mutate anything. Read-style in-guest probes also travel through Cloud Assistant RunCommand. They are NOT query-only from the customer's side: the command still executes inside their machine and leaves a task record there. ABSOLUTE PROHIBITION: never dispatch one without the customer's consent for that exact command in this turn. Ask first, then pass `--allow-guest-read` to the entry command. Without it the dispatcher strips the area's guest flags, prints `CONSENT-REQUIRED:` naming the command it refused, and the cloud-side (Describe/Get) reads still run — so a missing consent degrades the answer instead of blocking it.
+**guest-read areas (10)** - in-guest reads through Cloud Assistant RunCommand:
+   `access-block-layered`, `console-channel-diagnosis`, `disk-expand-diagnosis`,
+   `host-intrusion-cleanup`, `instance-start-stop-anomaly`, `instance-state-diagnosis`,
+   `resource-bottleneck`, `ssh-connection`, `web-inaccessible-slow`, `windows-rdp`.
 
-When the customer issue matches an area, run that area entry command and follow the
-area spec in `references/areas/<area>.md`. Do not mix areas in one report.
+The write gate covers state-changing actions ONLY: those MUST stop and ask for explicit customer confirmation (the area's confirmation flag: `--user-confirmed` / `--confirmation`, or `--confirm` where the area defines it) before running; without confirmation, do not mutate anything. Read-style in-guest probes also travel through Cloud Assistant RunCommand. They are NOT query-only from the customer's side: the command still executes inside their machine and leaves a task record there. ABSOLUTE PROHIBITION: never dispatch one without the customer's consent for that exact command in this turn. Ask first, then pass `--allow-guest-read` to the entry command. Without it the dispatcher strips the area's guest flags, prints `CONSENT-REQUIRED:` naming the command it refused, and the cloud-side (Describe/Get) reads still run — so a missing consent degrades the answer instead of blocking it.
+
+When the customer issue matches an area, run that area entry command and follow the area spec in `references/areas/<area>.md`. Do not mix areas in one report.
 
 ## Trigger Conditions
-See description (customer wording kept verbatim from the merged intake analysis).
+See description; every trigger phrase is copied verbatim from a core-owned family's triggers in [references/symptom-ownership.json](references/symptom-ownership.json).
 
 ## Input Parameters
 Per area: region id / instance id / uid as required by the area spec; if missing, ask the customer once, never guess.
@@ -217,17 +219,15 @@ Stating a defaulted or derived value as if the customer had supplied it is a rep
 ### Confirmation flag names (MANDATORY)
 `--allow-guest-read` is the central consent switch only; each area also has its own switch and
 the two are not interchangeable. Names in use: `--confirm` (some areas require the value to echo
-the target id verbatim), `--user-confirmed`, `--user-confirmation`, `--customer-confirmed`,
-`--confirmed`, `--confirmation`, `--confirmation-scope`, `--approval-quote`,
-`--acknowledge-approval`, `--confirm-cost`, `--snapshot-confirmed`, `--confirm-irreversible`,
-`--guest-confirmed-by`. Areas that define more than one switch (console-channel-diagnosis,
-db-on-ecs-diagnosis, disk-expand-diagnosis, intranet-egress, snapshot-billing-cleanup,
-ssh-connection, ssl-cert-deployment, unexpected-reboot-diagnosis) need all of their switches;
+the target id verbatim), `--user-confirmed`, `--customer-confirmed`, `--confirmed`,
+`--confirmation`, `--approval-quote`, `--confirm-cost`, `--snapshot-confirmed`,
+`--confirm-irreversible`, `--guest-confirmed-by`. Areas that define more than one switch
+(console-channel-diagnosis, disk-expand-diagnosis, ssh-connection) need all of their switches;
 passing only `--allow-guest-read` leaves the guest layer UNVERIFIED. Read the switch name and
 value form from the area spec's Parameters section before running.
 
 ## Execution Flow
-1. Classify the symptom into one area via the table above. **Customer self-diagnosis never routes (MANDATORY)**: a customer's speculated cause ("suspected disk IO error / maybe a virus / must be the network") is NOT an area-selection input - route by the objective reproducible phenomenon instead (e.g. "VNC freezes" -> console-channel). When an objective channel/startup/availability symptom coexists with a customer guess, the symptom's own area takes precedence; customers mistaking a symptom for the cause is the most common misrouting pattern in real tickets. **Compound billing intent lands on the mechanism area (MANDATORY)**: when a stop/downtime state coexists with a billing question ("instance is stopped yet keeps charging", "want to stop it AND stop the charges"), route to the mechanism area (stop-mode-billing-guide) - never to the generic stop-charges area (arrears-trial-billing-stop); the generic area is only for a pure "how do I stop all billing" with no instance-state element, because the mechanism area supersedes it and the generic answer silently omits the stop-mode prerequisites (which resources keep charging after StopInstance, NoCharges eligibility).
+1. Classify the symptom into one area via the table above. **Customer self-diagnosis never routes (MANDATORY)**: a customer's speculated cause ("suspected disk IO error / maybe a virus / must be the network") is NOT an area-selection input - route by the objective reproducible phenomenon instead (e.g. "VNC freezes" -> console-channel). When an objective channel/startup/availability symptom coexists with a customer guess, the symptom's own area takes precedence; customers mistaking a symptom for the cause is the most common misrouting pattern in real tickets. **Compound billing intent lands on bill attribution (MANDATORY)**: when a stop/downtime state coexists with a billing question ("instance is stopped yet keeps charging", "want to stop it AND stop the charges"), route to billing-attribution-bill-check - never to arrears-trial-billing-stop, which is only for overdue payment stopping/releasing resources or a trial ending. Deliver the stop-mode facts with the bill read: stopping stops the compute meter, but cloud disks, snapshots and the public IP keep charging. When the customer asks the stop-mode mechanism itself (NoCharges eligibility, switching modes), name the account-and-service-process extension package as its owner.
 2. Run the area entry command in query-only mode.
 3. Gated area: stop, present the exact write action, wait for explicit `--confirm`.
 4. Deliver the report in the area spec's format. Delivery IS the answer, not a tracked task: never put it in a todo list (close the list at the last read instead), and let the answer block be the last message of the run - no tool call and no message may follow it.
@@ -246,7 +246,7 @@ value form from the area spec's Parameters section before running.
    add a hand-off when the dispatcher withheld it (the run log says `HANDOFF: not evaluated (...)`
    with the reason - credential failure, missing toolchain, or a rejected argument shape). The
    measured ticket basis for every row, and the admission test
-   `ecs-suite-v2/tools/check_routing_table.py` re-derives, are in
+   `evaluation-knowledge-base/scripts/check_routing_table.py` re-derives, are in
    [references/routing-detail.md](references/routing-detail.md).
 
 ## Observability
@@ -325,17 +325,17 @@ UNVERIFIED and put it in the layered checklist instead.
        Rungs: an `area:<slug>` target is a check this package already ships, so stay
        here and name it in words (the token is internal, never deliver it);
        otherwise use what is already installed; otherwise offer the catalogue's
-       answer as a card of at most 2 candidates, downloading staying the customer's
-       decision; no match or no answer degrades - say so, keep answering in scope.
+       answer as a card of at most 2 candidates - nothing is installed until the customer
+       confirms, then the agent installs it for them (rule 3); no match or no answer degrades.
        ABSOLUTE PROHIBITION: never name a skill the ladder did not return - the
        codes inherited from the single-skill packages this one was assembled from
        answer 404 against the catalogue, so such a sentence reads as an answer and
        sends the customer to a skill they cannot install.
        MANDATORY: the query carries generic symptom words only - no id, IP, domain,
        path or credential - because that query leaves this machine over the network.
-3. ABSOLUTE PROHIBITION on installing anything yourself: never download, write or
-   execute external skill code - installing is a platform action the customer takes
-   after their own confirmation.
+3. The script never downloads or executes external code; it only names a target. After the customer explicitly confirms the named candidate, the agent may install that published, catalogue-verified extension for them from `https://skills.aliyun.com/api/public/skills/<confirmed-code>/download`, then remind them whether a conversation restart is needed.
+   ABSOLUTE PROHIBITION: never install without that per-install confirmation, never install a name the ladder did not return as published+verified, never bypass this official endpoint with a handwritten downloader, and never auto-install in the background.
+   Without confirmation, keep answering in scope and leave the choice with the customer.
 4. When neither 2a nor 2b applies - a knowledge question whose topic family no area
    owns - say that plainly and mark the determination UNVERIFIED. Do not fill the gap
    with a recalled rule, a guessed URL, or a confident-sounding number: an answer that
@@ -429,10 +429,10 @@ report - full wording, ticket evidence and worked verdict-line/citation examples
 3g. A withheld layer must reach the conclusion: when the tool prints `WITHHELD-LEAD:`, the
    verdict you copy must keep that `not read:` segment on the first line, not only in the
    body, so a reader of the conclusion alone cannot infer more than the run established.
-3h. Answer surface (ABSOLUTE PROHIBITION): exactly two parts - line 1 the verdict line,
+3h. Answer surface (ABSOLUTE PROHIBITION): the delivered answer's first line IS the customer-facing conclusion (the verdict line) - exactly two parts - line 1 the verdict line,
    everything after it the customer's content. Nothing may precede it, no message may follow it, and none of these may appear in the
    answer, in any language: process narration ("let me check the entry script first", "the pipeline has run",
-   "Done.", "Diagnosis complete") or a saved-file list (`outputs/`, `ran_scripts/`); a compliance recital - never
+   "Done.", "Diagnosis complete"); scheduler/queue/handoff/run-log reasoning of any kind ("let me check the scheduler options", "the scheduler has queued a handoff", "checking the run log for the handoff switch", "the handoff area needs a pinned target") - MANDATORY: scheduling, queuing, handoff switches and internal run logs are machinery, ABSOLUTE PROHIBITION on narrating them in any language, not even as a preamble or a parenthetical; or a saved-file list (`outputs/`, `ran_scripts/`); a compliance recital - never
    say what you did NOT do (no change made, no write API, no in-guest command, no credential read), nor name an unpassed flag, a credential path or the script's defaults/routing/exit codes; a
    tool/command inventory ("Executed checks" tables listing `python3 ...`, `scripts/areas/...`, exit codes, `STATUS:
    OK/DEGRADED/FAIL`); internal markers or machine fields (`[EVIDENCE]`, `[FINDING]`, `[RISK]`, `[HUMAN STEP]`,
@@ -487,12 +487,10 @@ report - full wording, ticket evidence and worked verdict-line/citation examples
 ## Area root-cause intel (curated from resolved tickets)
 
 MANDATORY: before composing the report for the routed area, read its entry in
-[references/area-root-cause-intel.md](references/area-root-cause-intel.md). Those
-entries are ranking rules adjudicated against resolved tickets: where an entry names
-a PRIMARY cause it leads the conclusion and the verdict line (rules 2 / 3c / 3d), and
-where it records a layer EXCLUDED by a read that layer must not be named as root cause.
-The ticket ids and batch labels in that file are maintainer provenance and never
-appear in a customer answer (rule 3h).
+[references/area-root-cause-intel.md](references/area-root-cause-intel.md): ranking rules adjudicated
+against resolved tickets. Where an entry names a PRIMARY cause it leads the conclusion and the verdict
+line (rules 2 / 3c / 3d); a layer it records as EXCLUDED by a read must not be named as root cause. Its
+ticket ids and batch labels are maintainer provenance and never appear in a customer answer (rule 3h).
 
 ## Important Notes
 - Relative paths only; all assets live in this package.

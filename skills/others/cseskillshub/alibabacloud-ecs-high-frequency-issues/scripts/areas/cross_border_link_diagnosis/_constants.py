@@ -341,9 +341,10 @@ HANDOFFS = (
     {
         "key": "bandwidth",
         "feature": "Bandwidth is fully used with no cross-border segment involved.",
-        "target": "area:network-quality-bandwidth",
+        "target": "the advanced-network-diagnostics extension package",
         "wording": "A local capacity ceiling with no cross-border factor belongs to "
-                   "area:network-quality-bandwidth.",
+                   "the network quality and bandwidth check in the "
+                   "advanced-network-diagnostics extension package.",
     },
     {
         "key": "ssh",
@@ -361,9 +362,9 @@ HANDOFFS = (
     {
         "key": "intranet-egress",
         "feature": "Internal reachability or outbound direction governed by VPC, NAT, or routes.",
-        "target": "area:intranet-egress",
-        "wording": "Private-network and egress configuration belongs to "
-                   "area:intranet-egress.",
+        "target": "the advanced-network-diagnostics extension package",
+        "wording": "Private-network and egress configuration belongs to the intranet "
+                   "egress check in the advanced-network-diagnostics extension package.",
     },
     {
         "key": "filing",
@@ -374,29 +375,32 @@ HANDOFFS = (
     {
         "key": "panel",
         "feature": "Only the server management panel login or QR scan fails; ports are open.",
-        "target": "area:bt-panel-diagnosis",
-        "wording": "Panel sign-in behaviour belongs to area:bt-panel-diagnosis.",
+        "target": "the app-deploy-and-site-build extension package",
+        "wording": "Panel sign-in behaviour belongs to the panel diagnosis in the "
+                   "app-deploy-and-site-build extension package.",
     },
     {
         "key": "attack",
         "feature": "Attack traffic and a resulting blackhole are already visible.",
-        "target": "area:attack-blackhole-diagnosis",
-        "wording": "Attack and blackhole handling belongs to "
-                   "area:attack-blackhole-diagnosis.",
+        "target": "the security-audit-and-intrusion-response extension package",
+        "wording": "Attack and blackhole handling belongs to the attack and blackhole "
+                   "diagnosis in the security-audit-and-intrusion-response extension "
+                   "package.",
     },
     {
         "key": "file-transfer",
         "feature": "After the cross-border path is excluded, one transfer tool or protocol "
                    "misbehaves.",
-        "target": "area:file-transfer-diagnosis",
-        "wording": "Protocol and tool configuration belongs to "
-                   "area:file-transfer-diagnosis.",
+        "target": "the boot-and-login-repair extension package",
+        "wording": "Protocol and tool configuration belongs to the file transfer "
+                   "diagnosis in the boot-and-login-repair extension package.",
     },
     {
         "key": "punishment",
         "feature": "The resource is restricted by a platform policy decision.",
-        "target": "area:punishment-appeal-guide",
-        "wording": "Policy restriction appeals belong to area:punishment-appeal-guide.",
+        "target": "the account-and-service-process extension package",
+        "wording": "Policy restriction appeals belong to the punishment appeal guide "
+                   "in the account-and-service-process extension package.",
     },
     {
         "key": "manual-change",

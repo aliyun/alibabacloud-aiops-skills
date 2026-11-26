@@ -39,55 +39,24 @@ AREAS = {
  "billing-attribution-bill-check": "areas/billing_attribution_bill_check/query_ecs_bill.py",
  "access-block-layered": "areas/access_block_layered/diagnose_access_block.py",
  "expiry-release-retention": "areas/expiry_release_retention/ecs_expiry_release_check.py",
- "web-service-runtime-config": "areas/web_service_runtime_config/web_service_runtime_config.py",
- "attack-blackhole-diagnosis": "areas/attack_blackhole_diagnosis/attack_blackhole_diagnosis.py",
  "login-credential-repair": "areas/login_credential_repair/login_credential_diagnose.py",
  "instance-start-stop-anomaly": "areas/instance_start_stop_anomaly/ecs_start_stop_diagnosis.py",
  "instance-state-diagnosis": "areas/instance_state_diagnosis/diagnose_instance_state.py",
  "arrears-trial-billing-stop": "areas/arrears_trial_billing_stop/billing_lifecycle_diagnosis.py",
  "unsubscribe-refund": "areas/unsubscribe_refund/ecs_unsubscribe_refund.py",
- "bt-panel-diagnosis": "areas/bt_panel_diagnosis/bt_panel_diagnosis.py",
- "snapshot-billing-cleanup": "areas/snapshot_billing_cleanup/snapshot_billing_report.py",
- "billing-mode-selection": "areas/billing_mode_selection/billing_mode_advisor.py",
  "console-channel-diagnosis": "areas/console_channel_diagnosis/console_channel_diagnosis.py",
  "remote-connection-entry": "areas/remote_connection_entry/ecs_remote_connection_triage.py",
- "file-transfer-diagnosis": "areas/file_transfer_diagnosis/ecs_file_transfer_diagnosis.py",
  "host-intrusion-cleanup": "areas/host_intrusion_cleanup/host_intrusion_diagnosis.py",
- "disk-attach-os-visibility": "areas/disk_attach_os_visibility/ecs_disk_attach_visibility.py",
  "public-ip-guide": "areas/public_ip_guide/public_ip_guide.py",
- "db-on-ecs-diagnosis": "areas/db_on_ecs_diagnosis/db_on_ecs_diagnosis.py",
- "bandwidth-modify-guide": "areas/bandwidth_modify_guide/bandwidth_modify_guide.py",
  "instance-modify-diagnosis": "areas/instance_modify_diagnosis/ecs_instance_modify.py",
  "spec-change-purchase": "areas/spec_change_purchase/assess_spec_change.py",
- "network-quality-bandwidth": "areas/network_quality_bandwidth/network_quality_bandwidth.py",
  "ssh-connection": "areas/ssh_connection/ecs_ssh_diagnosis.py",
  "icp-filing-guide": "areas/icp_filing_guide/icp_filing_check.py",
- "data-recovery-assessment": "areas/data_recovery_assessment/ecs_data_recovery_assessment.py",
- "intranet-egress": "areas/intranet_egress/ecs_connectivity_diagnose.py",
- "console-resource-lookup": "areas/console_resource_lookup/console_navigation.py",
  "custom-image-lifecycle": "areas/custom_image_lifecycle/image_lifecycle_check.py",
  "windows-rdp": "areas/windows_rdp/rdp_diagnose.py",
  "cross-border-link-diagnosis": "areas/cross_border_link_diagnosis/cross_border_link_diagnosis.py",
- "vpc-connectivity-check": "areas/vpc_connectivity_check/vpc_connectivity_check.py",
- "instance-relocation-guide": "areas/instance_relocation_guide/relocation_preflight.py",
  "sas-alert-vulnerability": "areas/sas_alert_vulnerability/sas_alert_triage.py",
  "disk-expand-diagnosis": "areas/disk_expand_diagnosis/disk_expand_diagnosis.py",
- "unexpected-reboot-diagnosis": "areas/unexpected_reboot_diagnosis/reboot_diagnosis.py",
- "service-escalation-guide": "areas/service_escalation_guide/ecs_service_escalation.py",
- "stop-mode-billing-guide": "areas/stop_mode_billing_guide/ecs_stop_mode_billing_guide.py",
- "smtp-block-diagnosis": "areas/smtp_block_diagnosis/ecs_smtp_block_diagnosis.py",
- "ddh-capacity-guide": "areas/ddh_capacity_guide/ddh_capacity_guide.py",
- "punishment-appeal-guide": "areas/punishment_appeal_guide/punishment_appeal_guide.py",
- "cloud-assistant-diagnosis": "areas/cloud_assistant_diagnosis/cloud_assistant_diagnosis.py",
- "image-billing-cleanup": "areas/image_billing_cleanup/ecs_image_billing_cleanup.py",
- "preemptible-instance-guide": "areas/preemptible_instance_guide/spot_instance_check.py",
- "slb-backend-diagnosis": "areas/slb_backend_diagnosis/slb_backend_diagnosis.py",
- "hbr-backup-diagnosis": "areas/hbr_backup_diagnosis/hbr_backup_diagnosis.py",
- "burstable-instance-guide": "areas/burstable_instance_guide/burstable_instance_guide.py",
- "ssl-cert-deployment": "areas/ssl_cert_deployment/ssl_cert_deployment_report.py",
- "ram-policy-diagnosis": "areas/ram_policy_diagnosis/ram_policy_diagnosis.py",
- "linux-permission-repair": "areas/linux_permission_repair/permission_diagnosis.py",
- "disk-pl-change-guide": "areas/disk_pl_change_guide/disk_pl_advisor.py"
 }
 HERE = os.path.dirname(os.path.abspath(__file__))
 g.register_area_slugs(AREAS)
@@ -134,7 +103,7 @@ def customer_gave_target(question, rest):
         (question or '') + ' ' + ' '.join(rest or [])))
 
 # ---- first-call default mode --------------------------------------------------
-# 19 areas select their job with a positional subcommand or a required selector
+# 7 areas select their job with a positional subcommand or a required selector
 # flag. The documented uniform shape `--area <area> -- <args>` carries neither, so
 # argparse exited 2 with a usage block and the customer got a 100-byte
 # 'PRIMARY-CAUSE: unverified' answer (DingTalk use case 4, measured 19/55 on
@@ -143,45 +112,22 @@ def customer_gave_target(question, rest):
 # chose a mode is never overridden. Guest, snapshot and resize modes are never
 # defaults, and every consent/action gate downstream still applies unchanged.
 AREA_DEFAULT_MODE = {
-    'bt-panel-diagnosis': (None, 'triage', ('check-env', 'triage', 'probe', 'readback', 'handoff', 'explain')),
-    'cloud-assistant-diagnosis': (None, 'triage', ('check-env', 'triage', 'invocations', 'guest-probe', 'snapshot-guard', 'explain')),
     'console-channel-diagnosis': (None, 'diagnose', ('check-auth', 'diagnose', 'guest-probe', 'explain')),
     'custom-image-lifecycle': ('--mode', 'report', ('report', 'capacity', 'precheck', 'plan', 'guest')),
-    'db-on-ecs-diagnosis': (None, 'diagnose', ('check-auth', 'diagnose', 'probe', 'explain', 'create-snapshot')),
     'disk-expand-diagnosis': (None, 'diagnose', ('check-auth', 'explain', 'diagnose', 'run-command', 'create-snapshot', 'resize-disk')),
-    'file-transfer-diagnosis': (None, 'classify', ('classify', 'collect', 'invocation', 'guest-plan')),
-    'hbr-backup-diagnosis': (None, 'triage', ('check-env', 'triage', 'guest-probe', 'snapshot-guard', 'billing-attribution', 'explain')),
     'icp-filing-guide': (None, 'triage', ('eligibility', 'triage', 'knowledge', 'selftest')),
-    'image-billing-cleanup': (None, 'scope', ('scope', 'faq', 'unblock-check', 'inventory', 'guest-check', 'invocation-result', 'snapshot-backup')),
-    'instance-relocation-guide': (None, 'assess', ('doctor', 'inventory', 'stock', 'assess')),
-    'linux-permission-repair': (None, 'classify', ('identity', 'preflight', 'classify', 'guest-plan', 'guest-run', 'guest-result', 'snapshot', 'guide', 'boundary')),
-    'network-quality-bandwidth': (None, 'collect', ('preflight', 'collect', 'judge', 'guide', 'report')),
     'public-ip-guide': ('--intent', 'consult', ('consult', 'change-ip', 'add-ip', 'retain-ip', 'billing', 'ip-missing', 'verify', 'triage')),
     'renewal-pricing-discount': (None, 'inventory', ('inventory', 'expiring', 'pricing-modules', 'quote', 'explain', 'handoff')),
-    'service-escalation-guide': (None, '--screen', ('--screen', '--build-package', '--collect-evidence')),
-    'stop-mode-billing-guide': (None, 'assess', ('assess', 'verify-status', 'check-stock', 'report')),
-    'unexpected-reboot-diagnosis': (None, 'diagnose', ('check-auth', 'diagnose', 'guest-probe', 'create-snapshot', 'explain')),
     'unsubscribe-refund': (None, '--inventory', ('--inventory', '--estimate', '--rules', '--checklist')),
-    'vpc-connectivity-check': ('--check', 'public-path', ('pair', 'transfer', 'ip-inventory', 'public-path', 'cidr-only')),
-    'web-service-runtime-config': (None, 'report', ('report', 'guest-plan', 'guest-run', 'snapshot', 'knowledge')),
 }
 
-# ---- dual-entry area: console-resource-lookup ---------------------------------
-# The slug covers two jobs: a knowledge/navigation question ("where do I change the
-# public IP in the console") and an account-side lookup ("list my running
-# instances"). They are two scripts, and the slug used to always dispatch the
-# navigation one, so an account listing question fell through to "no locator
-# given" and the leg spent 18 tool calls rediscovering the lookup script
-# (P-01b, 2026-10-27). The dispatcher now picks the entry from the flags.
-LOOKUP_AREA = 'console-resource-lookup'
-LOOKUP_ENTRY = 'areas/console_resource_lookup/lookup_console_resource.py'
-LOOKUP_ROUTE_FLAGS = (
-    '--instance-id', '--instance-ids', '--instance-name', '--public-ip', '--private-ip',
-    '--resource-group-id', '--regions', '--region-hint', '--status', '--all-regions',
-    '--console-claims', '--no-status-check', '--availability',
-    '--availability-region', '--destination-resource', '--instance-charge-type',
-    '--instance-type', '--zone-id', '--resource-type',
-)
+# ---- instance listing helper (engine infrastructure) -------------------------
+# The console-resource-lookup axis moved to the account-and-service-process
+# extension package, but the dispatcher still owes every area an instance offer
+# when a customer id could not be read. The listing leg therefore stays here as
+# a shared helper instead of an area: the same verified read-only sweep, with no
+# dispatch surface of its own.
+LOOKUP_ENTRY = '_instance_lookup/lookup_console_resource.py'
 
 
 # S3 routing for spec-change: the area already owns the static notices (change
@@ -369,32 +315,8 @@ def infer_change_object(area, rest, question):
 
 
 def resolve_entry(area, rest):
-    """Path of the script this dispatch must run, plus the argv it gets.
-
-    Pure so the dual-entry rule is testable offline. The lookup entry takes
-    `--instance-ids`; the singular `--instance-id` used by every other area is
-    translated when the lookup entry is chosen, instead of failing in argparse.
-    """
-    entry = os.path.join(HERE, AREAS[area])
-    if area != LOOKUP_AREA:
-        return entry, list(rest)
-    flags = [t.split('=', 1)[0] for t in rest]
-    if not any(f in LOOKUP_ROUTE_FLAGS for f in flags):
-        return entry, list(rest)
-    argv, i = [], 0
-    while i < len(rest):
-        tok = rest[i]
-        if tok == '--instance-id' and i + 1 < len(rest):
-            argv.extend(['--instance-ids', rest[i + 1]])
-            i += 2
-            continue
-        if tok.startswith('--instance-id='):
-            argv.append('--instance-ids=' + tok.split('=', 1)[1])
-            i += 1
-            continue
-        argv.append(tok)
-        i += 1
-    return os.path.join(HERE, LOOKUP_ENTRY), argv
+    """Path of the script this dispatch must run, plus the argv it gets."""
+    return os.path.join(HERE, AREAS[area]), list(rest)
 
 # Areas that really dispatch a command into the customer's instance (evidence: the
 # area's own entry script issues Cloud Assistant RunCommand), and the flags that
@@ -403,33 +325,15 @@ def resolve_entry(area, rest):
 # customer's consent. Cloud-side reads are untouched.
 GUEST_ACTIVATION = {
     'access-block-layered': ('--guest-check', '--user-confirmed'),
-    'bt-panel-diagnosis': ('--confirm',),
-    'cloud-assistant-diagnosis': ('--confirm',),
     'console-channel-diagnosis': ('--user-confirmed', '--approval-quote'),
-    'db-on-ecs-diagnosis': ('--confirm',),
-    'disk-attach-os-visibility': ('--confirmed',),
     'disk-expand-diagnosis': ('--confirm',),
-    'disk-pl-change-guide': ('--confirm', '--guest-command'),
-    'file-transfer-diagnosis': ('--confirm',),
-    'hbr-backup-diagnosis': ('--confirm',),
     'host-intrusion-cleanup': ('--confirmed', '--guest-check'),
-    'image-billing-cleanup': ('--confirm',),
     'instance-start-stop-anomaly': ('--confirmed', '--guest-arg', '--guest-check'),
     'instance-state-diagnosis': ('--customer-confirmed', '--guest-baseline',
                                  '--guest-command'),
-    'intranet-egress': ('--confirm', '--acknowledge-approval'),
-    'linux-permission-repair': ('--confirm',),
-    'ram-policy-diagnosis': ('--confirm', '--guest-check'),
     'resource-bottleneck': ('--confirmation', '--guest-command'),
-    'smtp-block-diagnosis': ('--user-confirmation',),
-    'snapshot-billing-cleanup': ('--guest-command', '--guest-path',
-                                 '--user-confirmed', '--confirmation-scope'),
     'ssh-connection': ('--guest-command', '--guest-confirmed-by'),
-    'ssl-cert-deployment': ('--guest-command', '--guest-path',
-                            '--user-confirmed', '--confirmation-scope'),
-    'unexpected-reboot-diagnosis': ('--user-confirmed',),
     'web-inaccessible-slow': ('--confirm', '--guest-command'),
-    'web-service-runtime-config': ('--confirmed',),
     'windows-rdp': ('--confirm', '--guest-check'),
 }
 
@@ -2100,7 +2004,7 @@ def _run_selftest():
           guest_baseline_plan('web-inaccessible-slow',
                               ['--url', 'https://x.example.com'], consented=True), None)
     check('g7_no_region_skipped',
-          guest_baseline_plan('db-on-ecs-diagnosis', ['--instance-id', 'i-1'],
+          guest_baseline_plan('disk-expand-diagnosis', ['--instance-id', 'i-1'],
                               consented=True), None)
     # flag consumed but value missing / looks like another flag -> no target, no fire
     check('g8_dangling_flag', guest_baseline_plan('ssh-connection',
@@ -2136,8 +2040,8 @@ def _run_selftest():
           ['--guest-command', 'df -h'])
     def _area_text(area):
         # The activation flags are the area's own switches; an area may define them in
-        # a helper module of the same directory (intranet-egress keeps its dispatch
-        # flags in guest_command_gate.py), so the check covers the area directory.
+        # a helper module of the same directory, so the check covers the whole area
+        # directory rather than only the entry script.
         entry = os.path.join(HERE, AREAS[area])
         root = os.path.dirname(entry)
         chunks = [open(entry, encoding='utf-8').read()]
@@ -2205,7 +2109,7 @@ def _run_selftest():
     check('k16_success_code_assignment_is_not_a_denial',
           g.is_policy_denial('response code: 200, request completed'), False)
     _usage_block = [
-        'usage: ecs_data_recovery_assessment.py [-h] [--instance-id INSTANCE_ID]',
+        'usage: ecs_ssh_diagnosis.py [-h] [--instance-id INSTANCE_ID]',
         '                                       [--region-id REGION_ID]',
         '                                       [--profile PROFILE] [--assess]',
         '                                       [--instance-state {present-running,present-stopped,not-visible,unknown}]',
@@ -2215,7 +2119,7 @@ def _run_selftest():
         '  --instance-id INSTANCE_ID',
         '  --profile PROFILE     Optional aliyun CLI credential profile name',
         '  --loss-type LOSS_TYPE',
-        'Read-only ECS data-loss recoverability assessment.',
+        'Read-only ECS SSH reachability diagnosis.',
         'Check the ECS console for the instance state.',
     ]
     _kept_b1, _folded_b1 = g.compose_answer(_usage_block)
@@ -2799,22 +2703,10 @@ def _run_selftest():
         if base == 'sts_token.py' and siblings:
             helper_entry.append(a)
     check('ax_no_identity_helper_as_entry', helper_entry, [])
-    # ---- dual-entry area: a listing question must reach the lookup script ----
-    nav = os.path.join(HERE, AREAS[LOOKUP_AREA])
-    lookup = os.path.join(HERE, LOOKUP_ENTRY)
-    check('lu_question_routes_to_navigation',
-          resolve_entry(LOOKUP_AREA, ['--question', 'where is the IP'])[0], nav)
-    check('lu_no_flags_routes_to_navigation', resolve_entry(LOOKUP_AREA, [])[0], nav)
-    check('lu_status_routes_to_lookup',
-          resolve_entry(LOOKUP_AREA, ['--status', 'Running'])[0], lookup)
-    check('lu_scan_routes_to_lookup',
-          resolve_entry(LOOKUP_AREA, ['--all-regions', '--status', 'Running'])[0], lookup)
-    check('lu_singular_instance_id_translated',
-          resolve_entry(LOOKUP_AREA, ['--instance-id', 'i-1'])[1],
-          ['--instance-ids', 'i-1'])
-    check('lu_equals_form_translated',
-          resolve_entry(LOOKUP_AREA, ['--instance-id=i-1'])[1], ['--instance-ids=i-1'])
-    check('lu_other_area_untouched',
+    # ---- instance listing helper: engine infrastructure, not a dispatch area ----
+    check('lu_helper_entry_exists', os.path.isfile(os.path.join(HERE, LOOKUP_ENTRY)), True)
+    check('lu_helper_is_not_an_area', LOOKUP_ENTRY.startswith('areas/'), False)
+    check('lu_area_argv_untouched',
           resolve_entry('ssh-connection', ['--instance-id', 'i-1'])[1], ['--instance-id', 'i-1'])
     # -- stream_child: forwards while running, collects for the lead, keeps the 124 path --
     _sink = []
@@ -2870,11 +2762,11 @@ def _run_selftest():
                         ('guest', 'snapshot', 'run-command', 'resize', 'change-ip',
                          'add-ip', 'retain-ip', 'reboot', 'delete', 'release'))), [])
     check('am03_positional_mode_is_supplied_when_absent',
-          default_area_mode('stop-mode-billing-guide', ['--region-id', 'cn-hangzhou'])[0],
-          ['assess', '--region-id', 'cn-hangzhou'])
+          default_area_mode('icp-filing-guide', ['--region-id', 'cn-hangzhou'])[0],
+          ['triage', '--region-id', 'cn-hangzhou'])
     check('am04_caller_mode_is_never_overridden',
-          default_area_mode('stop-mode-billing-guide', ['report', '--region-id', 'cn-h'])[0],
-          ['report', '--region-id', 'cn-h'])
+          default_area_mode('icp-filing-guide', ['eligibility', '--region-id', 'cn-h'])[0],
+          ['eligibility', '--region-id', 'cn-h'])
     check('am05_selector_flag_is_supplied_when_absent',
           default_area_mode('public-ip-guide', ['--instance-id', 'i-1'])[0],
           ['--intent', 'consult', '--instance-id', 'i-1'])
@@ -2888,7 +2780,7 @@ def _run_selftest():
           all(default_area_mode(area, [])[1].startswith('[internal] AUTO-MODE:')
               for area in AREA_DEFAULT_MODE), True)
     check('am09_no_note_when_nothing_was_supplied',
-          default_area_mode('stop-mode-billing-guide', ['assess'])[1], '')
+          default_area_mode('icp-filing-guide', ['triage'])[1], '')
     check('sc01_bare_change_asks_direction_and_object',
           spec_change_clarification('spec-change-purchase', 'ECS 变更配置',
                                     ['--change-object', 'spec'], inferred='spec'),
@@ -3075,9 +2967,9 @@ def _run_selftest():
     dr.verify = lambda *a, **k: {'verdict': 'hash-match', 'detail': 'stub'}
     try:
         machine, customer, state = doc_ref_leg(
-            'hbr-backup-diagnosis',
-            ['--symptom', '怎么停止云备份计费，备份计划删了还在出账'], [],
-            question='怎么停止云备份计费，备份计划删了还在出账')
+            'billing-attribution-bill-check',
+            ['--symptom', '账户欠费了，欠费多久会停机，账单什么时候出账，优惠券能抵扣吗'], [],
+            question='账户欠费了，欠费多久会停机，账单什么时候出账，优惠券能抵扣吗')
     finally:
         dr.body, dr.verify = real_body3, real_verify3
     cited_urls = {l.split('DOC-REF-URL: ', 1)[1] for l in machine
@@ -3090,18 +2982,18 @@ def _run_selftest():
 
     # A `scope_limit` is an instruction to the agent about what a citation may NOT be
     # used for -- typically because the source page covers a topic the area boundary
-    # routes away (disk-attach__replace-os-cross-type-data-disk quotes a data-disk
-    # impact fact from the replace-the-operating-system page, and this area owes no
-    # replacement procedure). SKILL.md law-4b binds the agent to it, so the line has
-    # to actually survive the dispatcher. max_fetches=0 keeps this hermetic: the
-    # scope line is emitted during citation assembly, before any body-state branch.
+    # routes away (billing-attribution__arrears-payg-15day-timeline quotes the arrears
+    # lifecycle from the overdue-payments page, and this area owes no expiry-retention
+    # timeline). SKILL.md law-4b binds the agent to it, so the line has to actually
+    # survive the dispatcher. max_fetches=0 keeps this hermetic: the scope line is
+    # emitted during citation assembly, before any body-state branch.
     machine, customer, state = doc_ref_leg(
-        'disk-attach-os-visibility', [], set(), max_fetches=0,
-        question='系统换成Linux之后，原来的数据盘挂载后读不出来，是不是盘坏了')
+        'billing-attribution-bill-check', [], set(), max_fetches=0,
+        question='欠费多久会停机回收')
     scope_lines = [l for l in machine if l.startswith('DOC-REF-SCOPE-LIMIT:')]
     check('d80_scope_limit_survives_to_the_machine_record', bool(scope_lines), True)
     check('d81_scope_limit_names_the_excluded_act',
-          any('更换操作系统' in l for l in scope_lines), True)
+          any('到期' in l for l in scope_lines), True)
     # Deliberate: the limit is authoring/agent-facing and carries internal vocabulary
     # (match_term, support-position, handoff-boundaries.md), so it must NOT be copied
     # into the customer block. This pins the design so it is not "fixed" by leaking.
@@ -3210,15 +3102,16 @@ def _run_selftest():
           any(l.startswith('not read: doc leg') for l in machine), True)
 
     machine, customer, state = doc_ref_leg(
-        'snapshot-billing-cleanup', ['--symptom', '快照怎么关闭，我不想用快照服务了'],
+        'unsubscribe-refund', ['--symptom', '快照删不掉，删除不了怎么办'],
         seen_before, max_fetches=0)
     check('d23_shared_anchor_reaches_declaring_area', state != 'skipped', True)
-    check('d24_override_demotes_to_verify_only',
-          any('role=verify-only' in l for l in machine), True)
+    check('d24_shared_anchor_cited_with_its_role',
+          any('_shared__snapshot-delete-constraints' in l and 'role=doc-answers' in l
+              for l in machine), True)
     machine, customer, state = doc_ref_leg(
-        'disk-attach-os-visibility', ['--symptom', '初始化会不会丢数据'],
+        'billing-attribution-bill-check', ['--symptom', '快照还在计费，资源包抵扣不了'],
         seen_before, max_fetches=0)
-    check('d25_same_anchor_is_doc_answers_for_pilot_area',
+    check('d25_second_declaring_area_reaches_its_anchor',
           any('role=doc-answers' in l or 'role=promote' in l for l in machine), True)
 
     # -- action classes (law: high-risk is guided, never executed; a config change runs
@@ -3289,15 +3182,15 @@ def _run_selftest():
     #    lexicon must load from the package root (not scripts/), guarding the path.
     _rt_lex = troute.load_lexicon(HERE)
     check('rt_lexicon_loads_from_package_root', len(_rt_lex) > 0, True)
-    _rt_rank = troute.rank_areas('宝塔面板打不开', _rt_lex)
-    check('rt_rank_bt_panel_top1',
-          bool(_rt_rank) and _rt_rank[0][0] == 'bt-panel-diagnosis', True)
+    _rt_rank = troute.rank_areas('网站打不开，访问很慢', _rt_lex)
+    check('rt_rank_web_top1',
+          bool(_rt_rank) and _rt_rank[0][0] == 'web-inaccessible-slow', True)
     _p_route = subprocess.run(
-        [sys.executable, _entry, '--route-question', '宝塔面板打不开'],
+        [sys.executable, _entry, '--route-question', '网站打不开，访问很慢'],
         capture_output=True, text=True, timeout=60)
     check('rt_entry_survives_route',
           (_p_route.returncode, 'Traceback' in _p_route.stderr,
-           'bt-panel-diagnosis' in _p_route.stdout, 'PRIMARY-CAUSE' in _p_route.stdout),
+           'web-inaccessible-slow' in _p_route.stdout, 'PRIMARY-CAUSE' in _p_route.stdout),
           (0, False, True, False))
     _p_nosig = subprocess.run(
         [sys.executable, _entry, '--route-question', '你好'],
@@ -3307,184 +3200,6 @@ def _run_selftest():
            'no lexical signal' in _p_nosig.stdout),
           (1, False, True))
 
-    # -- R2 A类: disk-attach detach/usage structured guidance is symptom-conditional
-    #    and guide-only (ledger D160 §39). Direct build_sections call, no cloud/stub.
-    _da_dir = os.path.join(HERE, 'areas', 'disk_attach_os_visibility')
-    sys.path.insert(0, _da_dir)
-    try:
-        import ecs_disk_attach_visibility as _da
-
-        class _DaArgs:
-            region_id = 'cn-hangzhou'
-            instance_id = 'i-x'
-            symptom = ''
-            disk_id = []
-
-        def _da_titles(symptom):
-            _a = _DaArgs()
-            _a.symptom = symptom
-            return [t for t, _ in _da.build_sections(
-                _a, {}, [], {}, {}, 'linux', [], [], 'uid')]
-
-        check('r2_detach_guidance_present',
-              'Detaching a data disk (guidance only)' in _da_titles('如何卸载云盘'), True)
-        check('r2_usage_guidance_present',
-              'Cloud capacity vs filesystem usage' in _da_titles('查看云盘使用容量'), True)
-        check('r2_detach_absent_for_usage',
-              'Detaching a data disk (guidance only)' not in _da_titles('查看云盘使用容量'), True)
-        check('r2_usage_absent_for_expand',
-              'Cloud capacity vs filesystem usage' not in _da_titles('磁盘扩容后容量没变'), True)
-        check('r2_usage_absent_for_plain_attach',
-              'Cloud capacity vs filesystem usage' not in _da_titles(
-                  'data disk attached but not visible'), True)
-        import report_builder as _rb
-        _probe_disk = {"disk_id": "d-x", "size_gib": 100,
-                       "attached_instances": ["i-x"], "multi_attach": "", "billing": ""}
-        _probe_verdict = _rb.evaluate_disk(
-            _probe_disk, "i-x", {"collected": False, "gaps": []}, "windows", "")
-        _chain = {step: state for step, _plane, state in _rb.chain_table(_probe_verdict)}
-        check('r2_chain_os_not_verified_when_probe_missing',
-              _chain.get('1') == 'checked and in place'
-              and _chain.get('3') == 'not verified (guest not read)'
-              and _chain.get('5') == 'not verified (guest not read)', True)
-
-        def _da_snapshot_gap_probe():
-            _saved_call = _da.call
-            _da.call = lambda *a, **k: {"Snapshots": {"Snapshot": []}}
-            try:
-                _snap, _snap_gaps = _da._fetch_snapshot_presence('sess', 'cn-hangzhou', 'i-x', 30)
-            finally:
-                _da.call = _saved_call
-            return _snap['snapshot_count'] == 0 and _snap_gaps == []
-        check('r2_no_snapshot_is_not_a_diagnostic_gap', _da_snapshot_gap_probe(), True)
-
-        _nd_guest = {'collected': True, 'gaps': []}
-        _nd_verdict = {"findings": [_rb.FINDING_DISK_ATTACHED_TO_THIS_INSTANCE,
-                                    _rb.FINDING_NO_FILESYSTEM]}
-        check('r2_new_disk_lead_present_linux',
-              _da._new_disk_lead_line([_nd_verdict], 'linux', _nd_guest) is not None, True)
-        check('r2_new_disk_lead_absent_guest_missing',
-              _da._new_disk_lead_line([_nd_verdict], 'linux', {'collected': False}) is None, True)
-        check('r2_new_disk_lead_absent_windows',
-              _da._new_disk_lead_line([_nd_verdict], 'windows', _nd_guest) is None, True)
-        check('r2_new_disk_lead_absent_complete',
-              _da._new_disk_lead_line([{"findings": [_rb.FINDING_DISK_ATTACHED_TO_THIS_INSTANCE,
-                                                     _rb.FINDING_MOUNTED_AND_READABLE]}],
-                                      'linux', _nd_guest) is None, True)
-        check('r2_new_disk_lead_absent_not_attached',
-              _da._new_disk_lead_line([{"findings": [_rb.FINDING_DISK_NOT_ATTACHED]}],
-                                      'linux', _nd_guest) is None, True)
-        _nd_rl = report_lead([_da._new_disk_lead_line([_nd_verdict], 'linux', _nd_guest)])
-        check('r2_new_disk_lead_names_cause',
-              _nd_rl.startswith('PRIMARY-CAUSE: the attached data disk')
-              and 'unverified' not in _nd_rl, True)
-        check('r2_placement_lead_not_attached',
-              _da._placement_lead_line([{"findings": [_rb.FINDING_DISK_NOT_ATTACHED]}])
-              is not None, True)
-        check('r2_placement_lead_other_instance',
-              _da._placement_lead_line([{"findings": [_rb.FINDING_DISK_ON_OTHER_INSTANCE]}])
-              is not None, True)
-        check('r2_placement_lead_absent_when_attached',
-              _da._placement_lead_line([{"findings": [_rb.FINDING_DISK_ATTACHED_TO_THIS_INSTANCE]}])
-              is None, True)
-        check('r2_placement_lead_absent_when_no_findings',
-              _da._placement_lead_line([{"findings": []}]) is None, True)
-        _pl_rl = report_lead([_da._placement_lead_line(
-            [{"findings": [_rb.FINDING_DISK_NOT_ATTACHED]}])])
-        check('r2_placement_lead_names_cause',
-              _pl_rl.startswith('PRIMARY-CAUSE: the data disk is not attached')
-              and 'unverified' not in _pl_rl, True)
-        _po_rl = report_lead([_da._placement_lead_line(
-            [{"findings": [_rb.FINDING_DISK_ON_OTHER_INSTANCE]}])])
-        check('r2_placement_lead_other_names_cause',
-              _po_rl.startswith('PRIMARY-CAUSE: the data disk is attached to a different')
-              and 'unverified' not in _po_rl, True)
-        check('r2_guest_lead_outranks_placement',
-              (_da._new_disk_lead_line([_nd_verdict], 'linux', _nd_guest)
-               or _da._placement_lead_line([_nd_verdict])).startswith(
-                   'MUST-LEAD: [disk-not-initialized]'), True)
-
-        # -- R2: OS-side remediation guidance for the core 'attached but not
-        #    visible' scenario reaches the customer answer (ledger D160 §43).
-        def _da_sections(verdicts, os_family, guest, symptom=''):
-            _a = _DaArgs()
-            _a.symptom = symptom
-            return _da.build_sections(_a, {}, [], guest, {}, os_family,
-                                      verdicts, [], 'uid')
-
-        def _da_body(sections, title):
-            for heading, body in sections:
-                if heading == title:
-                    return body
-            return []
-
-        _vis_title = 'Making an attached disk visible (guidance only)'
-        _guest_missing = {'collected': False, 'gaps': []}
-        _attach_disk = {"disk_id": "d-x", "size_gib": 100,
-                        "attached_instances": ["i-x"], "multi_attach": "", "billing": ""}
-        _v_probe = _rb.evaluate_disk(_attach_disk, "i-x", _guest_missing, "windows", "")
-        _v_notattach = _rb.evaluate_disk(
-            dict(_attach_disk, attached_instances=[]), "i-x", _guest_missing, "windows", "")
-        _v_complete = {"findings": [_rb.FINDING_DISK_ATTACHED_TO_THIS_INSTANCE,
-                                    _rb.FINDING_MOUNTED_AND_READABLE],
-                       "blocked_step": _rb.FINDING_MOUNTED_AND_READABLE,
-                       "explanation": "complete", "manual_next_step": "",
-                       "chain_steps_confirmed": [1, 2, 3, 4, 5], "os_family": "windows",
-                       "symptom_reported": False,
-                       "evidence": {"disk_id": "d-x", "size_gib": 100}}
-        check('r2_visibility_guidance_present_when_attached_not_visible',
-              _vis_title in [t for t, _ in _da_sections([_v_probe], 'windows', _guest_missing)],
-              True)
-        check('r2_visibility_guidance_absent_when_complete',
-              _vis_title not in [t for t, _ in _da_sections([_v_complete], 'windows', _guest_missing)],
-              True)
-        check('r2_visibility_guidance_absent_when_not_attached',
-              _vis_title not in [t for t, _ in _da_sections([_v_notattach], 'windows', _guest_missing)],
-              True)
-        _vis_body_win = _da_body(_da_sections([_v_probe], 'windows', _guest_missing), _vis_title)
-        _vis_text_win = ' '.join(_vis_body_win)
-        check('r2_visibility_guidance_snapshot_console_ospath',
-              ('snapshot' in _vis_text_win and 'Console entry point' in _vis_text_win
-               and 'Disk Management' in _vis_text_win and 'drive letter' in _vis_text_win), True)
-        _vis_body_linux = _da_body(_da_sections([_v_probe], 'linux', _guest_missing), _vis_title)
-        _vis_text_linux = ' '.join(_vis_body_linux)
-        check('r2_visibility_guidance_linux_mount_fstab',
-              ('mount' in _vis_text_linux and ('/' + 'etc/fstab') in _vis_text_linux
-               and 'mkfs' in _vis_text_linux), True)
-        _chain_body = _da_body(_da_sections([_v_probe], 'windows', _guest_missing),
-                               'Where the chain stops')
-        _chain_text = ' '.join(_chain_body)
-        check('r2_probe_missing_manual_step_not_complete',
-              ('none; the chain is complete' not in _chain_text
-               and 'not complete yet' in _chain_text), True)
-        _vis_report = _rb.render_markdown(
-            't', _da_sections([_v_probe], 'windows', _guest_missing))
-        _kept, _folded = g.compose_answer(_vis_report.splitlines(), detail='answer')
-        check('r2_visibility_guidance_survives_short_answer',
-              any('Console entry point' in ln or 'snapshot' in ln for ln in _kept), True)
-        _v_na_linux = _rb.evaluate_disk(
-            dict(_attach_disk, attached_instances=[]), "i-x", _guest_missing, "linux", "")
-        _chain_na_linux = ' '.join(_da_body(
-            _da_sections([_v_na_linux], 'linux', _guest_missing), 'Where the chain stops'))
-        check('r2_not_attached_forward_mount_fstab',
-              ('After attaching' in _chain_na_linux and 'mount' in _chain_na_linux
-               and ('/' + 'etc/fstab') in _chain_na_linux), True)
-        _chain_na_win = ' '.join(_da_body(
-            _da_sections([_v_notattach], 'windows', _guest_missing), 'Where the chain stops'))
-        check('r2_not_attached_forward_windows_online',
-              ('After attaching' in _chain_na_win and 'Online' in _chain_na_win
-               and 'drive letter' in _chain_na_win), True)
-        _chain_complete_text = ' '.join(_da_body(
-            _da_sections([_v_complete], 'windows', _guest_missing), 'Where the chain stops'))
-        check('r2_not_attached_forward_absent_when_complete',
-              'After attaching' not in _chain_complete_text, True)
-        _na_report = _rb.render_markdown(
-            't', _da_sections([_v_na_linux], 'linux', _guest_missing))
-        _na_kept, _na_folded = g.compose_answer(_na_report.splitlines(), detail='answer')
-        check('r2_not_attached_forward_survives_short_answer',
-              any(('/' + 'etc/fstab') in ln for ln in _na_kept), True)
-    finally:
-        sys.path.pop(0)
 
     # -- the duty travels with the output (eval run 15607 regressions) -----------
     def _route_stdout(question):
@@ -3655,7 +3370,7 @@ def _run_selftest():
           _v26_prompts, [])
     check('v26_the_case_prompt_sweep_is_not_vacuous',
           len(glob.glob(os.path.join(HERE, '..', 'evals', 'scenarios', '*',
-                                     '*.jsonc'))), 74)
+                                     '*.jsonc'))), 41)
     # Eval 15643: the answer block was clean, but the log the leg quoted still said
     # `[EVIDENCE]` / `[FINDING]` / `STATUS: DEGRADED`, and two legs copied those
     # tokens straight into the customer reply. The echo is a boundary too.
@@ -3758,7 +3473,7 @@ def _run_selftest():
           _ua_ch, ['--symptom', 'auto', '--instance-id', 'i-x'])
     check('ua07_closed_selector_still_keeps_the_wording', _ua_ch_prose, ['disk missing'])
     _ua_no_neutral, _, _ua_nn_prose = repair_area_argv(
-        'db-on-ecs-diagnosis', ['diagnose', '--symptom', 'disk missing'],
+        'disk-expand-diagnosis', ['diagnose', '--symptom', 'disk missing'],
         "prog: error: argument --symptom: invalid choice: 'disk missing' "
         "(choose from 'connect', 'deploy')")
     check('ua08_no_neutral_member_drops_the_flag',
@@ -3769,12 +3484,12 @@ def _run_selftest():
     check('ua09_required_region_is_renamed_not_guessed',
           _ua_req, ['inventory', '--region', 'cn-hangzhou'])
     _ua_req2, _, _ = repair_area_argv(
-        'instance-relocation-guide', ['assess', '--region-id', 'cn-hangzhou'],
+        'x', ['assess', '--region-id', 'cn-hangzhou'],
         'prog: error: the following arguments are required: --source-region')
     check('ua10_source_region_is_an_alias_too',
           _ua_req2, ['assess', '--source-region', 'cn-hangzhou'])
     _ua_req3, _, _ = repair_area_argv(
-        'linux-permission-repair', ['classify'],
+        'x', ['classify'],
         'prog: error: the following arguments are required: --text',
         question='cannot read the file')
     check('ua11_required_prose_comes_from_the_question',
@@ -3784,10 +3499,10 @@ def _run_selftest():
                            'prog: error: the following arguments are required: --target-size')[0],
           None)
     check('ua13_group_takes_the_curated_read_only_mode',
-          repair_area_argv('service-escalation-guide', ['--text', 'x'],
-                           'prog: error: one of the arguments --screen --build-package '
-                           '--collect-evidence is required')[0],
-          ['--screen', '--text', 'x'])
+          repair_area_argv('unsubscribe-refund', ['--text', 'x'],
+                           'prog: error: one of the arguments --inventory --estimate '
+                           '--rules is required')[0],
+          ['--inventory', '--text', 'x'])
     check('ua14_group_without_a_curated_mode_is_not_guessed',
           repair_area_argv('unknown-area', [],
                            'prog: error: one of the arguments --a --b is required')[0],
@@ -3817,7 +3532,7 @@ def _run_selftest():
     _ua_help = ('usage: spot.py [-h] [--region REGION] [--instance-id INSTANCE_ID]\n'
                 '  --region REGION       required for cloud queries\n')
     _ua_ren, _ua_ren_note, _ = repair_area_argv(
-        'preemptible-instance-guide', ['--region-id', 'cn-hangzhou', '--json'],
+        'x', ['--region-id', 'cn-hangzhou', '--json'],
         'prog: error: unrecognized arguments: --region-id cn-hangzhou',
         help_text=_ua_help)
     check('ua25_declared_alias_is_renamed_not_dropped',
@@ -3827,7 +3542,7 @@ def _run_selftest():
     _ua_pfx_help = ('usage: lookup.py [-h] [--regions REGIONS] '
                     '[--region-hint REGION_HINT]\n')
     _ua_pfx, _, _ua_pfx_prose = repair_area_argv(
-        'console-resource-lookup', ['--region-id', 'cn-hangzhou', '--json'],
+        'x', ['--region-id', 'cn-hangzhou', '--json'],
         'prog: error: unrecognized arguments: --region-id cn-hangzhou',
         help_text=_ua_pfx_help)
     check('ua27_longer_option_is_not_an_alias_match',
@@ -3860,7 +3575,7 @@ def _run_selftest():
     check('ua35_prose_rename_note_is_internal',
           _ua_pr_note.startswith('[internal] AUTO-ARGS: --symptom->--error-text'), True)
     _ua_ct, _, _ = repair_area_argv(
-        'smtp-block-diagnosis', ['--symptom', 'cannot send mail', '--json'],
+        'x', ['--symptom', 'cannot send mail', '--json'],
         'prog: error: unrecognized arguments: --symptom cannot send mail',
         help_text='usage: s.py [-h] [--error-text ERROR_TEXT] [--customer-text CUSTOMER_TEXT]\n')
     check('ua36_customer_wording_is_preferred_over_error_text',
@@ -3899,7 +3614,7 @@ def _run_selftest():
         # The fixture is dropped precisely because the attribution line below names
         # a check; proving the scrub works needs the dead spelling present, not
         # approved, so the routing gate exempts this line by marker.
-        'Skill      : alibabacloud-ecs-hbr-backup-diagnosis',  # gate:handoff-exempt
+        'Skill      : alibabacloud-ecs-diagnose',  # gate:handoff-exempt
         'observability session id: ****040e',
         '"userAgent": "AlibabaCloud-Agent-Skills/x/****d895 skill-version/1.0.0",',
         'the customer keeps this line'], machine_status=False)
@@ -4096,33 +3811,6 @@ def _run_selftest():
               for tok in ('its file name included (never an area slug)',
                           'the saved report is the block verbatim',
                           'no mechanism narration')), True)
-    # The disk area's audit trailer used to print its whole permission whitelist as
-    # "actions used", so every read-only run claimed the consent-gated command
-    # dispatch action it never called. A trailer is a statement about the run.
-    _da_area = os.path.join(HERE, 'areas', 'disk_attach_os_visibility')
-    _da_prog = (
-        'import sys\n'
-        'sys.path.insert(0, %r)\n'
-        'import ecs_disk_attach_visibility as m\n'
-        'def offline(*args, **kwargs):\n'
-        '    raise m.CliError("Offline", "no credential in this run")\n'
-        'm.sts_token.fetch_identity = offline\n'
-        'm._fetch_instance = offline\n'
-        'm._fetch_disks = offline\n'
-        'm._fetch_snapshot_presence = offline\n'
-        'sys.exit(m.main(["--region-id", "cn-hangzhou", '
-        '"--instance-id", "i-selftest0000000000", "--timeout", "5"]))\n'
-    ) % _da_area
-    _da = subprocess.run([sys.executable, '-c', _da_prog],
-                         capture_output=True, text=True, timeout=180,
-                         env={'PATH': '/usr/bin:/bin',
-                              'HOME': tempfile.mkdtemp(prefix='da-home-')})
-    _da_trailers = [ln for ln in _da.stdout.split('\n') if 'actions used:' in ln]
-    _da_trailer = _da_trailers[0] if _da_trailers else ''
-    check('cv40_the_action_trailer_names_only_the_calls_this_run_made',
-          (len(_da_trailers), 'RunCommand' in _da_trailer,
-           'DescribeInvocations' in _da_trailer,
-           'DescribeInstances' in _da_trailer), (1, False, False, True))
     # The static UA-SKILL-VERSION check reads the first UA definition in a file and
     # misses the versioned override below it, so it reported a gap on 55 files that
     # have none. This gate reads the LAST binding of every UA name, which is the one
@@ -4148,7 +3836,7 @@ def _run_selftest():
             if 'skill-version/' not in _ua_body or '_SKILL_VERSION' not in _ua_body:
                 _ua_gaps.append((os.path.basename(os.path.dirname(_ua_path)), _ua_name))
     check('ua10_every_area_ua_ends_with_the_manifest_version',
-          (len(_ua_files) >= 55, _ua_gaps), (True, []))
+          (len(_ua_files) >= 24, _ua_gaps), (True, []))
     # Eval 15657 residue: an admission code, a title-case bracket label and an
     # area-local session line - three shapes the scrub table could not see.
     check('cv41_noevidence_reads_as_prose',
@@ -4311,36 +3999,6 @@ def _run_selftest():
     #    `--region`, lost every inventory read, and answered "no instance data"
     #    on an account with three running instances. The CLI names the flag it
     #    wants, so the retry supplies it from the region the call already has.
-    _rf_areas = ('billing_mode_selection', 'image_billing_cleanup')
-    # Each area's `_cli` imports its own `_constants`, so the probe runs in its
-    # own interpreter: importing two of them in one process resolves the second
-    # area's constants against the first area's cached module.
-    _rf_probe = (
-        'import json, _cli\n'
-        'cmd = ["aliyun", "ecs", "describe-instances", "--region", "cn-hangzhou"]\n'
-        'want = cmd + ["--biz-region-id", "cn-hangzhou"]\n'
-        'print(json.dumps([\n'
-        '  _cli._region_flag_retry(cmd, "ERROR: missing required parameter(s): '
-        '--biz-region-id", "cn-hangzhou") == want,\n'
-        '  _cli._region_flag_retry(cmd, "Error: --biz-region-id is required", '
-        '"cn-hangzhou") == want,\n'
-        '  _cli._region_flag_retry(cmd, "Forbidden.RAM: no permission", '
-        '"cn-hangzhou") is None,\n'
-        '  _cli._region_flag_retry(want, "Error: --biz-region-id is required", '
-        '"cn-hangzhou") is None,\n'
-        '  _cli._region_flag_retry(cmd, "Error: --biz-region-id is required", "") '
-        'is None,\n'
-        ']))\n')
-    for _rf_name in _rf_areas:
-        _rf_dir = os.path.join(HERE, 'areas', _rf_name)
-        _rf_run = subprocess.run([sys.executable, '-c', _rf_probe], cwd=_rf_dir,
-                                 capture_output=True, text=True, timeout=60)
-        try:
-            _rf_got = json.loads(_rf_run.stdout)
-        except ValueError:
-            _rf_got = [_rf_run.returncode, _rf_run.stderr[-200:]]
-        check('rf01_%s_region_flag_retry_is_exact_and_once' % _rf_name,
-              _rf_got, [True] * 5)
     _rf_uncovered = []
     for _rf_cli in sorted(glob.glob(os.path.join(HERE, 'areas', '*', '_cli.py'))):
         _rf_src = open(_rf_cli, encoding='utf-8').read()
@@ -4394,8 +4052,8 @@ def _run_selftest():
         'except ValueError:\n'
         '    ok.append(True)\n'
         'print(json.dumps(ok))\n')
-    for _jb_name in ('smtp_block_diagnosis', 'console_resource_lookup',
-                     'db_on_ecs_diagnosis'):
+    for _jb_name in ('access_block_layered', 'billing_attribution_bill_check',
+                     'disk_expand_diagnosis'):
         _jb_run = subprocess.run(
             [sys.executable, '-c', _jb_probe],
             cwd=os.path.join(HERE, 'areas', _jb_name),
@@ -4449,7 +4107,7 @@ def _run_selftest():
     # local inventory read, so the write happens only when the plugin is absent.
     import importlib.util
     import types
-    _probe_area = os.path.join(HERE, 'areas', 'file_transfer_diagnosis')
+    _probe_area = os.path.join(HERE, 'areas', 'access_block_layered')
     _probe_spec = importlib.util.spec_from_file_location(
         '_probe_cli', os.path.join(_probe_area, '_cli.py'))
     _probe_mod = importlib.util.module_from_spec(_probe_spec)
@@ -4557,16 +4215,6 @@ def _run_selftest():
                         _py_name))
     check('no_scope_names_a_variable_it_never_binds', _unbound, [])
 
-    # -- a nil burstable inventory still reads the run state of what it saw ------
-    # eval 15634 assert-003: the inventory leg listed instances and stopped, so the
-    # whitelisted DescribeInstanceStatus was never attempted and the finding rested
-    # on one snapshot field.
-    _bg_path = os.path.join(HERE, 'areas', 'burstable_instance_guide',
-                            'burstable_instance_guide.py')
-    with open(_bg_path, encoding='utf-8') as _bg_handle:
-        _bg_inv = _bg_handle.read().split('def run_inventory(', 1)[1].split('\ndef ', 1)[0]
-    check('burstable_nil_inventory_still_reads_run_state',
-          'fetch_status(' in _bg_inv, True)
 
     # -- eval 15645: the area spec, not the agent, ordered the forbidden words ----
     # file-transfer's outputs/ report held exactly `STATUS:` + `NEXT_ACTION:` and
@@ -4603,29 +4251,7 @@ def _run_selftest():
     check('ad01_every_status_spec_opens_with_the_delivery_override', _ad_missing, [])
     check('ad02_delivery_override_sits_above_the_first_status_key', _ad_late, [])
     check('ad03_delivery_override_binds_both_saved_surfaces', _ad_thin, [])
-    check('ad04_the_status_spec_sweep_is_not_vacuous', len(_ad_docs) >= 49, True)
-    # -- eval 15648: two TestCase failures were the spec hiding a read it ships --
-    # stop-mode failed on BOTH models: the case asks for DescribeInstanceStatus,
-    # only `verify-status` sends it, and the workflow said "read facts with assess
-    # or report" - so the leg never learned the power-state read existed.
-    # disk-attach failed because the leg left the guest flag off and reported
-    # "guest reads not collected" instead of asking, which the spec never forbade.
-    _ad_stop = open(os.path.join(HERE, '..', 'references', 'areas',
-                                 'stop-mode-billing-guide.md'),
-                    encoding='utf-8').read()
-    _ad_stop_step = _ad_stop.split('2. **Read facts**', 1)[1].split('3. **Route', 1)[0]
-    check('ad05_stop_mode_workflow_names_the_power_state_read',
-          all(tok in _ad_stop_step
-              for tok in ('verify-status', 'power state', 'assess` does not return it')),
-          True)
-    _ad_disk = open(os.path.join(HERE, '..', 'references', 'areas',
-                                 'disk-attach-os-visibility.md'),
-                    encoding='utf-8').read()
-    check('ad06_the_guest_ask_cannot_be_skipped_by_omitting_the_flag',
-          all(tok in _ad_disk
-              for tok in ('leaving the guest', 'does not discharge it',
-                          'unfinished run, not a degraded one', 'Ask first',
-                          'declined or unanswered ask')), True)
+    check('ad04_the_status_spec_sweep_is_not_vacuous', len(_ad_docs) >= 23, True)
 
     print('== selftest: %d checks / %d failures' % (checks['n'], checks['fail']))
     return 1 if checks['fail'] else 0

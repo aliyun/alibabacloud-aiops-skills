@@ -2,7 +2,7 @@
 
 This file is the customer- and agent-facing contract for what this skill may do on a
 customer's behalf. **It is governed by `references/action-classes.json`; on any conflict
-the JSON wins.** The build gate `ecs-suite-v2/tools/check_action_policy.py` re-reads both
+the JSON wins.** The build gate `check_action_policy.py` (suite tooling archive) re-reads both
 and fails if they drift, if a guide-only action has any dispatch call site in `scripts/`,
 or if a dispatched consent-write action lacks its cost disclosure.
 
@@ -57,12 +57,12 @@ its side effects (for example, a snapshot bills).
 ### auto-read (1)
 | action | api | capability | areas |
 |---|---|---|---|
-| guest-read-command | RunCommand | dispatched | access-block-layered, disk-pl-change-guide, host-intrusion-cleanup, image-billing-cleanup, instance-start-stop-anomaly, intranet-egress, ram-policy-diagnosis, smtp-block-diagnosis, web-inaccessible-slow |
+| guest-read-command | RunCommand | dispatched | access-block-layered, console-channel-diagnosis, disk-expand-diagnosis, host-intrusion-cleanup, instance-start-stop-anomaly, instance-state-diagnosis, resource-bottleneck, ssh-connection, web-inaccessible-slow |
 
 ### consent-write (3)
 | action | api | capability | areas |
 |---|---|---|---|
-| create-snapshot | CreateSnapshot | dispatched | host-intrusion-cleanup, image-billing-cleanup, instance-start-stop-anomaly |
+| create-snapshot | CreateSnapshot | dispatched | disk-expand-diagnosis, host-intrusion-cleanup, instance-start-stop-anomaly |
 | guest-config-change | RunCommand | not-built | - |
 | security-group-write | AuthorizeSecurityGroup | not-built | - |
 

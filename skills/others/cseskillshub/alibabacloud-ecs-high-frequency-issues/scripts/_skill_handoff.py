@@ -9,8 +9,11 @@ sanctioned way to name another skill, and it is deliberately strict:
 
   1. in-package target  -> stay here; name the check in words, never a code;
   2. installed locally  -> say it is already available, no egress, no download pitch;
-  3. published online   -> propose at most two candidates as a confirmation card, and
-                           the customer decides whether to download;
+  3. published online   -> propose at most two candidates as a confirmation card;
+                           nothing is installed until the customer explicitly confirms,
+                           after which the agent may install it for them through the
+                           platform's sanctioned skill installer (this script itself
+                           never downloads or executes external code);
   4. nothing published  -> degrade: state that no matching skill was found and keep
                            answering inside this skill's scope.
 
@@ -338,13 +341,13 @@ def lines_for(result):
         lines = ["The official skill catalogue lists these for the part of the "
                  "question this skill does not own. Compare each stated scope with "
                  "the remaining question first: if none of them covers it, there is "
-                 "no hand-off and this skill keeps answering. Downloading is your "
-                 "decision and nothing is installed for you:"]
+                 "no hand-off and this skill keeps answering. Nothing is installed "
+                 "until you confirm:"]
         for candidate in result.get("candidates", [])[:MAX_CANDIDATES]:
             scope = candidate.get("scope") or "its own document states what it settles"
             lines.append("  - %s - %s" % (candidate.get("name"), scope))
-        lines.append("  - Next: tell me to go ahead and I will walk you through "
-                     "installing it from the official skill page; until then this "
+        lines.append("  - Next: tell me to go ahead and I will install it for you "
+                     "through the official platform skill installer; until then this "
                      "skill keeps answering within its own scope.")
         return lines
     reason = (result or {}).get("reason") or "no-match"

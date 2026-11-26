@@ -79,6 +79,7 @@ Internal-only hosts and account consoles never appear in a customer-facing answe
 Documentation for the bandwidth side:
 https://help.aliyun.com/zh/ecs/user-guide/modify-the-bandwidth-of-an-eip.md and
 https://help.aliyun.com/zh/ecs/user-guide/network-bandwidth.md. A pure bandwidth
-up- or down-grade, with no address question in it, belongs to
-`area:bandwidth-modify-guide`; this skill keeps only the billing-method
-switch that is a precondition of an address change.
+up- or down-grade, with no address question in it, belongs to the bandwidth
+modification guide in the advanced-network-diagnostics extension package; this
+skill keeps only the billing-method switch that is a precondition of an address
+change.

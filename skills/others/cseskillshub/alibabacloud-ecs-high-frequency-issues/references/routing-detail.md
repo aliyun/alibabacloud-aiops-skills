@@ -11,10 +11,10 @@ appear in a customer answer.
 6. **Cross-area hand-off is decided by the table, not by improvisation (MANDATORY).**
    Measured over 37,750 real ECS tickets, 15,930 of the 27,615 tickets that name an
    area at all (57.7%) walk through more than one area before they are resolved, and
-   this package used to document zero hand-offs between its own 55 areas. The
+   this package used to document zero hand-offs between its own areas. The
    dispatcher now reads `references/routing-table.json`, matches the customer's own
    words (passed with `--customer-question`, which is now also listed in `--help`),
-   and appends a three-line `Handoff:` block naming the target area, what that area
+   and appends a three-line `Continue with:` block naming the target area, what that area
    settles, and what happens next. The agent half of the hand-off - the exact switch,
    `--area <target>` plus its sub-command - is printed on the run log as
    `HANDOFF-SWITCH:` and must never be pasted into the customer answer, because a
@@ -25,18 +25,18 @@ appear in a customer answer.
    reason - credential failure, missing toolchain, or a rejected argument shape).
    Every row was admitted only on words that were tested against tickets that never
    reached the target: a word is dropped when more than half of the tickets using it
-   belong to a different area. `ecs-suite-v2/tools/check_routing_table.py` re-derives
+   belong to a different area. `evaluation-knowledge-base/scripts/check_routing_table.py` re-derives
    those numbers and fails the build if a row stops clearing them.
 
 ## Selecting an area from a Chinese question (Area Index)
 
 The `Triggers:` on each area card are English. When the customer's first question is
 Chinese, also match it against `references/trigger-lexicon.json`: per-area Chinese
-trigger terms measured over the same 37,750-ticket corpus, each admitted only when it
-fires in at least 20 first questions and at most half of those belong to other areas.
-It covers the 41 areas whose Chinese vocabulary is discriminative; the other 14 share
-words with sibling areas and must be chosen by meaning, using the cross-area table in
-`references/routing-table.json`. The lexicon only helps pick `--area`; it never
+trigger terms measured over the same 37,750-ticket corpus (admission: a term fires in
+at least 5 first questions with at least half belonging to this area; a sparse fallback
+admits 2-fire terms at a stricter share; areas under 10 development tickets are
+coverage-exempt). It carries terms for all 24 areas; where an area's terms are sparse,
+choose by meaning, using the cross-area table in `references/routing-table.json`. The lexicon only helps pick `--area`; it never
 authorises a dispatch or a write, and a lexical match is a hint, not a confirmed cause.
 
 `python3 scripts/ticket-support.py --route-question "<customer question>"` prints a

@@ -292,7 +292,8 @@ SYMPTOM_ANCHORS = (
 # A platform security penalty (mining/malware alert plus a public-connectivity
 # block) is NOT ticket-only. Security Center exposes a self-service "apply to
 # release the penalty" page over the penalty / security-control records; the
-# sibling area attack_blackhole_diagnosis registers the same URL as
+# attack-and-blackhole axis (now in the security-audit-and-intrusion-response
+# extension package) registers the same URL as
 # PENALTY_RELEASE_URL and names it "penalty record list and the self-service
 # 'apply to release the penalty' page". This area only CITES the entry: the
 # customer submits the application, the platform decides the review, and this

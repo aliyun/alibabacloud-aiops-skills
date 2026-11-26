@@ -14,35 +14,34 @@ The dispatcher composes the answer, so a flow class binds to an area only
 through its scenarios; a single area can carry scenarios of different classes. The Chinese
 names for these two levels are recorded in the project decision log, not in this package.
 
+> **Migration note (2026-11-18).** This core package now ships 24 areas; 31 areas moved
+> to the suite's extension packages. The run-corpus statistics below (the X/55 answer
+> columns, the 110-run and 165-run measurements, §3.1 and §6.1) were measured on the
+> pre-migration 55-area tree and are kept as the historical record of that corpus; they
+> are not re-measured here. The reproducible code-side instruments (the §2 class roster
+> and the §3 code column) were re-run on the 24-area tree and their numbers updated.
+
 ## 1. Why the class binds to `(area, scenario)` and not to `area`
 
 Measured offline against a PATH-shadowed CLI stub, counting every `aliyun stub called:`
 line on the run log and accepting only a run that exits 0 with a non-trivial answer.
-Eleven areas answer at least one scenario with **zero cloud reads at all** (the caller
-identity pre-check included), and every one of them also contains sibling scenarios that
-do read:
+On the pre-migration 55-area tree, eleven areas answered at least one scenario with
+**zero cloud reads at all** (the caller identity pre-check included), and every one of
+them also contained sibling scenarios that do read. Nine of those eleven areas have
+since moved to extension packages; the two that remain in this package:
 
 | area | scenario that reads nothing | answer size |
 | --- | --- | --- |
-| `web-service-runtime-config` | `knowledge` | 9661 B |
-| `hbr-backup-diagnosis` | `billing-attribution` | 9460 B |
-| `stop-mode-billing-guide` | `assess` / `report` / `check-stock` | 6296 / 6462 / 2152 B |
-| `bt-panel-diagnosis` | `readback` / `handoff` | 5239 / 3172 B |
-| `file-transfer-diagnosis` | `collect` / `guest-plan` | 3443 / 613 B |
-| `cloud-assistant-diagnosis` | `invocations` / `snapshot-guard` / `check-env` | 2398 / 1818 / 374 B |
 | `public-ip-guide` | `--intent consult` | 2148 B |
-| `network-quality-bandwidth` | `judge` / `preflight` | 999 / 232 B |
-| `instance-relocation-guide` | `doctor` / `stock` | 564 / 372 B |
 | `sas-alert-vulnerability` | bare entry | 1483 B |
-| `db-on-ecs-diagnosis` | `check-auth` | 664 B |
 
 Two consequences this file is built around:
 
 1. **Zero-read answering is a property of the path, never of the area.** Each of those
    eleven areas also contains a sibling scenario that reaches the cloud, and each of them
    names a read operation in its own code. The table is therefore a floor, not a ceiling:
-   22 areas were probed and 33 were not, and an unprobed area may hold an unlisted
-   zero-read path.
+   on the original corpus 22 areas were probed and 33 were not, and an unprobed area may
+   hold an unlisted zero-read path.
 2. **A template that keys on `area` would mis-classify every row of that table.** Class
    lookup happens on the scenario actually executed, which the entry script knows and the
    dispatcher infers from the sub-command it was handed.
@@ -59,16 +58,17 @@ tested:
 
 | class | rule | areas | evidence the answer may rest on |
 | --- | --- | --- | --- |
-| **A** in-guest | the area's code names a guest dispatch (`run-command` / `invoke-command`, either spelling) | 28 | cloud facts **and** guest readings |
-| **B** enumerated verdict | no guest dispatch, and the area defines at least three `VERDICT_*` tokens | 4 | cloud facts plus that verdict |
-| **D** read-and-report | everything else: reads the control plane, no guest channel, no verdict set | 23 | cloud facts only |
+| **A** in-guest | the area's code names a guest dispatch (`run-command` / `invoke-command`, either spelling) | 12 | cloud facts **and** guest readings |
+| **B** enumerated verdict | no guest dispatch, and the area defines at least three `VERDICT_*` tokens | 0 | cloud facts plus that verdict |
+| **D** read-and-report | everything else: reads the control plane, no guest channel, no verdict set | 12 | cloud facts only |
 | **C** knowledge-only | *not* an area class: the scenario actually executed performs no cloud read | overlay on all three (11 measured, floor) | published rules and the document leg only |
 
 Two things that measurement settled, against expectations written earlier in this project:
 
-- **No area is knowledge-only.** All 55 areas name at least one read operation in their own
-  code, so **C** can only ever be inherited from a scenario, never declared by an area.
-- The in-guest population is **28**, not the 31 or 48 quoted from two earlier static passes.
+- **No area is knowledge-only.** All 24 areas name at least one read operation in their
+  own code, so **C** can only ever be inherited from a scenario, never declared by an area.
+- The in-guest population is **12** on the 24-area tree (it was 28 on the pre-migration
+  55-area tree, not the 31 or 48 quoted from two earlier static passes).
   Those two passes disagreed because they used different, unreproducible criteria (one
   resolved only direct call sites, the other counted any mention of an in-guest step in the
   area's spec). The rule in the table above is the one now in force, and it is reproducible:
@@ -91,21 +91,21 @@ for d in sorted(os.listdir('scripts/areas')):
     out[k].append(d.replace('_', '-'))
     if not READ.search(txt):
         no_read.append(d.replace('_', '-'))
-print({k: len(v) for k, v in out.items()})       # {'A': 28, 'B': 4, 'D': 23}
+print({k: len(v) for k, v in out.items()})       # {'A': 12, 'B': 0, 'D': 12}
 print('areas naming no read at all:', len(no_read))   # 0, which is what makes C an overlay
 PY
 ```
 
 **C overrides the class of the area it runs inside.** An A, B or D area follows its own class
 for scenarios that read, and follows the C rules below for a scenario that reads nothing.
-That is why the table has 55 areas across three rows while section 1's zero-read measurement
-spans eleven areas.
+That is why the table has 24 areas across three rows while section 1's zero-read measurement
+spans eleven areas on the pre-migration tree (two of them still here).
 
 A per-layer HIT / EXCLUDED walk is **not** a class of its own: it is how one class-A area
 (`access-block-layered`) reaches its answer, and it is governed by the ranking law in
 `../SKILL.md` rather than by anything here.
 
-### A. In-guest diagnosis (28 areas)
+### A. In-guest diagnosis (12 areas)
 
 1. Resolve identity, then the target, and say which region and account the answer covers.
 2. Read the control plane; stop and report if a refusal leaves a layer undecided.
@@ -117,7 +117,11 @@ A per-layer HIT / EXCLUDED walk is **not** a class of its own: it is how one cla
 An A answer that never got guest evidence is `DEGRADED` and must say its conclusions rest
 on cloud facts alone.
 
-### B. Enumerated verdict (4 areas)
+### B. Enumerated verdict (0 areas today)
+
+No area in the 24-area tree lands in B: every area with three or more `VERDICT_*` tokens
+also names a guest dispatch and therefore classifies as A first. The class definition is
+kept because the rule order, not the roster, is the contract.
 
 Same skeleton as A, minus the guest reading. The report selects one token from the area's closed
 `VERDICT_*` set, and the customer answer must carry the reading that produced it plus the
@@ -145,7 +149,7 @@ Hard rules for C:
 - A C answer is complete for the question asked. Do not append "run a diagnosis" when the
   diagnosis would not change the rule.
 
-### D. Read-and-report (23 areas)
+### D. Read-and-report (12 areas)
 
 1 through 3 as in A, then: report what the reads returned including an empty result that
 is a real answer, then state the limit of the reading (one region, one account, one
@@ -157,8 +161,9 @@ The template is a selection contract: lines the area printed are kept or folded,
 rewritten. Slots, in print order, with the 8-line / 600-character body ceiling already
 enforced by the shared guardrail.
 
-`today` is what the 55 areas produce now, on two instruments, and the two are separated
-because they answer different questions. **Answers**: 110 runs - every area, two offline
+`today` is what the 55 pre-migration areas produced, on two instruments, and the two are
+separated because they answer different questions (historical corpus; see the migration
+note above). **Answers**: 110 runs - every area, two offline
 stub modes, call shapes derived from each area's own `--help` and its intake errors, so all
 55 areas reached a diagnosis rather than an argument error. **Code**: the same strings
 searched in `scripts/areas/*/`, which is what an area is *capable* of printing even in a
@@ -198,8 +203,8 @@ for d in sorted(os.listdir('scripts/areas')):
                          for f in sorted(os.listdir(p)) if f.endswith('.py'))
 for needle in ('[FINDING]', '[HUMAN STEP]', '[HANDOFF]', 'CONSENT-REQUIRED',
                'not collected'):
-    print('%-18s %d/55' % (needle, sum(needle in t for t in code.values())))
-print('op+row-count     %d/55' % sum(bool(ROWS.search(t)) for t in code.values()))
+    print('%-18s %d/24' % (needle, sum(needle in t for t in code.values())))
+print('op+row-count     %d/24' % sum(bool(ROWS.search(t)) for t in code.values()))
 for slug, t in code.items():
     names = set(re.findall(r'add_parser\(\s*["\']([a-z0-9][a-z0-9_-]{2,})["\']', t))
     hit = sorted(n for n in names if RECHECK.match(n))
@@ -208,11 +213,11 @@ for slug, t in code.items():
     # a hand-off register is NOT measurable from code alone: requiring the word on
     # the same line as `print(` finds 11/55 (most areas build the block first and
     # print the list later), accepting any line finds 55/55 (comments count). The
-    # operative number is the answer-side one in the table above, 23/55.
+    # operative number is the answer-side one in the table above, 23/55 (historical).
     if any(HAND.search(l) for l in t.splitlines() if 'print(' in l):
         hand.append(slug)
-print('recheck sub-cmd  %d/55  %s' % (len(recheck), recheck))
-print('hand-off wording %d/55' % len(hand))
+print('recheck sub-cmd  %d/24  %s' % (len(recheck), recheck))
+print('hand-off wording %d/24' % len(hand))
 anchors = json.load(open('references/doc-anchors.json'))['anchors']
 owners = sorted({a['area'] for a in anchors} - {'_shared'})
 reach = set(owners)
@@ -232,9 +237,10 @@ Two honest consequences of that column:
   area-side development item, not a composer feature.
 - **Slot 9 is a display rule for now**: an answer that says the customer applied a
   fix may not claim the pressure eased without a second run. Wiring the second run
-  is area work, and only 2 of 55 areas even expose a sub-command that means "check
-  again after the change" (`bt-panel-diagnosis readback`, `stop-mode-billing-guide
-  verify-status`).
+  is area work, and on the 24-area tree no area exposes a sub-command that means "check
+  again after the change" (the pre-migration tree had two, `bt-panel-diagnosis readback`
+  and `stop-mode-billing-guide verify-status`; both moved to extension packages with
+  their areas).
 
 `EVIDENCE_SOURCES` in the shared guardrail names the six source forms
 (`cloud-read`, `platform-rule`, `in-guest`, `not-collected`, `refused-read`,
@@ -258,8 +264,8 @@ Coverage, measured over 165 investigation runs (all 55 areas, three stub modes):
 The two zeros are the row this table exists for. `cloud-read` is 0 because the offline
 stub answers every read with an error body or an empty set, so no `live read HIT` line
 ever exists here - it needs a real resource, which is batch-4 work, not a wording gap.
-`not-collected` is 0 because only 2 of 55 areas use those words at all, and neither of
-those paths ran in this corpus. Both stay honest precisely because the footer cannot
+`not-collected` is 0 because only 2 of the 55 pre-migration areas used those words at all,
+and neither of those paths ran in this corpus. Both stay honest precisely because the footer cannot
 invent them.
 
 A remedy block the customer has to act on is never truncated to fit: the credential
@@ -309,8 +315,8 @@ area-side wording item, not a composer item.
 - It does not apply to a script run directly from `scripts/areas/<area>/`. That path keeps
   its own report shape and is the developer channel; only the dispatcher output is bound
   by slots.
-- It does not apply to the 14 extension packages, which still carry the previous directory
-  spelling and will be brought to this vocabulary in their own change.
+- It does not apply to the suite's extension packages, which carry their own axis
+  directory spelling and will be brought to this vocabulary in their own change.
 - It does not make class C cheaper or class A safer. It states which answer a run may give,
   so that a missing read shows up as an undeclared gap rather than as a confident sentence.
 
@@ -329,7 +335,7 @@ that promised a grant path the code never produced.
 | verbatim tokens survive the identifier scrub | `t25`-`t27` (`CREDENTIAL-FAIL-CLOSED`, `UNVERIFIED`) | code |
 | the failure class is one of six named classes | `failure_class`, self-tested by `k14`-`k18` | code |
 | citations come only from the adjudicated anchor file | the document-leg module, checked by the build-time anchor gate | code |
-| no claim that a fix worked without a second run | this file, section 3 slot 9 | **discipline** - and only 2/55 areas expose a sub-command that *is* that second run, so today the rule binds the agent's wording, not the tool's output |
+| no claim that a fix worked without a second run | this file, section 3 slot 9 | **discipline** - and no area in the 24-area tree exposes a sub-command that *is* that second run (the two pre-migration ones moved with their areas), so today the rule binds the agent's wording, not the tool's output |
 | class C answer asserts no resource state | area scripts own their lead | **discipline** (0 checks; the per-claim `[FINDING]` source exists in 1/55 areas) |
 | a hand-off names a real target area | nothing | **not enforced**. 23/55 areas name a hand-off in the answer they actually deliver (measured over 165 investigation runs); 1/55 marks it with a bracket the dispatcher could parse. A code-side census is not usable here: requiring the word on the same line as `print(` finds 11/55, accepting any line finds 55/55 because comments count. |
 
@@ -351,9 +357,12 @@ Measured demand (37,750 September ECS tickets, each turn attributed to an area b
 | transitions the package documented before this batch | 3 of those 114, 1.0% of the weight |
 | hand-off targets in package text that resolve to nothing locally | 65 hits over 16 distinct names, on the scan range this table was built with. The 2026-11-11 re-scan over the full customer text (SKILL.md + `references/**` + `scripts/**`, 165,723 lines) found 84: the old glob skipped `references/areas/` and the constants that assemble the sentence. All 84 are closed in 6.1. |
 
-The shipped answer is `references/routing-table.json`: 104 rows over 33 source areas,
-covering 9,319 of the 9,960 events at that threshold (93.6%). How a row earns its
-place, in order:
+The shipped answer is `references/routing-table.json`: after the 2026-11-18 migration it
+carries 59 rows over 20 source areas - the KEEP-to-KEEP edges only, 5,806 transition
+events of weight. Edges touching the 31 migrated areas belong to the extension packages
+and to the cross-package handoff work, not to this table. On the pre-migration tree the
+table carried 104 rows over 33 source areas, covering 9,319 of the 9,960 events at that
+threshold (93.6%). How a row earns its place, in order:
 
 1. the edge was seen in at least 50 real tickets;
 2. each trigger word appears in at least 20 customer first questions;
