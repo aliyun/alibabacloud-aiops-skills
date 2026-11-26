@@ -1,0 +1,28 @@
+{
+  "en": {
+    "conclusion": "Conclusion",
+    "evidence": "Evidence",
+    "unknowns": "Unconfirmed items",
+    "scope": "The excerpts below use only the supplied response batch; they do not establish current or complete coverage.",
+    "no_extracts": "No source extracts were selected. The listed question fragments are unconfirmed within this batch; this does not establish absence in other sources.",
+    "compound_join": "The recorded association contains {count} join-key pairs. A single pair covers only part of the recorded condition.",
+    "warnings": "Original response warnings:",
+    "unconfirmed_fragment": "The following part of the question is unconfirmed within this batch:",
+    "applicability_unresolved": "Applicability among the selected sources remains unconfirmed; no source has been chosen as authoritative.",
+    "no_listed_unknowns": "No additional unconfirmed question fragments were listed. This does not establish that all conditions, exceptions or unknowns are absent.",
+    "semantic_limit": "Extraction and source bindings were validated locally. Relevance, intent, business truth and answer completeness still require semantic review."
+  },
+  "zh": {
+    "conclusion": "结论",
+    "evidence": "依据",
+    "unknowns": "未确认项",
+    "scope": "以上摘录仅来自本批已提供响应，不能据此确认当前状态或完整覆盖范围。",
+    "no_extracts": "本批未选择来源摘录，仅将下列问题片段列为未确认；不能据此认定相关规定在其他来源中不存在。",
+    "compound_join": "这条关联记录了 {count} 组关联字段。仅使用其中一组只能覆盖记录条件的一部分。",
+    "warnings": "原始响应警告：",
+    "unconfirmed_fragment": "本批证据未确认以下问题片段：",
+    "applicability_unresolved": "所选来源之间的适用口径尚未确认，未选定其中任一来源为权威口径。",
+    "no_listed_unknowns": "未另列未确认的问题片段；这不表示已排除全部条件、例外或其他未知项。",
+    "semantic_limit": "本地校验仅确认摘录及来源绑定，问题相关性、意图、业务真实性和答案完整性仍需语义复核。"
+  }
+}
