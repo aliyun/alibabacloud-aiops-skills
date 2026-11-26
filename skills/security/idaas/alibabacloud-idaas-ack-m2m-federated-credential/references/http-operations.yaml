@@ -1,0 +1,77 @@
+openapi: 3.0.3
+info:
+  title: ACK workload federation data plane
+  version: 0.1.0
+paths:
+  /api/v2/iauths_system/oauth2/token:
+    post:
+      operationId: ExchangeAckFederatedAssertion
+      description: Use the selected EIAM instance's verified default host.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [grant_type, client_id, client_assertion_type, client_assertion, application_federated_credential_name, scope]
+              properties:
+                grant_type: {type: string, enum: [client_credentials]}
+                client_id: {type: string}
+                client_assertion_type: {type: string, enum: ["urn:cloud:idaas:params:oauth:client-assertion-type:id-token-bearer"]}
+                client_assertion: {type: string, format: password}
+                application_federated_credential_name: {type: string}
+                scope: {type: string}
+      responses:
+        "200":
+          description: M2M bearer token issued
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [access_token, token_type]
+                properties:
+                  access_token: {type: string, format: password}
+                  token_type: {type: string}
+                  expires_in: {type: integer}
+        "400":
+          description: Invalid assertion, client, or scope
+  /v2/{instanceId}/cloudAccountRoles/_/actions/obtainAccessCredential:
+    get:
+      operationId: ObtainCloudAccountRoleAccessCredential
+      description: Use the regional EIAM Developer API host and the PAM M2M bearer token.
+      security: [{pamBearer: []}]
+      parameters:
+        - name: instanceId
+          in: path
+          required: true
+          schema: {type: string}
+        - name: cloudAccountRoleExternalId
+          in: query
+          required: true
+          schema: {type: string}
+      responses:
+        "200":
+          description: STS credential for the explicitly specified role
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [cloudAccountRoleExternalId, cloudAccountRoleAccessCredential]
+                properties:
+                  cloudAccountRoleExternalId: {type: string}
+                  cloudAccountRoleAccessCredential:
+                    type: object
+                    required: [alibabaCloudStsToken]
+                    properties:
+                      alibabaCloudStsToken:
+                        type: object
+                        required: [accessKeyId, accessKeySecret, securityToken]
+                        properties:
+                          accessKeyId: {type: string, format: password}
+                          accessKeySecret: {type: string, format: password}
+                          securityToken: {type: string, format: password}
+        "403":
+          description: The selected application is not granted the requested role
+components:
+  securitySchemes:
+    pamBearer: {type: http, scheme: bearer}
