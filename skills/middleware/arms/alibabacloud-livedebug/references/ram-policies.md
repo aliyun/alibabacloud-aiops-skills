@@ -4,11 +4,11 @@
 > Derived solely from the OpenAPI calls this skill actually issues:
 > `aliyun cms2 apm service-task create/list/get/delete` (CMS `2024-03-30`,
 > `ServiceTaskController`), the discovery/resolution reads `aliyun cms2 workspace list`
-> and `aliyun cms2 apm service list` / `apm log-correlation get`, the optional temporary-service lifecycle
+> and `aliyun cms2 apm service list`, the optional temporary-service lifecycle
 > `aliyun cms2 apm service create/delete`, and `aliyun sls get-logs-v2` (SLS log query).
 > API granularity only - **no `*` wildcard in Action lists**.
 >
-> Replace `<accountId>`, `<region>`, `<project>`, and `<logstore>` with your values.
+> Replace `<accountId>`, `<region>`, and the trace project `<project>` with your values.
 
 ## Scope of This Skill
 
@@ -25,11 +25,10 @@ Actions are intentionally **not** requested here.
 | CMS (2024-03-30) | `apm service-task create` / `list` / `get` / `delete` | Create, list, get, and delete Live-Debug tasks (probes & commands) |
 | CMS (2024-03-30) | `workspace list` | Discover an existing workspace when none is given |
 | CMS (2024-03-30) | `apm service list` | Resolve `serviceId` by service name; verify cleanup |
-| CMS (2024-03-30) | `apm log-correlation get` | Discover the application's bound log project, logstore, and SLS region |
 | CMS (2024-03-30) | `apm service create` / `delete` (optional) | Register / clean up a temporary service entity when the workflow requires one |
 | SLS | `get-logs-v2` | Query task installation status and capture results |
 
-> The scripts under `scripts/live-debug/` call ServiceTask, log-correlation read, and SLS APIs; the
+> The scripts under `scripts/live-debug/` call ServiceTask and SLS APIs; the
 > workspace/service reads and the optional service lifecycle are issued directly via
 > `aliyun cms2` per SKILL.md. No STS, Container Service, `apm configuration`,
 > `integration addon`, or `entity query` Actions are used by this skill.
@@ -46,7 +45,6 @@ Actions are intentionally **not** requested here.
 | `apm service-task delete` | `cms:DeleteServiceTask` | write |
 | `workspace list` | `cms:ListWorkspaces` | read (workspace discovery) |
 | `apm service list` | `cms:ListServices` | read (serviceId resolution / cleanup verification) |
-| `apm log-correlation get` | `cms:GetServiceRecord` | read (application log binding discovery) |
 | `apm service create` | `cms:CreateService` | write (**optional** - temporary service lifecycle only) |
 | `apm service delete` | `cms:DeleteService` | write (**optional** - temporary service lifecycle only) |
 
@@ -84,7 +82,6 @@ used to locate the target.
       "Action": [
         "cms:ListWorkspaces",
         "cms:ListServices",
-        "cms:GetServiceRecord",
         "cms:ListServiceTask",
         "cms:GetServiceTask"
       ],
@@ -95,7 +92,7 @@ used to locate the target.
       "Action": [
         "log:GetLogStoreLogs"
       ],
-      "Resource": "acs:log:<region>:<accountId>:project/<project>/logstore/<logstore>"
+      "Resource": "acs:log:<region>:<accountId>:project/<project>/logstore/logstore-apm-logs"
     }
   ]
 }
@@ -114,7 +111,6 @@ The complete Live-Debug workflow additionally needs create and delete on Service
       "Action": [
         "cms:ListWorkspaces",
         "cms:ListServices",
-        "cms:GetServiceRecord",
         "cms:CreateServiceTask",
         "cms:ListServiceTask",
         "cms:GetServiceTask",
@@ -127,7 +123,7 @@ The complete Live-Debug workflow additionally needs create and delete on Service
       "Action": [
         "log:GetLogStoreLogs"
       ],
-      "Resource": "acs:log:<region>:<accountId>:project/<project>/logstore/<logstore>"
+      "Resource": "acs:log:<region>:<accountId>:project/<project>/logstore/logstore-apm-logs"
     }
   ]
 }

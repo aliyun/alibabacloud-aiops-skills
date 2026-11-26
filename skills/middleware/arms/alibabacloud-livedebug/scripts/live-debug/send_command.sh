@@ -13,8 +13,8 @@
 #
 # Environment Variables:
 #   LIVE_DEBUG_REGION_ID    - Onboarding region (e.g. cn-hangzhou), passed explicitly as CLI --region
-#   LIVE_DEBUG_CMS_ENDPOINT - CMS API endpoint (optional, passed as --endpoint to override the region)
-#   LIVE_DEBUG_CMS2         - Override for how the CMS CLI is invoked (default: aliyun cms2; can be aliyuncms2 or a binary path)
+#   LIVE_DEBUG_CMS_ENDPOINT - CMS API endpoint (optional official *.aliyuncs.com hostname, optionally prefixed with https://)
+#   LIVE_DEBUG_CMS2         - Override for how the CMS CLI is invoked (default: aliyun cms2; aliyuncms2 or aliyun cms2)
 #
 # Example:
 #   send_command.sh "cc-test" "abc@def" \

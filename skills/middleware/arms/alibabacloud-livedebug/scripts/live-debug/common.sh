@@ -22,22 +22,25 @@ resolve_region_id() {
 
 # Resolve the CMS CLI invocation into the CMS2 array.
 # Priority:
-#   1. LIVE_DEBUG_CMS2         - explicit override, e.g. "aliyuncms2" or "/path/to/aliyuncms2"
+#   1. LIVE_DEBUG_CMS2         - select "aliyun cms2" or "aliyuncms2"
 #   2. aliyun cms2             - Aliyun CLI plugin (standard end-user setup)
 #   3. aliyuncms2 on PATH      - standalone binary (local dev)
 #   4. ~/.aliyun/aliyuncms2    - default install location of the plugin binary
 resolve_cms2() {
-  if [ -n "${LIVE_DEBUG_CMS2:-}" ]; then
-    # shellcheck disable=SC2206
-    CMS2=(${LIVE_DEBUG_CMS2})
-  elif command -v aliyun >/dev/null 2>&1; then
+  case "${LIVE_DEBUG_CMS2:-}" in
+    "aliyun cms2") CMS2=(aliyun cms2); return ;;
+    aliyuncms2) CMS2=(aliyuncms2); return ;;
+    "") ;;
+    *) echo "Error: LIVE_DEBUG_CMS2 must be aliyun cms2 or aliyuncms2." >&2; return 1 ;;
+  esac
+  if command -v aliyun >/dev/null 2>&1; then
     CMS2=(aliyun cms2)
   elif command -v aliyuncms2 >/dev/null 2>&1; then
     CMS2=(aliyuncms2)
   elif [ -x "${HOME}/.aliyun/aliyuncms2" ]; then
     CMS2=("${HOME}/.aliyun/aliyuncms2")
   else
-    echo "Error: CMS CLI not found. Install Aliyun CLI + aliyuncms2 (aliyun cms2), or set LIVE_DEBUG_CMS2 to the aliyuncms2 binary path." >&2
+    echo "Error: CMS CLI not found. Install Aliyun CLI + aliyuncms2 (aliyun cms2)." >&2
     return 1
   fi
 }
@@ -77,6 +80,11 @@ resolve_cms2_args() {
   CMS2_ARGS=()
   resolve_user_agent || return 1
   if [ -n "${LIVE_DEBUG_CMS_ENDPOINT:-}" ]; then
+    local endpoint_host="${LIVE_DEBUG_CMS_ENDPOINT#https://}"
+    if ! [[ "$endpoint_host" =~ ^([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+aliyuncs\.com$ ]]; then
+      echo "Error: CMS endpoint must be an official aliyuncs.com hostname, optionally prefixed with https://." >&2
+      return 1
+    fi
     CMS2_ARGS+=(--endpoint "$LIVE_DEBUG_CMS_ENDPOINT" "${UA_ARGS[@]}")
     return 0
   fi

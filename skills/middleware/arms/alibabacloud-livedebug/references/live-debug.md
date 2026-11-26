@@ -32,7 +32,7 @@ Confirm the following parameters before making a call:
 | serviceId | Application / service ID | `ggxw4lnjuz@f2fd3a6265a254a052afb` |
 | targetIp | Target instance IP (optional; defaults to `*`, matching all instances) | `10.0.0.1` |
 | regionId | Onboarding region | `cn-hangzhou` |
-| SLS destination | Discover `project`, `storeName`, and `regionId` from the application's log correlation binding before querying | Unbound application: workspace trace project / `app-logs` |
+| SLS destination | Current workspace’s trace project | `logstore-apm-logs` |
 
 **Acquisition order:**
 
@@ -44,17 +44,16 @@ Confirm the following parameters before making a call:
    targetIp=10.0.0.1
    slsProject=proj-xtrace-xxxxxxxxxxxxxxxxxxxxxx-cn-hangzhou
    ```
-2. If `.arms-info` does not exist or is missing target parameters, ask the user for the missing values. If the user asks you to discover the workspace, run `aliyun cms2 workspace list` and pick an existing workspace that matches the naming the user requires (e.g. `agentloop-{32 hex chars}`); never invent a workspace ID. If `targetIp` is missing, use the default `*`. Resolve the current SLS destination from the application's binding rather than assuming the saved `slsProject` is current.
+2. If `.arms-info` does not exist or is missing target parameters, ask the user for the missing values. If the user asks you to discover the workspace, run `aliyun cms2 workspace list` and pick an existing workspace that matches the naming the user requires (e.g. `agentloop-{32 hex chars}`); never invent a workspace ID. If `targetIp` is missing, use the default `*`. Use `slsProject` when it identifies the current workspace’s trace project.
 
 Defaults can be overridden via environment variables:
-- `LIVE_DEBUG_REGION_ID` - CMS workspace region (from `regionId` in `.arms-info`). Used for ServiceTask calls and log-correlation discovery.
-- `LIVE_DEBUG_CMS_ENDPOINT` - CMS API endpoint (optional; passed as the CMS CLI `--endpoint`, overriding the region-derived result).
-- `LIVE_DEBUG_CMS2` - how the CMS CLI is invoked (default `aliyun cms2`, i.e. the aliyuncms2 plugin of the Alibaba Cloud CLI; for local debugging it can be set to `aliyuncms2` or an absolute binary path).
-- `LIVE_DEBUG_WORKSPACE` / `LIVE_DEBUG_SERVICE_ID` - application identifiers used by `query_task.sh` to discover the log binding.
-- `LIVE_DEBUG_SLS_PROJECT` / `LIVE_DEBUG_SLS_LOGSTORE` / `LIVE_DEBUG_SLS_REGION_ID` - optional explicit values for a confirmed SLS destination. `query_task.sh` discovers the binding if project or logstore is missing. It uses the binding's `regionId` for SLS, which can differ from the CMS workspace region. When both project and logstore are supplied, set the confirmed SLS region too; legacy calls without it fall back to the explicit region or project suffix.
+- `LIVE_DEBUG_REGION_ID` - CMS workspace region (from `regionId` in `.arms-info`). Used for ServiceTask calls.
+- `LIVE_DEBUG_CMS_ENDPOINT` - CMS API endpoint (optional; passed as the CMS CLI `--endpoint`, restricted to official *.aliyuncs.com hosts).
+- `LIVE_DEBUG_CMS2` - how the CMS CLI is invoked (default `aliyun cms2`, i.e. the aliyuncms2 plugin of the Alibaba Cloud CLI; for local debugging it can be set to `aliyuncms2` or `aliyun cms2`).
+- `LIVE_DEBUG_SLS_PROJECT` and `LIVE_DEBUG_SLS_REGION_ID` identify the workspace trace project and its SLS region.
 - `LIVE_DEBUG_SESSION_ID` - the workflow's 32-character lowercase hex session ID; follow the [root Observability rules](../SKILL.md#observability). Scripts derive the versioned User-Agent from this ID and the manifest.
 
-> **Agent must-do:** export the CMS region, workspace, service ID and current skill session before using scripts. For capture queries, discover the application binding or supply all confirmed SLS target values. For an unbound service, use the default described in section 5 and pass its SLS region explicitly.
+> Export the workflow session before using scripts. For capture queries, supply the workspace trace project and its SLS region.
 
 ## Workflow
 
@@ -67,7 +66,6 @@ Maps to the OpenAPI `ServiceTaskController` (CMS `2024-03-30`):
 | Get one | `GET /serviceTask/{workspace}/{serviceId}/task/{taskId}` | `aliyun cms2 apm service-task get` | `get_task.sh` |
 | Delete | `DELETE /serviceTask/{workspace}/{serviceId}/task/{taskId}` | `aliyun cms2 apm service-task delete` | `delete_task.sh` |
 | Bulk-delete probes | list + delete combination | - | `delete_all_probes.sh` |
-| Discover application log binding | `GetServiceRecord` (`recordType=logCorrelation`) | `aliyun cms2 apm log-correlation get` | `query_task.sh` (when target is missing) |
 | Query results | SLS query | `aliyun sls get-logs-v2` | `query_task.sh` |
 
 All scripts call CMS through the CMS CLI (`aliyun cms2`, i.e. aliyuncms2) `apm service-task` commands, reusing the Alibaba Cloud CLI credential system. CLI output is uniformly wrapped as `{"success":true,"data":{...}}`, and the scripts always use `-o json`.
@@ -182,37 +180,13 @@ Covers: `live_debug_log_probe` / `live_debug_snapshot_probe` / `live_debug_metri
 
 ### 5. Query capture results (SLS)
 
-Application logs and Live-Debug results go to the logstore bound to the ARMS application. First inspect the read-only binding (include the User-Agent required by the root skill):
+Query installation status and captures in `logstore-apm-logs` in the current CloudMonitor workspace’s trace project. Use the trace project supplied by the caller or confirmed in workspace configuration. If it is unknown, ask for it before querying.
 
 ```bash
-aliyun cms2 apm log-correlation get \
-  --workspace <workspace> --service-id <serviceId> --region <cms-region> \
-  --user-agent "AlibabaCloud-Agent-Skills/alibabacloud-livedebug/skill-version/{version}/{session-id}" -o json
+LIVE_DEBUG_SLS_REGION_ID="$TRACE_REGION" scripts/live-debug/query_task.sh "$TASK_ID" "$TRACE_PROJECT" logstore-apm-logs 30
 ```
 
-Decode `data.record.recordContent` as JSON and map `project` to `--project`, `storeName` to `--logstore`, and `regionId` to the **SLS** `--region`. The CMS region locates the application; the binding's region locates the logs. Do not create or update a binding during diagnostics. If it is inaccessible, invalid, or a `storeview` rather than a `logstore`, report the limitation and request a confirmed logstore target. Never fall back to a guessed destination.
-
-When the service has **no application log binding** (`service record not exists`), the default for Live Debug logs routed as application logs (`external_logs`) is the **current CloudMonitor workspace’s trace project**, Logstore **`app-logs`**. Confirm the trace project associated with that workspace; the workspace name and its general SLS project can differ from the trace project. Use the explicit-target form:
-
-```bash
-LIVE_DEBUG_SLS_REGION_ID="$TRACE_REGION" scripts/live-debug/query_task.sh "$TASK_ID" "$TRACE_PROJECT" app-logs 30
-```
-
-If the probe sends the `livedebug` scope as `internal_logs`, also check `logstore-apm-logs` in the trace project. A missing Logstore or empty result does not confirm delivery. A permission error does not establish that the service is unbound.
-
-For automatic discovery of an existing binding, reuse the workflow session and export the confirmed application identifiers:
-
-```bash
-LIVE_DEBUG_REGION_ID=cn-hangzhou \
-LIVE_DEBUG_WORKSPACE=<workspace> \
-LIVE_DEBUG_SERVICE_ID=<serviceId> \
-  scripts/live-debug/query_task.sh <taskId> "" "" 10
-```
-
-- `taskId` - the taskId returned at create time (required).
-- `project` / `logstore` - optional positional overrides, then `LIVE_DEBUG_SLS_PROJECT` / `LIVE_DEBUG_SLS_LOGSTORE`; if either is missing, discover both from the application binding. Partial overrides must match the binding.
-- `minutes` - how many minutes to look back (optional; default 5).
-- **region** - use the binding's `regionId`; for explicit targets use `LIVE_DEBUG_SLS_REGION_ID`. Every SLS query carries an explicit `--region`.
+The project argument defaults to `LIVE_DEBUG_SLS_PROJECT`. The logstore argument may be omitted or set to `logstore-apm-logs`. The look-back window defaults to five minutes.
 
 The script looks back N minutes from now as the query range and outputs two sections:
 - **Task Status** - probe/command installation status and funnel metrics (`livedebug.report_type = 'status'`).
@@ -821,7 +795,7 @@ scripts/live-debug/get_task.sh \
 
 # 3. Trigger business traffic, then query results
 scripts/live-debug/query_task.sh \
-  "$TASK_ID" "" "" 10
+  "$TASK_ID" "$TRACE_PROJECT" logstore-apm-logs 10
 
 # 4. Clean up
 scripts/live-debug/delete_task.sh \
